@@ -43,7 +43,7 @@ apps/api         Fastify API 独立进程
 apps/worker      Fastify Worker 独立进程
 packages/shared  Zod 数据格式
 packages/db      数据库配置入口；阶段 2 加入 Drizzle 表与迁移
-packages/rating  decimal.js 入口；阶段 1 加入计费规则
+packages/rating  计费核心纯函数：金额/费率品牌类型、计费、前缀匹配、授权、CSV
 freeswitch/      阶段 3 加入配置与脚本
 tooling/eslint/  金额保护规则
 tests/           工具与跨包测试
@@ -66,11 +66,11 @@ const fee = 0.1 * 3;
 const fee = decimal('0.1').mul('3');
 ```
 
-这是一条保守的静态保护规则，不能证明跨函数或外部数据一定具有金额语义。金额应保持明确命名、使用字符串与 Decimal 传递，阶段 1 再加入金额、费率和币种品牌类型；不要将金额改名或转换为 number 来绕开规则。
+这是一条保守的静态保护规则，不能证明跨函数或外部数据一定具有金额语义。金额应保持明确命名、使用字符串与 Decimal 传递，阶段 1 已加入 `Money<Currency>` / `Rate<Currency>` 品牌类型，不同币种相加在类型检查阶段报错；不要将金额改名或转换为 number 来绕开规则。
 
 ## CI 与阶段验收
 
-每次 push 和 PR 执行安装、`pnpm check`、构建、浮点金额拒绝实验与 PostgreSQL 启动/SQL 检查。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。阶段 0 证据记录在 [验收记录](docs/phase-0-scaffold.md)。
+每次 push 和 PR 执行安装、`pnpm check`、`pnpm coverage`（rating 行覆盖率 ≥ 95%）、构建、浮点金额拒绝实验、CNY+USD 类型拒绝实验与 PostgreSQL 启动/SQL 检查。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。阶段 0 证据记录在 [验收记录](docs/phase-0-scaffold.md)。
 
 ## 运行验证
 

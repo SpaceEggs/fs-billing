@@ -24,7 +24,19 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm coverage
       - run: pnpm build
+      - name: Reject CNY + USD at typecheck
+        run: |
+          probe=packages/rating/src/ci-currency-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          printf "%s\n" "import { addMoney, money } from './money.js';" "export const total = addMoney(money('CNY', '1'), money('USD', '1'));" > "$probe"
+          if pnpm --filter @fs-billing/rating typecheck > /tmp/currency-tsc.log 2>&1; then
+            echo 'ERROR: CNY + USD was accepted'
+            exit 1
+          fi
+          cat /tmp/currency-tsc.log
+          grep -q "Money<\"USD\">" /tmp/currency-tsc.log
       - name: Reject native floating point money arithmetic
         run: |
           probe=packages/rating/src/ci-money-probe.ts
