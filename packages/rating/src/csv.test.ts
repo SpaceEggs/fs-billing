@@ -130,3 +130,12 @@ test('export quotes newlines', () => {
     ]),
   ).toBe('prefix,country,rate\n1,"A\nB",0.0100\n');
 });
+
+test('prefix starting with 00 is rejected with line number', () => {
+  expect(
+    parseRateCsv('prefix,country,rate\n44,英国,0.04\n0044,英国,0.04', 'USD'),
+  ).toEqual({
+    ok: false,
+    errors: [{ line: 3, reason: '前缀不能以 00 开头（国际冠字应去掉）：0044' }],
+  });
+});

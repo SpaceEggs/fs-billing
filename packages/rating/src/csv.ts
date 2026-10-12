@@ -79,6 +79,9 @@ export function parseRateCsv<C extends Currency>(
     const [prefix, country, rateText] = cells as [string, string, string];
 
     if (!PREFIX.test(prefix)) return fail(`前缀只能是数字：${prefix}`);
+    if (prefix.startsWith('00')) {
+      return fail(`前缀不能以 00 开头（国际冠字应去掉）：${prefix}`);
+    }
     const firstLine = seen.get(prefix);
     if (firstLine !== undefined) {
       return fail(`前缀 ${prefix} 与第 ${firstLine} 行重复`);
