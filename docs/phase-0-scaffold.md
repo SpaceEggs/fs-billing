@@ -9,7 +9,7 @@
 - [x] 全新克隆后 `pnpm install && pnpm check` 通过。
 - [x] `docker compose up -d --wait` 后 PostgreSQL 健康检查通过。
 - [x] 在 rating 包写入 `export const fee = 0.1 * 3;` 后，`pnpm check` 报错。
-- [ ] CI 在一次提交上跑通，有记录可查（推送后验证）。
+- [x] CI 在一次提交上跑通，有记录可查。
 
 ## 本地运行证据
 
@@ -53,6 +53,10 @@ packages/rating/src/money-probe.ts
 浏览器实际打开 Web，显示“服务状态：连接正常”：
 
 ![阶段 0 Web 运行截图](evidence/phase-0/web.png)
+
+## CI 证据
+
+提交 `c220df72840ddec2343c26c947e81b3a389f8262` 的 [GitHub Actions 运行 #38263096133](https://github.com/SpaceEggs/fs-billing/actions/runs/38263096133) 已成功完成。Ubuntu runner 上安装、`pnpm check`、构建、浮点金额拒绝实验和 PostgreSQL 健康/SQL 检查均通过；数据库在任务结束时正常停止。
 
 ## 范围边界
 
