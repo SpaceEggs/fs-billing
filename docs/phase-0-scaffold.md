@@ -1,6 +1,6 @@
 # 阶段 0 验收记录
 
-分支：`phase-0-scaffold`。
+分支：`phase-0-scaffold`，已通过 PR [#2](https://github.com/SpaceEggs/fs-billing/pull/2) squash 合并到 `main`（提交 `5492cea`）。
 
 验证日期：2026-10-12。环境：macOS arm64，Node.js 22.23.2，pnpm 10.34.7，Docker 29.4.0 / OrbStack。
 
