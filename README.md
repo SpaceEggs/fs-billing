@@ -1,6 +1,6 @@
 # FS-Billing
 
-FreeSWITCH 话单计费系统。工程按 [阶段计划](docs/plan.md) 推进，业务规则见 [设计文档](docs/design.md)。当前为阶段 0：可启动工程骨架。
+FreeSWITCH 话单计费系统。工程按 [阶段计划](docs/plan.md) 推进，业务规则见 [设计文档](docs/design.md)。阶段 0（工程骨架）与阶段 1（计费核心 `packages/rating`）已完成并合并到 `main`，下一步为阶段 2：数据库与账本。
 
 ## 开发环境
 
@@ -70,7 +70,7 @@ const fee = decimal('0.1').mul('3');
 
 ## CI 与阶段验收
 
-每次 push 和 PR 执行安装、`pnpm check`、`pnpm coverage`（rating 行覆盖率 ≥ 95%）、构建、浮点金额拒绝实验、CNY+USD 类型拒绝实验与 PostgreSQL 启动/SQL 检查。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。阶段 0 证据记录在 [验收记录](docs/phase-0-scaffold.md)。
+每次 push 和 PR 执行安装、`pnpm check`、`pnpm coverage`（rating 行覆盖率 ≥ 95%）、构建、浮点金额拒绝实验、CNY+USD 类型拒绝实验与 PostgreSQL 启动/SQL 检查。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。各阶段证据见验收记录：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)。
 
 ## 运行验证
 

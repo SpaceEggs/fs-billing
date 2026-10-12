@@ -357,5 +357,5 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 ## 15. 下一步
 
-1. 根据 `docs/pages.md`（页面说明书）在 Claude Design 中设计界面
-2. 界面确认后，制定开发阶段计划（每个阶段含验收标准）
+1. ~~根据 `docs/pages.md`（页面说明书）在 Claude Design 中设计界面~~ 已完成：已确认的设计稿在 `design/设计系统规范确认/`
+2. ~~界面确认后，制定开发阶段计划（每个阶段含验收标准）~~ 已完成：见 [`plan.md`](plan.md)，当前进度以其中的阶段表为准
