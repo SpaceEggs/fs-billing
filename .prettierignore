@@ -8,3 +8,6 @@ docs/design.md
 docs/pages.md
 docs/plan.md
 docs/freeswitch.md
+
+artifacts/verify/
+.audit/

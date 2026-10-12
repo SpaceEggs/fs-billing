@@ -71,3 +71,7 @@ const fee = decimal('0.1').mul('3');
 ## CI 与阶段验收
 
 每次 push 和 PR 执行安装、`pnpm check`、构建、浮点金额拒绝实验与 PostgreSQL 启动/SQL 检查。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。阶段 0 证据记录在 [验收记录](docs/phase-0-scaffold.md)。
+
+## 运行验证
+
+项目内 [verify 技能](apps/web/.agents/skills/verify/SKILL.md) 提供进程归属检查、真实 HTTP 与浏览器验证，以及清理步骤。[功能图](apps/web/.agents/skills/verify/features/README.md) 记录当前可验证的用户路径。验证证据默认保存在 `artifacts/verify/`，清理后保留。
