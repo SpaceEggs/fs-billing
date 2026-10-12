@@ -1,0 +1,33 @@
+{
+  "name": "fs-billing",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=22.12.0 <23 || >=24.0.0 <25"
+  },
+  "scripts": {
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
+    "test": "vitest run",
+    "build": "pnpm -r build",
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "dev:setup": "pnpm check && pnpm db:up"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "^22.0.0",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "^10.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}

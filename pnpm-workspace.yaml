@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+
+# 仅允许已知构建工具运行安装脚本。
+onlyBuiltDependencies:
+  - esbuild
