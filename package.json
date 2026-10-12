@@ -17,11 +17,13 @@
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
-    "dev:setup": "pnpm check && pnpm db:up"
+    "dev:setup": "pnpm check && pnpm db:up",
+    "coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "5.0.4",
     "eslint": "10.12.0",
     "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.0.0",

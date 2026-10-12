@@ -9,5 +9,12 @@ export default defineConfig({
       'tests/**/*.test.ts',
     ],
     clearMocks: true,
+    coverage: {
+      provider: 'v8',
+      include: ['packages/rating/src/**/*.ts'],
+      exclude: ['**/*.test.ts'],
+      reporter: ['text', 'json-summary'],
+      thresholds: { lines: 95 },
+    },
   },
 });
