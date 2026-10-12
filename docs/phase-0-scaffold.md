@@ -6,12 +6,14 @@
 
 ## 验收标准
 
-- [ ] 全新克隆后 `pnpm install && pnpm check` 通过（下一步执行）。
+- [x] 全新克隆后 `pnpm install && pnpm check` 通过。
 - [x] `docker compose up -d --wait` 后 PostgreSQL 健康检查通过。
 - [x] 在 rating 包写入 `export const fee = 0.1 * 3;` 后，`pnpm check` 报错。
 - [ ] CI 在一次提交上跑通，有记录可查（推送后验证）。
 
 ## 本地运行证据
+
+从提交 `c220df7` 使用 `git clone --no-local --branch phase-0-scaffold` 克隆到全新的 `/private/tmp/fs-billing-phase-0.fUQKkc`，目录中没有 `.env`、构建产物或 `node_modules`。执行 `pnpm install --frozen-lockfile && pnpm check` 返回 0，四个测试文件、36 个测试全部通过；安装过程中两次连接重置由 pnpm 自动重试恢复。
 
 `pnpm check` 返回 0：ESLint、Prettier、全部六个工作包与根目录的 TypeScript 检查通过；Vitest 4 个测试文件、36 个测试通过。金额规则测试包含金额别名、复合赋值、自增自减、对象字段、解构、箭头函数、原生转换与两个目录的实际 ESLint 配置。
 
