@@ -67,10 +67,12 @@
 
 **验收标准**
 
-- [ ] 全新克隆后，执行 `pnpm install && pnpm check` 全部通过（lint + typecheck + test）
-- [ ] `docker compose up -d` 后 PostgreSQL 健康检查通过
-- [ ] 故意写一行 `const fee = 0.1 * 3` 到 rating 包，`pnpm check` 报错
-- [ ] CI 在一次提交上跑通，有记录可查
+- [x] 全新克隆后，执行 `pnpm install && pnpm check` 全部通过（lint + typecheck + test）
+- [x] `docker compose up -d` 后 PostgreSQL 健康检查通过
+- [x] 故意写一行 `const fee = 0.1 * 3` 到 rating 包，`pnpm check` 报错
+- [x] CI 在一次提交上跑通，有记录可查
+
+验收命令输出、网页截图与 CI 链接见 [`phase-0-scaffold.md`](phase-0-scaffold.md)。
 
 ---
 

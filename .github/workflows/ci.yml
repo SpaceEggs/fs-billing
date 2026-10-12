@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+      - name: Reject native floating point money arithmetic
+        run: |
+          probe=packages/rating/src/ci-money-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          echo 'export const fee = 0.1 * 3;' > "$probe"
+          if pnpm exec eslint "$probe" --format json > /tmp/money-lint.log 2>&1; then
+            echo 'ERROR: unsafe money arithmetic was accepted'
+            exit 1
+          fi
+          cat /tmp/money-lint.log
+          grep -q 'money/no-number-money' /tmp/money-lint.log
+      - name: Start and verify PostgreSQL
+        run: |
+          docker compose up -d --wait
+          docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT version(); SHOW timezone;"'
+      - name: PostgreSQL logs
+        if: failure()
+        run: docker compose logs
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down
