@@ -30,7 +30,7 @@
 
 ## 本地运行证据
 
-`pnpm check` 返回 0：ESLint、Prettier、全部包的 TypeScript 检查通过；Vitest 9 个测试文件、115 个测试通过。
+`pnpm check` 返回 0：ESLint、Prettier、全部包的 TypeScript 检查通过；Vitest 9 个测试文件、116 个测试通过。
 
 `pnpm build` 返回 0。
 
@@ -38,8 +38,8 @@
 
 ```text
 File          | % Stmts | % Branch | % Funcs | % Lines
-All files     |     100 |    96.29 |     100 |     100
-Lines        : 100% ( 135/135 )
+All files     |     100 |    96.36 |     100 |     100
+Lines        : 100% ( 137/137 )
 ```
 
 临时写入 `packages/rating/src/ci-currency-probe.ts`（`addMoney(money('CNY', '1'), money('USD', '1'))`）后执行 `pnpm --filter @fs-billing/rating typecheck`：
@@ -50,6 +50,10 @@ src/ci-currency-probe.ts(2,50): error TS2345: Argument of type 'Money<"USD">' is
 ```
 
 退出码非 0；临时文件已删除。CI 每次运行同一实验。
+
+## CI 证据
+
+PR [#4](https://github.com/SpaceEggs/fs-billing/pull/4) 上最后一次代码提交 `17fd3d0` 的 GitHub Actions 运行均已成功：[push 运行 #38321133511](https://github.com/SpaceEggs/fs-billing/actions/runs/38321133511)、[pull_request 运行 #38321137694](https://github.com/SpaceEggs/fs-billing/actions/runs/38321137694)。安装、`pnpm check`、`pnpm coverage`、构建、CNY + USD 类型拒绝实验、浮点金额拒绝实验和 PostgreSQL 检查全部通过。此后只追加了本条仅改文档的提交（加入这些链接），其自身的 CI 运行见 PR 页面。
 
 ## 设计取舍
 
