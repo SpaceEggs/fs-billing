@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+html,body{margin:0;padding:0;background:#d4d4d8;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:var(--primary,#2563eb);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;text-underline-offset:3px;}
+*{box-sizing:border-box;}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--primary:#2563eb;--primary-fg:#ffffff;--neg:#dc2626;--destructive:#dc2626;--pos:#16a34a;--overlay:rgba(9,9,11,.45);--brand-soft:#eff6ff;--brand-bd:#bfdbfe;--side:#fafafa;--page:#f8fafc;
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--primary:#3b82f6;--primary-fg:#ffffff;--neg:#f87171;--destructive:#ef4444;--pos:#4ade80;--overlay:rgba(0,0,0,.65);--brand-soft:rgba(59,130,246,.12);--brand-bd:rgba(59,130,246,.35);--side:#0c0c0e;--page:#0b0d12;
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="padding:56px;display:flex;flex-direction:column;gap:72px;min-width:max-content;">
+
+  <header style="display:flex;flex-direction:column;gap:6px;color:#18181b;">
+    <div style="font-size:13px;color:#52525b;">FS-Billing · 第三批 · 管理后台</div>
+    <h1 style="margin:0;font-size:30px;font-weight:600;">系统与账号：登录、管理员、全局元素</h1>
+    <div style="font-size:13px;color:#52525b;">当前登录：王敏 wangmin@fs-billing.com · 今天 2026-09-29 · 系统告警有 1 条进行中（菜单红点）。浅色/深色在 Tweaks 中切换。</div>
+  </header>
+
+  <section data-screen-label="管理后台登录 电脑" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">1 · 管理后台登录 · 电脑</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,960px);gap:40px;">
+      <sc-for list="{{ login }}" as="s" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ s.label }}</div>
+          <div style="width:960px;height:640px;background:var(--page);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(0,0,0,.08);border-top:4px solid var(--primary);">
+            <sc-if value="{{ s.expired }}" hint-placeholder-val="{{ false }}">
+              <div style="height:44px;flex-shrink:0;background:var(--warn-bg);border-bottom:1px solid var(--warn-bd);color:var(--warn-fg);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;"><span style="font-weight:600;">登录已过期，请重新登录</span><span>登录后将返回之前的页面</span></div>
+            </sc-if>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;">
+              <div style="display:flex;align-items:center;gap:10px;"><span style="width:32px;height:32px;border-radius:8px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;">F</span><span style="font-size:16px;font-weight:600;">FS-Billing</span><span style="height:24px;padding:0 10px;border-radius:999px;background:var(--brand-soft);border:1px solid var(--brand-bd);color:var(--primary);font-size:12px;font-weight:600;display:flex;align-items:center;">管理后台</span></div>
+              <div style="width:400px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:20px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+                <div style="display:flex;flex-direction:column;gap:6px;"><h3 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em;">登录管理后台</h3><span style="font-size:13px;color:var(--muted-fg);">仅限内部管理员使用</span></div>
+                <sc-if value="{{ s.alert }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid {{ s.alertBd }};background:{{ s.alertBg }};color:{{ s.alertFg }};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:1.5;"><span style="font-weight:600;">{{ s.alertTitle }}</span><span>{{ s.alertBody }}</span></div>
+                </sc-if>
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">登录邮箱
+                    <span style="height:40px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:400;color:{{ s.emailColor }};background:{{ s.fieldBg }};">{{ s.email }}</span>
+                  </label>
+                  <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;"><span>密码</span><span style="font-size:12px;font-weight:400;color:var(--primary);">忘记密码？</span></div>
+                    <span style="height:40px;border:1px solid {{ s.pwdBd }};box-shadow:{{ s.pwdRing }};border-radius:8px;padding:0 4px 0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:400;background:{{ s.fieldBg }};"><span style="color:{{ s.pwdColor }};letter-spacing:{{ s.pwdLs }};">{{ s.pwd }}</span><span style="height:32px;padding:0 10px;display:flex;align-items:center;font-size:12px;color:var(--muted-fg);">{{ s.eye }}</span></span>
+                    <sc-if value="{{ s.forgot }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12px;font-weight:400;color:var(--fg);background:var(--brand-soft);border:1px solid var(--brand-bd);border-radius:8px;padding:8px 10px;line-height:1.5;">请联系其他管理员在「管理员」页面为你重置密码</div>
+                    </sc-if>
+                  </div>
+                </div>
+                <button style="height:40px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;opacity:{{ s.btnOp }};">{{ s.btn }}</button>
+              </div>
+              <span style="font-size:12px;color:var(--muted-fg);">客户请使用客户门户登录</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="管理后台登录 手机" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">1 · 管理后台登录 · 手机</h2>
+    <div style="display:flex;gap:32px;">
+      <sc-for list="{{ login }}" as="s" hint-placeholder-count="6">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ s.mlabel }}</div>
+          <div style="width:390px;height:844px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);display:flex;flex-direction:column;">
+            <div style="height:44px;flex-shrink:0;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+            <sc-if value="{{ s.expired }}" hint-placeholder-val="{{ false }}">
+              <div style="flex-shrink:0;background:var(--warn-bg);border-top:1px solid var(--warn-bd);border-bottom:1px solid var(--warn-bd);color:var(--warn-fg);padding:10px 20px;display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:1.5;"><span style="font-weight:600;">登录已过期，请重新登录</span><span>登录后将返回之前的页面</span></div>
+            </sc-if>
+            <div style="flex:1;padding:0 24px 64px;display:flex;flex-direction:column;justify-content:center;gap:24px;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+                <span style="width:44px;height:44px;border-radius:10px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;">F</span>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;"><span style="font-size:22px;font-weight:600;">登录管理后台</span><span style="height:24px;padding:0 10px;border-radius:999px;background:var(--brand-soft);border:1px solid var(--brand-bd);color:var(--primary);font-size:12px;font-weight:600;display:flex;align-items:center;">FS-Billing 管理后台</span></div>
+              </div>
+              <sc-if value="{{ s.alert }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid {{ s.alertBd }};background:{{ s.alertBg }};color:{{ s.alertFg }};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;font-size:13px;line-height:1.5;"><span style="font-weight:600;">{{ s.alertTitle }}</span><span>{{ s.alertBody }}</span></div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:14px;">
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">登录邮箱
+                  <span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:16px;font-weight:400;color:{{ s.emailColor }};background:{{ s.fieldBg }};">{{ s.email }}</span>
+                </label>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">
+                  <span>密码</span>
+                  <span style="height:44px;border:1px solid {{ s.pwdBd }};box-shadow:{{ s.pwdRing }};border-radius:8px;padding-left:12px;display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:400;background:{{ s.fieldBg }};"><span style="color:{{ s.pwdColor }};letter-spacing:{{ s.pwdLs }};">{{ s.pwd }}</span><span style="width:56px;height:44px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted-fg);">{{ s.eye }}</span></span>
+                </div>
+              </div>
+              <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;opacity:{{ s.btnOp }};">{{ s.btn }}</button>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <span style="height:44px;display:flex;align-items:center;font-size:14px;color:var(--primary);">忘记密码？</span>
+                <sc-if value="{{ s.forgot }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:13px;background:var(--brand-soft);border:1px solid var(--brand-bd);border-radius:8px;padding:8px 12px;text-align:center;line-height:1.5;">请联系其他管理员在「管理员」页面为你重置密码</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="管理员" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">2 · 管理员</h2>
+    <div style="display:flex;gap:40px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2a 电脑 · 列表（王敏的「停用」悬停提示）</div>
+        <div style="width:1440px;height:620px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+          <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+            <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+              <sc-for list="{{ navAdmins }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+            </nav>
+          </aside>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+            <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:14px;color:var(--muted-fg);">管理员</span>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">◐</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+            </div>
+            <main style="padding:28px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;align-items:baseline;gap:10px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">管理员</h1><span style="font-size:13px;color:var(--muted-fg);">共 3 位 · 2 位启用</span></div>
+                <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">＋ 新增管理员</button>
+              </div>
+              <div style="font-size:13px;color:var(--fg);background:var(--brand-soft);border:1px solid var(--brand-bd);border-radius:8px;padding:10px 12px;">当前版本所有管理员权限相同，均可管理租户、费率、余额和其他管理员。不能停用自己，且至少保留一位启用的管理员。</div>
+              <div style="border:1px solid var(--border);border-radius:10px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                  <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                    <th style="text-align:left;font-weight:500;padding:10px 16px;border-radius:10px 0 0 0;">姓名</th>
+                    <th style="text-align:left;font-weight:500;padding:10px 12px;">登录邮箱</th>
+                    <th style="text-align:left;font-weight:500;padding:10px 12px;">状态</th>
+                    <th style="text-align:left;font-weight:500;padding:10px 12px;">最后登录时间</th>
+                    <th style="text-align:right;font-weight:500;padding:10px 16px;border-radius:0 10px 0 0;">操作</th>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ admins }}" as="a" hint-placeholder-count="3">
+                      <tr style="border-top:1px solid var(--border);">
+                        <td style="padding:14px 16px;"><div style="display:flex;align-items:center;gap:10px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">{{ a.initial }}</span><span style="font-size:14px;font-weight:500;">{{ a.name }}</span><sc-if value="{{ a.me }}" hint-placeholder-val="{{ false }}"><span style="height:20px;padding:0 7px;border-radius:5px;background:var(--brand-soft);color:var(--primary);font-size:11px;font-weight:600;display:flex;align-items:center;">你</span></sc-if></div></td>
+                        <td style="padding:14px 12px;">{{ a.email }}</td>
+                        <td style="padding:14px 12px;"><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid {{ a.stBd }};background:{{ a.stBg }};color:{{ a.stFg }};">{{ a.status }}</span></td>
+                        <td style="padding:14px 12px;font-variant-numeric:tabular-nums;color:{{ a.lastColor }};">{{ a.last }}</td>
+                        <td style="padding:14px 16px;"><div style="display:flex;justify-content:flex-end;gap:16px;position:relative;"><a>重置密码</a><span style="color:{{ a.actColor }};cursor:{{ a.cursor }};">{{ a.action }}</span>
+                          <sc-if value="{{ a.me }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;right:-8px;bottom:28px;background:var(--fg);color:var(--bg);font-size:12px;padding:6px 10px;border-radius:6px;white-space:nowrap;">不能停用自己的账号</div></sc-if>
+                        </div></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2b 手机 · 列表</div>
+        <div style="width:390px;height:620px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);">
+          <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+          <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+            <span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></span>
+            <div style="display:flex;flex-direction:column;align-items:center;"><span style="font-size:16px;font-weight:600;">管理员</span><span style="font-size:10px;color:var(--primary);font-weight:500;">管理后台</span></div>
+            <span style="width:40px;height:40px;border-radius:8px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:20px;">＋</span>
+          </div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:12px;color:var(--muted-fg);line-height:1.5;">所有管理员权限相同 · 至少保留一位启用的管理员</div>
+            <sc-for list="{{ admins }}" as="a" hint-placeholder-count="3">
+              <div style="border:1px solid var(--border);border-radius:12px;padding:14px 4px 14px 14px;display:flex;align-items:center;gap:12px;">
+                <span style="width:36px;height:36px;flex-shrink:0;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">{{ a.initial }}</span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;">
+                  <div style="display:flex;align-items:center;gap:6px;"><span style="font-size:15px;font-weight:600;">{{ a.name }}</span><sc-if value="{{ a.me }}" hint-placeholder-val="{{ false }}"><span style="height:20px;padding:0 7px;border-radius:5px;background:var(--brand-soft);color:var(--primary);font-size:11px;font-weight:600;display:flex;align-items:center;">你</span></sc-if><span style="height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;display:flex;align-items:center;border:1px solid {{ a.stBd }};background:{{ a.stBg }};color:{{ a.stFg }};">{{ a.status }}</span></div>
+                  <span style="font-size:13px;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;">{{ a.email }}</span>
+                  <span style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">最后登录 {{ a.last }}</span>
+                </div>
+                <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);font-size:18px;">⋯</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;max-width:2400px;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2c 电脑 · 新增管理员</div>
+        <div style="width:760px;height:560px;background:var(--overlay);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fg);">
+          <div style="width:480px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;justify-content:space-between;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">新增管理员</span><span style="font-size:13px;color:var(--muted-fg);">新管理员拥有与你相同的全部权限</span></div><span style="color:var(--muted-fg);">✕</span></div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">姓名<span style="height:40px;border:1px solid var(--primary);box-shadow:0 0 0 3px var(--brand-soft);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:400;">赵磊</span></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">登录邮箱<span style="height:40px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:400;">zhaolei@fs-billing.com</span></label>
+            <div style="font-size:13px;color:var(--muted-fg);background:var(--muted);border-radius:8px;padding:10px 12px;line-height:1.5;">创建后系统生成临时密码，只显示一次。对方首次登录后需修改密码。新增操作记入操作日志。</div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;"><button style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">取消</button><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">创建并生成临时密码</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2d 电脑 · 重置密码结果（只显示一次）</div>
+        <div style="width:760px;height:560px;background:var(--overlay);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fg);">
+          <div style="width:480px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:18px;">
+            <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">已为 李俊 生成临时密码</span><span style="font-size:13px;color:var(--muted-fg);">lijun@fs-billing.com · 原密码已失效，李俊的所有登录已退出</span></div>
+            <div style="display:flex;gap:8px;align-items:center;border:1px solid var(--border);background:var(--muted);border-radius:10px;padding:8px 8px 8px 16px;"><span style="flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:600;letter-spacing:.06em;">Kx7m-Qp42-Rt9w</span><button style="height:36px;padding:0 14px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">复制</button></div>
+            <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);color:var(--warn-fg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;display:flex;flex-direction:column;gap:2px;"><span style="font-weight:600;">关闭后无法再次查看</span><span>请立即复制并通过安全渠道发给对方，对方首次登录后需修改密码。本次重置已记入操作日志。</span></div>
+            <div style="display:flex;justify-content:flex-end;"><button style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">我已复制，关闭</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2e 电脑 · 停用确认</div>
+        <div style="width:760px;height:560px;background:var(--overlay);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fg);">
+          <div style="width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:17px;font-weight:600;">停用管理员 李俊？</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">停用后李俊会立即退出登录，且无法再登录管理后台。之前的操作记录保留，可随时重新启用。停用操作记入操作日志。</span></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;"><button style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">取消</button><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--destructive);color:#fff;font-size:14px;font-weight:500;font-family:inherit;">停用</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2f 电脑 · 至少保留一位启用的管理员（停用最后一位时）</div>
+        <div style="width:760px;height:560px;background:var(--overlay);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fg);">
+          <div style="width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:17px;font-weight:600;">无法停用</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">系统至少需要保留一位启用的管理员。请先新增或启用其他管理员，再执行此操作。</span></div>
+            <div style="display:flex;justify-content:flex-end;"><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">知道了</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:32px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2g 手机 · 新增管理员</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:16px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">新增管理员</span><span style="font-size:13px;color:var(--muted-fg);">新管理员拥有与你相同的全部权限</span></div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">姓名<span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:16px;font-weight:400;">赵磊</span></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">登录邮箱<span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:16px;font-weight:400;">zhaolei@fs-billing.com</span></label>
+            <div style="font-size:13px;color:var(--muted-fg);background:var(--muted);border-radius:8px;padding:10px 12px;line-height:1.5;">创建后系统生成临时密码，只显示一次。记入操作日志。</div>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">创建并生成临时密码</button>
+            <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2h 手机 · 重置密码结果</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:16px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">已为 李俊 生成临时密码</span><span style="font-size:13px;color:var(--muted-fg);">原密码已失效，李俊的所有登录已退出</span></div>
+            <div style="border:1px solid var(--border);background:var(--muted);border-radius:10px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:600;letter-spacing:.06em;text-align:center;">Kx7m-Qp42-Rt9w</div>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">复制临时密码</button>
+            <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);color:var(--warn-fg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;"><span style="font-weight:600;">关闭后无法再次查看。</span>请立即复制并通过安全渠道发给对方。已记入操作日志。</div>
+            <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">我已复制，关闭</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2i 手机 · 停用确认</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:16px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:17px;font-weight:600;">停用管理员 李俊？</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">停用后李俊会立即退出登录，且无法再登录管理后台。可随时重新启用。记入操作日志。</span></div>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--destructive);color:#fff;font-size:16px;font-weight:500;font-family:inherit;">停用</button>
+            <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">2j 手机 · 王敏的操作（不能停用自己）</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 16px 28px;display:flex;flex-direction:column;gap:4px;font-size:16px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;margin-bottom:8px;"></div>
+            <div style="display:flex;gap:12px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;">王</span><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-weight:600;font-size:15px;">王敏（你）</span><span style="font-size:12px;color:var(--muted-fg);">wangmin@fs-billing.com</span></div></div>
+            <div style="height:48px;display:flex;align-items:center;border-bottom:1px solid var(--border);">重置密码</div>
+            <div style="padding:12px 0;display:flex;flex-direction:column;gap:4px;color:var(--muted-fg);opacity:.7;"><span>停用</span><span style="font-size:13px;">不能停用自己的账号</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="全局元素" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">3 · 全局元素</h2>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;max-width:2400px;">
+      <sc-for list="{{ globals }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ g.label }}</div>
+          <div style="width:1200px;height:560px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+                <sc-for list="{{ g.nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+              </nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:14px;color:var(--muted-fg);">{{ g.crumb }}</span>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">◐</span><span style="height:36px;padding:0 10px 0 4px;border-radius:8px;display:flex;align-items:center;gap:8px;font-size:13px;background:{{ g.avatarBg }};"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 {{ g.caret }}</span></div>
+              </div>
+              <sc-if value="{{ g.is404 }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding-bottom:40px;">
+                  <span style="font-size:56px;font-weight:600;letter-spacing:-.03em;color:var(--primary);">404</span>
+                  <span style="font-size:18px;font-weight:600;">找不到这个页面</span>
+                  <span style="font-size:14px;color:var(--muted-fg);">页面不存在或链接已失效，请检查地址是否正确</span>
+                  <button style="margin-top:8px;height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">返回首页</button>
+                  <span style="font-size:12px;color:var(--muted-fg);">返回首页即回到「概览」</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ g.filler }}" hint-placeholder-val="{{ true }}">
+                <main style="padding:28px;display:flex;flex-direction:column;gap:20px;"><h1 style="margin:0;font-size:24px;font-weight:600;">{{ g.crumb }}</h1><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;"><div style="height:112px;border-radius:12px;background:var(--muted);"></div><div style="height:112px;border-radius:12px;background:var(--muted);"></div><div style="height:112px;border-radius:12px;background:var(--muted);"></div></div><div style="height:220px;border-radius:12px;background:var(--muted);"></div></main>
+              </sc-if>
+            </div>
+            <sc-if value="{{ g.menu }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;top:54px;right:28px;width:250px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:4px;font-size:14px;">
+                <div style="padding:10px 10px 12px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--border);margin-bottom:4px;"><span style="font-weight:600;">王敏</span><span style="font-size:12px;color:var(--muted-fg);">wangmin@fs-billing.com</span></div>
+                <div style="height:36px;padding:0 10px;border-radius:6px;display:flex;align-items:center;color:var(--neg);background:var(--muted);">退出登录</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ g.expired }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;">
+                <div style="width:420px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:20px;box-shadow:0 20px 50px rgba(0,0,0,.25);">
+                  <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:17px;font-weight:600;">登录已过期，请重新登录</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">为保障账户安全，长时间未操作后需要重新登录。登录后将回到当前页面。</span></div>
+                  <div style="display:flex;justify-content:flex-end;"><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">重新登录</button></div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          <span style="font-size:12px;color:#52525b;">{{ g.note }}</span>
+        </div>
+      </sc-for>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">3d 电脑 · 系统告警红点：有进行中 / 无</div>
+        <div style="display:flex;gap:24px;">
+          <sc-for list="{{ dotPair }}" as="p" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <aside style="width:232px;height:420px;background:var(--side);color:var(--fg);border:1px solid var(--border);border-radius:12px;padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+                <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+                  <sc-for list="{{ p.nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+                </nav>
+              </aside>
+              <span style="font-size:12px;color:#52525b;">{{ p.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:32px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">3e 手机 · 菜单抽屉（红点）</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;top:0;bottom:0;width:300px;background:var(--side);padding:56px 12px 24px;display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+            <nav style="display:flex;flex-direction:column;gap:2px;font-size:16px;">
+              <sc-for list="{{ navAdmins }}" as="n" hint-placeholder-count="8"><span style="height:44px;padding:0 12px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:8px;height:8px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">3f 手机 · 账号菜单</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 16px 28px;display:flex;flex-direction:column;gap:4px;font-size:16px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;margin-bottom:8px;"></div>
+            <div style="display:flex;gap:12px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;">王</span><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-weight:600;font-size:15px;">王敏</span><span style="font-size:12px;color:var(--muted-fg);">wangmin@fs-billing.com</span></div></div>
+            <div style="height:48px;display:flex;align-items:center;color:var(--neg);">退出登录</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">3g 手机 · 登录过期</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:16px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;"><span style="font-size:17px;font-weight:600;">登录已过期，请重新登录</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">为保障账户安全，长时间未操作后需要重新登录。登录后将回到当前页面。</span></div>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">重新登录</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">3h 手机 · 404</div>
+        <div style="width:390px;height:700px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);display:flex;flex-direction:column;">
+          <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+          <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></span><span style="font-size:10px;color:var(--primary);font-weight:500;">管理后台</span><span style="width:30px;height:30px;margin:5px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span></div>
+          <div style="flex:1;padding:0 24px 48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;">
+            <span style="font-size:48px;font-weight:600;letter-spacing:-.03em;color:var(--primary);">404</span>
+            <span style="font-size:18px;font-weight:600;">找不到这个页面</span>
+            <span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">页面不存在或链接已失效，请检查地址是否正确</span>
+            <button style="margin-top:12px;width:100%;height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">返回首页</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'light';
+    const items = ['概览', '租户', '待收款', '未归属话单', '账单', '系统告警', '操作日志', '管理员'];
+    const mkNav = (active, alert = true) => items.map(l => ({ label: l, bg: l === active ? 'var(--brand-soft)' : 'transparent', fg: l === active ? 'var(--primary)' : 'var(--muted-fg)', weight: l === active ? 500 : 400, dot: alert && l === '系统告警' ? 1 : 0 }));
+    const tones = { neg: ['var(--err-bd)', 'var(--err-bg)', 'var(--err-fg)'], warn: ['var(--warn-bd)', 'var(--warn-bg)', 'var(--warn-fg)'] };
+    const alert = (t, title, body) => { const [b, bg, f] = tones[t]; return { alert: true, alertBd: b, alertBg: bg, alertFg: f, alertTitle: title, alertBody: body }; };
+    const base = { email: 'name@fs-billing.com', emailColor: 'var(--muted-fg)', pwd: '请输入密码', pwdColor: 'var(--muted-fg)', pwdLs: 'normal', pwdBd: 'var(--input)', pwdRing: 'none', eye: '显示', fieldBg: 'transparent', btn: '登录', btnOp: 1, alert: false, expired: false, forgot: false };
+    const filled = { email: 'wangmin@fs-billing.com', emailColor: 'var(--fg)' };
+    const masked = { pwd: '••••••••••', pwdColor: 'var(--fg)', pwdLs: '2px' };
+    const login = [
+      { label: '1a 默认', mlabel: '1a 手机 · 默认' },
+      { label: '1b 显示密码 + 点击「忘记密码？」', mlabel: '1b 手机 · 显示密码 + 忘记密码', ...filled, pwd: 'Fsb#Admin26', pwdColor: 'var(--fg)', eye: '隐藏', forgot: true },
+      { label: '1c 账号或密码错误', mlabel: '1c 手机 · 账号或密码错误', ...filled, ...alert('neg', '登录邮箱或密码错误', '请检查后重新输入'), pwdBd: 'var(--neg)', pwdRing: '0 0 0 3px var(--err-bg)' },
+      { label: '1d 账号已停用', mlabel: '1d 手机 · 账号已停用', ...filled, ...masked, ...alert('neg', '该管理员账号已停用', '如需恢复，请联系其他管理员启用') },
+      { label: '1e 连续失败 5 次 · 锁定 15 分钟', mlabel: '1e 手机 · 锁定中', ...filled, ...masked, ...alert('warn', '登录失败次数过多，已暂时锁定', '请在 14分32秒 后重试'), fieldBg: 'var(--muted)', btn: '请在 14分32秒 后重试', btnOp: .5 },
+      { label: '1f 登录已过期（从其他页面跳转）', mlabel: '1f 手机 · 登录已过期', ...filled, expired: true },
+    ].map(s => ({ ...base, ...s }));
+    const st = on => on ? { status: '启用', stBd: 'var(--ok-bd)', stBg: 'var(--ok-bg)', stFg: 'var(--ok-fg)' } : { status: '已停用', stBd: 'var(--border)', stBg: 'var(--muted)', stFg: 'var(--muted-fg)' };
+    const admins = [
+      { name: '王敏', initial: '王', me: true, email: 'wangmin@fs-billing.com', ...st(true), last: '2026-09-29 09:12:40', lastColor: 'var(--fg)', action: '停用', actColor: 'var(--muted-fg)', cursor: 'not-allowed' },
+      { name: '李俊', initial: '李', me: false, email: 'lijun@fs-billing.com', ...st(true), last: '2026-09-28 18:47:05', lastColor: 'var(--fg)', action: '停用', actColor: 'var(--neg)', cursor: 'pointer' },
+      { name: '陈静', initial: '陈', me: false, email: 'chenjing@fs-billing.com', ...st(false), last: '2026-07-15 11:20:33', lastColor: 'var(--muted-fg)', action: '启用', actColor: 'var(--primary)', cursor: 'pointer' },
+    ];
+    const g = (label, crumb, active, x) => ({ label, crumb, nav: mkNav(active), avatarBg: 'transparent', caret: '▾', is404: false, filler: true, menu: false, expired: false, note: '', ...x });
+    const globals = [
+      g('3a 电脑 · 账号菜单（点击右上角头像）', '概览', '概览', { menu: true, avatarBg: 'var(--muted)', caret: '▴', note: '管理后台没有个人设置页；主题在顶部 ◐ 切换。' }),
+      g('3b 电脑 · 登录过期（操作时弹出）', '租户', '租户', { expired: true, note: '点击「重新登录」→ 登录页顶部提示（见 1f）→ 登录后回到原页面。' }),
+      g('3c 电脑 · 404', '找不到页面', '', { is404: true, filler: false }),
+    ];
+    const dotPair = [{ nav: mkNav('概览', true), note: '有进行中的告警 · 显示红点' }, { nav: mkNav('概览', false), note: '无进行中的告警 · 不显示' }];
+    return { theme, login, admins, globals, dotPair, navAdmins: mkNav('管理员') };
+  }
+}
+</script>
+</body>
+</html>

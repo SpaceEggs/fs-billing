@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+html,body{margin:0;padding:0;background:#d4d4d8;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:var(--primary,#2563eb);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;text-underline-offset:3px;}
+*{box-sizing:border-box;}
+input::placeholder{color:var(--muted-fg);}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--ring:#93c5fd;--primary:#2563eb;--primary-fg:#ffffff;--neg:#dc2626;--pos:#16a34a;--overlay:rgba(9,9,11,.45);--row-hover:#fafafa;--brand-soft:#eff6ff;--brand-bd:#bfdbfe;--hl:#fefce8;--side:#fafafa;--pop-shadow:0 8px 24px rgba(0,0,0,.12);
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--ring:#1d4ed8;--primary:#3b82f6;--primary-fg:#ffffff;--neg:#f87171;--pos:#4ade80;--overlay:rgba(0,0,0,.65);--row-hover:#141416;--brand-soft:rgba(59,130,246,.12);--brand-bd:rgba(59,130,246,.35);--hl:rgba(234,179,8,.10);--side:#0c0c0e;--pop-shadow:0 8px 24px rgba(0,0,0,.5);
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;padding:24px;display:flex;flex-direction:column;align-items:flex-start;gap:16px;width:max-content;min-width:100%;">
+  <div style="display:flex;align-items:center;gap:12px;font-size:13px;color:#3f3f46;">
+    <span style="font-weight:600;color:#18181b;">管理后台 · CSV 导入原型</span>
+    <span>从费率标签页点击「导入 CSV」开始</span>
+    <button onClick="{{ reset }}" style="height:28px;padding:0 10px;border:1px solid #a1a1aa;border-radius:6px;background:transparent;font-family:inherit;font-size:12px;color:#3f3f46;cursor:pointer;">重置演示数据</button>
+  </div>
+
+  <div style="width:1440px;height:900px;border-radius:12px;position:relative;overflow:hidden;background:var(--bg);color:var(--fg);display:flex;box-shadow:0 4px 24px rgba(0,0,0,.12);">
+    <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+      <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">概览</span>
+        <span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;background:var(--brand-soft);color:var(--primary);font-weight:500;">租户</span>
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">待收款</span>
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">未归属话单</span>
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">账单</span>
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">系统告警</span>
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">操作日志</span>
+        <span style="height:36px;padding:0 10px;display:flex;align-items:center;color:var(--muted-fg);">管理员</span>
+      </nav>
+    </aside>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+        <span style="font-size:14px;color:var(--muted-fg);">租户 / <span style="color:var(--fg);">ABC001</span></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onClick="{{ toggleTheme }}" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);cursor:pointer;">{{ themeIcon }}</button>
+          <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏</span>
+        </div>
+      </div>
+      <main style="flex:1;overflow:auto;padding:28px;display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;align-items:center;gap:10px;"><h1 style="margin:0;font-size:22px;font-weight:600;">深圳市某某科技有限公司</h1><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>透支中</span><span style="font-size:13px;color:var(--muted-fg);font-family:ui-monospace,Menlo,monospace;">ABC001 · CNY</span></div>
+        <div style="display:flex;gap:2px;border-bottom:1px solid var(--border);font-size:14px;">
+          <span style="padding:10px 12px;color:var(--muted-fg);">概况</span><span style="padding:10px 12px;color:var(--muted-fg);">余额流水</span><span style="padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid var(--primary);font-weight:600;">费率</span><span style="padding:10px 12px;color:var(--muted-fg);">话单</span><span style="padding:10px 12px;color:var(--muted-fg);">账单</span><span style="padding:10px 12px;color:var(--muted-fg);">设置</span><span style="padding:10px 12px;color:var(--muted-fg);">门户账号</span>
+        </div>
+
+        <sc-if value="{{ hasScheduled }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--brand-bd);background:var(--brand-soft);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;background:var(--primary);color:var(--primary-fg);">排定的新版本</span>
+              <span style="font-size:14px;font-variant-numeric:tabular-nums;"><span style="font-weight:600;">{{ schedAt }}</span> 起生效 · 新增 {{ cntAdd }} · 修改 {{ cntMod }} · 删除 {{ cntDel }}</span>
+              <span style="flex:1;"></span>
+              <a onClick="{{ toggleSchedDetail }}" style="font-size:13px;font-weight:500;">{{ schedToggleLabel }}</a>
+              <button onClick="{{ cancelSched }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;cursor:pointer;">取消排定</button>
+            </div>
+            <sc-if value="{{ schedDetail }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <sc-for list="{{ changes }}" as="c" hint-placeholder-count="6">
+                  <div style="display:grid;grid-template-columns:70px 70px 1fr 90px 24px 90px 70px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--border);font-size:13px;font-variant-numeric:tabular-nums;">
+                    <span style="display:inline-flex;align-items:center;justify-self:start;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:500;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }};">{{ c.tag }}</span>
+                    <span style="font-family:ui-monospace,Menlo,monospace;font-weight:600;">{{ c.prefix }}</span><span>{{ c.country }}</span>
+                    <span style="text-align:right;color:var(--muted-fg);text-decoration:{{ c.strike }};">{{ c.old }}</span><span style="text-align:center;color:var(--muted-fg);">{{ c.arrow }}</span><span style="text-align:right;font-weight:600;">{{ c.nu }}</span><span style="text-align:right;color:{{ c.pctColor }};">{{ c.pct }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasPendEdits }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--brand-bd);background:var(--brand-soft);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:12px;"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;background:var(--primary);color:var(--primary-fg);">排定的新版本 · 单条修改</span><span style="flex:1;"></span><button onClick="{{ cancelPendEdits }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;cursor:pointer;">取消排定</button></div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+              <sc-for list="{{ pendEdits }}" as="p" hint-placeholder-count="1">
+                <div style="display:grid;grid-template-columns:70px 1fr 90px 24px 150px 70px 200px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-variant-numeric:tabular-nums;">
+                  <span style="font-family:ui-monospace,Menlo,monospace;font-weight:600;">{{ p.prefix }}</span><span>{{ p.country }}</span><span style="text-align:right;color:var(--muted-fg);">{{ p.old }}</span><span style="text-align:center;color:var(--muted-fg);">→</span><span style="text-align:right;font-weight:600;">{{ p.nu }} 元/分钟</span><span style="text-align:right;color:{{ p.pctColor }};">{{ p.pct }}</span><span style="text-align:right;">{{ p.at }} 生效</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasFlash }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--ok-bd);background:var(--ok-bg);color:var(--ok-fg);border-radius:10px;padding:10px 14px;font-size:14px;display:flex;align-items:center;gap:10px;"><span style="font-weight:700;">✓</span><span>{{ flash }}</span><span style="flex:1;"></span><button onClick="{{ dismissFlash }}" style="border:none;background:transparent;color:inherit;cursor:pointer;font-size:13px;">关闭</button></div>
+        </sc-if>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input value="{{ q }}" onChange="{{ onQ }}" placeholder="搜索前缀或国家" style="height:36px;width:260px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);font-size:14px;font-family:inherit;outline:none;" style-focus="border-color:var(--primary);box-shadow:0 0 0 3px var(--ring);">
+          <span style="font-size:13px;color:var(--muted-fg);">当前生效版本 · {{ rateCount }} 条 · 元/分钟</span>
+          <span style="flex:1;"></span>
+          <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">复制到其他租户</button>
+          <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">导出 CSV</button>
+          <button onClick="{{ openDlg }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="opacity:.9;">导入 CSV</button>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+            <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;"><th style="text-align:left;font-weight:500;padding:10px 16px;width:120px;">前缀</th><th style="text-align:left;font-weight:500;padding:10px 12px;">国家/备注</th><th style="text-align:right;font-weight:500;padding:10px 12px;width:160px;">费率（元/分钟）</th><th style="text-align:left;font-weight:500;padding:10px 12px 10px 32px;">生效时间</th><th style="text-align:right;font-weight:500;padding:10px 16px;width:80px;"></th></tr></thead>
+            <tbody style="font-variant-numeric:tabular-nums;">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+                <tr style="border-top:1px solid var(--border);background:{{ r.bg }};" style-hover="background:var(--row-hover);">
+                  <td style="padding:10px 16px;font-family:ui-monospace,Menlo,monospace;font-weight:600;">{{ r.prefix }}</td>
+                  <td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;">{{ r.country }}<sc-if value="{{ r.hasTag }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:500;background:{{ r.tbg }};color:{{ r.tfg }};border:1px solid {{ r.tbd }};">{{ r.tag }}</span></sc-if></div></td>
+                  <td style="padding:10px 12px;text-align:right;"><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span style="font-weight:500;">{{ r.rate }}</span><sc-if value="{{ r.hasPending }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--primary);">{{ r.pending }}</span></sc-if></div></td>
+                  <td style="padding:10px 12px 10px 32px;color:var(--muted-fg);">{{ r.since }}</td>
+                  <td style="padding:10px 16px;text-align:right;"><a onClick="{{ r.edit }}" style="font-size:13px;">编辑</a></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <sc-if value="{{ dlg }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeDlg }}" style="position:absolute;inset:0;background:var(--overlay);z-index:50;display:flex;align-items:center;justify-content:center;">
+        <div onClick="{{ stop }}" style="width:720px;max-height:92%;overflow:visible;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative;">
+          <sc-if value="{{ step3 }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:32px 24px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+              <span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;">✓</span>
+              <sc-if value="{{ doneNow }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size:17px;font-weight:600;">已导入，已生效</span>
+                <span style="font-size:14px;color:var(--muted-fg);line-height:1.7;font-variant-numeric:tabular-nums;">新增 2 · 修改 3 · 删除 1<br>生效时间 <span style="color:var(--fg);font-weight:600;">{{ doneAt }}</span>，新呼叫按新费率计费<br>已记入操作日志</span>
+              </sc-if>
+              <sc-if value="{{ doneLater }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:17px;font-weight:600;">已导入，已排定新版本</span>
+                <span style="font-size:14px;color:var(--muted-fg);line-height:1.7;font-variant-numeric:tabular-nums;">新增 2 · 修改 3 · 删除 1<br>将于 <span style="color:var(--fg);font-weight:600;">{{ doneAt }}</span> 生效，此前继续使用当前费率<br>已记入操作日志</span>
+              </sc-if>
+            </div>
+            <div style="padding:0 24px 24px;display:flex;justify-content:center;"><button onClick="{{ finish }}" style="height:36px;padding:0 20px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">返回费率表</button></div>
+          </sc-if>
+
+          <div style="display:{{ headDisplay }};flex-direction:column;">
+            <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">导入费率表</span><span style="font-size:13px;color:var(--muted-fg);">ABC001 深圳市某某科技有限公司（CNY）</span></div><button onClick="{{ closeDlg }}" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;color:var(--muted-fg);cursor:pointer;">✕</button></div>
+            <div style="padding:16px 24px 0;display:flex;align-items:center;gap:8px;font-size:13px;">
+              <span style="display:flex;align-items:center;gap:6px;color:{{ d1.tc }};font-weight:{{ d1.w }};"><span style="width:20px;height:20px;border-radius:50%;background:{{ d1.bg }};color:{{ d1.fg }};border:1px solid {{ d1.bd }};font-size:11px;display:flex;align-items:center;justify-content:center;">{{ d1.label }}</span>上传</span><span style="flex:1;height:1px;background:var(--border);"></span>
+              <span style="display:flex;align-items:center;gap:6px;color:{{ d2.tc }};font-weight:{{ d2.w }};"><span style="width:20px;height:20px;border-radius:50%;background:{{ d2.bg }};color:{{ d2.fg }};border:1px solid {{ d2.bd }};font-size:11px;display:flex;align-items:center;justify-content:center;">{{ d2.label }}</span>预览与校验</span><span style="flex:1;height:1px;background:var(--border);"></span>
+              <span style="display:flex;align-items:center;gap:6px;color:{{ d3.tc }};font-weight:{{ d3.w }};"><span style="width:20px;height:20px;border-radius:50%;background:{{ d3.bg }};color:{{ d3.fg }};border:1px solid {{ d3.bd }};font-size:11px;display:flex;align-items:center;justify-content:center;">{{ d3.label }}</span>确认导入</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ step1 }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:18px;">
+              <sc-if value="{{ noFile }}" hint-placeholder-val="{{ true }}">
+                <div style="border:1.5px dashed var(--input);border-radius:10px;padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+                  <span style="width:40px;height:40px;border-radius:10px;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">⤒</span>
+                  <span style="font-size:14px;font-weight:500;">拖拽 CSV 文件到此处，或 <a>点击选择文件</a></span>
+                  <span style="font-size:12px;color:var(--muted-fg);">支持 UTF-8 / GBK 编码（Excel 默认保存格式即可），系统自动识别编码</span>
+                  <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
+                    <span style="font-size:12px;color:var(--muted-fg);font-family:ui-monospace,Menlo,monospace;">演示：</span>
+                    <button onClick="{{ pickGood }}" style="height:32px;padding:0 12px;border-radius:7px;border:1px dashed var(--ok-fg);background:var(--ok-bg);color:var(--ok-fg);font-size:13px;font-family:inherit;cursor:pointer;">正确的文件</button>
+                    <button onClick="{{ pickBad }}" style="height:32px;padding:0 12px;border-radius:7px;border:1px dashed var(--err-fg);background:var(--err-bg);color:var(--err-fg);font-size:13px;font-family:inherit;cursor:pointer;">有错误的文件</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasFile }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
+                  <span style="width:36px;height:36px;border-radius:8px;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:ui-monospace,Menlo,monospace;">CSV</span>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ fileName }}</span><span style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ fileMeta }}</span></div>
+                  <a onClick="{{ clearFile }}" style="font-size:13px;">更换文件</a>
+                </div>
+              </sc-if>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:10px 12px;border-radius:8px;background:var(--muted);">
+                <span style="color:var(--muted-fg);">格式：<span style="font-family:ui-monospace,Menlo,monospace;color:var(--fg);">prefix,country,rate</span>　覆盖整张费率表</span>
+                <a style="font-weight:500;">下载 CSV 模板</a>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;position:relative;">生效时间
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-weight:400;">
+                  <button onClick="{{ setNow }}" style="text-align:left;border:{{ rNow.bw }} solid {{ rNow.bd }};background:{{ rNow.bg }};color:var(--fg);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;font-family:inherit;cursor:pointer;"><span style="width:16px;height:16px;border-radius:50%;border:{{ rNow.dot }};margin-top:2px;flex-shrink:0;"></span><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">立即生效</span><span style="font-size:12px;color:var(--muted-fg);">确认导入后马上用于新呼叫</span></span></button>
+                  <button onClick="{{ setLater }}" style="text-align:left;border:{{ rLater.bw }} solid {{ rLater.bd }};background:{{ rLater.bg }};color:var(--fg);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;font-family:inherit;cursor:pointer;"><span style="width:16px;height:16px;border-radius:50%;border:{{ rLater.dot }};margin-top:2px;flex-shrink:0;"></span><span style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">指定时间生效</span><span style="font-size:12px;color:var(--muted-fg);">到点前继续使用当前费率</span></span></button>
+                </div>
+                <sc-if value="{{ effLater }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ togglePicker }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--primary);background:transparent;color:var(--fg);display:flex;align-items:center;justify-content:space-between;font-size:14px;font-family:inherit;font-variant-numeric:tabular-nums;cursor:pointer;"><span>{{ schedStr }}</span><span style="font-size:12px;color:var(--muted-fg);">北京时间 ▦</span></button>
+                </sc-if>
+                <sc-if value="{{ picker }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:0;top:calc(100% + 6px);width:340px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--pop-shadow);padding:14px;display:flex;flex-direction:column;gap:10px;z-index:10;font-weight:400;">
+                    <div style="display:flex;justify-content:center;font-size:14px;font-weight:600;">2026年10月</div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);font-size:12px;color:var(--muted-fg);text-align:center;"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;font-variant-numeric:tabular-nums;">
+                      <sc-for list="{{ cal }}" as="c" hint-placeholder-count="34">
+                        <button onClick="{{ c.pick }}" style="height:32px;border:none;border-radius:7px;font-family:inherit;font-size:13px;background:{{ c.bg }};color:{{ c.fg }};font-weight:{{ c.w }};cursor:pointer;">{{ c.n }}</button>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;border-top:1px solid var(--border);padding-top:10px;font-size:13px;">
+                      <span style="color:var(--muted-fg);margin-right:2px;">时间</span>
+                      <sc-for list="{{ times }}" as="t" hint-placeholder-count="4">
+                        <button onClick="{{ t.pick }}" style="height:30px;padding:0 8px;border-radius:6px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};font-size:12px;font-family:inherit;font-variant-numeric:tabular-nums;cursor:pointer;">{{ t.t }}</button>
+                      </sc-for>
+                      <span style="flex:1;"></span>
+                      <button onClick="{{ closePicker }}" style="height:30px;padding:0 12px;border-radius:6px;border:none;background:var(--primary);color:var(--primary-fg);font-size:13px;font-family:inherit;cursor:pointer;">确定</button>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+              <button onClick="{{ closeDlg }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">取消</button>
+              <button onClick="{{ toStep2 }}" disabled="{{ noFile }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;opacity:{{ nextOp }};">下一步：预览</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ step2Good }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;align-items:center;gap:10px;font-size:14px;"><span style="width:20px;height:20px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">✓</span><span style="font-weight:600;">校验通过</span><span style="color:var(--muted-fg);">将新增 <span style="color:var(--ok-fg);font-weight:600;">2</span> 条、修改 <span style="color:var(--primary);font-weight:600;">3</span> 条、删除 <span style="color:var(--err-fg);font-weight:600;">1</span> 条，其余 {{ unchanged }} 条不变</span></div>
+              <div style="border:1px solid var(--err-bd);background:var(--err-bg);color:var(--err-fg);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:14px;"><span style="width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">!</span><span><span style="font-weight:600;">删除后，拨打这些前缀的呼叫将被拒绝</span>：1876 牙买加</span></div>
+              <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                  <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;"><th style="text-align:left;font-weight:500;padding:9px 16px;width:80px;">变动</th><th style="text-align:left;font-weight:500;padding:9px 12px;">前缀</th><th style="text-align:left;font-weight:500;padding:9px 12px;">国家/备注</th><th style="text-align:right;font-weight:500;padding:9px 12px;">当前费率（元/分钟）</th><th style="width:20px;"></th><th style="text-align:right;font-weight:500;padding:9px 12px;">新费率（元/分钟）</th><th style="text-align:right;font-weight:500;padding:9px 16px;">涨跌</th></tr></thead>
+                  <tbody style="font-variant-numeric:tabular-nums;">
+                    <sc-for list="{{ changes }}" as="c" hint-placeholder-count="6">
+                      <tr style="border-top:1px solid var(--border);background:{{ c.rowBg }};"><td style="padding:10px 16px;"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.bd }};">{{ c.tag }}</span></td><td style="padding:10px 12px;font-family:ui-monospace,Menlo,monospace;font-weight:600;">{{ c.prefix }}</td><td style="padding:10px 12px;">{{ c.country }}</td><td style="padding:10px 12px;text-align:right;color:var(--muted-fg);text-decoration:{{ c.strike }};">{{ c.old }}</td><td style="text-align:center;color:var(--muted-fg);">{{ c.arrow }}</td><td style="padding:10px 12px;text-align:right;font-weight:600;">{{ c.nu }}</td><td style="padding:10px 16px;text-align:right;color:{{ c.pctColor }};">{{ c.pct }}</td></tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:10px 14px;border-radius:8px;background:var(--muted);font-variant-numeric:tabular-nums;"><span style="color:var(--muted-fg);">生效时间</span><span style="font-weight:600;">{{ effectLabel }}</span></div>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:space-between;gap:8px;">
+              <button onClick="{{ back1 }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">上一步</button>
+              <div style="display:flex;gap:8px;"><button onClick="{{ closeDlg }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">取消</button><button onClick="{{ confirm }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">确认导入</button></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ step2Bad }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+              <div style="border:1px solid var(--err-bd);background:var(--err-bg);border-radius:10px;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;">
+                <span style="width:20px;height:20px;border-radius:50%;border:1.5px solid var(--err-fg);color:var(--err-fg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px;">!</span>
+                <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:15px;font-weight:600;color:var(--err-fg);">发现 4 处错误，文件未导入</span><span style="font-size:13px;">有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。</span></div>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                  <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;"><th style="text-align:left;font-weight:500;padding:9px 16px;width:90px;">行号</th><th style="text-align:left;font-weight:500;padding:9px 12px;">错误原因</th><th style="text-align:left;font-weight:500;padding:9px 16px;">原始内容</th></tr></thead>
+                  <tbody style="font-variant-numeric:tabular-nums;">
+                    <sc-for list="{{ errors }}" as="e" hint-placeholder-count="4">
+                      <tr style="border-top:1px solid var(--border);"><td style="padding:11px 16px;font-weight:600;white-space:nowrap;">第 {{ e.line }} 行</td><td style="padding:11px 12px;color:var(--err-fg);">{{ e.msg }}</td><td style="padding:11px 16px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted-fg);">{{ e.raw }}</td></tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+              <button onClick="{{ closeDlg }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">取消</button>
+              <button onClick="{{ reupload }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">重新上传</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ editOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeEdit }}" style="position:absolute;inset:0;background:var(--overlay);z-index:60;display:flex;align-items:center;justify-content:center;">
+        <div onClick="{{ stop }}" style="width:500px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative;">
+          <sc-if value="{{ edForm }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">编辑费率</span><span style="font-size:13px;color:var(--muted-fg);">ABC001 · CNY</span></div><button onClick="{{ closeEdit }}" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;color:var(--muted-fg);cursor:pointer;">✕</button></div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+              <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">前缀<div style="height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:var(--muted);display:flex;align-items:center;font-family:ui-monospace,Menlo,monospace;font-weight:600;color:var(--muted-fg);">{{ edPrefix }}</div></div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">国家/备注<div style="height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-weight:400;">{{ edCountry }}</div></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">费率（元/分钟）
+                <div style="height:40px;border-radius:8px;border:1px solid {{ edBd }};box-shadow:0 0 0 3px var(--ring);display:flex;align-items:center;font-weight:400;overflow:hidden;"><input value="{{ edValue }}" onChange="{{ onEdValue }}" inputmode="decimal" style="flex:1;min-width:0;height:100%;border:none;background:transparent;color:var(--fg);padding:0 12px;text-align:right;font-size:16px;font-family:inherit;font-variant-numeric:tabular-nums;outline:none;"><span style="padding:0 12px;color:var(--muted-fg);border-left:1px solid var(--input);height:100%;display:flex;align-items:center;font-size:13px;">元/分钟</span></div>
+                <sc-if value="{{ edHasErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;font-weight:400;color:var(--err-fg);">{{ edErr }}</span></sc-if>
+                <span style="font-size:12px;font-weight:400;color:var(--muted-fg);font-variant-numeric:tabular-nums;">当前 {{ edOld }} 元/分钟 · 最多 4 位小数，不能为负</span>
+              </div>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+              <button onClick="{{ closeEdit }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">取消</button>
+              <button onClick="{{ edNext }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">下一步：确认</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ edConfirm }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:20px 24px 0;display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">确认修改费率</span><span style="font-size:13px;color:var(--muted-fg);">ABC001 · {{ edPrefix }} {{ edCountry }}</span></div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+              <div style="border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;align-items:center;justify-content:center;gap:16px;font-variant-numeric:tabular-nums;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:12px;color:var(--muted-fg);">旧费率</span><span style="font-size:22px;color:var(--muted-fg);text-decoration:line-through;">{{ edOld }}</span></div>
+                <span style="font-size:20px;color:var(--muted-fg);">→</span>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:12px;color:var(--muted-fg);">新费率</span><span style="font-size:26px;font-weight:700;">{{ edNew }}</span></div>
+                <span style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:6px;font-size:13px;font-weight:600;background:{{ edPctBg }};color:{{ edPctFg }};border:1px solid {{ edPctBd }};">{{ edPct }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;position:relative;">生效时间
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-weight:400;">
+                  <button onClick="{{ edSetNow }}" style="border:{{ eNow.bw }} solid {{ eNow.bd }};background:{{ eNow.bg }};color:var(--fg);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;font-family:inherit;font-size:14px;cursor:pointer;"><span style="width:16px;height:16px;border-radius:50%;border:{{ eNow.dot }};flex-shrink:0;"></span>立即生效</button>
+                  <button onClick="{{ edSetLater }}" style="border:{{ eLater.bw }} solid {{ eLater.bd }};background:{{ eLater.bg }};color:var(--fg);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:center;font-family:inherit;font-size:14px;cursor:pointer;"><span style="width:16px;height:16px;border-radius:50%;border:{{ eLater.dot }};flex-shrink:0;"></span>指定时间生效</button>
+                </div>
+                <sc-if value="{{ edLater }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ edTogglePicker }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--primary);background:transparent;color:var(--fg);display:flex;align-items:center;justify-content:space-between;font-size:14px;font-family:inherit;font-variant-numeric:tabular-nums;cursor:pointer;"><span>{{ edAt }}</span><span style="font-size:12px;color:var(--muted-fg);">北京时间 ▦</span></button>
+                </sc-if>
+                <sc-if value="{{ edPicker }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;left:0;top:calc(100% + 6px);width:340px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--pop-shadow);padding:14px;display:flex;flex-direction:column;gap:10px;z-index:10;font-weight:400;">
+                    <div style="display:flex;justify-content:center;font-size:14px;font-weight:600;">2026年10月</div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);font-size:12px;color:var(--muted-fg);text-align:center;"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+                    <div style="display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;font-variant-numeric:tabular-nums;">
+                      <sc-for list="{{ edCal }}" as="c" hint-placeholder-count="34"><button onClick="{{ c.pick }}" style="height:32px;border:none;border-radius:7px;font-family:inherit;font-size:13px;background:{{ c.bg }};color:{{ c.fg }};font-weight:{{ c.w }};cursor:pointer;">{{ c.n }}</button></sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;border-top:1px solid var(--border);padding-top:10px;font-size:13px;">
+                      <span style="color:var(--muted-fg);margin-right:2px;">时间</span>
+                      <sc-for list="{{ edTimes }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.pick }}" style="height:30px;padding:0 8px;border-radius:6px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};font-size:12px;font-family:inherit;font-variant-numeric:tabular-nums;cursor:pointer;">{{ t.t }}</button></sc-for>
+                      <span style="flex:1;"></span>
+                      <button onClick="{{ edClosePicker }}" style="height:30px;padding:0 12px;border-radius:6px;border:none;background:var(--primary);color:var(--primary-fg);font-size:13px;font-family:inherit;cursor:pointer;">确定</button>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="font-size:13px;color:var(--muted-fg);line-height:1.6;">已产生的话单和账单不受影响。将记入操作日志。</div>
+            </div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+              <button onClick="{{ edBack }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">返回修改</button>
+              <button onClick="{{ edConfirmNow }}" style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">确认修改</button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const BASE = [['1', '美国/加拿大', 0.01], ['1876', '牙买加', 0.25], ['44', '英国', 0.02], ['447', '英国手机', 0.045], ['65', '新加坡', 0.028], ['81', '日本', 0.035], ['852', '中国香港', 0.03], ['86', '中国', 0.05], ['60', '马来西亚', 0.032], ['63', '菲律宾', 0.068], ['66', '泰国', 0.041], ['82', '韩国', 0.029], ['84', '越南', 0.072], ['886', '中国台湾', 0.031]]
+  .map(([prefix, country, rate]) => ({ prefix, country, rate, since: '2026-08-12 10:30:00' }));
+const CHANGES = [['add', '33', '法国', null, 0.022], ['add', '49', '德国', null, 0.023], ['mod', '447', '英国手机', 0.045, 0.048], ['mod', '81', '日本', 0.035, 0.033], ['mod', '65', '新加坡', 0.028, 0.03], ['del', '1876', '牙买加', 0.25, null]];
+const ERRORS = [['12', '前缀只能包含数字', '44-7,英国手机,0.0480'], ['37', '费率不能为负数', '852,中国香港,-0.0300'], ['45', '前缀 447 重复', '447,英国手机,0.0450'], ['58', '费率小数位超过 4 位', '81,日本,0.03315']];
+const fresh = () => ({ edit: null, pendEdits: [], rates: BASE, sched: null, hl: [], flash: '', q: '', dlg: false, step: 1, file: null, effect: 'now', day: 1, time: '00:00', picker: false, schedDetail: false });
+
+class Component extends DCLogic {
+  state = { theme: 'light', ...fresh() };
+  renderVals() {
+    const s = this.state, set = p => this.setState(p);
+    const p2 = n => String(n).padStart(2, '0');
+    const T = { add: ['新增', 'var(--ok-bg)', 'var(--ok-fg)', 'var(--ok-bd)'], mod: ['修改', 'var(--brand-soft)', 'var(--primary)', 'var(--brand-bd)'], del: ['删除', 'var(--err-bg)', 'var(--err-fg)', 'var(--err-bd)'] };
+    const changes = CHANGES.map(([k, prefix, country, o, n]) => {
+      const pct = o != null && n != null ? (n - o) / o * 100 : null;
+      return { k, tag: T[k][0], bg: T[k][1], fg: T[k][2], bd: T[k][3], prefix, country, oN: o, nN: n,
+        old: o != null ? o.toFixed(4) : '—', nu: n != null ? n.toFixed(4) : '—', strike: k === 'del' ? 'line-through' : 'none', arrow: k === 'mod' ? '→' : '',
+        pct: pct == null ? '' : (pct > 0 ? '+' : '') + pct.toFixed(1) + '%', pctColor: pct > 0 ? 'var(--neg)' : 'var(--pos)', rowBg: k === 'del' ? 'var(--err-bg)' : 'transparent' };
+    });
+    const nowStr = () => { const d = new Date(); return `2026-09-29 ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; };
+    const schedStr = `2026-10-${p2(s.day)} ${s.time}:00`;
+    const sched = s.sched;
+    const pendMap = {};
+    if (sched) changes.forEach(c => { pendMap[c.prefix] = c; });
+    const q = s.q.trim();
+    const rows = s.rates.filter(r => !q || r.prefix.startsWith(q) || r.country.includes(q)).sort((a, b) => a.prefix < b.prefix ? -1 : 1).map(r => {
+      const hl = s.hl.find(h => h.prefix === r.prefix), pc = pendMap[r.prefix];
+      const tagSrc = hl ? T[hl.k] : null;
+      return { prefix: r.prefix, country: r.country, rate: r.rate.toFixed(4), since: r.since,
+        bg: hl ? 'var(--hl)' : 'transparent', hasTag: !!hl, tag: hl ? (hl.k === 'mod' ? `已修改 · 原 ${hl.old}` : '新增') : '', tbg: tagSrc ? tagSrc[1] : '', tfg: tagSrc ? tagSrc[2] : '', tbd: tagSrc ? tagSrc[3] : '',
+        hasPending: !!pc, pending: pc ? (pc.k === 'del' ? `${sched.at.slice(5, 16)} 起删除` : `${sched.at.slice(5, 16)} 起 ${pc.nu}`) : '' };
+    });
+    const cur = s.rates.length, fileRows = cur + 2 - 1;
+    const good = s.file === 'good', bad = s.file === 'bad';
+    const cal = [{}, {}, {}].map(() => ({ n: '', bg: 'transparent', fg: 'var(--fg)', w: 400, pick: () => {} }));
+    for (let d = 1; d <= 31; d++) cal.push({ n: d, bg: d === s.day ? 'var(--primary)' : 'transparent', fg: d === s.day ? 'var(--primary-fg)' : 'var(--fg)', w: d === s.day ? 600 : 400, pick: () => set({ day: d }) });
+    const times = ['00:00', '06:00', '12:00', '18:00'].map(t => ({ t, bg: t === s.time ? 'var(--brand-soft)' : 'transparent', fg: t === s.time ? 'var(--primary)' : 'var(--fg)', bd: t === s.time ? 'var(--primary)' : 'var(--input)', pick: () => set({ time: t }) }));
+    const stepDot = (n) => {
+      const done = s.step > n, act = s.step === n, err = act && n === 2 && bad;
+      return { bg: err ? 'var(--err-fg)' : act ? 'var(--primary)' : done ? 'var(--brand-soft)' : 'transparent', fg: err ? '#fff' : act ? 'var(--primary-fg)' : done ? 'var(--primary)' : 'var(--muted-fg)',
+        bd: act || done || err ? 'transparent' : 'var(--input)', label: err ? '!' : done ? '✓' : String(n), tc: err ? 'var(--err-fg)' : act ? 'var(--fg)' : 'var(--muted-fg)', w: act ? 600 : 400 };
+    };
+    const effectLabel = s.effect === 'now' ? '立即生效（确认导入后）' : `${schedStr} 起（北京时间）`;
+    const ed = s.edit;
+    let ev = { editOpen: !!ed };
+    const pendEdits = s.pendEdits || [];
+    if (ed) {
+      const base = s.rates.find(r => r.prefix === ed.prefix);
+      const o = base.rate, txt = String(ed.value).trim(), n = Number(txt);
+      const dec = (txt.split('.')[1] || '').length;
+      const err = txt === '' || isNaN(n) ? '请输入费率' : n < 0 ? '费率不能为负数' : dec > 4 ? '小数不超过 4 位' : n === o ? '新费率与当前费率相同' : '';
+      const pct = !err ? (n - o) / o * 100 : 0;
+      const edAt = `2026-10-${p2(ed.day)} ${ed.time}:00`;
+      const upd = p => set({ edit: { ...s.edit, ...p } });
+      ev = {
+        editOpen: true, edPrefix: ed.prefix, edCountry: base.country, edOld: o.toFixed(4), edValue: ed.value,
+        edForm: ed.step === 'form', edConfirm: ed.step === 'confirm', edErr: ed.showErr ? err : '', edHasErr: !!(ed.showErr && err),
+        edBd: ed.showErr && err ? 'var(--err-fg)' : 'var(--primary)',
+        edNew: !err ? n.toFixed(4) : '', edPct: !err ? (pct > 0 ? '涨 +' : '降 ') + pct.toFixed(1) + '%' : '',
+        edPctBg: pct > 0 ? 'var(--err-bg)' : 'var(--ok-bg)', edPctFg: pct > 0 ? 'var(--err-fg)' : 'var(--ok-fg)', edPctBd: pct > 0 ? 'var(--err-bd)' : 'var(--ok-bd)',
+        edNow: ed.effect === 'now', edLater: ed.effect === 'later', edAt, edPicker: ed.effect === 'later' && ed.picker,
+        eNow: ed.effect === 'now' ? { bd: 'var(--primary)', bg: 'var(--brand-soft)', dot: '5px solid var(--primary)', bw: '1.5px' } : { bd: 'var(--input)', bg: 'transparent', dot: '1.5px solid var(--input)', bw: '1px' },
+        eLater: ed.effect === 'later' ? { bd: 'var(--primary)', bg: 'var(--brand-soft)', dot: '5px solid var(--primary)', bw: '1.5px' } : { bd: 'var(--input)', bg: 'transparent', dot: '1.5px solid var(--input)', bw: '1px' },
+        edCal: cal.map(c => ({ ...c, bg: c.n === ed.day ? 'var(--primary)' : 'transparent', fg: c.n === ed.day ? 'var(--primary-fg)' : 'var(--fg)', w: c.n === ed.day ? 600 : 400, pick: c.n ? () => upd({ day: c.n }) : () => {} })),
+        edTimes: ['00:00', '06:00', '12:00', '18:00'].map(t => ({ t, bg: t === ed.time ? 'var(--brand-soft)' : 'transparent', fg: t === ed.time ? 'var(--primary)' : 'var(--fg)', bd: t === ed.time ? 'var(--primary)' : 'var(--input)', pick: () => upd({ time: t }) })),
+        onEdValue: e => upd({ value: e.target.value, showErr: false }),
+        edNext: () => err ? upd({ showErr: true }) : upd({ step: 'confirm' }),
+        edBack: () => upd({ step: 'form' }),
+        edSetNow: () => upd({ effect: 'now', picker: false }), edSetLater: () => upd({ effect: 'later', picker: true }),
+        edTogglePicker: () => upd({ picker: !ed.picker }), edClosePicker: () => upd({ picker: false }),
+        edConfirmNow: () => {
+          if (ed.effect === 'now') {
+            const at = nowStr();
+            set({ edit: null, rates: s.rates.map(r => r.prefix === ed.prefix ? { ...r, rate: n, since: at } : r), hl: [...s.hl.filter(h => h.prefix !== ed.prefix), { prefix: ed.prefix, k: 'mod', old: o.toFixed(4) }], flash: `${ed.prefix} ${base.country} 费率已改为 ${n.toFixed(4)} 元/分钟（${(pct > 0 ? '+' : '') + pct.toFixed(1)}%），已记入操作日志` });
+          } else {
+            set({ edit: null, pendEdits: [...pendEdits.filter(p => p.prefix !== ed.prefix), { prefix: ed.prefix, country: base.country, old: o.toFixed(4), nu: n.toFixed(4), pct: (pct > 0 ? '+' : '') + pct.toFixed(1) + '%', pctColor: pct > 0 ? 'var(--neg)' : 'var(--pos)', at: edAt }], flash: `已排定：${ed.prefix} ${base.country} 将于 ${edAt} 起改为 ${n.toFixed(4)} 元/分钟，已记入操作日志` });
+          }
+        },
+        closeEdit: () => set({ edit: null }),
+      };
+    }
+    const pendMap2 = {}; pendEdits.forEach(p => { pendMap2[p.prefix] = p; });
+    rows.forEach(r => {
+      const raw = s.rates.find(x => x.prefix === r.prefix);
+      r.edit = () => set({ edit: { prefix: r.prefix, value: raw.rate.toFixed(4), step: 'form', effect: 'now', day: 1, time: '00:00', picker: false, showErr: false } });
+      const pe = pendMap2[r.prefix];
+      if (pe && !r.hasPending) { r.hasPending = true; r.pending = `${pe.at.slice(5, 16)} 起 ${pe.nu}`; r.bg = 'var(--brand-soft)'; }
+    });
+    return {
+      ...ev, hasPendEdits: pendEdits.length > 0, pendEdits, cancelPendEdits: () => set({ pendEdits: [], flash: '已取消排定的单条修改，已记入操作日志' }),
+      theme: s.theme, themeIcon: s.theme === 'light' ? '☾' : '☀', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
+      reset: () => set(fresh()), q: s.q, onQ: e => set({ q: e.target.value }), rows, rateCount: cur, changes,
+      hasScheduled: !!sched, schedAt: sched ? sched.at : '', cntAdd: 2, cntMod: 3, cntDel: 1,
+      schedDetail: s.schedDetail, schedToggleLabel: s.schedDetail ? '收起变动' : '查看变动', toggleSchedDetail: () => set({ schedDetail: !s.schedDetail }),
+      cancelSched: () => set({ sched: null, flash: '已取消排定的新版本，已记入操作日志', schedDetail: false }),
+      hasFlash: !!s.flash, flash: s.flash, dismissFlash: () => set({ flash: '' }),
+      openDlg: () => set({ dlg: true, step: 1, file: null, effect: 'now', day: 1, time: '00:00', picker: false }),
+      closeDlg: () => set({ dlg: false, picker: false }), stop: e => e.stopPropagation(),
+      dlg: s.dlg, step1: s.step === 1, step2: s.step === 2, step3: s.step === 3, d1: stepDot(1), d2: stepDot(2), d3: stepDot(3),
+      noFile: !s.file, hasFile: !!s.file, nextOp: s.file ? 1 : 0.5, headDisplay: s.step === 3 ? 'none' : 'flex',
+      step2Good: s.step === 2 && good, step2Bad: s.step === 2 && bad,
+      fileName: good ? 'ABC001_费率_2026-10.csv' : '费率_修订版.csv', fileMeta: good ? `8.2 KB · ${fileRows} 行 · 已识别编码 GBK` : '8.6 KB · 92 行 · 已识别编码 UTF-8',
+      pickGood: () => set({ file: 'good' }), pickBad: () => set({ file: 'bad' }), clearFile: () => set({ file: null }),
+      effNow: s.effect === 'now', effLater: s.effect === 'later',
+      rNow: s.effect === 'now' ? { bd: 'var(--primary)', bg: 'var(--brand-soft)', dot: '5px solid var(--primary)', bw: '1.5px' } : { bd: 'var(--input)', bg: 'transparent', dot: '1.5px solid var(--input)', bw: '1px' },
+      rLater: s.effect === 'later' ? { bd: 'var(--primary)', bg: 'var(--brand-soft)', dot: '5px solid var(--primary)', bw: '1.5px' } : { bd: 'var(--input)', bg: 'transparent', dot: '1.5px solid var(--input)', bw: '1px' },
+      setNow: () => set({ effect: 'now', picker: false }), setLater: () => set({ effect: 'later', picker: true }),
+      schedStr, picker: s.picker && s.effect === 'later', togglePicker: () => set({ picker: !s.picker }), closePicker: () => set({ picker: false }), cal, times,
+      toStep2: () => s.file && set({ step: 2, picker: false }), back1: () => set({ step: 1 }), reupload: () => set({ step: 1, file: null }),
+      good, bad, unchanged: cur - 4, effectLabel, errors: ERRORS.map(([line, msg, raw]) => ({ line, msg, raw })),
+      confirm: () => {
+        if (s.effect === 'now') {
+          const at = nowStr();
+          let rates = s.rates.filter(r => r.prefix !== '1876').map(r => { const c = changes.find(x => x.prefix === r.prefix && x.k === 'mod'); return c ? { ...r, rate: c.nN, since: at } : r; });
+          rates = [...rates, { prefix: '33', country: '法国', rate: 0.022, since: at }, { prefix: '49', country: '德国', rate: 0.023, since: at }];
+          const hl = changes.filter(c => c.k !== 'del').map(c => ({ prefix: c.prefix, k: c.k, old: c.old }));
+          set({ step: 3, rates, hl, sched: null, doneAt: at });
+        } else set({ step: 3, sched: { at: schedStr }, hl: [], doneAt: schedStr });
+      },
+      doneNow: s.effect === 'now', doneLater: s.effect === 'later', doneAt: s.doneAt || '',
+      finish: () => set({ dlg: false, q: '', flash: s.effect === 'now' ? '费率表已更新：新增 2 · 修改 3 · 删除 1，变动的行已高亮' : `已排定新版本，将于 ${schedStr} 生效`, schedDetail: s.effect === 'later' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

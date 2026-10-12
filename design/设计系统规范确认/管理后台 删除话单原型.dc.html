@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+html,body{margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg,#fff);}
+a{color:var(--primary,#2563eb);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;text-underline-offset:3px;}
+*{box-sizing:border-box;}
+input{font-family:inherit;}
+input:focus{outline:none;}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--primary:#2563eb;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#dc2626;--pos:#16a34a;--overlay:rgba(9,9,11,.45);--row-hover:#fafafa;--brand-soft:#eff6ff;--brand-bd:#bfdbfe;--side:#fafafa;
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;--off-bg:#f4f4f5;--off-fg:#52525b;--off-bd:#e4e4e7;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--primary:#3b82f6;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#f87171;--pos:#4ade80;--overlay:rgba(0,0,0,.65);--row-hover:#141416;--brand-soft:rgba(59,130,246,.12);--brand-bd:rgba(59,130,246,.35);--side:#0c0c0e;
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);--off-bg:#1f1f23;--off-fg:#a1a1aa;--off-bd:#3f3f46;}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;">
+  <div style="height:44px;flex-shrink:0;background:#18181b;color:#fafafa;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:13px;gap:12px;">
+    <span>演示 · 删除话单流程（ABC001）· 状态：{{ demoState }}</span>
+    <button onClick="{{ reset }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid #3f3f46;background:transparent;color:#fafafa;font-size:13px;font-family:inherit;cursor:pointer;" style-hover="background:#27272a;">重置演示数据</button>
+  </div>
+  <div style="flex:1;display:flex;min-height:0;">
+    <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+      <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+      </nav>
+    </aside>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:14px;color:var(--muted-fg);"><a>租户</a> / ABC001</span>
+        <div style="display:flex;align-items:center;gap:8px;"><span onClick="{{ toggleTheme }}" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;">◐</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+      </div>
+      <main style="padding:28px;display:flex;flex-direction:column;gap:24px;max-width:1240px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">深圳市某某科技有限公司</h1><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>透支中</span></div>
+            <div style="display:flex;gap:14px;font-size:13px;color:var(--muted-fg);"><span style="font-family:ui-monospace,Menlo,monospace;color:var(--fg);">ABC001</span><span>CNY</span><span>创建于 2026-08-12</span><span>当前余额 <span style="color:var(--neg);font-weight:600;">-¥35.20</span></span></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">停用</button>
+            <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">编辑</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">余额操作</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);font-size:14px;overflow-x:auto;">
+          <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="7"><span onClick="{{ tb.onClick }}" style="padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-weight:{{ tb.weight }};cursor:{{ tb.cursor }};white-space:nowrap;opacity:{{ tb.op }};">{{ tb.label }}</span></sc-for>
+        </div>
+
+        <sc-if value="{{ isCalls }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+              <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">月份</span>
+                <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:13px;height:36px;">
+                  <sc-for list="{{ monthTabs }}" as="m" hint-placeholder-count="2"><span onClick="{{ m.onClick }}" style="padding:0 12px;display:flex;align-items:center;border-radius:6px;background:{{ m.bg }};color:{{ m.fg }};font-weight:{{ m.w }};box-shadow:{{ m.sh }};cursor:pointer;">{{ m.label }}</span></sc-for>
+                </div>
+              </div>
+              <span style="flex:1;"></span>
+              <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;opacity:{{ exportOp }};">导出 CSV</button>
+              <button onClick="{{ openDlg }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--err-bd);background:var(--bg);color:var(--neg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="background:var(--err-bg);">删除话单</button>
+            </div>
+            <sc-if value="{{ showRows }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;gap:32px;padding:14px 20px;border:1px solid var(--border);border-radius:10px;background:var(--muted);font-variant-numeric:tabular-nums;flex-wrap:wrap;">
+                  <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">通话数</span><span style="font-size:18px;font-weight:600;">{{ sum.n }}</span></div>
+                  <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">总计费</span><span style="font-size:18px;font-weight:600;">{{ sum.mins }}</span></div>
+                  <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">总费用</span><span style="font-size:18px;font-weight:600;">{{ sum.fee }}</span></div>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:10px;overflow-x:auto;">
+                  <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                    <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                      <th style="text-align:left;font-weight:500;padding:10px 16px;">接通时间 ↓</th><th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">国家/备注</th><th style="text-align:right;font-weight:500;padding:10px 12px;">计费时长</th><th style="text-align:right;font-weight:500;padding:10px 12px;">费率（元/分钟）</th><th style="text-align:right;font-weight:500;padding:10px 16px;">费用</th>
+                    </tr></thead>
+                    <tbody style="font-variant-numeric:tabular-nums;">
+                      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+                        <tr style="border-top:1px solid var(--border);" style-hover="background:var(--row-hover);"><td style="padding:11px 16px;">{{ r.time }}</td><td style="padding:11px 12px;">{{ r.caller }}</td><td style="padding:11px 12px;">{{ r.callee }}</td><td style="padding:11px 12px;">{{ r.country }}</td><td style="padding:11px 12px;text-align:right;">{{ r.billed }}</td><td style="padding:11px 12px;text-align:right;">{{ r.rate }}</td><td style="padding:11px 16px;text-align:right;font-weight:500;">{{ r.fee }}</td></tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+                <span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ pageInfo }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ showDeleted }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--border);border-radius:10px;padding:56px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;">
+                <span style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">∅</span>
+                <span style="font-size:15px;font-weight:600;">2026年8月 的话单已删除</span>
+                <span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">共 9,642 条 · 王敏 删除于 {{ deletedAt }} · 已记入操作日志</span>
+                <span style="font-size:13px;color:var(--muted-fg);">月账单和余额不受影响，可在「账单」标签页查看该月汇总</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isBills }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="border:1px solid var(--border);border-radius:10px;overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                  <th style="text-align:left;font-weight:500;padding:10px 16px;">月份</th><th style="text-align:right;font-weight:500;padding:10px 12px;">期初余额</th><th style="text-align:right;font-weight:500;padding:10px 12px;">通话扣费</th><th style="text-align:right;font-weight:500;padding:10px 12px;">期末余额</th><th style="text-align:right;font-weight:500;padding:10px 12px;">通话分钟数</th><th style="text-align:right;font-weight:500;padding:10px 16px;">操作</th>
+                </tr></thead>
+                <tbody style="font-variant-numeric:tabular-nums;">
+                  <sc-for list="{{ bills }}" as="m" hint-placeholder-count="2">
+                    <tr style="border-top:1px solid var(--border);">
+                      <td style="padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;font-weight:500;">{{ m.title }}</span><sc-if value="{{ m.live }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--border);"><span style="width:6px;height:6px;border-radius:50%;background:var(--pos);"></span>本月（进行中）</span></sc-if><sc-if value="{{ m.deleted }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--off-bg);color:var(--off-fg);border:1px solid var(--off-bd);">话单已删除</span></sc-if></div></td>
+                      <td style="padding:14px 12px;text-align:right;">{{ m.opening }}</td><td style="padding:14px 12px;text-align:right;">{{ m.usage }}</td><td style="padding:14px 12px;text-align:right;font-weight:600;color:{{ m.closingColor }};">{{ m.closing }}</td><td style="padding:14px 12px;text-align:right;">{{ m.mins }}</td>
+                      <td style="padding:10px 16px;"><div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;"><span style="font-size:12px;color:var(--muted-fg);">{{ m.reason }}</span>
+                        <button title="{{ m.exportTip }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;opacity:{{ m.exportOp }};cursor:{{ m.exportCursor }};">导出话单明细</button>
+                        <button title="{{ m.regenTip }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;opacity:{{ m.regenOp }};cursor:{{ m.regenCursor }};">重新生成</button></div></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <span style="font-size:12px;color:var(--muted-fg);">余额和已生成的月账单不受话单删除影响。</span>
+          </div>
+        </sc-if>
+      </main>
+    </div>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:flex;gap:12px;align-items:center;z-index:30;">{{ toast }}<span onClick="{{ closeToast }}" style="cursor:pointer;opacity:.7;">✕</span></div>
+  </sc-if>
+
+  <sc-if value="{{ dlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:20;padding:20px;">
+      <div onClick="{{ stop }}" style="width:560px;max-width:100%;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;">
+        <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:32px 28px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+            <span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:22px;">✓</span>
+            <span style="font-size:18px;font-weight:600;">已删除 9,642 条话单</span>
+            <span style="font-size:14px;color:var(--muted-fg);">ABC001 · 2026年8月（2026-08-12 至 2026-08-31）</span>
+            <span style="font-size:13px;color:var(--muted-fg);line-height:1.6;">已自动记入操作日志（王敏 · {{ deletedAt }}）。余额 -¥35.20 和 2026年8月 月账单不受影响。</span>
+            <button onClick="{{ finish }}" style="margin-top:8px;align-self:stretch;height:40px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">完成</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isForm }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;">
+            <div style="padding:20px 24px 0;display:flex;justify-content:space-between;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">删除话单</span><span style="font-size:13px;color:var(--muted-fg);">ABC001 深圳市某某科技有限公司 · 按整月删除</span></div><span onClick="{{ closeDlg }}" style="color:var(--muted-fg);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">✕</span></div>
+            <div style="padding:18px 24px;display:flex;flex-direction:column;gap:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative;">
+                <sc-for list="{{ pickers }}" as="p" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">{{ p.label }}<span onClick="{{ p.onClick }}" style="height:40px;border:1px solid {{ p.bd }};box-shadow:{{ p.ring }};border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:400;cursor:pointer;color:{{ p.fg }};">{{ p.value }}<span style="color:var(--muted-fg);font-size:12px;">▾</span></span></div>
+                </sc-for>
+                <sc-if value="{{ pickerOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:72px;left:{{ pickerLeft }};width:320px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:12px;display:flex;flex-direction:column;gap:10px;z-index:2;">
+                    <div style="display:flex;justify-content:center;font-size:14px;font-weight:600;">2026</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+                      <sc-for list="{{ grid }}" as="m" hint-placeholder-count="12"><span onClick="{{ m.onClick }}" title="{{ m.tip }}" style="height:44px;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:13px;background:{{ m.bg }};color:{{ m.fg }};font-weight:{{ m.w }};border:1px solid {{ m.bd }};cursor:{{ m.cursor }};">{{ m.label }}<span style="font-size:10px;font-weight:400;">{{ m.sub }}</span></span></sc-for>
+                    </div>
+                    <div style="font-size:12px;line-height:1.55;color:var(--muted-fg);border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px;"><span><span style="color:var(--fg);font-weight:500;">9月不可选：</span>本月账单尚未生成（2026-10-01 生成后可选）。</span><span>{{ pickerNote }}</span></div>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ hasRange }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;background:var(--muted);"><span style="font-size:15px;">将删除 <span style="font-family:ui-monospace,Menlo,monospace;font-weight:600;">ABC001</span> 在 <span style="font-weight:600;">2026年8月</span> 的 <span style="font-weight:600;color:var(--neg);">9,642</span> 条话单</span><span style="font-size:12px;color:var(--muted-fg);">时间范围 2026-08-12 00:00:00 至 2026-08-31 23:59:59（北京时间）</span></div>
+              </sc-if>
+              <sc-if value="{{ noRange }}" hint-placeholder-val="{{ true }}">
+                <div style="border:1px dashed var(--input);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--muted-fg);">{{ noRangeText }}</div>
+              </sc-if>
+              <div style="border:1px solid var(--err-bd);background:var(--err-bg);border-radius:10px;padding:12px 14px;display:flex;gap:10px;font-size:13px;line-height:1.6;"><span style="width:20px;height:20px;flex-shrink:0;border-radius:50%;background:var(--destructive);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;">!</span><span><span style="font-weight:600;color:var(--err-fg);">删除后无法恢复。</span>余额和已生成的月账单不受影响，但该时段将无法导出话单明细，也无法重新生成月账单。</span></div>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;"><span>请输入租户编码 <span style="font-family:ui-monospace,Menlo,monospace;padding:1px 6px;border-radius:4px;background:var(--muted);">ABC001</span> 以确认</span>
+                <input value="{{ code }}" onChange="{{ onCode }}" placeholder="输入 ABC001" disabled="{{ codeDisabled }}" style="height:40px;border:1px solid {{ codeBd }};box-shadow:{{ codeRing }};border-radius:8px;padding:0 12px;font-size:14px;font-family:ui-monospace,Menlo,monospace;background:transparent;color:var(--fg);"></input>
+                <span style="font-size:12px;font-weight:400;color:{{ msgColor }};">{{ msg }}</span>
+              </label>
+            </div>
+            <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;"><button onClick="{{ closeDlg }}" style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">取消</button><button onClick="{{ doDelete }}" disabled="{{ delDisabled }}" style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--destructive);color:#fff;font-size:14px;font-weight:500;font-family:inherit;opacity:{{ delOp }};cursor:{{ delCursor }};">{{ delLabel }}</button></div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static KEY = 'fsb-delete-calls-demo';
+  state = { theme: 'light', tab: '话单', month: '2026-08', deleted: null, dlg: false, step: 'form', start: null, end: null, picker: null, code: '', toast: '' };
+  componentDidMount() {
+    try { const s = JSON.parse(localStorage.getItem('fsb-delete-calls-demo') || 'null'); if (s) this.setState({ deleted: s.deleted || null, tab: s.tab || '话单', month: s.month || '2026-08' }); } catch (e) {}
+  }
+  save(p) { this.setState(p, () => { try { localStorage.setItem('fsb-delete-calls-demo', JSON.stringify({ deleted: this.state.deleted, tab: this.state.tab, month: this.state.month })); } catch (e) {} }); }
+  renderVals() {
+    const s = this.state;
+    const money = c => (c < 0 ? '-' : '') + '¥' + (Math.abs(c) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const items = ['概览', '租户', '待收款', '未归属话单', '账单', '系统告警', '操作日志', '管理员'];
+    const nav = items.map(l => ({ label: l, bg: l === '租户' ? 'var(--brand-soft)' : 'transparent', fg: l === '租户' ? 'var(--primary)' : 'var(--muted-fg)', weight: l === '租户' ? 500 : 400, dot: l === '系统告警' ? 1 : 0 }));
+    const live = ['话单', '账单'];
+    const tabs = ['概况', '余额流水', '费率', '话单', '账单', '设置', '门户账号'].map(l => ({ label: l, line: l === s.tab ? 'var(--primary)' : 'transparent', fg: l === s.tab ? 'var(--fg)' : 'var(--muted-fg)', weight: l === s.tab ? 600 : 400, cursor: live.includes(l) ? 'pointer' : 'default', op: live.includes(l) ? 1 : .55, onClick: live.includes(l) ? () => this.save({ tab: l }) : undefined }));
+    const monthTabs = [['2026-09', '2026年9月'], ['2026-08', '2026年8月']].map(([k, l]) => { const on = s.month === k; return { label: l, bg: on ? 'var(--bg)' : 'transparent', fg: on ? 'var(--fg)' : 'var(--muted-fg)', w: on ? 500 : 400, sh: on ? '0 1px 2px rgba(0,0,0,.1)' : 'none', onClick: () => this.save({ month: k }) }; });
+    const mk = (d, list) => list.map(([t, caller, callee, country, mins, rate]) => ({ time: d + ' ' + t, caller, callee, country, billed: mins + '分钟', rate: rate.toFixed(4), fee: money(Math.round(mins * rate * 100)) }));
+    const sepRows = mk('2026-09-29', [['14:03:22','075586001234','8613800138000','中国',4,0.05],['13:58:07','075586001234','18765551234','牙买加',13,0.25],['13:41:55','075586001235','447700900123','英国手机',1,0.045],['13:22:40','075586001234','6591234567','新加坡',5,0.028],['13:05:18','075586001236','85291234567','中国香港',2,0.03],['12:47:33','075586001234','14155550123','美国/加拿大',23,0.01],['12:31:09','075586001236','442071234567','英国',6,0.02],['12:18:44','075586001235','8613912345678','中国',16,0.05]]);
+    const augRows = mk('2026-08-31', [['23:41:08','075586001234','8613800138000','中国',3,0.05],['23:12:55','075586001236','14155550123','美国/加拿大',18,0.01],['22:58:30','075586001234','18765551234','牙买加',9,0.25],['22:40:17','075586001235','81312345678','日本',4,0.035],['22:15:02','075586001234','8613700137000','中国',7,0.05],['21:57:44','075586001236','6591234567','新加坡',3,0.028],['21:33:19','075586001235','447700900123','英国手机',2,0.045],['21:08:51','075586001234','442071234567','英国',11,0.02]]);
+    const isAug = s.month === '2026-08', del = !!s.deleted;
+    const sum = isAug ? { n: '9,642', mins: '37,468分钟', fee: '¥1,873.40' } : { n: '13,517', mins: '49,726分钟', fee: '¥2,486.30' };
+    const delTip = '该月话单明细已于 ' + (s.deleted || '') + ' 删除';
+    const bills = [
+      { title: '2026年9月', live: true, deleted: false, opening: '¥1,176.60', usage: '¥2,486.30', closing: '-¥35.20', closingColor: 'var(--neg)', mins: '49,726分钟', reason: '进行中，月结后可重新生成', exportOp: 1, exportCursor: 'pointer', exportTip: '', regenOp: .45, regenCursor: 'not-allowed', regenTip: '本月进行中' },
+      { title: '2026年8月', live: false, deleted: del, opening: '¥0.00', usage: '¥1,873.40', closing: '¥1,176.60', closingColor: 'var(--fg)', mins: '37,468分钟', reason: del ? delTip + '，无法导出或重新生成' : '', exportOp: del ? .45 : 1, exportCursor: del ? 'not-allowed' : 'pointer', exportTip: del ? delTip : '', regenOp: del ? .45 : 1, regenCursor: del ? 'not-allowed' : 'pointer', regenTip: del ? delTip : '' },
+    ];
+    const augOk = !del;
+    const pick = which => () => this.setState({ picker: s.picker === which ? null : which });
+    const fmt = v => v ? '2026年8月' : '选择月份';
+    const pickers = [['start', '开始月份', s.start], ['end', '结束月份', s.end]].map(([k, l, v]) => ({ label: l, value: fmt(v), fg: v ? 'var(--fg)' : 'var(--muted-fg)', bd: s.picker === k ? 'var(--primary)' : 'var(--input)', ring: s.picker === k ? '0 0 0 3px var(--brand-soft)' : 'none', onClick: pick(k) }));
+    const cur = s.picker === 'start' ? s.start : s.end;
+    const grid = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1, isA = m === 8, ok = isA && augOk, sel = ok && cur === '2026-08';
+      const sub = m === 8 ? (augOk ? '9,642 条' : '已删除') : m === 9 ? '账单未生成' : m < 8 ? '未开户' : '';
+      const tip = m === 9 ? '本月账单尚未生成，不可选' : m < 8 ? '2026-08-12 开户前无话单' : m > 9 ? '尚未到达' : !augOk ? '该月话单已删除' : '';
+      return { label: m + '月', sub, tip, bg: sel ? 'var(--primary)' : 'transparent', fg: sel ? 'var(--primary-fg)' : ok ? 'var(--fg)' : m === 9 ? 'var(--muted-fg)' : 'color-mix(in srgb, var(--muted-fg) 55%, transparent)', w: sel || ok ? 600 : 400, bd: ok && !sel ? 'var(--input)' : m === 9 ? 'var(--border)' : 'transparent', cursor: ok ? 'pointer' : 'not-allowed',
+        onClick: ok ? () => this.setState(st => st.picker === 'start' ? { start: '2026-08', end: st.end || '2026-08', picker: null } : { end: '2026-08', start: st.start || '2026-08', picker: null }) : undefined };
+    });
+    const hasRange = !!(s.start && s.end);
+    const codeOk = s.code === 'ABC001', typed = s.code.length > 0;
+    const wrong = typed && !codeOk;
+    const can = hasRange && codeOk;
+    const msg = !typed ? '区分大小写' : codeOk ? '✓ 编码正确' : 'ABC001'.startsWith(s.code) ? '继续输入…' : '编码不一致，请输入 ABC001';
+    const hardWrong = wrong && !'ABC001'.startsWith(s.code);
+    return {
+      theme: s.theme, nav, tabs, monthTabs, isCalls: s.tab === '话单', isBills: s.tab === '账单',
+      showRows: !(isAug && del), showDeleted: isAug && del, rows: isAug ? augRows : sepRows, sum,
+      pageInfo: isAug ? '第 1–50 条，共 9,642 条' : '第 1–50 条，共 13,517 条', exportOp: isAug && del ? .45 : 1,
+      deletedAt: s.deleted || '', bills,
+      demoState: del ? '8月话单已删除' : '初始（8月话单完整）',
+      dlgOpen: s.dlg, isDone: s.step === 'done', isForm: s.step === 'form',
+      pickers, pickerOpen: !!s.picker, pickerLeft: s.picker === 'end' ? 'calc(50% + 6px)' : '0', grid,
+      pickerNote: augOk ? '只能选择已生成月账单的月份；2026-08-12 开户前无话单。' : '8月话单已删除，目前没有可删除的月份。',
+      hasRange, noRange: !hasRange, noRangeText: augOk ? '请选择开始和结束月份，选择后显示将删除的话单数量' : '没有可删除的月份：8月话单已删除，9月账单尚未生成',
+      code: s.code, codeDisabled: !hasRange, codeBd: hardWrong ? 'var(--neg)' : codeOk ? 'var(--ok-bd)' : 'var(--input)', codeRing: hardWrong ? '0 0 0 3px var(--err-bg)' : 'none',
+      msg, msgColor: hardWrong ? 'var(--neg)' : codeOk ? 'var(--ok-fg)' : 'var(--muted-fg)',
+      delDisabled: !can, delOp: can ? 1 : .45, delCursor: can ? 'pointer' : 'not-allowed', delLabel: hasRange ? '删除 9,642 条话单' : '删除',
+      onCode: e => this.setState({ code: e.target.value.trim() }),
+      openDlg: () => this.setState({ dlg: true, step: 'form', start: null, end: null, picker: null, code: '' }),
+      closeDlg: () => this.setState({ dlg: false, picker: null }),
+      stop: e => e.stopPropagation(),
+      doDelete: () => { if (!can) return; const d = new Date(); const p = n => String(n).padStart(2, '0'); this.save({ deleted: `2026-09-29 ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`, step: 'done', picker: null }); },
+      finish: () => this.setState({ dlg: false, toast: '已删除 9,642 条话单，已记入操作日志' }),
+      toast: s.toast, closeToast: () => this.setState({ toast: '' }),
+      reset: () => { try { localStorage.removeItem('fsb-delete-calls-demo'); } catch (e) {} this.setState({ deleted: null, tab: '话单', month: '2026-08', dlg: false, toast: '', code: '', start: null, end: null }); },
+      toggleTheme: () => this.setState({ theme: s.theme === 'light' ? 'dark' : 'light' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

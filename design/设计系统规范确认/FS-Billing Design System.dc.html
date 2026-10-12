@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+html,body{margin:0;padding:0;background:#f4f4f5;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;color:#09090b;-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:underline;text-underline-offset:3px;}
+a:hover{opacity:.8;}
+*{box-sizing:border-box;}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--ring:#a1a1aa;--primary:#18181b;--primary-fg:#fafafa;--secondary:#f4f4f5;--secondary-fg:#18181b;--destructive:#dc2626;--destructive-fg:#ffffff;--neg:#dc2626;--pos:#16a34a;--overlay:rgba(9,9,11,.45);--skeleton:#ececee;--row-hover:#fafafa;--brand-soft:#f4f4f5;
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;--off-bg:#f4f4f5;--off-fg:#52525b;--off-bd:#e4e4e7;--unv-bg:#fefce8;--unv-fg:#a16207;--unv-bd:#fde047;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--ring:#71717a;--primary:#fafafa;--primary-fg:#18181b;--secondary:#27272a;--secondary-fg:#fafafa;--destructive:#dc2626;--destructive-fg:#ffffff;--neg:#f87171;--pos:#4ade80;--overlay:rgba(0,0,0,.65);--skeleton:#1f1f23;--row-hover:#141416;--brand-soft:#18181b;
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);--off-bg:#1f1f23;--off-fg:#a1a1aa;--off-bd:#3f3f46;--unv-bg:rgba(234,179,8,.12);--unv-fg:#facc15;--unv-bd:rgba(234,179,8,.4);}
+[data-product=admin][data-theme=light]{--primary:#2563eb;--primary-fg:#ffffff;--ring:#93c5fd;--brand-soft:#eff6ff;}
+[data-product=admin][data-theme=dark]{--primary:#3b82f6;--primary-fg:#ffffff;--ring:#1d4ed8;--brand-soft:rgba(59,130,246,.12);}
+</style>
+</helmet>
+
+<div style="max-width:1600px;margin:0 auto;padding:48px 40px 96px;display:flex;flex-direction:column;gap:40px;">
+
+  <header style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid #e4e4e7;padding-bottom:28px;">
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:13px;color:#71717a;letter-spacing:.02em;">FS-Billing · 设计系统 v0.1 · 依据 pages.md §1</div>
+      <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.01em;">设计系统</h1>
+      <p style="margin:0;font-size:14px;color:#52525b;max-width:680px;line-height:1.7;text-wrap:pretty;">基于 shadcn/ui（Zinc 中性色）。客户门户使用中性黑白主色；管理后台以蓝色作为主色点缀，用于主按钮、选中态与焦点环，避免两端混淆。系统字体，金额 / 时长 / 费率一律等宽数字、右对齐。</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;font-size:13px;"><span style="width:10px;height:10px;border-radius:3px;background:#18181b;"></span>客户门户</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e4e4e7;border-radius:8px;background:#fff;font-size:13px;"><span style="width:10px;height:10px;border-radius:3px;background:#2563eb;"></span>管理后台</div>
+    </div>
+  </header>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:24px;">
+    <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:baseline;">
+        <h2 style="margin:0;font-size:16px;font-weight:600;">01 · 颜色（浅色 / 深色对照）</h2>
+        <span style="font-size:12px;color:#71717a;">语义令牌</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="color:#71717a;font-size:12px;text-align:left;">
+          <th style="padding:10px 20px;font-weight:500;border-bottom:1px solid #e4e4e7;">令牌</th>
+          <th style="padding:10px 12px;font-weight:500;border-bottom:1px solid #e4e4e7;">用途</th>
+          <th style="padding:10px 12px;font-weight:500;border-bottom:1px solid #e4e4e7;">浅色</th>
+          <th style="padding:10px 20px 10px 12px;font-weight:500;border-bottom:1px solid #e4e4e7;">深色</th>
+        </tr></thead>
+        <tbody style="font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12px;">
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">background</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;font-family:inherit;color:#52525b;">页面底色</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#ffffff;border:1px solid #e4e4e7;"></span>#FFFFFF</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#09090b;"></span>#09090B</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">foreground</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">正文文字</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#09090b;"></span>#09090B</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#fafafa;border:1px solid #e4e4e7;"></span>#FAFAFA</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">card</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">卡片 / 弹窗</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#ffffff;border:1px solid #e4e4e7;"></span>#FFFFFF</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#111113;"></span>#111113</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">muted</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">表头、次级底</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#f4f4f5;border:1px solid #e4e4e7;"></span>#F4F4F5</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#27272a;"></span>#27272A</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">muted-foreground</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">辅助文字、未接通</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#71717a;"></span>#71717A</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#a1a1aa;"></span>#A1A1AA</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">border / input</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">分隔线、输入框</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#e4e4e7;"></span>#E4E4E7</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#27272a;"></span>#27272A / #3F3F46</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">primary · 门户</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">主按钮、选中</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#18181b;"></span>#18181B</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#fafafa;border:1px solid #e4e4e7;"></span>#FAFAFA</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">primary · 后台</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">主按钮、选中、焦点</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#2563eb;"></span>#2563EB</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#3b82f6;"></span>#3B82F6</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">destructive</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">删除按钮</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#dc2626;"></span>#DC2626</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#dc2626;"></span>#DC2626</div></td></tr>
+          <tr><td style="padding:9px 20px;border-bottom:1px solid #f4f4f5;">amount-negative</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;color:#52525b;">负数金额、扣费</td><td style="padding:9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#dc2626;"></span>#DC2626</div></td><td style="padding:9px 20px 9px 12px;border-bottom:1px solid #f4f4f5;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#f87171;"></span>#F87171</div></td></tr>
+          <tr><td style="padding:9px 20px;">amount-positive</td><td style="padding:9px 12px;color:#52525b;">入账金额</td><td style="padding:9px 12px;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#16a34a;"></span>#16A34A</div></td><td style="padding:9px 20px 9px 12px;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:28px;height:18px;border-radius:4px;background:#4ade80;"></span>#4ADE80</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:24px;">
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;display:flex;justify-content:space-between;align-items:baseline;">
+          <h2 style="margin:0;font-size:16px;font-weight:600;">状态色（文字 / 底 / 描边）</h2>
+          <span style="font-size:12px;color:#71717a;">两种模式均 ≥ 4.5:1</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;">
+          <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;background:#ffffff;border-right:1px solid #e4e4e7;">
+            <div style="font-size:12px;color:#71717a;">浅色</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#52525b;"><span style="width:72px;height:24px;border-radius:6px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">绿 · 正常</span>#15803D</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#52525b;"><span style="width:72px;height:24px;border-radius:6px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">橙 · 提醒</span>#C2410C</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#52525b;"><span style="width:72px;height:24px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">红 · 停机</span>#B91C1C</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#52525b;"><span style="width:72px;height:24px;border-radius:6px;background:#f4f4f5;border:1px solid #e4e4e7;color:#52525b;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">灰 · 停用</span>#52525B</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#52525b;"><span style="width:72px;height:24px;border-radius:6px;background:#fefce8;border:1px solid #fde047;color:#a16207;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">琥珀 · 未验</span>#A16207</div>
+          </div>
+          <div style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;background:#09090b;">
+            <div style="font-size:12px;color:#a1a1aa;">深色</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#a1a1aa;"><span style="width:72px;height:24px;border-radius:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.32);color:#4ade80;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">绿 · 正常</span>#4ADE80</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#a1a1aa;"><span style="width:72px;height:24px;border-radius:6px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.35);color:#fb923c;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">橙 · 提醒</span>#FB923C</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#a1a1aa;"><span style="width:72px;height:24px;border-radius:6px;background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.38);color:#f87171;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">红 · 停机</span>#F87171</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#a1a1aa;"><span style="width:72px;height:24px;border-radius:6px;background:#1f1f23;border:1px solid #3f3f46;color:#a1a1aa;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">灰 · 停用</span>#A1A1AA</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#a1a1aa;"><span style="width:72px;height:24px;border-radius:6px;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.4);color:#facc15;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">琥珀 · 未验</span>#FACC15</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid #e4e4e7;"><h2 style="margin:0;font-size:16px;font-weight:600;">02 · 字体与数据格式</h2></div>
+        <div style="padding:16px 20px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid #e4e4e7;">
+          <div style="font-size:12px;color:#71717a;">界面字体（系统字体，不加载网络字体）</div>
+          <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3f3f46;line-height:1.6;">-apple-system, "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", sans-serif</div>
+          <div style="font-size:12px;color:#71717a;margin-top:6px;">等宽字体（仅 UUID、前缀代码、CSV 字段）</div>
+          <div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#3f3f46;">ui-monospace, "SF Mono", Menlo, Consolas, monospace</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tbody>
+            <tr><td style="padding:8px 20px;color:#71717a;border-bottom:1px solid #f4f4f5;width:110px;">日期时间</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;font-variant-numeric:tabular-nums;">2026-09-29 14:03:22</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:12px;">北京时间</td></tr>
+            <tr><td style="padding:8px 20px;color:#71717a;border-bottom:1px solid #f4f4f5;">月份</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;">2026年9月</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:12px;">YYYY年M月</td></tr>
+            <tr><td style="padding:8px 20px;color:#71717a;border-bottom:1px solid #f4f4f5;">金额</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;font-variant-numeric:tabular-nums;">¥1,234.56 · $1,234.56 · <span style="color:#dc2626;">-¥56.20</span></td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:12px;">负号在币种前</td></tr>
+            <tr><td style="padding:8px 20px;color:#71717a;border-bottom:1px solid #f4f4f5;">费率</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;font-variant-numeric:tabular-nums;">0.0450 元/分钟 · $0.0120/分钟</td><td style="padding:8px 20px;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:12px;">4 位小数</td></tr>
+            <tr><td style="padding:8px 20px;color:#71717a;">时长</td><td style="padding:8px 20px;font-variant-numeric:tabular-nums;">3分50秒 → 4分钟</td><td style="padding:8px 20px;color:#71717a;font-size:12px;">通话 → 计费（60/60）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;">03 · 组件（{{ productLabel }}）</h2>
+    <span style="font-size:13px;color:#71717a;">在 Tweaks 中切换「客户门户 / 管理后台」查看主色差异</span>
+  </div>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,700px),1fr));gap:24px;align-items:start;">
+    <sc-for list="{{ themes }}" as="t" hint-placeholder-count="2">
+      <div data-theme="{{ t.key }}" data-product="{{ product }}" style="background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:40px;min-width:0;">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span>
+            <div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing {{ productLabel }}</span><span style="font-size:12px;color:var(--muted-fg);">{{ t.label }}</span></div>
+          </div>
+          <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:12px;">
+            <sc-if value="{{ t.isLight }}" hint-placeholder-val="{{ true }}">
+              <span style="padding:4px 10px;border-radius:6px;background:var(--bg);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12);font-weight:500;">浅色</span>
+              <span style="padding:4px 10px;border-radius:6px;color:var(--muted-fg);">深色</span>
+            </sc-if>
+            <sc-if value="{{ t.isDark }}" hint-placeholder-val="{{ false }}">
+              <span style="padding:4px 10px;border-radius:6px;color:var(--muted-fg);">浅色</span>
+              <span style="padding:4px 10px;border-radius:6px;background:var(--bg);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.4);font-weight:500;">深色</span>
+            </sc-if>
+            <span style="padding:4px 10px;border-radius:6px;color:var(--muted-fg);">跟随系统</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">字体层级</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:baseline;gap:16px;"><span style="width:96px;flex-shrink:0;font-size:12px;color:var(--muted-fg);">页面标题 24</span><span style="font-size:24px;font-weight:600;letter-spacing:-.01em;">话单</span></div>
+            <div style="display:flex;align-items:baseline;gap:16px;"><span style="width:96px;flex-shrink:0;font-size:12px;color:var(--muted-fg);">区块标题 16</span><span style="font-size:16px;font-weight:600;">按国家汇总</span></div>
+            <div style="display:flex;align-items:baseline;gap:16px;"><span style="width:96px;flex-shrink:0;font-size:12px;color:var(--muted-fg);">正文 14</span><span style="font-size:14px;">深圳市某某科技有限公司（CNY）</span></div>
+            <div style="display:flex;align-items:baseline;gap:16px;"><span style="width:96px;flex-shrink:0;font-size:12px;color:var(--muted-fg);">辅助 12</span><span style="font-size:12px;color:var(--muted-fg);">日期范围最长一个月</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:var(--muted-fg);">等宽数字 tabular-nums ✓</span>
+              <div style="font-variant-numeric:tabular-nums;font-size:15px;text-align:right;line-height:1.7;">¥11,111.11<br>¥88,888.88<br><span style="color:var(--neg);">-¥1,234.50</span></div>
+            </div>
+            <div style="border:1px dashed var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:12px;color:var(--muted-fg);">比例数字（不使用）</span>
+              <div style="font-variant-numeric:proportional-nums;font-size:15px;text-align:right;line-height:1.7;color:var(--muted-fg);">¥11,111.11<br>¥88,888.88<br>-¥1,234.50</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:16px;"><span style="width:96px;flex-shrink:0;font-size:12px;color:var(--muted-fg);">大数字 32</span><span style="font-size:32px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--neg);">-¥35.20</span></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">按钮</div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="opacity:.9;">充值</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--secondary);color:var(--secondary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="opacity:.85;">次要</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="background:var(--muted);">导出 CSV</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:transparent;color:var(--fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="background:var(--muted);">取消</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--destructive);color:var(--destructive-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="opacity:.9;">删除话单</button>
+            <button style="height:36px;padding:0 4px;border:none;background:transparent;color:var(--fg);font-size:14px;font-weight:500;font-family:inherit;text-decoration:underline;text-underline-offset:4px;cursor:pointer;">查看全部</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <button style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;">小 32</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">默认 36</button>
+            <button style="height:44px;padding:0 20px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:15px;font-weight:500;font-family:inherit;">手机 44</button>
+            <button disabled style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;opacity:.5;cursor:not-allowed;">不可用</button>
+            <button style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;box-shadow:0 0 0 3px var(--ring);">焦点环</button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">输入框</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 20px;">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">被叫号码
+              <input placeholder="模糊搜索，例如 8613800" style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);font-size:14px;font-family:inherit;outline:none;" style-focus="box-shadow:0 0 0 3px var(--ring);">
+            </label>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">日期范围
+              <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:space-between;font-weight:400;font-variant-numeric:tabular-nums;"><span>2026-09-01 — 2026-09-30</span><span style="color:var(--muted-fg);font-size:12px;">▾</span></div>
+              <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">最长一个月</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">接通状态
+              <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:space-between;font-weight:400;"><span>已接通</span><span style="color:var(--muted-fg);font-size:12px;">▾</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">金额
+              <div style="height:36px;border-radius:8px;border:1px solid var(--primary);box-shadow:0 0 0 3px var(--ring);display:flex;align-items:center;font-weight:400;"><span style="padding:0 10px;color:var(--muted-fg);border-right:1px solid var(--input);height:100%;display:flex;align-items:center;">¥</span><span style="padding:0 12px;flex:1;text-align:right;font-variant-numeric:tabular-nums;">500.00</span></div>
+              <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">聚焦态</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">租户编码
+              <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--err-fg);display:flex;align-items:center;font-weight:400;color:var(--muted-fg);">ABC 001</div>
+              <span style="font-size:12px;font-weight:400;color:var(--err-fg);">只能包含字母和数字</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">登录邮箱
+              <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:var(--muted);display:flex;align-items:center;font-weight:400;color:var(--muted-fg);">billing@abc-tech.cn</div>
+              <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">只读</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">密码
+              <div style="height:36px;padding:0 4px 0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:space-between;font-weight:400;"><span style="letter-spacing:3px;">••••••••</span><span style="font-size:12px;color:var(--muted-fg);padding:4px 8px;border-radius:6px;">显示</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">备注<span style="font-size:12px;font-weight:500;padding:1px 6px;border-radius:4px;background:var(--brand-soft);color:var(--primary);">客户可见</span></div>
+              <div style="min-height:60px;padding:8px 12px;border-radius:8px;border:1px solid var(--input);font-weight:400;font-size:14px;color:var(--muted-fg);">9月话费补偿</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">状态标签</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--ok-bg);color:var(--ok-fg);border:1px solid var(--ok-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>正常</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>余额不足</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>透支中</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--err-bg);color:var(--err-fg);border:1px solid var(--err-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>已停机</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--off-bg);color:var(--off-fg);border:1px solid var(--off-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>已停用</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--ok-bg);color:var(--ok-fg);border:1px solid var(--ok-bd);">已收款</span>
+            <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);">待收款</span>
+            <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;color:var(--fg);border:1px solid var(--border);">已接通</span>
+            <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted-fg);border:1px solid var(--border);">未接通</span>
+            <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+              <span style="display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);">未经验证</span>
+              <span style="font-size:12px;color:var(--muted-fg);">← 仅管理后台显示</span>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">卡片 · 指标</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted-fg);">当前余额<span style="display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);">透支中</span></div>
+              <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;color:var(--neg);">-¥35.20</div>
+              <div style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">可用额度 ¥64.80</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:13px;color:var(--muted-fg);">透支额度</div>
+              <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;">¥100.00</div>
+              <div style="font-size:12px;color:var(--muted-fg);">CNY</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:13px;color:var(--muted-fg);">本月消费</div>
+              <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;">¥2,486.30</div>
+              <div style="font-size:12px;color:var(--muted-fg);">2026年9月</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+              <div style="font-size:13px;color:var(--muted-fg);">本月通话</div>
+              <div style="font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em;">49,726<span style="font-size:14px;font-weight:400;color:var(--muted-fg);margin-left:4px;">分钟</span></div>
+              <div style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">12,804 通</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">表格（筛选栏 · 汇总栏 · 分页）</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+            <div style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;gap:6px;font-size:13px;font-variant-numeric:tabular-nums;"><span style="color:var(--muted-fg);">日期</span>2026-09-01 — 09-30</div>
+            <div style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;font-size:13px;color:var(--muted-fg);width:150px;">被叫号码</div>
+            <div style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;gap:6px;font-size:13px;"><span style="color:var(--muted-fg);">国家</span>全部 ▾</div>
+            <div style="height:32px;padding:0 10px;border-radius:7px;border:1px dashed var(--input);display:flex;align-items:center;gap:6px;font-size:13px;"><span style="color:var(--muted-fg);">状态</span>全部</div>
+            <div style="flex:1;"></div>
+            <button style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;">导出 CSV</button>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:10px;overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+              <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                <th style="text-align:left;font-weight:500;padding:9px 12px;">接通时间</th>
+                <th style="text-align:left;font-weight:500;padding:9px 12px;">被叫号码</th>
+                <th style="text-align:left;font-weight:500;padding:9px 12px;">国家/备注</th>
+                <th style="text-align:right;font-weight:500;padding:9px 12px;">通话时长</th>
+                <th style="text-align:right;font-weight:500;padding:9px 12px;">计费时长</th>
+                <th style="text-align:right;font-weight:500;padding:9px 12px;">费率</th>
+                <th style="text-align:right;font-weight:500;padding:9px 12px;">费用</th>
+              </tr></thead>
+              <tbody style="font-variant-numeric:tabular-nums;">
+                <tr style-hover="background:var(--row-hover);" style="border-top:1px solid var(--border);"><td style="padding:10px 12px;">2026-09-29 14:03:22</td><td style="padding:10px 12px;">8613800138000</td><td style="padding:10px 12px;">中国</td><td style="padding:10px 12px;text-align:right;">3分50秒</td><td style="padding:10px 12px;text-align:right;">4分钟</td><td style="padding:10px 12px;text-align:right;">0.0500</td><td style="padding:10px 12px;text-align:right;font-weight:500;">¥0.20</td></tr>
+                <tr style-hover="background:var(--row-hover);" style="border-top:1px solid var(--border);"><td style="padding:10px 12px;">2026-09-29 13:58:07</td><td style="padding:10px 12px;">18765551234</td><td style="padding:10px 12px;">牙买加</td><td style="padding:10px 12px;text-align:right;">12分04秒</td><td style="padding:10px 12px;text-align:right;">13分钟</td><td style="padding:10px 12px;text-align:right;">0.2500</td><td style="padding:10px 12px;text-align:right;font-weight:500;">¥3.25</td></tr>
+                <tr style-hover="background:var(--row-hover);" style="border-top:1px solid var(--border);"><td style="padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;">2026-09-29 13:41:55<sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:18px;padding:0 5px;border-radius:4px;font-size:11px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);">未经验证</span></sc-if></div></td><td style="padding:10px 12px;">447700900123</td><td style="padding:10px 12px;">英国手机</td><td style="padding:10px 12px;text-align:right;">0分01秒</td><td style="padding:10px 12px;text-align:right;">1分钟</td><td style="padding:10px 12px;text-align:right;">0.0450</td><td style="padding:10px 12px;text-align:right;font-weight:500;">¥0.05</td></tr>
+                <tr style="border-top:1px solid var(--border);color:var(--muted-fg);"><td style="padding:10px 12px;">2026-09-29 13:40:12</td><td style="padding:10px 12px;">81312345678</td><td style="padding:10px 12px;">日本 · 未接通</td><td style="padding:10px 12px;text-align:right;">0分00秒</td><td style="padding:10px 12px;text-align:right;">0分钟</td><td style="padding:10px 12px;text-align:right;">0.0350</td><td style="padding:10px 12px;text-align:right;">¥0.00</td></tr>
+                <tr style-hover="background:var(--row-hover);" style="border-top:1px solid var(--border);"><td style="padding:10px 12px;">2026-09-29 13:22:40</td><td style="padding:10px 12px;">6591234567</td><td style="padding:10px 12px;">新加坡</td><td style="padding:10px 12px;text-align:right;">4分01秒</td><td style="padding:10px 12px;text-align:right;">5分钟</td><td style="padding:10px 12px;text-align:right;">0.0280</td><td style="padding:10px 12px;text-align:right;font-weight:500;">¥0.14</td></tr>
+              </tbody>
+              <tfoot><tr style="border-top:1px solid var(--border);background:var(--muted);font-variant-numeric:tabular-nums;font-size:13px;">
+                <td colspan="4" style="padding:10px 12px;color:var(--muted-fg);">筛选结果 <span style="color:var(--fg);font-weight:500;">12,804</span> 通</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:500;">49,726分钟</td>
+                <td style="padding:10px 12px;"></td>
+                <td style="padding:10px 12px;text-align:right;font-weight:600;">¥2,486.30</td>
+              </tr></tfoot>
+            </table>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted-fg);flex-wrap:wrap;gap:8px;">
+            <span style="font-variant-numeric:tabular-nums;">第 1–50 条，共 12,804 条 · 每页 50 条</span>
+            <div style="display:flex;gap:4px;font-variant-numeric:tabular-nums;">
+              <span style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;opacity:.5;">上一页</span>
+              <span style="width:32px;height:32px;border-radius:7px;border:1px solid var(--primary);color:var(--fg);display:flex;align-items:center;justify-content:center;font-weight:500;">1</span>
+              <span style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--fg);">2</span>
+              <span style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--fg);">3</span>
+              <span style="width:24px;height:32px;display:flex;align-items:center;justify-content:center;">…</span>
+              <span style="width:40px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--fg);">257</span>
+              <span style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;color:var(--fg);">下一页</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">对话框（电脑 · 居中）</div>
+          <div style="background:var(--overlay);border-radius:12px;padding:32px 24px;display:flex;justify-content:center;">
+            <div style="width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;">
+              <div style="padding:20px 24px 0;display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:17px;font-weight:600;">余额操作</span><span style="color:var(--muted-fg);font-size:16px;">✕</span></div>
+                <span style="font-size:13px;color:var(--muted-fg);">ABC001 深圳市某某科技有限公司（CNY）</span>
+              </div>
+              <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:13px;text-align:center;">
+                  <span style="padding:6px 0;border-radius:6px;background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.08);font-weight:500;">充值</span>
+                  <span style="padding:6px 0;color:var(--muted-fg);">赊账充值</span>
+                  <span style="padding:6px 0;color:var(--muted-fg);">赠送</span>
+                  <span style="padding:6px 0;color:var(--muted-fg);">调账</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">金额
+                  <div style="height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-weight:400;"><span style="padding:0 10px;color:var(--muted-fg);border-right:1px solid var(--input);height:100%;display:flex;align-items:center;">¥</span><span style="padding:0 12px;flex:1;text-align:right;font-variant-numeric:tabular-nums;">500.00</span></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;">备注<span style="font-size:12px;font-weight:500;padding:1px 6px;border-radius:4px;background:var(--brand-soft);color:var(--primary);">客户可见</span></div>
+                  <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-weight:400;color:var(--muted-fg);">银行转账 9月</div>
+                </div>
+                <div style="border-radius:8px;background:var(--muted);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-variant-numeric:tabular-nums;gap:8px;flex-wrap:wrap;">
+                  <span style="color:var(--muted-fg);">当前余额 <span style="color:var(--neg);font-weight:500;">-¥35.20</span></span>
+                  <span style="color:var(--muted-fg);">→</span>
+                  <span style="color:var(--muted-fg);">操作后 <span style="color:var(--fg);font-weight:600;">¥464.80</span></span>
+                </div>
+              </div>
+              <div style="padding:0 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+                <button style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">取消</button>
+                <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">下一步：确认</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">手机 · 列表卡片与底部弹出面板</div>
+          <div style="display:flex;flex-wrap:wrap;gap:24px;justify-content:center;">
+            <div style="width:300px;height:580px;border:1px solid var(--border);border-radius:32px;overflow:hidden;position:relative;background:var(--bg);flex-shrink:0;">
+              <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+                <span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:14px;">☰</span>
+                <span style="font-size:15px;font-weight:600;">话单</span>
+                <span style="width:28px;height:28px;border-radius:50%;background:var(--muted);"></span>
+              </div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;gap:8px;"><div style="flex:1;height:44px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;padding:0 12px;font-size:14px;color:var(--muted-fg);">搜索被叫号码</div><div style="height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;gap:6px;font-size:14px;">筛选<span style="min-width:18px;height:18px;border-radius:9px;background:var(--primary);color:var(--primary-fg);font-size:11px;display:flex;align-items:center;justify-content:center;">2</span></div></div>
+                <div style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;">
+                  <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:500;"><span>8613800138000</span><span>¥0.20</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>中国 · 3分50秒</span><span>09-29 14:03:22</span></div>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;">
+                  <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:500;"><span>18765551234</span><span>¥3.25</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>牙买加 · 12分04秒</span><span>09-29 13:58:07</span></div>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;color:var(--muted-fg);">
+                  <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:500;"><span>81312345678</span><span>¥0.00</span></div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;"><span>日本 · 未接通</span><span>09-29 13:40:12</span></div>
+                </div>
+              </div>
+              <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+              <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:8px 16px 20px;display:flex;flex-direction:column;gap:14px;">
+                <div style="width:40px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:16px;font-weight:600;">筛选</span><span style="font-size:14px;color:var(--muted-fg);">清除筛选</span></div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">日期范围
+                  <div style="height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-size:14px;font-weight:400;font-variant-numeric:tabular-nums;">2026-09-01 — 2026-09-30</div>
+                  <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">最长一个月</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">接通状态
+                  <div style="display:grid;grid-template-columns:1fr 1fr;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:14px;font-weight:400;text-align:center;">
+                    <span style="height:38px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:var(--bg);font-weight:500;">已接通</span>
+                    <span style="height:38px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);">全部</span>
+                  </div>
+                </div>
+                <button style="height:44px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:15px;font-weight:500;font-family:inherit;">查看 12,804 条结果</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">骨架屏（加载中）</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div style="border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;"><span style="width:50%;height:12px;border-radius:4px;background:var(--skeleton);"></span><span style="width:80%;height:24px;border-radius:6px;background:var(--skeleton);"></span></div>
+            <div style="border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;"><span style="width:40%;height:12px;border-radius:4px;background:var(--skeleton);"></span><span style="width:70%;height:24px;border-radius:6px;background:var(--skeleton);"></span></div>
+            <div style="border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;"><span style="width:55%;height:12px;border-radius:4px;background:var(--skeleton);"></span><span style="width:60%;height:24px;border-radius:6px;background:var(--skeleton);"></span></div>
+          </div>
+          <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+            <div style="height:36px;background:var(--muted);display:grid;grid-template-columns:2fr 2fr 1fr 1fr 1fr;gap:16px;align-items:center;padding:0 12px;"><span style="height:8px;width:60%;border-radius:4px;background:var(--skeleton);"></span><span style="height:8px;width:50%;border-radius:4px;background:var(--skeleton);"></span><span></span><span></span><span></span></div>
+            <sc-for list="{{ skeletonRows }}" as="r" hint-placeholder-count="4">
+              <div style="height:44px;border-top:1px solid var(--border);display:grid;grid-template-columns:2fr 2fr 1fr 1fr 1fr;gap:16px;align-items:center;padding:0 12px;">
+                <span style="height:10px;width:85%;border-radius:4px;background:var(--skeleton);"></span>
+                <span style="height:10px;width:70%;border-radius:4px;background:var(--skeleton);"></span>
+                <span style="height:10px;width:60%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span>
+                <span style="height:10px;width:50%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span>
+                <span style="height:10px;width:70%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="font-size:12px;font-weight:500;color:var(--muted-fg);letter-spacing:.04em;">空状态 / 错误</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+            <div style="border:1px dashed var(--border);border-radius:12px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+              <div style="width:88px;height:64px;border-radius:8px;border:1px solid var(--border);background:repeating-linear-gradient(135deg,var(--muted) 0 6px,transparent 6px 12px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted-fg);">插图</div>
+              <div style="font-size:14px;font-weight:600;">还没有话单</div>
+              <div style="font-size:12px;color:var(--muted-fg);line-height:1.6;text-wrap:pretty;">开始通话后，记录会显示在这里</div>
+            </div>
+            <div style="border:1px dashed var(--border);border-radius:12px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">⌕</div>
+              <div style="font-size:14px;font-weight:600;">没有符合条件的结果</div>
+              <div style="font-size:12px;color:var(--muted-fg);line-height:1.6;">试试调整日期或号码</div>
+              <button style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;">清除筛选</button>
+            </div>
+            <div style="border:1px solid var(--err-bd);background:var(--err-bg);border-radius:12px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+              <div style="width:44px;height:44px;border-radius:50%;border:1px solid var(--err-bd);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--err-fg);">!</div>
+              <div style="font-size:14px;font-weight:600;color:var(--err-fg);">加载失败</div>
+              <div style="font-size:12px;color:var(--muted-fg);line-height:1.6;">网络异常，请稍后重试</div>
+              <button style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;">重试</button>
+            </div>
+          </div>
+          <div style="border:1px solid var(--err-bd);background:var(--err-bg);color:var(--err-fg);border-radius:10px;padding:12px 16px;font-size:14px;display:flex;align-items:center;gap:10px;">
+            <span style="width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">!</span>
+            <span style="font-weight:500;">余额不足，已暂停呼叫，请联系客服充值</span>
+          </div>
+        </div>
+
+      </div>
+    </sc-for>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;product&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;portal&quot;,&quot;admin&quot;],&quot;default&quot;:&quot;portal&quot;,&quot;tsType&quot;:&quot;'portal'|'admin'&quot;,&quot;section&quot;:&quot;展示&quot;},&quot;panes&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;'both'|'light'|'dark'&quot;,&quot;section&quot;:&quot;展示&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const product = this.props.product ?? 'portal';
+    const mode = this.props.panes ?? 'both';
+    const all = [
+      { key: 'light', label: '浅色模式', isLight: true, isDark: false },
+      { key: 'dark', label: '深色模式', isLight: false, isDark: true },
+    ];
+    return {
+      product,
+      isAdmin: product === 'admin',
+      productLabel: product === 'admin' ? '管理后台' : '客户门户',
+      themes: mode === 'both' ? all : all.filter(t => t.key === mode),
+      skeletonRows: [1, 2, 3, 4],
+    };
+  }
+}
+</script>
+</body>
+</html>

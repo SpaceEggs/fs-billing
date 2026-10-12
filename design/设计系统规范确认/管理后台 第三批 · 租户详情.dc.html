@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+html,body{margin:0;padding:0;background:#d4d4d8;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:var(--primary,#2563eb);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;text-underline-offset:3px;}
+*{box-sizing:border-box;}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--primary:#2563eb;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#dc2626;--pos:#16a34a;--overlay:rgba(9,9,11,.45);--skeleton:#ececee;--row-hover:#fafafa;--brand-soft:#eff6ff;--brand-bd:#bfdbfe;--side:#fafafa;--bar:#2563eb;--bar-dim:#bfdbfe;
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;--off-bg:#f4f4f5;--off-fg:#52525b;--off-bd:#e4e4e7;--unv-bg:#fefce8;--unv-fg:#a16207;--unv-bd:#fde047;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--primary:#3b82f6;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#f87171;--pos:#4ade80;--overlay:rgba(0,0,0,.65);--skeleton:#1f1f23;--row-hover:#141416;--brand-soft:rgba(59,130,246,.12);--brand-bd:rgba(59,130,246,.35);--side:#0c0c0e;--bar:#3b82f6;--bar-dim:rgba(59,130,246,.35);
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);--off-bg:#1f1f23;--off-fg:#a1a1aa;--off-bd:#3f3f46;--unv-bg:rgba(234,179,8,.12);--unv-fg:#facc15;--unv-bd:rgba(234,179,8,.4);}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="padding:56px;display:flex;flex-direction:column;gap:72px;min-width:max-content;">
+
+  <header style="display:flex;flex-direction:column;gap:6px;color:#18181b;">
+    <div style="font-size:13px;color:#52525b;">FS-Billing · 第三批 · 管理后台</div>
+    <h1 style="margin:0;font-size:30px;font-weight:600;">租户详情 · 概况 / 话单 / 账单 / 设置 / 门户账号</h1>
+    <div style="font-size:13px;color:#52525b;">ABC001 深圳市某某科技有限公司（CNY · 透支中 · 当前余额 -¥35.20）· 今天 2026-09-29 · 2026-09-27 03:08 发生一次计费系统授权超时。浅色/深色在 Tweaks 中切换。</div>
+  </header>
+
+  <section data-screen-label="租户详情 电脑" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">1 · 电脑</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,1440px);gap:48px 40px;align-items:start;">
+      <sc-for list="{{ desk }}" as="b" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:1440px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+                <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+              </nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:14px;color:var(--muted-fg);"><a>租户</a> / ABC001</span>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">◐</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+              </div>
+              <main style="padding:28px;display:flex;flex-direction:column;gap:24px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;">
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">深圳市某某科技有限公司</h1><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>透支中</span></div>
+                    <div style="display:flex;gap:14px;font-size:13px;color:var(--muted-fg);"><span style="font-family:ui-monospace,Menlo,monospace;color:var(--fg);">ABC001</span><span>CNY</span><span>创建于 2026-08-12</span></div>
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">停用</button>
+                    <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">编辑</button>
+                    <button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">余额操作</button>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;border:1px solid var(--border);border-radius:12px;font-variant-numeric:tabular-nums;">
+                  <div style="padding:20px 24px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--border);"><span style="font-size:13px;color:var(--muted-fg);">当前余额</span><span style="font-size:36px;font-weight:600;letter-spacing:-.02em;color:var(--neg);line-height:1.1;">-¥35.20</span></div>
+                  <div style="padding:20px 24px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--border);"><span style="font-size:13px;color:var(--muted-fg);">透支额度</span><span style="font-size:22px;font-weight:600;">¥100.00</span><span style="font-size:12px;color:var(--muted-fg);">提醒阈值 ¥200.00</span></div>
+                  <div style="padding:20px 24px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--border);"><span style="font-size:13px;color:var(--muted-fg);">可用额度</span><span style="font-size:22px;font-weight:600;">¥64.80</span><span style="font-size:12px;color:var(--muted-fg);">余额 + 透支额度</span></div>
+                  <div style="padding:20px 24px;display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;color:var(--muted-fg);">待收款</span><span style="font-size:22px;font-weight:600;color:var(--warn-fg);">¥500.00</span><span style="font-size:12px;color:var(--muted-fg);">1 笔 · 已欠 6 天</span></div>
+                </div>
+                <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);font-size:14px;">
+                  <sc-for list="{{ b.tabs }}" as="tb" hint-placeholder-count="7"><span style="padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-weight:{{ tb.weight }};">{{ tb.label }}</span></sc-for>
+                </div>
+
+                <sc-if value="{{ b.ov }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:20px;">
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-variant-numeric:tabular-nums;">
+                      <div style="border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;color:var(--muted-fg);">本月消费</span><span style="font-size:26px;font-weight:600;">¥2,486.30</span><span style="font-size:12px;color:var(--muted-fg);">2026-09-01 至今 · 实时</span></div>
+                      <div style="border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;color:var(--muted-fg);">本月通话</span><span style="font-size:26px;font-weight:600;">49,726分钟</span><span style="font-size:12px;color:var(--muted-fg);">13,517 通 · 含未接通 713</span></div>
+                      <div style="border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px;"><span style="font-size:13px;color:var(--muted-fg);">今日消费</span><span style="font-size:26px;font-weight:600;">¥88.64</span><span style="font-size:12px;color:var(--muted-fg);">截至 14:03</span></div>
+                    </div>
+                    <div style="border:1px solid var(--border);border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:16px;font-weight:600;">最近 30 天每日消费</span><span style="font-size:12px;color:var(--muted-fg);">2026-08-31 至 2026-09-29 · 与客户门户首页一致</span></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><span style="font-size:12px;color:var(--muted-fg);">合计</span><span style="font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;">{{ chartTotal }}</span></div></div>
+                      <div style="display:flex;gap:12px;">
+                        <div style="display:flex;flex-direction:column;justify-content:space-between;height:200px;font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums;text-align:right;width:36px;"><span>¥120</span><span>¥80</span><span>¥40</span><span>¥0</span></div>
+                        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                          <div style="height:200px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--border);background:linear-gradient(var(--border) 1px,transparent 1px) 0 0/100% 66.67px;">
+                            <sc-for list="{{ chart }}" as="d" hint-placeholder-count="30"><div style="flex:1;height:{{ d.h }};background:{{ d.color }};border-radius:3px 3px 0 0;"></div></sc-for>
+                          </div>
+                          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums;"><span>08-31</span><span>09-07</span><span>09-14</span><span>09-21</span><span>09-29</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.callsTab }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:20px;">
+                    <div style="display:flex;gap:12px;align-items:flex-end;">
+                      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">日期范围 · 最长一个月</span><div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:space-between;font-size:14px;font-variant-numeric:tabular-nums;width:250px;"><span>{{ b.range }}</span><span style="color:var(--muted-fg);font-size:12px;">▦</span></div></div>
+                      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">被叫号码</span><div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-size:14px;color:var(--muted-fg);width:180px;">模糊搜索</div></div>
+                      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">国家</span><div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:space-between;font-size:14px;width:140px;"><span>全部国家</span><span style="color:var(--muted-fg);font-size:12px;">▾</span></div></div>
+                      <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">接通状态</span><div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:13px;height:36px;"><span style="padding:0 12px;display:flex;align-items:center;color:var(--muted-fg);">已接通</span><span style="padding:0 12px;display:flex;align-items:center;border-radius:6px;background:var(--bg);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.1);">全部</span></div></div>
+                      <span style="height:36px;padding:0 12px;border-radius:8px;border:1px solid {{ b.unvBd }};background:{{ b.unvBg }};display:flex;align-items:center;gap:8px;font-size:14px;"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ b.chkBd }};background:{{ b.chkBg }};color:var(--primary-fg);font-size:11px;display:flex;align-items:center;justify-content:center;">{{ b.chk }}</span>仅看未经验证</span>
+                      <button style="height:36px;padding:0 10px;border:none;background:transparent;color:var(--muted-fg);font-size:14px;font-family:inherit;">重置</button>
+                      <span style="flex:1;"></span>
+                      <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">导出 CSV</button>
+                      <button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--err-bd);background:var(--bg);color:var(--neg);font-size:14px;font-weight:500;font-family:inherit;">删除话单</button>
+                    </div>
+                    <sc-if value="{{ b.unvOnly }}" hint-placeholder-val="{{ false }}">
+                      <div style="border:1px solid var(--unv-bd);background:var(--unv-bg);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:12px;"><span><span style="font-weight:600;color:var(--unv-fg);">未经验证：</span>以下话单发生在计费系统授权超时期间（2026-09-27 03:08 起），由 FreeSWITCH 放行，最长 30 分钟，已按费率正常计费。</span><a style="white-space:nowrap;">查看告警 ›</a></div>
+                    </sc-if>
+                    <sc-if value="{{ b.hasSum }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:32px;padding:14px 20px;border:1px solid var(--border);border-radius:10px;background:var(--muted);font-variant-numeric:tabular-nums;align-items:baseline;">
+                        <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">通话数</span><span style="font-size:18px;font-weight:600;">{{ b.sum.n }}</span><span style="font-size:12px;color:var(--muted-fg);">{{ b.sum.nNote }}</span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">总计费</span><span style="font-size:18px;font-weight:600;">{{ b.sum.mins }}</span></div>
+                        <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">总费用</span><span style="font-size:18px;font-weight:600;">{{ b.sum.fee }}</span></div>
+                        <span style="flex:1;"></span>
+                        <span style="display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:6px;font-size:12px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);">{{ b.sum.unv }}</span>
+                      </div>
+                    </sc-if>
+                    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                        <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                          <th style="text-align:left;font-weight:500;padding:10px 16px;">接通时间 ↓</th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">国家/备注</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">通话时长</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">计费时长</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">费率（元/分钟）</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 16px;">费用</th>
+                        </tr></thead>
+                        <sc-if value="{{ b.hasRows }}" hint-placeholder-val="{{ true }}">
+                          <tbody style="font-variant-numeric:tabular-nums;">
+                            <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="10">
+                              <tr style="border-top:1px solid var(--border);color:{{ r.color }};cursor:pointer;" style-hover="background:var(--row-hover);">
+                                <td style="padding:11px 16px;"><div style="display:flex;align-items:center;gap:8px;">{{ r.time }}<sc-if value="{{ r.unv }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);">未经验证</span></sc-if></div></td>
+                                <td style="padding:11px 12px;">{{ r.caller }}</td>
+                                <td style="padding:11px 12px;">{{ r.callee }}</td>
+                                <td style="padding:11px 12px;">{{ r.countryLabel }}</td>
+                                <td style="padding:11px 12px;text-align:right;">{{ r.dur }}</td>
+                                <td style="padding:11px 12px;text-align:right;">{{ r.billed }}</td>
+                                <td style="padding:11px 12px;text-align:right;">{{ r.rate }}</td>
+                                <td style="padding:11px 16px;text-align:right;font-weight:500;">{{ r.fee }}</td>
+                              </tr>
+                            </sc-for>
+                          </tbody>
+                        </sc-if>
+                      </table>
+                      <sc-if value="{{ b.loading }}" hint-placeholder-val="{{ false }}">
+                        <div>
+                          <sc-for list="{{ skel }}" as="s" hint-placeholder-count="8">
+                            <div style="height:42px;border-top:1px solid var(--border);display:grid;grid-template-columns:1.4fr 1.2fr 1.2fr 1fr .8fr .8fr .8fr .8fr;gap:14px;align-items:center;padding:0 16px;"><span style="height:10px;width:85%;border-radius:4px;background:var(--skeleton);"></span><span style="height:10px;width:80%;border-radius:4px;background:var(--skeleton);"></span><span style="height:10px;width:80%;border-radius:4px;background:var(--skeleton);"></span><span style="height:10px;width:60%;border-radius:4px;background:var(--skeleton);"></span><span style="height:10px;width:70%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span><span style="height:10px;width:60%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span><span style="height:10px;width:60%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span><span style="height:10px;width:55%;border-radius:4px;background:var(--skeleton);justify-self:end;"></span></div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}">
+                        <div style="border-top:1px solid var(--border);padding:56px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;">
+                          <span style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">⌕</span>
+                          <span style="font-size:15px;font-weight:600;">所选日期范围内没有话单</span>
+                          <span style="font-size:13px;color:var(--muted-fg);">该租户创建于 2026-08-12，请调整日期范围</span>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ b.hasRows }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted-fg);">
+                        <span style="font-variant-numeric:tabular-nums;">{{ b.pageInfo }}</span>
+                        <div style="display:flex;gap:4px;font-variant-numeric:tabular-nums;"><span style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;opacity:.5;">上一页</span><span style="width:32px;height:32px;border-radius:7px;border:1px solid var(--primary);color:var(--fg);display:flex;align-items:center;justify-content:center;font-weight:500;">1</span><span style="height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--input);display:flex;align-items:center;opacity:{{ b.nextOp }};">下一页</span></div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.bills }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                        <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                          <th style="text-align:left;font-weight:500;padding:10px 16px;">月份</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">期初余额</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">充值</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">赠送</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">调账</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">通话扣费</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">期末余额</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 12px;">通话分钟数</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 16px;">操作</th>
+                        </tr></thead>
+                        <tbody style="font-variant-numeric:tabular-nums;">
+                          <sc-for list="{{ b.months }}" as="m" hint-placeholder-count="2">
+                            <tr style="border-top:1px solid var(--border);">
+                              <td style="padding:14px 16px;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;font-weight:500;">{{ m.title }}</span><sc-if value="{{ m.live }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;border:1px solid var(--border);"><span style="width:6px;height:6px;border-radius:50%;background:var(--pos);"></span>本月（进行中）</span></sc-if><sc-if value="{{ m.deleted }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--off-bg);color:var(--off-fg);border:1px solid var(--off-bd);">话单已删除</span></sc-if></div></td>
+                              <td style="padding:14px 12px;text-align:right;">{{ m.opening }}</td>
+                              <td style="padding:14px 12px;text-align:right;">{{ m.recharge }}</td>
+                              <td style="padding:14px 12px;text-align:right;">{{ m.gift }}</td>
+                              <td style="padding:14px 12px;text-align:right;color:{{ m.adjColor }};">{{ m.adj }}</td>
+                              <td style="padding:14px 12px;text-align:right;">{{ m.usage }}</td>
+                              <td style="padding:14px 12px;text-align:right;font-weight:600;color:{{ m.closingColor }};">{{ m.closing }}</td>
+                              <td style="padding:14px 12px;text-align:right;">{{ m.mins }}</td>
+                              <td style="padding:10px 16px;"><div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;"><span style="font-size:12px;color:var(--muted-fg);">{{ m.reason }}</span><a>查看</a><button style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;opacity:{{ m.regenOp }};cursor:{{ m.regenCursor }};">重新生成</button></div></td>
+                            </tr>
+                          </sc-for>
+                        </tbody>
+                      </table>
+                    </div>
+                    <span style="font-size:12px;color:var(--muted-fg);">{{ b.billNote }}</span>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.settings }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--border);border-radius:12px;max-width:640px;display:flex;flex-direction:column;">
+                    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:18px;">
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                        <sc-for list="{{ b.fields }}" as="f" hint-placeholder-count="2">
+                          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">{{ f.label }}
+                            <span style="height:40px;border:1px solid {{ f.bd }};box-shadow:{{ f.ring }};border-radius:8px;display:flex;align-items:center;font-size:14px;font-weight:400;font-variant-numeric:tabular-nums;overflow:hidden;"><span style="height:100%;padding:0 12px;display:flex;align-items:center;background:var(--muted);color:var(--muted-fg);border-right:1px solid var(--input);">¥</span><span style="padding:0 12px;">{{ f.val }}</span></span>
+                            <span style="font-size:12px;font-weight:400;color:{{ f.msgColor }};">{{ f.msg }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:500;">通知邮箱
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;font-weight:400;">
+                          <sc-for list="{{ b.emails }}" as="e" hint-placeholder-count="2"><span style="height:30px;padding:0 6px 0 10px;border-radius:7px;background:var(--muted);border:1px solid {{ e.bd }};display:flex;align-items:center;gap:6px;font-size:13px;">{{ e.v }}<span style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);">✕</span></span></sc-for>
+                        </div>
+                        <div style="display:flex;gap:8px;"><span style="flex:1;height:36px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:400;color:var(--muted-fg);">输入邮箱后按回车添加</span><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">添加</button></div>
+                        <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">余额低于提醒阈值、透支、停机时发送邮件，可添加多个</span>
+                      </div>
+                    </div>
+                    <div style="border-top:1px solid var(--border);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;">
+                      <span style="font-size:12px;color:{{ b.footColor }};">{{ b.footNote }}</span>
+                      <div style="display:flex;gap:8px;"><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">取消</button><button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;opacity:{{ b.saveOp }};">保存修改</button></div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.portal }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:14px;max-width:760px;">
+                    <sc-if value="{{ b.off }}" hint-placeholder-val="{{ false }}">
+                      <div style="border:1px solid var(--off-bd);background:var(--off-bg);border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.5;"><span style="font-weight:600;">门户账号已停用</span>　客户无法登录客户门户。停用于 2026-09-29 15:20:08，操作人 王敏。呼叫与计费不受影响。</div>
+                    </sc-if>
+                    <div style="border:1px solid var(--border);border-radius:12px;">
+                      <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:15px;font-weight:600;">客户门户账号</span><span style="font-size:12px;color:var(--muted-fg);">第一版每个租户一个门户账号</span></div>
+                        <div style="display:flex;gap:8px;"><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">重置密码</button><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid {{ b.toggleBd }};background:var(--bg);color:{{ b.toggleFg }};font-size:14px;font-weight:500;font-family:inherit;">{{ b.toggle }}</button></div></div>
+                      <div style="display:grid;grid-template-columns:140px 1fr;font-size:14px;padding:4px 20px 8px;font-variant-numeric:tabular-nums;">
+                        <span style="padding:12px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">登录邮箱</span><span style="padding:12px 0;border-bottom:1px solid var(--border);">billing@abc-tech.cn</span>
+                        <span style="padding:12px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">状态</span><span style="padding:9px 0;border-bottom:1px solid var(--border);"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:{{ b.stBg }};color:{{ b.stFg }};border:1px solid {{ b.stBd }};">{{ b.st }}</span></span>
+                        <span style="padding:12px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">最后登录时间</span><span style="padding:12px 0;border-bottom:1px solid var(--border);">2026-09-29 09:12:40</span>
+                        <span style="padding:12px 0;color:var(--muted-fg);">密码最后修改</span><span style="padding:12px 0;">2026-08-12 10:31:02（开通时设置）</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+              </main>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="对话框 电脑" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">2 · 对话框 · 电脑</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,760px);gap:40px;align-items:start;">
+      <sc-for list="{{ dialogs }}" as="d" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ d.label }}</div>
+          <div style="width:760px;height:640px;background:var(--overlay);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fg);">
+            <div style="width:520px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:18px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;"><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:17px;font-weight:600;">{{ d.title }}</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">{{ d.sub }}</span></div><span style="color:var(--muted-fg);">✕</span></div>
+              <sc-if value="{{ d.hasRows }}" hint-placeholder-val="{{ false }}">
+                <dl style="margin:0;display:grid;grid-template-columns:120px 1fr;font-size:14px;font-variant-numeric:tabular-nums;border-top:1px solid var(--border);">
+                  <sc-for list="{{ d.rows }}" as="r" hint-placeholder-count="5">
+                    <dt style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">{{ r.k }}</dt>
+                    <dd style="margin:0;padding:9px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-family:{{ r.font }};"><sc-if value="{{ r.tag }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);font-family:inherit;">未经验证</span></sc-if><span style="color:{{ r.color }};">{{ r.v }}</span></dd>
+                  </sc-for>
+                </dl>
+              </sc-if>
+              <sc-if value="{{ d.code }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:8px;align-items:center;border:1px solid var(--border);background:var(--muted);border-radius:10px;padding:8px 8px 8px 16px;"><span style="flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;font-weight:600;letter-spacing:.06em;">{{ d.code }}</span><button style="height:36px;padding:0 14px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">复制</button></div>
+              </sc-if>
+              <sc-if value="{{ d.note }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid {{ d.noteBd }};background:{{ d.noteBg }};border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.55;display:flex;flex-direction:column;gap:2px;"><span style="font-weight:600;color:{{ d.noteFg }};">{{ d.noteTitle }}</span><span>{{ d.note }}</span></div>
+              </sc-if>
+              <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <sc-for list="{{ d.btns }}" as="x" hint-placeholder-count="2"><button style="height:36px;padding:0 16px;border-radius:8px;border:1px solid {{ x.bd }};background:{{ x.bg }};color:{{ x.fg }};font-size:14px;font-weight:500;font-family:inherit;">{{ x.label }}</button></sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="租户详情 手机" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">3 · 手机</h2>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;max-width:3000px;">
+      <sc-for list="{{ mob }}" as="b" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.mlabel }}</div>
+          <div style="width:390px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);">
+            <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+            <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;">‹</span><span style="font-size:16px;font-weight:600;font-family:ui-monospace,Menlo,monospace;">ABC001</span><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;">⋯</span></div>
+            <div style="padding:16px 16px 28px;display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-variant-numeric:tabular-nums;"><div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:16px;font-weight:600;">深圳市某某科技有限公司</span><span style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted-fg);"><span style="display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-bd);">透支中</span>CNY · 可用 ¥64.80</span></div><span style="font-size:22px;font-weight:600;color:var(--neg);">-¥35.20</span></div>
+              <div style="display:flex;border-bottom:1px solid var(--border);font-size:14px;overflow:hidden;white-space:nowrap;">
+                <div style="display:flex;gap:2px;margin-left:{{ b.tabShift }};">
+                  <sc-for list="{{ b.tabs }}" as="tb" hint-placeholder-count="7"><span style="padding:12px 10px;margin-bottom:-1px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-weight:{{ tb.weight }};">{{ tb.label }}</span></sc-for>
+                </div>
+              </div>
+
+              <sc-if value="{{ b.ov }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px;font-variant-numeric:tabular-nums;">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div style="border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:4px;"><span style="font-size:12px;color:var(--muted-fg);">本月消费</span><span style="font-size:19px;font-weight:600;">¥2,486.30</span></div>
+                    <div style="border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:4px;"><span style="font-size:12px;color:var(--muted-fg);">本月通话</span><span style="font-size:19px;font-weight:600;">49,726分钟</span></div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;"><span style="font-size:14px;font-weight:600;">最近 30 天消费</span><span style="font-size:14px;font-weight:600;">{{ chartTotal }}</span></div>
+                    <div style="height:120px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid var(--border);"><sc-for list="{{ chart }}" as="d" hint-placeholder-count="30"><div style="flex:1;height:{{ d.h }};background:{{ d.color }};border-radius:2px 2px 0 0;"></div></sc-for></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);"><span>08-31</span><span>09-14</span><span>09-29</span></div>
+                  </div>
+                  <button style="height:44px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:15px;font-weight:500;font-family:inherit;">余额操作</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ b.callsTab }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <div style="display:flex;gap:8px;"><div style="flex:1;height:44px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;padding:0 12px;font-size:14px;font-variant-numeric:tabular-nums;">{{ b.mrange }}</div><div style="height:44px;padding:0 14px;border-radius:8px;border:1px solid {{ b.unvBd }};background:{{ b.unvBg }};display:flex;align-items:center;font-size:15px;">{{ b.filterLabel }}</div></div>
+                  <sc-if value="{{ b.unvOnly }}" hint-placeholder-val="{{ false }}">
+                    <div style="border:1px solid var(--unv-bd);background:var(--unv-bg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;"><span style="font-weight:600;color:var(--unv-fg);">仅看未经验证 · 4 条</span><br>授权超时期间由 FreeSWITCH 放行，最长 30 分钟。<a>查看告警</a></div>
+                  </sc-if>
+                  <sc-if value="{{ b.hasSum }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;justify-content:space-between;padding:10px 12px;border-radius:8px;background:var(--muted);font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;"><span>{{ b.sum.n }} 通 · {{ b.sum.mins }}</span><span style="font-weight:600;color:var(--fg);">{{ b.sum.fee }}</span></div>
+                  </sc-if>
+                  <sc-for list="{{ b.mrows }}" as="r" hint-placeholder-count="6">
+                    <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;color:{{ r.color }};">
+                      <div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;">{{ r.callee }}<sc-if value="{{ r.unv }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);">未经验证</span></sc-if></div><span style="font-size:15px;font-weight:600;">{{ r.fee }}</span></div>
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>{{ r.shortTime }} · {{ r.countryLabel }}</span><span>{{ r.billed }}</span></div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ b.loading }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:8px;"><sc-for list="{{ skel5 }}" as="s" hint-placeholder-count="5"><div style="height:62px;border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;"><span style="height:10px;width:60%;border-radius:4px;background:var(--skeleton);"></span><span style="height:8px;width:80%;border-radius:4px;background:var(--skeleton);"></span></div></sc-for></div>
+                  </sc-if>
+                  <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:40px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;"><span style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">⌕</span><span style="font-size:15px;font-weight:600;">所选日期范围内没有话单</span><span style="font-size:13px;color:var(--muted-fg);">该租户创建于 2026-08-12</span></div>
+                  </sc-if>
+                  <button style="height:44px;border-radius:8px;border:1px solid var(--err-bd);background:var(--bg);color:var(--neg);font-size:15px;font-weight:500;font-family:inherit;">删除话单</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ b.bills }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <sc-for list="{{ b.months }}" as="m" hint-placeholder-count="2">
+                    <div style="border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;font-variant-numeric:tabular-nums;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:600;">{{ m.title }}</span><sc-if value="{{ m.live }}" hint-placeholder-val="{{ false }}"><span style="height:20px;padding:0 7px;border-radius:5px;font-size:11px;border:1px solid var(--border);display:inline-flex;align-items:center;">进行中</span></sc-if></div><span style="font-size:15px;font-weight:600;color:{{ m.closingColor }};">{{ m.closing }}</span></div>
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>通话扣费 {{ m.usage }}</span><span>{{ m.mins }}</span></div>
+                      <div style="display:flex;align-items:center;gap:10px;"><button style="height:44px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:15px;font-family:inherit;opacity:{{ m.regenOp }};">重新生成</button><span style="font-size:12px;color:var(--muted-fg);">{{ m.reason }}</span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ b.settings }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                  <sc-for list="{{ b.fields }}" as="f" hint-placeholder-count="2">
+                    <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">{{ f.label }}
+                      <span style="height:44px;border:1px solid {{ f.bd }};box-shadow:{{ f.ring }};border-radius:8px;display:flex;align-items:center;font-size:16px;font-weight:400;overflow:hidden;"><span style="height:100%;padding:0 12px;display:flex;align-items:center;background:var(--muted);color:var(--muted-fg);">¥</span><span style="padding:0 12px;">{{ f.val }}</span></span>
+                      <span style="font-size:12px;font-weight:400;color:{{ f.msgColor }};">{{ f.msg }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;">通知邮箱
+                    <sc-for list="{{ b.emails }}" as="e" hint-placeholder-count="2"><span style="height:44px;padding:0 4px 0 12px;border-radius:8px;background:var(--muted);display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:400;">{{ e.v }}<span style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);">✕</span></span></sc-for>
+                    <span style="height:44px;border:1px dashed var(--input);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:400;color:var(--primary);">＋ 添加邮箱</span>
+                  </div>
+                  <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;opacity:{{ b.saveOp }};">保存修改</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ b.portal }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <sc-if value="{{ b.off }}" hint-placeholder-val="{{ false }}">
+                    <div style="border:1px solid var(--off-bd);background:var(--off-bg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;"><span style="font-weight:600;">门户账号已停用</span>，客户无法登录。呼叫与计费不受影响。</div>
+                  </sc-if>
+                  <div style="border:1px solid var(--border);border-radius:12px;padding:4px 14px;font-size:14px;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;">
+                    <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px;"><span style="font-size:12px;color:var(--muted-fg);">登录邮箱</span>billing@abc-tech.cn</div>
+                    <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--muted-fg);">状态</span><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:{{ b.stBg }};color:{{ b.stFg }};border:1px solid {{ b.stBd }};">{{ b.st }}</span></div>
+                    <div style="padding:12px 0;display:flex;flex-direction:column;gap:2px;"><span style="font-size:12px;color:var(--muted-fg);">最后登录时间</span>2026-09-29 09:12:40</div>
+                  </div>
+                  <span style="font-size:12px;color:var(--muted-fg);">第一版每个租户一个门户账号</span>
+                  <button style="height:44px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:15px;font-family:inherit;">重置密码</button>
+                  <button style="height:44px;border-radius:8px;border:1px solid {{ b.toggleBd }};background:var(--bg);color:{{ b.toggleFg }};font-size:15px;font-weight:500;font-family:inherit;">{{ b.toggle }}</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;max-width:3000px;">
+      <sc-for list="{{ dialogs }}" as="d" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ d.mlabel }}</div>
+          <div style="width:390px;height:780px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+            <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;max-height:740px;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:14px;">
+              <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+              <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:17px;font-weight:600;">{{ d.title }}</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">{{ d.sub }}</span></div>
+              <sc-if value="{{ d.hasRows }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;font-size:14px;font-variant-numeric:tabular-nums;border-top:1px solid var(--border);">
+                  <sc-for list="{{ d.mrows }}" as="r" hint-placeholder-count="5">
+                    <div style="padding:9px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;"><span style="color:var(--muted-fg);flex-shrink:0;">{{ r.k }}</span><span style="display:flex;align-items:center;gap:6px;text-align:right;color:{{ r.color }};"><sc-if value="{{ r.tag }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;font-size:11px;font-weight:500;background:var(--unv-bg);color:var(--unv-fg);border:1px solid var(--unv-bd);">未经验证</span></sc-if>{{ r.v }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ d.code }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid var(--border);background:var(--muted);border-radius:10px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;font-weight:600;letter-spacing:.06em;text-align:center;">{{ d.code }}</div>
+                <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">复制临时密码</button>
+              </sc-if>
+              <sc-if value="{{ d.note }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid {{ d.noteBd }};background:{{ d.noteBg }};border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.55;"><span style="font-weight:600;color:{{ d.noteFg }};">{{ d.noteTitle }}　</span>{{ d.note }}</div>
+              </sc-if>
+              <sc-for list="{{ d.mbtns }}" as="x" hint-placeholder-count="2"><button style="height:44px;border-radius:8px;border:1px solid {{ x.bd }};background:{{ x.bg }};color:{{ x.fg }};font-size:16px;font-weight:500;font-family:inherit;">{{ x.label }}</button></sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="删除话单对话框" style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;flex-direction:column;gap:6px;"><h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">4 · 删除话单对话框</h2><span style="font-size:13px;color:#52525b;">从「话单」标签页右上角「删除话单」打开。话单默认永久保存，这是唯一的删除入口。可交互版本见 <a href="管理后台 删除话单原型.dc.html">管理后台 删除话单原型</a>。</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,760px);gap:40px;align-items:start;">
+      <sc-for list="{{ delStates }}" as="s" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ s.label }}</div>
+          <div style="width:760px;height:760px;background:var(--overlay);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--fg);">
+            <div style="width:560px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;position:relative;">
+              <sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:32px 28px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+                  <span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:22px;">✓</span>
+                  <span style="font-size:18px;font-weight:600;">已删除 9,642 条话单</span>
+                  <span style="font-size:14px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">ABC001 · 2026年8月（2026-08-12 至 2026-08-31）</span>
+                  <div style="width:100%;margin-top:8px;border:1px solid var(--border);border-radius:10px;display:grid;grid-template-columns:110px 1fr;font-size:13px;text-align:left;padding:4px 16px;font-variant-numeric:tabular-nums;">
+                    <span style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">操作日志</span><span style="padding:9px 0;border-bottom:1px solid var(--border);">已自动记入 · <a>查看</a></span>
+                    <span style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">操作人</span><span style="padding:9px 0;border-bottom:1px solid var(--border);">王敏 · 2026-09-29 15:42:10</span>
+                    <span style="padding:9px 0;color:var(--muted-fg);">不受影响</span><span style="padding:9px 0;">余额 -¥35.20、2026年8月 月账单</span>
+                  </div>
+                  <button style="margin-top:8px;align-self:stretch;height:40px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">完成</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.form }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;">
+                  <div style="padding:20px 24px 0;display:flex;justify-content:space-between;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">删除话单</span><span style="font-size:13px;color:var(--muted-fg);">ABC001 深圳市某某科技有限公司 · 按整月删除</span></div><span style="color:var(--muted-fg);">✕</span></div>
+                  <div style="padding:18px 24px;display:flex;flex-direction:column;gap:16px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative;">
+                      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">开始月份<span style="height:40px;border:1px solid {{ s.startBd }};box-shadow:{{ s.startRing }};border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:400;">2026年8月<span style="color:var(--muted-fg);font-size:12px;">▾</span></span></div>
+                      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">结束月份<span style="height:40px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:400;">2026年8月<span style="color:var(--muted-fg);font-size:12px;">▾</span></span></div>
+                      <sc-if value="{{ s.picker }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;top:72px;left:0;width:320px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:12px;display:flex;flex-direction:column;gap:10px;z-index:2;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600;"><span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);opacity:.4;">‹</span>2026<span style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);opacity:.4;">›</span></div>
+                          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+                            <sc-for list="{{ monthGrid }}" as="m" hint-placeholder-count="12"><span style="height:44px;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:13px;background:{{ m.bg }};color:{{ m.fg }};font-weight:{{ m.w }};border:1px solid {{ m.bd }};">{{ m.label }}<span style="font-size:10px;font-weight:400;">{{ m.sub }}</span></span></sc-for>
+                          </div>
+                          <div style="font-size:12px;line-height:1.55;color:var(--muted-fg);border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px;"><span><span style="color:var(--fg);font-weight:500;">9月不可选：</span>本月账单尚未生成（2026-10-01 生成后可选）。</span><span>只能选择已生成月账单的月份；2026-08-12 开户前无话单。</span></div>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <div style="border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;background:var(--muted);font-variant-numeric:tabular-nums;"><span style="font-size:15px;">将删除 <span style="font-family:ui-monospace,Menlo,monospace;font-weight:600;">ABC001</span> 在 <span style="font-weight:600;">2026年8月</span> 的 <span style="font-weight:600;color:var(--neg);">9,642</span> 条话单</span><span style="font-size:12px;color:var(--muted-fg);">时间范围 2026-08-12 00:00:00 至 2026-08-31 23:59:59（北京时间）</span></div>
+                    <div style="border:1px solid var(--err-bd);background:var(--err-bg);border-radius:10px;padding:12px 14px;display:flex;gap:10px;font-size:13px;line-height:1.6;"><span style="width:20px;height:20px;flex-shrink:0;border-radius:50%;background:var(--destructive);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;">!</span><span><span style="font-weight:600;color:var(--err-fg);">删除后无法恢复。</span>余额和已生成的月账单不受影响，但该时段将无法导出话单明细，也无法重新生成月账单。</span></div>
+                    <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;"><span>请输入租户编码 <span style="font-family:ui-monospace,Menlo,monospace;padding:1px 6px;border-radius:4px;background:var(--muted);">ABC001</span> 以确认</span>
+                      <span style="height:40px;border:1px solid {{ s.codeBd }};box-shadow:{{ s.codeRing }};border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:400;font-family:ui-monospace,Menlo,monospace;color:{{ s.codeColor }};">{{ s.code }}</span>
+                      <span style="font-size:12px;font-weight:400;color:{{ s.msgColor }};">{{ s.msg }}</span>
+                    </div>
+                  </div>
+                  <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;"><button style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">取消</button><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--destructive);color:#fff;font-size:14px;font-weight:500;font-family:inherit;opacity:{{ s.btnOp }};cursor:{{ s.btnCursor }};">删除 9,642 条话单</button></div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;gap:32px;align-items:flex-start;">
+      <sc-for list="{{ delMob }}" as="s" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ s.label }}</div>
+          <div style="width:390px;height:844px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+            <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:14px;">
+              <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+              <sc-if value="{{ s.picker }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:17px;font-weight:600;">选择开始月份</span><span style="font-size:15px;color:var(--muted-fg);">2026</span></div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                    <sc-for list="{{ monthGrid }}" as="m" hint-placeholder-count="12"><span style="height:52px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:15px;background:{{ m.bg }};color:{{ m.fg }};font-weight:{{ m.w }};border:1px solid {{ m.bd }};">{{ m.label }}<span style="font-size:11px;font-weight:400;">{{ m.sub }}</span></span></sc-for>
+                  </div>
+                  <div style="font-size:13px;line-height:1.55;color:var(--muted-fg);background:var(--muted);border-radius:8px;padding:10px 12px;"><span style="color:var(--fg);font-weight:500;">9月不可选：</span>本月账单尚未生成，2026-10-01 生成后可选。只能选择已生成月账单的月份。</div>
+                  <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">确定</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.form }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px;">
+                  <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">删除话单</span><span style="font-size:13px;color:var(--muted-fg);">ABC001 · 按整月删除</span></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">开始月份<span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400;">2026年8月</span></div><div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">结束月份<span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:15px;font-weight:400;">2026年8月</span></div></div>
+                  <div style="border-radius:10px;padding:12px 14px;background:var(--muted);font-size:15px;line-height:1.5;">将删除 <span style="font-weight:600;">ABC001</span> 在 <span style="font-weight:600;">2026年8月</span> 的 <span style="font-weight:600;color:var(--neg);">9,642</span> 条话单</div>
+                  <div style="border:1px solid var(--err-bd);background:var(--err-bg);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.6;"><span style="font-weight:600;color:var(--err-fg);">删除后无法恢复。</span>余额和已生成的月账单不受影响，但该时段将无法导出话单明细，也无法重新生成月账单。</div>
+                  <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">输入租户编码 ABC001 以确认<span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:16px;font-weight:400;font-family:ui-monospace,Menlo,monospace;">ABC001</span><span style="font-size:12px;font-weight:400;color:var(--ok-fg);">✓ 编码正确</span></div>
+                  <button style="height:44px;border:none;border-radius:8px;background:var(--destructive);color:#fff;font-size:16px;font-weight:500;font-family:inherit;">删除 9,642 条话单</button>
+                  <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">取消</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding-top:8px;">
+                  <span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:22px;">✓</span>
+                  <span style="font-size:18px;font-weight:600;">已删除 9,642 条话单</span>
+                  <span style="font-size:14px;color:var(--muted-fg);">ABC001 · 2026年8月</span>
+                  <span style="font-size:13px;color:var(--muted-fg);line-height:1.6;">已自动记入操作日志（王敏 · 2026-09-29 15:42:10）。余额和月账单不受影响。</span>
+                  <button style="margin-top:8px;align-self:stretch;height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">完成</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'light';
+    const money = c => (c < 0 ? '-' : '') + '¥' + (Math.abs(c) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const pad = n => String(n).padStart(2, '0');
+    const items = ['概览', '租户', '待收款', '未归属话单', '账单', '系统告警', '操作日志', '管理员'];
+    const nav = items.map(l => ({ label: l, bg: l === '租户' ? 'var(--brand-soft)' : 'transparent', fg: l === '租户' ? 'var(--primary)' : 'var(--muted-fg)', weight: l === '租户' ? 500 : 400, dot: l === '系统告警' ? 1 : 0 }));
+    const tabNames = ['概况', '余额流水', '费率', '话单', '账单', '设置', '门户账号'];
+    const tabs = a => tabNames.map(l => ({ label: l, line: l === a ? 'var(--primary)' : 'transparent', fg: l === a ? 'var(--fg)' : 'var(--muted-fg)', weight: l === a ? 600 : 400 }));
+    const shift = { '概况': '0px', '话单': '-120px', '账单': '-150px', '设置': '-190px', '门户账号': '-190px' };
+
+    const vals = [];
+    for (let i = 0; i < 30; i++) vals.push((i % 7 === 5 || i % 7 === 6) ? 48 + ((i * 13) % 11) : 78 + ((i * 37) % 19));
+    vals[29] = 88.64;
+    const chart = vals.map((v, i) => ({ h: (v / 120 * 100).toFixed(1) + '%', color: i === 29 ? 'var(--bar)' : 'var(--bar-dim)' }));
+    const chartTotal = money(Math.round(vals.reduce((a, b) => a + b, 0) * 100));
+
+    const raw = [
+      ['03:31:12','075586001234','8613800138000','中国',182,0.05,1,0],
+      ['03:26:47','075586001236','14155550123','美国/加拿大',845,0.01,1,0],
+      ['03:19:03','075586001235','447700900123','英国手机',302,0.045,1,0],
+      ['03:14:20','075586001234','14165550199','美国/加拿大',1260,0.01,1,1],
+      ['03:11:52','075586001236','8613912345678','中国',415,0.05,1,1],
+      ['03:10:05','075586001234','18765551234','牙买加',388,0.25,1,1],
+      ['03:08:41','075586001235','6591234567','新加坡',96,0.028,1,1],
+      ['03:02:30','075586001234','81312345678','日本',0,0.035,0,0],
+      ['02:57:18','075586001236','85291234567','中国香港',214,0.03,1,0],
+      ['02:49:55','075586001234','442071234567','英国',533,0.02,1,0],
+      ['02:41:07','075586001235','8613600136000','中国',77,0.05,1,0],
+      ['02:33:40','075586001234','14155550188','美国/加拿大',610,0.01,1,0],
+    ];
+    const rows = raw.map(([t, caller, callee, country, sec, rate, ok, unv]) => {
+      const mins = ok ? Math.ceil(sec / 60) : 0;
+      return { time: '2026-09-27 ' + t, shortTime: '09-27 ' + t, caller, callee, countryLabel: ok ? country : country + ' · 未接通', dur: Math.floor(sec / 60) + '分' + pad(sec % 60) + '秒', billed: mins + '分钟', mins, rate: rate.toFixed(4), feeC: Math.round(mins * rate * 100), fee: money(Math.round(mins * rate * 100)), color: ok ? 'var(--fg)' : 'var(--muted-fg)', unv: !!unv };
+    });
+    const unvRows = rows.filter(r => r.unv);
+    const unvSum = { n: String(unvRows.length), nNote: '全部已接通', mins: unvRows.reduce((a, r) => a + r.mins, 0) + '分钟', fee: money(unvRows.reduce((a, r) => a + r.feeC, 0)), unv: '全部为未经验证' };
+    const daySum = { n: '286', nNote: '含未接通 15', mins: '1,160分钟', fee: '¥58.00', unv: '其中未经验证 4 条' };
+
+    const ok = { st: '启用', stBg: 'var(--ok-bg)', stFg: 'var(--ok-fg)', stBd: 'var(--ok-bd)', toggle: '停用账号', toggleBd: 'var(--err-bd)', toggleFg: 'var(--neg)' };
+    const off = { st: '已停用', stBg: 'var(--off-bg)', stFg: 'var(--off-fg)', stBd: 'var(--off-bd)', toggle: '启用账号', toggleBd: 'var(--input)', toggleFg: 'var(--fg)', off: true };
+
+    const mk = (title, live, deleted, o, r, g, a, u, mins, reason) => {
+      const close = o + r + g + a - u;
+      return { title, live, deleted, opening: money(o), recharge: money(r), gift: money(g), adj: money(a), adjColor: a < 0 ? 'var(--neg)' : 'var(--fg)', usage: money(u), closing: money(close), closingColor: close < 0 ? 'var(--neg)' : 'var(--fg)', mins: mins.toLocaleString('en-US') + '分钟', reason, regenOp: reason ? .45 : 1, regenCursor: reason ? 'not-allowed' : 'pointer' };
+    };
+    const sep = mk('2026年9月', true, false, 117660, 130000, 0, -2550, 248630, 49726, '进行中，月结后可重新生成');
+    const aug = mk('2026年8月', false, false, 0, 300000, 5000, 0, 187340, 37468, '');
+    const augDel = mk('2026年8月', false, true, 0, 300000, 5000, 0, 187340, 37468, '话单已删除，无法重新计算');
+
+    const fld = (label, val, err, hint) => ({ label, val, bd: err ? 'var(--neg)' : 'var(--input)', ring: err ? '0 0 0 3px var(--err-bg)' : 'none', msg: err || hint, msgColor: err ? 'var(--neg)' : 'var(--muted-fg)' });
+    const emails = [{ v: 'billing@abc-tech.cn', bd: 'transparent' }, { v: 'finance@abc-tech.cn', bd: 'var(--primary)' }];
+
+    const base = { ov: false, callsTab: false, bills: false, settings: false, portal: false, off: false, unvOnly: false, hasSum: false, hasRows: false, loading: false, empty: false, rows: [], mrows: [], sum: daySum, unvBd: 'var(--input)', unvBg: 'transparent', chk: '', chkBd: 'var(--input)', chkBg: 'transparent', filterLabel: '筛选', range: '2026-09-27 — 2026-09-27', mrange: '2026-09-27', pageInfo: '', nextOp: 1 };
+    const unvOn = { unvOnly: true, unvBd: 'var(--primary)', unvBg: 'var(--brand-soft)', chk: '✓', chkBd: 'var(--primary)', chkBg: 'var(--primary)', filterLabel: '筛选 · 1' };
+    const B = (tab, label, mlabel, x) => ({ ...base, tabs: tabs(tab), tabShift: shift[tab], label, mlabel, ...x });
+    const screens = [
+      B('概况', '1a 概况', '3a 概况', { ov: true }),
+      B('话单', '1b 话单 · 2026-09-27（混入 4 条未经验证）', '3b 话单', { callsTab: true, hasSum: true, hasRows: true, rows, mrows: rows.slice(0, 8), pageInfo: '第 1–50 条，共 286 条' }),
+      B('话单', '1c 话单 · 仅看未经验证', '3c 仅看未经验证', { callsTab: true, ...unvOn, hasSum: true, hasRows: true, rows: unvRows, mrows: unvRows, sum: unvSum, pageInfo: '共 4 条', nextOp: .5 }),
+      B('话单', '1d 话单 · 加载中', '3d 话单 · 加载中', { callsTab: true, loading: true }),
+      B('话单', '1e 话单 · 没有话单', '3e 话单 · 没有话单', { callsTab: true, empty: true, range: '2026-08-01 — 2026-08-11', mrange: '2026-08-01 — 08-11' }),
+      B('账单', '1f 账单 · 本月进行中不可重新生成', '3f 账单', { bills: true, months: [sep, aug], billNote: '重新生成会按当前话单重新计算该月账单，用于补推话单后更正；每次操作记入操作日志。' }),
+      B('账单', '1g 账单 · 该月话单已删除，不可重新生成', '3g 账单 · 话单已删除', { bills: true, months: [sep, augDel], billNote: '2026年8月的话单明细已于 2026-09-29 15:42 被删除（已记入操作日志），账单数据保留，但无法重新生成。' }),
+      B('设置', '1h 设置 · 已修改，待保存', '3h 设置', { settings: true, fields: [fld('透支额度', '300.00', '', '余额可透支到 -¥300.00 后停机'), fld('余额提醒阈值', '200.00', '', '可用额度低于此值时发送提醒')], emails, footNote: '保存前会显示变更摘要，所有修改记入操作日志', footColor: 'var(--muted-fg)', saveOp: 1 }),
+      B('设置', '1i 设置 · 校验错误（透支额度不能为负）', '3i 设置 · 校验错误', { settings: true, fields: [fld('透支额度', '-50.00', '透支额度不能为负数，不允许透支请填 0', ''), fld('余额提醒阈值', '200.00', '', '可用额度低于此值时发送提醒')], emails, footNote: '请修正 1 处错误后再保存', footColor: 'var(--neg)', saveOp: .5 }),
+      B('门户账号', '1j 门户账号', '3j 门户账号', { portal: true, ...ok }),
+      B('门户账号', '1k 门户账号 · 已停用', '3k 门户账号 · 已停用', { portal: true, ...off }),
+    ];
+
+    const mono = 'ui-monospace,Menlo,Consolas,monospace';
+    const R = (k, v, x) => ({ k, v, font: 'inherit', color: 'var(--fg)', tag: false, ...x });
+    const primary = l => ({ label: l, bg: 'var(--primary)', fg: 'var(--primary-fg)', bd: 'var(--primary)' });
+    const danger = l => ({ label: l, bg: 'var(--destructive)', fg: '#fff', bd: 'var(--destructive)' });
+    const ghost = l => ({ label: l, bg: 'transparent', fg: 'var(--fg)', bd: 'var(--input)' });
+    const tone = t => ({ unv: ['var(--unv-bd)', 'var(--unv-bg)', 'var(--unv-fg)'], warn: ['var(--warn-bd)', 'var(--warn-bg)', 'var(--warn-fg)'], info: ['var(--brand-bd)', 'var(--brand-soft)', 'var(--primary)'], err: ['var(--err-bd)', 'var(--err-bg)', 'var(--err-fg)'] })[t];
+    const D = (label, mlabel, title, sub, x) => { const [noteBd, noteBg, noteFg] = x.tone ? tone(x.tone) : []; const rows = x.rows || []; return { label, mlabel, title, sub, rows, mrows: x.mrows || rows, hasRows: rows.length > 0, code: x.code || '', note: x.note || '', noteTitle: x.noteTitle || '', noteBd, noteBg, noteFg, btns: x.btns, mbtns: [...x.btns].reverse() }; };
+    const dialogs = [
+      D('2a 话单详情 · 未经验证', '3l 话单详情（底部弹出）', '话单详情', '18765551234 · 牙买加 · 7分钟 × 0.2500 元/分钟 = ¥1.75', {
+        rows: [R('验证状态', '计费系统授权超时', { tag: true }), R('主叫号码', '075586001234'), R('接通时间', '2026-09-27 03:10:05'), R('挂断时间', '2026-09-27 03:16:33'), R('通话时长', '6分28秒'), R('计费时长', '7分钟'), R('匹配的前缀', '1876', { font: mono }), R('关联告警', '授权超时 · 2026-09-27 03:08', { color: 'var(--primary)' }), R('通话 UUID', '8b21e0c4-5f3a-4d71-a9e6-2c7f0d4b9e15', { font: mono })],
+        mrows: [R('验证状态', '', { tag: true }), R('接通时间', '2026-09-27 03:10:05'), R('通话时长', '6分28秒'), R('计费时长', '7分钟'), R('关联告警', '授权超时 03:08', { color: 'var(--primary)' })],
+        tone: 'unv', noteTitle: '未经验证', note: '计费系统故障期间由 FreeSWITCH 放行，最长 30 分钟。通话结束后已按费率补记计费，此标签仅管理后台可见。', btns: [ghost('关闭')] }),
+      D('2b 重新生成确认', '3m 重新生成确认', '重新生成 2026年8月 账单？', '将按当前话单重新计算该月账单，用于补推话单后更正。', {
+        rows: [R('当前通话扣费', '¥1,873.40'), R('当前通话分钟数', '37,468分钟'), R('账单生成于', '2026-09-01 02:00:15')],
+        tone: 'info', noteTitle: '记入操作日志', note: '重新生成后客户门户的月账单同步更新，此操作记录操作人和前后差异。', btns: [ghost('取消'), primary('重新生成')] }),
+      D('2c 设置 · 保存前变更摘要', '3n 设置 · 变更摘要', '确认保存以下修改？', 'ABC001 深圳市某某科技有限公司', {
+        rows: [R('透支额度', '¥100.00 → ¥300.00'), R('可用额度', '¥64.80 → ¥264.80'), R('通知邮箱', '新增 finance@abc-tech.cn')],
+        tone: 'info', noteTitle: '记入操作日志', note: '保存后立即生效，变更将记入操作日志。', btns: [ghost('返回修改'), primary('确认保存')] }),
+      D('2d 门户账号 · 重置密码结果', '3o 重置密码结果', '已生成临时密码', 'billing@abc-tech.cn · 原密码已失效，客户所有设备上的登录已退出', {
+        code: 'Hn4t-Wz83-Lc6p', tone: 'warn', noteTitle: '只显示一次，关闭后无法再次查看', note: '请立即复制并通过安全渠道发给客户，客户登录后可在「账号设置」修改密码。本次重置已记入操作日志。', btns: [ghost('我已复制，关闭')] }),
+      D('2e 门户账号 · 停用确认', '3p 停用确认', '停用门户账号？', 'billing@abc-tech.cn 将立即退出登录，停用后客户无法登录客户门户。', {
+        tone: 'err', noteTitle: '不影响呼叫和计费', note: '租户的呼叫、计费和余额不受影响；如需暂停呼叫，请使用页面右上角的「停用」。可随时重新启用。停用和启用均记入操作日志。', btns: [ghost('取消'), danger('停用账号')] }),
+    ];
+
+    const monthGrid = Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1, sel = m === 8, cur = m === 9;
+      return { label: m + '月', sub: sel ? '9,642 条' : cur ? '账单未生成' : m < 8 ? '未开户' : '', bg: sel ? 'var(--primary)' : 'transparent', fg: sel ? 'var(--primary-fg)' : 'var(--muted-fg)', w: sel ? 600 : 400, bd: cur ? 'var(--border)' : 'transparent' };
+    }).map(m => ({ ...m, fg: m.sub === '' || m.sub === '未开户' ? 'color-mix(in srgb, var(--muted-fg) 55%, transparent)' : m.fg }));
+    const ds = (label, x) => ({ label, form: true, done: false, picker: false, startBd: 'var(--input)', startRing: 'none', code: '输入 ABC001', codeColor: 'var(--muted-fg)', codeBd: 'var(--input)', codeRing: 'none', msg: '区分大小写', msgColor: 'var(--muted-fg)', btnOp: .45, btnCursor: 'not-allowed', ...x });
+    const delStates = [
+      ds('4a 选择月份 · 月份选择器展开（9月不可选）', { picker: true, startBd: 'var(--primary)', startRing: '0 0 0 3px var(--brand-soft)' }),
+      ds('4b 预览与影响说明 · 未输入编码，删除不可用', {}),
+      ds('4c 编码输入错误（ABC01）· 仍不可用', { code: 'ABC01', codeColor: 'var(--fg)', codeBd: 'var(--neg)', codeRing: '0 0 0 3px var(--err-bg)', msg: '编码不一致，请输入 ABC001', msgColor: 'var(--neg)' }),
+      ds('4d 编码正确 · 删除按钮可用', { code: 'ABC001', codeColor: 'var(--fg)', codeBd: 'var(--ok-bd)', msg: '✓ 编码正确', msgColor: 'var(--ok-fg)', btnOp: 1, btnCursor: 'pointer' }),
+      ds('4e 删除完成', { form: false, done: true }),
+    ];
+    const delMob = [
+      { label: '4f 手机 · 选择月份（底部面板）', picker: true, form: false, done: false },
+      { label: '4g 手机 · 编码正确，可删除', picker: false, form: true, done: false },
+      { label: '4h 手机 · 删除完成', picker: false, form: false, done: true },
+    ];
+    return { monthGrid, delStates, delMob, theme, nav, chart, chartTotal, desk: screens, mob: screens, dialogs, skel: [1, 2, 3, 4, 5, 6, 7, 8], skel5: [1, 2, 3, 4, 5] };
+  }
+}
+</script>
+</body>
+</html>

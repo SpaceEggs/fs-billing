@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+html,body{margin:0;padding:0;background:#d4d4d8;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+a:hover{opacity:.8;}
+*{box-sizing:border-box;}
+input::placeholder{color:var(--muted-fg);}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--ring:#a1a1aa;--primary:#18181b;--primary-fg:#fafafa;--neg:#dc2626;--pos:#16a34a;--overlay:rgba(9,9,11,.45);--skeleton:#ececee;--row-hover:#fafafa;--side:#fafafa;--bar:#18181b;--bar-dim:#d4d4d8;--pop-shadow:0 8px 24px rgba(0,0,0,.12);
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--ring:#71717a;--primary:#fafafa;--primary-fg:#18181b;--neg:#f87171;--pos:#4ade80;--overlay:rgba(0,0,0,.65);--skeleton:#1f1f23;--row-hover:#141416;--side:#0c0c0e;--bar:#e4e4e7;--bar-dim:#3f3f46;--pop-shadow:0 8px 24px rgba(0,0,0,.5);
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;padding:24px;display:flex;flex-direction:column;align-items:flex-start;gap:16px;width:max-content;min-width:100%;">
+
+  <div style="display:flex;align-items:center;gap:12px;font-size:13px;color:#3f3f46;">
+    <span style="font-weight:600;color:#18181b;">客户门户 · 可交互原型</span>
+    <div style="display:flex;padding:3px;background:#e4e4e7;border-radius:8px;gap:2px;">
+      <button onClick="{{ toDesktop }}" style="height:28px;padding:0 12px;border:none;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;background:{{ devD.bg }};color:{{ devD.fg }};font-weight:{{ devD.w }};">电脑</button>
+      <button onClick="{{ toMobile }}" style="height:28px;padding:0 12px;border:none;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;background:{{ devM.bg }};color:{{ devM.fg }};font-weight:{{ devM.w }};">手机</button>
+    </div>
+    <span>右上角「演示」切换账户状态</span>
+  </div>
+
+  <div style="width:{{ frameW }};height:{{ frameH }};border-radius:{{ frameR }};position:relative;overflow:hidden;background:var(--bg);color:var(--fg);display:flex;box-shadow:0 4px 24px rgba(0,0,0,.12);flex-shrink:0;">
+
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+      <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;">
+          <span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span>
+          <div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--muted-fg);">客户门户</span></div>
+        </div>
+        <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+          <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+            <button onClick="{{ n.go }}" style="height:36px;padding:0 10px;border:none;border-radius:8px;display:flex;align-items:center;font-family:inherit;font-size:14px;cursor:pointer;text-align:left;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.w }};" style-hover="color:var(--fg);">{{ n.label }}</button>
+          </sc-for>
+        </nav>
+      </aside>
+    </sc-if>
+
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+        <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;flex-shrink:0;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+      </sc-if>
+      <div style="height:{{ topH }};border-bottom:1px solid var(--border);padding:0 {{ topPad }};display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;">
+        <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size:14px;color:var(--muted-fg);">ABC001 · 深圳市某某科技有限公司</span>
+        </sc-if>
+        <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ openDrawer }}" style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);font-size:16px;cursor:pointer;">☰</button>
+          <span style="font-size:16px;font-weight:600;">{{ pageTitle }}</span>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="position:relative;">
+            <button onClick="{{ toggleDemo }}" style="height:36px;padding:0 10px;border-radius:8px;border:1px dashed var(--input);background:transparent;color:var(--fg);font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">演示<sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><span style="color:var(--muted-fg);">· {{ acctLabel }}</span></sc-if> ▾</button>
+            <sc-if value="{{ demoOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;right:0;top:42px;z-index:30;width:220px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:var(--pop-shadow);padding:6px;display:flex;flex-direction:column;">
+                <span style="font-size:12px;color:var(--muted-fg);padding:6px 8px;">演示：账户状态</span>
+                <sc-for list="{{ acctOpts }}" as="o" hint-placeholder-count="4">
+                  <button onClick="{{ o.pick }}" style="height:36px;padding:0 8px;border:none;border-radius:6px;background:{{ o.bg }};color:var(--fg);font-family:inherit;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" style-hover="background:var(--muted);">{{ o.label }}<span>{{ o.check }}</span></button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          <button onClick="{{ toggleTheme }}" title="切换主题" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);font-size:13px;cursor:pointer;">{{ themeIcon }}</button>
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+            <span style="height:36px;padding:0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">A</span>billing@abc-tech.cn</span>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="flex:1;overflow:auto;">
+
+        <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+          <main style="padding:{{ pad }};display:flex;flex-direction:column;gap:{{ gap }};">
+            <sc-if value="{{ isStopped }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--err-bd);background:var(--err-bg);color:var(--err-fg);border-radius:10px;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;">
+                <span style="width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px;">!</span>
+                <div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;font-weight:600;">余额不足，已暂停呼叫，请联系客服充值</span><span style="font-size:13px;">到账后自动恢复呼叫。</span></div>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">首页</h1></sc-if>
+              <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--muted-fg);flex:1;">ABC001 · CNY</span></sc-if>
+              <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;background:{{ acct.tagBg }};color:{{ acct.tagFg }};border:1px solid {{ acct.tagBd }};"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>{{ acct.status }}</span>
+              <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--muted-fg);">{{ acct.hint }}</span></sc-if>
+            </div>
+            <div style="display:grid;grid-template-columns:{{ metricCols }};gap:{{ metricGap }};">
+              <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="4">
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:{{ metricPad }};display:flex;flex-direction:column;gap:6px;min-width:0;">
+                  <span style="font-size:13px;color:var(--muted-fg);">{{ m.label }}</span>
+                  <span style="font-size:{{ metricSize }};font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:{{ m.color }};white-space:nowrap;">{{ m.value }}<span style="font-size:13px;font-weight:400;color:var(--muted-fg);margin-left:3px;">{{ m.unit }}</span></span>
+                  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:var(--muted-fg);">{{ m.sub }}</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:{{ cardPad }};display:flex;flex-direction:column;gap:14px;overflow:hidden;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+                <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:16px;font-weight:600;">最近 30 天每日消费</span><span style="font-size:12px;color:var(--muted-fg);">2026-08-31 至 2026-09-29</span></div>
+                <span style="font-size:{{ totalSize }};font-weight:600;font-variant-numeric:tabular-nums;">{{ chartTotal }}</span>
+              </div>
+              <sc-if value="{{ hasCalls }}" hint-placeholder-val="{{ true }}">
+                <div style="overflow-x:auto;">
+                  <div style="width:{{ chartW }};display:flex;flex-direction:column;gap:6px;">
+                    <div style="height:{{ chartH }};display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--border);background:linear-gradient(var(--border) 1px,transparent 1px) 0 0/100% 33.33%;">
+                      <sc-for list="{{ chart }}" as="d" hint-placeholder-count="30">
+                        <div title="{{ d.tip }}" onMouseEnter="{{ d.hover }}" style="flex:1;height:{{ d.h }};background:{{ d.color }};border-radius:3px 3px 0 0;cursor:pointer;"></div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums;"><span>08-31</span><span>09-05</span><span>09-10</span><span>09-15</span><span>09-20</span><span>09-25</span><span>09-29</span></div>
+                  </div>
+                </div>
+                <div style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ chartTip }}</div>
+              </sc-if>
+              <sc-if value="{{ noCalls }}" hint-placeholder-val="{{ false }}">
+                <div style="height:140px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted-fg);">暂无消费数据</div>
+              </sc-if>
+            </div>
+
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+              <div style="padding:14px {{ cardPadX }};display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:16px;font-weight:600;">最近 10 通话单</span>
+                <sc-if value="{{ hasCalls }}" hint-placeholder-val="{{ true }}"><a onClick="{{ goCalls }}" style="font-size:14px;font-weight:500;">查看全部 →</a></sc-if>
+              </div>
+              <sc-if value="{{ noCalls }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:32px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;border-top:1px solid var(--border);">
+                  <div style="width:96px;height:68px;border-radius:8px;border:1px solid var(--border);background:repeating-linear-gradient(135deg,var(--muted) 0 6px,transparent 6px 12px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted-fg);">空状态插图</div>
+                  <span style="font-size:15px;font-weight:600;">还没有通话记录</span>
+                  <span style="font-size:13px;color:var(--muted-fg);">开始外呼后，话单会显示在这里</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ homeTable }}" hint-placeholder-val="{{ true }}">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                  <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                    <th style="text-align:left;font-weight:500;padding:9px 24px;">接通时间</th><th style="text-align:left;font-weight:500;padding:9px 12px;">被叫号码</th><th style="text-align:left;font-weight:500;padding:9px 12px;">国家/备注</th><th style="text-align:right;font-weight:500;padding:9px 12px;">通话时长</th><th style="text-align:right;font-weight:500;padding:9px 12px;">计费时长</th><th style="text-align:right;font-weight:500;padding:9px 24px;">费用</th>
+                  </tr></thead>
+                  <tbody style="font-variant-numeric:tabular-nums;">
+                    <sc-for list="{{ recent }}" as="r" hint-placeholder-count="10">
+                      <tr onClick="{{ r.open }}" style="border-top:1px solid var(--border);cursor:pointer;" style-hover="background:var(--row-hover);">
+                        <td style="padding:10px 24px;">{{ r.time }}</td><td style="padding:10px 12px;">{{ r.callee }}</td><td style="padding:10px 12px;">{{ r.country }}</td><td style="padding:10px 12px;text-align:right;">{{ r.dur }}</td><td style="padding:10px 12px;text-align:right;">{{ r.billed }}</td><td style="padding:10px 24px;text-align:right;font-weight:500;">{{ r.fee }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </sc-if>
+              <sc-if value="{{ homeCards }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;">
+                  <sc-for list="{{ recent }}" as="r" hint-placeholder-count="10">
+                    <div onClick="{{ r.open }}" style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;cursor:pointer;">
+                      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:500;"><span>{{ r.callee }}</span><span>{{ r.fee }}</span></div>
+                      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>{{ r.country }} · {{ r.dur }}</span><span>{{ r.shortTime }}</span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </main>
+        </sc-if>
+
+        <sc-if value="{{ isPlaceholder }}" hint-placeholder-val="{{ false }}">
+          <main style="padding:{{ pad }};display:flex;flex-direction:column;gap:20px;">
+            <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}"><h1 style="margin:0;font-size:24px;font-weight:600;">{{ pageTitle }}</h1></sc-if>
+            <div style="height:360px;border:1px dashed var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted-fg);font-size:14px;text-align:center;padding:16px;">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:12px;">占位页</span>
+              <span>「{{ pageTitle }}」将在后续批次设计</span>
+            </div>
+          </main>
+        </sc-if>
+
+        <sc-if value="{{ isCalls }}" hint-placeholder-val="{{ false }}">
+          <main style="padding:{{ pad }};display:flex;flex-direction:column;gap:16px;">
+            <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">话单</h1>
+                <button style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;" style-hover="background:var(--muted);">导出 CSV（当前筛选）</button>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                <div style="display:flex;flex-direction:column;gap:6px;position:relative;">
+                  <span style="font-size:12px;color:var(--muted-fg);">日期范围 · 最长一个月</span>
+                  <button onClick="{{ toggleDate }}" style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);display:flex;align-items:center;gap:10px;font-size:14px;font-family:inherit;font-variant-numeric:tabular-nums;width:260px;justify-content:space-between;cursor:pointer;"><span>{{ dateLabel }}</span><span style="color:var(--muted-fg);font-size:12px;">▦</span></button>
+                  <sc-if value="{{ deskDate }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:66px;left:0;z-index:20;width:320px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--pop-shadow);padding:14px;display:flex;flex-direction:column;gap:10px;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:14px;font-weight:600;">2026年9月</span><a onClick="{{ thisMonth }}" style="font-size:12px;">本月</a></div>
+                      <div style="display:grid;grid-template-columns:repeat(7,1fr);font-size:12px;color:var(--muted-fg);text-align:center;"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+                      <div style="display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;font-size:13px;font-variant-numeric:tabular-nums;">
+                        <sc-for list="{{ cal }}" as="c" hint-placeholder-count="31">
+                          <button onClick="{{ c.pick }}" style="height:36px;border:none;font-family:inherit;font-size:13px;background:{{ c.bg }};color:{{ c.fg }};border-radius:{{ c.radius }};font-weight:{{ c.w }};cursor:{{ c.cur }};opacity:{{ c.op }};">{{ c.n }}</button>
+                        </sc-for>
+                      </div>
+                      <div style="font-size:12px;color:var(--muted-fg);display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;"><span>{{ draftLabel }}</span><span>{{ pickHint }}</span></div>
+                      <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button onClick="{{ cancelDate }}" style="height:32px;padding:0 12px;border-radius:7px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:13px;font-family:inherit;cursor:pointer;">取消</button>
+                        <button onClick="{{ applyDate }}" style="height:32px;padding:0 12px;border-radius:7px;border:none;background:var(--primary);color:var(--primary-fg);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;">确定</button>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">被叫号码</span><input value="{{ q }}" onChange="{{ onQ }}" placeholder="模糊搜索" style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);font-size:14px;font-family:inherit;width:220px;outline:none;" style-focus="box-shadow:0 0 0 3px var(--ring);"></div>
+                <div style="display:flex;flex-direction:column;gap:6px;position:relative;">
+                  <span style="font-size:12px;color:var(--muted-fg);">国家</span>
+                  <button onClick="{{ toggleCountry }}" style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);display:flex;align-items:center;justify-content:space-between;font-size:14px;font-family:inherit;width:170px;cursor:pointer;"><span>{{ country }}</span><span style="color:var(--muted-fg);font-size:12px;">▾</span></button>
+                  <sc-if value="{{ countryOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:66px;left:0;z-index:20;width:200px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:var(--pop-shadow);padding:6px;display:flex;flex-direction:column;">
+                      <sc-for list="{{ countryOpts }}" as="o" hint-placeholder-count="9">
+                        <button onClick="{{ o.pick }}" style="height:34px;padding:0 10px;border:none;border-radius:6px;background:{{ o.bg }};color:var(--fg);font-family:inherit;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" style-hover="background:var(--muted);">{{ o.label }}<span>{{ o.check }}</span></button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">接通状态</span>
+                  <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;height:36px;">
+                    <button onClick="{{ setAns }}" style="padding:0 12px;border:none;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;background:{{ stAns.bg }};color:{{ stAns.fg }};font-weight:{{ stAns.w }};box-shadow:{{ stAns.sh }};">已接通</button>
+                    <button onClick="{{ setAll }}" style="padding:0 12px;border:none;border-radius:6px;font-family:inherit;font-size:13px;cursor:pointer;background:{{ stAll.bg }};color:{{ stAll.fg }};font-weight:{{ stAll.w }};box-shadow:{{ stAll.sh }};">全部</button>
+                  </div>
+                </div>
+                <sc-if value="{{ hasFilter }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ clearFilters }}" style="height:36px;padding:0 12px;border:none;background:transparent;color:var(--muted-fg);font-size:14px;font-family:inherit;cursor:pointer;" style-hover="color:var(--fg);">重置</button>
+                </sc-if>
+              </div>
+              <div style="display:flex;gap:32px;padding:14px 20px;border:1px solid var(--border);border-radius:10px;background:var(--muted);font-variant-numeric:tabular-nums;">
+                <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">通话数</span><span style="font-size:18px;font-weight:600;">{{ sumCount }}</span><sc-if value="{{ showUnanswered }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--muted-fg);">含未接通 {{ unanswered }}</span></sc-if></div>
+                <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">总计费</span><span style="font-size:18px;font-weight:600;">{{ sumMins }}</span></div>
+                <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:13px;color:var(--muted-fg);">总费用</span><span style="font-size:18px;font-weight:600;">{{ sumFee }}</span></div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;">
+                <input value="{{ q }}" onChange="{{ onQ }}" placeholder="搜索被叫号码" style="flex:1;min-width:0;height:44px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);padding:0 12px;font-size:15px;font-family:inherit;outline:none;">
+                <button onClick="{{ openFilter }}" style="height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);display:flex;align-items:center;gap:6px;font-size:15px;font-family:inherit;cursor:pointer;">筛选<sc-if value="{{ hasFilter }}" hint-placeholder-val="{{ false }}"><span style="min-width:18px;height:18px;border-radius:9px;background:var(--primary);color:var(--primary-fg);font-size:11px;display:flex;align-items:center;justify-content:center;">{{ filterBadge }}</span></sc-if></button>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;"><span>{{ sumCount }} 通 · {{ sumMins }}</span><span style="color:var(--fg);font-weight:600;">{{ sumFee }}</span></div>
+            </sc-if>
+
+            <sc-if value="{{ callsTable }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                  <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                    <th style="text-align:left;font-weight:500;padding:10px 16px;">接通时间 ↓</th><th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">国家/备注</th><th style="text-align:right;font-weight:500;padding:10px 12px;">通话时长</th><th style="text-align:right;font-weight:500;padding:10px 12px;">计费时长</th><th style="text-align:right;font-weight:500;padding:10px 12px;">费率（元/分钟）</th><th style="text-align:right;font-weight:500;padding:10px 16px;">费用</th>
+                  </tr></thead>
+                  <tbody style="font-variant-numeric:tabular-nums;">
+                    <sc-for list="{{ calls }}" as="r" hint-placeholder-count="12">
+                      <tr onClick="{{ r.open }}" style="border-top:1px solid var(--border);color:{{ r.color }};cursor:pointer;" style-hover="background:var(--row-hover);">
+                        <td style="padding:11px 16px;">{{ r.time }}</td><td style="padding:11px 12px;">{{ r.caller }}</td><td style="padding:11px 12px;">{{ r.callee }}</td><td style="padding:11px 12px;">{{ r.countryLabel }}</td><td style="padding:11px 12px;text-align:right;">{{ r.dur }}</td><td style="padding:11px 12px;text-align:right;">{{ r.billed }}</td><td style="padding:11px 12px;text-align:right;">{{ r.rate }}</td><td style="padding:11px 16px;text-align:right;font-weight:500;">{{ r.fee }}</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <div style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">共 {{ sumCount }} 条 · 每页 50 条</div>
+            </sc-if>
+
+            <sc-if value="{{ callsCards }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <sc-for list="{{ calls }}" as="r" hint-placeholder-count="8">
+                  <div onClick="{{ r.open }}" style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;color:{{ r.color }};cursor:pointer;">
+                    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:500;"><span>{{ r.callee }}</span><span>{{ r.fee }}</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>{{ r.countryLabel }} · {{ r.dur }}</span><span>{{ r.shortTime }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ callsEmptyNew }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px dashed var(--border);border-radius:12px;padding:48px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+                <div style="width:96px;height:68px;border-radius:8px;border:1px solid var(--border);background:repeating-linear-gradient(135deg,var(--muted) 0 6px,transparent 6px 12px);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted-fg);">空状态插图</div>
+                <span style="font-size:15px;font-weight:600;">还没有话单</span>
+                <span style="font-size:13px;color:var(--muted-fg);">开始外呼后，通话记录会显示在这里</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ callsEmptyFilter }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--border);border-radius:12px;padding:48px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+                <span style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">⌕</span>
+                <span style="font-size:15px;font-weight:600;">没有符合条件的话单</span>
+                <span style="font-size:13px;color:var(--muted-fg);">试试调整日期、国家或号码</span>
+                <button onClick="{{ clearFilters }}" style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">清除筛选</button>
+              </div>
+            </sc-if>
+          </main>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:var(--overlay);z-index:40;">
+        <div onClick="{{ stop }}" style="position:absolute;left:0;top:0;bottom:0;width:280px;background:var(--side);border-right:1px solid var(--border);padding:56px 12px 16px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 8px;">
+            <div style="display:flex;align-items:center;gap:10px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--muted-fg);">客户门户</span></div></div>
+            <button onClick="{{ closeDrawer }}" style="width:44px;height:44px;border:none;background:transparent;color:var(--muted-fg);font-size:16px;cursor:pointer;">✕</button>
+          </div>
+          <nav style="display:flex;flex-direction:column;gap:2px;">
+            <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+              <button onClick="{{ n.go }}" style="height:44px;padding:0 12px;border:none;border-radius:8px;display:flex;align-items:center;font-family:inherit;font-size:15px;cursor:pointer;text-align:left;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.w }};">{{ n.label }}</button>
+            </sc-for>
+          </nav>
+          <div style="margin-top:auto;padding:12px 8px 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:2px;font-size:13px;"><span style="font-weight:500;">ABC001 · 深圳市某某科技有限公司</span><span style="color:var(--muted-fg);">billing@abc-tech.cn</span></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ filterSheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeFilter }}" style="position:absolute;inset:0;background:var(--overlay);z-index:40;">
+        <div onClick="{{ stop }}" style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 16px 28px;display:flex;flex-direction:column;gap:16px;max-height:92%;overflow:auto;">
+          <div style="width:40px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:17px;font-weight:600;">筛选</span><button onClick="{{ clearFilters }}" style="height:44px;border:none;background:transparent;color:var(--muted-fg);font-size:15px;font-family:inherit;cursor:pointer;">清除筛选</button></div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">日期范围
+            <button onClick="{{ toggleDate }}" style="height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:transparent;color:var(--fg);display:flex;align-items:center;justify-content:space-between;font-size:15px;font-family:inherit;font-variant-numeric:tabular-nums;cursor:pointer;"><span>{{ dateLabel }}</span><span style="color:var(--muted-fg);font-size:12px;">▦</span></button>
+            <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">最长一个月</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">国家
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <sc-for list="{{ countryOpts }}" as="o" hint-placeholder-count="9">
+                <button onClick="{{ o.pick }}" style="height:40px;padding:0 12px;border-radius:8px;border:1px solid var(--input);background:{{ o.bg }};color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">{{ o.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">接通状态
+            <div style="display:grid;grid-template-columns:1fr 1fr;padding:3px;background:var(--muted);border-radius:8px;gap:2px;">
+              <button onClick="{{ setAns }}" style="height:40px;border:none;border-radius:6px;font-family:inherit;font-size:15px;cursor:pointer;background:{{ stAns.bg }};color:{{ stAns.fg }};font-weight:{{ stAns.w }};">已接通</button>
+              <button onClick="{{ setAll }}" style="height:40px;border:none;border-radius:6px;font-family:inherit;font-size:15px;cursor:pointer;background:{{ stAll.bg }};color:{{ stAll.fg }};font-weight:{{ stAll.w }};">全部</button>
+            </div>
+          </div>
+          <button onClick="{{ closeFilter }}" style="height:48px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;cursor:pointer;">查看 {{ sumCount }} 条结果</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ mobDate }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ cancelDate }}" style="position:absolute;inset:0;background:var(--overlay);z-index:45;">
+        <div onClick="{{ stop }}" style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 16px 28px;display:flex;flex-direction:column;gap:12px;">
+          <div style="width:40px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;height:44px;"><span style="font-size:16px;font-weight:600;">2026年9月</span><button onClick="{{ thisMonth }}" style="height:44px;border:none;background:transparent;color:var(--fg);text-decoration:underline;font-size:14px;font-family:inherit;cursor:pointer;">本月</button></div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);font-size:12px;color:var(--muted-fg);text-align:center;"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);row-gap:4px;font-variant-numeric:tabular-nums;">
+            <sc-for list="{{ cal }}" as="c" hint-placeholder-count="31">
+              <button onClick="{{ c.pick }}" style="height:44px;border:none;font-family:inherit;font-size:15px;background:{{ c.bg }};color:{{ c.fg }};border-radius:{{ c.radius }};font-weight:{{ c.w }};cursor:{{ c.cur }};opacity:{{ c.op }};">{{ c.n }}</button>
+            </sc-for>
+          </div>
+          <div style="border-radius:8px;background:var(--muted);padding:10px 12px;font-size:13px;color:var(--muted-fg);display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;"><span>{{ draftLabel }}</span><span>{{ pickHint }}</span></div>
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+            <button onClick="{{ cancelDate }}" style="height:48px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:16px;font-family:inherit;cursor:pointer;">取消</button>
+            <button onClick="{{ applyDate }}" style="height:48px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;cursor:pointer;">确定</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ deskDetail }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeDetail }}" style="position:absolute;inset:0;background:var(--overlay);z-index:40;display:flex;align-items:center;justify-content:center;">
+        <div onClick="{{ stop }}" style="width:560px;max-height:90%;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;">
+          <div style="padding:20px 24px 16px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);">
+            <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">话单详情</span><span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ selTitle }}</span></div>
+            <button onClick="{{ closeDetail }}" style="width:32px;height:32px;border:none;border-radius:6px;background:transparent;color:var(--muted-fg);cursor:pointer;font-size:14px;" style-hover="background:var(--muted);">✕</button>
+          </div>
+          <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:baseline;background:var(--muted);font-variant-numeric:tabular-nums;">
+            <span style="font-size:13px;color:var(--muted-fg);">{{ selCalc }}<sc-if value="{{ selNo }}" hint-placeholder-val="{{ false }}"> · 未接通不计费</sc-if></span>
+            <span style="font-size:24px;font-weight:600;">{{ selFee }}</span>
+          </div>
+          <dl style="margin:0;padding:8px 24px 20px;display:grid;grid-template-columns:120px 1fr;font-size:14px;font-variant-numeric:tabular-nums;">
+            <sc-for list="{{ detail }}" as="f" hint-placeholder-count="12">
+              <dt style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">{{ f.k }}</dt>
+              <dd style="margin:0;padding:9px 0;border-bottom:1px solid var(--border);font-family:{{ f.font }};font-size:{{ f.size }};">{{ f.v }}</dd>
+            </sc-for>
+          </dl>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ mobDetail }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeDetail }}" style="position:absolute;inset:0;background:var(--overlay);z-index:40;">
+        <div onClick="{{ stop }}" style="position:absolute;left:0;right:0;bottom:0;top:96px;background:var(--card);border-radius:16px 16px 0 0;padding:8px 0 24px;display:flex;flex-direction:column;overflow:auto;">
+          <div style="width:40px;height:4px;border-radius:2px;background:var(--input);align-self:center;margin-bottom:4px;flex-shrink:0;"></div>
+          <div style="padding:0 16px 8px;display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:17px;font-weight:600;">话单详情</span><span style="font-size:12px;color:var(--muted-fg);">{{ selTitle }}</span></div><button onClick="{{ closeDetail }}" style="width:44px;height:44px;border:none;background:transparent;color:var(--muted-fg);font-size:16px;cursor:pointer;">✕</button></div>
+          <div style="margin:0 16px;padding:14px;border-radius:10px;background:var(--muted);display:flex;justify-content:space-between;align-items:baseline;font-variant-numeric:tabular-nums;"><span style="font-size:13px;color:var(--muted-fg);">{{ selCalc }}</span><span style="font-size:22px;font-weight:600;">{{ selFee }}</span></div>
+          <dl style="margin:0;padding:8px 16px;display:grid;grid-template-columns:96px 1fr;font-size:14px;font-variant-numeric:tabular-nums;">
+            <sc-for list="{{ detail }}" as="f" hint-placeholder-count="12">
+              <dt style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">{{ f.k }}</dt>
+              <dd style="margin:0;padding:9px 0;border-bottom:1px solid var(--border);font-family:{{ f.font }};font-size:{{ f.size }};word-break:break-all;">{{ f.v }}</dd>
+            </sc-for>
+          </dl>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { page: 'home', theme: 'light', device: 'desktop', acct: 'overdraft', drawer: false, demoOpen: false,
+    status: 'answered', country: '全部国家', countryOpen: false, dateOpen: false, from: 1, to: 29, picking: false,
+    draftFrom: 1, draftTo: 29, q: '', sel: null, filterSheet: false, hoverDay: 29 };
+
+  renderVals() {
+    const s = this.state, set = p => this.setState(p);
+    const isM = s.device === 'mobile', isD = !isM;
+    const pad2 = n => String(n).padStart(2, '0');
+    const money = v => (v < 0 ? '-' : '') + '¥' + Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const seg = on => on ? { bg: 'var(--bg)', fg: 'var(--fg)', w: 500, sh: '0 1px 2px rgba(0,0,0,.12)' } : { bg: 'transparent', fg: 'var(--muted-fg)', w: 400, sh: 'none' };
+    const devSeg = on => on ? { bg: '#ffffff', fg: '#09090b', w: 600 } : { bg: 'transparent', fg: '#52525b', w: 400 };
+
+    const ACCT = {
+      normal: { label: '正常', bal: 1286.4, status: '正常', tone: 'ok', month: 2486.3, mins: '49,726', calls: '12,804', hint: '账户正常' },
+      overdraft: { label: '透支中', bal: -35.2, status: '透支中', tone: 'warn', month: 2486.3, mins: '49,726', calls: '12,804', hint: '余额已为负数，可用额度仍有 ¥64.80' },
+      stopped: { label: '已停机', bal: -100.36, status: '已停机', tone: 'err', month: 2551.46, mins: '51,030', calls: '13,140', hint: '余额 + 透支额度已用完' },
+      new: { label: '新客户（无话单）', bal: 200, status: '正常', tone: 'ok', month: 0, mins: '0', calls: '0', hint: '新开通账户' },
+    };
+    const a = ACCT[s.acct];
+    const acct = { ...a, tagBg: `var(--${a.tone}-bg)`, tagFg: `var(--${a.tone}-fg)`, tagBd: `var(--${a.tone}-bd)` };
+    const avail = a.bal + 100;
+    const metrics = [
+      { label: '当前余额', value: money(a.bal), unit: '', color: a.bal < 0 ? 'var(--neg)' : 'var(--fg)', sub: '可用额度 ' + money(avail) },
+      { label: '透支额度', value: '¥100.00', unit: '', color: 'var(--fg)', sub: '余额 + 透支额度用完后暂停呼叫' },
+      { label: '本月消费', value: money(a.month), unit: '', color: 'var(--fg)', sub: '2026年9月 · 截至今日' },
+      { label: isM ? '本月通话' : '本月通话分钟数', value: a.mins, unit: '分钟', color: 'var(--fg)', sub: '已接通 ' + a.calls + ' 通' },
+    ];
+
+    const RAW = [
+      ['8613800138000', '中国', '86', 0.05, 230, 1], ['18765551234', '牙买加', '1876', 0.25, 724, 1], ['447700900123', '英国手机', '447', 0.045, 1, 1],
+      ['81312345678', '日本', '81', 0.035, 0, 0], ['6591234567', '新加坡', '65', 0.028, 241, 1], ['85291234567', '中国香港', '852', 0.03, 72, 1],
+      ['14155550123', '美国/加拿大', '1', 0.01, 1350, 1], ['442071234567', '英国', '44', 0.02, 360, 1], ['8613912345678', '中国', '86', 0.05, 941, 1],
+      ['8613700137000', '中国', '86', 0.05, 0, 0], ['81345678901', '日本', '81', 0.035, 508, 1], ['8613600136000', '中国', '86', 0.05, 95, 1], ['14165550199', '美国/加拿大', '1', 0.01, 187, 1],
+    ];
+    let all = [];
+    if (s.acct !== 'new') {
+      for (let d = 29; d >= 1; d--) for (let k = 0; k < 2; k++) {
+        const [callee, country, prefix, rate, sec0, ok] = RAW[(d * 2 + k) % 13];
+        const sec = ok ? sec0 + ((d * 7) % 40) : 0;
+        const hh = 18 - k * 5 - (d % 3), mm = (d * 7 + k * 13) % 60, ss = (d * 11 + k * 17) % 60;
+        const mins = ok ? Math.ceil(sec / 60) : 0;
+        const t = `2026-09-${pad2(d)} ${pad2(hh)}:${pad2(mm)}:${pad2(ss)}`;
+        const ringSec = 6 + (d % 12);
+        const add = (base, plus) => { const x = new Date('2026-09-' + pad2(d) + 'T' + pad2(hh) + ':' + pad2(mm) + ':' + pad2(ss)); x.setSeconds(x.getSeconds() + plus); return `2026-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())} ${pad2(x.getHours())}:${pad2(x.getMinutes())}:${pad2(x.getSeconds())}`; };
+        all.push({
+          id: d * 10 + k, day: d, ok: !!ok, time: t, shortTime: t.slice(5), caller: '07558600123' + (4 + k), callee, country, prefix,
+          countryLabel: ok ? country : country + ' · 未接通',
+          dur: Math.floor(sec / 60) + '分' + pad2(sec % 60) + '秒', billed: mins + '分钟', rate: rate.toFixed(4), rateFull: rate.toFixed(4) + ' 元/分钟',
+          feeNum: mins * rate, fee: money(mins * rate), mins,
+          color: ok ? 'var(--fg)' : 'var(--muted-fg)',
+          ring: add(t, -ringSec), hang: add(t, sec), cause: ok ? 'NORMAL_CLEARING（正常挂断）' : 'NO_ANSWER（无人接听）',
+          uuid: ['3f9c2a1e', (d * 4099).toString(16).padStart(4, '0').slice(-4), '4e8a', (k ? '9c21' : 'b7f0'), (d * 997 + k * 31).toString(16).padStart(12, '0')].join('-'),
+        });
+      }
+    }
+    const open = c => () => set({ sel: c.id, demoOpen: false });
+    all = all.map(c => ({ ...c, open: open(c) }));
+    const hasCalls = all.length > 0;
+    const recent = all.filter(c => c.ok).slice(0, 10);
+
+    const q = s.q.trim();
+    const filtered = all.filter(c => (s.status === 'all' || c.ok) && (s.country === '全部国家' || c.country === s.country) && c.day >= s.from && c.day <= s.to && (!q || c.callee.includes(q)));
+    const sumMins = filtered.reduce((x, c) => x + c.mins, 0), sumFee = filtered.reduce((x, c) => x + c.feeNum, 0);
+    const filterCount = (s.status === 'all' ? 1 : 0) + (s.country !== '全部国家' ? 1 : 0) + (s.from !== 1 || s.to !== 29 ? 1 : 0) + (q ? 1 : 0);
+    const clearFilters = () => set({ status: 'answered', country: '全部国家', from: 1, to: 29, draftFrom: 1, draftTo: 29, q: '', countryOpen: false, dateOpen: false });
+
+    const vals = [];
+    for (let i = 0; i < 30; i++) vals.push((i % 7 === 5 || i % 7 === 6) ? 48 + ((i * 13) % 11) : 78 + ((i * 37) % 19) + ((i * 7) % 10) / 100);
+    vals[29] = 88.64;
+    if (s.acct === 'stopped') { vals[28] = 64.2; vals[29] = 0.94; }
+    const dayLabel = i => { const x = new Date(2026, 7, 31 + i); return `2026-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`; };
+    const hi = s.hoverDay;
+    const chart = vals.map((v, i) => ({ h: (v / 120 * 100).toFixed(1) + '%', color: i === hi ? 'var(--bar)' : 'var(--bar-dim)', tip: dayLabel(i) + ' ' + money(v), hover: () => set({ hoverDay: i }) }));
+
+    const countries = ['全部国家', '中国', '美国/加拿大', '牙买加', '英国', '英国手机', '日本', '新加坡', '中国香港'];
+    const countryOpts = countries.map(c => ({ label: c, bg: c === s.country ? 'var(--muted)' : 'transparent', check: c === s.country ? '✓' : '', pick: () => set({ country: c, countryOpen: false }) }));
+
+    const df = s.draftFrom, dt = s.draftTo;
+    const cal = [{ n: '', bg: 'transparent', fg: 'var(--fg)', radius: '0', w: 400, cur: 'default', pick: () => {} }];
+    for (let d = 1; d <= 30; d++) {
+      const future = d > 29, edge = d === df || d === dt, inR = d > df && d < dt;
+      cal.push({
+        n: d, bg: edge ? 'var(--primary)' : inR ? 'var(--muted)' : 'transparent', fg: edge ? 'var(--primary-fg)' : future ? 'var(--muted-fg)' : 'var(--fg)',
+        radius: edge ? '8px' : '0', w: edge ? 600 : 400, cur: future ? 'not-allowed' : 'pointer', op: future ? 0.4 : 1,
+        pick: future ? () => {} : () => {
+          if (!s.picking) set({ draftFrom: d, draftTo: d, picking: true });
+          else { const f = Math.min(df, d), t = Math.max(df, d); set({ draftFrom: f, draftTo: t, picking: false }); }
+        },
+      });
+    }
+    const dateText = (f, t) => `2026-09-${pad2(f)} — 2026-09-${pad2(t)}`;
+
+    const selC = all.find(c => c.id === s.sel);
+    const mono = 'ui-monospace,Menlo,Consolas,monospace';
+    const detail = selC ? [
+      ['接通时间', selC.ok ? selC.time : '—'], ['主叫号码', selC.caller], ['被叫号码', selC.callee], ['国家/备注', selC.country], ['匹配的前缀', selC.prefix, mono],
+      ['振铃开始', selC.ring], ['挂断时间', selC.hang], ['通话时长', selC.dur], ['计费时长', selC.billed], ['费率', selC.rateFull],
+      ['挂断原因', selC.cause], ['通话 UUID', selC.uuid, mono],
+    ].map(([k, v, f]) => ({ k, v, font: f || 'inherit', size: f ? '13px' : '14px' })) : [];
+
+    const NAV = [['home', '首页'], ['calls', '话单'], ['bills', '月账单'], ['ledger', '余额流水'], ['settings', '账号设置']];
+    const nav = NAV.map(([k, l]) => ({ label: l, bg: s.page === k ? 'var(--muted)' : 'transparent', fg: s.page === k ? 'var(--fg)' : 'var(--muted-fg)', w: s.page === k ? 500 : 400, go: () => set({ page: k, drawer: false, demoOpen: false }) }));
+    const pageTitle = NAV.find(n => n[0] === s.page)[1];
+    const acctOpts = [['normal', '正常'], ['overdraft', '透支中'], ['stopped', '已停机'], ['new', '新客户（无话单）']].map(([k, l]) => ({ label: l, check: s.acct === k ? '✓' : '', bg: s.acct === k ? 'var(--muted)' : 'transparent', pick: () => set({ acct: k, demoOpen: false, sel: null }) }));
+
+    return {
+      theme: s.theme, themeIcon: s.theme === 'light' ? '☾' : '☀', toggleTheme: () => set({ theme: s.theme === 'light' ? 'dark' : 'light' }),
+      isDesktop: isD, isMobile: isM, devD: devSeg(isD), devM: devSeg(isM),
+      toDesktop: () => set({ device: 'desktop', drawer: false, filterSheet: false }), toMobile: () => set({ device: 'mobile', countryOpen: false }),
+      frameW: isM ? '390px' : '1440px', frameH: isM ? '844px' : '900px', frameR: isM ? '36px' : '12px',
+      topH: isM ? '52px' : '56px', topPad: isM ? '12px' : '28px', pad: isM ? '16px' : '28px', gap: isM ? '16px' : '24px',
+      metricCols: isM ? '1fr 1fr' : 'repeat(4,1fr)', metricGap: isM ? '10px' : '16px', metricPad: isM ? '14px' : '20px', metricSize: isM ? '20px' : '30px',
+      cardPad: isM ? '14px' : '20px 24px', cardPadX: isM ? '14px' : '24px', totalSize: isM ? '15px' : '18px',
+      chartW: isM ? '620px' : '100%', chartH: isM ? '120px' : '200px',
+      chartTip: (isM ? '← 左右滑动 · ' : '悬停查看 · ') + chart[hi].tip,
+      nav, pageTitle, isHome: s.page === 'home', isCalls: s.page === 'calls', isPlaceholder: s.page !== 'home' && s.page !== 'calls',
+      openDrawer: () => set({ drawer: true, demoOpen: false }), closeDrawer: () => set({ drawer: false }), drawerOpen: isM && s.drawer,
+      demoOpen: s.demoOpen, toggleDemo: () => set({ demoOpen: !s.demoOpen }), acctOpts, acctLabel: a.label,
+      acct, metrics, isStopped: s.acct === 'stopped', hasCalls, noCalls: !hasCalls,
+      chart, chartTotal: hasCalls ? money(vals.reduce((x, y) => x + y, 0)) : '¥0.00',
+      recent, homeTable: hasCalls && isD, homeCards: hasCalls && isM, goCalls: () => set({ page: 'calls' }),
+      calls: filtered, callsTable: isD && filtered.length > 0, callsCards: isM && filtered.length > 0,
+      callsEmptyNew: !hasCalls, callsEmptyFilter: hasCalls && filtered.length === 0,
+      sumCount: filtered.length.toLocaleString('en-US'), sumMins: sumMins.toLocaleString('en-US') + '分钟', sumFee: money(sumFee),
+      unanswered: filtered.filter(c => !c.ok).length, showUnanswered: s.status === 'all',
+      stAns: seg(s.status === 'answered'), stAll: seg(s.status === 'all'),
+      setAns: () => set({ status: 'answered' }), setAll: () => set({ status: 'all' }),
+      q: s.q, onQ: e => set({ q: e.target.value }),
+      country: s.country, countryOpts, countryOpen: s.countryOpen, toggleCountry: () => set({ countryOpen: !s.countryOpen, dateOpen: false }),
+      dateLabel: dateText(s.from, s.to), draftLabel: dateText(df, dt), picking: s.picking,
+      pickHint: s.picking ? '请选择结束日期' : '最长一个月',
+      dateOpen: s.dateOpen, deskDate: isD && s.dateOpen, mobDate: isM && s.dateOpen,
+      toggleDate: () => set({ dateOpen: !s.dateOpen, countryOpen: false, draftFrom: s.from, draftTo: s.to, picking: false }),
+      applyDate: () => set({ from: s.draftFrom, to: s.draftTo, dateOpen: false, picking: false }),
+      cancelDate: () => set({ dateOpen: false, picking: false }),
+      thisMonth: () => set({ draftFrom: 1, draftTo: 29, picking: false }),
+      cal, clearFilters, filterCount, hasFilter: filterCount > 0, filterBadge: filterCount || '',
+      filterSheet: isM && s.filterSheet && !s.dateOpen, openFilter: () => set({ filterSheet: true }), closeFilter: () => set({ filterSheet: false }),
+      sel: !!selC, deskDetail: isD && !!selC, mobDetail: isM && !!selC, closeDetail: () => set({ sel: null }), detail,
+      selTitle: selC ? selC.callee + ' · ' + selC.country : '', selFee: selC ? selC.fee : '', selCalc: selC ? `${selC.billed} × ${selC.rateFull}` : '',
+      selOk: selC ? selC.ok : true, selNo: selC ? !selC.ok : false,
+      anyOverlay: (isM && (s.drawer || s.filterSheet || s.dateOpen)) || !!selC,
+      stop: e => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

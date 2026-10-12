@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+html,body{margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg,#fff);}
+a{color:var(--primary,#2563eb);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;text-underline-offset:3px;}
+*{box-sizing:border-box;}
+textarea,input{font-family:inherit;}
+textarea:focus,input:focus{outline:none;}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--primary:#2563eb;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#dc2626;--overlay:rgba(9,9,11,.45);--row-hover:#fafafa;--brand-soft:#eff6ff;--brand-bd:#bfdbfe;--side:#fafafa;
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--primary:#3b82f6;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#f87171;--overlay:rgba(0,0,0,.65);--row-hover:#141416;--brand-soft:rgba(59,130,246,.12);--brand-bd:rgba(59,130,246,.35);--side:#0c0c0e;
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;">
+  <div style="height:44px;flex-shrink:0;background:#18181b;color:#fafafa;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:13px;gap:12px;">
+    <span>演示 · 未归属话单 · {{ demoState }}</span>
+    <div style="display:flex;gap:8px;"><button onClick="{{ toggleTheme }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid #3f3f46;background:transparent;color:#fafafa;font-size:13px;font-family:inherit;cursor:pointer;">浅色/深色</button><button onClick="{{ reset }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid #3f3f46;background:transparent;color:#fafafa;font-size:13px;font-family:inherit;cursor:pointer;" style-hover="background:#27272a;">重置演示数据</button></div>
+  </div>
+  <div style="flex:1;display:flex;min-height:0;">
+    <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+      <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="font-size:11px;color:var(--muted-fg);font-weight:400;">{{ n.badge }}</span></span></sc-for>
+      </nav>
+    </aside>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:14px;color:var(--muted-fg);">未归属话单</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+      <main style="padding:28px;display:flex;flex-direction:column;gap:20px;max-width:1240px;">
+        <div style="display:flex;flex-direction:column;gap:6px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">未归属话单</h1><span style="font-size:13px;color:var(--muted-fg);">话单中的租户标签缺失，或找不到对应租户。这些话单尚未计费。</span></div>
+        <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);border-radius:8px;padding:10px 14px;font-size:13px;"><span style="font-weight:600;color:var(--warn-fg);">提示　</span>请同时检查 FreeSWITCH 中的 <span style="font-family:ui-monospace,Menlo,monospace;">billing_tenant</span> 配置，否则新话单会继续进入此处。</div>
+        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);font-size:14px;">
+          <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="2"><span onClick="{{ tb.onClick }}" style="padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-weight:{{ tb.weight }};display:flex;align-items:center;gap:6px;cursor:pointer;">{{ tb.label }}<span style="font-size:12px;padding:1px 7px;border-radius:999px;background:var(--muted);color:var(--muted-fg);font-weight:500;font-variant-numeric:tabular-nums;">{{ tb.n }}</span></span></sc-for>
+        </div>
+
+        <sc-if value="{{ showPending }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+              <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+                <div onClick="{{ g.onClick }}" style="min-width:200px;flex:{{ g.flex }};border:1px solid {{ g.bd }};background:{{ g.bg }};box-shadow:{{ g.ring }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;" style-hover="border-color:var(--primary);">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:14px;font-weight:600;">{{ g.title }}</span><span style="font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;">{{ g.n }}<span style="font-size:12px;font-weight:400;color:var(--muted-fg);"> 条</span></span></div>
+                  <span style="font-size:12px;color:{{ g.subColor }};">{{ g.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--brand-bd);background:var(--brand-soft);border-radius:10px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:12px;font-size:14px;flex-wrap:wrap;">
+                <span style="font-weight:600;font-variant-numeric:tabular-nums;">{{ selText }}</span>
+                <sc-if value="{{ canSelectGroup }}" hint-placeholder-val="{{ false }}"><a onClick="{{ selectGroup }}" style="font-size:13px;">{{ selectGroupLabel }}</a></sc-if>
+                <a onClick="{{ clearSel }}" style="font-size:13px;color:var(--muted-fg);">清除选择</a>
+                <span style="flex:1;"></span>
+                <button onClick="{{ openIgnore }}" style="height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">忽略</button>
+                <button onClick="{{ openAssign }}" style="height:34px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;">归属到租户</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noSelHint }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:13px;color:var(--muted-fg);">勾选话单，或点击上方分组后「选择该分组全部」，再归属到租户或忽略。</div>
+            </sc-if>
+            <div style="border:1px solid var(--border);border-radius:10px;overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                  <th style="width:44px;padding:10px 0 10px 16px;text-align:left;"><span onClick="{{ togglePage }}" style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ pageBd }};background:{{ pageBg }};color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;">{{ pageMark }}</span></th>
+                  <th style="text-align:left;font-weight:500;padding:10px 12px;">接通时间 ↓</th><th style="text-align:left;font-weight:500;padding:10px 12px;">话单中的租户标签</th><th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th><th style="text-align:right;font-weight:500;padding:10px 16px;">通话时长</th>
+                </tr></thead>
+                <tbody style="font-variant-numeric:tabular-nums;">
+                  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+                    <tr onClick="{{ r.onClick }}" style="border-top:1px solid var(--border);background:{{ r.bg }};cursor:pointer;" style-hover="background:var(--row-hover);">
+                      <td style="padding:11px 0 11px 16px;"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ r.cbd }};background:{{ r.cbg }};color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">{{ r.mark }}</span></td>
+                      <td style="padding:11px 12px;">{{ r.time }}</td><td style="padding:11px 12px;font-family:{{ r.tagFont }};color:{{ r.tagColor }};">{{ r.tagLabel }}</td><td style="padding:11px 12px;">{{ r.caller }}</td><td style="padding:11px 12px;">{{ r.callee }}</td><td style="padding:11px 16px;text-align:right;">{{ r.dur }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ pageInfo }}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid var(--border);border-radius:12px;padding:64px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+            <span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:20px;">✓</span>
+            <span style="font-size:17px;font-weight:600;">所有话单都已归属</span>
+            <span style="font-size:13px;color:var(--muted-fg);">没有待处理的未归属话单</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showIgnored }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <sc-if value="{{ hasIgnored }}" hint-placeholder-val="{{ true }}">
+              <div style="border:1px solid var(--border);border-radius:10px;overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                  <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;"><th style="text-align:left;font-weight:500;padding:10px 16px;">接通时间</th><th style="text-align:left;font-weight:500;padding:10px 12px;">租户标签</th><th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th><th style="text-align:right;font-weight:500;padding:10px 12px;">通话时长</th><th style="text-align:left;font-weight:500;padding:10px 12px;">忽略原因</th><th style="text-align:left;font-weight:500;padding:10px 12px;">操作人 · 时间</th><th style="text-align:right;font-weight:500;padding:10px 16px;">操作</th></tr></thead>
+                  <tbody style="font-variant-numeric:tabular-nums;">
+                    <sc-for list="{{ ignoredRows }}" as="r" hint-placeholder-count="5">
+                      <tr style="border-top:1px solid var(--border);"><td style="padding:11px 16px;">{{ r.time }}</td><td style="padding:11px 12px;font-family:{{ r.tagFont }};color:{{ r.tagColor }};">{{ r.tagLabel }}</td><td style="padding:11px 12px;">{{ r.caller }}</td><td style="padding:11px 12px;">{{ r.callee }}</td><td style="padding:11px 12px;text-align:right;">{{ r.dur }}</td><td style="padding:11px 12px;white-space:normal;max-width:280px;">{{ r.reason }}</td><td style="padding:11px 12px;color:var(--muted-fg);">{{ r.by }}</td><td style="padding:11px 16px;text-align:right;"><a onClick="{{ r.undo }}">撤销忽略</a></td></tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ ignoredInfo }}</span>
+            </sc-if>
+            <sc-if value="{{ noIgnored }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid var(--border);border-radius:12px;padding:48px 20px;text-align:center;font-size:14px;color:var(--muted-fg);">没有已忽略的话单</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </main>
+    </div>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:flex;gap:12px;align-items:center;z-index:30;">{{ toast }}<span onClick="{{ closeToast }}" style="cursor:pointer;opacity:.7;">✕</span></div>
+  </sc-if>
+
+  <sc-if value="{{ dlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDlg }}" style="position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:20;padding:20px;">
+      <div onClick="{{ stop }}" style="width:560px;max-width:100%;background:var(--card);color:var(--fg);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;">
+        <div style="padding:20px 24px 0;display:flex;justify-content:space-between;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">{{ dTitle }}</span><span style="font-size:13px;color:var(--muted-fg);">{{ dSub }}</span></div><span onClick="{{ closeDlg }}" style="color:var(--muted-fg);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">✕</span></div>
+        <div style="padding:18px 24px;display:flex;flex-direction:column;gap:14px;">
+          <sc-if value="{{ isAssign }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">归属到租户
+                <span onClick="{{ toggleCombo }}" style="height:40px;border:1px solid {{ comboBd }};box-shadow:{{ comboRing }};border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:400;cursor:pointer;color:{{ comboColor }};">{{ comboVal }}<span style="color:var(--muted-fg);font-size:12px;">▾</span></span>
+                <sc-if value="{{ comboOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:4px;font-weight:400;background:var(--card);">
+                    <sc-for list="{{ tenantOpts }}" as="t" hint-placeholder-count="6"><div onClick="{{ t.onClick }}" style="height:40px;padding:0 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between;font-size:14px;cursor:pointer;background:{{ t.bg }};" style-hover="background:var(--muted);"><span><span style="font-family:ui-monospace,Menlo,monospace;">{{ t.code }}</span>　{{ t.name }}</span><span style="font-size:12px;color:{{ t.hintColor }};">{{ t.hint }}</span></div></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ hasPreview }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:10px;font-variant-numeric:tabular-nums;">
+                    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--border);"><span style="font-size:12px;color:var(--muted-fg);">实际归属</span><span style="font-size:20px;font-weight:600;">{{ pv.ok }} 条</span><span style="font-size:11px;color:var(--muted-fg);">已选 {{ pv.n }} 条</span></div>
+                    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--border);"><span style="font-size:12px;color:var(--muted-fg);">扣费合计</span><span style="font-size:20px;font-weight:600;">{{ pv.fee }}</span><span style="font-size:11px;color:var(--muted-fg);">按 {{ pv.code }} 费率计算</span></div>
+                    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:{{ pv.nrBg }};border-radius:0 10px 10px 0;"><span style="font-size:12px;color:{{ pv.nrFg }};">匹配不到费率</span><span style="font-size:20px;font-weight:600;color:{{ pv.nrFg }};">{{ pv.nr }} 条</span><span style="font-size:11px;color:{{ pv.nrFg }};">不能归属</span></div>
+                  </div>
+                  <sc-if value="{{ pv.hasNr }}" hint-placeholder-val="{{ false }}">
+                    <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.55;">{{ pv.nr }} 条被叫前缀 <span style="font-family:ui-monospace,Menlo,monospace;font-weight:600;">1876</span>（牙买加）在 {{ pv.code }} 费率表中已删除，这些话单会保留在未归属话单中。</div>
+                  </sc-if>
+                  <div style="font-size:13px;color:var(--muted-fg);line-height:1.55;">确认后从 {{ pv.code }} 余额扣除 {{ pv.fee }}，并记入操作日志。</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isIgnore }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font-size:13px;font-weight:500;">忽略原因 <span style="color:var(--neg);font-weight:400;font-size:12px;">必填</span></span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;"><sc-for list="{{ quick }}" as="q" hint-placeholder-count="3"><span onClick="{{ q.onClick }}" style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--input);font-size:12px;display:flex;align-items:center;cursor:pointer;" style-hover="background:var(--muted);">{{ q.label }}</span></sc-for></div>
+              <textarea value="{{ reason }}" onChange="{{ onReason }}" placeholder="说明忽略这些话单的原因，例如：FreeSWITCH 测试呼叫，不属于任何客户" style="height:88px;resize:none;border:1px solid {{ reasonBd }};box-shadow:{{ reasonRing }};border-radius:8px;padding:10px 12px;font-size:14px;background:transparent;color:var(--fg);"></textarea>
+              <sc-if value="{{ reasonErr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--neg);">请填写忽略原因</span></sc-if>
+              <span style="font-size:13px;color:var(--muted-fg);">忽略的话单不计费，移到「已忽略」标签页，可随时撤销。忽略和撤销均记入操作日志。</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;"><button onClick="{{ closeDlg }}" style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;cursor:pointer;">取消</button><button onClick="{{ submit }}" style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;opacity:{{ okOp }};cursor:{{ okCursor }};">{{ okLabel }}</button></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { theme: 'light', tab: 'pending', group: 'all', sel: [], assigned: [], ignored: {}, dlg: null, tenant: null, combo: false, reason: '', tried: false, toast: '' };
+  componentDidMount() {
+    try { const s = JSON.parse(localStorage.getItem('fsb-unassigned-demo') || 'null'); if (s) this.setState({ assigned: s.assigned || [], ignored: s.ignored || {} }); } catch (e) {}
+  }
+  persist(p) { this.setState(p, () => { try { localStorage.setItem('fsb-unassigned-demo', JSON.stringify({ assigned: this.state.assigned, ignored: this.state.ignored })); } catch (e) {} }); }
+  data() {
+    if (this._d) return this._d;
+    const p2 = n => String(n).padStart(2, '0');
+    const callers = ['075586001234', '075586001235', '075586001236'];
+    const callees = ['8613800138000', '447700900123', '85291234567', '14155550123', '6591234567', '442071234567', '8613912345678', '81345678901', '8613600136000'];
+    const rows = []; let t = 13 * 3600 + 47 * 60 + 2;
+    const noRateIdx = [2, 141];
+    for (let i = 0; i < 338; i++) {
+      const empty = i % 28 === 3; // 12 empty-tag rows
+      const id = 'c' + i;
+      const nr = !empty && noRateIdx.includes(i);
+      const callee = nr ? (i === 2 ? '18765551234' : '18765559876') : empty ? '86137' + String(10000000 + i * 7919).slice(0, 8) : callees[(i * 7) % callees.length];
+      const sec = 20 + ((i * 97) % 600);
+      rows.push({ id, tag: empty ? '' : 'ABC01', caller: empty ? '02088776655' : callers[i % 3], callee, sec, t, nr });
+      t -= 30 + ((i * 13) % 17);
+    }
+    const abc = rows.filter(r => r.tag === 'ABC01' && !r.nr);
+    abc.forEach((r, i) => { r.cents = 18 + (i % 2 === 0 ? 1 : -1) * ((i * 5) % 7); });
+    const diff = 5835 - abc.reduce((a, r) => a + r.cents, 0); abc[abc.length - 1].cents += diff;
+    rows.filter(r => !r.tag).forEach((r, i) => { r.cents = 10 + ((i * 11) % 30); });
+    rows.filter(r => r.nr).forEach(r => { r.cents = 175; });
+    rows.forEach(r => { const h = Math.floor(r.t / 3600), m = Math.floor(r.t % 3600 / 60), s = r.t % 60; r.time = `2026-09-29 ${p2(h)}:${p2(m)}:${p2(s)}`; r.dur = Math.floor(r.sec / 60) + '分' + p2(r.sec % 60) + '秒'; });
+    const seeded = [
+      ['s1', 'TEST', '075500000001', '8613800000001', 12, '2026-09-28 17:42:10'], ['s2', 'TEST', '075500000001', '8613800000001', 9, '2026-09-28 17:40:51'], ['s3', 'TEST', '075500000001', '8613800000002', 31, '2026-09-28 17:39:33'],
+      ['s4', '', '02088776600', '8613500135000', 64, '2026-09-26 10:15:08'], ['s5', '', '02088776600', '8613500135000', 58, '2026-09-26 10:12:47'],
+    ].map(([id, tag, caller, callee, sec, time]) => ({ id, tag, caller, callee, sec, time, dur: Math.floor(sec / 60) + '分' + p2(sec % 60) + '秒', cents: 5, nr: false, seeded: true }));
+    const seedIgn = { s1: { reason: 'FreeSWITCH 测试呼叫，不属于任何客户', by: '王敏 · 09-28 18:05' }, s2: { reason: 'FreeSWITCH 测试呼叫，不属于任何客户', by: '王敏 · 09-28 18:05' }, s3: { reason: 'FreeSWITCH 测试呼叫，不属于任何客户', by: '王敏 · 09-28 18:05' }, s4: { reason: '内部线路，运维排障拨测', by: '李俊 · 09-26 11:30' }, s5: { reason: '内部线路，运维排障拨测', by: '李俊 · 09-26 11:30' } };
+    this._d = { all: [...rows, ...seeded], seedIgn };
+    return this._d;
+  }
+  renderVals() {
+    const s = this.state, D = this.data();
+    const tenants = [['ABC001', '深圳市某某科技有限公司', 'CNY', 1, '与标签 ABC01 相近'], ['BJH003', '北京华联信息技术有限公司', 'CNY', 1.12, 'CNY'], ['GZT007', '广州通达云科技有限公司', 'CNY', 0.96, 'CNY'], ['SHC005', '上海辰星网络科技有限公司', 'CNY', 1.05, 'CNY'], ['XYZ002', 'Global Trade Ltd', 'USD', 0.14, 'USD'], ['NYC021', 'Hudson Contact Center Inc', 'USD', 0.15, 'USD']];
+    const ign = { ...D.seedIgn, ...s.ignored };
+    Object.keys(s.ignored).forEach(k => { if (s.ignored[k] === null) delete ign[k]; });
+    const assigned = new Set(s.assigned);
+    const pending = D.all.filter(r => !assigned.has(r.id) && !ign[r.id]);
+    const ignoredList = D.all.filter(r => ign[r.id]);
+    const tagLabel = r => r.tag || '（空）';
+    const gKey = r => r.tag || '__empty';
+    const counts = {}; pending.forEach(r => { counts[gKey(r)] = (counts[gKey(r)] || 0) + 1; });
+    const group = s.group !== 'all' && !counts[s.group] ? 'all' : s.group;
+    const gMeta = k => k === 'ABC01' ? ['标签 ABC01', '疑似拼写错误，相近：ABC001', 'var(--warn-fg)'] : k === '__empty' ? ['标签为空', '话单未携带租户标签', 'var(--muted-fg)'] : ['标签 ' + k, '找不到对应租户', 'var(--muted-fg)'];
+    const gs = [{ k: 'all', n: pending.length, title: '全部', sub: Object.keys(counts).length + ' 个分组', subColor: 'var(--muted-fg)' }, ...Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map(k => { const [title, sub, subColor] = gMeta(k); return { k, n: counts[k], title, sub, subColor }; })];
+    const groups = gs.map(g => { const on = g.k === group; return { ...g, n: g.n.toLocaleString('en-US'), flex: g.k === 'all' ? '0 0 200px' : '1 1 260px', bd: on ? 'var(--primary)' : 'var(--border)', bg: on ? 'var(--brand-soft)' : 'transparent', ring: on ? '0 0 0 1px var(--primary)' : 'none', onClick: () => this.setState({ group: g.k, sel: [] }) }; });
+    const filtered = group === 'all' ? pending : pending.filter(r => gKey(r) === group);
+    const page = filtered.slice(0, 20);
+    const sel = new Set(s.sel.filter(id => pending.some(r => r.id === id)));
+    const toggle = id => () => this.setState(st => { const x = new Set(st.sel); x.has(id) ? x.delete(id) : x.add(id); return { sel: [...x] }; });
+    const pageAll = page.length > 0 && page.every(r => sel.has(r.id)), pageSome = page.some(r => sel.has(r.id));
+    const ck = on => ({ mark: on ? '✓' : '', cbd: on ? 'var(--primary)' : 'var(--input)', cbg: on ? 'var(--primary)' : 'transparent' });
+    const decor = r => ({ ...r, tagLabel: tagLabel(r), tagFont: r.tag ? 'ui-monospace,Menlo,monospace' : 'inherit', tagColor: r.tag ? 'var(--fg)' : 'var(--muted-fg)' });
+    const rows = page.map(r => ({ ...decor(r), ...ck(sel.has(r.id)), bg: sel.has(r.id) ? 'var(--brand-soft)' : 'transparent', onClick: toggle(r.id) }));
+    const allGroupSel = filtered.length > 0 && filtered.every(r => sel.has(r.id));
+    const selRows = pending.filter(r => sel.has(r.id));
+    const gTitle = group === 'all' ? '全部' : gMeta(group)[0];
+    const T = tenants.find(t => t[0] === s.tenant);
+    let pv = null;
+    if (T) {
+      const nr = T[0] === 'ABC001' ? selRows.filter(r => r.nr).length : 0;
+      const okRows = selRows.filter(r => !(T[0] === 'ABC001' && r.nr));
+      const cents = Math.round(okRows.reduce((a, r) => a + r.cents, 0) * T[3]);
+      const sym = T[2] === 'USD' ? '$' : '¥';
+      pv = { n: selRows.length, ok: okRows.length, nr, hasNr: nr > 0, fee: sym + (cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','), code: T[0], nrBg: nr ? 'var(--warn-bg)' : 'transparent', nrFg: nr ? 'var(--warn-fg)' : 'var(--muted-fg)', okIds: okRows.map(r => r.id) };
+    }
+    const nav = ['概览', '租户', '待收款', '未归属话单', '账单', '系统告警', '操作日志', '管理员'].map(l => ({ label: l, bg: l === '未归属话单' ? 'var(--brand-soft)' : 'transparent', fg: l === '未归属话单' ? 'var(--primary)' : 'var(--muted-fg)', weight: l === '未归属话单' ? 500 : 400, badge: l === '未归属话单' ? String(pending.length) : '' }));
+    const tabs = [['pending', '待处理', pending.length], ['ignored', '已忽略', ignoredList.length]].map(([k, l, n]) => ({ label: l, n: n.toLocaleString('en-US'), line: s.tab === k ? 'var(--primary)' : 'transparent', fg: s.tab === k ? 'var(--fg)' : 'var(--muted-fg)', weight: s.tab === k ? 600 : 400, onClick: () => this.setState({ tab: k }) }));
+    const reasonEmpty = !s.reason.trim();
+    const isAssign = s.dlg === 'assign', isIgnore = s.dlg === 'ignore';
+    const okEnabled = isAssign ? !!(pv && pv.ok > 0) : true;
+    const quick = ['测试呼叫', '内部线路', '重复话单'].map(l => ({ label: l, onClick: () => this.setState({ reason: l + (l === '测试呼叫' ? '，不属于任何客户' : ''), tried: false }) }));
+    const ignoredRows = ignoredList.slice(0, 50).map(r => ({ ...decor(r), reason: ign[r.id].reason, by: ign[r.id].by, undo: () => this.persist({ ignored: { ...s.ignored, [r.id]: null } }) }));
+    const now = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `09-29 ${p(d.getHours())}:${p(d.getMinutes())}`; };
+    return {
+      theme: s.theme, nav, tabs, groups, rows,
+      showPending: s.tab === 'pending' && pending.length > 0, showEmpty: s.tab === 'pending' && pending.length === 0, showIgnored: s.tab === 'ignored',
+      hasIgnored: ignoredList.length > 0, noIgnored: ignoredList.length === 0, ignoredRows, ignoredInfo: ignoredList.length > 50 ? `显示前 50 条，共 ${ignoredList.length} 条` : `共 ${ignoredList.length} 条`,
+      hasSel: sel.size > 0, noSelHint: sel.size === 0,
+      selText: allGroupSel && filtered.length > page.length ? `已选择「${gTitle}」全部 ${filtered.length} 条` : `已选 ${sel.size} 条`,
+      canSelectGroup: !allGroupSel && filtered.length > page.length, selectGroupLabel: `选择「${gTitle}」全部 ${filtered.length} 条`,
+      selectGroup: () => this.setState({ sel: filtered.map(r => r.id) }), clearSel: () => this.setState({ sel: [] }),
+      pageMark: pageAll ? '✓' : pageSome ? '–' : '', pageBd: pageSome ? 'var(--primary)' : 'var(--input)', pageBg: pageSome ? 'var(--primary)' : 'transparent',
+      togglePage: e => { e.stopPropagation(); this.setState(st => { const x = new Set(st.sel); if (pageAll) page.forEach(r => x.delete(r.id)); else page.forEach(r => x.add(r.id)); return { sel: [...x] }; }); },
+      pageInfo: filtered.length > 20 ? `显示前 20 条，共 ${filtered.length.toLocaleString('en-US')} 条` : `共 ${filtered.length} 条`,
+      dlgOpen: !!s.dlg, isAssign, isIgnore,
+      dTitle: isAssign ? '归属到租户' : `忽略 ${selRows.length} 条话单`, dSub: `已选 ${selRows.length} 条 · ${gTitle}`,
+      comboOpen: s.combo, toggleCombo: () => this.setState({ combo: !s.combo }),
+      comboVal: T ? `${T[0]}　${T[1]}（${T[2]}）` : '选择租户', comboColor: T ? 'var(--fg)' : 'var(--muted-fg)', comboBd: s.combo ? 'var(--primary)' : 'var(--input)', comboRing: s.combo ? '0 0 0 3px var(--brand-soft)' : 'none',
+      tenantOpts: tenants.map(t => ({ code: t[0], name: t[1], hint: t[4], hintColor: t[0] === 'ABC001' ? 'var(--warn-fg)' : 'var(--muted-fg)', bg: t[0] === s.tenant ? 'var(--muted)' : 'transparent', onClick: () => this.setState({ tenant: t[0], combo: false }) })),
+      hasPreview: !!pv, pv: pv || { n: 0, ok: 0, nr: 0, hasNr: false, fee: '', code: '', nrBg: 'transparent', nrFg: 'var(--muted-fg)' },
+      reason: s.reason, onReason: e => this.setState({ reason: e.target.value, tried: false }), quick,
+      reasonErr: s.tried && reasonEmpty, reasonBd: s.tried && reasonEmpty ? 'var(--neg)' : 'var(--input)', reasonRing: s.tried && reasonEmpty ? '0 0 0 3px var(--err-bg)' : 'none',
+      okLabel: isAssign ? (pv ? `确认归属 ${pv.ok} 条并扣费` : '确认归属') : `忽略 ${selRows.length} 条`,
+      okOp: okEnabled ? 1 : .45, okCursor: okEnabled ? 'pointer' : 'not-allowed',
+      openAssign: () => this.setState({ dlg: 'assign', tenant: null, combo: true }),
+      openIgnore: () => this.setState({ dlg: 'ignore', reason: '', tried: false }),
+      closeDlg: () => this.setState({ dlg: null, combo: false }), stop: e => e.stopPropagation(),
+      submit: () => {
+        if (isAssign) { if (!pv || !pv.ok) return; this.persist({ assigned: [...s.assigned, ...pv.okIds], sel: [], dlg: null, toast: `已归属 ${pv.ok} 条到 ${pv.code}，扣费 ${pv.fee}${pv.nr ? `，${pv.nr} 条匹配不到费率仍保留` : ''}，已记入操作日志` }); return; }
+        if (reasonEmpty) { this.setState({ tried: true }); return; }
+        const add = {}; selRows.forEach(r => { add[r.id] = { reason: s.reason.trim(), by: '王敏 · ' + now() }; });
+        this.persist({ ignored: { ...s.ignored, ...add }, sel: [], dlg: null, toast: `已忽略 ${selRows.length} 条，可在「已忽略」中撤销` });
+      },
+      toast: s.toast, closeToast: () => this.setState({ toast: '' }),
+      demoState: `待处理 ${pending.length} · 已归属 ${s.assigned.length} · 已忽略 ${ignoredList.length}`,
+      reset: () => { try { localStorage.removeItem('fsb-unassigned-demo'); } catch (e) {} this.setState({ assigned: [], ignored: {}, sel: [], group: 'all', tab: 'pending', dlg: null, toast: '' }); },
+      toggleTheme: () => this.setState({ theme: s.theme === 'light' ? 'dark' : 'light' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

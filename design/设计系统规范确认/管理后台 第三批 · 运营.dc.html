@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+html,body{margin:0;padding:0;background:#d4d4d8;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+a{color:var(--primary,#2563eb);text-decoration:none;cursor:pointer;}
+a:hover{text-decoration:underline;text-underline-offset:3px;}
+*{box-sizing:border-box;}
+[data-theme=light]{--bg:#ffffff;--fg:#09090b;--card:#ffffff;--muted:#f4f4f5;--muted-fg:#71717a;--border:#e4e4e7;--input:#e4e4e7;--primary:#2563eb;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#dc2626;--pos:#16a34a;--skeleton:#ececee;--row-hover:#fafafa;--brand-soft:#eff6ff;--brand-bd:#bfdbfe;--side:#fafafa;--bar:#2563eb;--bar-dim:#bfdbfe;
+--ok-bg:#f0fdf4;--ok-fg:#15803d;--ok-bd:#bbf7d0;--warn-bg:#fff7ed;--warn-fg:#c2410c;--warn-bd:#fed7aa;--err-bg:#fef2f2;--err-fg:#b91c1c;--err-bd:#fecaca;--off-bg:#f4f4f5;--off-fg:#52525b;--off-bd:#e4e4e7;}
+[data-theme=dark]{--bg:#09090b;--fg:#fafafa;--card:#111113;--muted:#27272a;--muted-fg:#a1a1aa;--border:#27272a;--input:#3f3f46;--primary:#3b82f6;--primary-fg:#ffffff;--destructive:#dc2626;--neg:#f87171;--pos:#4ade80;--skeleton:#1f1f23;--row-hover:#141416;--brand-soft:rgba(59,130,246,.12);--brand-bd:rgba(59,130,246,.35);--side:#0c0c0e;--bar:#3b82f6;--bar-dim:rgba(59,130,246,.35);
+--ok-bg:rgba(34,197,94,.12);--ok-fg:#4ade80;--ok-bd:rgba(34,197,94,.32);--warn-bg:rgba(249,115,22,.12);--warn-fg:#fb923c;--warn-bd:rgba(249,115,22,.35);--err-bg:rgba(239,68,68,.13);--err-fg:#f87171;--err-bd:rgba(239,68,68,.38);--off-bg:#1f1f23;--off-fg:#a1a1aa;--off-bd:#3f3f46;}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="padding:56px;display:flex;flex-direction:column;gap:72px;min-width:max-content;">
+
+  <header style="display:flex;flex-direction:column;gap:6px;color:#18181b;">
+    <div style="font-size:13px;color:#52525b;">FS-Billing · 第三批 · 管理后台</div>
+    <h1 style="margin:0;font-size:30px;font-weight:600;">概览</h1>
+    <div style="font-size:13px;color:#52525b;">10 个租户（CNY 6 · USD 4）· 今天 2026-09-29 · CNY 与 USD 分开统计，不相加。待收款与第二批待收款页一致。浅色/深色在 Tweaks 中切换。</div>
+  </header>
+
+  <section data-screen-label="概览 电脑" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">1 · 电脑</h2>
+    <div style="display:flex;flex-direction:column;gap:48px;">
+      <sc-for list="{{ boards }}" as="b" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:1440px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+                <sc-for list="{{ b.nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+              </nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:14px;color:var(--muted-fg);">概览</span>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">◐</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+              </div>
+              <main style="padding:28px;display:flex;flex-direction:column;gap:24px;">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">概览</h1><span style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ b.asOf }}</span></div>
+
+                <sc-if value="{{ b.loading }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:24px;">
+                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;"><sc-for list="{{ six }}" as="x" hint-placeholder-count="6"><div style="height:118px;border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;"><span style="height:10px;width:55%;border-radius:4px;background:var(--skeleton);"></span><span style="height:18px;width:80%;border-radius:5px;background:var(--skeleton);"></span><span style="height:14px;width:60%;border-radius:4px;background:var(--skeleton);"></span></div></sc-for></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"><div style="height:260px;border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;"><span style="height:12px;width:30%;border-radius:4px;background:var(--skeleton);"></span><span style="height:40px;border-radius:8px;background:var(--skeleton);"></span><span style="height:40px;border-radius:8px;background:var(--skeleton);"></span><span style="height:40px;border-radius:8px;background:var(--skeleton);"></span></div><div style="height:260px;border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;"><span style="height:12px;width:30%;border-radius:4px;background:var(--skeleton);"></span><span style="height:64px;border-radius:8px;background:var(--skeleton);"></span><span style="height:40px;border-radius:8px;background:var(--skeleton);"></span></div></div>
+                    <div style="height:300px;border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px;"><span style="height:12px;width:20%;border-radius:4px;background:var(--skeleton);"></span><div style="flex:1;display:flex;align-items:flex-end;gap:6px;"><sc-for list="{{ skelBars }}" as="h" hint-placeholder-count="30"><span style="flex:1;height:{{ h }};border-radius:3px 3px 0 0;background:var(--skeleton);"></span></sc-for></div></div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.ready }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:24px;">
+                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;font-variant-numeric:tabular-nums;">
+                      <sc-for list="{{ b.cards }}" as="c" hint-placeholder-count="6">
+                        <div style="border:1px solid {{ c.bd }};background:{{ c.bg }};border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+                          <span style="font-size:13px;color:var(--muted-fg);">{{ c.label }}</span>
+                          <div style="display:flex;flex-direction:column;gap:4px;">
+                            <sc-for list="{{ c.lines }}" as="l" hint-placeholder-count="2"><div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;"><span style="font-size:{{ l.size }};font-weight:600;color:{{ l.color }};letter-spacing:-.01em;">{{ l.v }}</span><span style="font-size:11px;color:var(--muted-fg);">{{ l.cur }}</span></div></sc-for>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+
+                    <sc-if value="{{ b.allOk }}" hint-placeholder-val="{{ false }}">
+                      <div style="border:1px solid var(--ok-bd);background:var(--ok-bg);border-radius:12px;padding:24px;display:flex;align-items:center;gap:16px;">
+                        <span style="width:44px;height:44px;flex-shrink:0;border-radius:50%;background:var(--bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:20px;">✓</span>
+                        <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;color:var(--ok-fg);">一切正常</span><span style="font-size:13px;color:var(--fg);">没有已停机或余额不足的租户，没有未归属话单，最近 24 小时没有系统告警。</span></div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ b.hasAttn }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;flex-direction:column;gap:12px;">
+                        <div style="display:flex;align-items:baseline;gap:10px;"><span style="font-size:16px;font-weight:600;">需要关注</span><span style="font-size:13px;color:var(--muted-fg);">6 项 · 点击查看详情</span></div>
+                        <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:16px;">
+                          <div style="display:flex;flex-direction:column;gap:16px;">
+                            <sc-for list="{{ tenantGroups }}" as="g" hint-placeholder-count="2">
+                              <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                                <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:{{ g.dot }};"></span><span style="font-size:14px;font-weight:600;">{{ g.title }}</span><span style="font-size:13px;color:var(--muted-fg);">{{ g.count }}</span></div><a style="font-size:13px;">{{ g.more }}</a></div>
+                                <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="2">
+                                  <div style="padding:12px 16px;display:grid;grid-template-columns:1fr auto auto 16px;gap:16px;align-items:center;border-top:1px solid var(--border);cursor:pointer;font-variant-numeric:tabular-nums;" style-hover="background:var(--row-hover);">
+                                    <div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:14px;font-weight:500;">{{ t.name }}</span><span style="font-size:12px;color:var(--muted-fg);"><span style="font-family:ui-monospace,Menlo,monospace;">{{ t.code }}</span> · {{ t.cur }} · {{ t.sub }}</span></div>
+                                    <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap;flex-shrink:0;background:{{ t.sbg }};color:{{ t.sfg }};border:1px solid {{ t.sbd }};">{{ t.status }}</span>
+                                    <span style="font-size:15px;font-weight:600;color:{{ t.balColor }};text-align:right;min-width:90px;">{{ t.bal }}</span>
+                                    <span style="color:var(--muted-fg);">›</span>
+                                  </div>
+                                </sc-for>
+                              </div>
+                            </sc-for>
+                          </div>
+                          <div style="display:flex;flex-direction:column;gap:16px;">
+                            <div style="border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" style-hover="background:var(--row-hover);">
+                              <div style="display:flex;flex-direction:column;gap:4px;"><div style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--warn-fg);"></span><span style="font-size:14px;font-weight:600;">未归属话单</span></div><span style="font-size:12px;color:var(--muted-fg);">无法匹配到租户，未计费 · 最近一条 13:47:02</span></div>
+                              <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;">338<span style="font-size:13px;font-weight:400;color:var(--muted-fg);"> 条</span></span><span style="color:var(--muted-fg);">›</span></div>
+                            </div>
+                            <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                              <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--destructive);"></span><span style="font-size:14px;font-weight:600;">系统告警</span><span style="font-size:13px;color:var(--muted-fg);">最近 24 小时 · 2 条</span></div><a style="font-size:13px;">全部告警 ›</a></div>
+                              <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="2">
+                                <div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--border);cursor:pointer;" style-hover="background:var(--row-hover);">
+                                  <div style="display:flex;flex-direction:column;gap:2px;"><div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span style="font-size:14px;font-weight:500;">{{ a.title }}</span><span style="display:inline-flex;align-items:center;gap:5px;height:20px;white-space:nowrap;flex-shrink:0;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;background:{{ a.sbg }};color:{{ a.sfg }};border:1px solid {{ a.sbd }};">{{ a.status }}</span></div><span style="font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ a.sub }}</span></div>
+                                  <span style="color:var(--muted-fg);">›</span>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <div style="border:1px solid var(--border);border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:16px;font-weight:600;">最近 30 天每日消费</span><span style="font-size:12px;color:var(--muted-fg);">2026-08-31 至 2026-09-29 · 所有 {{ b.ch.cur }} 租户合计</span></div>
+                        <div style="display:flex;align-items:center;gap:20px;">
+                          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><span style="font-size:12px;color:var(--muted-fg);">合计</span><span style="font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;">{{ b.ch.total }}</span></div>
+                          <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:13px;height:34px;"><sc-for list="{{ b.ch.seg }}" as="s" hint-placeholder-count="2"><span style="padding:0 14px;display:flex;align-items:center;border-radius:6px;background:{{ s.bg }};color:{{ s.fg }};font-weight:{{ s.w }};box-shadow:{{ s.sh }};">{{ s.label }}</span></sc-for></div>
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:12px;">
+                        <div style="display:flex;flex-direction:column;justify-content:space-between;height:200px;font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums;text-align:right;width:48px;"><sc-for list="{{ b.ch.axis }}" as="t" hint-placeholder-count="4"><span>{{ t }}</span></sc-for></div>
+                        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                          <div style="height:200px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid var(--border);background:linear-gradient(var(--border) 1px,transparent 1px) 0 0/100% 66.67px;"><sc-for list="{{ b.ch.bars }}" as="d" hint-placeholder-count="30"><div style="flex:1;height:{{ d.h }};background:{{ d.color }};border-radius:3px 3px 0 0;"></div></sc-for></div>
+                          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);font-variant-numeric:tabular-nums;"><span>08-31</span><span>09-07</span><span>09-14</span><span>09-21</span><span>09-29 今天</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+              </main>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="概览 手机" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">2 · 手机</h2>
+    <div style="display:flex;gap:32px;align-items:flex-start;">
+      <sc-for list="{{ mob }}" as="b" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:390px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);">
+            <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+            <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+              <span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ b.dot }};"></span></span>
+              <div style="display:flex;flex-direction:column;align-items:center;"><span style="font-size:16px;font-weight:600;">概览</span><span style="font-size:10px;color:var(--primary);font-weight:500;">管理后台</span></div>
+              <span style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;"><span style="width:30px;height:30px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span></span>
+            </div>
+            <div style="padding:16px 16px 28px;display:flex;flex-direction:column;gap:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-variant-numeric:tabular-nums;">
+                <sc-for list="{{ b.cards }}" as="c" hint-placeholder-count="6">
+                  <div style="border:1px solid {{ c.bd }};background:{{ c.bg }};border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;">
+                    <span style="font-size:12px;color:var(--muted-fg);">{{ c.label }}</span>
+                    <sc-for list="{{ c.mlines }}" as="l" hint-placeholder-count="2"><span style="font-size:{{ l.size }};font-weight:600;color:{{ l.color }};">{{ l.v }}</span></sc-for>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ b.allOk }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid var(--ok-bd);background:var(--ok-bg);border-radius:12px;padding:16px;display:flex;gap:12px;align-items:flex-start;"><span style="width:32px;height:32px;flex-shrink:0;border-radius:50%;background:var(--bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;">✓</span><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:15px;font-weight:600;color:var(--ok-fg);">一切正常</span><span style="font-size:13px;line-height:1.5;">没有需要关注的租户、未归属话单或告警。</span></div></div>
+              </sc-if>
+              <sc-if value="{{ b.hasAttn }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <span style="font-size:15px;font-weight:600;">需要关注 · 6 项</span>
+                  <sc-for list="{{ mobAttn }}" as="t" hint-placeholder-count="6">
+                    <div style="border:1px solid var(--border);border-radius:12px;padding:12px 4px 12px 14px;display:flex;align-items:center;gap:12px;font-variant-numeric:tabular-nums;">
+                      <span style="width:8px;height:8px;flex-shrink:0;border-radius:50%;background:{{ t.dot }};"></span>
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;"><span style="font-size:12px;color:var(--muted-fg);">{{ t.kind }}</span><span style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.title }}</span><span style="font-size:12px;color:var(--muted-fg);">{{ t.sub }}</span></div>
+                      <span style="font-size:15px;font-weight:600;color:{{ t.valColor }};white-space:nowrap;">{{ t.val }}</span>
+                      <span style="width:28px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);">›</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:600;">最近 30 天消费</span><span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;">{{ b.ch.total }}</span></div>
+                  <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:14px;height:44px;"><sc-for list="{{ b.ch.seg }}" as="s" hint-placeholder-count="2"><span style="padding:0 14px;display:flex;align-items:center;border-radius:6px;background:{{ s.bg }};color:{{ s.fg }};font-weight:{{ s.w }};box-shadow:{{ s.sh }};">{{ s.label }}</span></sc-for></div></div>
+                <div style="height:120px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid var(--border);"><sc-for list="{{ b.ch.bars }}" as="d" hint-placeholder-count="30"><div style="flex:1;height:{{ d.h }};background:{{ d.color }};border-radius:2px 2px 0 0;"></div></sc-for></div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);"><span>08-31</span><span>09-14</span><span>09-29</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="未归属话单 电脑" style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;flex-direction:column;gap:6px;"><h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">3 · 未归属话单 · 电脑</h2><span style="font-size:13px;color:#52525b;">租户标签缺失或找不到对应租户的话单，未计费。可交互版本见 <a href="管理后台 未归属话单原型.dc.html">管理后台 未归属话单原型</a>。</span></div>
+    <div style="display:grid;grid-template-columns:repeat(2,1440px);gap:48px 40px;align-items:start;">
+      <sc-for list="{{ ua }}" as="b" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:1440px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;">
+                <sc-for list="{{ uaNav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for>
+              </nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:14px;color:var(--muted-fg);">未归属话单</span>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">◐</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+              </div>
+              <main style="padding:28px;display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;flex-direction:column;gap:6px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">未归属话单</h1><span style="font-size:13px;color:var(--muted-fg);">话单中的租户标签缺失，或找不到对应租户。这些话单尚未计费，可归属到租户后补扣费，或填写原因后忽略。</span></div>
+                <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:8px;align-items:center;"><span style="font-weight:600;color:var(--warn-fg);">提示</span><span>请同时检查 FreeSWITCH 中的 <span style="font-family:ui-monospace,Menlo,monospace;padding:1px 6px;border-radius:4px;background:var(--bg);border:1px solid var(--warn-bd);">billing_tenant</span> 配置，否则新话单会继续进入此处。</span></div>
+                <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);font-size:14px;">
+                  <sc-for list="{{ b.tabs }}" as="tb" hint-placeholder-count="2"><span style="padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-weight:{{ tb.weight }};display:flex;align-items:center;gap:6px;">{{ tb.label }}<span style="font-size:12px;padding:1px 7px;border-radius:999px;background:var(--muted);color:var(--muted-fg);font-weight:500;">{{ tb.n }}</span></span></sc-for>
+                </div>
+
+                <sc-if value="{{ b.pending }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="display:grid;grid-template-columns:200px 1fr 1fr;gap:12px;">
+                      <sc-for list="{{ b.groups }}" as="g" hint-placeholder-count="3">
+                        <div style="border:1px solid {{ g.bd }};background:{{ g.bg }};box-shadow:{{ g.ring }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;">
+                          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span style="font-size:14px;font-weight:600;">{{ g.title }}</span><span style="font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;">{{ g.n }}<span style="font-size:12px;font-weight:400;color:var(--muted-fg);"> 条</span></span></div>
+                          <span style="font-size:12px;color:{{ g.subColor }};">{{ g.sub }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <sc-if value="{{ b.hasSel }}" hint-placeholder-val="{{ false }}">
+                      <div style="border:1px solid var(--brand-bd);background:var(--brand-soft);border-radius:10px;padding:8px 8px 8px 16px;display:flex;align-items:center;gap:12px;font-size:14px;">
+                        <span style="font-weight:600;">{{ b.selText }}</span><span style="color:var(--muted-fg);font-size:13px;">{{ b.selHint }}</span><a style="font-size:13px;">{{ b.selLink }}</a>
+                        <span style="flex:1;"></span>
+                        <button style="height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">忽略</button>
+                        <button style="height:34px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">归属到租户</button>
+                      </div>
+                    </sc-if>
+                    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                        <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                          <th style="width:44px;padding:10px 0 10px 16px;text-align:left;"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ b.allBd }};background:{{ b.allBg }};color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">{{ b.allMark }}</span></th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">接通时间 ↓</th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">话单中的租户标签</th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th>
+                          <th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th>
+                          <th style="text-align:right;font-weight:500;padding:10px 16px;">通话时长</th>
+                        </tr></thead>
+                        <tbody style="font-variant-numeric:tabular-nums;">
+                          <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="10">
+                            <tr style="border-top:1px solid var(--border);background:{{ r.bg }};">
+                              <td style="padding:11px 0 11px 16px;"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid {{ r.cbd }};background:{{ r.cbg }};color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">{{ r.mark }}</span></td>
+                              <td style="padding:11px 12px;">{{ r.time }}</td>
+                              <td style="padding:11px 12px;font-family:{{ r.tagFont }};color:{{ r.tagColor }};">{{ r.tag }}</td>
+                              <td style="padding:11px 12px;">{{ r.caller }}</td>
+                              <td style="padding:11px 12px;">{{ r.callee }}</td>
+                              <td style="padding:11px 16px;text-align:right;">{{ r.dur }}</td>
+                            </tr>
+                          </sc-for>
+                        </tbody>
+                      </table>
+                    </div>
+                    <span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ b.pageInfo }}</span>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.ignored }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                        <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                          <th style="text-align:left;font-weight:500;padding:10px 16px;">接通时间</th><th style="text-align:left;font-weight:500;padding:10px 12px;">租户标签</th><th style="text-align:left;font-weight:500;padding:10px 12px;">主叫号码</th><th style="text-align:left;font-weight:500;padding:10px 12px;">被叫号码</th><th style="text-align:right;font-weight:500;padding:10px 12px;">通话时长</th><th style="text-align:left;font-weight:500;padding:10px 12px;">忽略原因</th><th style="text-align:left;font-weight:500;padding:10px 12px;">操作人 · 时间</th><th style="text-align:right;font-weight:500;padding:10px 16px;">操作</th>
+                        </tr></thead>
+                        <tbody style="font-variant-numeric:tabular-nums;">
+                          <sc-for list="{{ uaIgnored }}" as="r" hint-placeholder-count="5">
+                            <tr style="border-top:1px solid var(--border);"><td style="padding:11px 16px;">{{ r.time }}</td><td style="padding:11px 12px;font-family:ui-monospace,Menlo,monospace;">{{ r.tag }}</td><td style="padding:11px 12px;">{{ r.caller }}</td><td style="padding:11px 12px;">{{ r.callee }}</td><td style="padding:11px 12px;text-align:right;">{{ r.dur }}</td><td style="padding:11px 12px;white-space:normal;max-width:280px;">{{ r.reason }}</td><td style="padding:11px 12px;color:var(--muted-fg);">{{ r.by }}</td><td style="padding:11px 16px;text-align:right;"><a>撤销忽略</a></td></tr>
+                          </sc-for>
+                        </tbody>
+                      </table>
+                    </div>
+                    <span style="font-size:12px;color:var(--muted-fg);">撤销后话单回到「待处理」，可重新归属或忽略。忽略和撤销均记入操作日志。</span>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--border);border-radius:12px;padding:64px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;">
+                    <span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:20px;">✓</span>
+                    <span style="font-size:17px;font-weight:600;">所有话单都已归属</span>
+                    <span style="font-size:13px;color:var(--muted-fg);">最近一次处理：王敏 · 2026-09-29 15:10:44 · 归属 324 条到 ABC001</span>
+                  </div>
+                </sc-if>
+              </main>
+
+              <sc-if value="{{ b.dlg }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;">
+                  <div style="width:540px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;">
+                    <div style="padding:20px 24px 0;display:flex;justify-content:space-between;"><div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">{{ b.dTitle }}</span><span style="font-size:13px;color:var(--muted-fg);">{{ b.dSub }}</span></div><span style="color:var(--muted-fg);">✕</span></div>
+                    <div style="padding:18px 24px;display:flex;flex-direction:column;gap:14px;">
+                      <sc-if value="{{ b.assign }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;gap:14px;">
+                          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;position:relative;">归属到租户
+                            <span style="height:40px;border:1px solid {{ b.selBd }};box-shadow:{{ b.selRing }};border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:400;color:{{ b.selColor }};">{{ b.selVal }}<span style="color:var(--muted-fg);font-size:12px;">▾</span></span>
+                            <sc-if value="{{ b.combo }}" hint-placeholder-val="{{ false }}">
+                              <div style="border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:4px;font-weight:400;background:var(--card);">
+                                <div style="height:36px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;font-size:13px;color:var(--muted-fg);margin-bottom:4px;">搜索编码或名称</div>
+                                <sc-for list="{{ uaTenants }}" as="t" hint-placeholder-count="5"><div style="height:40px;padding:0 10px;border-radius:6px;display:flex;align-items:center;justify-content:space-between;background:{{ t.bg }};font-size:14px;"><span><span style="font-family:ui-monospace,Menlo,monospace;">{{ t.code }}</span>　{{ t.name }}</span><span style="font-size:12px;color:{{ t.hintColor }};">{{ t.hint }}</span></div></sc-for>
+                              </div>
+                            </sc-if>
+                          </div>
+                          <sc-if value="{{ b.preview }}" hint-placeholder-val="{{ false }}">
+                            <div style="display:flex;flex-direction:column;gap:12px;">
+                              <div style="display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:10px;font-variant-numeric:tabular-nums;">
+                                <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--border);"><span style="font-size:12px;color:var(--muted-fg);">实际归属</span><span style="font-size:20px;font-weight:600;">324 条</span><span style="font-size:11px;color:var(--muted-fg);">已选 326 条</span></div>
+                                <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--border);"><span style="font-size:12px;color:var(--muted-fg);">扣费合计</span><span style="font-size:20px;font-weight:600;">¥58.35</span><span style="font-size:11px;color:var(--muted-fg);">按 ABC001 费率计算</span></div>
+                                <div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;background:var(--warn-bg);border-radius:0 10px 10px 0;"><span style="font-size:12px;color:var(--warn-fg);">匹配不到费率</span><span style="font-size:20px;font-weight:600;color:var(--warn-fg);">2 条</span><span style="font-size:11px;color:var(--warn-fg);">不能归属</span></div>
+                              </div>
+                              <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.55;">2 条被叫前缀 <span style="font-family:ui-monospace,Menlo,monospace;font-weight:600;">1876</span>（牙买加）在 ABC001 费率表中已删除，这 2 条会保留在未归属话单中。如需归属，请先在费率表补充该前缀。</div>
+                              <div style="font-size:13px;color:var(--muted-fg);line-height:1.55;">确认后从 ABC001 余额扣除 ¥58.35（-¥35.20 → -¥93.55），话单出现在该租户的话单和当月账单中，并记入操作日志。</div>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ b.ignore }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500;">忽略原因<span style="color:var(--neg);font-weight:400;font-size:12px;">必填</span></div>
+                          <div style="display:flex;gap:6px;flex-wrap:wrap;"><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--input);font-size:12px;display:flex;align-items:center;">测试呼叫</span><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--input);font-size:12px;display:flex;align-items:center;">内部线路</span><span style="height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--input);font-size:12px;display:flex;align-items:center;">重复话单</span></div>
+                          <span style="height:88px;border:1px solid var(--neg);box-shadow:0 0 0 3px var(--err-bg);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--muted-fg);">说明忽略这些话单的原因，例如：FreeSWITCH 测试呼叫，不属于任何客户</span>
+                          <span style="font-size:12px;color:var(--neg);">请填写忽略原因</span>
+                          <span style="font-size:13px;color:var(--muted-fg);line-height:1.55;">忽略的话单不计费，移到「已忽略」标签页，可随时撤销。忽略和撤销均记入操作日志。</span>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;"><button style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">取消</button><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;opacity:{{ b.okOp }};">{{ b.okLabel }}</button></div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="未归属话单 手机" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">4 · 未归属话单 · 手机</h2>
+    <div style="display:flex;gap:32px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">4a 手机 · 列表（分组 + 勾选）</div>
+        <div style="width:390px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+          <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></span><div style="display:flex;flex-direction:column;align-items:center;"><span style="font-size:16px;font-weight:600;">未归属话单</span><span style="font-size:10px;color:var(--primary);font-weight:500;">管理后台</span></div><span style="width:40px;"></span></div>
+          <div style="padding:14px 16px 96px;display:flex;flex-direction:column;gap:12px;">
+            <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;">请同时检查 FreeSWITCH 中的 <span style="font-family:ui-monospace,Menlo,monospace;">billing_tenant</span> 配置</div>
+            <div style="display:flex;gap:8px;font-size:14px;"><span style="height:40px;padding:0 14px;border-radius:999px;background:var(--fg);color:var(--bg);display:flex;align-items:center;font-weight:500;">待处理 338</span><span style="height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--input);display:flex;align-items:center;color:var(--muted-fg);">已忽略 5</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="border:1.5px solid var(--primary);background:var(--brand-soft);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;font-weight:600;">标签 ABC01</span><span style="font-size:12px;color:var(--warn-fg);">疑似拼写错误，相近：ABC001</span></div><span style="font-size:17px;font-weight:600;">326</span></div>
+              <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:15px;font-weight:600;">标签为空</span><span style="font-size:12px;color:var(--muted-fg);">话单未携带租户标签</span></div><span style="font-size:17px;font-weight:600;">12</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;"><span style="color:var(--muted-fg);">已选 3 条</span><a>选择该分组全部 326 条</a></div>
+            <sc-for list="{{ uaMob }}" as="r" hint-placeholder-count="5">
+              <div style="border:1px solid {{ r.cardBd }};background:{{ r.bg }};border-radius:10px;padding:12px 14px 12px 4px;display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;">
+                <span style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><span style="width:20px;height:20px;border-radius:5px;border:1.5px solid {{ r.cbd }};background:{{ r.cbg }};color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;">{{ r.mark }}</span></span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;"><span style="font-size:15px;font-weight:500;">{{ r.callee }}</span><span style="font-size:14px;">{{ r.dur }}</span></div><span style="font-size:12px;color:var(--muted-fg);">{{ r.shortTime }} · 主叫 {{ r.caller }} · <span style="font-family:ui-monospace,Menlo,monospace;">{{ r.tag }}</span></span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="position:absolute;left:0;right:0;bottom:0;padding:12px 16px 24px;background:var(--card);border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 2fr;gap:8px;"><button style="height:44px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:15px;font-family:inherit;">忽略</button><button style="height:44px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:15px;font-weight:500;font-family:inherit;">归属到租户（3）</button></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">4b 手机 · 归属预览（底部面板）</div>
+        <div style="width:390px;height:844px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:14px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">归属到租户</span><span style="font-size:13px;color:var(--muted-fg);">已选 326 条 · 标签 ABC01</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:500;">租户<span style="height:44px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:400;"><span><span style="font-family:ui-monospace,Menlo,monospace;">ABC001</span> 深圳市某某科技</span><span style="color:var(--muted-fg);font-size:12px;">▾</span></span></div>
+            <div style="border:1px solid var(--border);border-radius:10px;padding:4px 14px;font-size:14px;display:flex;flex-direction:column;font-variant-numeric:tabular-nums;">
+              <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span style="color:var(--muted-fg);">实际归属</span><span style="font-weight:600;">324 条</span></div>
+              <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span style="color:var(--muted-fg);">扣费合计</span><span style="font-weight:600;">¥58.35</span></div>
+              <div style="padding:10px 0;display:flex;justify-content:space-between;"><span style="color:var(--warn-fg);">匹配不到费率</span><span style="font-weight:600;color:var(--warn-fg);">2 条 · 不能归属</span></div>
+            </div>
+            <div style="border:1px solid var(--warn-bd);background:var(--warn-bg);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.55;">前缀 1876（牙买加）已从 ABC001 费率表删除，这 2 条保留在未归属话单中。</div>
+            <span style="font-size:13px;color:var(--muted-fg);line-height:1.55;">确认后从 ABC001 余额扣费，并记入操作日志。</span>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">确认归属 324 条</button>
+            <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">4c 手机 · 忽略（原因必填）</div>
+        <div style="width:390px;height:844px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:12px;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;flex-direction:column;gap:4px;"><span style="font-size:17px;font-weight:600;">忽略 12 条话单</span><span style="font-size:13px;color:var(--muted-fg);">标签为空</span></div>
+            <span style="font-size:14px;font-weight:500;">忽略原因 <span style="color:var(--neg);font-weight:400;font-size:12px;">必填</span></span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;"><span style="height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--input);font-size:13px;display:flex;align-items:center;">测试呼叫</span><span style="height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--input);font-size:13px;display:flex;align-items:center;">内部线路</span><span style="height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--input);font-size:13px;display:flex;align-items:center;">重复话单</span></div>
+            <span style="height:96px;border:1px solid var(--neg);box-shadow:0 0 0 3px var(--err-bg);border-radius:8px;padding:10px 12px;font-size:15px;color:var(--muted-fg);">说明忽略原因</span>
+            <span style="font-size:12px;color:var(--neg);">请填写忽略原因</span>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;opacity:.45;">忽略 12 条</button>
+            <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="账单" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">5 · 账单</h2>
+    <div style="display:flex;gap:40px;align-items:flex-start;">
+      <sc-for list="{{ billBoards }}" as="b" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:1440px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;"><sc-for list="{{ billNav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for></nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:14px;color:var(--muted-fg);">账单</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+              <main style="padding:28px;display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+                  <div style="display:flex;flex-direction:column;gap:6px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">账单</h1><span style="font-size:13px;color:var(--muted-fg);">每月 1 日凌晨生成上月账单 · CNY 与 USD 分开合计</span></div>
+                  <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">月份</span><div style="display:flex;align-items:center;gap:4px;"><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;color:var(--muted-fg);">‹</span><span style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;gap:24px;font-size:14px;">2026年8月<span style="color:var(--muted-fg);font-size:12px;">▾</span></span><span style="width:36px;height:36px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;color:var(--muted-fg);opacity:.4;">›</span></div></div>
+                </div>
+                <sc-for list="{{ billGroups }}" as="g" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:15px;font-weight:600;">{{ g.cur }}</span><span style="font-size:13px;color:var(--muted-fg);">{{ g.count }}</span></div>
+                    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                      <table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;">
+                        <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;">
+                          <th style="text-align:left;font-weight:500;padding:10px 16px;">租户</th><th style="text-align:left;font-weight:500;padding:10px 12px;">币种</th><th style="text-align:right;font-weight:500;padding:10px 12px;">期初余额</th><th style="text-align:right;font-weight:500;padding:10px 12px;">充值</th><th style="text-align:right;font-weight:500;padding:10px 12px;">赠送</th><th style="text-align:right;font-weight:500;padding:10px 12px;">调账</th><th style="text-align:right;font-weight:500;padding:10px 12px;">通话扣费</th><th style="text-align:right;font-weight:500;padding:10px 12px;">期末余额</th><th style="text-align:left;font-weight:500;padding:10px 12px;">生成时间</th><th style="text-align:right;font-weight:500;padding:10px 16px;">操作</th>
+                        </tr></thead>
+                        <tbody style="font-variant-numeric:tabular-nums;">
+                          <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="5">
+                            <tr style="border-top:1px solid var(--border);">
+                              <td style="padding:11px 16px;"><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:14px;font-weight:500;">{{ r.name }}</span><span style="font-size:12px;color:var(--muted-fg);font-family:ui-monospace,Menlo,monospace;">{{ r.code }}</span></div></td>
+                              <td style="padding:11px 12px;">{{ r.cur }}</td><td style="padding:11px 12px;text-align:right;">{{ r.open }}</td><td style="padding:11px 12px;text-align:right;">{{ r.rech }}</td><td style="padding:11px 12px;text-align:right;">{{ r.gift }}</td><td style="padding:11px 12px;text-align:right;color:{{ r.adjColor }};">{{ r.adj }}</td><td style="padding:11px 12px;text-align:right;">{{ r.usage }}</td><td style="padding:11px 12px;text-align:right;font-weight:600;color:{{ r.closeColor }};">{{ r.close }}</td>
+                              <td style="padding:11px 12px;"><div style="display:flex;flex-direction:column;gap:2px;"><span>{{ r.gen }}</span><span style="font-size:11px;color:{{ r.genNoteColor }};">{{ r.genNote }}</span></div></td>
+                              <td style="padding:11px 16px;"><div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;"><a>查看</a><span title="{{ r.tip }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid var(--input);display:inline-flex;align-items:center;font-size:13px;opacity:{{ r.regenOp }};cursor:{{ r.cursor }};">重新生成</span></div></td>
+                            </tr>
+                          </sc-for>
+                          <tr style="border-top:1px solid var(--border);background:var(--muted);font-weight:600;">
+                            <td style="padding:11px 16px;" colspan="2">{{ g.cur }} 合计</td><td style="padding:11px 12px;text-align:right;">{{ g.t.open }}</td><td style="padding:11px 12px;text-align:right;">{{ g.t.rech }}</td><td style="padding:11px 12px;text-align:right;">{{ g.t.gift }}</td><td style="padding:11px 12px;text-align:right;">{{ g.t.adj }}</td><td style="padding:11px 12px;text-align:right;">{{ g.t.usage }}</td><td style="padding:11px 12px;text-align:right;">{{ g.t.close }}</td><td colspan="2"></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </sc-for>
+                <span style="font-size:12px;color:var(--muted-fg);">「重新生成」按当前话单重新计算该月账单，用于补推话单后更正；话单已删除的月份不可用。每次重新生成记入操作日志。</span>
+              </main>
+            </div>
+            <sc-if value="{{ b.dlg }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;">
+                <div style="width:500px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);padding:24px;display:flex;flex-direction:column;gap:16px;">
+                  <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:17px;font-weight:600;">重新生成 ABC001 2026年8月 账单？</span><span style="font-size:14px;color:var(--muted-fg);line-height:1.6;">将按当前话单重新计算该月账单，用于补推话单后更正。</span></div>
+                  <div style="display:grid;grid-template-columns:120px 1fr;font-size:14px;border-top:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">当前通话扣费</span><span style="padding:9px 0;border-bottom:1px solid var(--border);">¥1,873.40 · 37,468分钟</span><span style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">当前期末余额</span><span style="padding:9px 0;border-bottom:1px solid var(--border);">¥1,176.60</span><span style="padding:9px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">生成于</span><span style="padding:9px 0;border-bottom:1px solid var(--border);">2026-09-01 02:00:15</span></div>
+                  <div style="border:1px solid var(--brand-bd);background:var(--brand-soft);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.55;">重新生成后客户门户的月账单同步更新；操作人和前后差异记入操作日志。</div>
+                  <div style="display:flex;justify-content:flex-end;gap:8px;"><button style="height:36px;padding:0 16px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">取消</button><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">重新生成</button></div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">5c 手机</div>
+        <div style="width:390px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);">
+          <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+          <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></span><span style="font-size:16px;font-weight:600;">账单</span><span style="width:40px;"></span></div>
+          <div style="padding:14px 16px 28px;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:6px;"><span style="width:44px;height:44px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;">‹</span><span style="flex:1;height:44px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">2026年8月 ▾</span><span style="width:44px;height:44px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;opacity:.4;">›</span></div>
+            <sc-for list="{{ billGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 2px 0;font-variant-numeric:tabular-nums;"><span style="font-size:15px;font-weight:600;">{{ g.cur }} · {{ g.count }}</span><span style="font-size:12px;color:var(--muted-fg);">扣费合计 <span style="color:var(--fg);font-weight:600;">{{ g.t.usage }}</span></span></div>
+                <sc-for list="{{ g.mrows }}" as="r" hint-placeholder-count="3">
+                  <div style="border:1px solid var(--border);border-radius:10px;padding:12px 4px 12px 14px;display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums;">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;"><div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span><span style="font-size:15px;font-weight:600;color:{{ r.closeColor }};">{{ r.close }}</span></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);"><span>{{ r.code }} · 扣费 {{ r.usage }}</span><span>期末</span></div></div>
+                    <span style="width:32px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);">⋯</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+            <span style="font-size:12px;color:var(--muted-fg);">点 ⋯ 查看或重新生成；手机端仅显示前 3 个租户示意</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="系统告警" style="display:flex;flex-direction:column;gap:20px;">
+    <h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">6 · 系统告警</h2>
+    <div style="display:grid;grid-template-columns:repeat(2,1200px);gap:48px 40px;align-items:start;">
+      <sc-for list="{{ alBoards }}" as="b" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:1200px;min-height:640px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);position:relative;">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;"><sc-for list="{{ b.nav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for></nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:14px;color:var(--muted-fg);">系统告警</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+              <main style="padding:28px;display:flex;flex-direction:column;gap:20px;">
+                <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">系统告警</h1>
+                <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);font-size:14px;"><sc-for list="{{ b.tabs }}" as="tb" hint-placeholder-count="2"><span style="padding:10px 12px;margin-bottom:-1px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-weight:{{ tb.weight }};">{{ tb.label }}</span></sc-for></div>
+                <sc-if value="{{ b.list }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="display:flex;gap:12px;align-items:center;">
+                      <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:13px;height:36px;"><span style="padding:0 12px;display:flex;align-items:center;border-radius:6px;background:var(--bg);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.1);">全部状态</span><span style="padding:0 12px;display:flex;align-items:center;color:var(--muted-fg);">进行中</span><span style="padding:0 12px;display:flex;align-items:center;color:var(--muted-fg);">已恢复</span></div>
+                      <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;gap:16px;font-size:14px;">全部类型<span style="color:var(--muted-fg);font-size:12px;">▾</span></div>
+                      <div style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-size:14px;font-variant-numeric:tabular-nums;">最近 30 天</div>
+                    </div>
+                    <sc-if value="{{ b.hasRows }}" hint-placeholder-val="{{ true }}">
+                      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                          <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;white-space:nowrap;"><th style="text-align:left;font-weight:500;padding:10px 16px;">时间</th><th style="text-align:left;font-weight:500;padding:10px 12px;">类型</th><th style="text-align:left;font-weight:500;padding:10px 12px;">说明</th><th style="text-align:left;font-weight:500;padding:10px 12px;">状态</th><th style="width:32px;"></th></tr></thead>
+                          <tbody style="font-variant-numeric:tabular-nums;">
+                            <sc-for list="{{ alerts30 }}" as="a" hint-placeholder-count="5">
+                              <tr style="border-top:1px solid var(--border);background:{{ a.rowBg }};cursor:pointer;" style-hover="background:var(--row-hover);">
+                                <td style="padding:12px 16px;white-space:nowrap;">{{ a.time }}</td><td style="padding:12px 12px;white-space:nowrap;font-weight:500;">{{ a.type }}</td><td style="padding:12px 12px;color:var(--fg);">{{ a.desc }}</td>
+                                <td style="padding:12px 12px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap;background:{{ a.sbg }};color:{{ a.sfg }};border:1px solid {{ a.sbd }};"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>{{ a.status }}</span></td>
+                                <td style="padding:12px 16px 12px 0;color:var(--muted-fg);">›</td>
+                              </tr>
+                            </sc-for>
+                          </tbody>
+                        </table>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}">
+                      <div style="border:1px solid var(--border);border-radius:12px;padding:64px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;"><span style="width:48px;height:48px;border-radius:50%;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--ok-fg);display:flex;align-items:center;justify-content:center;font-size:20px;">✓</span><span style="font-size:17px;font-weight:600;">最近 30 天没有系统告警</span><span style="font-size:13px;color:var(--muted-fg);">计费授权、话单处理和邮件发送均正常</span></div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.settings }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--border);border-radius:12px;max-width:620px;">
+                    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:20px;">
+                      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:500;">告警接收邮箱
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;font-weight:400;"><span style="height:30px;padding:0 6px 0 10px;border-radius:7px;background:var(--muted);display:flex;align-items:center;gap:6px;font-size:13px;">ops@fs-billing.com<span style="color:var(--muted-fg);width:20px;text-align:center;">✕</span></span><span style="height:30px;padding:0 6px 0 10px;border-radius:7px;background:var(--muted);display:flex;align-items:center;gap:6px;font-size:13px;">wangmin@fs-billing.com<span style="color:var(--muted-fg);width:20px;text-align:center;">✕</span></span></div>
+                        <div style="display:flex;gap:8px;"><span style="flex:1;height:36px;border:1px solid var(--input);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:400;color:var(--muted-fg);">输入邮箱后按回车添加</span><button style="height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">添加</button></div>
+                        <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">可添加多个，所有告警类型都会发送到这些邮箱</span>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:500;">汇总邮件间隔
+                        <div style="display:flex;padding:3px;background:var(--muted);border-radius:8px;gap:2px;font-size:13px;height:36px;align-self:flex-start;font-weight:400;"><span style="padding:0 14px;display:flex;align-items:center;color:var(--muted-fg);">5 分钟</span><span style="padding:0 14px;display:flex;align-items:center;border-radius:6px;background:var(--bg);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.1);">15 分钟</span><span style="padding:0 14px;display:flex;align-items:center;color:var(--muted-fg);">30 分钟</span><span style="padding:0 14px;display:flex;align-items:center;color:var(--muted-fg);">60 分钟</span></div>
+                        <span style="font-size:12px;font-weight:400;color:var(--muted-fg);">间隔内的告警合并为一封汇总邮件，避免短时间内收到大量邮件。默认 15 分钟。</span>
+                      </div>
+                    </div>
+                    <div style="border-top:1px solid var(--border);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--muted-fg);">修改记入操作日志</span><button style="height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">保存</button></div>
+                  </div>
+                </sc-if>
+              </main>
+            </div>
+            <sc-if value="{{ b.detail }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;">
+                <div style="width:540px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-direction:column;">
+                  <div style="padding:20px 24px 16px;display:flex;justify-content:space-between;border-bottom:1px solid var(--border);"><div style="display:flex;flex-direction:column;gap:6px;"><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:17px;font-weight:600;">授权超时</span><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap;background:var(--off-bg);color:var(--off-fg);border:1px solid var(--off-bd);">已恢复</span></div><span style="font-size:13px;color:var(--muted-fg);">2026-09-27 03:08 授权超时，持续 18 分钟，期间放行 23 通未经验证话单</span></div><span style="color:var(--muted-fg);">✕</span></div>
+                  <dl style="margin:0;padding:8px 24px;display:grid;grid-template-columns:120px 1fr;font-size:14px;font-variant-numeric:tabular-nums;">
+                    <dt style="padding:10px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">开始时间</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--border);">2026-09-27 03:08:12</dd>
+                    <dt style="padding:10px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">恢复时间</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--border);">2026-09-27 03:26:09</dd>
+                    <dt style="padding:10px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">持续时长</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--border);">17分57秒</dd>
+                    <dt style="padding:10px 0;color:var(--muted-fg);border-bottom:1px solid var(--border);">影响的通话</dt><dd style="margin:0;padding:10px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;"><span><span style="font-weight:600;">23 通</span> 由 FreeSWITCH 放行（未经验证），已按费率计费</span><span style="font-size:12px;color:var(--muted-fg);">ABC001 4 通 · BJH003 11 通 · SHC005 8 通</span></dd>
+                    <dt style="padding:10px 0;color:var(--muted-fg);">原因</dt><dd style="margin:0;padding:10px 0;">计费授权接口响应超过 2 秒；放行单通最长 30 分钟</dd>
+                  </dl>
+                  <div style="padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--muted-fg);">已发送 2 封汇总邮件</span><div style="display:flex;gap:8px;"><button style="height:36px;padding:0 14px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:14px;font-family:inherit;">关闭</button><button style="height:36px;padding:0 16px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:500;font-family:inherit;">查看这 23 通话单 ›</button></div></div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;gap:32px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">6e 手机 · 列表</div>
+        <div style="width:390px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);">
+          <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+          <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></span><span style="font-size:16px;font-weight:600;">系统告警</span><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:15px;">⚙</span></div>
+          <div style="padding:14px 16px 28px;display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ alerts30 }}" as="a" hint-placeholder-count="5">
+              <div style="border:1px solid {{ a.cardBd }};background:{{ a.rowBg }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:600;">{{ a.type }}</span><span style="display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;white-space:nowrap;background:{{ a.sbg }};color:{{ a.sfg }};border:1px solid {{ a.sbd }};">{{ a.status }}</span></div>
+                <span style="font-size:13px;line-height:1.5;">{{ a.desc }}</span>
+                <span style="font-size:12px;color:var(--muted-fg);">{{ a.time }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:#3f3f46;font-weight:500;">6f 手机 · 告警详情（底部面板）</div>
+        <div style="width:390px;height:760px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);position:relative;">
+          <div style="position:absolute;inset:0;background:var(--overlay);"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:16px 16px 0 0;padding:8px 20px 28px;display:flex;flex-direction:column;gap:12px;font-variant-numeric:tabular-nums;">
+            <div style="width:36px;height:4px;border-radius:2px;background:var(--input);align-self:center;"></div>
+            <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:17px;font-weight:600;">授权超时</span><span style="display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;white-space:nowrap;background:var(--off-bg);color:var(--off-fg);border:1px solid var(--off-bd);">已恢复</span></div>
+            <div style="display:flex;flex-direction:column;font-size:14px;border-top:1px solid var(--border);">
+              <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span style="color:var(--muted-fg);">开始</span>2026-09-27 03:08:12</div>
+              <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span style="color:var(--muted-fg);">恢复</span>2026-09-27 03:26:09</div>
+              <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span style="color:var(--muted-fg);">持续</span>17分57秒</div>
+              <div style="padding:10px 0;display:flex;justify-content:space-between;"><span style="color:var(--muted-fg);">影响</span><span style="font-weight:600;">放行 23 通未经验证话单</span></div>
+            </div>
+            <span style="font-size:12px;color:var(--muted-fg);">ABC001 4 通 · BJH003 11 通 · SHC005 8 通</span>
+            <button style="height:44px;border:none;border-radius:8px;background:var(--primary);color:var(--primary-fg);font-size:16px;font-weight:500;font-family:inherit;">查看这 23 通话单</button>
+            <button style="height:44px;border:1px solid var(--input);border-radius:8px;background:transparent;color:var(--fg);font-size:16px;font-family:inherit;">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="操作日志" style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;flex-direction:column;gap:6px;"><h2 style="margin:0;font-size:20px;font-weight:600;color:#18181b;">7 · 操作日志</h2><span style="font-size:13px;color:#52525b;">日志截至 2026-09-29 15:45（概览数据截至 14:03）。包含当天下午的确认收款、归属话单、删除话单等操作，因此晚于概览、待收款中的数值。</span></div>
+    <div style="display:flex;flex-direction:column;gap:48px;">
+      <sc-for list="{{ logBoards }}" as="b" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:13px;color:#3f3f46;font-weight:500;">{{ b.label }}</div>
+          <div style="width:1440px;background:var(--bg);color:var(--fg);border-radius:12px;overflow:hidden;display:flex;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+            <aside style="width:232px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
+              <div style="display:flex;align-items:center;gap:10px;padding:4px 8px;"><span style="width:28px;height:28px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">F</span><div style="display:flex;flex-direction:column;"><span style="font-size:14px;font-weight:600;">FS-Billing</span><span style="font-size:11px;color:var(--primary);font-weight:500;">管理后台</span></div></div>
+              <nav style="display:flex;flex-direction:column;gap:2px;font-size:14px;"><sc-for list="{{ logNav }}" as="n" hint-placeholder-count="8"><span style="height:36px;padding:0 10px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;background:{{ n.bg }};color:{{ n.fg }};font-weight:{{ n.weight }};">{{ n.label }}<span style="width:7px;height:7px;border-radius:50%;background:var(--destructive);opacity:{{ n.dot }};"></span></span></sc-for></nav>
+            </aside>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div style="height:56px;border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:14px;color:var(--muted-fg);">操作日志</span><span style="height:36px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:28px;height:28px;border-radius:50%;background:var(--brand-soft);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">王</span>王敏 ▾</span></div>
+              <main style="padding:28px;display:flex;flex-direction:column;gap:20px;">
+                <div style="display:flex;align-items:baseline;gap:12px;"><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em;">操作日志</h1><span style="font-size:13px;color:var(--muted-fg);">只读 · 记录不可修改或删除</span></div>
+                <div style="display:flex;gap:12px;align-items:flex-end;">
+                  <sc-for list="{{ b.filters }}" as="f" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:6px;"><span style="font-size:12px;color:var(--muted-fg);">{{ f.label }}</span><div style="height:36px;min-width:{{ f.w }};padding:0 12px;border-radius:8px;border:1px solid {{ f.bd }};background:{{ f.bg }};display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;font-variant-numeric:tabular-nums;">{{ f.v }}<span style="color:var(--muted-fg);font-size:12px;">▾</span></div></div>
+                  </sc-for>
+                  <button style="height:36px;padding:0 10px;border:none;background:transparent;color:var(--muted-fg);font-size:14px;font-family:inherit;">重置</button>
+                  <span style="flex:1;"></span>
+                  <span style="font-size:13px;color:var(--muted-fg);font-variant-numeric:tabular-nums;">{{ b.count }}</span>
+                </div>
+                <sc-if value="{{ b.hasRows }}" hint-placeholder-val="{{ true }}">
+                  <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                      <thead><tr style="background:var(--muted);color:var(--muted-fg);font-size:12px;white-space:nowrap;"><th style="width:32px;"></th><th style="text-align:left;font-weight:500;padding:10px 12px 10px 0;">时间</th><th style="text-align:left;font-weight:500;padding:10px 12px;">管理员</th><th style="text-align:left;font-weight:500;padding:10px 12px;">操作</th><th style="text-align:left;font-weight:500;padding:10px 12px;">对象</th><th style="text-align:left;font-weight:500;padding:10px 16px;">详情</th></tr></thead>
+                      <tbody style="font-variant-numeric:tabular-nums;">
+                        <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="10">
+                          <tr style="border-top:1px solid var(--border);background:{{ r.bg }};cursor:pointer;" style-hover="background:var(--row-hover);">
+                            <td style="padding:12px 0 12px 16px;color:var(--muted-fg);font-size:11px;">{{ r.caret }}</td>
+                            <td style="padding:12px 12px 12px 0;white-space:nowrap;">{{ r.time }}</td><td style="padding:12px 12px;white-space:nowrap;">{{ r.admin }}</td>
+                            <td style="padding:12px 12px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap;background:{{ r.tbg }};color:{{ r.tfg }};border:1px solid {{ r.tbd }};">{{ r.op }}</span></td>
+                            <td style="padding:12px 12px;white-space:nowrap;font-family:ui-monospace,Menlo,monospace;">{{ r.obj }}</td><td style="padding:12px 16px;">{{ r.summary }}</td>
+                          </tr>
+                          <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
+                            <tr style="background:var(--brand-soft);"><td></td><td colspan="5" style="padding:4px 16px 16px 0;">
+                              <div style="border:1px solid var(--border);background:var(--card);border-radius:8px;overflow:hidden;max-width:760px;">
+                                <div style="display:grid;grid-template-columns:140px 1fr 1fr;font-size:12px;color:var(--muted-fg);background:var(--muted);"><span style="padding:8px 12px;">字段</span><span style="padding:8px 12px;">修改前</span><span style="padding:8px 12px;">修改后</span></div>
+                                <sc-for list="{{ r.changes }}" as="c" hint-placeholder-count="3"><div style="display:grid;grid-template-columns:140px 1fr 1fr;font-size:13px;border-top:1px solid var(--border);"><span style="padding:9px 12px;color:var(--muted-fg);">{{ c.k }}</span><span style="padding:9px 12px;color:{{ c.beforeColor }};text-decoration:{{ c.strike }};">{{ c.before }}</span><span style="padding:9px 12px;font-weight:500;">{{ c.after }}</span></div></sc-for>
+                              </div>
+                              <div style="font-size:12px;color:var(--muted-fg);margin-top:8px;">{{ r.meta }}</div>
+                            </td></tr>
+                          </sc-if>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.empty }}" hint-placeholder-val="{{ false }}">
+                  <div style="border:1px solid var(--border);border-radius:12px;padding:64px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;"><span style="width:44px;height:44px;border-radius:50%;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted-fg);">⌕</span><span style="font-size:15px;font-weight:600;">没有符合条件的操作记录</span><span style="font-size:13px;color:var(--muted-fg);">管理员：李俊 · 操作：删除话单 · 租户：ABC001 · 最近 30 天</span><button style="margin-top:4px;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--input);background:var(--bg);color:var(--fg);font-size:14px;font-family:inherit;">清除筛选</button></div>
+                </sc-if>
+              </main>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:13px;color:#3f3f46;font-weight:500;">7d 手机 · 列表（点击卡片展开）</div>
+      <div style="width:390px;background:var(--bg);color:var(--fg);border-radius:36px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);border:1px solid var(--border);">
+        <div style="height:44px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;"><span>9:41</span><span style="font-size:12px;">●●● ▮</span></div>
+        <div style="height:52px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);"><span style="width:40px;height:40px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;">☰<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></span><span style="font-size:16px;font-weight:600;">操作日志</span><span style="width:40px;"></span></div>
+        <div style="padding:14px 16px 28px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:8px;"><div style="flex:1;height:44px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;padding:0 12px;font-size:14px;">2026-08-31 — 09-29</div><div style="height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--input);display:flex;align-items:center;font-size:15px;">筛选</div></div>
+          <sc-for list="{{ logMob }}" as="r" hint-placeholder-count="5">
+            <div style="border:1px solid {{ r.cardBd }};border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:5px;font-size:11px;font-weight:500;white-space:nowrap;background:{{ r.tbg }};color:{{ r.tfg }};border:1px solid {{ r.tbd }};">{{ r.op }}</span><span style="font-size:14px;font-family:ui-monospace,Menlo,monospace;">{{ r.obj }}</span></div><span style="font-size:12px;color:var(--muted-fg);">{{ r.caret }}</span></div>
+              <span style="font-size:14px;line-height:1.5;">{{ r.summary }}</span>
+              <span style="font-size:12px;color:var(--muted-fg);">{{ r.admin }} · {{ r.time }}</span>
+              <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
+                <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+                  <sc-for list="{{ r.changes }}" as="c" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px;font-size:13px;"><span style="font-size:12px;color:var(--muted-fg);">{{ c.k }}</span><span><span style="color:var(--muted-fg);text-decoration:{{ c.strike }};">{{ c.before }}</span> → <span style="font-weight:500;">{{ c.after }}</span></span></div></sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'light';
+    const fmt = (sym, v) => (v < 0 ? '-' : '') + sym + Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const items = ['概览', '租户', '待收款', '未归属话单', '账单', '系统告警', '操作日志', '管理员'];
+    const mkNav = dot => items.map(l => ({ label: l, bg: l === '概览' ? 'var(--brand-soft)' : 'transparent', fg: l === '概览' ? 'var(--primary)' : 'var(--muted-fg)', weight: l === '概览' ? 500 : 400, dot: dot && l === '系统告警' ? 1 : 0 }));
+
+    const series = (base, amp, wkd, today) => { const v = []; for (let i = 0; i < 30; i++) { const we = i % 7 === 5 || i % 7 === 6; v.push(Math.round(((we ? base * wkd : base) + ((i * 37) % 19 - 9) / 9 * amp) * 100) / 100); } v[29] = today; return v; };
+    const cny = series(1780, 220, .62, 1862.40), usd = series(198, 34, .55, 214.75);
+    const chart = (cur, sym, vals, max) => ({ cur, total: fmt(sym, vals.reduce((a, b) => a + b, 0)), axis: [3, 2, 1, 0].map(k => sym + (max / 3 * k).toLocaleString('en-US', { maximumFractionDigits: 0 })), bars: vals.map((v, i) => ({ h: Math.min(100, v / max * 100).toFixed(1) + '%', color: i === 29 ? 'var(--bar)' : 'var(--bar-dim)' })),
+      seg: ['CNY', 'USD'].map(l => { const on = l === cur; return { label: l, bg: on ? 'var(--bg)' : 'transparent', fg: on ? 'var(--fg)' : 'var(--muted-fg)', w: on ? 500 : 400, sh: on ? '0 1px 2px rgba(0,0,0,.1)' : 'none' }; }) });
+    const chCNY = chart('CNY', '¥', cny, 2400), chUSD = chart('USD', '$', usd, 300);
+
+    const L = (v, cur, x) => ({ v, cur, size: '19px', color: 'var(--fg)', ...x });
+    const card = (label, lines, x) => ({ label, lines, mlines: lines.map(l => ({ ...l, size: '16px' })), bd: 'var(--border)', bg: 'transparent', ...x });
+    const cardsFor = ok => [
+      card('租户总数', [L('10', ''), L('CNY 6 · USD 4', '', { size: '12px', color: 'var(--muted-fg)' })]),
+      card('今日通话分钟', [L('37,248', 'CNY 租户'), L('8,590', 'USD 租户')]),
+      card('今日消费', [L('¥1,862.40', 'CNY'), L('$214.75', 'USD')]),
+      card('本月消费', [L('¥15,415.50', 'CNY'), L('$1,571.05', 'USD')]),
+      card('待收款总额', [L('¥6,300.00', 'CNY', { color: 'var(--warn-fg)' }), L('$1,700.00', 'USD', { color: 'var(--warn-fg)' })]),
+      ok ? card('已停机租户', [L('0', ''), L('全部租户可呼叫', '', { size: '12px', color: 'var(--muted-fg)' })])
+         : card('已停机租户', [L('2', '', { color: 'var(--neg)' }), L('CNY 1 · USD 1', '', { size: '12px', color: 'var(--muted-fg)' })], { bd: 'var(--err-bd)', bg: 'var(--err-bg)' }),
+    ];
+    const st = { '已停机': ['var(--err-bg)', 'var(--err-fg)', 'var(--err-bd)'], '透支中': ['var(--warn-bg)', 'var(--warn-fg)', 'var(--warn-bd)'], '余额不足': ['var(--warn-bg)', 'var(--warn-fg)', 'var(--warn-bd)'] };
+    const T = (code, name, cur, status, bal, sub) => { const [sbg, sfg, sbd] = st[status]; return { code, name, cur, status, sbg, sfg, sbd, bal: fmt(cur === 'CNY' ? '¥' : '$', bal), balColor: bal < 0 ? 'var(--neg)' : 'var(--fg)', sub, rawBal: bal }; };
+    const stopped = [T('HZX014', '杭州星讯通信有限公司', 'CNY', '已停机', -100.36, '已达透支额度 ¥100.00 · 停机于 11:26'), T('GLB009', 'Global Voice Partners', 'USD', '已停机', -15.02, '已达透支额度 $15.00 · 停机于 08:52')];
+    const low = [T('ABC001', '深圳市某某科技有限公司', 'CNY', '透支中', -35.20, '可用 ¥64.80'), T('XYZ002', 'Global Trade Ltd', 'USD', '透支中', -4.82, '可用 $10.18'), T('GZT007', '广州通达云科技有限公司', 'CNY', '余额不足', 86.50, '低于提醒阈值 ¥100.00'), T('SGN011', 'Lion City Telecom Pte Ltd', 'USD', '余额不足', 12.30, '低于提醒阈值 $15.00')];
+    const tenantGroups = [
+      { title: '已停机租户', count: '2 个', more: '全部 ›', dot: 'var(--destructive)', items: stopped },
+      { title: '余额不足租户', count: '4 个 · 含透支中', more: '全部 ›', dot: 'var(--warn-fg)', items: low },
+    ];
+    const alerts = [
+      { title: '授权超时', status: '进行中', sbg: 'var(--err-bg)', sfg: 'var(--err-fg)', sbd: 'var(--err-bd)', sub: '开始于 13:52:18 · 已持续 11 分钟 · FreeSWITCH 放行中' },
+      { title: '话单推送延迟', status: '已恢复', sbg: 'var(--off-bg)', sfg: 'var(--off-fg)', sbd: 'var(--off-bd)', sub: '2026-09-29 02:14 – 02:31 · 持续 17 分钟' },
+    ];
+    const mobAttn = [
+      ...stopped.map(t => ({ kind: '已停机', title: t.name, sub: t.code + ' · ' + t.cur, val: t.bal, valColor: t.balColor, dot: 'var(--destructive)' })),
+      { kind: '系统告警 · 进行中', title: '授权超时', sub: '开始于 13:52:18 · 已持续 11 分钟', val: '', valColor: 'var(--fg)', dot: 'var(--destructive)' },
+      { kind: '未归属话单', title: '338 条未计费', sub: '最近一条 13:47:02', val: '', valColor: 'var(--fg)', dot: 'var(--warn-fg)' },
+      { kind: '余额不足 · 4 个', title: '深圳市某某科技有限公司 等', sub: 'ABC001 · XYZ002 · GZT007 · SGN011', val: '', valColor: 'var(--fg)', dot: 'var(--warn-fg)' },
+    ];
+    const boards = [
+      { label: '1a 正常 · 有需要关注的事项（图表 CNY）', nav: mkNav(true), asOf: '数据截至 2026-09-29 14:03:22 · 每分钟刷新', loading: false, ready: true, allOk: false, hasAttn: true, cards: cardsFor(false), ch: chCNY },
+      { label: '1b 一切正常 · 没有需要关注的事项（图表切换为 USD）', nav: mkNav(false), asOf: '数据截至 2026-09-29 14:03:22 · 每分钟刷新', loading: false, ready: true, allOk: true, hasAttn: false, cards: cardsFor(true), ch: chUSD },
+      { label: '1c 加载中', nav: mkNav(true), asOf: '加载中…', loading: true, ready: false, allOk: false, hasAttn: false, cards: [], ch: chCNY },
+    ];
+    const mob = [
+      { label: '2a 手机 · 正常（指标 2 列，需要关注为卡片）', dot: 1, allOk: false, hasAttn: true, cards: cardsFor(false), ch: chCNY },
+      { label: '2b 手机 · 一切正常（图表 USD）', dot: 0, allOk: true, hasAttn: false, cards: cardsFor(true), ch: chUSD },
+    ];
+    const skelBars = Array.from({ length: 30 }, (_, i) => (40 + ((i * 29) % 45)) + '%');
+    const uaNav = items.map(l => ({ label: l, bg: l === '未归属话单' ? 'var(--brand-soft)' : 'transparent', fg: l === '未归属话单' ? 'var(--primary)' : 'var(--muted-fg)', weight: l === '未归属话单' ? 500 : 400, dot: l === '系统告警' ? 1 : 0 }));
+    const R0 = [
+      ['13:47:02','ABC01','075586001234','8613800138000',192],['13:39:45','ABC01','075586001235','447700900123',48],['13:31:20','ABC01','075586001234','18765551234',425],
+      ['13:22:08','','02088776655','8613912345678',151],['13:18:51','ABC01','075586001236','85291234567',114],['13:09:37','ABC01','075586001234','14155550123',760],
+      ['12:58:14','','02088776655','8613700137000',36],['12:51:03','ABC01','075586001235','6591234567',262],['12:44:29','ABC01','075586001234','18765559876',130],['12:36:55','ABC01','075586001236','442071234567',303],
+      ['12:30:12','ABC01','075586001234','8613600136000',88],['12:24:40','ABC01','075586001235','81345678901',219],
+    ];
+    const p2 = n => String(n).padStart(2, '0');
+    const toRow = ([t, tag, caller, callee, s], i, checked) => ({ time: '2026-09-29 ' + t, shortTime: t, tag: tag || '（空）', tagFont: tag ? 'ui-monospace,Menlo,monospace' : 'inherit', tagColor: tag ? 'var(--fg)' : 'var(--muted-fg)', caller, callee, dur: Math.floor(s / 60) + '分' + p2(s % 60) + '秒', mark: checked ? '✓' : '', cbd: checked ? 'var(--primary)' : 'var(--input)', cbg: checked ? 'var(--primary)' : 'transparent', bg: checked ? 'var(--brand-soft)' : 'transparent', cardBd: checked ? 'var(--brand-bd)' : 'var(--border)' });
+    const allRows = R0.slice(0, 10).map((r, i) => toRow(r, i, false));
+    const abc = R0.filter(r => r[1] === 'ABC01').slice(0, 10);
+    const grpRows = (fn) => abc.map((r, i) => toRow(r, i, fn(i)));
+    const G = (key, active) => [
+      { k: 'all', title: '全部', n: '338', sub: '2 个分组', subColor: 'var(--muted-fg)' },
+      { k: 'abc', title: '标签 ABC01', n: '326', sub: '疑似拼写错误，相近：ABC001', subColor: 'var(--warn-fg)' },
+      { k: 'empty', title: '标签为空', n: '12', sub: '话单未携带租户标签', subColor: 'var(--muted-fg)' },
+    ].map(g => ({ ...g, bd: g.k === active ? 'var(--primary)' : 'var(--border)', bg: g.k === active ? 'var(--brand-soft)' : 'transparent', ring: g.k === active ? '0 0 0 1px var(--primary)' : 'none' }));
+    const uaTabs = (a, n1 = '338') => [['待处理', n1], ['已忽略', '5']].map(([l, n]) => ({ label: l, n, line: l === a ? 'var(--primary)' : 'transparent', fg: l === a ? 'var(--fg)' : 'var(--muted-fg)', weight: l === a ? 600 : 400 }));
+    const U = (label, x) => ({ label, tabs: uaTabs('待处理'), pending: true, ignored: false, empty: false, groups: G(0, 'all'), rows: allRows, hasSel: false, allMark: '', allBd: 'var(--input)', allBg: 'transparent', pageInfo: '第 1–50 条，共 338 条', dlg: false, assign: false, ignore: false, combo: false, preview: false, ...x });
+    const chk = { allMark: '✓', allBd: 'var(--primary)', allBg: 'var(--primary)' };
+    const allSel = { groups: G(0, 'abc'), rows: grpRows(() => true), hasSel: true, selText: '已选择该分组全部 326 条', selHint: '包括其他页', selLink: '清除选择', ...chk, pageInfo: '第 1–50 条，共 326 条' };
+    const ua = [
+      U('3a 列表 · 全部分组', {}),
+      U('3b 点击分组筛选「ABC01」· 勾选 3 条', { groups: G(0, 'abc'), rows: grpRows(i => i === 0 || i === 2 || i === 3), hasSel: true, selText: '已选 3 条', selHint: '', selLink: '选择该分组全部 326 条', allMark: '–', allBd: 'var(--primary)', allBg: 'var(--primary)', pageInfo: '第 1–50 条，共 326 条' }),
+      U('3c 已选择该分组全部 326 条', allSel),
+      U('3d 归属到租户 · 选择租户', { ...allSel, dlg: true, assign: true, combo: true, dTitle: '归属到租户', dSub: '已选 326 条 · 标签 ABC01', selVal: '选择租户', selColor: 'var(--muted-fg)', selBd: 'var(--primary)', selRing: '0 0 0 3px var(--brand-soft)', okLabel: '确认归属', okOp: .45 }),
+      U('3e 归属到租户 · 预览（2 条匹配不到费率）', { ...allSel, dlg: true, assign: true, preview: true, dTitle: '归属到租户', dSub: '已选 326 条 · 标签 ABC01', selVal: 'ABC001　深圳市某某科技有限公司（CNY）', selColor: 'var(--fg)', selBd: 'var(--input)', selRing: 'none', okLabel: '确认归属 324 条并扣费', okOp: 1 }),
+      U('3f 忽略 · 原因必填（未填写时提交）', { groups: G(0, 'empty'), rows: R0.filter(r => !r[1]).map((r, i) => toRow(r, i, true)), hasSel: true, selText: '已选择该分组全部 12 条', selHint: '', selLink: '清除选择', ...chk, pageInfo: '共 12 条', dlg: true, ignore: true, dTitle: '忽略 12 条话单', dSub: '标签为空 · 忽略后不计费', okLabel: '忽略 12 条', okOp: .45 }),
+      U('3g 已忽略标签页', { tabs: uaTabs('已忽略'), pending: false, ignored: true }),
+      U('3h 没有未归属话单', { tabs: uaTabs('待处理', '0'), pending: false, empty: true }),
+    ];
+    const uaIgnored = [
+      ['2026-09-28 17:42:10','TEST','075500000001','8613800000001',12,'FreeSWITCH 测试呼叫，不属于任何客户','王敏 · 09-28 18:05'],
+      ['2026-09-28 17:40:51','TEST','075500000001','8613800000001',9,'FreeSWITCH 测试呼叫，不属于任何客户','王敏 · 09-28 18:05'],
+      ['2026-09-28 17:39:33','TEST','075500000001','8613800000002',31,'FreeSWITCH 测试呼叫，不属于任何客户','王敏 · 09-28 18:05'],
+      ['2026-09-26 10:15:08','（空）','02088776600','8613500135000',64,'内部线路，运维排障拨测','李俊 · 09-26 11:30'],
+      ['2026-09-26 10:12:47','（空）','02088776600','8613500135000',58,'内部线路，运维排障拨测','李俊 · 09-26 11:30'],
+    ].map(([time, tag, caller, callee, s, reason, by]) => ({ time, tag, caller, callee, dur: Math.floor(s / 60) + '分' + p2(s % 60) + '秒', reason, by }));
+    const uaTenants = [['ABC001', '深圳市某某科技有限公司', '与标签 ABC01 相近', 'var(--warn-fg)', 'var(--muted)'], ['BJH003', '北京华联信息技术有限公司', 'CNY', 'var(--muted-fg)', 'transparent'], ['GZT007', '广州通达云科技有限公司', 'CNY', 'var(--muted-fg)', 'transparent'], ['HZX014', '杭州星讯通信有限公司', 'CNY · 已停机', 'var(--muted-fg)', 'transparent'], ['XYZ002', 'Global Trade Ltd', 'USD', 'var(--muted-fg)', 'transparent']].map(([code, name, hint, hintColor, bg]) => ({ code, name, hint, hintColor, bg }));
+    const uaMob = grpRows(i => i === 0 || i === 2 || i === 3).slice(0, 5);
+    const navOf = a => items.map(l => ({ label: l, bg: l === a ? 'var(--brand-soft)' : 'transparent', fg: l === a ? 'var(--primary)' : 'var(--muted-fg)', weight: l === a ? 500 : 400, dot: l === '系统告警' ? 1 : 0 }));
+    const BT = [
+      ['ABC001','深圳市某某科技有限公司','CNY',0,3000,50,0,1873.40,'2026-09-01 02:00:15'],
+      ['BJH003','北京华联信息技术有限公司','CNY',1820.60,2000,100,0,2954.30,'2026-09-01 02:00:15'],
+      ['GZT007','广州通达云科技有限公司','CNY',310.25,2000,0,-20,1450.75,'2026-09-03 10:22:41','re'],
+      ['HZX014','杭州星讯通信有限公司','CNY',420,1500,0,0,1712.80,'2026-09-01 02:00:16','del'],
+      ['SHC005','上海辰星网络科技有限公司','CNY',6400,10000,0,0,6587.15,'2026-09-01 02:00:16'],
+      ['CDT018','成都某某贸易有限公司','CNY',0,0,0,0,0,'2026-09-01 02:00:16'],
+      ['GLB009','Global Voice Partners','USD',85.40,200,0,0,268.10,'2026-09-01 02:00:17'],
+      ['NYC021','Hudson Contact Center Inc','USD',1850,1000,0,0,798.60,'2026-09-01 02:00:17'],
+      ['SGN011','Lion City Telecom Pte Ltd','USD',40,100,10,0,95.20,'2026-09-01 02:00:17'],
+      ['XYZ002','Global Trade Ltd','USD',120,300,0,0,402.35,'2026-09-01 02:00:17'],
+    ];
+    const billGroups = ['CNY', 'USD'].map(cur => {
+      const sym = cur === 'CNY' ? '¥' : '$', f = v => fmt(sym, v);
+      const list = BT.filter(r => r[2] === cur);
+      const tot = [0, 0, 0, 0, 0, 0];
+      const rows = list.map(([code, name, c, o, r, g, a, u, gen, flag]) => {
+        const cl = Math.round((o + r + g + a - u) * 100) / 100;
+        [o, r, g, a, u, cl].forEach((v, i) => tot[i] += v);
+        return { code, name, cur: c, open: f(o), rech: f(r), gift: f(g), adj: f(a), adjColor: a < 0 ? 'var(--neg)' : 'var(--fg)', usage: f(u), close: f(cl), closeColor: cl < 0 ? 'var(--neg)' : 'var(--fg)', gen, genNote: flag === 're' ? '已重新生成 · 原 09-01 02:00' : flag === 'del' ? '该月话单已删除' : '', genNoteColor: flag === 'del' ? 'var(--muted-fg)' : 'var(--primary)', regenOp: flag === 'del' ? .45 : 1, cursor: flag === 'del' ? 'not-allowed' : 'pointer', tip: flag === 'del' ? '该月话单明细已删除，无法重新生成' : '' };
+      });
+      return { cur, count: list.length + ' 个租户', rows, mrows: rows.slice(0, 3), t: { open: f(tot[0]), rech: f(tot[1]), gift: f(tot[2]), adj: f(tot[3]), usage: f(tot[4]), close: f(tot[5]) } };
+    });
+    const billBoards = [{ label: '5a 电脑 · 2026年8月（默认上月）· HZX014 话单已删除，不可重新生成', dlg: false }, { label: '5b 电脑 · 重新生成确认', dlg: true }];
+    const alerts30 = [
+      ['2026-09-29 13:52:18', '授权超时', '计费授权接口响应超时（>2 秒），FreeSWITCH 正在放行新呼叫 · 已持续 11 分钟', 1],
+      ['2026-09-29 02:14:05', '话单处理失败', '话单推送延迟，队列积压 1,204 条，02:31 自动重试完成，无话单丢失', 0],
+      ['2026-09-28 18:30:41', '邮件发送失败', 'GZT007 余额提醒邮件被退信（finance@gzt-cloud.cn 地址不存在）', 0],
+      ['2026-09-27 03:08:12', '授权超时', '持续 18 分钟，期间放行 23 通未经验证话单', 0],
+      ['2026-09-24 11:40:27', '邮件发送失败', 'SMTP 连接超时，3 次重试后发送成功', 0],
+    ].map(([time, type, desc, live]) => ({ time, type, desc, status: live ? '进行中' : '已恢复', sbg: live ? 'var(--err-bg)' : 'var(--off-bg)', sfg: live ? 'var(--err-fg)' : 'var(--off-fg)', sbd: live ? 'var(--err-bd)' : 'var(--off-bd)', rowBg: live ? 'var(--err-bg)' : 'transparent', cardBd: live ? 'var(--err-bd)' : 'var(--border)' }));
+    const alTabs = a => ['告警列表', '设置'].map(l => ({ label: l, line: l === a ? 'var(--primary)' : 'transparent', fg: l === a ? 'var(--fg)' : 'var(--muted-fg)', weight: l === a ? 600 : 400 }));
+    const alNavNoDot = navOf('系统告警').map(n => ({ ...n, dot: 0 }));
+    const alBoards = [
+      { label: '6a 列表 · 含进行中和已恢复（菜单红点）', nav: navOf('系统告警'), tabs: alTabs('告警列表'), list: true, hasRows: true, empty: false, settings: false, detail: false },
+      { label: '6b 告警详情 · 2026-09-27 03:08 授权超时', nav: navOf('系统告警'), tabs: alTabs('告警列表'), list: true, hasRows: true, empty: false, settings: false, detail: true },
+      { label: '6c 设置 · 接收邮箱与汇总间隔', nav: navOf('系统告警'), tabs: alTabs('设置'), list: false, hasRows: false, empty: false, settings: true, detail: false },
+      { label: '6d 没有告警（无红点）', nav: alNavNoDot, tabs: alTabs('告警列表'), list: true, hasRows: false, empty: true, settings: false, detail: false },
+    ];
+    const opTone = { '删除话单': 'err', '调账': 'warn', '赊账充值': 'warn', '修改费率': 'info', '导入费率': 'info', '复制费率表': 'info', '归属话单': 'info' };
+    const tones2 = { err: ['var(--err-bg)', 'var(--err-fg)', 'var(--err-bd)'], warn: ['var(--warn-bg)', 'var(--warn-fg)', 'var(--warn-bd)'], info: ['var(--brand-soft)', 'var(--primary)', 'var(--brand-bd)'], none: ['var(--muted)', 'var(--fg)', 'var(--border)'] };
+    const C = (k, before, after) => ({ k, before, after, beforeColor: before === '—' ? 'var(--muted-fg)' : 'var(--muted-fg)', strike: before === '—' ? 'none' : 'line-through' });
+    const LOG = [
+      ['2026-09-29 15:42:10', '王敏', '删除话单', 'ABC001', '删除话单 ABC001 2026年8月 9,642 条', [C('时间范围', '—', '2026-08-12 至 2026-08-31'), C('删除条数', '9,642 条', '0 条'), C('确认编码', '—', 'ABC001')]],
+      ['2026-09-29 15:10:44', '王敏', '归属话单', 'ABC001', '从标签 ABC01 归属 324 条，扣费 ¥58.35；2 条匹配不到费率未归属', [C('归属条数', '—', '324 条'), C('扣费合计', '—', '¥58.35'), C('余额', '-¥35.20', '-¥93.55')]],
+      ['2026-09-29 14:36:08', '王敏', '确认收款', 'GZT007', '确认收款 GZT007 ¥2,000.00', [C('收款状态', '待收款', '已收款'), C('金额', '¥2,000.00', '¥2,000.00'), C('CNY 待收款总额', '¥6,300.00', '¥4,300.00')]],
+      ['2026-09-29 14:12:30', '王敏', '修改费率', 'ABC001', '费率 447：0.0450 → 0.0480，2026-10-01 00:00 生效', [C('前缀', '447（英国手机）', '447（英国手机）'), C('费率（元/分钟）', '0.0450', '0.0480'), C('生效时间', '—', '2026-10-01 00:00')]],
+      ['2026-09-29 11:05:12', '李俊', '修改设置', 'SHC005', '透支额度 ¥100.00 → ¥300.00', [C('透支额度', '¥100.00', '¥300.00'), C('可用额度', '¥9,050.00', '¥9,250.00')]],
+      ['2026-09-28 16:20:55', '李俊', '赊账充值', 'XYZ002', '赊账充值 $300.00，计入待收款', [C('余额', '-$4.82', '$295.18'), C('待收款', '$0.00', '$300.00')]],
+      ['2026-09-28 09:44:02', '王敏', '导入费率', 'SHC005', '导入费率表 1,286 条，立即生效', [C('前缀条数', '1,240 条', '1,286 条'), C('文件', '—', 'shc005_rates_2609.csv')]],
+      ['2026-09-27 17:02:19', '王敏', '复制费率表', 'GZT007', '从 BJH003 复制费率表到 GZT007，覆盖 1,102 条', [C('来源', '—', 'BJH003'), C('前缀条数', '0 条', '1,102 条')]],
+      ['2026-09-26 14:15:00', '李俊', '调账', 'ABC001', '调账 -¥25.50，备注：8 月重复计费更正', [C('余额', '¥…', '-¥25.50 变动')]],
+      ['2026-09-25 10:08:33', '王敏', '重置密码', 'ABC001', '重置门户账号 billing@abc-tech.cn 的密码', [C('密码', '原密码', '临时密码（已失效原登录）')]],
+    ];
+    const mkLog = openIdx => LOG.map(([time, admin, op, obj, summary, changes], i) => { const [tbg, tfg, tbd] = tones2[opTone[op] || 'none']; const open = openIdx.includes(i); return { time, admin, op, obj, summary, changes, tbg, tfg, tbd, open, caret: open ? '▾' : '›', bg: open ? 'var(--brand-soft)' : 'transparent', cardBd: open ? 'var(--primary)' : 'var(--border)', meta: `操作人 ${admin} · ${time} · 只读记录` }; });
+    const F = (label, v, w, on) => ({ label, v, w, bd: on ? 'var(--primary)' : 'var(--input)', bg: on ? 'var(--brand-soft)' : 'transparent' });
+    const baseF = [F('日期范围', '2026-08-31 — 2026-09-29', '240px'), F('管理员', '全部管理员', '140px'), F('操作类型', '全部操作', '140px'), F('租户', '全部租户', '160px')];
+    const logBoards = [
+      { label: '7a 列表', filters: baseF, count: '共 214 条 · 第 1–50 条', hasRows: true, empty: false, rows: mkLog([]) },
+      { label: '7b 展开详情 · 修改费率、确认收款', filters: baseF, count: '共 214 条 · 第 1–50 条', hasRows: true, empty: false, rows: mkLog([2, 3]) },
+      { label: '7c 筛选结果为空', filters: [F('日期范围', '2026-08-31 — 2026-09-29', '240px'), F('管理员', '李俊', '140px', 1), F('操作类型', '删除话单', '140px', 1), F('租户', 'ABC001', '160px', 1)], count: '0 条', hasRows: false, empty: true, rows: [] },
+    ];
+    LOG[8][5] = [C('余额', '¥1,287.30', '¥1,261.80'), C('调账金额', '—', '-¥25.50')];
+    logBoards.forEach(b => { if (b.rows.length) b.rows[8].changes = LOG[8][5]; });
+    const logMob = mkLog([0]).slice(0, 5);
+    logMob[0].changes = LOG[0][5];
+    return { logNav: navOf('操作日志'), logBoards, logMob, alerts30, alBoards, billNav: navOf('账单'), billGroups, billBoards, uaNav, ua, uaIgnored, uaTenants, uaMob, theme, boards, mob, tenantGroups, alerts, mobAttn, six: [1, 2, 3, 4, 5, 6], skelBars };
+  }
+}
+</script>
+</body>
+</html>
