@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -30,7 +30,7 @@ jobs:
           probe=packages/rating/src/ci-money-probe.ts
           trap 'rm -f "$probe"' EXIT
           echo 'export const fee = 0.1 * 3;' > "$probe"
-          if pnpm exec eslint "$probe" > /tmp/money-lint.log 2>&1; then
+          if pnpm exec eslint "$probe" --format json > /tmp/money-lint.log 2>&1; then
             echo 'ERROR: unsafe money arithmetic was accepted'
             exit 1
           fi
