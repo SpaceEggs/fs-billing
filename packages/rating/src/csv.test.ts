@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseRateCsv } from './index.js';
+import { formatRateCsv, parseRateCsv, rate } from './index.js';
 
 test('valid file with header, BOM and CRLF', () => {
   const result = parseRateCsv(
@@ -59,4 +59,74 @@ test('empty file is rejected', () => {
     ok: false,
     errors: [{ line: 1, reason: '文件没有费率行' }],
   });
+});
+
+test('quoted country with comma round-trips', () => {
+  const text = 'prefix,country,rate\n447,"Korea, Republic of",0.0450\n';
+  const parsed = parseRateCsv(text, 'USD');
+  expect(parsed.ok && parsed.entries[0]?.country).toBe('Korea, Republic of');
+  if (!parsed.ok) return;
+  expect(formatRateCsv(parsed.entries)).toBe(text);
+});
+
+test('"" escapes a quote and round-trips', () => {
+  const text = 'prefix,country,rate\n1,"美国 ""本土""",0.0100\n';
+  const parsed = parseRateCsv(text, 'USD');
+  expect(parsed.ok && parsed.entries[0]?.country).toBe('美国 "本土"');
+  if (!parsed.ok) return;
+  expect(formatRateCsv(parsed.entries)).toBe(text);
+});
+
+test('quoted prefix and rate are accepted', () => {
+  const parsed = parseRateCsv('"1876","牙买加","0.2000"', 'USD');
+  expect(parsed.ok && parsed.entries[0]?.prefix).toBe('1876');
+});
+
+test('trailing empty columns are tolerated', () => {
+  const parsed = parseRateCsv('1876,牙买加,0.2000,,', 'CNY');
+  expect(parsed.ok && parsed.entries.length).toBe(1);
+});
+
+test('header is detected on the first non-empty line only', () => {
+  expect(parseRateCsv('\n\nprefix,country,rate\n1,美国,0.01', 'USD').ok).toBe(
+    true,
+  );
+  expect(parseRateCsv('1,美国,0.01\nprefix,country,rate', 'USD')).toEqual({
+    ok: false,
+    errors: [{ line: 2, reason: '前缀只能是数字：prefix' }],
+  });
+});
+
+test('newline inside quotes is an error with line number', () => {
+  const result = parseRateCsv(
+    'prefix,country,rate\n1,美国,0.01\n44,"英国\n本土",0.04\n',
+    'USD',
+  );
+  expect(result.ok).toBe(false);
+  if (result.ok) return;
+  expect(result.errors[0]).toEqual({
+    line: 3,
+    reason: '引号未闭合（引号内不能换行）',
+  });
+});
+
+test.each([
+  ['1,"美国"x,0.01', '引号后只能是逗号'],
+  ['1,美"国,0.01', '未加引号的字段中不能有引号'],
+  ['1,,0.01', '国家/备注不能为空'],
+  ['1,"",0.01', '国家/备注不能为空'],
+  ['1,美国,0.01,x', '应为 3 列，实际 4 列'],
+])('%s → %s', (row, reason) => {
+  expect(parseRateCsv(row, 'USD')).toEqual({
+    ok: false,
+    errors: [{ line: 1, reason }],
+  });
+});
+
+test('export quotes newlines', () => {
+  expect(
+    formatRateCsv([
+      { prefix: '1', country: 'A\nB', perMinute: rate('USD', '0.01') },
+    ]),
+  ).toBe('prefix,country,rate\n1,"A\nB",0.0100\n');
 });

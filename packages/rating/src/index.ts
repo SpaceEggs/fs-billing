@@ -4,3 +4,4 @@ export * from './rates.js';
 export * from './authorize.js';
 export * from './csv.js';
 export * from './time.js';
+export * from './dialed.js';

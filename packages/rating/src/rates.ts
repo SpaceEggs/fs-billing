@@ -1,3 +1,4 @@
+import type { DialedNumber } from './dialed.js';
 import type { Currency, Rate } from './money.js';
 
 export interface RateEntry<C extends Currency> {
@@ -36,10 +37,10 @@ export function versionAt<C extends Currency>(
   return current;
 }
 
-/** 最长前缀匹配；被叫号码需为纯数字（不做号码规范化）。 */
+/** 最长前缀匹配；只接受已校验的 DialedNumber。 */
 export function longestPrefix<C extends Currency>(
   entries: readonly RateEntry<C>[],
-  dialed: string,
+  dialed: DialedNumber,
 ): RateEntry<C> | undefined {
   let best: RateEntry<C> | undefined;
   for (const entry of entries) {
@@ -51,7 +52,7 @@ export function longestPrefix<C extends Currency>(
 
 export function findRate<C extends Currency>(
   table: RateTable<C>,
-  dialed: string,
+  dialed: DialedNumber,
   answeredAt: Date,
 ): RateEntry<C> | undefined {
   const version = versionAt(table, answeredAt);

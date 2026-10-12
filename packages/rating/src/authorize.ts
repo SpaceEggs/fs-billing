@@ -1,5 +1,6 @@
 import { Decimal } from 'decimal.js';
 import { addMoney, type Currency, type Money } from './money.js';
+import { parseDialedNumber, type DialedNumber } from './dialed.js';
 import { findRate, type RateEntry, type RateTable } from './rates.js';
 
 /** 单通最长 4 小时。 */
@@ -14,7 +15,8 @@ export interface Tenant<C extends Currency> {
   readonly rates: RateTable<C>;
 }
 
-export type RejectReason = '租户不存在' | '租户已停用' | '无费率' | '余额不足';
+export type RejectReason =
+  '号码格式错误' | '租户不存在' | '租户已停用' | '无费率' | '余额不足';
 
 export type Authorization<C extends Currency> =
   | {
@@ -32,13 +34,14 @@ export function callableMinutes<C extends Currency>(
 ): Decimal {
   if (available.value.lte(0)) return new Decimal(0);
   // 费率为 0 时不受余额限制，由单通上限封顶。
-  if (entry.perMinute.perMinute.isZero()) return new Decimal(Infinity);
+  if (entry.perMinute.perMinute.isZero())
+    return new Decimal(MAX_CALL_SECONDS).div(60);
   return available.value.div(entry.perMinute.perMinute).floor();
 }
 
 export function authorize<C extends Currency>(
   tenant: Tenant<C> | undefined,
-  dialed: string,
+  dialed: DialedNumber,
   at: Date,
 ): Authorization<C> {
   if (!tenant) return { allowed: false, reason: '租户不存在' };
@@ -57,4 +60,15 @@ export function authorize<C extends Currency>(
     callableMinutes: minutes.toNumber(),
     maxSeconds: Decimal.min(minutes.mul(60), MAX_CALL_SECONDS).toNumber(),
   };
+}
+
+/** 接口边界：先校验原始被叫号码，再授权。 */
+export function authorizeRaw<C extends Currency>(
+  tenant: Tenant<C> | undefined,
+  rawDialed: string,
+  at: Date,
+): Authorization<C> {
+  const dialed = parseDialedNumber(rawDialed);
+  if (!dialed) return { allowed: false, reason: '号码格式错误' };
+  return authorize(tenant, dialed, at);
 }

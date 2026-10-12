@@ -3,11 +3,14 @@ import {
   beijingTime,
   findRate,
   longestPrefix,
+  parseDialedNumber,
+  type DialedNumber,
   rate,
   type RateEntry,
   type RateTable,
 } from './index.js';
 
+const num = (raw: string): DialedNumber => parseDialedNumber(raw)!;
 const entry = (prefix: string, country: string, value: string) =>
   ({ prefix, country, perMinute: rate('CNY', value) }) as RateEntry<'CNY'>;
 
@@ -24,10 +27,10 @@ describe('design.md §6.2 最长前缀', () => {
     ['12125551234', '1'],
     ['442071234567', '44'],
   ])('%s → %s', (dialed, prefix) => {
-    expect(longestPrefix(entries, dialed)?.prefix).toBe(prefix);
+    expect(longestPrefix(entries, num(dialed))?.prefix).toBe(prefix);
   });
   test('no match', () => {
-    expect(longestPrefix(entries, '8613800000000')).toBeUndefined();
+    expect(longestPrefix(entries, num('8613800000000'))).toBeUndefined();
   });
 });
 
@@ -50,12 +53,12 @@ describe('design.md §6.3 生效时间', () => {
     ['2026-10-01 00:00:00', '0.048'],
     ['2026-12-31 12:00:00', '0.048'],
   ])('接通于 %s 用 %s', (at, expected) => {
-    const found = findRate(table, '44712345678', beijingTime(at));
+    const found = findRate(table, num('44712345678'), beijingTime(at));
     expect(found?.perMinute.perMinute.toString()).toBe(expected);
   });
   test('before any version there is no rate', () => {
     expect(
-      findRate(table, '44712345678', beijingTime('2025-12-31 23:59:59')),
+      findRate(table, num('44712345678'), beijingTime('2025-12-31 23:59:59')),
     ).toBeUndefined();
   });
 });
