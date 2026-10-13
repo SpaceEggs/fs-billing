@@ -22,16 +22,21 @@ export const databaseEnvironmentSchema = z.object({
 export type DatabaseEnvironment = z.infer<typeof databaseEnvironmentSchema>;
 
 export type Db = NodePgDatabase<typeof schema>;
+// 连接池数据库带 $client；事务没有该字段，不能作为独立维护操作的入口。
+export type PoolDb = Db & { readonly $client: pg.Pool };
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 export interface Connection {
-  readonly db: Db;
+  readonly db: PoolDb;
   readonly pool: pg.Pool;
 }
 
 // numeric 原样以字符串返回（pg 默认如此）；timestamptz 解析为 Date。
-export function connect(url: string): Connection {
-  const pool = new pg.Pool({ connectionString: url });
+export function connect(
+  url: string,
+  options: Pick<pg.PoolConfig, 'max' | 'connectionTimeoutMillis'> = {},
+): Connection {
+  const pool = new pg.Pool({ connectionString: url, ...options });
   return { pool, db: drizzle(pool, { schema }) };
 }
 

@@ -1,0 +1,30 @@
+
+> fs-billing@ coverage /workspace/fs-billing
+> vitest run --coverage
+
+
+ RUN  v5.0.4 /workspace/fs-billing
+      Coverage enabled with v8
+
+
+ Test Files  11 passed (11)
+      Tests  136 passed (136)
+   Start at  04:04:41
+   Duration  5.94s (tests 55%, import 36%, transform 6%, worker 3%)
+
+ % Coverage report from v8
+--------------|---------|----------|---------|---------|-------------------
+File          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+--------------|---------|----------|---------|---------|-------------------
+All files     |     100 |    96.36 |     100 |     100 |                   
+ csv.ts       |     100 |    94.44 |     100 |     100 | 93,107            
+ rates.ts     |     100 |    92.85 |     100 |     100 | 48                
+--------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 100% ( 167/167 )
+Branches     : 96.36% ( 106/110 )
+Functions    : 100% ( 31/31 )
+Lines        : 100% ( 137/137 )
+================================================================================
+exit 0

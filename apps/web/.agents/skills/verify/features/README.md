@@ -1,6 +1,6 @@
 # FS-Billing verification map
 
-Read this index before a run. This map covers implemented phase 0, 1, and 2 behavior. Package functions and database operator paths currently have no business UI or HTTP route.
+Read this index before a run. This map covers implemented phase 0, 1, and 2 behavior plus phase 3 units a–g. Worker authorization and CDR ingestion now have HTTP paths; business UI remains unimplemented.
 
 ## Baseline preconditions
 
@@ -48,5 +48,14 @@ Read this index before a run. This map covers implemented phase 0, 1, and 2 beha
 - [Stored rate versions](db-rate-versions.md): immutable history, future version management, rating reads.
 - [CDR storage](db-cdr-storage.md): answered/unanswered constraints, raw text and unassigned calls.
 - [Receivable settlement](db-receivable-settlement.md): credit recharge confirmation as an independent event.
+
+### Phase 3: Worker interfaces
+
+- [Worker authorization](worker-authorize.md): live decisions, SIP rejection, answer-time timers, fallback and latency measurement.
+- [Worker CDR ingestion](worker-cdr-ingest.md): raw preservation, UUID deduplication, pending calls, unverified flags and disk replay.
+- [Worker charge job](worker-charge-job.md): answer-time rates, ledger idempotency, month attribution and crash recovery.
+- [Worker security](worker-security.md): private bind, key/IP checks and the local CDR relay.
+- [Worker partitions](worker-partitions.md): startup/daily jobs, missing-partition replay, transaction type exclusion and savepoint markers.
+- [Worker API overview](worker-api.md): combined HTTP and DB acceptance command.
 
 **Stale claim (phase 0):** PostgreSQL was only a supporting check and business features had no real paths. Database operations and rating acceptance commands now have paths above. The three phase 0 endpoints still perform no business writes. Monetary lint and build remain supporting checks in the root README.

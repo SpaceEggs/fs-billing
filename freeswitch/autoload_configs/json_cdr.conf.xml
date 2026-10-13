@@ -1,0 +1,20 @@
+<configuration name="json_cdr.conf" description="Worker 话单推送">
+  <settings>
+    <!-- 本机 relay 加 X-Billing-Key 后转发 Worker；见 nginx/billing-cdr.conf。 -->
+    <param name="url" value="http://127.0.0.1:3002/cdr" />
+    <!-- 直传 JSON；Worker 不接受 cdr= 表单或 base64。变量也保持原值。 -->
+    <param name="encode" value="false" />
+    <param name="encode-values" value="false" />
+    <!-- 只推 A-leg，避免桥接 B-leg 的另一个 UUID 被当作第二通电话。 -->
+    <param name="log-b-leg" value="false" />
+    <param name="prefix-a-leg" value="true" />
+    <param name="log-http-and-disk" value="true" />
+    <param name="log-dir" value="/var/lib/freeswitch/cdr/archive" />
+    <param name="log-errors-to-disk" value="true" />
+    <param name="err-log-dir" value="/var/lib/freeswitch/cdr/retry" />
+    <param name="rotate" value="false" />
+    <param name="timeout" value="5" />
+    <param name="retries" value="3" />
+    <param name="delay" value="5" />
+  </settings>
+</configuration>

@@ -1,0 +1,45 @@
+diff --git a/dist/adapters/drizzle.js b/dist/adapters/drizzle.js
+index 6e5009b8eb41c7cb108fc17dcdf1f9c73056ef45..e861d248bbb36de14fdb87a68320bc7701e3a307 100644
+--- a/dist/adapters/drizzle.js
++++ b/dist/adapters/drizzle.js
+@@ -20,6 +20,10 @@ import { unwrapSQLResult } from "../tools.js";
+ export function fromDrizzle(tx, sql) {
+     return {
+         async executeSql(text, values) {
++            // 调用方已开启事务，维护 SQL 不能提前提交它。
++            if (/^\s*BEGIN;/.test(text) && /COMMIT;\s*$/.test(text)) {
++                text = text.replace(/^\s*BEGIN;/, '').replace(/COMMIT;\s*$/, '');
++            }
+             const { parts, reordered } = parsePlaceholders(text, values);
+             const { strings, params } = buildQuery(parts, reordered, sql);
+             return unwrapSQLResult(await tx.execute(sql(strings, ...params)));
+diff --git a/dist/attorney.js b/dist/attorney.js
+index 47fbbb466c30345c1912a0dd3ed5e5e8e47ab024..7f934337fc16728c8384ba3b8802598e23e28960 100644
+--- a/dist/attorney.js
++++ b/dist/attorney.js
+@@ -482,8 +482,11 @@ function resolveBackend(config) {
+     if (backend === 'yugabytedb') {
+         process.emitWarning("backend: 'yugabytedb' is deprecated and will be rejected in the next major. YugabyteDB is not supported: releases are not tested against it and upgrades do not work there. See https://pgboss.io/database-backends#not-supported-yugabytedb", 'DeprecationWarning', 'PGBOSS_DEP_YUGABYTEDB');
+     }
++    assert(!('noAdvisoryLocks' in config) || typeof config.noAdvisoryLocks === 'boolean', 'noAdvisoryLocks must be a boolean');
+     for (const flag of COMPATIBILITY_FLAGS) {
+-        config[flag] = flags[flag] ?? false;
++        config[flag] = flag === 'noAdvisoryLocks'
++            ? (config.noAdvisoryLocks ?? flags[flag] ?? false)
++            : (flags[flag] ?? false);
+     }
+     // Test hook: exercise the distributed runtime paths (atomic fetch + split mutations)
+     // on top of the current backend's schema, without standing up a distributed database.
+diff --git a/dist/types.d.ts b/dist/types.d.ts
+index 44cdc07f6f19264da0167ece400b2f29b5ea0ae1..aae7c8adf8969faab2004872dd62acb6b0a78fbb 100644
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -141,6 +141,8 @@ export interface SchedulingOptions {
+  */
+ export type BackendProfile = 'postgres' | 'cockroachdb' | 'yugabytedb' | 'citus' | 'pglite';
+ export interface MaintenanceOptions {
++    /** Disable auxiliary advisory locks when the caller owns transaction ordering. */
++    noAdvisoryLocks?: boolean;
+     supervise?: boolean;
+     migrate?: boolean;
+     createSchema?: boolean;

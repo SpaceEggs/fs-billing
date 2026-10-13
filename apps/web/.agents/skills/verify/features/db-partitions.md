@@ -41,4 +41,4 @@ psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c "SELECT relname, pg_get_expr(relpa
 - Tenant/unscoped maintenance fails `42501`; held tenant locks fail `55000`, including the already-existing-partition path.
 - Existing partitions return without waiting on the partition lock. Missing partitions need a name-specific advisory lock and parent-table DDL locks, so long reads can delay creation.
 - Child partitions enable RLS but receive no app grants; query parents, not children, as the app role.
-- Daily Worker scheduling is a future-phase comment, not an implemented scheduler. Missing partitions are not created on the CDR write path.
+- Worker performs startup maintenance and daily pg-boss scheduling at Beijing midnight; see [Worker interfaces](worker-api.md). Missing partitions are not created on the CDR write path.

@@ -10,7 +10,7 @@ The rating caller gets a decision from a tenant snapshot, normalized called numb
 
 ## How to get to it (user POV)
 
-- From the repository root, drive the package acceptance suite. The API and Worker do not yet expose an authorization endpoint.
+- From the repository root, drive the package acceptance suite. Worker HTTP authorization is verified separately via [Worker interfaces](worker-api.md).
 - Package callers use exports from `@fs-billing/rating`; authorization reads the supplied snapshot and performs no reservation or ledger write.
 
 ## Driving it with package commands

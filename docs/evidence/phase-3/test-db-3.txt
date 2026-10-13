@@ -1,0 +1,17 @@
+
+> fs-billing@ test:db /workspace/fs-billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+
+ Test Files  8 passed (8)
+      Tests  121 passed (121)
+   Start at  04:04:24
+   Duration  15.22s (tests 66%, import 32%, transform 1%)
+
+    Isolate  8 workers spawned · ~114ms startup each (spawn + environment, per file)
+             at least ~796ms faster with isolate: false — reuses workers across files instead of one per file
+
+exit 0

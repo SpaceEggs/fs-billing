@@ -1,6 +1,6 @@
 # FS-Billing
 
-FreeSWITCH 话单计费系统。工程按 [阶段计划](docs/plan.md) 推进，业务规则见 [设计文档](docs/design.md)。阶段 0（工程骨架）、阶段 1（计费核心 `packages/rating`）与阶段 2（数据库与账本 `packages/db`）已完成并合并到 `main`。
+FreeSWITCH 话单计费系统。工程按 [阶段计划](docs/plan.md) 推进，业务规则见 [设计文档](docs/design.md)。阶段 0（工程骨架）、阶段 1（计费核心 `packages/rating`）、阶段 2（数据库与账本 `packages/db`）与阶段 3（FreeSWITCH 接口 `apps/worker`）已完成并合并到 `main`；阶段 3 的 FreeSWITCH 实机通话验收待阶段 10 进行。
 
 ## 开发环境
 
@@ -15,6 +15,7 @@ cp .env.example .env
 pnpm dev:setup
 pnpm db:migrate
 pnpm db:seed
+pnpm --filter @fs-billing/worker queue:migrate
 pnpm dev
 ```
 
@@ -27,7 +28,7 @@ pnpm dev
 | Worker     | http://127.0.0.1:3001/health     | 返回 `{"status":"ok","service":"worker"}` |
 | PostgreSQL | 127.0.0.1:5432                   | `docker compose ps` 显示 healthy          |
 
-Web 开发服务器代理 `/api` 到 3000 端口。自定义 API 端口时需同步修改 `apps/web/vite.config.ts` 的代理。API 与 Worker 各自启动，健康接口暂不检查数据库，也尚未提供业务接口。
+Web 开发服务器代理 `/api` 到 3000 端口。自定义 API 端口时需同步修改 `apps/web/vite.config.ts` 的代理。API 与 Worker 各自启动，健康接口暂不检查数据库。Worker 已提供授权、话单与扣费任务，见 [Worker 接口](docs/worker-api.md) 与 [FreeSWITCH 配置](freeswitch/README.md)。
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version(); SHOW timezone;"'
@@ -56,7 +57,7 @@ apps/worker      Fastify Worker 独立进程
 packages/shared  Zod 数据格式
 packages/db      表结构与迁移（SQL）、Drizzle 描述、RLS 身份、流水与费率读写、种子
 packages/rating  计费核心纯函数：金额/费率品牌类型、计费、前缀匹配、授权、CSV
-freeswitch/      阶段 3 加入配置与脚本
+freeswitch/      授权 Lua、拨号计划、mod_json_cdr、内网 relay 与落盘重推
 tooling/eslint/  金额保护规则
 tests/           工具与跨包测试
 docs/            设计、计划与验收记录
@@ -82,8 +83,10 @@ const fee = decimal('0.1').mul('3');
 
 ## CI 与阶段验收
 
-每次 push 和 PR 执行安装、`pnpm check`、`pnpm coverage`（rating 行覆盖率 ≥ 95%）、构建、浮点金额拒绝实验、CNY+USD 类型拒绝实验、PostgreSQL 启动/SQL 检查、空库上 `pnpm db:migrate && pnpm db:seed && pnpm db:migrate`，以及 `pnpm test:db`。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。各阶段证据见验收记录：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)。
+每次 push 和 PR 执行安装、`pnpm check`、`pnpm coverage`（rating 行覆盖率 ≥ 95%）、构建、浮点金额拒绝实验、CNY+USD 类型拒绝实验、PostgreSQL 启动/SQL 检查、空库上 `pnpm db:migrate && pnpm db:seed && pnpm db:migrate`，以及 `pnpm test:db`。阶段分支使用 `phase-<编号>-<简称>`，完成后 PR 列出验收证据，通过后 squash 合并到 `main`。各阶段证据见验收记录：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)。
 
 ## 运行验证
 
 项目内 [verify 技能](apps/web/.agents/skills/verify/SKILL.md) 提供进程归属检查、真实 HTTP 与浏览器验证，以及清理步骤。[功能图](apps/web/.agents/skills/verify/features/README.md) 记录当前可验证的用户路径。验证证据默认保存在 `artifacts/verify/`，清理后保留。
+
+阶段 3 验证路径：[授权](apps/web/.agents/skills/verify/features/worker-authorize.md)、[话单入库](apps/web/.agents/skills/verify/features/worker-cdr-ingest.md)、[扣费任务](apps/web/.agents/skills/verify/features/worker-charge-job.md)、[接口安全](apps/web/.agents/skills/verify/features/worker-security.md)、[分区维护](apps/web/.agents/skills/verify/features/worker-partitions.md)。实机通话按 FreeSWITCH 接入文档另行保存证据。
