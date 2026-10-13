@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { beijingTime, formatMoney, money } from '@fs-billing/rating';
 import {
+  adminId,
   connections,
   createTenant,
   pgError,
@@ -13,11 +14,16 @@ import { loadRatingTenant } from './rates.js';
 
 const { app, owner } = connections();
 
-async function adminId() {
-  const { rows } = await owner.pool.query<{ id: string }>(
-    `SELECT id FROM admins WHERE email = 'wangmin@example.com'`,
-  );
-  return rows[0]!.id;
+async function waitUntilBlocked(pid: number) {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const { rows } = await owner.pool.query<{ blocked: boolean }>(
+      'SELECT cardinality(pg_blocking_pids($1)) > 0 AS blocked',
+      [pid],
+    );
+    if (rows[0]!.blocked) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`连接 ${pid} 没有进入锁等待`);
 }
 
 describe('ABC001 种子余额', () => {
@@ -122,7 +128,7 @@ describe('appendLedgerEntry', () => {
 
   it('同一幂等键但金额不同时报错', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const admin = await adminId();
+    const admin = await adminId(owner);
     const entry = (value: string) => ({
       kind: 'recharge' as const,
       amount: money('CNY', value),
@@ -157,7 +163,7 @@ describe('appendLedgerEntry', () => {
 
   it('数据库按类型检查符号与必填：正的通话扣费、无原因的调账被拒绝', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const admin = await adminId();
+    const admin = await adminId(owner);
     const positiveCharge = await pgError(
       withAdmin(app.db, (tx) =>
         appendLedgerEntry(tx, tenant, {
@@ -227,7 +233,7 @@ describe('流水按发生时间归属月份', () => {
 
   it('人工操作的发生时间只能是写入时间', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const admin = await adminId();
+    const admin = await adminId(owner);
     const backdated = await pgError(
       withAdmin(app.db, (tx) =>
         tx.execute(sql`insert into ledger_entries
@@ -246,7 +252,7 @@ describe('流水按发生时间归属月份', () => {
 describe('待收款 → 已收款', () => {
   it('结算是独立记录：原流水不变，状态由 receivables 视图给出，只能结算一次', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const admin = await adminId();
+    const admin = await adminId(owner);
     const credit = await withAdmin(app.db, (tx) =>
       appendLedgerEntry(tx, tenant, {
         kind: 'credit_recharge',
@@ -294,7 +300,7 @@ describe('待收款 → 已收款', () => {
 
   it('不能结算非赊账充值的流水', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const admin = await adminId();
+    const admin = await adminId(owner);
     const recharge = await withAdmin(app.db, (tx) =>
       appendLedgerEntry(tx, tenant, {
         kind: 'recharge',
@@ -317,7 +323,7 @@ describe('待收款 → 已收款', () => {
 describe('缓存余额可重算核对', () => {
   it('缓存被改坏后，balance_discrepancies 列出该租户，rebuild_tenant_balances 修复', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const admin = await adminId();
+    const admin = await adminId(owner);
     await withAdmin(app.db, (tx) =>
       appendLedgerEntry(tx, tenant, {
         kind: 'gift',
@@ -344,6 +350,55 @@ describe('缓存余额可重算核对', () => {
         .rows,
     ).toEqual([{ fixed: 1 }]);
     expect((await discrepancies()).rows).toEqual([]);
+  });
+
+  it('扣费已写入未提交时开始重算：重算等扣费提交，结束后缓存 = 流水合计', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    await withAdmin(app.db, (tx) =>
+      appendLedgerEntry(tx, tenant, {
+        kind: 'gift',
+        amount: money('CNY', '20.00'),
+        note: '线路故障补偿',
+        adminId: admin,
+        idempotencyKey: 'gift-1',
+      }),
+    );
+    await owner.pool.query(
+      'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
+      [tenant.id],
+    );
+
+    const charging = await app.pool.connect();
+    const rebuilding = await owner.pool.connect();
+    try {
+      await charging.query('BEGIN');
+      await charging.query(`SELECT set_config('app.scope', 'system', true)`);
+      await charging.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -5, 'call:interleaved')`,
+        [tenant.id],
+      );
+      const { rows } = await rebuilding.query<{ pid: number }>(
+        'SELECT pg_backend_pid() AS pid',
+      );
+      const rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      await waitUntilBlocked(rows[0]!.pid);
+      await charging.query('COMMIT');
+      await rebuilt;
+    } finally {
+      await charging.query('ROLLBACK');
+      charging.release();
+      rebuilding.release();
+    }
+
+    const { rows } = await owner.pool.query(
+      `SELECT balance::text AS cached,
+              (SELECT sum(amount)::text FROM ledger_entries WHERE tenant_id = $1) AS ledger_total
+       FROM tenant_balances WHERE tenant_id = $1`,
+      [tenant.id],
+    );
+    expect(rows).toEqual([{ cached: '15', ledger_total: '15' }]);
   });
 
   it('应用角色不能直接修改缓存余额', async () => {

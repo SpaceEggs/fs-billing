@@ -261,20 +261,29 @@ LEFT JOIN (
 ) l ON l.tenant_id = t.id
 WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
 
+-- 锁协议：tenant_balances 的行锁。流水插入在同一事务内由触发器更新该行（持有到提交）；
+-- 重算先按租户顺序锁住全部余额行，再用下一条语句（READ COMMITTED 下是新快照）求和。
+-- 先更新了缓存的插入：重算等它提交，求和时已计入。重算拿锁后才到的插入：等重算提交，
+-- 再在重算后的余额上累加（balance = balance + amount 读取最新版本）。
 CREATE FUNCTION rebuild_tenant_balances() RETURNS integer
-LANGUAGE sql AS $$
+LANGUAGE plpgsql AS $$
+DECLARE
+  fixed integer;
+BEGIN
+  PERFORM 1 FROM tenant_balances ORDER BY tenant_id FOR UPDATE;
   WITH totals AS (
     SELECT t.id AS tenant_id, coalesce(sum(e.amount), 0) AS total
     FROM tenants t LEFT JOIN ledger_entries e ON e.tenant_id = t.id
     GROUP BY t.id
-  ), fixed AS (
+  ), updated AS (
     UPDATE tenant_balances b SET balance = totals.total, updated_at = now()
     FROM totals
     WHERE b.tenant_id = totals.tenant_id AND b.balance <> totals.total
     RETURNING 1
   )
-  SELECT count(*)::integer FROM fixed
-$$;
+  SELECT count(*)::integer INTO fixed FROM updated;
+  RETURN fixed;
+END $$;
 
 -- 话单：按北京时间自然月分区。通话 UUID 由非分区登记表保证全局唯一，
 -- 正式话单与未归属话单共用：tenant_id 为空表示未归属，只能被认领一次。
