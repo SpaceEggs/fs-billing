@@ -9,8 +9,11 @@ import {
   type RateEntry,
 } from '@fs-billing/rating';
 import {
+  adminTransaction,
+  backendPid,
   connections,
   createTenant,
+  deferred,
   pgError,
   waitForTenantLock,
 } from '../test/support.js';
@@ -326,6 +329,94 @@ describe('费率版本', () => {
       await Promise.allSettled(jobs);
       editor.release();
       deleter.release();
+    }
+  });
+});
+
+describe('同一租户的费率修改串行执行', () => {
+  it('同时新建两个版本：后到的事务在租户锁上排队，再按已提交的版本校验', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const written = deferred();
+    const release = deferred();
+    const secondPid = deferred<number>();
+    const first = adminTransaction(app.db, async (tx) => {
+      await createRateVersion(tx, tenant.id, CHINA, {
+        effectiveFrom: new Date('2031-01-01T00:00:00+08:00'),
+      });
+      written.resolve();
+      await release.promise;
+    });
+    let second: Promise<unknown> = Promise.resolve();
+    try {
+      await Promise.race([written.promise, first]);
+      second = adminTransaction(app.db, async (tx) => {
+        secondPid.resolve(await backendPid(tx));
+        await createRateVersion(tx, tenant.id, CHINA_RAISED, {
+          effectiveFrom: new Date('2030-06-01T00:00:00+08:00'),
+        });
+      });
+      await waitForTenantLock(owner, await secondPid.promise, tenant.id);
+      release.resolve();
+      await first;
+      expect(await pgError(second)).toMatchObject({
+        code: '23514',
+        message:
+          '已排定 2030-12-31 16:00:00+00 生效的新版本，请先修改该未来版本',
+      });
+    } finally {
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
+  it('两个事务各插一条未来条目后都删版本：后到的事务排队，版本删掉后它的插入报外键错误', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const version = await withAdmin(app.db, (tx) =>
+      createRateVersion(tx, tenant.id, CHINA, {
+        effectiveFrom: new Date('2031-06-01T00:00:00Z'),
+      }),
+    );
+    const insertEntry = (tx: Tx, prefix: string) =>
+      tx.execute(sql`insert into rate_entries (tenant_id, rate_version_id, prefix, country, rate)
+                     values (${tenant.id}, ${version.id}, ${prefix}, '测试', 0.0100)`);
+    const deleteVersion = (tx: Tx) =>
+      tx.execute(sql`delete from rate_versions where id = ${version.id}`);
+
+    const inserted = deferred();
+    const release = deferred();
+    const secondPid = deferred<number>();
+    const first = adminTransaction(app.db, async (tx) => {
+      await lockTenants(tx, [tenant.id]);
+      await insertEntry(tx, '44');
+      inserted.resolve();
+      await release.promise;
+      await deleteVersion(tx);
+    });
+    let second: Promise<unknown> = Promise.resolve();
+    try {
+      await Promise.race([inserted.promise, first]);
+      second = adminTransaction(app.db, async (tx) => {
+        secondPid.resolve(await backendPid(tx));
+        await lockTenants(tx, [tenant.id]);
+        await insertEntry(tx, '1');
+        await deleteVersion(tx);
+      });
+      await waitForTenantLock(owner, await secondPid.promise, tenant.id);
+      release.resolve();
+      await first;
+      expect(await pgError(second)).toMatchObject({
+        code: '23503',
+        constraint: 'rate_entries_rate_version_id_tenant_id_fkey',
+      });
+      const { rows } = await owner.pool.query(
+        `SELECT (SELECT count(*)::int FROM rate_versions WHERE tenant_id = $1) AS versions,
+                (SELECT count(*)::int FROM rate_entries WHERE tenant_id = $1) AS entries`,
+        [tenant.id],
+      );
+      expect(rows).toEqual([{ versions: 0, entries: 0 }]);
+    } finally {
+      release.resolve();
+      await Promise.allSettled([first, second]);
     }
   });
 });

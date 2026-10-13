@@ -3,10 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { beijingTime, formatMoney, money } from '@fs-billing/rating';
 import {
   adminId,
+  adminTransaction,
+  backendPid,
   connections,
   createTenant,
+  deferred,
   pgError,
   tenantId,
+  waitForTenantLock,
 } from '../test/support.js';
 import { lockTenants, withAdmin, withTenant, type Tx } from './client.js';
 import {
@@ -14,7 +18,7 @@ import {
   appendLedgerEntry,
   callChargeKey,
 } from './ledger.js';
-import { loadRatingTenant } from './rates.js';
+import { createRateVersion, loadRatingTenant } from './rates.js';
 
 const { app, owner } = connections();
 
@@ -667,6 +671,105 @@ describe('同一事务的多租户流水按 tenant_id 升序加锁', () => {
       [tenant.id],
     );
     expect(rows).toEqual([{ balance: '3' }]);
+  });
+});
+
+describe('同一租户的写入在租户锁上串行', () => {
+  const giftOf = (admin: string, idempotencyKey: string, amount: string) => ({
+    kind: 'gift' as const,
+    amount: money('CNY', amount),
+    note: '租户锁',
+    adminId: admin,
+    idempotencyKey,
+  });
+
+  it('A 写幂等键 a、b，B 写 b：B 排队，A 提交后 B 拿回 A 写的 b', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    const wroteA = deferred();
+    const release = deferred();
+    const secondPid = deferred<number>();
+    const first = adminTransaction(app.db, async (tx) => {
+      await appendLedgerEntry(tx, tenant, giftOf(admin, 'key-a', '1'));
+      wroteA.resolve();
+      await release.promise;
+      return appendLedgerEntry(tx, tenant, giftOf(admin, 'key-b', '2'));
+    });
+    let second: Promise<unknown> = Promise.resolve();
+    try {
+      await Promise.race([wroteA.promise, first]);
+      second = adminTransaction(app.db, async (tx) => {
+        secondPid.resolve(await backendPid(tx));
+        return appendLedgerEntries(tx, [
+          { tenant, entry: giftOf(admin, 'key-b', '2') },
+        ]);
+      });
+      await waitForTenantLock(owner, await secondPid.promise, tenant.id);
+      release.resolve();
+      const firstB = await first;
+      expect((await second) as unknown[]).toEqual([firstB]);
+      const { rows } = await owner.pool.query(
+        'SELECT balance::text FROM tenant_balances WHERE tenant_id = $1',
+        [tenant.id],
+      );
+      expect(rows).toEqual([{ balance: '3' }]);
+    } finally {
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
+  });
+
+  it('A 锁两个租户、改低位费率并给两边记账，B 给两边记账：B 在低位租户的锁上排队，两边都提交', async () => {
+    const firstTenant = await createTenant(app, 'CNY');
+    const secondTenant = await createTenant(app, 'CNY');
+    const [low, high] =
+      firstTenant.id < secondTenant.id
+        ? [firstTenant, secondTenant]
+        : [secondTenant, firstTenant];
+    const admin = await adminId(owner);
+    const wroteHigh = deferred();
+    const release = deferred();
+    const secondPid = deferred<number>();
+    const first = adminTransaction(app.db, async (tx) => {
+      await lockTenants(tx, [high.id, low.id]);
+      await appendLedgerEntry(tx, high, giftOf(admin, 'a-high', '20'));
+      wroteHigh.resolve();
+      await release.promise;
+      await createRateVersion(tx, low.id, [], {
+        effectiveFrom: new Date('2031-01-01T00:00:00Z'),
+      });
+      await appendLedgerEntry(tx, low, giftOf(admin, 'a-low', '10'));
+    });
+    let second: Promise<unknown> = Promise.resolve();
+    try {
+      await Promise.race([wroteHigh.promise, first]);
+      second = adminTransaction(app.db, async (tx) => {
+        secondPid.resolve(await backendPid(tx));
+        await appendLedgerEntries(tx, [
+          { tenant: high, entry: giftOf(admin, 'b-high', '2') },
+          { tenant: low, entry: giftOf(admin, 'b-low', '1') },
+        ]);
+      });
+      await waitForTenantLock(owner, await secondPid.promise, low.id);
+      release.resolve();
+      await first;
+      await second;
+      const { rows } = await owner.pool.query(
+        `SELECT tenant_id, balance::text,
+                (SELECT count(*)::int FROM rate_versions v WHERE v.tenant_id = b.tenant_id) AS versions
+         FROM tenant_balances b
+         WHERE tenant_id = ANY($1::uuid[])
+         ORDER BY tenant_id`,
+        [[low.id, high.id]],
+      );
+      expect(rows).toEqual([
+        { tenant_id: low.id, balance: '11', versions: 1 },
+        { tenant_id: high.id, balance: '22', versions: 0 },
+      ]);
+    } finally {
+      release.resolve();
+      await Promise.allSettled([first, second]);
+    }
   });
 });
 

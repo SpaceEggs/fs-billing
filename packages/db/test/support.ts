@@ -2,7 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { afterAll, inject } from 'vitest';
 import type { Currency } from '@fs-billing/rating';
-import { connect, withAdmin, type Connection } from '../src/client.js';
+import {
+  connect,
+  withAdmin,
+  type Connection,
+  type Db,
+  type Tx,
+} from '../src/client.js';
 import { tenants } from '../src/schema.js';
 
 /** 每个测试文件一个应用角色连接和一个 owner 连接，文件结束时关闭。 */
@@ -53,6 +59,35 @@ export async function createTenant<C extends Currency>(
       .returning({ id: tenants.id }),
   );
   return { id: row!.id, code, currency };
+}
+
+/** 不重试的管理员事务。并发测试要看到 40P01，withAdmin 会把它重试掉。 */
+export function adminTransaction<T>(
+  db: Db,
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.scope', 'admin', true)`);
+    return fn(tx);
+  });
+}
+
+export function deferred<T = void>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+export async function backendPid(tx: Tx): Promise<number> {
+  const { rows } = await tx.execute<{ pid: number }>(
+    sql`select pg_backend_pid() as pid`,
+  );
+  return rows[0]!.pid;
 }
 
 /** 等到 `pid` 在 `tenantId` 的租户锁上排队：pg_locks 里有它未授予的那把 advisory 锁。 */
