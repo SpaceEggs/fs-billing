@@ -107,13 +107,21 @@
 
 ## 6. 阶段 3 的决定与验证
 
-- [x] 安装方式采用官方 SignalWire Debian 12 包。服务器 A 与镜像都执行 [install.sh](../freeswitch/install/install.sh)，固定完整版本 `1.11.3-release-33213556856-ef32e20529~bookworm~amd64-1~bookworm+1`。包安装保留标准目录与 systemd 集成，避免自行维护 FreeSWITCH 及其 SIP 依赖的源码构建。
+- [x] 安装方式采用官方 SignalWire Debian 12 包。服务器 A 与镜像都执行 [install.sh](../freeswitch/install/install.sh)，固定完整版本 `1.11.3-release-33213556856-ef32e20529~bookworm~amd64-1~bookworm+1`，包括 `freeswitch-systemd`。包安装保留标准目录与 systemd 集成；PID 1 为 systemd 时，安装后执行 `systemctl disable --now freeswitch`，配置完成前保持服务停用。Docker 构建跳过此命令。
 - [x] 只安装本项目需要的模块与 vanilla 基础配置，不安装 `freeswitch-meta-all`，减少无关模块、依赖与启动配置。
 - [x] `mod_lua` 链接 Lua 5.3。授权使用固定版本 Lua-cURL（Lua-cURLv3）`0.3.13-1` 和 Debian `lua-cjson` `2.1.0+dfsg-2.2`。Debian `lua-curl` 是旧版接口且只提供 Lua 5.1、5.2，不能提供 `cURL.safe`。JSON 数字先用 `math.tointeger` 转成整数，再生成 SIP 与挂断命令；非整数响应按无效响应处理。
 - [x] 话单只推 A 腿，失败原文落入 retry。独立 [replay-cdr.sh](../freeswitch/scripts/replay-cdr.sh) 补推超过一分钟的文件，Worker 按 UUID 去重。
 - [x] 业务拒绝使用 SIP 402、403、404；非法号码使用 484。号码去掉开头的 `+` 和 `00`，其余必须为数字，并同时改写授权、桥接与话单字段。
 - [x] 授权与话单路径为 `/authorize` 和 `/cdr`，请求格式见 [Worker 接口](worker-api.md)。
 - [ ] 用 [run-integration.sh](../freeswitch/test/run-integration.sh) 保存真实 SIP、CDR 与账本证据，验证 1500 ms 停滞超时、60 秒 `ALLOTTED_TIMEOUT`、失败落盘与重复补推。此脚本使用本机回环地址，不替代服务器 A 的网络与 TLS 验收。
+
+服务器 A 安装后，按以下步骤配置，再启动服务。vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_password` 为 `1234`，不能直接用于服务器 A。
+
+1. 替换 `/etc/freeswitch/autoload_configs/event_socket.conf.xml`，将 `listen-ip` 设为 `127.0.0.1`，将 `password` 换成新的强密码。
+2. 修改 `/etc/freeswitch/vars.xml` 的 `default_password`，换成新的强密码。
+3. 替换 `/etc/freeswitch/sip_profiles/`、`directory/` 与 `dialplan/` 中的 vanilla 示例，使用服务器 A 的 SIP 接入、租户、上游网关与 billing 拨号计划配置。
+4. 替换 `/etc/freeswitch/autoload_configs/modules.conf.xml`，只加载已安装且需要的模块，包括 `mod_lua` 与 `mod_json_cdr`。按 [FreeSWITCH 接入说明](../freeswitch/README.md) 配置授权脚本与话单推送。
+5. 完成上述配置后，执行 `systemctl enable --now freeswitch`。
 
 SignalWire 下载令牌属于仓库所有者 SpaceEggs/dogegg 的 SignalWire 账号，是个人 PAT。CI 使用仓库 secret `SIGNALWIRE_TOKEN`，通过 BuildKit secret 只传给安装步骤。服务器 A 从受限文件读取令牌，默认路径 `/run/secrets/signalwire_token`，也可用 `SIGNALWIRE_TOKEN_FILE` 或脚本参数指定。安装步骤关闭 shell tracing，在同一次运行内删除 apt 认证文件，失败时也删除。
 

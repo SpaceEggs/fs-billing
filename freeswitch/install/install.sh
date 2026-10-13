@@ -9,6 +9,7 @@ LUA_CJSON_VERSION='2.1.0+dfsg-2.2'
 token_file=${1:-${SIGNALWIRE_TOKEN_FILE:-/run/secrets/signalwire_token}}
 auth_file=/etc/apt/auth.conf.d/fs-billing-signalwire.conf
 source_file=/etc/apt/sources.list.d/fs-billing-signalwire.list
+[[ $EUID == 0 ]] || { echo '必须以 root 执行' >&2; exit 1; }
 work_dir=$(mktemp -d)
 cleanup() {
     rm -f "$auth_file" "$source_file"
@@ -19,7 +20,6 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 rm -f "$auth_file" "$source_file"
-[[ $EUID == 0 ]] || { echo '必须以 root 执行' >&2; exit 1; }
 # 精确版本是 amd64 bookworm 包；其他平台不能静默安装别的版本。
 . /etc/os-release
 [[ $ID == debian && $VERSION_ID == 12 && $(dpkg --print-architecture) == amd64 ]] || {
@@ -29,6 +29,7 @@ rm -f "$auth_file" "$source_file"
 token=$(cat "$token_file")
 [[ $token != *[[:space:]]* ]] || { echo 'SignalWire token 不能包含空白' >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
+apt-mark showauto | sed 's/:.*//' | sort -u > "$work_dir/auto-before"
 apt-get update
 apt-get install -y --no-install-recommends ca-certificates curl gnupg
 install -d -m 0755 /etc/apt/auth.conf.d /usr/share/keyrings
@@ -52,7 +53,7 @@ Pin: version $FS_VERSION
 Pin-Priority: 1001
 PINS
 apt-get update
-packages=(freeswitch libfreeswitch1 freeswitch-conf-vanilla
+packages=(freeswitch libfreeswitch1 freeswitch-conf-vanilla freeswitch-systemd
     freeswitch-mod-lua freeswitch-mod-sofia freeswitch-mod-json-cdr
     freeswitch-mod-commands freeswitch-mod-dptools freeswitch-mod-console
     freeswitch-mod-dialplan-xml freeswitch-mod-event-socket freeswitch-mod-hash
@@ -61,6 +62,9 @@ pinned=()
 for package in "${packages[@]}"; do pinned+=("$package=$FS_VERSION"); done
 apt-get install -y --allow-downgrades --no-install-recommends "${pinned[@]}" \
     "lua-cjson=$LUA_CJSON_VERSION" lua5.3 libcurl4
+if [[ $(cat /proc/1/comm) == systemd ]]; then
+    systemctl disable --now freeswitch
+fi
 apt-mark manual libcurl4
 
 # Debian lua-curl 是 v2 且缺少 5.3；显式构建 Lua-cURLv3 的 5.3 模块。
@@ -76,8 +80,15 @@ if ! lua5.3 -e "assert(require('cURL')._VERSION == '0.3.13'); require('cURL.safe
     curl_multiarch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
     luarocks --lua-version=5.3 --tree=/usr/local install Lua-cURL "$LUA_CURL_VERSION" \
         CURL_INCDIR="/usr/include/$curl_multiarch" CURL_LIBDIR="/usr/lib/$curl_multiarch"
-    # 只移除本次新增的直接构建依赖，不清理生产机器原有包。
-    if ((${#remove_packages[@]})); then apt-get purge -y "${remove_packages[@]}"; fi
+    # 不让 autoremove 删除安装前已标记为自动安装的包。
+    if ((${#remove_packages[@]})); then
+        apt-get purge -y "${remove_packages[@]}"
+        apt-get --simulate autoremove -y > "$work_dir/autoremove"
+        awk '/^Remv / { print $2 }' "$work_dir/autoremove" | sed 's/:.*//' | sort -u > "$work_dir/auto-remove"
+        if [[ -z $(comm -12 "$work_dir/auto-before" "$work_dir/auto-remove") ]]; then
+            apt-get autoremove -y
+        fi
+    fi
 fi
 lua5.3 -e "require('cURL.safe'); require('cjson.safe')"
 ldd /usr/lib/freeswitch/mod/mod_lua.so | grep 'liblua5.3'

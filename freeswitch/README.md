@@ -2,6 +2,18 @@
 
 示例实现 [design.md](../docs/design.md) §4 的呼叫前授权与话单推送。测试机准备见 [准备清单](../docs/freeswitch.md)，HTTP 契约见 [Worker 接口](../docs/worker-api.md)。地址、gateway 与密钥都需要替换成测试机配置。
 
+## 服务器 A 安装与启动
+
+以 root 运行 [install.sh](install/install.sh)，令牌放在受限文件 `/run/secrets/signalwire_token`。脚本安装固定版本的 `freeswitch-systemd`；PID 1 为 systemd 时，安装后执行 `systemctl disable --now freeswitch`。Docker 构建跳过此命令。
+
+vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_password` 为 `1234`。服务停用期间完成以下步骤：
+
+1. 替换 `/etc/freeswitch/autoload_configs/event_socket.conf.xml`，将 `listen-ip` 设为 `127.0.0.1`，将 `password` 换成新的强密码。
+2. 修改 `/etc/freeswitch/vars.xml` 的 `default_password`，换成新的强密码。
+3. 替换 `/etc/freeswitch/sip_profiles/`、`directory/` 与 `dialplan/` 中的 vanilla 示例，使用服务器 A 的 SIP 接入、租户、上游网关与下述 billing 拨号计划配置。
+4. 替换 `/etc/freeswitch/autoload_configs/modules.conf.xml`，只加载已安装且需要的模块，包括 `mod_lua` 与 `mod_json_cdr`。完成下述授权脚本与话单推送配置。
+5. 完成上述配置后，执行 `systemctl enable --now freeswitch`。
+
 ## 安装授权脚本与拨号计划
 
 自定义 `lua.conf.xml` 的 `script-directory` 时，在路径末尾保留 `;;`，以保留 Lua 默认模块搜索路径。

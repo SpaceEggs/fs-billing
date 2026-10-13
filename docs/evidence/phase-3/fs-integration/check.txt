@@ -19,11 +19,11 @@ All matched files use Prettier code style!
 Scope: 6 of 7 workspace projects
 packages/rating typecheck$ tsc -p tsconfig.json
 packages/shared typecheck$ tsc -p tsconfig.json
-packages/rating typecheck: Done
 packages/shared typecheck: Done
+packages/rating typecheck: Done
+packages/db typecheck$ tsc -p tsconfig.json
 apps/api typecheck$ tsc -p tsconfig.json
 apps/web typecheck$ tsc -p tsconfig.json
-packages/db typecheck$ tsc -p tsconfig.json
 apps/api typecheck: Done
 apps/web typecheck: Done
 packages/db typecheck: Done
@@ -39,6 +39,6 @@ apps/worker typecheck: Done
 
  Test Files  13 passed (13)
       Tests  178 passed (178)
-   Start at  08:09:51
-   Duration  2.96s (import 58%, tests 34%, transform 7%, worker 1%)
+   Start at  08:27:58
+   Duration  2.75s (import 58%, tests 34%, transform 7%, worker 1%)
 

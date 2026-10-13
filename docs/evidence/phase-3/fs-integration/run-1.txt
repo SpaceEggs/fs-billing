@@ -1,0 +1,33 @@
+用例	结果
+准备	PASS
+归一化 plus	PASS
+归一化 doublezero	PASS
+拒绝 484	PASS
+拒绝 403	PASS
+拒绝 402	PASS
+ALLOTTED_TIMEOUT	PASS
+授权降级 refused	PASS
+授权降级 stalled	PASS
+话单重试与去重	PASS
+
+stalled INVITE seconds 1.5075015199981863
+== plus cdr
+{"tenant_id":"2f887d8a-4a1b-4b42-81c6-9a03f35827a5","call_uuid":"c8458457-e5f5-415b-ba85-23c19aebc917","started_at":"2026-10-13T15:22:43.363+00:00","answered_at":"2026-10-13T15:22:43.483+00:00","ended_at":"2026-10-13T15:22:45.503+00:00","caller":"fsi","callee":"447700900123","duration_seconds":2,"billed_minutes":1,"matched_prefix":"44","country":"集成测试","rate":0.01,"charge":0.01,"hangup_cause":"NORMAL_CLEARING","unverified":false,"received_at":"2026-10-13T15:22:45.540635+00:00","reconcile_attempts":0,"reconciled_at":null,"reconcile_alerted":false}
+
+== doublezero cdr
+{"tenant_id":"2f887d8a-4a1b-4b42-81c6-9a03f35827a5","call_uuid":"0851b1d3-b5cd-4770-b5c3-85cb2c137224","started_at":"2026-10-13T15:22:48.723+00:00","answered_at":"2026-10-13T15:22:48.783+00:00","ended_at":"2026-10-13T15:22:50.803+00:00","caller":"fsi","callee":"447700900123","duration_seconds":2,"billed_minutes":1,"matched_prefix":"44","country":"集成测试","rate":0.01,"charge":0.01,"hangup_cause":"NORMAL_CLEARING","unverified":false,"received_at":"2026-10-13T15:22:50.822855+00:00","reconcile_attempts":0,"reconciled_at":null,"reconcile_alerted":false}
+
+== allotted cdr
+{"tenant_id":"33026a15-1bb2-48a3-9555-85e1266c3ed0","call_uuid":"84d293da-a1aa-42a5-9155-e6265401e3c6","started_at":"2026-10-13T15:23:04.243+00:00","answered_at":"2026-10-13T15:23:04.303+00:00","ended_at":"2026-10-13T15:24:04.323+00:00","caller":"fsi","callee":"447700900123","duration_seconds":60,"billed_minutes":1,"matched_prefix":"44","country":"集成测试","rate":0.01,"charge":0.01,"hangup_cause":"ALLOTTED_TIMEOUT","unverified":false,"received_at":"2026-10-13T15:24:04.359231+00:00","reconcile_attempts":0,"reconciled_at":null,"reconcile_alerted":false}
+
+== refused cdr
+{"tenant_id":"2f887d8a-4a1b-4b42-81c6-9a03f35827a5","call_uuid":"d34b290d-5747-4840-831c-57c5b1e1b84f","started_at":"2026-10-13T15:24:07.923+00:00","answered_at":"2026-10-13T15:24:07.963+00:00","ended_at":"2026-10-13T15:24:10.003+00:00","caller":"fsi","callee":"447700900123","duration_seconds":3,"billed_minutes":1,"matched_prefix":"44","country":"集成测试","rate":0.01,"charge":0.01,"hangup_cause":"NORMAL_CLEARING","unverified":true,"received_at":"2026-10-13T15:24:16.652206+00:00","reconcile_attempts":0,"reconciled_at":null,"reconcile_alerted":false}
+
+== stalled cdr
+{"tenant_id":"2f887d8a-4a1b-4b42-81c6-9a03f35827a5","call_uuid":"b994921c-5b73-455a-86d2-a1dbd23f8ecd","started_at":"2026-10-13T15:24:20.723+00:00","answered_at":"2026-10-13T15:24:22.263+00:00","ended_at":"2026-10-13T15:24:24.283+00:00","caller":"fsi","callee":"447700900123","duration_seconds":2,"billed_minutes":1,"matched_prefix":"44","country":"集成测试","rate":0.01,"charge":0.01,"hangup_cause":"NORMAL_CLEARING","unverified":true,"received_at":"2026-10-13T15:24:24.37228+00:00","reconcile_attempts":0,"reconciled_at":null,"reconcile_alerted":false}
+
+== replay cdr
+{"tenant_id":"2f887d8a-4a1b-4b42-81c6-9a03f35827a5","call_uuid":"a3070215-6338-4e4d-95b1-989a23554208","started_at":"2026-10-13T15:24:28.423+00:00","answered_at":"2026-10-13T15:24:28.503+00:00","ended_at":"2026-10-13T15:24:30.523+00:00","caller":"fsi","callee":"447700900123","duration_seconds":2,"billed_minutes":1,"matched_prefix":"44","country":"集成测试","rate":0.01,"charge":0.01,"hangup_cause":"NORMAL_CLEARING","unverified":false,"received_at":"2026-10-13T15:24:32.781478+00:00","reconcile_attempts":0,"reconciled_at":null,"reconcile_alerted":false}
+
+== replay re-POST
+{"status":"duplicate","rawId":"08a863f8-00a2-4009-ab22-b42db9eb25c6"}

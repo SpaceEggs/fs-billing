@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: freeswitch-${{ github.workflow }}-${{ github.ref }}
+  group: freeswitch-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -64,6 +64,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6.18.0
         if: steps.token.outputs.available == 'true'
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           file: freeswitch/docker/Dockerfile
@@ -76,7 +78,7 @@ jobs:
 
   e2e:
     needs: image
-    if: always() && (needs.image.result == 'success' || needs.image.result == 'skipped')
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (needs.image.result == 'success' || needs.image.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -101,7 +103,7 @@ jobs:
             echo 'available=true' >> "$GITHUB_OUTPUT"
             echo "FS_IMAGE=$image" >> "$GITHUB_ENV"
           else
-            echo '::notice::私有镜像不存在或无拉取权限，跳过 FreeSWITCH 联调。'
+            echo "::notice::此 hash 的镜像尚未构建（$IMAGE_HASH），跳过 FreeSWITCH 联调；合并后在 main 上运行 workflow_dispatch。"
             echo 'available=false' >> "$GITHUB_OUTPUT"
           fi
       - uses: pnpm/action-setup@v6.1.0

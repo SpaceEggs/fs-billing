@@ -1,20 +1,8 @@
-#10 10.32   libjbig0 libjpeg62-turbo liblerc4 libltdl7 liblua5.3-0 libodbc2 libperl5.36
-#10 10.52 Get:22 http://deb.debian.org/debian bookworm/main amd64 liblua5.3-0 amd64 5.3.6-2 [123 kB]
-#10 14.29 Selecting previously unselected package liblua5.3-0:amd64.
-#10 14.29 Preparing to unpack .../33-liblua5.3-0_5.3.6-2_amd64.deb ...
-#10 14.29 Unpacking liblua5.3-0:amd64 (5.3.6-2) ...
-#10 14.53 Setting up liblua5.3-0:amd64 (5.3.6-2) ...
-#10 16.56   libisl23 libitm1 libjansson4 liblsan0 liblua5.3-dev libmpc3 libmpfr6
-#10 17.13 Get:51 http://deb.debian.org/debian bookworm/main amd64 liblua5.3-dev amd64 5.3.6-2 [152 kB]
-#10 22.56 Selecting previously unselected package liblua5.3-dev:amd64.
-#10 22.56 Preparing to unpack .../50-liblua5.3-dev_5.3.6-2_amd64.deb ...
-#10 22.56 Unpacking liblua5.3-dev:amd64 (5.3.6-2) ...
-#10 23.02 Setting up liblua5.3-dev:amd64 (5.3.6-2) ...
-#10 28.56   build-essential* libcurl4-openssl-dev* liblua5.3-dev* luarocks*
-#10 28.85 Removing liblua5.3-dev:amd64 (5.3.6-2) ...
-#10 28.99 	liblua5.3.so.0 => /lib/x86_64-linux-gnu/liblua5.3.so.0 (0x00007f3fb6c4c000)
-#10 DONE 29.0s
-#11 [stage-0 4/4] COPY freeswitch/docker/entrypoint.sh /usr/local/bin/fs-integration-entrypoint
-#11 DONE 1.8s
+#10 217.4   build-essential* libcurl4-openssl-dev* liblua5.3-dev* luarocks*
+#10 217.7 Removing liblua5.3-dev:amd64 (5.3.6-2) ...
+#10 222.1 	liblua5.3.so.0 => /lib/x86_64-linux-gnu/liblua5.3.so.0 (0x00007f62daff9000)
+#10 DONE 222.1s
+#11 [stage-0 4/4] COPY freeswitch/docker/entrypoint.sh /usr/local/bin/fs-in#11 [stage-0 4/4] COP#11 DONE 2.2s
 #12 naming to docker.io/library/fs-billing-freeswitch:local done
-#12 DONE 1.6s
+#12 DONE 1.8s
+#12 DONE 1.7s
