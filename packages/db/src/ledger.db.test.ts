@@ -460,6 +460,203 @@ describe('同一事务的多租户流水按 tenant_id 升序加锁', () => {
       holder.release();
     }
   });
+
+  it('去掉连字符或加上花括号后，仍先锁较小的 uuid', async () => {
+    const lowId = '00000000-0000-4000-8000-0000000000a1';
+    const highId = '00000000-0000-4000-8000-0000000000a2';
+    await owner.pool.query(
+      `INSERT INTO tenants (id, code, name, currency, overdraft_limit) VALUES
+         ($1, 'ORDLOWA1', '低位', 'CNY', 0),
+         ($2, 'ORDHIGHA2', '高位', 'CNY', 0)`,
+      [lowId, highId],
+    );
+    const admin = await adminId(owner);
+    const gift = (id: string, idempotencyKey: string, amount: string) => ({
+      tenant: { id, currency: 'CNY' as const },
+      entry: {
+        kind: 'gift' as const,
+        amount: money('CNY', amount),
+        note: '规范 UUID 排序',
+        adminId: admin,
+        idempotencyKey,
+      },
+    });
+    // 只转小写时，较大的 uuid 排在花括号或无连字符的较小 uuid 前面。
+    expect(highId < `{${lowId}}`).toBe(true);
+    expect(highId < lowId.replaceAll('-', '')).toBe(true);
+
+    const holder = await owner.pool.connect();
+    const jobs: Promise<unknown>[] = [];
+    let markPlainWaiting: () => void = () => undefined;
+    const plainWaiting = new Promise<void>((resolve) => {
+      markPlainWaiting = resolve;
+    });
+    let markCanonicalWaiting: () => void = () => undefined;
+    const canonicalWaiting = new Promise<void>((resolve) => {
+      markCanonicalWaiting = resolve;
+    });
+    try {
+      const holderPid = (
+        await holder.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')
+      ).rows[0]!.pid;
+      await holder.query('BEGIN');
+      await holder.query(
+        'SELECT tenant_id FROM tenant_balances WHERE tenant_id = $1 FOR UPDATE',
+        [highId],
+      );
+
+      let plainPid = 0;
+      const plainForms = withAdmin(app.db, async (tx) => {
+        const pid = await tx.execute<{ pid: number }>(
+          sql`select pg_backend_pid() as pid`,
+        );
+        plainPid = pid.rows[0]!.pid;
+        markPlainWaiting();
+        return appendLedgerEntries(tx, [
+          gift(highId, 'plain-high-20', '20'),
+          gift(`{${lowId}}`, 'plain-low-10', '10'),
+        ]);
+      });
+      jobs.push(plainForms);
+      await plainWaiting;
+      await waitUntilBlocked(plainPid, holderPid);
+
+      let canonicalPid = 0;
+      const canonicalForms = withAdmin(app.db, async (tx) => {
+        const pid = await tx.execute<{ pid: number }>(
+          sql`select pg_backend_pid() as pid`,
+        );
+        canonicalPid = pid.rows[0]!.pid;
+        markCanonicalWaiting();
+        return appendLedgerEntries(tx, [
+          gift(highId, 'canon-high-2', '2'),
+          gift(lowId.replaceAll('-', ''), 'canon-low-1', '1'),
+        ]);
+      });
+      jobs.push(canonicalForms);
+      await canonicalWaiting;
+      await waitUntilBlocked(canonicalPid, plainPid);
+
+      await holder.query('COMMIT');
+      const written = await plainForms;
+      await canonicalForms;
+      expect(written.map((row) => row.tenantId)).toEqual([lowId, highId]);
+
+      const { rows } = await owner.pool.query(
+        `SELECT tenant_id, balance::text
+         FROM tenant_balances
+         WHERE tenant_id = ANY($1::uuid[])
+         ORDER BY tenant_id`,
+        [[lowId, highId]],
+      );
+      expect(rows).toEqual([
+        { tenant_id: lowId, balance: '11' },
+        { tenant_id: highId, balance: '22' },
+      ]);
+    } finally {
+      await holder.query('ROLLBACK').catch(() => undefined);
+      await Promise.allSettled(jobs);
+      holder.release();
+    }
+  });
+
+  it('同一事务再写更小的 tenant_id 时拒绝，这次调用的流水全部回滚', async () => {
+    const firstTenant = await createTenant(app, 'CNY');
+    const secondTenant = await createTenant(app, 'CNY');
+    const [low, high] =
+      firstTenant.id < secondTenant.id
+        ? [firstTenant, secondTenant]
+        : [secondTenant, firstTenant];
+    const admin = await adminId(owner);
+    const gift = (
+      tenant: typeof low,
+      idempotencyKey: string,
+      amount: string,
+    ) => ({
+      tenant,
+      entry: {
+        kind: 'gift' as const,
+        amount: money('CNY', amount),
+        note: '不能回头加锁',
+        adminId: admin,
+        idempotencyKey,
+      },
+    });
+
+    await expect(
+      withAdmin(app.db, async (tx) => {
+        await appendLedgerEntries(tx, [gift(high, 'back-high', '5')]);
+        await appendLedgerEntries(tx, [gift(low, 'back-low', '7')]);
+      }),
+    ).rejects.toThrow(/只能调用一次 appendLedgerEntries/);
+
+    await withAdmin(app.db, (tx) =>
+      appendLedgerEntries(tx, [
+        gift(high, 'after-high', '4'),
+        gift(low, 'after-low', '3'),
+      ]),
+    );
+    const { rows } = await owner.pool.query(
+      `SELECT tenant_id, balance::text
+       FROM tenant_balances
+       WHERE tenant_id = ANY($1::uuid[])
+       ORDER BY tenant_id`,
+      [[low.id, high.id]],
+    );
+    expect(rows).toEqual([
+      { tenant_id: low.id, balance: '3' },
+      { tenant_id: high.id, balance: '4' },
+    ]);
+  });
+
+  it('非法 tenant_id 在写入之前被拒绝', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    const gift = (id: string, idempotencyKey: string) => ({
+      tenant: { id, currency: tenant.currency },
+      entry: {
+        kind: 'gift' as const,
+        amount: money(tenant.currency, '9'),
+        note: '非法 UUID',
+        adminId: admin,
+        idempotencyKey,
+      },
+    });
+    await expect(
+      withAdmin(app.db, (tx) =>
+        appendLedgerEntries(tx, [
+          gift(tenant.id, 'valid-before-invalid'),
+          gift('not-a-uuid', 'invalid-tenant'),
+        ]),
+      ),
+    ).rejects.toThrow(/不是合法的 UUID：not-a-uuid/);
+    const { rows } = await owner.pool.query(
+      'SELECT balance::text FROM tenant_balances WHERE tenant_id = $1',
+      [tenant.id],
+    );
+    expect(rows).toEqual([{ balance: '0' }]);
+  });
+
+  it('同一事务对同一个租户写两次仍然成功', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    const gift = (idempotencyKey: string, amount: string) => ({
+      kind: 'gift' as const,
+      amount: money('CNY', amount),
+      note: '同一租户',
+      adminId: admin,
+      idempotencyKey,
+    });
+    await withAdmin(app.db, async (tx) => {
+      await appendLedgerEntry(tx, tenant, gift('same-1', '1'));
+      await appendLedgerEntry(tx, tenant, gift('same-2', '2'));
+    });
+    const { rows } = await owner.pool.query(
+      'SELECT balance::text FROM tenant_balances WHERE tenant_id = $1',
+      [tenant.id],
+    );
+    expect(rows).toEqual([{ balance: '3' }]);
+  });
 });
 
 describe('缓存余额可重算核对', () => {

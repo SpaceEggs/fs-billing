@@ -300,7 +300,9 @@ WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
 -- 每轮提交后重新查找还没处理的余额行，所以调用期间新开的户会在后面的轮次被算进去。
 -- 最后一次查找之后才提交的开户不在这次调用里。开户触发器写下的余额仍等于流水合计。
 -- 拿到行锁之后才插入的流水会等这次 COMMIT，再按 balance = balance + amount 累加。
--- 同一事务给多个租户写流水时，按 tenant_id 升序 INSERT。应用侧用 appendLedgerEntries。
+-- 同一事务给多个租户写流水时，按 tenant_id 升序 INSERT，并且只排一次序。
+-- 应用侧同一事务只调用一次 appendLedgerEntries：先把 tenant_id 解析成 UUID，
+-- 规范成小写带连字符的形式，再按这个顺序写入。
 CREATE PROCEDURE rebuild_tenant_balances(OUT fixed integer)
 LANGUAGE plpgsql AS $$
 DECLARE
