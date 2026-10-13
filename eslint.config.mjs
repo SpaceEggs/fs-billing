@@ -28,7 +28,11 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['packages/rating/**/*.ts', 'apps/worker/**/*.ts'],
+    files: [
+      'packages/rating/**/*.ts',
+      'packages/db/**/*.ts',
+      'apps/worker/**/*.ts',
+    ],
     plugins: { money },
     rules: { 'money/no-number-money': 'error' },
   },

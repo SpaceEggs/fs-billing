@@ -1,0 +1,721 @@
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'fs_billing_app') THEN
+    CREATE ROLE fs_billing_app NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT;
+  END IF;
+END $$;
+
+GRANT USAGE ON SCHEMA public TO fs_billing_app;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+
+-- 会话身份：事务内 set_config('app.scope', 'tenant' | 'admin' | 'system', true)；未设置时策略为假。
+-- tenant（客户门户）只读本租户；admin（管理后台）与 system（Worker）可见全部并可写。
+CREATE FUNCTION app_scope() RETURNS text
+LANGUAGE sql STABLE AS $$ SELECT current_setting('app.scope', true) $$;
+
+CREATE FUNCTION app_tenant_id() RETURNS uuid
+LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('app.tenant_id', true), '')::uuid $$;
+
+CREATE FUNCTION app_is_operator() RETURNS boolean
+LANGUAGE sql STABLE AS $$ SELECT coalesce(app_scope() IN ('admin', 'system'), false) $$;
+
+CREATE FUNCTION app_can_see(row_tenant uuid) RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT app_is_operator()
+    OR (app_scope() = 'tenant' AND coalesce(row_tenant = app_tenant_id(), false))
+$$;
+
+CREATE FUNCTION reject_mutation() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION '% 只能新增，禁止 %', TG_TABLE_NAME, TG_OP
+    USING ERRCODE = 'insufficient_privilege';
+END $$;
+
+-- 租户
+
+CREATE TABLE tenants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE CHECK (code ~ '^[A-Za-z0-9]+$'),
+  name text NOT NULL CHECK (btrim(name) <> ''),
+  currency text NOT NULL CHECK (currency IN ('CNY', 'USD')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  overdraft_limit numeric NOT NULL CHECK (overdraft_limit >= 0),
+  contact_name text NOT NULL DEFAULT '',
+  contact_phone text NOT NULL DEFAULT '',
+  remark text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE FUNCTION tenants_freeze_identity() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.code <> OLD.code OR NEW.currency <> OLD.currency OR NEW.id <> OLD.id THEN
+    RAISE EXCEPTION '租户编码和币种创建后不可修改' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER tenants_freeze_identity BEFORE UPDATE ON tenants
+  FOR EACH ROW EXECUTE FUNCTION tenants_freeze_identity();
+
+CREATE TABLE admins (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text NOT NULL UNIQUE,
+  name text NOT NULL CHECK (btrim(name) <> ''),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  last_login_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE portal_accounts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  email text NOT NULL UNIQUE,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  last_login_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 费率：每个租户一张表（design §6.1），版本是整表快照。
+
+CREATE TABLE rate_versions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  effective_from timestamptz NOT NULL DEFAULT now(),
+  created_by uuid REFERENCES admins,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT rate_versions_tenant_effective_from_key UNIQUE (tenant_id, effective_from),
+  UNIQUE (id, tenant_id)
+);
+
+CREATE TABLE rate_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  rate_version_id uuid NOT NULL,
+  prefix text NOT NULL CHECK (prefix ~ '^[0-9]+$' AND prefix !~ '^00'),
+  country text NOT NULL CHECK (btrim(country) <> ''),
+  rate numeric NOT NULL CHECK (rate >= 0 AND scale(rate) <= 4),
+  FOREIGN KEY (rate_version_id, tenant_id) REFERENCES rate_versions (id, tenant_id) ON DELETE CASCADE,
+  UNIQUE (rate_version_id, prefix)
+);
+
+-- 租户互斥：改费率和写流水的事务在任何写入之前调用 lock_tenants，同一租户的这些事务串行执行。
+-- 已持有 = 本事务通过 lock_tenants 拿到：事务级标记 app.tenant_locks 里有该租户，且 pg_locks 里有这把锁。
+-- 标记随事务（或回滚的保存点）一起消失，会话级的同键 advisory 锁和连接池里上一个事务都不算持有。
+-- 信任模型：app.tenant_locks 和 app.scope 一样是普通会话变量，假定后端代码可信、只经本函数写它；
+-- 能执行任意 SQL 的主体故意伪造标记不在威胁模型内。应用角色没有 pg_advisory_* 的 EXECUTE（迁移末尾），
+-- 拿不到同键锁，伪造标记也过不了 pg_locks 那一半检查，这缩小了上述假设的范围。
+--
+-- 为什么不会成环：lock_tenants 只在本事务除了以下锁之外什么都没拿时才排队等新租户的锁：
+--   1. 本事务通过 lock_tenants 拿到的租户锁，按 tenant_id 升序，只会等更大的租户；
+--   2. AccessShare、RowShare、RowExclusive 表锁，与 DML 要的表锁互不冲突；
+--   3. 自己的 virtualxid 和可串行化隔离的 SIReadLock，都不阻塞任何人。
+-- 没有 transactionid 锁说明还没分配事务号：没写过行，也没加过行锁（FOR UPDATE / FOR SHARE 等），
+-- 别的事务不会在它的行或事务号上等待。所以排队者手里没有持锁者会等的东西；
+-- 持锁者在锁内做的外键 KEY SHARE、唯一索引等待、执行器的 FOR UPDATE 只可能等其他已持锁的事务或不在排队的事务。
+-- 先加行锁或强表锁再调用 lock_tenants 报 55000，而不是排队后形成死锁。
+CREATE FUNCTION tenant_lock_key(tenant uuid) RETURNS bigint
+LANGUAGE sql IMMUTABLE AS $$ SELECT hashtextextended('tenant:' || tenant::text, 0) $$;
+
+CREATE FUNCTION tenant_locks_marked() RETURNS uuid[]
+LANGUAGE sql STABLE AS $$
+  SELECT coalesce(nullif(current_setting('app.tenant_locks', true), '')::uuid[], '{}')
+$$;
+
+CREATE FUNCTION tenant_lock_held(tenant uuid) RETURNS boolean
+LANGUAGE sql SET search_path = public, pg_temp AS $$
+  SELECT tenant = ANY (tenant_locks_marked()) AND EXISTS (
+    SELECT FROM pg_locks
+    WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+      AND mode = 'ExclusiveLock' AND objsubid = 1
+      AND ((classid::bigint << 32) | objid::bigint) = tenant_lock_key(tenant)
+  )
+$$;
+
+-- 租户身份只能锁 app.tenant_id；管理员与系统身份可锁任意租户。未设置身份或身份不完整时一律拒绝：
+-- 新连接只设置 app.tenant_id、没有 app.scope 时 app_can_see 返回 NULL，所以判断用 IS NOT TRUE。
+CREATE FUNCTION lock_tenants(tenant_ids uuid[]) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  held uuid[] := tenant_locks_marked();
+  tid uuid;
+BEGIN
+  SELECT t INTO tid FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL AND app_can_see(t) IS NOT TRUE LIMIT 1;
+  IF FOUND THEN
+    RAISE EXCEPTION '当前身份不能锁租户 %', tid USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  FOR tid IN SELECT DISTINCT t FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL ORDER BY t LOOP
+    CONTINUE WHEN tid = ANY (held);
+    -- held 按加锁顺序追加，只追加更大的租户，所以是升序的，末尾最大。
+    IF tid < held[cardinality(held)] THEN
+      RAISE EXCEPTION '租户 % 早于本事务已锁的租户 %：同一事务的租户要在一次 lock_tenants 调用里加锁',
+        tid, held[cardinality(held)]
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF EXISTS (
+      SELECT FROM pg_locks
+      WHERE pid = pg_backend_pid() AND granted
+        AND locktype <> 'virtualxid' AND mode <> 'SIReadLock'
+        AND NOT (locktype = 'relation'
+          AND mode IN ('AccessShareLock', 'RowShareLock', 'RowExclusiveLock'))
+        AND NOT (locktype = 'advisory' AND objsubid = 1
+          AND ((classid::bigint << 32) | objid::bigint) IN (SELECT tenant_lock_key(h) FROM unnest(held) AS h))
+    ) THEN
+      RAISE EXCEPTION '租户 % 的锁要在本事务的任何写入、行锁和其他锁之前拿', tid
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    PERFORM pg_advisory_xact_lock(tenant_lock_key(tid));
+    held := held || tid;
+    PERFORM set_config('app.tenant_locks', held::text, true);
+  END LOOP;
+END $$;
+
+CREATE FUNCTION assert_tenant_locked(tenant uuid) RETURNS void
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NOT tenant_lock_held(tenant) THEN
+    RAISE EXCEPTION '写租户 % 的费率或流水之前，先在本事务调用 lock_tenants', tenant
+      USING ERRCODE = 'object_not_in_prerequisite_state';
+  END IF;
+END $$;
+
+-- 新版本必须晚于所有已有版本：已排定未来版本时，插入立即生效的版本被拒绝。
+CREATE FUNCTION rate_versions_guard() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  latest timestamptz;
+  tenant uuid;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    RAISE EXCEPTION '费率版本不可修改' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  tenant := CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+  PERFORM assert_tenant_locked(tenant);
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.effective_from <= clock_timestamp() THEN
+      RAISE EXCEPTION '已生效的费率版本不可删除' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    RETURN OLD;
+  END IF;
+  SELECT max(effective_from) INTO latest FROM rate_versions WHERE tenant_id = NEW.tenant_id;
+  IF NEW.effective_from < latest THEN
+    IF latest > clock_timestamp() THEN
+      RAISE EXCEPTION '已排定 % 生效的新版本，请先修改该未来版本', latest
+        USING ERRCODE = 'check_violation';
+    END IF;
+    RAISE EXCEPTION '新版本的生效时间必须晚于当前版本（%）', latest
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER rate_versions_guard BEFORE INSERT OR UPDATE OR DELETE ON rate_versions
+  FOR EACH ROW EXECUTE FUNCTION rate_versions_guard();
+
+-- 条目只能在未来版本或本事务新建的版本上增删；已生效的版本是历史，不可改。
+CREATE FUNCTION rate_entries_guard() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  version rate_versions%ROWTYPE;
+  row_version uuid;
+  tenant uuid;
+  version_found boolean;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    RAISE EXCEPTION '费率条目不可修改，请新建版本' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  row_version := CASE TG_OP WHEN 'INSERT' THEN NEW.rate_version_id ELSE OLD.rate_version_id END;
+  tenant := CASE TG_OP WHEN 'INSERT' THEN NEW.tenant_id ELSE OLD.tenant_id END;
+  PERFORM assert_tenant_locked(tenant);
+  SELECT * INTO version FROM rate_versions WHERE id = row_version AND tenant_id = tenant;
+  version_found := FOUND;
+  -- 插入时由外键报错；删除时版本已不存在，说明是取消未来版本的级联删除。
+  IF NOT version_found THEN
+    RETURN CASE TG_OP WHEN 'INSERT' THEN NEW ELSE OLD END;
+  END IF;
+  IF version.effective_from <= clock_timestamp()
+     AND (SELECT xmin FROM rate_versions WHERE id = row_version) <> pg_current_xact_id()::xid THEN
+    RAISE EXCEPTION '已生效的费率版本不可修改，请新建版本' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN CASE TG_OP WHEN 'INSERT' THEN NEW ELSE OLD END;
+END $$;
+
+CREATE TRIGGER rate_entries_guard BEFORE INSERT OR UPDATE OR DELETE ON rate_entries
+  FOR EACH ROW EXECUTE FUNCTION rate_entries_guard();
+
+-- 余额流水：只增；余额 = 合计。账单按 occurred_at（北京时间日/月）归属：
+-- 通话扣费为接通时间，人工操作即写入时间。
+
+CREATE TABLE ledger_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  kind text NOT NULL
+    CHECK (kind IN ('recharge', 'credit_recharge', 'gift', 'adjustment', 'call_charge')),
+  amount numeric NOT NULL,
+  note text NOT NULL DEFAULT '',
+  created_by uuid REFERENCES admins,
+  idempotency_key text NOT NULL CHECK (idempotency_key <> ''),
+  occurred_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ledger_entries_tenant_idempotency_key UNIQUE (tenant_id, idempotency_key),
+  UNIQUE (id, tenant_id, kind),
+  CONSTRAINT ledger_entries_kind_shape CHECK (CASE kind
+    WHEN 'call_charge' THEN amount < 0 AND created_by IS NULL
+    WHEN 'adjustment' THEN amount <> 0 AND created_by IS NOT NULL AND btrim(note) <> ''
+      AND occurred_at = created_at
+    ELSE amount > 0 AND created_by IS NOT NULL AND occurred_at = created_at
+  END)
+);
+
+CREATE INDEX ledger_entries_tenant_occurred_at ON ledger_entries (tenant_id, occurred_at);
+
+CREATE TRIGGER ledger_entries_append_only BEFORE UPDATE OR DELETE ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER ledger_entries_no_truncate BEFORE TRUNCATE ON ledger_entries
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+
+-- 应用角色不能指定写入时间。Drizzle 的 INSERT 会列出 created_at 并写 DEFAULT，
+-- 列权限会把这次合法插入一起拒绝，所以在这里拒绝非 now() 的值。owner 写种子的历史时间。
+CREATE FUNCTION ledger_entries_stamp_created_at() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF current_user = 'fs_billing_app' AND NEW.created_at IS DISTINCT FROM now() THEN
+    RAISE EXCEPTION 'created_at 由数据库生成' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER ledger_entries_stamp_created_at BEFORE INSERT ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_entries_stamp_created_at();
+
+CREATE FUNCTION ledger_entries_require_tenant_lock() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  PERFORM assert_tenant_locked(NEW.tenant_id);
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER ledger_entries_require_tenant_lock BEFORE INSERT ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_entries_require_tenant_lock();
+
+-- 待收款 → 已收款：结算是一条独立事件，原流水不变。
+CREATE TABLE receivable_settlements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  ledger_entry_id uuid NOT NULL UNIQUE,
+  entry_kind text NOT NULL DEFAULT 'credit_recharge' CHECK (entry_kind = 'credit_recharge'),
+  received_on date NOT NULL,
+  note text NOT NULL DEFAULT '',
+  confirmed_by uuid NOT NULL REFERENCES admins,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (ledger_entry_id, tenant_id, entry_kind)
+    REFERENCES ledger_entries (id, tenant_id, kind)
+);
+
+CREATE TRIGGER receivable_settlements_append_only BEFORE UPDATE OR DELETE ON receivable_settlements
+  FOR EACH ROW EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER receivable_settlements_no_truncate BEFORE TRUNCATE ON receivable_settlements
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+
+CREATE VIEW receivables WITH (security_invoker = true) AS
+SELECT
+  e.id AS ledger_entry_id,
+  e.tenant_id,
+  e.amount,
+  e.note,
+  e.created_by,
+  e.created_at,
+  CASE WHEN s.id IS NULL THEN 'pending' ELSE 'received' END AS status,
+  s.received_on,
+  s.confirmed_by
+FROM ledger_entries e
+LEFT JOIN receivable_settlements s ON s.ledger_entry_id = e.id
+WHERE e.kind = 'credit_recharge';
+
+-- 缓存余额：只由触发器维护，可由 balance_discrepancies 核对、rebuild_tenant_balances 重算。
+CREATE TABLE tenant_balances (
+  tenant_id uuid PRIMARY KEY REFERENCES tenants,
+  balance numeric NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE FUNCTION tenants_open_balance() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO tenant_balances (tenant_id) VALUES (NEW.id);
+  RETURN NULL;
+END $$;
+
+CREATE TRIGGER tenants_open_balance AFTER INSERT ON tenants
+  FOR EACH ROW EXECUTE FUNCTION tenants_open_balance();
+
+CREATE FUNCTION ledger_entries_apply_balance() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  UPDATE tenant_balances
+  SET balance = balance + NEW.amount, updated_at = now()
+  WHERE tenant_id = NEW.tenant_id;
+  RETURN NULL;
+END $$;
+
+CREATE TRIGGER ledger_entries_apply_balance AFTER INSERT ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_entries_apply_balance();
+
+CREATE VIEW balance_discrepancies WITH (security_invoker = true) AS
+SELECT t.id AS tenant_id, t.code, b.balance AS cached_balance, coalesce(l.total, 0) AS ledger_total
+FROM tenants t
+LEFT JOIN tenant_balances b ON b.tenant_id = t.id
+LEFT JOIN (
+  SELECT tenant_id, sum(amount) AS total FROM ledger_entries GROUP BY tenant_id
+) l ON l.tenant_id = t.id
+WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
+
+-- 一次只锁一个租户的余额行，写回后 COMMIT，再处理下一个。任何时刻只拿着一个租户的锁。
+-- 调用：自动提交的连接上执行 CALL rebuild_tenant_balances(NULL)。
+-- 不要包在已经 BEGIN 的事务里。显式事务中调用时，处理第一个租户的 COMMIT 报 SQLSTATE 2D000
+-- （invalid transaction termination），外层事务不会被提交。一个租户都没有时不执行 COMMIT，返回 fixed = 0。
+-- fixed 是余额发生变化的租户数。
+-- 未提交的扣费占着该租户的余额行锁。这一轮 FOR UPDATE 等到它提交，下一句求和能看见这笔流水。
+-- 每轮提交后重新查找还没处理的余额行，所以调用期间新开的户会在后面的轮次被算进去。
+-- 最后一次查找之后才提交的开户不在这次调用里。开户触发器写下的余额仍等于流水合计。
+-- 拿到行锁之后才插入的流水会等这次 COMMIT，再按 balance = balance + amount 累加。
+-- 写流水的事务先用 lock_tenants 拿租户互斥锁。重算不拿这把锁，只锁余额行，不会和写流水成环。
+CREATE PROCEDURE rebuild_tenant_balances(OUT fixed integer)
+LANGUAGE plpgsql AS $$
+DECLARE
+  done uuid[] := '{}';
+  tid uuid;
+  total numeric;
+  changed integer;
+BEGIN
+  fixed := 0;
+  LOOP
+    SELECT b.tenant_id INTO tid
+    FROM tenant_balances b
+    WHERE b.tenant_id <> ALL (done)
+    ORDER BY b.tenant_id
+    LIMIT 1
+    FOR UPDATE;
+
+    EXIT WHEN NOT FOUND;
+
+    SELECT coalesce(sum(e.amount), 0) INTO total
+    FROM ledger_entries e
+    WHERE e.tenant_id = tid;
+
+    UPDATE tenant_balances
+    SET balance = total, updated_at = now()
+    WHERE tenant_id = tid AND balance IS DISTINCT FROM total;
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    fixed := fixed + changed;
+    done := done || tid;
+    COMMIT;
+  END LOOP;
+END $$;
+
+-- 话单：按北京时间自然月分区。通话 UUID 由非分区登记表保证全局唯一，
+-- 正式话单与未归属话单共用：tenant_id 为空表示未归属，只能被认领一次。
+
+CREATE TABLE call_uuids (
+  call_uuid uuid PRIMARY KEY,
+  tenant_id uuid REFERENCES tenants,
+  started_at timestamptz NOT NULL
+);
+
+CREATE TABLE cdrs (
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  call_uuid uuid NOT NULL,
+  started_at timestamptz NOT NULL,
+  answered_at timestamptz,
+  ended_at timestamptz NOT NULL,
+  caller text NOT NULL,
+  callee text NOT NULL,
+  duration_seconds integer NOT NULL DEFAULT 0 CHECK (duration_seconds >= 0),
+  billed_minutes numeric NOT NULL DEFAULT 0 CHECK (billed_minutes >= 0),
+  matched_prefix text,
+  country text,
+  rate numeric CHECK (rate >= 0 AND scale(rate) <= 4),
+  charge numeric NOT NULL DEFAULT 0 CHECK (charge >= 0),
+  hangup_cause text NOT NULL DEFAULT '',
+  unverified boolean NOT NULL DEFAULT false,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (call_uuid, started_at),
+  CHECK (ended_at >= started_at),
+  CONSTRAINT cdrs_answered_shape CHECK (
+    CASE WHEN answered_at IS NULL
+      THEN duration_seconds = 0 AND billed_minutes = 0 AND charge = 0
+      ELSE answered_at >= started_at AND answered_at <= ended_at
+        AND matched_prefix IS NOT NULL AND country IS NOT NULL AND rate IS NOT NULL
+    END
+  )
+) PARTITION BY RANGE (started_at);
+
+CREATE INDEX cdrs_tenant_answered_at ON cdrs (tenant_id, answered_at);
+
+-- 认领未归属的登记，或新登记；登记已属于某个租户时与普通唯一冲突相同地报错。
+CREATE FUNCTION cdrs_register_call_uuid() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO call_uuids AS registered (call_uuid, tenant_id, started_at)
+  VALUES (NEW.call_uuid, NEW.tenant_id, NEW.started_at)
+  ON CONFLICT (call_uuid) DO UPDATE SET tenant_id = EXCLUDED.tenant_id
+    WHERE registered.tenant_id IS NULL;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'duplicate key value violates unique constraint "call_uuids_pkey"'
+      USING ERRCODE = 'unique_violation', CONSTRAINT = 'call_uuids_pkey', TABLE = 'call_uuids',
+        DETAIL = format('Key (call_uuid)=(%s) already exists.', NEW.call_uuid);
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER cdrs_register_call_uuid BEFORE INSERT ON cdrs
+  FOR EACH ROW EXECUTE FUNCTION cdrs_register_call_uuid();
+
+-- 原始话单：body 是收到的原文，payload 由它派生。下列转换错误得到 NULL，原文仍写入。
+-- 22P02 非法 JSON，22P05 jsonb 不接受的转义（\u0000），22003 数值超出 numeric。
+CREATE FUNCTION jsonb_or_null(body text) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN body::jsonb;
+EXCEPTION
+  WHEN SQLSTATE '22P02' OR SQLSTATE '22P05' OR SQLSTATE '22003' THEN
+    RETURN NULL;
+END $$;
+
+CREATE TABLE raw_cdrs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid REFERENCES tenants,
+  call_uuid uuid,
+  body text NOT NULL,
+  payload jsonb GENERATED ALWAYS AS (jsonb_or_null(body)) STORED,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (id, received_at)
+) PARTITION BY RANGE (received_at);
+
+-- 先无锁检查，缺分区时才加锁并再查一次，并发调用不会互相串行。
+-- 建分区要父表的 AccessExclusive 锁，会等所有读过该表的事务。持租户锁的事务若在这里等，
+-- 而读过话单的事务正排队等它的租户锁，就成环（40P01）。所以建分区是单独事务里的维护操作，
+-- 持有租户锁时一律拒绝（分区已存在也拒绝，错误在开发时就暴露）；写入路径缺分区直接报错，不建分区。
+CREATE FUNCTION ensure_month_partition(parent text, moment timestamptz) RETURNS text
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  month_start timestamp := date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai');
+  partition_name text := parent || '_' || to_char(month_start, 'YYYY_MM');
+BEGIN
+  IF NOT app_is_operator() THEN
+    RAISE EXCEPTION '建分区只允许管理员或系统身份' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF cardinality(tenant_locks_marked()) > 0 THEN
+    RAISE EXCEPTION '建分区要在单独的事务里进行，不能在持有租户锁的事务里'
+      USING ERRCODE = 'object_not_in_prerequisite_state';
+  END IF;
+  IF parent NOT IN ('cdrs', 'raw_cdrs') THEN
+    RAISE EXCEPTION '% 不是按月分区的表', parent USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+  IF to_regclass(partition_name) IS NOT NULL THEN
+    RETURN partition_name;
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('partition:' || partition_name, 0));
+  IF to_regclass(partition_name) IS NULL THEN
+    EXECUTE format(
+      'CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)',
+      partition_name,
+      parent,
+      month_start AT TIME ZONE 'Asia/Shanghai',
+      (month_start + interval '1 month') AT TIME ZONE 'Asia/Shanghai'
+    );
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', partition_name);
+  END IF;
+  RETURN partition_name;
+END $$;
+
+-- 维护操作：建 cdrs 与 raw_cdrs 从 moment 所在月起、往后 months_ahead 个月的分区；幂等，每日调度。
+CREATE FUNCTION cdr_ensure_partitions(moment timestamptz DEFAULT now(), months_ahead integer DEFAULT 1)
+RETURNS SETOF text
+LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT ensure_month_partition(parent,
+    (date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai') + n * interval '1 month')
+      AT TIME ZONE 'Asia/Shanghai')
+  FROM unnest(ARRAY['cdrs', 'raw_cdrs']) AS parent, generate_series(0, months_ahead) AS n
+  ORDER BY parent, n
+$$;
+
+-- 租户标签缺失、找不到租户、无费率或号码格式错误的话单，等待人工处理。
+CREATE TABLE unassigned_cdrs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_tag text NOT NULL DEFAULT '',
+  call_uuid uuid NOT NULL UNIQUE,
+  reason text NOT NULL CHECK (btrim(reason) <> ''),
+  started_at timestamptz NOT NULL,
+  answered_at timestamptz,
+  ended_at timestamptz NOT NULL,
+  caller text NOT NULL,
+  callee text NOT NULL,
+  duration_seconds integer NOT NULL DEFAULT 0 CHECK (duration_seconds >= 0),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ignored', 'assigned')),
+  ignore_reason text,
+  assigned_tenant_id uuid REFERENCES tenants,
+  resolved_by uuid REFERENCES admins,
+  resolved_at timestamptz,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT unassigned_cdrs_status_shape CHECK (CASE status
+    WHEN 'pending' THEN ignore_reason IS NULL AND assigned_tenant_id IS NULL
+      AND resolved_by IS NULL AND resolved_at IS NULL
+    WHEN 'ignored' THEN btrim(coalesce(ignore_reason, '')) <> '' AND assigned_tenant_id IS NULL
+      AND resolved_by IS NOT NULL AND resolved_at IS NOT NULL
+    ELSE assigned_tenant_id IS NOT NULL AND ignore_reason IS NULL
+      AND resolved_by IS NOT NULL AND resolved_at IS NOT NULL
+  END)
+);
+
+CREATE FUNCTION unassigned_cdrs_register_call_uuid() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO call_uuids (call_uuid, tenant_id, started_at)
+  VALUES (NEW.call_uuid, NULL, NEW.started_at);
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER unassigned_cdrs_register_call_uuid BEFORE INSERT ON unassigned_cdrs
+  FOR EACH ROW EXECUTE FUNCTION unassigned_cdrs_register_call_uuid();
+
+-- 账单、日志、告警、余额提醒
+
+CREATE TABLE monthly_statements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  month date NOT NULL CHECK (extract(day FROM month) = 1),
+  opening_balance numeric NOT NULL,
+  recharge numeric NOT NULL CHECK (recharge >= 0),
+  gift numeric NOT NULL CHECK (gift >= 0),
+  adjustment numeric NOT NULL,
+  call_charges numeric NOT NULL CHECK (call_charges >= 0),
+  closing_balance numeric NOT NULL,
+  call_minutes numeric NOT NULL CHECK (call_minutes >= 0),
+  details_deleted boolean NOT NULL DEFAULT false,
+  generated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, month),
+  CONSTRAINT monthly_statements_balanced CHECK (
+    closing_balance = opening_balance + recharge + gift + adjustment - call_charges
+  )
+);
+
+CREATE TABLE operation_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL REFERENCES admins,
+  tenant_id uuid REFERENCES tenants,
+  action text NOT NULL CHECK (btrim(action) <> ''),
+  target text NOT NULL DEFAULT '',
+  details jsonb NOT NULL DEFAULT '{}',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER operation_logs_append_only BEFORE UPDATE OR DELETE ON operation_logs
+  FOR EACH ROW EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER operation_logs_no_truncate BEFORE TRUNCATE ON operation_logs
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+
+CREATE TABLE system_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid REFERENCES tenants,
+  kind text NOT NULL
+    CHECK (kind IN ('auth_timeout', 'cdr_failed', 'email_failed', 'partition_failed')),
+  description text NOT NULL,
+  started_at timestamptz NOT NULL DEFAULT now(),
+  recovered_at timestamptz CHECK (recovered_at >= started_at),
+  affected_calls integer NOT NULL DEFAULT 0 CHECK (affected_calls >= 0)
+);
+
+CREATE TABLE balance_alert_settings (
+  tenant_id uuid PRIMARY KEY REFERENCES tenants,
+  threshold numeric NOT NULL,
+  emails text[] NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE balance_alert_deliveries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES tenants,
+  kind text NOT NULL CHECK (kind IN ('low_balance', 'suspended')),
+  balance numeric NOT NULL,
+  recipients text[] NOT NULL,
+  sent_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER balance_alert_deliveries_append_only BEFORE UPDATE OR DELETE ON balance_alert_deliveries
+  FOR EACH ROW EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER balance_alert_deliveries_no_truncate BEFORE TRUNCATE ON balance_alert_deliveries
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+
+-- 行级安全
+
+-- 行级安全：按命令分开的策略（同一命令的多条 permissive 策略是 OR 合并，所以没有 ALL 策略）。
+-- 租户身份只能 SELECT 本租户；写入只允许管理员与系统身份。UPDATE 的 USING 用可见性、
+-- WITH CHECK 用写权限，租户改自己的行会报错而不是静默影响 0 行；DELETE 没有 WITH CHECK，
+-- 租户的删除影响 0 行。
+
+DO $$
+DECLARE
+  target record;
+BEGIN
+  FOR target IN SELECT * FROM (VALUES
+    ('tenants', 'id'), ('portal_accounts', 'tenant_id'), ('rate_versions', 'tenant_id'),
+    ('rate_entries', 'tenant_id'), ('ledger_entries', 'tenant_id'),
+    ('receivable_settlements', 'tenant_id'), ('tenant_balances', 'tenant_id'),
+    ('cdrs', 'tenant_id'), ('monthly_statements', 'tenant_id'),
+    ('balance_alert_settings', 'tenant_id'), ('balance_alert_deliveries', 'tenant_id')
+  ) AS t (name, tenant_column) LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', target.name);
+    EXECUTE format('CREATE POLICY tenant_read ON %I FOR SELECT USING (app_can_see(%I))',
+      target.name, target.tenant_column);
+    EXECUTE format('CREATE POLICY operator_insert ON %I FOR INSERT WITH CHECK (app_is_operator())',
+      target.name);
+    EXECUTE format(
+      'CREATE POLICY operator_update ON %I FOR UPDATE USING (app_can_see(%I)) WITH CHECK (app_is_operator())',
+      target.name, target.tenant_column);
+    EXECUTE format('CREATE POLICY operator_delete ON %I FOR DELETE USING (app_is_operator())',
+      target.name);
+  END LOOP;
+  FOR target IN SELECT * FROM (VALUES
+    ('admins', 'app_scope() = ''admin'''), ('operation_logs', 'app_scope() = ''admin'''),
+    ('raw_cdrs', 'app_is_operator()'), ('unassigned_cdrs', 'app_is_operator()'),
+    ('system_alerts', 'app_is_operator()'), ('call_uuids', 'app_is_operator()')
+  ) AS t (name, allowed) LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', target.name);
+    EXECUTE format('CREATE POLICY staff_only ON %I USING (%s) WITH CHECK (%s)',
+      target.name, target.allowed, target.allowed);
+  END LOOP;
+END $$;
+
+-- 应用角色权限：流水、结算、日志、发送记录只有 SELECT/INSERT。该表没有 UPDATE。
+
+GRANT SELECT, INSERT, UPDATE ON tenants, admins, portal_accounts, unassigned_cdrs,
+  monthly_statements, system_alerts, balance_alert_settings TO fs_billing_app;
+GRANT SELECT, INSERT, DELETE ON rate_versions, rate_entries, cdrs TO fs_billing_app;
+GRANT SELECT, INSERT ON ledger_entries, receivable_settlements, raw_cdrs, operation_logs,
+  balance_alert_deliveries TO fs_billing_app;
+GRANT SELECT ON tenant_balances, receivables, balance_discrepancies TO fs_billing_app;
+
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+REVOKE EXECUTE ON ALL PROCEDURES IN SCHEMA public FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_is_operator(), app_can_see(uuid),
+  jsonb_or_null(text), cdr_ensure_partitions(timestamptz, integer), lock_tenants(uuid[]) TO fs_billing_app;
+
+-- 应用角色不能直接拿 advisory 锁：租户锁只能经 lock_tenants（SECURITY DEFINER，以 owner 执行）拿，
+-- 应用代码无法用会话级同键锁或 pg_advisory_unlock_all 干扰它。pg_catalog 函数只有超级用户能改权限，
+-- 非超级用户执行时 REVOKE 只警告不生效，所以最后核对一遍，没撤销掉就让迁移失败。
+DO $$
+DECLARE
+  fn regprocedure;
+BEGIN
+  FOR fn IN SELECT oid::regprocedure FROM pg_proc WHERE proname ~ '^pg_(try_)?advisory_' LOOP
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, fs_billing_app', fn);
+  END LOOP;
+  SELECT oid::regprocedure INTO fn FROM pg_proc
+  WHERE proname ~ '^pg_(try_)?advisory_' AND has_function_privilege('fs_billing_app', oid, 'EXECUTE')
+  LIMIT 1;
+  IF FOUND THEN
+    RAISE EXCEPTION '未能撤销 fs_billing_app 对 % 的 EXECUTE：迁移要以超级用户执行', fn;
+  END IF;
+END $$;

@@ -6,10 +6,19 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "migrate": "tsx --env-file-if-exists=../../.env src/bin/migrate.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/bin/seed.ts",
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@fs-billing/rating": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
     "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15"
   }
 }
