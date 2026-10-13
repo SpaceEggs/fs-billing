@@ -1,6 +1,7 @@
 -- 阶段 2 验收查询。以应用角色执行，预期中的报错会原样打印：
 --   psql "$APP_DATABASE_URL" -X -f docs/evidence/phase-2/acceptance.sql
 -- 所有写操作都在 ROLLBACK 的事务里，不改变库中数据。
+-- 写费率和流水的事务先调用 lock_tenants。
 \set ON_ERROR_STOP 0
 \set ON_ERROR_ROLLBACK on
 \pset footer off
@@ -75,6 +76,7 @@ SET LOCAL app.scope = 'admin';
 SELECT to_char(occurred_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM') AS month,
        sum(amount) AS call_charges, count(*) AS entries
 FROM ledger_entries WHERE tenant_id = :'abc001' AND kind = 'call_charge' GROUP BY 1 ORDER BY 1;
+SELECT lock_tenants(ARRAY[:'abc001']::uuid[]);
 \echo '-- 应用角色回填 created_at 的人工调账被拒绝'
 INSERT INTO ledger_entries (tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at)
 SELECT :'abc001', 'adjustment', -1, '倒填', id, 'adjust-backfill',
@@ -128,12 +130,14 @@ ROLLBACK;
 \echo '== 费率版本：同一费率表相同生效时间'
 BEGIN;
 SET LOCAL app.scope = 'admin';
+SELECT lock_tenants(ARRAY[:'abc001']::uuid[]);
 INSERT INTO rate_versions (tenant_id, effective_from) VALUES (:'abc001', '2026-10-01 00:00:00+08');
 ROLLBACK;
 
 \echo '== 费率版本：已排定未来版本时新建立即生效版本'
 BEGIN;
 SET LOCAL app.scope = 'admin';
+SELECT lock_tenants(ARRAY[:'abc001']::uuid[]);
 INSERT INTO rate_versions (tenant_id, effective_from) VALUES (:'abc001', now() + interval '7 days')
 RETURNING effective_from;
 INSERT INTO rate_versions (tenant_id) VALUES (:'abc001');
@@ -142,10 +146,9 @@ ROLLBACK;
 \echo '== 费率版本：开户后首个立即生效版本'
 BEGIN;
 SET LOCAL app.scope = 'admin';
-WITH t AS (
-  INSERT INTO tenants (code, name, currency, overdraft_limit)
-  VALUES ('NEW001', '验收新开户', 'CNY', 100) RETURNING id
-)
-INSERT INTO rate_versions (tenant_id) SELECT id FROM t
+INSERT INTO tenants (code, name, currency, overdraft_limit)
+VALUES ('NEW001', '验收新开户', 'CNY', 100) RETURNING id AS new001 \gset
+SELECT lock_tenants(ARRAY[:'new001']::uuid[]);
+INSERT INTO rate_versions (tenant_id) VALUES (:'new001')
 RETURNING effective_from, effective_from <= now() AS effective_now;
 ROLLBACK;

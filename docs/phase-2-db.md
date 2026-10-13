@@ -55,7 +55,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 1. **余额 = 流水合计。** `balance(t) = SUM(ledger_entries.amount WHERE tenant_id = t)`，没有任何流水时为 0。
 2. **流水只增。** 任何角色（包括 owner）对 `ledger_entries` 的 `UPDATE`、`DELETE`、`TRUNCATE` 都被触发器拒绝；应用角色另外没有这三项权限。改错用一笔反向“调账”冲正。
 3. **状态变化另记。** 赊账充值的收款状态 = 是否存在对应的 `receivable_settlements` 行；`receivables` 视图（`security_invoker`，受 RLS 约束）给出 `pending` / `received`。
-4. **缓存余额可重算核对。** `tenant_balances.balance` 由流水插入触发器在同一事务内累加（`balance = balance + amount`，行锁持有到提交）。`balance_discrepancies` 列出缓存与流水合计不同的租户，正常情况下为空。重算是过程 `rebuild_tenant_balances(OUT fixed integer)`。在自动提交的连接上调用 `CALL rebuild_tenant_balances(NULL)`，`fixed` 是这次余额有变化的租户数。不要把这次 `CALL` 放进已经 `BEGIN` 的事务。显式事务里调用时，处理第一个租户的 `COMMIT` 报 SQLSTATE 2D000（invalid transaction termination），外层事务不会被提交。一个租户都没有时过程不执行 `COMMIT`，返回 `fixed = 0`。每一轮只锁一个还没处理过的 `tenant_balances` 行（`FOR UPDATE`），把该租户的流水求和后写回缓存，然后 `COMMIT`。任何时刻只拿着一个租户的锁，所以重算不会和扣费事务死锁。未提交的扣费占着该租户的余额行锁，这一轮 `FOR UPDATE` 会等到它提交，下一句求和已经能看见这笔流水。重算提交之后才插入的流水会等这把锁，再按 `balance = balance + amount` 累加。每轮提交后重新查找还没处理的余额行，调用期间新开的户会在后面的轮次被算进去。最后一次查找之后才提交的开户不在这次调用里，开户触发器写下的余额仍等于当时的流水合计。同一个事务要给多个租户写流水时，必须按 `tenant_id` 升序拿余额行锁。应用代码在同一事务里只调用一次 `appendLedgerEntries`，把要写的租户全部放进这一次调用。函数把每个 `tenant_id` 解析成 UUID，规范成小写带连字符的形式，非法值直接拒绝，再按这个形式升序调用 `appendLedgerEntry`。这个顺序与 `uuid` 列的比较顺序一致。只把字符串转成小写时，没有连字符或包在花括号里的写法会排到另一边，两个事务会以相反的顺序锁余额行。已经锁过更大的 `tenant_id` 之后再写更小的，会在加锁前拒绝。直接写 SQL 时也按 `tenant_id` 升序 `INSERT`，一个事务只排一次序。两个多租户事务的加锁顺序相反时会互相死锁。重算每次只锁一个租户，不参与这个环。
+4. **缓存余额可重算核对。** `tenant_balances.balance` 由流水插入触发器在同一事务内累加（`balance = balance + amount`，行锁持有到提交）。`balance_discrepancies` 列出缓存与流水合计不同的租户，正常情况下为空。重算是过程 `rebuild_tenant_balances(OUT fixed integer)`。在自动提交的连接上调用 `CALL rebuild_tenant_balances(NULL)`，`fixed` 是这次余额有变化的租户数。不要把这次 `CALL` 放进已经 `BEGIN` 的事务。显式事务里调用时，处理第一个租户的 `COMMIT` 报 SQLSTATE 2D000（invalid transaction termination），外层事务不会被提交。一个租户都没有时过程不执行 `COMMIT`，返回 `fixed = 0`。每一轮只锁一个还没处理过的 `tenant_balances` 行（`FOR UPDATE`），把该租户的流水求和后写回缓存，然后 `COMMIT`。任何时刻只拿着一个租户的锁，所以重算不会和扣费事务死锁。未提交的扣费占着该租户的余额行锁，这一轮 `FOR UPDATE` 会等到它提交，下一句求和已经能看见这笔流水。重算提交之后才插入的流水会等这把锁，再按 `balance = balance + amount` 累加。每轮提交后重新查找还没处理的余额行，调用期间新开的户会在后面的轮次被算进去。最后一次查找之后才提交的开户不在这次调用里，开户触发器写下的余额仍等于当时的流水合计。写流水的事务先调用 `lock_tenants(uuid[])`，见下文“租户锁”。重算不拿租户锁，每次只锁一个租户的余额行，不参与写流水之间的等待。
 5. **按类型的符号。** `recharge`、`credit_recharge`、`gift`：金额 > 0，必须有操作管理员；`adjustment`：金额 ≠ 0，必须有操作管理员和非空原因；`call_charge`：金额 < 0，无操作管理员。由检查约束保证。
 6. **重试收敛。** 每笔流水带幂等键（通话扣费为 `call:<通话 UUID>`）；`appendLedgerEntry` 以 `ON CONFLICT DO NOTHING` 写入，重试返回原记录，键相同但内容不同则报错。
 7. **发生时间决定归属。** `occurred_at` 是流水在账务上发生的时刻，门户按天合并、月账单和核对任务一律按它的北京日期/月份统计，`created_at` 只是写入时间。通话扣费的 `occurred_at` 是接通时间（`LedgerEntryInput` 的 `call_charge` 分支必须给 `occurredAt`）。人工操作不写这两列，都取这次 `INSERT` 的 `now()`，检查约束 `ledger_entries_kind_shape` 要求它们相等。`fs_billing_app` 插入时若 `created_at` 不是 `now()`，触发器 `ledger_entries_stamp_created_at` 拒绝。该表没有 `UPDATE`。历史种子由 owner 连接写入 `created_at`。9-30 23:59 接通、10-01 00:00:30 才写入的扣费归属 9 月。
@@ -66,8 +66,17 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 1. `(tenant_id, effective_from)` 唯一。
 2. **新版本的生效时间必须晚于该租户所有已有版本。** 已排定未来版本时，“修改当前版本”（插入一个立即生效的新版本）会被拒绝，错误提示“已排定 … 生效的新版本，请先修改该未来版本”。理由：未来版本是排定时的整表快照，不包含之后对当前版本的修改；若允许插入，修改会在未来版本生效时静默丢失。选择“禁止并提示”而非“同步到未来版本”，因为未来版本可能本来就要改同一前缀，自动同步会覆盖管理员的排定意图。
-3. 已生效的版本及其条目不可修改、不可删除。是否已生效，先锁父版本行，再拿该租户费率的事务级 advisory 锁，然后用 `clock_timestamp()` 比较。`now()` 停在事务开始，不能用来做这个判断。条目的增删用 `FOR KEY SHARE`（与外键检查相同）。删除版本时执行器先 `FOR UPDATE` 锁住版本行，触发器再拿同一把 advisory 锁。两条路径都是先版本行、后 advisory。倒过来时，一个事务删掉未来条目后拿着 advisory 锁去插入，另一个事务已经锁住版本行并在触发器里等 advisory 锁，插入的外键检查再等版本行，PostgreSQL 报 `40P01`。未来版本可以整体删除（取消排定）后重新排定。
+3. 已生效的版本及其条目不可修改、不可删除。触发器在租户锁已持有时用 `clock_timestamp()` 判断是否已生效。`now()` 停在事务开始，不能用来做这个判断。未来版本可以整体删除（取消排定）后重新排定。
 4. “立即生效”的版本不传 `effective_from`，由数据库默认值 `now()`（事务开始时刻）填写，因此提交后立刻满足 `effective_from ≤ now()`。
+
+### 租户锁
+
+改费率和写流水的事务，在任何写入之前调用 `lock_tenants(uuid[])`。函数对传入的租户去重、按 `uuid` 升序，逐个拿事务级 advisory 锁 `pg_advisory_xact_lock(tenant_lock_key(id))`。费率和流水共用每个租户的这一把锁。同一租户的这些事务因此串行执行，外键检查、唯一索引等待、执行器为 `BEFORE DELETE` 触发器拿的 `FOR UPDATE` 都发生在拿到租户锁之后，不会成环。
+
+- 同一事务的全部租户放进一次调用。函数用 `app.tenant_lock_highwater` 记下本事务锁过的最大租户。之后再锁一个尚未持有、但更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。
+- `rate_versions`、`rate_entries` 的增删和 `ledger_entries` 的插入由触发器检查 `pg_locks`。本事务没有持有该租户的锁时报 55000，不写入。
+- 应用侧 `createRateVersion`、`appendLedgerEntry`、`appendLedgerEntries` 自己调用 `lockTenants`。`appendLedgerEntries` 先校验并规范全部 `tenant_id`，非法值在发出任何 SQL 之前抛出，再一次锁齐全部租户。直接写 SQL 的事务自己先调用 `lock_tenants`。
+- `withAdmin`、`withSystem` 遇到 `40P01`、`40001` 时重跑整个事务，最多 3 次。这只是兜底。租户锁下的写入路径不会产生 `40P01`。
 
 ### 话单唯一与分区
 

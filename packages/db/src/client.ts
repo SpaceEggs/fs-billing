@@ -90,3 +90,19 @@ function sqlState(error: unknown): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * 拿这些租户的事务级互斥锁。改费率、写流水的事务必须在任何写入之前调用；
+ * 数据库触发器在写入时检查锁已持有。同一事务的全部租户放进一次调用。
+ */
+export async function lockTenants(
+  tx: Tx,
+  tenantIds: readonly string[],
+): Promise<void> {
+  await tx.execute(
+    sql`select lock_tenants(array[${sql.join(
+      tenantIds.map((id) => sql`${id}`),
+      sql`, `,
+    )}]::uuid[])`,
+  );
+}

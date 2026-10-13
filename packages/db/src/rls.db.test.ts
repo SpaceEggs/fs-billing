@@ -8,7 +8,7 @@ import {
   pgError,
   tenantId,
 } from '../test/support.js';
-import { withAdmin, withSystem, withTenant } from './client.js';
+import { lockTenants, withAdmin, withSystem, withTenant } from './client.js';
 
 const { app, owner } = connections();
 
@@ -92,10 +92,11 @@ describe('RLS 租户隔离', () => {
     const abc001 = await tenantId(app, 'ABC001');
     const gzt007 = await tenantId(app, 'GZT007');
     const error = await pgError(
-      withTenant(app.db, abc001, (tx) =>
-        tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
-                       values (${gzt007}, 'call_charge', -1, 'call:cross-tenant')`),
-      ),
+      withTenant(app.db, abc001, async (tx) => {
+        await lockTenants(tx, [gzt007]);
+        await tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
+                             values (${gzt007}, 'call_charge', -1, 'call:cross-tenant')`);
+      }),
     );
     expect(error).toMatchObject({
       code: '42501',
@@ -108,10 +109,11 @@ describe('RLS 租户隔离', () => {
     const tenant = await createTenant(app, 'CNY');
     const admin = await adminId(owner);
     const error = await pgError(
-      withTenant(app.db, tenant.id, (tx) =>
-        tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, created_by, idempotency_key)
-                       values (${tenant.id}, 'recharge', 1000, ${admin}, 'recharge:self')`),
-      ),
+      withTenant(app.db, tenant.id, async (tx) => {
+        await lockTenants(tx, [tenant.id]);
+        await tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, created_by, idempotency_key)
+                             values (${tenant.id}, 'recharge', 1000, ${admin}, 'recharge:self')`);
+      }),
     );
     const { rows } = await withTenant(app.db, tenant.id, (tx) =>
       tx.execute(
@@ -165,10 +167,11 @@ describe('RLS 租户隔离', () => {
 
   it('系统身份（Worker）可以写入任一租户的扣费', async () => {
     const tenant = await createTenant(app, 'CNY');
-    await withSystem(app.db, (tx) =>
-      tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
-                     values (${tenant.id}, 'call_charge', -0.18, 'call:system-scope')`),
-    );
+    await withSystem(app.db, async (tx) => {
+      await lockTenants(tx, [tenant.id]);
+      await tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
+                           values (${tenant.id}, 'call_charge', -0.18, 'call:system-scope')`);
+    });
     const { rows } = await withTenant(app.db, tenant.id, (tx) =>
       tx.execute(sql`select balance::text from tenant_balances`),
     );

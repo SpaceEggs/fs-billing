@@ -7,7 +7,7 @@ import {
   type RateVersion,
   type Tenant,
 } from '@fs-billing/rating';
-import type { Tx } from './client.js';
+import { lockTenants, type Tx } from './client.js';
 import {
   rateEntries,
   rateVersions,
@@ -18,6 +18,7 @@ import {
 /**
  * 新建整表费率版本。不传 effectiveFrom 即“立即生效”，由数据库 now() 填写。
  * 数据库拒绝早于已有版本的生效时间（包括已排定未来版本时的立即生效）。
+ * 先拿该租户的锁；同一事务还要写其他租户时，先用 lockTenants 一次锁齐。
  */
 export async function createRateVersion<C extends Currency>(
   tx: Tx,
@@ -25,6 +26,7 @@ export async function createRateVersion<C extends Currency>(
   entries: readonly RateEntry<C>[],
   options: { readonly effectiveFrom?: Date; readonly adminId?: string } = {},
 ): Promise<{ id: string; effectiveFrom: Date }> {
+  await lockTenants(tx, [tenantId]);
   const [version] = await tx
     .insert(rateVersions)
     .values({

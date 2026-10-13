@@ -8,8 +8,13 @@ import {
   type Currency,
   type RateEntry,
 } from '@fs-billing/rating';
-import { connections, createTenant, pgError } from '../test/support.js';
-import { withAdmin, type Tx } from './client.js';
+import {
+  connections,
+  createTenant,
+  pgError,
+  waitForTenantLock,
+} from '../test/support.js';
+import { lockTenants, withAdmin, type Tx } from './client.js';
 import { createRateVersion, loadRatingTenant } from './rates.js';
 
 const { app, owner } = connections();
@@ -22,19 +27,6 @@ function entries(csv: string): readonly RateEntry<Currency>[] {
 
 const CHINA = entries('86,中国,0.0500');
 const CHINA_RAISED = entries('86,中国,0.0550');
-
-/** 等到 `pid` 被 `blockerPid` 堵住。 */
-async function waitUntilBlocked(pid: number, blockerPid: number) {
-  for (let attempt = 0; attempt < 200; attempt++) {
-    const { rows } = await owner.pool.query<{ blocked: boolean }>(
-      'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
-      [pid, blockerPid],
-    );
-    if (rows[0]!.blocked) return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  throw new Error(`连接 ${pid} 没有被连接 ${blockerPid} 堵住`);
-}
 
 const dbNow = async (tx: Tx) => {
   const { rows } = await tx.execute<{ ms: string }>(
@@ -88,9 +80,10 @@ describe('费率版本', () => {
         effectiveFrom: later(30),
       }),
     );
-    await withAdmin(app.db, (tx) =>
-      tx.execute(sql`delete from rate_versions where id = ${future.id}`),
-    );
+    await withAdmin(app.db, async (tx) => {
+      await lockTenants(tx, [tenant.id]);
+      await tx.execute(sql`delete from rate_versions where id = ${future.id}`);
+    });
     await withAdmin(app.db, (tx) =>
       createRateVersion(tx, tenant.id, CHINA_RAISED),
     );
@@ -130,8 +123,14 @@ describe('费率版本', () => {
     const messages = [];
     for (const statement of attempts) {
       messages.push(
-        (await pgError(withAdmin(app.db, (tx) => tx.execute(statement))))
-          .message,
+        (
+          await pgError(
+            withAdmin(app.db, async (tx) => {
+              await lockTenants(tx, [tenant.id]);
+              await tx.execute(statement);
+            }),
+          )
+        ).message,
       );
     }
     expect(messages).toEqual([
@@ -187,6 +186,7 @@ describe('费率版本', () => {
     try {
       await editor.query('BEGIN');
       await editor.query(`SELECT set_config('app.scope', 'admin', true)`);
+      await editor.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
       const started = await editor.query<{
         still_future: boolean;
         wait_seconds: string;
@@ -281,11 +281,11 @@ describe('费率版本', () => {
       const pidOf = async (client: PoolClient) =>
         (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
           .rows[0]!.pid;
-      const editorPid = await pidOf(editor);
       const deleterPid = await pidOf(deleter);
 
       await editor.query('BEGIN');
       await editor.query(`SELECT set_config('app.scope', 'admin', true)`);
+      await editor.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
       await editor.query(
         `DELETE FROM rate_entries WHERE rate_version_id = $1 AND prefix = '44'`,
         [version.id],
@@ -294,12 +294,15 @@ describe('费率版本', () => {
       const deleting = (async () => {
         await deleter.query('BEGIN');
         await deleter.query(`SELECT set_config('app.scope', 'admin', true)`);
+        await deleter.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [
+          tenant.id,
+        ]);
         await deleter.query('DELETE FROM rate_versions WHERE id = $1', [
           version.id,
         ]);
       })();
       jobs.push(deleting);
-      await waitUntilBlocked(deleterPid, editorPid);
+      await waitForTenantLock(owner, deleterPid, tenant.id);
 
       await editor.query(
         `INSERT INTO rate_entries (tenant_id, rate_version_id, prefix, country, rate)

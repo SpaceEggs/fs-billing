@@ -10,7 +10,7 @@ import {
   type Currency,
   type RateEntry,
 } from '@fs-billing/rating';
-import { withAdmin, type Db, type Tx } from './client.js';
+import { lockTenants, withAdmin, type Db, type Tx } from './client.js';
 import { createRateVersion } from './rates.js';
 import {
   admins,
@@ -448,15 +448,8 @@ export function seedDatabase(db: Db): Promise<void> {
           .from(rateVersions)
       ).map((r) => r.tenantId),
     );
-    // 重复执行时租户已在，流水插入才取得余额行锁。按 tenant_id 升序，和 appendLedgerEntries 一致。
-    const tenantsInLockOrder = [...TENANTS].sort((left, right) =>
-      idOf(left.code) < idOf(right.code)
-        ? -1
-        : idOf(left.code) > idOf(right.code)
-          ? 1
-          : 0,
-    );
-    for (const t of tenantsInLockOrder) {
+    await lockTenants(tx, [...tenantIds.values()]);
+    for (const t of TENANTS) {
       const tenantId = idOf(t.code);
       if (!seeded.has(tenantId)) {
         await createRateVersion(tx, tenantId, sampleRates(t.currency), {

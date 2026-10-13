@@ -8,7 +8,7 @@ import {
   pgError,
   tenantId,
 } from '../test/support.js';
-import { withAdmin, withTenant, type Tx } from './client.js';
+import { lockTenants, withAdmin, withTenant, type Tx } from './client.js';
 import {
   appendLedgerEntries,
   appendLedgerEntry,
@@ -207,12 +207,14 @@ describe('appendLedgerEntry', () => {
 describe('流水按发生时间归属月份', () => {
   it('9-30 23:59（北京时间）接通、10-01 才写入的扣费，按 occurred_at 归属 9 月', async () => {
     const tenant = await createTenant(app, 'CNY');
-    await owner.pool.query(
-      `INSERT INTO ledger_entries (tenant_id, kind, amount, note, idempotency_key, occurred_at, created_at)
-       VALUES ($1, 'call_charge', -0.05, '8613800138000 通话 1分0秒', $2,
-               '2026-09-30 23:59:00+08', '2026-10-01 00:00:30+08')`,
-      [tenant.id, callChargeKey('5d0b7c1e-2f4a-4b8e-9c61-0e3a9f1d2c30')],
-    );
+    await owner.db.transaction(async (tx) => {
+      await lockTenants(tx, [tenant.id]);
+      await tx.execute(sql`
+        insert into ledger_entries (tenant_id, kind, amount, note, idempotency_key, occurred_at, created_at)
+        values (${tenant.id}, 'call_charge', -0.05, '8613800138000 通话 1分0秒',
+                ${callChargeKey('5d0b7c1e-2f4a-4b8e-9c61-0e3a9f1d2c30')},
+                '2026-09-30 23:59:00+08', '2026-10-01 00:00:30+08')`);
+    });
     const { rows } = await withTenant(app.db, tenant.id, (tx) =>
       tx.execute(sql`
         select to_char(occurred_at at time zone 'Asia/Shanghai', 'YYYY-MM') as month,
@@ -242,12 +244,13 @@ describe('流水按发生时间归属月份', () => {
     const tenant = await createTenant(app, 'CNY');
     const admin = await adminId(owner);
     const backdated = await pgError(
-      withAdmin(app.db, (tx) =>
-        tx.execute(sql`insert into ledger_entries
+      withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [tenant.id]);
+        await tx.execute(sql`insert into ledger_entries
           (tenant_id, kind, amount, created_by, idempotency_key, occurred_at)
           values (${tenant.id}, 'recharge', 100, ${admin}, 'recharge-backdated',
-                  '2026-09-30T12:00:00+08:00')`),
-      ),
+                  '2026-09-30T12:00:00+08:00')`);
+      }),
     );
     expect(backdated).toMatchObject({
       code: '23514',
@@ -274,12 +277,13 @@ describe('流水按发生时间归属月份', () => {
       return rows[0];
     });
     const backfill = await pgError(
-      withAdmin(app.db, (tx) =>
-        tx.execute(sql`insert into ledger_entries
+      withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [tenant.id]);
+        await tx.execute(sql`insert into ledger_entries
           (tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at)
           values (${tenant.id}, 'adjustment', -5.00, '倒填', ${admin}, 'adjust:backfill',
-                  '2026-09-01 00:00:00+08', '2026-09-01 00:00:00+08')`),
-      ),
+                  '2026-09-01 00:00:00+08', '2026-09-01 00:00:00+08')`);
+      }),
     );
     expect(written).toEqual({ same: true, at_db_now: true });
     expect(backfill).toMatchObject({
@@ -583,12 +587,16 @@ describe('同一事务的多租户流水按 tenant_id 升序加锁', () => {
       },
     });
 
-    await expect(
+    const error = await pgError(
       withAdmin(app.db, async (tx) => {
         await appendLedgerEntries(tx, [gift(high, 'back-high', '5')]);
         await appendLedgerEntries(tx, [gift(low, 'back-low', '7')]);
       }),
-    ).rejects.toThrow(/只能调用一次 appendLedgerEntries/);
+    );
+    expect(error).toMatchObject({
+      code: '55000',
+      message: `租户 ${low.id} 早于本事务已锁的租户 ${high.id}：同一事务的租户要在一次 lock_tenants 调用里加锁`,
+    });
 
     await withAdmin(app.db, (tx) =>
       appendLedgerEntries(tx, [
@@ -737,6 +745,9 @@ describe('缓存余额可重算核对', () => {
     try {
       await charging.query('BEGIN');
       await charging.query(`SELECT set_config('app.scope', 'system', true)`);
+      await charging.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [
+        tenant.id,
+      ]);
       await charging.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
          VALUES ($1, 'call_charge', -5, 'call:interleaved')`,
@@ -791,16 +802,24 @@ describe('缓存余额可重算核对', () => {
          VALUES ('Q6NEW', '并发开户', 'CNY', 0)
          RETURNING id`,
       );
+      await opener.query('BEGIN');
+      await opener.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [
+        created!.id,
+      ]);
       await opener.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
          VALUES ($1, 'call_charge', -20, 'call:q6new-20')`,
         [created!.id],
       );
+      await opener.query('COMMIT');
       await opener.query(
         'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
         [created!.id],
       );
       await opener.query('BEGIN');
+      await opener.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [
+        created!.id,
+      ]);
       await opener.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
          VALUES ($1, 'call_charge', -5, 'call:q6new-5')`,
@@ -867,6 +886,7 @@ describe('缓存余额可重算核对', () => {
       const rebuildingPid = await pidOf(rebuilding);
 
       await writer.query('BEGIN');
+      await writer.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
       await writer.query('UPDATE tenants SET remark = remark WHERE id = $1', [
         tenant.id,
       ]);
@@ -937,6 +957,7 @@ describe('缓存余额可重算核对', () => {
       const writerPid = await pidOf(writer);
 
       await holder.query('BEGIN');
+      await holder.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [highId]);
       await holder.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
          VALUES ($1, 'call_charge', -4, 'call:high-open')`,
@@ -955,6 +976,10 @@ describe('缓存余额可重算核对', () => {
         [lowId],
       );
       await writer.query('BEGIN');
+      await writer.query('SELECT lock_tenants(ARRAY[$1, $2]::uuid[])', [
+        lowId,
+        midId,
+      ]);
       await writer.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
          VALUES ($1, 'call_charge', -8, 'call:low-open')`,
@@ -1028,6 +1053,10 @@ describe('缓存余额可重算核对', () => {
       const rebuildingPid = await pidOf(rebuilding);
 
       await writer.query('BEGIN');
+      await writer.query('SELECT lock_tenants(ARRAY[$1, $2]::uuid[])', [
+        highId,
+        lowId,
+      ]);
       await writer.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
          VALUES ($1, 'call_charge', -1, 'call:high-then-low')`,

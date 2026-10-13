@@ -101,6 +101,49 @@ CREATE TABLE rate_entries (
   UNIQUE (rate_version_id, prefix)
 );
 
+-- 租户互斥：改费率和写流水的事务在任何 DML 之前调用 lock_tenants，同一租户的这些事务串行执行。
+-- 外键检查、唯一索引等待、执行器的 FOR UPDATE 都在拿到这把锁之后发生，不会成环。
+-- 同一事务只能按 tenant_id 升序加锁：已经拿过更大的租户后，再拿未持有的更小租户报错。
+CREATE FUNCTION tenant_lock_key(tenant uuid) RETURNS bigint
+LANGUAGE sql IMMUTABLE AS $$ SELECT hashtextextended('tenant:' || tenant::text, 0) $$;
+
+CREATE FUNCTION tenant_lock_held(tenant uuid) RETURNS boolean
+LANGUAGE sql SET search_path = public, pg_temp AS $$
+  SELECT EXISTS (
+    SELECT FROM pg_locks
+    WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+      AND mode = 'ExclusiveLock' AND objsubid = 1
+      AND ((classid::bigint << 32) | objid::bigint) = tenant_lock_key(tenant)
+  )
+$$;
+
+CREATE FUNCTION lock_tenants(tenant_ids uuid[]) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  highwater uuid := nullif(current_setting('app.tenant_lock_highwater', true), '')::uuid;
+  tid uuid;
+BEGIN
+  FOR tid IN SELECT DISTINCT t FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL ORDER BY t LOOP
+    CONTINUE WHEN tenant_lock_held(tid);
+    IF tid < highwater THEN
+      RAISE EXCEPTION '租户 % 早于本事务已锁的租户 %：同一事务的租户要在一次 lock_tenants 调用里加锁', tid, highwater
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    PERFORM pg_advisory_xact_lock(tenant_lock_key(tid));
+    highwater := tid;
+    PERFORM set_config('app.tenant_lock_highwater', tid::text, true);
+  END LOOP;
+END $$;
+
+CREATE FUNCTION assert_tenant_locked(tenant uuid) RETURNS void
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NOT tenant_lock_held(tenant) THEN
+    RAISE EXCEPTION '写租户 % 的费率或流水之前，先在本事务调用 lock_tenants', tenant
+      USING ERRCODE = 'object_not_in_prerequisite_state';
+  END IF;
+END $$;
+
 -- 新版本必须晚于所有已有版本：已排定未来版本时，插入立即生效的版本被拒绝。
 CREATE FUNCTION rate_versions_guard() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -111,16 +154,8 @@ BEGIN
   IF TG_OP = 'UPDATE' THEN
     RAISE EXCEPTION '费率版本不可修改' USING ERRCODE = 'insufficient_privilege';
   END IF;
-  -- 先锁再读时钟。now() 停在事务开始，等锁期间可能跨过生效时间。
-  -- 删除时执行器已经 FOR UPDATE 锁住这一行。这里再锁一次，顺序就写在函数里：
-  -- 先版本行，再 advisory。rate_entries_guard 用 FOR KEY SHARE 走同一顺序。
-  -- 倒过来会 40P01：删未来条目的事务拿着 advisory 锁，删版本的事务拿着版本行锁，
-  -- 前者插入时的外键检查再等这把行锁。
   tenant := CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
-  IF TG_OP = 'DELETE' THEN
-    PERFORM 1 FROM rate_versions WHERE id = OLD.id FOR UPDATE;
-  END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || tenant::text, 0));
+  PERFORM assert_tenant_locked(tenant);
   IF TG_OP = 'DELETE' THEN
     IF OLD.effective_from <= clock_timestamp() THEN
       RAISE EXCEPTION '已生效的费率版本不可删除' USING ERRCODE = 'insufficient_privilege';
@@ -156,11 +191,9 @@ BEGIN
   END IF;
   row_version := CASE TG_OP WHEN 'INSERT' THEN NEW.rate_version_id ELSE OLD.rate_version_id END;
   tenant := CASE TG_OP WHEN 'INSERT' THEN NEW.tenant_id ELSE OLD.tenant_id END;
-  -- 先 FOR KEY SHARE 父版本行（与外键检查同一强度，并和删除版本的 FOR UPDATE 冲突），
-  -- 再拿 rate_versions_guard 的 advisory 锁。PERFORM 会改写 FOUND，所以先记下。
-  SELECT * INTO version FROM rate_versions WHERE id = row_version FOR KEY SHARE;
+  PERFORM assert_tenant_locked(tenant);
+  SELECT * INTO version FROM rate_versions WHERE id = row_version AND tenant_id = tenant;
   version_found := FOUND;
-  PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || tenant::text, 0));
   -- 插入时由外键报错；删除时版本已不存在，说明是取消未来版本的级联删除。
   IF NOT version_found THEN
     RETURN CASE TG_OP WHEN 'INSERT' THEN NEW ELSE OLD END;
@@ -219,6 +252,16 @@ END $$;
 
 CREATE TRIGGER ledger_entries_stamp_created_at BEFORE INSERT ON ledger_entries
   FOR EACH ROW EXECUTE FUNCTION ledger_entries_stamp_created_at();
+
+CREATE FUNCTION ledger_entries_require_tenant_lock() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  PERFORM assert_tenant_locked(NEW.tenant_id);
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER ledger_entries_require_tenant_lock BEFORE INSERT ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_entries_require_tenant_lock();
 
 -- 待收款 → 已收款：结算是一条独立事件，原流水不变。
 CREATE TABLE receivable_settlements (
@@ -301,9 +344,7 @@ WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
 -- 每轮提交后重新查找还没处理的余额行，所以调用期间新开的户会在后面的轮次被算进去。
 -- 最后一次查找之后才提交的开户不在这次调用里。开户触发器写下的余额仍等于流水合计。
 -- 拿到行锁之后才插入的流水会等这次 COMMIT，再按 balance = balance + amount 累加。
--- 同一事务给多个租户写流水时，按 tenant_id 升序 INSERT，并且只排一次序。
--- 应用侧同一事务只调用一次 appendLedgerEntries：先把 tenant_id 解析成 UUID，
--- 规范成小写带连字符的形式，再按这个顺序写入。
+-- 写流水的事务先用 lock_tenants 拿租户互斥锁。重算不拿这把锁，只锁余额行，不会和写流水成环。
 CREATE PROCEDURE rebuild_tenant_balances(OUT fixed integer)
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -617,4 +658,4 @@ GRANT SELECT ON tenant_balances, receivables, balance_discrepancies TO fs_billin
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 REVOKE EXECUTE ON ALL PROCEDURES IN SCHEMA public FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_is_operator(), app_can_see(uuid),
-  jsonb_or_null(text), cdr_ensure_partitions(timestamptz) TO fs_billing_app;
+  jsonb_or_null(text), cdr_ensure_partitions(timestamptz), lock_tenants(uuid[]) TO fs_billing_app;

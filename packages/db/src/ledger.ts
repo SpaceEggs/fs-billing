@@ -1,6 +1,6 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { decimal, type Currency, type Money } from '@fs-billing/rating';
-import type { Tx } from './client.js';
+import { lockTenants, type Tx } from './client.js';
 import { ledgerEntries, type LedgerKind } from './schema.js';
 
 export interface TenantRef<C extends Currency> {
@@ -41,7 +41,15 @@ export async function appendLedgerEntry<C extends Currency>(
   entry: LedgerEntryInput<NoInfer<C>>,
 ): Promise<LedgerEntry> {
   const tenantId = canonicalTenantId(tenant.id);
-  await assertAscendingTenantLock(tx, tenantId);
+  await lockTenants(tx, [tenantId]);
+  return insertLedgerEntry(tx, tenantId, entry);
+}
+
+async function insertLedgerEntry(
+  tx: Tx,
+  tenantId: string,
+  entry: LedgerEntryInput<Currency>,
+): Promise<LedgerEntry> {
   const [inserted] = await tx
     .insert(ledgerEntries)
     .values({
@@ -85,8 +93,6 @@ export type TenantLedgerWrite = {
     readonly entry: LedgerEntryInput<C>;
   };
 }[Currency];
-
-const LEDGER_LOCK_HIGHWATER = 'app.ledger_tenant_highwater';
 
 /**
  * PostgreSQL `uuid` 输入的规范形式：小写，8-4-4-4-12。
@@ -140,38 +146,10 @@ function compareCanonical(left: string, right: string): number {
 }
 
 /**
- * 余额行锁留到事务结束。本事务已经锁过更大的 tenant_id 时，再锁更小的会和
- * 另一个按升序加锁的事务死锁。在 INSERT 之前拒绝。
- * 多租户写入要一次把全部租户交给 appendLedgerEntries，让它先排好序。
- */
-async function assertAscendingTenantLock(
-  tx: Tx,
-  tenantId: string,
-): Promise<void> {
-  const { rows } = await tx.execute<{ highwater: string | null }>(
-    sql`select current_setting(${LEDGER_LOCK_HIGHWATER}, true) as highwater`,
-  );
-  const highwater = rows[0]?.highwater;
-  if (highwater && tenantId < highwater) {
-    throw new Error(
-      '同一事务给多个租户写流水只能调用一次 appendLedgerEntries。它按 tenant_id 升序加锁。这次的租户早于本事务已经锁过的租户',
-    );
-  }
-  if (tenantId !== highwater) {
-    await tx.execute(
-      sql`select set_config(${LEDGER_LOCK_HIGHWATER}, ${tenantId}, true)`,
-    );
-  }
-}
-
-/**
  * 在当前事务里按 tenant_id 升序写入多笔流水，并按这个顺序返回。
  *
- * 多租户写入必须在同一事务里只调用一次本函数，把全部租户放进这一次调用。
- * 每个 tenant_id 先规范成 PostgreSQL uuid 的小写带连字符形式，再排序。
- * 这个字典序与 uuid 类型的比较顺序一致。只做 toLowerCase 时，去掉连字符或
- * 加上花括号的写法会排到相反的位置，两个事务会按相反的顺序锁余额行。
- * 本事务里如果已经锁过更大的 tenant_id，再写更小的租户会在加锁前抛出错误。
+ * 多租户写入必须在同一事务里只调用一次本函数，把全部租户放进这一次调用：
+ * 写入之前一次拿齐这些租户的锁。非法 tenant_id 在发出任何 SQL 之前抛出错误。
  */
 export async function appendLedgerEntries(
   tx: Tx,
@@ -183,25 +161,13 @@ export async function appendLedgerEntries(
       tenantId: canonicalTenantId(write.tenant.id),
     }))
     .sort((left, right) => compareCanonical(left.tenantId, right.tenantId));
+  await lockTenants(
+    tx,
+    ordered.map(({ tenantId }) => tenantId),
+  );
   const written: LedgerEntry[] = [];
-  for (const { write } of ordered) {
-    written.push(await appendTenantLedgerEntry(tx, write));
+  for (const { write, tenantId } of ordered) {
+    written.push(await insertLedgerEntry(tx, tenantId, write.entry));
   }
   return written;
-}
-
-function isCnyWrite(
-  write: TenantLedgerWrite,
-): write is Extract<TenantLedgerWrite, { tenant: TenantRef<'CNY'> }> {
-  return write.tenant.currency === 'CNY';
-}
-
-async function appendTenantLedgerEntry(
-  tx: Tx,
-  write: TenantLedgerWrite,
-): Promise<LedgerEntry> {
-  if (isCnyWrite(write)) {
-    return appendLedgerEntry(tx, write.tenant, write.entry);
-  }
-  return appendLedgerEntry(tx, write.tenant, write.entry);
 }

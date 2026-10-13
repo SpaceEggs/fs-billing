@@ -55,6 +55,27 @@ export async function createTenant<C extends Currency>(
   return { id: row!.id, code, currency };
 }
 
+/** 等到 `pid` 在 `tenantId` 的租户锁上排队：pg_locks 里有它未授予的那把 advisory 锁。 */
+export async function waitForTenantLock(
+  { pool }: Connection,
+  pid: number,
+  tenantId: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const { rows } = await pool.query<{ waiting: boolean }>(
+      `SELECT EXISTS (
+         SELECT FROM pg_locks
+         WHERE pid = $1 AND locktype = 'advisory' AND NOT granted
+           AND ((classid::bigint << 32) | objid::bigint) = tenant_lock_key($2)
+       ) AS waiting`,
+      [pid, tenantId],
+    );
+    if (rows[0]!.waiting) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`连接 ${pid} 没有在租户 ${tenantId} 的锁上等待`);
+}
+
 /** 种子管理员王敏的编号。 */
 export async function adminId({ pool }: Connection): Promise<string> {
   const { rows } = await pool.query<{ id: string }>(
