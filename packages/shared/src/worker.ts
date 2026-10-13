@@ -52,10 +52,22 @@ export const modJsonCdrSchema = z
       billsec: seconds,
       duration: seconds,
       billing_unverified: flag.default(false),
-      caller_id_number: z.string(),
-      destination_number: z.string(),
+      caller_id_number: z.string().optional(),
+      destination_number: z.string().optional(),
       hangup_cause: z.string().default(''),
     }),
+    callflow: z
+      .array(
+        z.object({
+          caller_profile: z
+            .object({
+              caller_id_number: z.string().optional(),
+              destination_number: z.string().optional(),
+            })
+            .optional(),
+        }),
+      )
+      .optional(),
   })
   .superRefine(({ variables: v }, ctx) => {
     if (
@@ -71,7 +83,7 @@ export const modJsonCdrSchema = z
       ctx.addIssue({ code: 'custom', message: '话单时间与时长不一致' });
     }
   })
-  .transform(({ variables: v }) => ({
+  .transform(({ variables: v, callflow }) => ({
     callUuid: v.uuid,
     tenantTag: v.billing_tenant,
     startedAt: new Date(v.start_epoch * 1000),
@@ -80,8 +92,14 @@ export const modJsonCdrSchema = z
     billsec: v.billsec,
     duration: v.duration,
     unverified: v.billing_unverified,
-    caller: v.caller_id_number,
-    callee: v.destination_number,
+    caller:
+      v.caller_id_number ??
+      callflow?.[0]?.caller_profile?.caller_id_number ??
+      '',
+    callee:
+      v.destination_number ??
+      callflow?.[0]?.caller_profile?.destination_number ??
+      '',
     hangupCause: v.hangup_cause,
   }));
 export type ParsedCdr = z.infer<typeof modJsonCdrSchema>;

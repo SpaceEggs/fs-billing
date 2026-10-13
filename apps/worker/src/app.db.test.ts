@@ -198,6 +198,67 @@ describe('Worker HTTP 与真实数据库', () => {
     ).toEqual([{ balance: '-0.192' }]);
   });
 
+  it.each(['075586001234', undefined])(
+    'variables 缺少号码、callflow 主叫为 %s 时保存话单且只扣费一次',
+    async (caller) => {
+      const tenant = await fixture();
+      const uuid = randomUUID();
+      const payload = JSON.stringify({
+        ...template,
+        variables: {
+          ...template.variables,
+          uuid,
+          billing_tenant: tenant.code,
+          caller_id_number: undefined,
+          destination_number: undefined,
+        },
+        callflow: [
+          {
+            caller_profile: {
+              caller_id_number: caller,
+              destination_number: '447700900123',
+            },
+          },
+        ],
+      });
+      expect((await post(payload)).json()).toMatchObject({ status: 'queued' });
+      expect((await post(payload)).json()).toMatchObject({
+        status: 'duplicate',
+      });
+      const jobs = await boss.fetch<unknown>(CHARGE_QUEUE, { batchSize: 100 });
+      expect(jobs).toHaveLength(1);
+      for (const job of jobs) {
+        await chargeCdr(connection.db, job.data);
+        await chargeCdr(connection.db, job.data);
+        await boss.complete(CHARGE_QUEUE, job.id);
+      }
+      expect(await state(uuid)).toEqual({
+        cdrs: 1,
+        unassigned: 0,
+        charges: 1,
+        jobs: 1,
+      });
+      expect(
+        (
+          await owner.pool.query(
+            'select caller, callee, charge::text from cdrs where call_uuid = $1',
+            [uuid],
+          )
+        ).rows,
+      ).toEqual([
+        { caller: caller ?? '', callee: '447700900123', charge: '0.192' },
+      ]);
+      expect(
+        (
+          await owner.pool.query(
+            'select balance::text from tenant_balances where tenant_id = $1',
+            [tenant.id],
+          )
+        ).rows,
+      ).toEqual([{ balance: '-0.192' }]);
+    },
+  );
+
   it.each(['ABC01', '', 'UNKNOWN99'])(
     '租户标签 %s 进入 pending，并告警且不扣费',
     async (tag) => {

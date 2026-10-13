@@ -75,6 +75,8 @@ pnpm --filter @fs-billing/worker start
 | `caller_id_number` / `destination_number` | 主叫/被叫字符串；被叫格式单独校验，错误也保存为未归属话单                                                                 |
 | `hangup_cause`                            | 挂断原因，缺失为空字符串                                                                                                  |
 
+`caller_id_number` 与 `destination_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。缺主叫不拒绝话单；缺被叫按号码格式错误保存为未归属话单。
+
 其他 mod_json_cdr 字段不参与业务解析，原文全部保留。输入形状和输出类型由 `packages/shared/src/worker.ts` 的 Zod schema 派生。
 
 处理顺序：
