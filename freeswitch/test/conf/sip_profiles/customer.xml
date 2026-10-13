@@ -1,0 +1,33 @@
+<include>
+  <profile name="customer">
+    <gateways>
+      <gateway name="upstream">
+        <param name="proxy" value="127.0.0.1:5090" />
+        <param name="register" value="false" />
+      </gateway>
+    </gateways>
+    <domains>
+      <domain name="$${domain}" alias="true" parse="false" />
+    </domains>
+    <settings>
+      <param name="sip-ip" value="127.0.0.1" />
+      <param name="rtp-ip" value="127.0.0.1" />
+      <param name="ext-sip-ip" value="127.0.0.1" />
+      <param name="ext-rtp-ip" value="127.0.0.1" />
+      <param name="sip-port" value="5060" />
+      <param name="dialplan" value="XML" />
+      <param name="context" value="billing" />
+      <param name="auth-calls" value="true" />
+      <param name="apply-inbound-acl" value="billing-tenants" />
+      <param name="accept-blind-auth" value="false" />
+      <param name="disable-register" value="true" />
+      <param name="inbound-codec-prefs" value="PCMU,PCMA" />
+      <param name="outbound-codec-prefs" value="PCMU,PCMA" />
+      <param name="inbound-late-negotiation" value="true" />
+      <!-- 无 RTP 的夹具由计费定时器结束，不触发媒体超时。 -->
+      <param name="rtp-timeout-sec" value="0" />
+      <param name="rtp-hold-timeout-sec" value="0" />
+      <param name="manage-presence" value="false" />
+    </settings>
+  </profile>
+</include>

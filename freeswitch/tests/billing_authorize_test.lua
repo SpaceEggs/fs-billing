@@ -25,7 +25,7 @@ local function run(destination, response)
     }
     package.loaded['cjson.safe'] = {
         encode = function() return '{}' end,
-        decode = function() return nil end,
+        decode = function() return type(response) == 'table' and response or nil end,
     }
     package.loaded['cURL.safe'] = {
         easy = function(options)
@@ -76,6 +76,30 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         check(requests == 1 and hangup == nil, response .. ' must attempt authorization without hanging up')
     end
 end
+
+for _, seconds in ipairs({ 60, 60.0 }) do
+    local variables, actions = run('44712345678', { allowed = true, maxSeconds = seconds })
+    check(variables.execute_on_answer == 'sched_hangup +60 ALLOTTED_TIMEOUT',
+        tostring(seconds) .. ' must produce an integer timer')
+    check(variables.billing_unverified == 'false', 'valid allowance must be verified')
+    check(actions.bridge == 'sofia/gateway/upstream/44712345678', 'valid allowance must bridge')
+end
+
+local fractional = run('44712345678', { allowed = true, maxSeconds = 60.5 })
+check(fractional.billing_unverified == 'true', 'fractional allowance must use invalid-response fallback')
+check(fractional.execute_on_answer == 'sched_hangup +1800 ALLOTTED_TIMEOUT',
+    'fractional allowance must use the fallback timer')
+
+local denied, deny_actions, _, deny_hangup = run('44712345678',
+    { allowed = false, sipCode = 402.0, reason = 'insufficient_balance' })
+check(deny_actions.respond == '402', 'float SIP code must produce respond 402')
+check(denied.billing_authorized == 'false' and deny_actions.bridge == nil,
+    'business rejection must not bridge')
+check(deny_hangup == 'CALL_REJECTED', 'business rejection must hang up')
+
+local invalid_code = run('44712345678',
+    { allowed = false, sipCode = 402.5, reason = 'insufficient_balance' })
+check(invalid_code.billing_unverified == 'true', 'fractional SIP code must use invalid-response fallback')
 
 assert(#failures == 0, table.concat(failures, '\n'))
 print('billing_authorize fallback tests passed')

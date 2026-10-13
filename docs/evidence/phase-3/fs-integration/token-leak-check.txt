@@ -1,0 +1,6 @@
+SignalWire token leak check (fs-billing-freeswitch:local, 2026-10-13 PT; token value never printed)
+docker history --no-trunc: not found
+docker inspect: not found
+docker save, byte search of every layer tar and every file inside: not found
+/etc/apt/auth.conf.d/* file in any layer: not found
+build log + integration logs: not found

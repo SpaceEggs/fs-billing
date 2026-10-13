@@ -1,0 +1,6 @@
+PASS lua_version
+PASS cURL.safe
+PASS cjson.safe
+PASS json_integer_conversion
+PASS FS_CHECK
+

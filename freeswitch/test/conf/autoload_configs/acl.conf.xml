@@ -1,0 +1,7 @@
+<configuration name="acl.conf" description="测试租户来源 IP">
+  <network-lists>
+    <list name="billing-tenants" default="deny">
+      <node type="allow" domain="$${domain}" />
+    </list>
+  </network-lists>
+</configuration>
