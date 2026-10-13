@@ -34,6 +34,12 @@ describe('Worker 启动配置边界', () => {
   );
 
   it.each([
+    { WORKER_DB_POOL_MAX: '0' },
+    { WORKER_QUEUE_POOL_MAX: '1.5' },
+    { WORKER_DB_CONNECTION_TIMEOUT_MS: '0' },
+    { WORKER_DB_CONNECTION_TIMEOUT_MS: 'Infinity' },
+    { WORKER_RECONCILE_MIN_AGE_MINUTES: '-1' },
+    { WORKER_RECONCILE_ALERT_ATTEMPTS: '0' },
     { WORKER_PORT: '0' },
     { WORKER_PORT: '65536' },
     { WORKER_PORT: '1.5' },

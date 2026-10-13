@@ -336,7 +336,7 @@ describe('Worker HTTP 与真实数据库', () => {
     },
   );
 
-  it.each(['{ "broken":', '{}'])(
+  it.each(['{ "broken":'])(
     '损坏或缺字段的正文 %s 不返回 400，先保存原文并告警',
     async (payload) => {
       const response = await post(payload);

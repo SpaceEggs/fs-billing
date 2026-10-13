@@ -10,7 +10,7 @@ pnpm --filter @fs-billing/worker queue:migrate
 pnpm --filter @fs-billing/worker start
 ```
 
-`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`maintain-cdr-partitions` 与内部调度队列并授权。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
+`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions` 与内部调度队列并授权。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
 
 | 环境变量             | 要求                                               |
 | -------------------- | -------------------------------------------------- |
@@ -82,7 +82,7 @@ pnpm --filter @fs-billing/worker start
 处理顺序：
 
 1. 将收到的 UTF-8 文本原样写入 `raw_cdrs.body`，在独立系统事务里提交。每次推送一行，包括重复和损坏正文。保留空白、字段顺序与重复键；`payload` 是数据库生成的规范副本。先保存后解析，原文行的 `tenant_id`、`call_uuid` 保持 NULL；响应 `rawId` 可定位原文，UUID 可从 payload 查询。
-2. JSON 或结构无效时返回 200 `invalid`，写 `cdr_failed` 告警。缺 UUID 或错误时间无法构造正式/未归属话单，保留原文供人工排查。
+2. JSON 语法损坏时仍保留原文、返回 200 `invalid` 并告警。JSON 可解析但结构/时间校验失败时，保存 `unassigned_cdrs(status=pending)`、原因和 `raw_id/raw_received_at` 原文引用，返回 200 `unassigned` 并写 `cdr_failed`。未知 UUID/开始/结束时间为 NULL，不伪造通话数据；有效 UUID 仍由 `call_uuids` 去重，缺开始时间时登记表使用收到时间作为占位，人工修正前不能认领。缺 UUID 的每次推送各有待办，人工按原文处理；不自动猜测两份正文是否同一通话。
 3. 解析成功后检查 `call_uuids`。已登记即返回 `duplicate`，不会将重推变成未归属话单的认领。入口设置事务级 `app.cdr_ingest=true`，登记触发器也禁止认领，因此并发插入同样只允许一条；只将 `23505` 且约束为 `call_uuids_pkey` 的冲突识别为重复，不使用话单 `ON CONFLICT DO NOTHING`。
 4. 缺标签、未知租户（包括 `ABC01`）、错误被叫进入 `unassigned_cdrs(status=pending)` 并写 `cdr_failed`，HTTP 200，不入扣费队列。重复推送不重复告警。
 5. 接通电话按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务写一条 `auth_timeout` 告警，重推不重复写。Worker 不可能在断网时立即收到超时信号，告警随话单到达。
@@ -120,7 +120,7 @@ pnpm coverage
 
 入库使用 `answered_at` 选择整表费率版本与最长前缀，保存该时刻的费率快照。任务只带租户编号与通话 UUID，以快照费率和接通时长调用 `packages/rating` 计价；接通时无匹配费率就在入库事务里保存 pending 未归属话单、写 `cdr_failed` 告警，不入扣费队列。未接通或合法零费率不产生扣费流水。
 
-扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败记日志与告警，错误继续向队列抛出。
+扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败立即记日志，错误继续向队列抛出；持续失败由对账任务合并为每话单一条告警。
 
 Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 PoolDb，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed` 告警并抛错；启动失败不监听 HTTP。入库路径缺分区返回 503、记录同类告警，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。
 
@@ -133,3 +133,23 @@ Worker 启动时执行一次分区维护，然后注册每日北京时间零点�
 [拨号计划与 Lua](../freeswitch/README.md) 在 bridge 前剥掉被叫的 `+` 与 `00`，同时更新 A-leg 的 `destination_number`，让授权与话单号码一致。脚本使用 Lua-cURL 的毫秒超时，密钥从全局变量读取，不写进通道变量。
 
 `mod_json_cdr` 原生只支持 `cred` 的 HTTP Basic 认证，不能配置 `X-Billing-Key`。示例在 FreeSWITCH 机器放一个仅回环监听的 nginx relay，添加共享密钥后向 Worker 内网地址转发；Worker 的 IP 白名单填写 FreeSWITCH 机器来源 IP。配置只推 A-leg、直传 JSON，并保留 archive 与失败 retry 原文。HTTP 重试耗尽后由独立脚本扫描 retry 重推，2xx 才移除失败副本。缺分区或其他保存故障的 503 原样传回，不能在代理上改为成功。
+
+## 扣费对账与连接池
+
+新增部署迁移 `0002_worker_reliability`，再运行 `queue:migrate` 安装对账队列。现有扣费队列策略不变，存量任务不删除。
+
+`reconcile-cdr-charges` 每分钟调度（`* * * * *`，Asia/Shanghai），查找 `charge > 0` 且没有同租户 `call:<UUID>` 通话扣费流水的话单。未接通、合法零费率无需流水，不进入对账。以接收时间为宽限期，重试耗尽、任务丢失或被清理都能重新发现。
+
+| 配置                               | 默认值 | 有效范围                                         |
+| ---------------------------------- | ------ | ------------------------------------------------ |
+| `WORKER_RECONCILE_MIN_AGE_MINUTES` | 5      | 整数 1–10080 分钟；接收/上次补投后至少等待此时长 |
+| `WORKER_RECONCILE_ALERT_ATTEMPTS`  | 3      | 整数 1–1000；已补投这么多轮仍无流水时告警        |
+| `WORKER_DB_POOL_MAX`               | 10     | 整数 1–100；HTTP、扣费、对账业务连接             |
+| `WORKER_QUEUE_POOL_MAX`            | 2      | 整数 1–20；pg-boss 元数据与调度连接              |
+| `WORKER_DB_CONNECTION_TIMEOUT_MS`  | 5000   | 整数 1–60000；两个池的连接获取超时               |
+
+每个候选沿用已有租户锁，拿锁后重新检查流水、宽限期和未终结任务（包括升级前没有 singletonKey 的任务）。补投使用稳定 `singletonKey=callUuid` 和由 UUID/轮次生成的确定性任务 ID；真正的去重由任务主键、同一事务内更新的 `reconcile_attempts/reconciled_at` 及原有租户锁保证，标准队列的 singletonKey 本身不保证唯一。重复/并发对账不增加任务或次数。计费仍使用账本唯一键，不重复扣费。
+
+次数保存在话单，不随 pg-boss 清理历史任务而丢失。达到告警阈值后仍继续补投；`reconcile_alerted` 与 `system_alerts(kind=cdr_failed)` 同事务提交，一通话只告警一次。无需人工发现队列的 failed 状态；管理员可按告警中的 UUID 查账并处理。任务处理失败保留异常和日志，不吞错。数据库/Worker 不可用时需恢复服务，对账才会继续；邮件通知属于阶段 9。
+
+启动并发挂起的根因是 pg-boss `send()` 在使用传入事务插入任务之前，冷缓存的 `getQueueCache()` 会通过默认 adapter 另借连接。同一个默认 10 连接池被入库事务占满时，持连接的请求等待队列元数据查询，后者又等待这些请求归还连接。增加池大小或仅预热不能消除此依赖。现在 pg-boss 默认 adapter 使用独立应用角色池；任务 INSERT 仍使用入库事务的连接，保留话单/任务原子提交。两个池都设置有限 `connectionTimeoutMillis`，部署时按实例数为 PostgreSQL 预留两池总连接预算。连接获取失败会返回服务错误，CDR 保存失败按 503 重推；不存在无限等连接的默认配置。

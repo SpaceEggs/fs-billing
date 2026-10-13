@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { fromDrizzle, PgBoss, getConstructionPlans } from 'pg-boss';
 import {
@@ -11,9 +12,10 @@ import {
 import type { ChargeJob } from '@fs-billing/shared';
 
 export const CHARGE_QUEUE = 'charge-cdr';
+export const RECONCILE_QUEUE = 'reconcile-cdr-charges';
 export const PARTITION_QUEUE = 'maintain-cdr-partitions';
 export interface ChargeQueue {
-  enqueue(tx: Tx, job: ChargeJob): Promise<void>;
+  enqueue(tx: Tx, job: ChargeJob, attempt?: number): Promise<void>;
 }
 
 // 队列数据库操作同样声明系统身份；入队使用调用方事务，避免话单已入库却丢任务。
@@ -40,9 +42,16 @@ export function createBoss(db: Db): PgBoss {
 
 export function chargeQueue(boss: PgBoss): ChargeQueue {
   return {
-    async enqueue(tx, job) {
+    async enqueue(tx, job, attempt = 0) {
+      // 每轮补投有稳定任务 ID；同一轮事务重跑也不能产生第二个任务。
+      const hex = createHash('sha256')
+        .update(`${job.callUuid}:${attempt}`)
+        .digest('hex');
+      const idempotencyId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
       const id = await boss.send(CHARGE_QUEUE, job, {
         db: fromDrizzle(tx, sql),
+        singletonKey: job.callUuid,
+        id: idempotencyId,
       });
       if (id === null) throw new Error('话单扣费任务未入队');
     },
@@ -70,8 +79,15 @@ export async function installQueue({ pool }: Connection): Promise<void> {
   });
   try {
     await boss.start();
-    await boss.createQueue(CHARGE_QUEUE, { retryLimit: 3, retryDelay: 0 });
-    await boss.updateQueue(CHARGE_QUEUE, { retryLimit: 3, retryDelay: 0 });
+    await boss.createQueue(CHARGE_QUEUE, {
+      retryLimit: 3,
+      retryDelay: 0,
+    });
+    await boss.updateQueue(CHARGE_QUEUE, {
+      retryLimit: 3,
+      retryDelay: 0,
+    });
+    await boss.createQueue(RECONCILE_QUEUE, { retryLimit: 3 });
     await boss.createQueue(PARTITION_QUEUE, { retryLimit: 3 });
     await boss.createQueue('__pgboss__send-it');
   } finally {

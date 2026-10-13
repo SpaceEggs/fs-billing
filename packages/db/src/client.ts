@@ -32,8 +32,11 @@ export interface Connection {
 }
 
 // numeric 原样以字符串返回（pg 默认如此）；timestamptz 解析为 Date。
-export function connect(url: string): Connection {
-  const pool = new pg.Pool({ connectionString: url });
+export function connect(
+  url: string,
+  options: Pick<pg.PoolConfig, 'max' | 'connectionTimeoutMillis'> = {},
+): Connection {
+  const pool = new pg.Pool({ connectionString: url, ...options });
   return { pool, db: drizzle(pool, { schema }) };
 }
 

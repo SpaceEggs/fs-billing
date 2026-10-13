@@ -14,6 +14,26 @@ function privateIpv4(value: string) {
 }
 export const workerEnvironmentSchema = z.object({
   APP_DATABASE_URL: databaseEnvironmentSchema.shape.APP_DATABASE_URL,
+  WORKER_DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+  WORKER_QUEUE_POOL_MAX: z.coerce.number().int().min(1).max(20).default(2),
+  WORKER_DB_CONNECTION_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(60000)
+    .default(5000),
+  WORKER_RECONCILE_MIN_AGE_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10080)
+    .default(5),
+  WORKER_RECONCILE_ALERT_ATTEMPTS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .default(3),
   WORKER_HOST: z
     .string()
     .refine(privateIpv4, '只能监听内网或回环 IPv4 地址')

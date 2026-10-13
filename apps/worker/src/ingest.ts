@@ -9,6 +9,7 @@ import {
 } from '@fs-billing/db';
 import { findRate, parseDialedNumber, priceCall } from '@fs-billing/rating';
 import { modJsonCdrSchema, type ParsedCdr } from '@fs-billing/shared';
+import { invalidCdrIdentitySchema } from './invalid-cdr.js';
 import type { ChargeQueue } from './queue.js';
 
 export function postgresError(
@@ -57,7 +58,11 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
   // 原文先独立提交；后续解析、去重或任务入队失败都不能撤销这次推送的原文。
   const [raw] = await withSystem(db, async (tx) => {
     await lockTenants(tx, []);
-    return tx.insert(schema.rawCdrs).values({ body }).returning();
+    // Date 只保留毫秒；原文定位键使用相同精度，避免驱动截断微秒。
+    return tx
+      .insert(schema.rawCdrs)
+      .values({ body, receivedAt: sql`date_trunc('milliseconds', now())` })
+      .returning();
   });
   if (!raw) throw new Error('原始话单未保存');
   let payload: unknown;
@@ -70,8 +75,33 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
   }
   const parsed = modJsonCdrSchema.safeParse(payload);
   if (!parsed.success) {
-    await recordAlert(db, 'cdr_failed', `${raw.id}: ${parsed.error.message}`);
-    return { status: 'invalid' as const, rawId: raw.id };
+    const { variables: identity } = invalidCdrIdentitySchema.parse(payload);
+    try {
+      await withSystem(db, async (tx) => {
+        await lockTenants(tx, []);
+        await tx.insert(schema.unassignedCdrs).values({
+          callUuid: identity.uuid,
+          tenantTag: identity.billing_tenant,
+          caller: identity.caller_id_number,
+          callee: identity.destination_number,
+          rawId: raw.id,
+          rawReceivedAt: raw.receivedAt,
+          reason: `话单校验失败: ${parsed.error.message}`,
+        });
+        await tx.insert(schema.systemAlerts).values({
+          kind: 'cdr_failed',
+          description: `${raw.id}: 话单校验失败: ${parsed.error.message}`,
+          affectedCalls: 1,
+        });
+      });
+      return { status: 'unassigned' as const, rawId: raw.id };
+    } catch (error) {
+      const pg = postgresError(error);
+      if (pg?.code === '23505' && pg.constraint === 'call_uuids_pkey') {
+        return { status: 'duplicate' as const, rawId: raw.id };
+      }
+      throw error;
+    }
   }
   const cdr = parsed.data;
   try {
