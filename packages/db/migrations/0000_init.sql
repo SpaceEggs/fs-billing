@@ -698,3 +698,21 @@ REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 REVOKE EXECUTE ON ALL PROCEDURES IN SCHEMA public FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_is_operator(), app_can_see(uuid),
   jsonb_or_null(text), cdr_ensure_partitions(timestamptz, integer), lock_tenants(uuid[]) TO fs_billing_app;
+
+-- 应用角色不能直接拿 advisory 锁：租户锁只能经 lock_tenants（SECURITY DEFINER，以 owner 执行）拿，
+-- 应用代码无法用会话级同键锁或 pg_advisory_unlock_all 干扰它。pg_catalog 函数只有超级用户能改权限，
+-- 非超级用户执行时 REVOKE 只警告不生效，所以最后核对一遍，没撤销掉就让迁移失败。
+DO $$
+DECLARE
+  fn regprocedure;
+BEGIN
+  FOR fn IN SELECT oid::regprocedure FROM pg_proc WHERE proname ~ '^pg_(try_)?advisory_' LOOP
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, fs_billing_app', fn);
+  END LOOP;
+  SELECT oid::regprocedure INTO fn FROM pg_proc
+  WHERE proname ~ '^pg_(try_)?advisory_' AND has_function_privilege('fs_billing_app', oid, 'EXECUTE')
+  LIMIT 1;
+  IF FOUND THEN
+    RAISE EXCEPTION '未能撤销 fs_billing_app 对 % 的 EXECUTE：迁移要以超级用户执行', fn;
+  END IF;
+END $$;

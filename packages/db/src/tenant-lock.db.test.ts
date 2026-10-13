@@ -8,18 +8,39 @@ import {
   pgError,
   waitForTenantLock,
 } from '../test/support.js';
-import { lockTenants, withAdmin, withSystem, withTenant } from './client.js';
+import {
+  APP_ROLE,
+  lockTenants,
+  withAdmin,
+  withSystem,
+  withTenant,
+} from './client.js';
 import { appendLedgerEntry } from './ledger.js';
 
 const { app, owner } = connections();
 
-/** 在一条应用角色连接上执行 fn，结束时回滚、放掉会话级 advisory 锁并归还连接。 */
-async function onAppClient<T>(fn: (client: pg.PoolClient) => Promise<T>) {
-  const client = await app.pool.connect();
+/**
+ * 在一条以应用角色执行的连接上运行 fn。应用角色不能调用 advisory 锁函数，所以连接取自 owner：
+ * 传了 sessionLockTenant 时先以 owner 拿该租户的会话级同键锁，再 SET ROLE 到应用角色。
+ * 结束时回滚、恢复角色、放掉会话级锁并归还连接。
+ */
+async function onAppClient<T>(
+  fn: (client: pg.PoolClient) => Promise<T>,
+  sessionLockTenant?: string,
+) {
+  const client = await owner.pool.connect();
   try {
+    if (sessionLockTenant) {
+      await client.query(
+        `SELECT pg_advisory_lock(hashtextextended('tenant:' || $1, 0))`,
+        [sessionLockTenant],
+      );
+    }
+    await client.query(`SET ROLE ${APP_ROLE}`);
     return await fn(client);
   } finally {
     await client.query('ROLLBACK');
+    await client.query('RESET ROLE');
     await client.query('SELECT pg_advisory_unlock_all()');
     client.release();
   }
@@ -100,12 +121,9 @@ describe('lock_tenants 只锁当前身份有权访问的租户', () => {
 });
 
 describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
-  const sessionLock = `SELECT pg_advisory_lock(hashtextextended('tenant:' || $1, 0))`;
-
   it('会话级同键 advisory 锁不能代替 lock_tenants 写流水', async () => {
     const tenant = await createTenant(app, 'CNY');
     const error = await onAppClient(async (client) => {
-      await client.query(sessionLock, [tenant.id]);
       await client.query('BEGIN');
       await client.query(`SELECT set_config('app.scope', 'admin', true)`);
       return queryError(
@@ -114,7 +132,7 @@ describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
          VALUES ($1, 'call_charge', -1, 'call:session-lock')`,
         [tenant.id],
       );
-    });
+    }, tenant.id);
     expect(error).toMatchObject({
       code: '55000',
       message: `写租户 ${tenant.id} 的费率或流水之前，先在本事务调用 lock_tenants`,
@@ -124,13 +142,12 @@ describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
   it('持有会话级同键锁时 lock_tenants 报 55000，而不是跳过加锁', async () => {
     const tenant = await createTenant(app, 'CNY');
     const error = await onAppClient(async (client) => {
-      await client.query(sessionLock, [tenant.id]);
       await client.query('BEGIN');
       await client.query(`SELECT set_config('app.scope', 'admin', true)`);
       return queryError(client, 'SELECT lock_tenants(ARRAY[$1]::uuid[])', [
         tenant.id,
       ]);
-    });
+    }, tenant.id);
     expect(error).toMatchObject({
       code: '55000',
       message: `租户 ${tenant.id} 的锁要在本事务的任何写入、行锁和其他锁之前拿`,
@@ -307,5 +324,26 @@ describe('建分区不在租户锁内进行', () => {
       reader.release();
       holder.release();
     }
+  });
+});
+
+describe('应用角色不能直接调用 advisory 锁函数', () => {
+  it('pg_advisory_lock 报 42501；所有 advisory 锁函数的重载都没有 EXECUTE；lock_tenants 照常可用', async () => {
+    const error = await pgError(app.pool.query('SELECT pg_advisory_lock(1)'));
+    const { rows } = await owner.pool.query<{ executable: string[] }>(
+      `SELECT array_agg(p.oid::regprocedure::text ORDER BY p.oid::regprocedure::text) AS executable
+       FROM pg_proc p
+       WHERE p.proname ~ '^pg_(try_)?advisory_' AND has_function_privilege($1, p.oid, 'EXECUTE')`,
+      [APP_ROLE],
+    );
+    const tenant = await createTenant(app, 'CNY');
+    await withAdmin(app.db, (tx) => lockTenants(tx, [tenant.id]));
+    expect({ error, executable: rows[0]!.executable }).toMatchObject({
+      error: {
+        code: '42501',
+        message: 'permission denied for function pg_advisory_lock',
+      },
+      executable: null,
+    });
   });
 });

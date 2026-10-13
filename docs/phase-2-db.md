@@ -83,6 +83,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 - 只能锁当前身份有权访问的租户：租户身份（`app.scope = 'tenant'`）只能锁 `app.tenant_id`，管理员与系统身份可以锁任意租户，未声明身份或身份不完整一律不行。新连接只设置 `app.tenant_id`、不设置 `app.scope` 时，`app_can_see` 返回 NULL 而不是 false，所以函数用 `app_can_see(t) IS NOT TRUE` 判断越权。越权时报 SQLSTATE 42501 `当前身份不能锁租户 <id>`，不拿任何锁。函数是 `SECURITY DEFINER`，检查在函数体里做，应用侧绕不过去。
 - 函数每拿到一把锁，就用 `set_config('app.tenant_locks', ..., true)` 把该租户追加到事务级标记里。“已持有”指本事务通过 `lock_tenants` 拿到：标记里有该租户，并且 `pg_locks` 里有这把锁。标记随事务结束或保存点回滚一起消失，所以会话级的同键 `pg_advisory_lock` 和连接池里上一个事务留下的状态都不算持有。
+- 应用角色不能直接调用任何 advisory 锁函数：迁移对 `pg_advisory_*`、`pg_try_advisory_*` 的全部重载（会话级与事务级、加锁、尝试、解锁，以及 `pg_advisory_unlock_all`）`REVOKE EXECUTE … FROM PUBLIC, fs_billing_app`，直接调用报 42501 `permission denied for function pg_advisory_lock`。`lock_tenants` 是 `SECURITY DEFINER`，以 owner 执行，不受影响。`pg_catalog` 里的函数只有超级用户能改权限，迁移最后核对一遍，没撤销掉就报错，所以 `pnpm db:migrate` 要以超级用户执行。
 - 新开户并在同一事务里建首个费率版本时，先生成租户编号并 `lock_tenants`，再插入租户。种子分两个事务：先写管理员与租户，再在新事务里锁租户，然后写费率、流水和话单。
 - 同一事务的全部租户放进一次调用。标记按加锁顺序是升序的。之后再锁一个尚未持有、但比标记里最大租户更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。
 - `rate_versions`、`rate_entries` 的增删和 `ledger_entries` 的插入由触发器检查本事务已持有该租户的锁。没有持有时报 55000，不写入。
