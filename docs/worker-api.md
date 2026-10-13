@@ -1,4 +1,4 @@
-# Worker 接口（阶段 3：a、b、c）
+# Worker 接口（阶段 3：a–e）
 
 Worker 独立于 Web/API，默认监听 `127.0.0.1:3001`。生产环境设置内网 IPv4 地址。运行时只使用 `APP_DATABASE_URL`（`fs_billing_app`）；业务与队列写入经 `withSystem`，写入前调用 `lockTenants`，不新增业务锁。金额由阶段 1 的 decimal.js 计价函数计算，不舍入。
 
@@ -10,7 +10,7 @@ pnpm --filter @fs-billing/worker queue:migrate
 pnpm --filter @fs-billing/worker start
 ```
 
-`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr` 队列并授权。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
+`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`maintain-cdr-partitions` 与内部调度队列并授权。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
 
 | 环境变量             | 要求                                               |
 | -------------------- | -------------------------------------------------- |
@@ -20,7 +20,7 @@ pnpm --filter @fs-billing/worker start
 | `WORKER_SHARED_KEY`  | 至少 16 字符                                       |
 | `WORKER_ALLOWED_IPS` | 逗号分隔的非空 IP 列表，例如 `127.0.0.1,10.0.0.10` |
 
-`POST /authorize` 与 `POST /cdr` 必须带 `X-Billing-Key`，缺失或错误返回 401，来源 IP 不在白名单返回 403。使用连接的实际 IP，不信任代理头。`GET /health` 返回 `{"status":"ok","service":"worker"}`，不检查数据库。
+`POST /authorize` 与 `POST /cdr` 必须带 `X-Billing-Key`，缺失或错误返回 401（固定长度 SHA-256 摘要经 `timingSafeEqual` 比较），来源 IP 不在白名单返回 403。使用连接的实际 IP，不信任代理头。`GET /health` 返回 `{"status":"ok","service":"worker"}`，不检查数据库。
 
 ## POST /authorize
 
@@ -113,3 +113,15 @@ pnpm coverage
 ```
 
 压测脚本使用应用角色创建专用租户和 500 条费率，启动本机 HTTP listener，连续顺序发送 1000 个授权请求并读完响应，计算 nearest-rank p95；p95 ≥ 50 ms 或任何响应不正确时非零退出。没有预热、不并发、不缓存。结束后停用压测租户，保留已生效费率供检查（数据库禁止删除历史费率）。重复运行使用新租户，不影响已有客户。
+
+## 扣费与维护任务
+
+入库使用 `answered_at` 选择整表费率版本与最长前缀，保存该时刻的费率快照。任务只带租户编号与通话 UUID，以快照费率和接通时长调用 `packages/rating` 计价；接通时无匹配费率就在入库事务里保存 pending 未归属话单、写 `cdr_failed` 告警，不入扣费队列。未接通或合法零费率不产生扣费流水。
+
+扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败记日志与告警，错误继续向队列抛出。
+
+Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 Db，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed` 告警并抛错；启动失败不监听 HTTP。入库路径缺分区返回 503、记录同类告警，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。
+
+`patches/pg-boss@12.37.1.patch` 为固定版本提供 `noAdvisoryLocks` 配置，并让 Drizzle adapter 保留调用方事务的提交权。运行时禁止队列额外 advisory 锁，关闭队列统计分区和索引 DDL；队列安装仍是 owner 部署操作。升级 pg-boss 时需重新核对该补丁与崩溃重投验收。
+
+验收：`pnpm test:db apps/worker/src/app.db.test.ts` 覆盖 HTTP 401/403、原文/UUID 去重、费率切换无匹配、跨月归属、插入流水后的模拟崩溃、队列重启与重投、启动/每日分区维护、缺分区重推。`pnpm test apps/worker/src/config.test.ts` 覆盖启动配置边界。

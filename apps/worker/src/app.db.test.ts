@@ -3,9 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createRateVersion, lockTenants, withSystem } from '@fs-billing/db';
+import {
+  createRateVersion,
+  ensureCdrPartitions,
+  lockTenants,
+  withSystem,
+} from '@fs-billing/db';
 import { rate } from '@fs-billing/rating';
 import { z } from 'zod';
+import { fromDrizzle } from 'pg-boss';
 import {
   connections,
   createTenant,
@@ -14,7 +20,12 @@ import {
 import { createWorker } from './app.js';
 import { chargeCdr } from './charge.js';
 import {
+  maintainPartitions,
+  startPartitionMaintenance,
+} from './maintenance.js';
+import {
   CHARGE_QUEUE,
+  PARTITION_QUEUE,
   chargeQueue,
   createBoss,
   installQueue,
@@ -338,6 +349,66 @@ describe('Worker HTTP 与真实数据库', () => {
         ])
       ).rows,
     ).toEqual([{ body: payload }]);
+    await ensureCdrPartitions(connection.db, {
+      moment: new Date('2034-06-01T00:00:00Z'),
+    });
+    expect((await post(payload)).json()).toMatchObject({ status: 'queued' });
+    await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 1,
+      jobs: 1,
+    });
+  });
+
+  it('原文分区缺失返回 503 并告警，恢复维护后重推成功', async () => {
+    const tenant = await fixture();
+    const uuid = randomUUID();
+    const payload = body(tenant.code, uuid);
+    const { rows } = await owner.pool.query(`select c.relname as name,
+      pg_get_expr(c.relpartbound, c.oid) as bounds from pg_class c
+      join pg_inherits i on i.inhrelid = c.oid
+      where i.inhparent = 'raw_cdrs'::regclass and c.relname =
+        'raw_cdrs_' || to_char(now() at time zone 'Asia/Shanghai', 'YYYY_MM')`);
+    const partition = z
+      .object({
+        name: z.string().regex(/^raw_cdrs_\d{4}_\d{2}$/),
+        bounds: z.string(),
+      })
+      .parse(rows[0]);
+    await owner.pool.query(
+      `alter table raw_cdrs detach partition ${partition.name}`,
+    );
+    try {
+      expect((await post(payload)).statusCode).toBe(503);
+      expect(await state(uuid)).toEqual({
+        cdrs: 0,
+        unassigned: 0,
+        charges: 0,
+        jobs: 0,
+      });
+      expect(
+        (
+          await owner.pool.query(
+            'select kind from system_alerts where description like $1',
+            ['no partition of relation "raw_cdrs" found for row%'],
+          )
+        ).rows,
+      ).toEqual([{ kind: 'partition_failed' }]);
+    } finally {
+      await owner.pool.query(
+        `alter table raw_cdrs attach partition ${partition.name} ${partition.bounds}`,
+      );
+    }
+    expect((await post(payload)).json()).toMatchObject({ status: 'queued' });
+    expect(
+      (
+        await owner.pool.query('select body from raw_cdrs where body = $1', [
+          payload,
+        ])
+      ).rows,
+    ).toEqual([{ body: payload }]);
   });
 
   it('入队失败回滚话单和 UUID 登记，原文保留，恢复后重推成功', async () => {
@@ -475,6 +546,22 @@ describe('Worker HTTP 与真实数据库', () => {
   });
 
   it('缺密钥或不在 IP 白名单的请求在保存正文前拒绝', async () => {
+    for (const key of [
+      'wrong',
+      'x'.repeat(security.secret.length),
+      '密钥错误',
+    ]) {
+      expect(
+        (
+          await worker.inject({
+            method: 'POST',
+            url: '/cdr',
+            headers: { 'x-billing-key': key },
+            payload: '{}',
+          })
+        ).statusCode,
+      ).toBe(401);
+    }
     expect(
       (await worker.inject({ method: 'POST', url: '/cdr', payload: '{}' }))
         .statusCode,
@@ -490,5 +577,300 @@ describe('Worker HTTP 与真实数据库', () => {
         })
       ).statusCode,
     ).toBe(403);
+  });
+
+  it('接通时刻选择整表版本，跨月处理仍按九月入账', async () => {
+    const tenant = await fixture();
+    await withSystem(connection.db, (tx) =>
+      createRateVersion(
+        tx,
+        tenant.id,
+        [
+          {
+            prefix: '447',
+            country: '英国手机',
+            perMinute: rate('CNY', '0.1000'),
+          },
+        ],
+        { effectiveFrom: new Date('2026-09-30T16:00:00Z') },
+      ),
+    );
+    for (const [answeredAt, amount, month] of [
+      ['2026-09-30T15:59:00Z', '-0.192', '2026-09'],
+      ['2026-09-30T16:00:00Z', '-0.4', '2026-10'],
+    ]) {
+      const uuid = randomUUID();
+      const answer = Math.floor(new Date(answeredAt!).getTime() / 1000);
+      expect(
+        (
+          await post(
+            body(tenant.code, uuid, {
+              start_epoch: answer - 9,
+              answer_epoch: answer,
+              end_epoch: answer + 190,
+            }),
+          )
+        ).json(),
+      ).toMatchObject({ status: 'queued' });
+      await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+      expect(
+        (
+          await owner.pool.query(
+            `select amount::text, occurred_at,
+         to_char(occurred_at at time zone 'Asia/Shanghai', 'YYYY-MM') as month,
+         created_at > '2026-09-30T16:00:00Z' as processed_later
+         from ledger_entries where idempotency_key = $1`,
+            [`call:${uuid}`],
+          )
+        ).rows,
+      ).toEqual([
+        {
+          amount,
+          occurred_at: new Date(answeredAt!),
+          month,
+          processed_later: true,
+        },
+      ]);
+    }
+  });
+
+  it('授权有费率，接通时新版移除前缀：pending 与告警，不回退旧费率也不扣零元', async () => {
+    const tenant = await fixture();
+    const uuid = randomUUID();
+    const authorization = await worker.inject({
+      method: 'POST',
+      url: '/authorize',
+      headers: { 'x-billing-key': security.secret },
+      payload: { tenant: tenant.code, callee: '447700900123', uuid },
+    });
+    expect(authorization.json()).toMatchObject({ allowed: true });
+    // 新版本在授权之后、接通之前生效；整表为空，不得沿用旧版前缀。
+    const answer = Math.floor(Date.now() / 1000) + 60;
+    await withSystem(connection.db, (tx) =>
+      createRateVersion(tx, tenant.id, [], {
+        effectiveFrom: new Date((answer - 1) * 1000),
+      }),
+    );
+    expect(
+      (
+        await post(
+          body(tenant.code, uuid, {
+            start_epoch: answer - 9,
+            answer_epoch: answer,
+            end_epoch: answer + 190,
+          }),
+        )
+      ).json(),
+    ).toMatchObject({ status: 'unassigned' });
+    expect(await state(uuid)).toEqual({
+      cdrs: 0,
+      unassigned: 1,
+      charges: 0,
+      jobs: 0,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          'select status, reason from unassigned_cdrs where call_uuid = $1',
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([{ status: 'pending', reason: '接通时无费率' }]);
+    expect(
+      (
+        await owner.pool.query(
+          'select kind from system_alerts where description = $1',
+          [`${uuid}: 接通时无费率`],
+        )
+      ).rows,
+    ).toEqual([{ kind: 'cdr_failed' }]);
+  });
+
+  it('流水已插入后模拟崩溃：回滚余额，重新执行只扣一次', async () => {
+    const tenant = await fixture();
+    const uuid = randomUUID();
+    expect((await post(body(tenant.code, uuid))).json()).toMatchObject({
+      status: 'queued',
+    });
+    // AFTER INSERT 时流水与余额触发器已运行；抛错模拟提交前崩溃并回滚事务。
+    await owner.pool.query(`create function test_charge_crash() returns trigger
+      language plpgsql security definer set search_path = public, pg_temp as $$
+      begin
+        if NEW.idempotency_key = TG_ARGV[0] then
+          raise exception '模拟扣费提交前崩溃';
+        end if;
+        return NEW;
+      end $$`);
+    await owner.pool
+      .query(`create trigger zz_test_charge_crash after insert on ledger_entries
+      for each row execute function test_charge_crash('call:${uuid}')`);
+    try {
+      await expect(
+        chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid }),
+      ).rejects.toThrow();
+    } finally {
+      await owner.pool.query(
+        'drop trigger zz_test_charge_crash on ledger_entries',
+      );
+      await owner.pool.query('drop function test_charge_crash()');
+    }
+    expect((await state(uuid))?.charges).toBe(0);
+    expect(
+      (
+        await owner.pool.query(
+          'select balance::text from tenant_balances where tenant_id = $1',
+          [tenant.id],
+        )
+      ).rows,
+    ).toEqual([{ balance: '0' }]);
+    await Promise.all([
+      chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid }),
+      chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid }),
+    ]);
+    expect((await state(uuid))?.charges).toBe(1);
+    expect(
+      (
+        await owner.pool.query(
+          'select balance::text from tenant_balances where tenant_id = $1',
+          [tenant.id],
+        )
+      ).rows,
+    ).toEqual([{ balance: '-0.192' }]);
+  });
+
+  it('扣费提交但任务未确认：重启队列，过期任务重投不重复扣费', async () => {
+    const tenant = await fixture();
+    const uuid = randomUUID();
+    expect((await post(body(tenant.code, uuid))).json()).toMatchObject({
+      status: 'queued',
+    });
+    const { rows } = await owner.pool.query<{ id: string }>(
+      `select id from pgboss.job where name = $1 and data->>'callUuid' = $2`,
+      [CHARGE_QUEUE, uuid],
+    );
+    const jobs = await boss.fetch<unknown>(CHARGE_QUEUE, { batchSize: 1000 });
+    const job = jobs.find((entry) => entry.id === rows[0]?.id);
+    expect(job).toBeDefined();
+    if (!job) throw new Error('扣费任务未领取');
+    await chargeCdr(connection.db, job.data);
+    await boss.stop();
+    // 推进这项任务的过期时间，避免等待默认的 15 分钟。
+    await owner.pool.query(
+      `update pgboss.job set started_on = now() - interval '1 hour'
+      where name = $1 and id = $2`,
+      [CHARGE_QUEUE, job.id],
+    );
+    const restarted = createBoss(connection.db);
+    try {
+      await restarted.start();
+      await restarted.supervise(CHARGE_QUEUE);
+      const redelivered = (
+        await restarted.fetch<unknown>(CHARGE_QUEUE, { batchSize: 1000 })
+      ).find((entry) => entry.id === job.id);
+      expect(redelivered).toBeDefined();
+      if (!redelivered) throw new Error('过期任务未重投');
+      await chargeCdr(connection.db, redelivered.data);
+      await restarted.complete(CHARGE_QUEUE, redelivered.id);
+    } finally {
+      await restarted.stop();
+      await boss.start();
+    }
+    expect((await state(uuid))?.charges).toBe(1);
+    expect(
+      (
+        await owner.pool.query(
+          'select balance::text from tenant_balances where tenant_id = $1',
+          [tenant.id],
+        )
+      ).rows,
+    ).toEqual([{ balance: '-0.192' }]);
+  });
+
+  it('pg-boss 维护 SQL 不提前提交调用方事务，后续失败时队列写入回滚', async () => {
+    const uuid = randomUUID();
+    await expect(
+      withSystem(connection.db, async (tx) => {
+        await lockTenants(tx, []);
+        await fromDrizzle(tx, sql).executeSql(
+          `BEGIN;
+        insert into pgboss.schedule (name, key, cron, timezone, data, options)
+        values ($1, $2, '0 0 * * *', 'Asia/Shanghai', '{}', '{}');
+        COMMIT;`,
+          [PARTITION_QUEUE, uuid],
+        );
+        throw new Error('模拟队列事务后续失败');
+      }),
+    ).rejects.toThrow('模拟队列事务后续失败');
+    expect(
+      (
+        await owner.pool.query(
+          'select key from pgboss.schedule where name = $1 and key = $2',
+          [PARTITION_QUEUE, uuid],
+        )
+      ).rows,
+    ).toEqual([]);
+  });
+
+  it('启动维护立即建分区，每日北京时间调度可重复运行', async () => {
+    const { rows: months } = await owner.pool.query<{ suffix: string }>(
+      `select to_char(date_trunc('month', now() at time zone 'Asia/Shanghai') + interval '1 month', 'YYYY_MM') as suffix`,
+    );
+    const suffix = z
+      .string()
+      .regex(/^\d{4}_\d{2}$/)
+      .parse(months[0]?.suffix);
+    await owner.pool.query(`drop table cdrs_${suffix}, raw_cdrs_${suffix}`);
+    await startPartitionMaintenance(boss, connection.db, worker.log);
+    expect(
+      (
+        await owner.pool.query(
+          'select to_regclass($1) as cdr, to_regclass($2) as raw',
+          [`cdrs_${suffix}`, `raw_cdrs_${suffix}`],
+        )
+      ).rows,
+    ).toEqual([{ cdr: `cdrs_${suffix}`, raw: `raw_cdrs_${suffix}` }]);
+    const schedules = await boss.getSchedules(PARTITION_QUEUE);
+    expect(schedules).toMatchObject([
+      { cron: '0 0 * * *', timezone: 'Asia/Shanghai' },
+    ]);
+    await maintainPartitions(connection.db, worker.log);
+    const id = await boss.send(PARTITION_QUEUE);
+    expect(id).not.toBeNull();
+    await expect
+      .poll(
+        async () =>
+          (
+            await owner.pool.query<{ state: string }>(
+              'select state from pgboss.job where name = $1 and id = $2',
+              [PARTITION_QUEUE, id],
+            )
+          ).rows[0]?.state,
+        { timeout: 10000 },
+      )
+      .toBe('completed');
+  });
+
+  it('启动及维护任务失败写 partition_failed，错误向外抛出', async () => {
+    await owner.pool.query(
+      'revoke execute on function cdr_ensure_partitions(timestamptz, integer) from fs_billing_app',
+    );
+    try {
+      for (const run of [
+        () => startPartitionMaintenance(boss, connection.db, worker.log),
+        () => maintainPartitions(connection.db, worker.log),
+      ]) {
+        await expect(run()).rejects.toThrow();
+      }
+    } finally {
+      await owner.pool.query(
+        'grant execute on function cdr_ensure_partitions(timestamptz, integer) to fs_billing_app',
+      );
+    }
+    expect(
+      (
+        await owner.pool.query(`select kind from system_alerts
+      where description like '话单分区维护失败:%'`)
+      ).rows,
+    ).toEqual([{ kind: 'partition_failed' }, { kind: 'partition_failed' }]);
   });
 });

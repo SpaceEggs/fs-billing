@@ -1,9 +1,10 @@
-import { connect, ensureCdrPartitions } from '@fs-billing/db';
+import { connect } from '@fs-billing/db';
 import { createWorker } from './app.js';
 import { workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeCdr } from './charge.js';
 import { recordAlert } from './ingest.js';
+import { startPartitionMaintenance } from './maintenance.js';
 
 const config = workerEnvironmentSchema.parse(process.env);
 const connection = connect(config.APP_DATABASE_URL);
@@ -17,6 +18,9 @@ const app = createWorker({
     allowedIps: config.WORKER_ALLOWED_IPS,
   },
 });
+connection.pool.on('error', (error) =>
+  app.log.error({ err: error }, '数据库空闲连接错误'),
+);
 boss.on('error', (error) => app.log.error({ err: error }, '队列错误'));
 app.addHook('onClose', async () => {
   await boss.stop();
@@ -31,16 +35,22 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 try {
-  try {
-    await ensureCdrPartitions(connection.db);
-  } catch (error) {
-    app.log.error({ err: error }, '启动建分区失败');
-    await recordAlert(connection.db, 'partition_failed', '启动建分区失败');
-    throw error;
-  }
   await boss.start();
+  await startPartitionMaintenance(boss, connection.db, app.log);
   await boss.work(CHARGE_QUEUE, async (jobs) => {
-    for (const job of jobs) await chargeCdr(connection.db, job.data);
+    for (const job of jobs) {
+      try {
+        await chargeCdr(connection.db, job.data);
+      } catch (error) {
+        app.log.error({ err: error, jobId: job.id }, '话单扣费失败');
+        await recordAlert(
+          connection.db,
+          'cdr_failed',
+          `任务 ${job.id}: 扣费失败`,
+        );
+        throw error;
+      }
+    }
   });
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,

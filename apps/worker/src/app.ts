@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import Fastify from 'fastify';
 import {
   authorizeRequestSchema,
@@ -32,11 +33,16 @@ export function createWorker(dependencies?: WorkerDependencies) {
   );
   if (!dependencies) return app;
   const { db, queue, security } = dependencies;
+  const secretHash = createHash('sha256').update(security.secret).digest();
   app.register(async (routes) => {
     routes.addHook('onRequest', async (request, reply) => {
       if (!security.allowedIps.includes(request.ip))
         return reply.code(403).send({ error: 'IP 不在白名单' });
-      if (request.headers['x-billing-key'] !== security.secret)
+      const key = request.headers['x-billing-key'];
+      if (
+        typeof key !== 'string' ||
+        !timingSafeEqual(createHash('sha256').update(key).digest(), secretHash)
+      )
         return reply.code(401).send({ error: '密钥错误' });
     });
     routes.post('/authorize', async (request, reply) => {

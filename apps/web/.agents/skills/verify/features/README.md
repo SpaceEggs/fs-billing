@@ -1,6 +1,6 @@
 # FS-Billing verification map
 
-Read this index before a run. This map covers implemented phase 0, 1, and 2 behavior plus phase 3 units a–c. Worker authorization and CDR ingestion now have HTTP paths; business UI remains unimplemented.
+Read this index before a run. This map covers implemented phase 0, 1, and 2 behavior plus phase 3 units a–e. Worker authorization and CDR ingestion now have HTTP paths; business UI remains unimplemented.
 
 ## Baseline preconditions
 
@@ -51,6 +51,6 @@ Read this index before a run. This map covers implemented phase 0, 1, and 2 beha
 
 ### Phase 3: Worker interfaces
 
-- [Worker authorization and CDR ingestion](worker-api.md): HTTP contracts, raw preservation, UUID deduplication, unassigned handling, transactional queue and minimal charge handler.
+- [Worker authorization and CDR ingestion](worker-api.md): HTTP contracts, raw preservation, UUID deduplication, unassigned handling, transactional charging, crash recovery, endpoint security and daily partition maintenance.
 
 **Stale claim (phase 0):** PostgreSQL was only a supporting check and business features had no real paths. Database operations and rating acceptance commands now have paths above. The three phase 0 endpoints still perform no business writes. Monetary lint and build remain supporting checks in the root README.

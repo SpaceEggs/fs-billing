@@ -5,3 +5,5 @@ packages:
 # 仅允许已知构建工具运行安装脚本。
 onlyBuiltDependencies:
   - esbuild
+patchedDependencies:
+  pg-boss@12.37.1: patches/pg-boss@12.37.1.patch

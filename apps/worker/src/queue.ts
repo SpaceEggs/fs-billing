@@ -11,6 +11,7 @@ import {
 import type { ChargeJob } from '@fs-billing/shared';
 
 export const CHARGE_QUEUE = 'charge-cdr';
+export const PARTITION_QUEUE = 'maintain-cdr-partitions';
 export interface ChargeQueue {
   enqueue(tx: Tx, job: ChargeJob): Promise<void>;
 }
@@ -25,8 +26,13 @@ export function createBoss(db: Db): PgBoss {
           return fromDrizzle(tx, sql).executeSql(text, values);
         }),
     },
-    supervise: false,
-    schedule: false,
+    supervise: true,
+    schedule: true,
+    // 应用角色不执行队列索引维护 DDL。
+    reindex: false,
+    // 沿用 Phase 2 租户锁规则；队列辅助维护不另拿 advisory 锁。
+    noAdvisoryLocks: true,
+    persistQueueStats: false,
     migrate: false,
     createSchema: false,
   });
@@ -64,7 +70,10 @@ export async function installQueue({ pool }: Connection): Promise<void> {
   });
   try {
     await boss.start();
-    await boss.createQueue(CHARGE_QUEUE);
+    await boss.createQueue(CHARGE_QUEUE, { retryLimit: 3, retryDelay: 0 });
+    await boss.updateQueue(CHARGE_QUEUE, { retryLimit: 3, retryDelay: 0 });
+    await boss.createQueue(PARTITION_QUEUE, { retryLimit: 3 });
+    await boss.createQueue('__pgboss__send-it');
   } finally {
     await boss.stop();
   }

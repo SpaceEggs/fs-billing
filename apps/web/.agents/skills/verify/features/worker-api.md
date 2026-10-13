@@ -9,8 +9,10 @@ The FreeSWITCH caller authorizes calls and pushes raw mod_json_cdr text directly
 - `worker-cdr-raw` commits exact received text before parsing, including malformed and duplicate pushes.
 - `worker-cdr-gate` deduplicates via call_uuids, including concurrent pushes and changed tags on unassigned calls.
 - `worker-cdr-unassigned` parks unknown/missing tenant tags and malformed numbers as pending with cdr_failed alerts and no charge.
-- `worker-cdr-charge` enqueues atomically with the CDR and supports idempotent ledger writes from the saved price snapshot.
+- `worker-cdr-charge` enqueues atomically with the CDR and calculates through rating from the saved answer-time rate and supports idempotent ledger writes with occurred_at = answered_at.
 - `worker-cdr-partition` returns 503, logs and alerts on missing partitions without write-path DDL.
+- `worker-crash` proves rollback after a simulated failure following ledger insertion and pg-boss redelivery after commit without acknowledgement.
+- `worker-partition-maintenance` runs once at startup and daily at Beijing midnight, alerts on failure and supports re-push after missing partitions recover.
 - `worker-access` rejects missing/wrong shared keys and IPs outside the allowlist.
 - `worker-authorize-perf` checks 500 entries and 1,000 sequential real HTTP requests against p95 < 50 ms.
 
@@ -32,4 +34,4 @@ For a direct Worker process, migrate DB and install the queue before starting. B
 - Bad JSON/invalid shapes are raw-only with alerts and HTTP 200; unassigned rows require a valid UUID and call timeline.
 - Raw CDR UUID/tenant columns remain NULL because original rows are inserted before parsing and are append-only. Inspect body/payload or returned rawId.
 - Formal CDRs preserve billing_unverified; unanswered and zero-price calls produce no ledger entry.
-- Complete job crash recovery, queue supervision, daily partition scheduling and FreeSWITCH dialplan integration are later phase 3 units. Do not report them as proven by these tests.
+- Job crash recovery, queue supervision and daily partition scheduling are covered by the DB suite. FreeSWITCH dialplan integration remains a later phase 3 unit. Simulated transaction failure and queue restart do not prove an actual FreeSWITCH call.
