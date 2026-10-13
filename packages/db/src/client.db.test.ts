@@ -1,7 +1,9 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { connections, pgError } from '../test/support.js';
-import { withAdmin, withSystem } from './client.js';
+import { money } from '@fs-billing/rating';
+import { connections, createTenant, pgError } from '../test/support.js';
+import { withAdmin, withSystem, withTenant } from './client.js';
+import { appendLedgerEntry } from './ledger.js';
 
 const { app } = connections();
 
@@ -56,6 +58,33 @@ describe('withAdmin / withSystem 重试', () => {
     expect({ code: exhausted.code, attempts }).toEqual({
       code: '40P01',
       attempts: 3,
+    });
+  });
+
+  it('重试前的写入随回滚消失：只留下最后一次尝试写的流水', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    let attempts = 0;
+    await withAdmin(app.db, async (tx) => {
+      attempts += 1;
+      await appendLedgerEntry(tx, tenant, {
+        kind: 'call_charge',
+        amount: money('CNY', '-1.00'),
+        note: '',
+        idempotencyKey: `call:attempt-${attempts}`,
+        occurredAt: new Date(),
+      });
+      if (attempts === 1) await tx.execute(raise('40P01'));
+    });
+    const { rows } = await withTenant(app.db, tenant.id, (tx) =>
+      tx.execute<{ keys: string[]; balance: string }>(
+        sql`select array(select idempotency_key from ledger_entries order by idempotency_key) as keys,
+                   (select balance from tenant_balances) as balance`,
+      ),
+    );
+    expect({ attempts, ...rows[0] }).toEqual({
+      attempts: 2,
+      keys: ['call:attempt-2'],
+      balance: '-1',
     });
   });
 

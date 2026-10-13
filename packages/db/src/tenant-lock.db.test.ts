@@ -130,6 +130,31 @@ describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
   });
 });
 
+describe('不调用 lock_tenants 的写入被拒绝', () => {
+  it('直接插入流水和费率版本都报 55000，余额不变', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const ledger = await pgError(
+      withAdmin(app.db, (tx) =>
+        tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
+                       values (${tenant.id}, 'call_charge', -1, 'call:no-lock')`),
+      ),
+    );
+    const version = await pgError(
+      withAdmin(app.db, (tx) =>
+        tx.execute(
+          sql`insert into rate_versions (tenant_id) values (${tenant.id})`,
+        ),
+      ),
+    );
+    const message = `写租户 ${tenant.id} 的费率或流水之前，先在本事务调用 lock_tenants`;
+    expect([ledger, version, await balance(tenant.id)]).toMatchObject([
+      { code: '55000', message },
+      { code: '55000', message },
+      '0',
+    ]);
+  });
+});
+
 describe('先加行锁再等租户锁会被拒绝，不会死锁', () => {
   it('A 先 FOR UPDATE 租户行再 lock_tenants 报 55000；持锁的 B 照常写流水并提交', async () => {
     const tenant = await createTenant(app, 'CNY');
