@@ -336,21 +336,21 @@ ERROR:  ledger_entries 只能新增，禁止 DELETE
 
 ## 本地运行证据
 
-环境：Linux x64，Node.js 24.21.0，pnpm 10.34.7，PostgreSQL 17.9（`pnpm db:up`），验证日期 2026-10-13。
+环境：Linux x64，Node.js 24.21.0，pnpm 10.34.7，PostgreSQL 17.9（`pnpm db:up`），验证日期 2026-10-12。
 
-| 命令            | 结果                                                                                                                                                                                |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`    | 0 退出；ESLint（金额规则已覆盖 `packages/db`）、Prettier、TypeScript 全部通过；Vitest 9 个文件 116 个测试通过（不连接数据库）                                                       |
-| `pnpm test:db`  | 0 退出；5 个文件 58 个测试通过（`migrate`、`ledger`、`rls`、`cdrs`、`rates`）                                                                                                       |
-| `pnpm coverage` | `packages/rating` 行覆盖率 100%（137/137），阈值 95% 不变                                                                                                                           |
-| `pnpm build`    | 0 退出，含 `packages/db`                                                                                                                                                            |
-| DB 测试的覆盖率 | 以 `--coverage` 运行 `test:db`：`ledger.ts`、`rates.ts` 行覆盖 100%，`client.ts` 92.85%（13/14）。`seed.ts` 显示 0%，因为它在 `globalSetup`（主进程）中执行，不在被统计的工作进程里 |
+| 命令            | 结果                                                                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`    | 0 退出；ESLint（金额规则已覆盖 `packages/db`）、Prettier、TypeScript 全部通过；Vitest 10 个文件 119 个测试通过（不连接数据库）                                                                          |
+| `pnpm test:db`  | 0 退出；7 个文件 93 个测试通过（`migrate`、`client`、`tenant-lock`、`ledger`、`rls`、`cdrs`、`rates`）                                                                                                  |
+| `pnpm coverage` | `packages/rating` 行覆盖率 100%（137/137），阈值 95% 不变                                                                                                                                               |
+| `pnpm build`    | 0 退出，含 `packages/db`                                                                                                                                                                                |
+| DB 测试的覆盖率 | 以 `--coverage` 运行 `test:db`：`rates.ts` 行覆盖 100%，`ledger.ts` 97.91%，`client.ts` 96.29%。`seed.ts`、`partitions.ts` 不在统计里，因为它们在 `globalSetup`（主进程）中执行，不在被统计的工作进程里 |
 
-新增测试能失败：临时把 `ensure_month_partition` 的加锁移到检查之前、把 `cdrs` 触发器改回普通 `INSERT`，`pnpm test:db` 中“分区已存在时不等待建分区锁”“由正式话单认领”“再给第二个租户被拒绝”3 个测试失败；当时恢复后 49 个全部通过。当前套件是 58 个。
+新增测试能失败：临时把 `ensure_month_partition` 的加锁移到检查之前、把 `cdrs` 触发器改回普通 `INSERT`，`pnpm test:db` 中“分区已存在时不等待建分区锁”“由正式话单认领”“再给第二个租户被拒绝”3 个测试失败；当时恢复后 49 个全部通过。当前套件是 93 个。本轮新增的“新连接只设置 app.tenant_id”“持租户锁建缺失分区”“应用角色不能直接调用 advisory 锁函数”3 个测试在修复前的代码上失败：逐项撤回对应修复，各自的测试失败；撤回建分区的 55000 检查时，“持租户锁建缺失分区”里读者收到 `40P01 deadlock detected`。
 
 CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:seed && pnpm db:migrate`，以及 `pnpm test:db`。
 
-上述命令在本轮修改之后重新执行。表中数字是 2026-10-13 这次执行的结果。空库上 `pnpm db:migrate`、`pnpm db:seed`、再一次 `pnpm db:migrate` 都以 0 退出。第二次迁移打印“迁移完成”。种子余额 ABC001 为 `-35.20`。
+上述命令在本轮修改之后重新执行。表中数字是 2026-10-12 这次执行的结果。空库上 `pnpm db:migrate`、`pnpm db:seed`、再一次 `pnpm db:migrate` 都以 0 退出。第二次迁移打印“迁移完成”。种子余额 ABC001 为 `-35.20`。
 
 ## 设计取舍
 
