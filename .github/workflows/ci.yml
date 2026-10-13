@@ -15,6 +15,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://fs_billing:local-development-only@127.0.0.1:5432/fs_billing
+      APP_DATABASE_URL: postgresql://fs_billing_app:local-app-only@127.0.0.1:5432/fs_billing
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: pnpm/action-setup@v6.1.0
@@ -52,6 +55,10 @@ jobs:
         run: |
           docker compose up -d --wait
           docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "SELECT version(); SHOW timezone;"'
+      - name: Migrate and seed an empty database, then migrate again
+        run: pnpm db:migrate && pnpm db:seed && pnpm db:migrate
+      - name: Database acceptance tests
+        run: pnpm test:db
       - name: PostgreSQL logs
         if: failure()
         run: docker compose logs
