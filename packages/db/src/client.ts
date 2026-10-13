@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { PgTransaction } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { z } from 'zod';
 import * as schema from './schema.js';
@@ -48,25 +49,37 @@ export function withTenant<T>(
   });
 }
 
-/** 以管理员身份执行（管理后台）：可见并可写全部租户。 */
-export function withAdmin<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
+/**
+ * 以管理员身份执行（管理后台）：可见并可写全部租户。
+ * 最外层事务遇到 40P01 / 40001 会回滚并重跑 fn，所以 fn 只能做数据库操作且可重跑：
+ * 不发邮件、不调外部接口、不改事务外的内存状态。在已有事务里调用时只开保存点，不重试，错误原样抛出。
+ */
+export function withAdmin<T>(
+  db: Db | Tx,
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T> {
   return withOperator(db, 'admin', fn);
 }
 
-/** 以系统身份执行（Worker：入库、扣费、建分区）：可见并可写全部租户。 */
-export function withSystem<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
+/** 以系统身份执行（Worker：入库、扣费、建分区）：可见并可写全部租户。重试规则同 withAdmin。 */
+export function withSystem<T>(
+  db: Db | Tx,
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T> {
   return withOperator(db, 'system', fn);
 }
 
 // 死锁（40P01）与序列化失败（40001）回滚整个事务，重跑 fn 是安全的。
+// 嵌套时出错的只是保存点，外层事务里先前的语句和锁还在，重跑保存点不等于重跑事务，所以只在最外层重试。
 const RETRYABLE = new Set(['40P01', '40001']);
 const MAX_ATTEMPTS = 3;
 
 async function withOperator<T>(
-  db: Db,
+  db: Db | Tx,
   scope: 'admin' | 'system',
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
+  const attempts = db instanceof PgTransaction ? 1 : MAX_ATTEMPTS;
   for (let attempt = 1; ; attempt++) {
     try {
       return await db.transaction(async (tx) => {
@@ -74,7 +87,7 @@ async function withOperator<T>(
         return fn(tx);
       });
     } catch (error) {
-      if (attempt >= MAX_ATTEMPTS || !RETRYABLE.has(sqlState(error) ?? '')) {
+      if (attempt >= attempts || !RETRYABLE.has(sqlState(error) ?? '')) {
         throw error;
       }
     }
@@ -92,8 +105,9 @@ function sqlState(error: unknown): string | undefined {
 }
 
 /**
- * 拿这些租户的事务级互斥锁。改费率、写流水的事务必须在任何写入之前调用；
- * 数据库触发器在写入时检查锁已持有。同一事务的全部租户放进一次调用。
+ * 拿这些租户的事务级互斥锁。改费率、写流水的事务必须在任何写入和行锁之前调用，否则报 55000；
+ * 数据库触发器在写入时检查锁是本事务通过 lock_tenants 拿到的。同一事务的全部租户放进一次调用。
+ * 租户身份只能锁自己的租户，否则报 42501。
  */
 export async function lockTenants(
   tx: Tx,

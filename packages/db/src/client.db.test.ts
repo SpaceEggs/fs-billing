@@ -58,4 +58,41 @@ describe('withAdmin / withSystem 重试', () => {
       attempts: 3,
     });
   });
+
+  it('嵌套调用不重试，错误抛给最外层，由最外层重跑整个事务', async () => {
+    let outer = 0;
+    let inner = 0;
+    const result = await withAdmin(app.db, async (tx) => {
+      outer += 1;
+      return withSystem(tx, async (nested) => {
+        inner += 1;
+        if (outer === 1) await nested.execute(raise('40P01'));
+        return 'done';
+      });
+    });
+    expect({ result, outer, inner }).toEqual({
+      result: 'done',
+      outer: 2,
+      inner: 2,
+    });
+  });
+
+  it('嵌套调用遇到可重试的错误不在保存点里重跑：每次外层尝试只跑一次', async () => {
+    let outer = 0;
+    let inner = 0;
+    const error = await pgError(
+      withSystem(app.db, async (tx) => {
+        outer += 1;
+        await withAdmin(tx, async (nested) => {
+          inner += 1;
+          await nested.execute(raise('40001'));
+        });
+      }),
+    );
+    expect({ code: error.code, outer, inner }).toEqual({
+      code: '40001',
+      outer: 3,
+      inner: 3,
+    });
+  });
 });
