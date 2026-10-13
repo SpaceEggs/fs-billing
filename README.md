@@ -1,6 +1,6 @@
 # FS-Billing
 
-FreeSWITCH 话单计费系统。工程按 [阶段计划](docs/plan.md) 推进，业务规则见 [设计文档](docs/design.md)。阶段 0（工程骨架）与阶段 1（计费核心 `packages/rating`）已完成并合并到 `main`；阶段 2（数据库与账本 `packages/db`）验收完成，在分支 `phase-2-db` 上待合并。
+FreeSWITCH 话单计费系统。工程按 [阶段计划](docs/plan.md) 推进，业务规则见 [设计文档](docs/design.md)。阶段 0（工程骨架）、阶段 1（计费核心 `packages/rating`）与阶段 2（数据库与账本 `packages/db`）已完成并合并到 `main`。
 
 ## 开发环境
 
