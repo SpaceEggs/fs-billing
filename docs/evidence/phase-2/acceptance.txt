@@ -1,0 +1,145 @@
+BEGIN
+SET
+COMMIT
+== 应用角色
+  current_user  | rolsuper | rolbypassrls 
+----------------+----------+--------------
+ fs_billing_app | f        | f
+
+== 余额流水 UPDATE / DELETE
+BEGIN
+SET
+psql:docs/evidence/phase-2/acceptance.sql:18: ERROR:  permission denied for table ledger_entries
+ROLLBACK
+BEGIN
+SET
+psql:docs/evidence/phase-2/acceptance.sql:22: ERROR:  permission denied for table ledger_entries
+ROLLBACK
+== 以 ABC001 身份 SELECT * FROM cdrs（SQL 中没有租户条件）
+BEGIN
+SET
+ tenant_set 
+------------
+ t
+
+              tenant_id               |              call_uuid               |       started_at       |      answered_at       |        ended_at        |    caller    |    callee     | duration_seconds | billed_minutes | matched_prefix | country  |  rate  | charge |  hangup_cause   | unverified |         received_at          
+--------------------------------------+--------------------------------------+------------------------+------------------------+------------------------+--------------+---------------+------------------+----------------+----------------+----------+--------+--------+-----------------+------------+------------------------------
+ f86a25a5-54b9-4f4b-9e2a-f94bca649a81 | a0000001-0000-4000-8000-000000000001 | 2026-09-28 06:03:10+00 | 2026-09-28 06:03:22+00 | 2026-09-28 06:07:12+00 | 075586001234 | 447700900123  |              230 |              4 | 447            | 英国手机 | 0.0450 |   0.18 | NORMAL_CLEARING | f          | 2026-10-13 00:10:49.65996+00
+ f86a25a5-54b9-4f4b-9e2a-f94bca649a81 | a0000001-0000-4000-8000-000000000002 | 2026-09-28 06:10:00+00 | 2026-09-28 06:10:05+00 | 2026-09-28 06:10:06+00 | 075586001234 | 18765550100   |                1 |              1 | 1876           | 牙买加   | 0.2500 |   0.25 | NORMAL_CLEARING | f          | 2026-10-13 00:10:49.65996+00
+ f86a25a5-54b9-4f4b-9e2a-f94bca649a81 | a0000001-0000-4000-8000-000000000003 | 2026-09-28 06:20:00+00 |                        | 2026-09-28 06:20:30+00 | 075586001234 | 8613800138000 |                0 |              0 |                |          |        |      0 | NO_ANSWER       | f          | 2026-10-13 00:10:49.65996+00
+
+ cdrs | tenants 
+------+---------
+    3 |       1
+
+== ABC001 余额（流水合计与缓存）
+ ledger_total | entries 
+--------------+---------
+       -35.20 |      33
+
+ balance 
+---------
+  -35.20
+
+ROLLBACK
+== 未声明身份
+ cdrs | ledger 
+------+--------
+    0 |      0
+
+== 同一 UUID 插入两次
+BEGIN
+SET
+INSERT 0 1
+psql:docs/evidence/phase-2/acceptance.sql:46: ERROR:  duplicate key value violates unique constraint "cdr_call_uuids_pkey"
+DETAIL:  Key (call_uuid)=(e0000000-0000-4000-8000-000000000001) already exists.
+CONTEXT:  SQL statement "INSERT INTO cdr_call_uuids (call_uuid, tenant_id, started_at)
+  VALUES (NEW.call_uuid, NEW.tenant_id, NEW.started_at)"
+PL/pgSQL function cdrs_register_call_uuid() line 3 at SQL statement
+ROLLBACK
+== 下月分区：迁移已建出当月与下月，下月话单直接落入分区；下月的每日任务再建出其后一个月
+BEGIN
+SET
+  partition   |       started_at       
+--------------+------------------------
+ cdrs_2026_11 | 2026-10-31 17:00:00+00
+
+INSERT 0 1
+ cdr_ensure_partitions 
+-----------------------
+ cdrs_2026_11
+ cdrs_2026_12
+
+                                                   Partitioned table "public.cdrs"
+      Column      |           Type           | Collation | Nullable | Default  | Storage  | Compression | Stats target | Description 
+------------------+--------------------------+-----------+----------+----------+----------+-------------+--------------+-------------
+ tenant_id        | uuid                     |           | not null |          | plain    |             |              | 
+ call_uuid        | uuid                     |           | not null |          | plain    |             |              | 
+ started_at       | timestamp with time zone |           | not null |          | plain    |             |              | 
+ answered_at      | timestamp with time zone |           |          |          | plain    |             |              | 
+ ended_at         | timestamp with time zone |           | not null |          | plain    |             |              | 
+ caller           | text                     |           | not null |          | extended |             |              | 
+ callee           | text                     |           | not null |          | extended |             |              | 
+ duration_seconds | integer                  |           | not null | 0        | plain    |             |              | 
+ billed_minutes   | numeric                  |           | not null | 0        | main     |             |              | 
+ matched_prefix   | text                     |           |          |          | extended |             |              | 
+ country          | text                     |           |          |          | extended |             |              | 
+ rate             | numeric                  |           |          |          | main     |             |              | 
+ charge           | numeric                  |           | not null | 0        | main     |             |              | 
+ hangup_cause     | text                     |           | not null | ''::text | extended |             |              | 
+ unverified       | boolean                  |           | not null | false    | plain    |             |              | 
+ received_at      | timestamp with time zone |           | not null | now()    | plain    |             |              | 
+Partition key: RANGE (started_at)
+Indexes:
+    "cdrs_pkey" PRIMARY KEY, btree (call_uuid, started_at)
+    "cdrs_tenant_answered_at" btree (tenant_id, answered_at)
+Check constraints:
+    "cdrs_answered_shape" CHECK (
+CASE
+    WHEN answered_at IS NULL THEN duration_seconds = 0 AND billed_minutes = 0::numeric AND charge = 0::numeric
+    ELSE answered_at >= started_at AND answered_at <= ended_at AND matched_prefix IS NOT NULL AND country IS NOT NULL AND rate IS NOT NULL
+END)
+    "cdrs_billed_minutes_check" CHECK (billed_minutes >= 0::numeric)
+    "cdrs_charge_check" CHECK (charge >= 0::numeric)
+    "cdrs_check" CHECK (ended_at >= started_at)
+    "cdrs_duration_seconds_check" CHECK (duration_seconds >= 0)
+    "cdrs_rate_check" CHECK (rate >= 0::numeric AND scale(rate) <= 4)
+Foreign-key constraints:
+    "cdrs_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+Policies:
+    POLICY "tenant_isolation"
+      USING (app_can_see(tenant_id))
+      WITH CHECK (app_can_see(tenant_id))
+Triggers:
+    cdrs_register_call_uuid BEFORE INSERT ON cdrs FOR EACH ROW EXECUTE FUNCTION cdrs_register_call_uuid()
+Partitions: cdrs_2026_09 FOR VALUES FROM ('2026-08-31 16:00:00+00') TO ('2026-09-30 16:00:00+00'),
+            cdrs_2026_10 FOR VALUES FROM ('2026-09-30 16:00:00+00') TO ('2026-10-31 16:00:00+00'),
+            cdrs_2026_11 FOR VALUES FROM ('2026-10-31 16:00:00+00') TO ('2026-11-30 16:00:00+00'),
+            cdrs_2026_12 FOR VALUES FROM ('2026-11-30 16:00:00+00') TO ('2026-12-31 16:00:00+00')
+
+ROLLBACK
+== 费率版本：同一费率表相同生效时间
+BEGIN
+SET
+psql:docs/evidence/phase-2/acceptance.sql:65: ERROR:  duplicate key value violates unique constraint "rate_versions_tenant_effective_from_key"
+ROLLBACK
+== 费率版本：已排定未来版本时新建立即生效版本
+BEGIN
+SET
+        effective_from         
+-------------------------------
+ 2026-10-20 00:11:13.193759+00
+
+INSERT 0 1
+psql:docs/evidence/phase-2/acceptance.sql:73: ERROR:  已排定 2026-10-20 00:11:13.193759+00 生效的新版本，请先修改该未来版本
+CONTEXT:  PL/pgSQL function rate_versions_guard() line 18 at RAISE
+ROLLBACK
+== 费率版本：开户后首个立即生效版本
+BEGIN
+SET
+        effective_from         | effective_now 
+-------------------------------+---------------
+ 2026-10-13 00:11:13.195136+00 | t
+
+INSERT 0 1
+ROLLBACK
