@@ -63,7 +63,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 
 1. `(tenant_id, effective_from)` 唯一。
 2. **新版本的生效时间必须晚于该租户所有已有版本。** 已排定未来版本时，“修改当前版本”（插入一个立即生效的新版本）会被拒绝，错误提示“已排定 … 生效的新版本，请先修改该未来版本”。理由：未来版本是排定时的整表快照，不包含之后对当前版本的修改；若允许插入，修改会在未来版本生效时静默丢失。选择“禁止并提示”而非“同步到未来版本”，因为未来版本可能本来就要改同一前缀，自动同步会覆盖管理员的排定意图。
-3. 已生效的版本及其条目不可修改、不可删除；未来版本可以整体删除（取消排定）后重新排定。
+3. 已生效的版本及其条目不可修改、不可删除。是否已生效，先拿该租户费率的事务级 advisory 锁，再用 `clock_timestamp()` 比较。`now()` 停在事务开始，不能用来做这个判断。未来版本可以整体删除（取消排定）后重新排定。
 4. “立即生效”的版本不传 `effective_from`，由数据库默认值 `now()`（事务开始时刻）填写，因此提交后立刻满足 `effective_from ≤ now()`。
 
 ### 话单唯一与分区
@@ -90,6 +90,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 - [x] **插入下个月的话单前自动建分区，`\d+` 能看到对应分区。** 迁移已建出 `cdrs_2026_10`、`cdrs_2026_11`（以及 `raw_cdrs` 的同月分区）；北京时间 `2026-11-01 01:00` 的话单直接落入 `cdrs_2026_11`；模拟下月的每日任务 `cdr_ensure_partitions(now() + interval '1 month')` 返回 `cdrs_2026_11`、`cdrs_2026_12`、`raw_cdrs_2026_11`、`raw_cdrs_2026_12`，`\d+ cdrs` 列出 4 个分区（见下）。测试用固定时间验证边界：`2027-01-31 23:59:59+08` 落入 `cdrs_2027_01`，`2027-02-01 00:00:00+08` 落入 `cdrs_2027_02`；无分区月份插入报 `no partition of relation "cdrs" found for row`。
 - [x] **费率版本（费率表，`effectiveFrom`）唯一。** `ERROR:  duplicate key value violates unique constraint "rate_versions_tenant_effective_from_key"`。
 - [x] **已排定未来版本时修改当前版本：禁止，并提示先改未来版本。** 先排定 7 天后的版本，再插入立即生效的版本：`ERROR:  已排定 2026-10-20 00:32:59.604318+00 生效的新版本，请先修改该未来版本`。删除（取消）未来版本后可以修改当前版本；早于当前版本的生效时间被拒绝；已生效版本的条目不可增删改、版本不可删改。规则与理由见上文“费率版本规则”。
+- [x] **事务跨过生效时间后不能再改删该版本。** 版本的 `effective_from` 在事务开始之后。`pg_sleep` 到 `clock_timestamp() >= effective_from` 且 `transaction_timestamp() < effective_from` 之后，删除版本报 `42501` `已生效的费率版本不可删除`，增删条目报 `42501` `已生效的费率版本不可修改，请新建版本`。回滚后版本与原条目仍在（1 条，费率前缀 `86`）。
 - [x] **首个“立即生效”版本 `effectiveFrom ≤ now`，开户后立刻授权能匹配到费率。** 新开户后不传生效时间插入版本：`effective_now = t`。测试中开户、建版本、提交后，以数据库 `clock_timestamp()` 为时刻调用阶段 1 的 `authorize`：`{ allowed: true, entry: { prefix: '86' }, callableMinutes: 2000, maxSeconds: 14400 }`。对照用例：生效时间取应用时钟且快 5 秒时，同样的调用返回 `{ allowed: false, reason: '无费率' }`。
 
 评审后追加的结构决定（见“已决定事项”），同样由 `pnpm test:db` 与上面的 psql 脚本验证：

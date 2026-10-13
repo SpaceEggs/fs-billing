@@ -106,20 +106,23 @@ CREATE FUNCTION rate_versions_guard() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   latest timestamptz;
+  tenant uuid;
 BEGIN
   IF TG_OP = 'UPDATE' THEN
     RAISE EXCEPTION '费率版本不可修改' USING ERRCODE = 'insufficient_privilege';
   END IF;
+  -- 先锁再读时钟。now() 停在事务开始，等锁期间可能跨过生效时间。
+  tenant := CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+  PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || tenant::text, 0));
   IF TG_OP = 'DELETE' THEN
-    IF OLD.effective_from <= now() THEN
+    IF OLD.effective_from <= clock_timestamp() THEN
       RAISE EXCEPTION '已生效的费率版本不可删除' USING ERRCODE = 'insufficient_privilege';
     END IF;
     RETURN OLD;
   END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || NEW.tenant_id::text, 0));
   SELECT max(effective_from) INTO latest FROM rate_versions WHERE tenant_id = NEW.tenant_id;
   IF NEW.effective_from < latest THEN
-    IF latest > now() THEN
+    IF latest > clock_timestamp() THEN
       RAISE EXCEPTION '已排定 % 生效的新版本，请先修改该未来版本', latest
         USING ERRCODE = 'check_violation';
     END IF;
@@ -138,17 +141,21 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   version rate_versions%ROWTYPE;
   row_version uuid;
+  tenant uuid;
 BEGIN
   IF TG_OP = 'UPDATE' THEN
     RAISE EXCEPTION '费率条目不可修改，请新建版本' USING ERRCODE = 'insufficient_privilege';
   END IF;
   row_version := CASE TG_OP WHEN 'INSERT' THEN NEW.rate_version_id ELSE OLD.rate_version_id END;
+  tenant := CASE TG_OP WHEN 'INSERT' THEN NEW.tenant_id ELSE OLD.tenant_id END;
+  -- 与 rate_versions_guard 同一把锁，拿到之后再用 clock_timestamp() 判断是否已生效。
+  PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || tenant::text, 0));
   SELECT * INTO version FROM rate_versions WHERE id = row_version;
   -- 插入时由外键报错；删除时版本已不存在，说明是取消未来版本的级联删除。
   IF NOT FOUND THEN
     RETURN CASE TG_OP WHEN 'INSERT' THEN NEW ELSE OLD END;
   END IF;
-  IF version.effective_from <= now()
+  IF version.effective_from <= clock_timestamp()
      AND (SELECT xmin FROM rate_versions WHERE id = row_version) <> pg_current_xact_id()::xid THEN
     RAISE EXCEPTION '已生效的费率版本不可修改，请新建版本' USING ERRCODE = 'insufficient_privilege';
   END IF;

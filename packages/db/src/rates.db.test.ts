@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import type { PoolClient } from 'pg';
 import { describe, expect, it } from 'vitest';
 import {
   authorize,
@@ -147,6 +148,92 @@ describe('费率版本', () => {
       '费率条目不可修改，请新建版本',
       '费率版本不可修改',
     ]);
+  });
+
+  it('事务在版本生效前开始，跨过生效时间后删除或修改被拒绝', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const version = await withAdmin(app.db, async (tx) => {
+      const { rows } = await tx.execute<{ ms: string }>(sql`
+        select (extract(epoch from clock_timestamp() + interval '3 seconds') * 1000)::bigint::text as ms`);
+      return createRateVersion(tx, tenant.id, CHINA, {
+        effectiveFrom: new Date(Number(rows[0]!.ms)),
+      });
+    });
+
+    const editor = await app.pool.connect();
+    const rejected = async (
+      client: PoolClient,
+      text: string,
+      params: unknown[],
+    ) => {
+      await client.query('SAVEPOINT rejected');
+      const error = await pgError(client.query(text, params));
+      await client.query('ROLLBACK TO SAVEPOINT rejected');
+      return error;
+    };
+    try {
+      await editor.query('BEGIN');
+      await editor.query(`SELECT set_config('app.scope', 'admin', true)`);
+      const started = await editor.query<{
+        still_future: boolean;
+        wait_seconds: string;
+      }>(
+        `SELECT effective_from > transaction_timestamp() AS still_future,
+                extract(epoch FROM (effective_from - clock_timestamp()))::text AS wait_seconds
+         FROM rate_versions WHERE id = $1`,
+        [version.id],
+      );
+      expect(started.rows[0]!.still_future).toBe(true);
+      const wait = Number(started.rows[0]!.wait_seconds);
+      expect(wait).toBeGreaterThan(0);
+      await editor.query('SELECT pg_sleep($1)', [wait + 0.3]);
+      const crossed = await editor.query<{
+        past: boolean;
+        txn_before: boolean;
+      }>(
+        `SELECT clock_timestamp() >= effective_from AS past,
+                transaction_timestamp() < effective_from AS txn_before
+         FROM rate_versions WHERE id = $1`,
+        [version.id],
+      );
+      expect(crossed.rows[0]).toEqual({ past: true, txn_before: true });
+      expect(
+        await rejected(editor, 'DELETE FROM rate_versions WHERE id = $1', [
+          version.id,
+        ]),
+      ).toMatchObject({ code: '42501', message: '已生效的费率版本不可删除' });
+      expect(
+        await rejected(
+          editor,
+          `INSERT INTO rate_entries (tenant_id, rate_version_id, prefix, country, rate)
+           VALUES ($1, $2, '44', '英国', 0.0200)`,
+          [tenant.id, version.id],
+        ),
+      ).toMatchObject({
+        code: '42501',
+        message: '已生效的费率版本不可修改，请新建版本',
+      });
+      expect(
+        await rejected(
+          editor,
+          'DELETE FROM rate_entries WHERE rate_version_id = $1',
+          [version.id],
+        ),
+      ).toMatchObject({
+        code: '42501',
+        message: '已生效的费率版本不可修改，请新建版本',
+      });
+    } finally {
+      await editor.query('ROLLBACK');
+      editor.release();
+    }
+
+    const { rows } = await withAdmin(app.db, (tx) =>
+      tx.execute(sql`
+        select (select count(*)::int from rate_versions where id = ${version.id}) as versions,
+               (select prefix from rate_entries where rate_version_id = ${version.id}) as prefix`),
+    );
+    expect(rows).toEqual([{ versions: 1, prefix: '86' }]);
   });
 
   it('费率超过 4 位小数被拒绝，而不是被四舍五入', async () => {
