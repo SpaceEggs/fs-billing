@@ -81,7 +81,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 没有 `transactionid` 锁说明本事务还没有分配事务号，也就是没写过行，也没加过行锁（`FOR UPDATE`、`FOR SHARE` 等）。所以别的事务不会在它的行或事务号上等待。排队者手里没有持锁者会等的东西。持锁者在锁内的等待只可能指向其他已持锁的事务，或者不在排队的事务。否则 `lock_tenants` 报 SQLSTATE 55000 `租户 <id> 的锁要在本事务的任何写入、行锁和其他锁之前拿`，不排队。原来的死锁是这样形成的：A 先 `SELECT ... FOR UPDATE` 租户行再等租户锁，持锁的 B 写流水时外键 `KEY SHARE` 又等 A 的行锁，结果报 40P01。现在 A 在第一步之后调用 `lock_tenants` 就直接报错。这个规则没有增加任何锁。
 
-- 只能锁当前身份有权访问的租户：租户身份（`app.scope = 'tenant'`）只能锁 `app.tenant_id`，管理员与系统身份可以锁任意租户，未声明身份一律不行。越权时报 SQLSTATE 42501 `当前身份不能锁租户 <id>`，不拿任何锁。函数是 `SECURITY DEFINER`，检查在函数体里做，应用侧绕不过去。
+- 只能锁当前身份有权访问的租户：租户身份（`app.scope = 'tenant'`）只能锁 `app.tenant_id`，管理员与系统身份可以锁任意租户，未声明身份或身份不完整一律不行。新连接只设置 `app.tenant_id`、不设置 `app.scope` 时，`app_can_see` 返回 NULL 而不是 false，所以函数用 `app_can_see(t) IS NOT TRUE` 判断越权。越权时报 SQLSTATE 42501 `当前身份不能锁租户 <id>`，不拿任何锁。函数是 `SECURITY DEFINER`，检查在函数体里做，应用侧绕不过去。
 - 函数每拿到一把锁，就用 `set_config('app.tenant_locks', ..., true)` 把该租户追加到事务级标记里。“已持有”指本事务通过 `lock_tenants` 拿到：标记里有该租户，并且 `pg_locks` 里有这把锁。标记随事务结束或保存点回滚一起消失，所以会话级的同键 `pg_advisory_lock` 和连接池里上一个事务留下的状态都不算持有。
 - 新开户并在同一事务里建首个费率版本时，先生成租户编号并 `lock_tenants`，再插入租户。种子分两个事务：先写管理员与租户，再在新事务里锁租户，然后写费率、流水和话单。
 - 同一事务的全部租户放进一次调用。标记按加锁顺序是升序的。之后再锁一个尚未持有、但比标记里最大租户更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。

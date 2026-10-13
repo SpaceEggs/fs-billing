@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import type pg from 'pg';
-import { describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { describe, expect, inject, it } from 'vitest';
 import { money } from '@fs-billing/rating';
 import { connections, createTenant, pgError } from '../test/support.js';
 import { lockTenants, withAdmin, withTenant } from './client.js';
@@ -69,6 +69,28 @@ describe('lock_tenants 只锁当前身份有权访问的租户', () => {
       code: '42501',
       message: `当前身份不能锁租户 ${tenant.id}`,
     });
+  });
+
+  // 连接上设置过 app.scope 后，未设置时读到的是 ''；只有新连接读到 NULL，app_can_see 才返回 NULL。
+  it('新连接只设置 app.tenant_id、没有 app.scope，锁该租户报 42501', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const client = new pg.Client({ connectionString: inject('appUrl') });
+    await client.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [
+        tenant.id,
+      ]);
+      const error = await pgError(
+        client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]),
+      );
+      expect(error).toMatchObject({
+        code: '42501',
+        message: `当前身份不能锁租户 ${tenant.id}`,
+      });
+    } finally {
+      await client.end();
+    }
   });
 });
 
