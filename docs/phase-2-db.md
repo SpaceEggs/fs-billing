@@ -15,17 +15,20 @@
 
 应用连接后必须在事务内声明身份，否则任何业务表都读不到行（默认拒绝）：
 
-| 身份         | 设置（事务级 `set_config(..., true)`）                | 可见范围         |
-| ------------ | ----------------------------------------------------- | ---------------- |
-| 租户         | `app.scope = 'tenant'`，`app.tenant_id = <租户 uuid>` | 该租户的行       |
-| 管理员与系统 | `app.scope = 'admin'`                                 | 全部行           |
-| 未设置       | —                                                     | 0 行（策略为假） |
+| 身份           | 设置（事务级 `set_config(..., true)`）                | 可见范围         |
+| -------------- | ----------------------------------------------------- | ---------------- |
+| 租户           | `app.scope = 'tenant'`，`app.tenant_id = <租户 uuid>` | 该租户的行，只读 |
+| 管理员         | `app.scope = 'admin'`                                 | 全部行，可写     |
+| 系统（Worker） | `app.scope = 'system'`                                | 全部行，可写     |
+| 未设置         | 不调用 `set_config`                                   | 0 行（策略为假） |
 
-TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/src/client.ts`）。分区表的各分区也启用 RLS 且不授予应用角色任何权限，只能经父表访问。
+TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(db, fn)`（`packages/db/src/client.ts`）。分区表的各分区也启用 RLS 且不授予应用角色任何权限，只能经父表访问。
+
+**RLS 的信任边界。** 租户编号来自登录之后应用写入的 `app.tenant_id`，不来自 SQL 里客户端自己写的租户条件。`app.scope` 由 `withTenant`、`withAdmin`、`withSystem` 在同一事务里设置。`fs_billing_app` 是 `NOSUPERUSER NOBYPASSRLS`，不能绕过 RLS。拿到 `APP_DATABASE_URL` 并能执行任意 SQL 的主体可以自己 `set_config` 这两个变量。RLS 兜底的是应用漏写过滤，不隔离共享数据库凭据。
 
 ### 表
 
-所有业务表带 `tenant_id`（`tenants` 自身以 `id` 为租户编号）；例外是全局的 `admins` 和尚未归属租户的 `unassigned_cdrs`（归属后记 `assigned_tenant_id`），二者仅管理员身份可见。金额 `NUMERIC`（不限精度，计费过程不舍入），费率 `NUMERIC` 加检查 `scale(rate) <= 4`（超过 4 位小数直接拒绝，`NUMERIC(10,4)` 会悄悄四舍五入），时间 `timestamptz`。测试断言库中没有 `real`/`double precision`/`money`/不带时区的 `timestamp` 列。
+所有业务表带 `tenant_id`（`tenants` 自身以 `id` 为租户编号）；例外是全局的 `admins`（仅 `app.scope = 'admin'` 可见）和尚未归属租户的 `unassigned_cdrs`（管理员与系统身份可见，归属后记 `assigned_tenant_id`）。金额 `NUMERIC`（不限精度，计费过程不舍入），费率 `NUMERIC` 加检查 `scale(rate) <= 4`（超过 4 位小数直接拒绝，`NUMERIC(10,4)` 会悄悄四舍五入），时间 `timestamptz`。测试断言库中没有 `real`/`double precision`/`money`/不带时区的 `timestamp` 列。
 
 | 表                         | 主要列                                                                                                                                                                                                             | 约束与规则                                                                                                                                                                              |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -38,12 +41,12 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 | `receivable_settlements`   | `tenant_id`、`ledger_entry_id`、`entry_kind`（恒为 `credit_recharge`）、`received_on`、`note`、`confirmed_by`                                                                                                      | 待收款 → 已收款的状态事件；`(ledger_entry_id, tenant_id, entry_kind)` 外键指向 `ledger_entries (id, tenant_id, kind)`，只能结算赊账充值；`UNIQUE (ledger_entry_id)` 只能结算一次；只增  |
 | `tenant_balances`          | `tenant_id`、`balance`、`updated_at`                                                                                                                                                                               | 缓存余额，仅由流水插入触发器维护；应用角色只读；`balance_discrepancies` 视图列出与流水合计不一致的租户                                                                                  |
 | `cdrs`                     | `tenant_id`、`call_uuid`、`started_at`（分区键）、`answered_at`、`ended_at`、`caller`、`callee`、`duration_seconds`、`billed_minutes`、`matched_prefix`、`country`、`rate`、`charge`、`hangup_cause`、`unverified` | `PARTITION BY RANGE (started_at)`，按北京时间自然月分区（`cdrs_2026_10` 覆盖 `2026-10-01 00:00+08` 至 `2026-11-01 00:00+08`）；UUID 全局唯一（见下）                                    |
-| `call_uuids`               | `call_uuid`、`tenant_id`（可空 = 未归属）、`started_at`                                                                                                                                                            | 非分区登记表，`call_uuid` 主键；`cdrs` 与 `unassigned_cdrs` 共用，由两者的插入触发器写入（见下）；仅管理员身份可见                                                                      |
-| `raw_cdrs`                 | `id`、`tenant_id`（可空）、`call_uuid`（可空）、`body text`、`payload jsonb`（由 `body` 生成）、`received_at`（分区键）                                                                                            | `PARTITION BY RANGE (received_at)`，按北京时间自然月分区，主键 `(id, received_at)`；不按 UUID 去重；仅管理员身份可见                                                                    |
-| `unassigned_cdrs`          | `tenant_tag`、`call_uuid`、通话字段、`status`、`ignore_reason`、`assigned_tenant_id`                                                                                                                               | 状态 `pending`/`ignored`/`assigned`，检查约束保证忽略必有原因、归属必有租户；插入时在 `call_uuids` 登记 `tenant_id = NULL`；仅管理员可见                                                |
+| `call_uuids`               | `call_uuid`、`tenant_id`（可空 = 未归属）、`started_at`                                                                                                                                                            | 非分区登记表，`call_uuid` 主键；`cdrs` 与 `unassigned_cdrs` 共用，由两者的插入触发器写入（见下）；管理员或系统身份可见                                                                  |
+| `raw_cdrs`                 | `id`、`tenant_id`（可空）、`call_uuid`（可空）、`body text`、`payload jsonb`（由 `body` 生成）、`received_at`（分区键）                                                                                            | `PARTITION BY RANGE (received_at)`，按北京时间自然月分区，主键 `(id, received_at)`；不按 UUID 去重；管理员或系统身份可见                                                                |
+| `unassigned_cdrs`          | `tenant_tag`、`call_uuid`、通话字段、`status`、`ignore_reason`、`assigned_tenant_id`                                                                                                                               | 状态 `pending`/`ignored`/`assigned`，检查约束保证忽略必有原因、归属必有租户；插入时在 `call_uuids` 登记 `tenant_id = NULL`；管理员或系统身份可见                                        |
 | `monthly_statements`       | `tenant_id`、`month`、期初、充值、赠送、调账、通话扣费、期末、通话分钟、`details_deleted`、`generated_at`                                                                                                          | `UNIQUE (tenant_id, month)`；检查 期末 = 期初 + 充值 + 赠送 + 调账 − 通话扣费                                                                                                           |
 | `operation_logs`           | `admin_id`、`tenant_id`（可空）、`action`、`target`、`details jsonb`、`created_at`                                                                                                                                 | 只增；仅管理员可见                                                                                                                                                                      |
-| `system_alerts`            | `tenant_id`（可空）、`kind`、`description`、`started_at`、`recovered_at`、`affected_calls`                                                                                                                         | `kind ∈ {auth_timeout, cdr_failed, email_failed, partition_failed}`；仅管理员可见                                                                                                       |
+| `system_alerts`            | `tenant_id`（可空）、`kind`、`description`、`started_at`、`recovered_at`、`affected_calls`                                                                                                                         | `kind ∈ {auth_timeout, cdr_failed, email_failed, partition_failed}`；管理员或系统身份可见                                                                                               |
 | `balance_alert_settings`   | `tenant_id`（主键）、`threshold`、`emails text[]`                                                                                                                                                                  |                                                                                                                                                                                         |
 | `balance_alert_deliveries` | `tenant_id`、`kind`、`balance`、`recipients`、`sent_at`                                                                                                                                                            | `kind ∈ {low_balance, suspended}`；只增                                                                                                                                                 |
 
@@ -74,9 +77,9 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
   - `cdrs` 的 `BEFORE INSERT` 触发器插入登记，或认领一条 `tenant_id IS NULL` 的登记（阶段 8 分配未归属话单）；登记已属于任何租户（包括本租户）时报与普通唯一冲突相同的 `23505 call_uuids_pkey`。
   - 因此同一通电话最多归属一个租户、最多扣费一次，阶段 8 把已计费的 UUID 再分配给另一个租户会被数据库拒绝。
   - 触发器在 `ON CONFLICT` 判断之前执行，`INSERT … ON CONFLICT DO NOTHING` 挡不住登记表的冲突；去重的调用方识别 `23505 call_uuids_pkey`（种子先查登记表再插入）。
-- `raw_cdrs` 按 `received_at`（收到推送的时间，解析失败时也一定有）的北京月份分区，归档时可以整月分离分区。`body text` 保存收到的原文，逐字节不变；`payload jsonb` 是由 `body` 生成的列（`jsonb_or_null(body)`），供查询使用。`body::jsonb` 报 `22P02`、`22P05`（`\u0000`）或 `22003`（数值超出 numeric）时 `payload` 为空，原文照样保存，其他错误照常抛出。`call_uuid` 可空，原文中解析不出 UUID 也能保存；去重不在这张表做。
-- `ensure_month_partition(parent, moment)` 幂等地建出 `cdrs` 或 `raw_cdrs` 在 `moment` 所在北京时间月份的分区：先用 `to_regclass` 检查，已存在就直接返回，不加锁；不存在时才拿该分区的事务级 advisory 锁并再检查一次，然后建表并启用 RLS。入库路径上调用它不会把并发入库串行化。
-- `cdr_ensure_partitions(moment timestamptz DEFAULT now())` 建两张表的当月与下月分区，返回 4 个分区名（应用角色可执行，函数以 owner 身份建表）。每次 `pnpm db:migrate` 都会调用一次；阶段 3 的 Worker 每日调度、启动时执行一次、缺分区时按该行时间调用后重试，失败写 `partition_failed` 告警（见 plan.md 阶段 3）。没有 DEFAULT 分区：落在未建分区月份的插入直接报错，而不是悄悄进入兜底分区。
+- `raw_cdrs` 按 `received_at`（收到推送的时间，解析失败时也一定有）的北京月份分区，归档时可以整月分离分区。数据库编码是 UTF-8。`body text` 保存的是按 UTF-8 解码后的文本，不是任意字节。合法 UTF-8 原文的字符原样读回。非法 UTF-8 或正文中的 NUL 不能写入 `text`。`payload jsonb` 是由 `body` 生成的列（`jsonb_or_null(body)`），供查询使用。`body::jsonb` 报 `22P02`、`22P05`（`\u0000`）或 `22003`（数值超出 numeric）时 `payload` 为空，原文照样保存，其他错误照常抛出。`call_uuid` 可空，原文中解析不出 UUID 也能保存；去重不在这张表做。
+- `ensure_month_partition(parent, moment)` 幂等地建出 `cdrs` 或 `raw_cdrs` 在 `moment` 所在北京时间月份的分区。调用者的 `app.scope` 必须是 `admin` 或 `system`，否则在加锁之前拒绝。应用角色没有这个函数的 `EXECUTE`。先用 `to_regclass` 检查，已存在就直接返回，不加锁。不存在时才拿该分区的事务级 advisory 锁并再检查一次，然后建表并启用 RLS。入库路径上调用它不会把并发入库串行化。
+- `cdr_ensure_partitions(moment timestamptz DEFAULT now())` 以 owner 身份（`SECURITY DEFINER`）建两张表的当月与下月分区，返回 4 个分区名。应用角色有这个函数的 `EXECUTE`。函数体仍调用 `ensure_month_partition`，所以租户身份和未声明身份报 `42501` `建分区只允许管理员或系统身份`。`pnpm db:migrate` 在 `withSystem` 里调用它，种子在 `withAdmin` 里调用它。阶段 3 的 Worker 用系统身份每日调度、启动时执行一次、缺分区时按该行时间调用后重试，失败写 `partition_failed` 告警（见 plan.md 阶段 3）。没有 DEFAULT 分区。落在未建分区月份的插入直接报错，而不是悄悄进入兜底分区。
 
 ## 验收标准
 
@@ -87,9 +90,10 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 - [x] **以租户 A 身份 `SELECT * FROM cdrs` 只返回 A 的数据。** 以 ABC001 身份执行 `SELECT * FROM cdrs`（无租户条件）返回 3 行，`tenant_id` 全部为 ABC001；`count(DISTINCT tenant_id)` = 1。GZT007 身份只看到自己的 2 条话单、自己的流水和自己的租户行；未声明身份时 `cdrs`、`ledger_entries` 均为 0 行；租户身份写入他人流水报 `new row violates row-level security policy for table "ledger_entries"`；直接读分区 `cdrs_2026_09` 报 `permission denied`。
 - [x] **ABC001 余额由流水合计算出为 −35.20。** 以 ABC001 身份 `SELECT sum(amount) FROM ledger_entries` → `-35.20`（33 条流水），缓存 `tenant_balances.balance` → `-35.20`，`formatMoney(loadRatingTenant(...).balance)` → `'-35.20'`；`balance_discrepancies` 为空。
 - [x] **同一 UUID 的话单插入两次，第二次被唯一约束挡住。** `ERROR:  duplicate key value violates unique constraint "call_uuids_pkey"`；开始时间不同（落在不同分区）的同一 UUID 同样被挡住。
+- [x] **建分区只允许管理员或系统身份。** 应用角色可以执行 `cdr_ensure_partitions`，不能执行 `ensure_month_partition`。租户身份与未声明身份调用前者报 `42501` `建分区只允许管理员或系统身份`。系统身份调用返回 4 个分区名。
 - [x] **插入下个月的话单前自动建分区，`\d+` 能看到对应分区。** 迁移已建出 `cdrs_2026_10`、`cdrs_2026_11`（以及 `raw_cdrs` 的同月分区）；北京时间 `2026-11-01 01:00` 的话单直接落入 `cdrs_2026_11`；模拟下月的每日任务 `cdr_ensure_partitions(now() + interval '1 month')` 返回 `cdrs_2026_11`、`cdrs_2026_12`、`raw_cdrs_2026_11`、`raw_cdrs_2026_12`，`\d+ cdrs` 列出 4 个分区（见下）。测试用固定时间验证边界：`2027-01-31 23:59:59+08` 落入 `cdrs_2027_01`，`2027-02-01 00:00:00+08` 落入 `cdrs_2027_02`；无分区月份插入报 `no partition of relation "cdrs" found for row`。
 - [x] **费率版本（费率表，`effectiveFrom`）唯一。** `ERROR:  duplicate key value violates unique constraint "rate_versions_tenant_effective_from_key"`。
-- [x] **已排定未来版本时修改当前版本：禁止，并提示先改未来版本。** 先排定 7 天后的版本，再插入立即生效的版本：`ERROR:  已排定 2026-10-20 00:32:59.604318+00 生效的新版本，请先修改该未来版本`。删除（取消）未来版本后可以修改当前版本；早于当前版本的生效时间被拒绝；已生效版本的条目不可增删改、版本不可删改。规则与理由见上文“费率版本规则”。
+- [x] **已排定未来版本时修改当前版本：禁止，并提示先改未来版本。** 先排定 7 天后的版本，再插入立即生效的版本：`ERROR:  已排定 2026-10-20 01:43:19.278455+00 生效的新版本，请先修改该未来版本`。删除（取消）未来版本后可以修改当前版本；早于当前版本的生效时间被拒绝；已生效版本的条目不可增删改、版本不可删改。规则与理由见上文“费率版本规则”。
 - [x] **事务跨过生效时间后不能再改删该版本。** 版本的 `effective_from` 在事务开始之后。`pg_sleep` 到 `clock_timestamp() >= effective_from` 且 `transaction_timestamp() < effective_from` 之后，删除版本报 `42501` `已生效的费率版本不可删除`，增删条目报 `42501` `已生效的费率版本不可修改，请新建版本`。回滚后版本与原条目仍在（1 条，费率前缀 `86`）。
 - [x] **首个“立即生效”版本 `effectiveFrom ≤ now`，开户后立刻授权能匹配到费率。** 新开户后不传生效时间插入版本：`effective_now = t`。测试中开户、建版本、提交后，以数据库 `clock_timestamp()` 为时刻调用阶段 1 的 `authorize`：`{ allowed: true, entry: { prefix: '86' }, callableMinutes: 2000, maxSeconds: 14400 }`。对照用例：生效时间取应用时钟且快 5 秒时，同样的调用返回 `{ allowed: false, reason: '无费率' }`。
 
@@ -97,7 +101,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 
 - [x] **流水按发生时间归属月份。** owner 写入北京时间 9-30 23:59 接通、10-01 00:00:30 入账的扣费：`statement_month = 2026-09`，`written_month = 2026-10`。种子中 ABC001 的 28 笔通话扣费全部归属 2026-09，合计 `-2486.30`（设计稿本月消费）。人工充值只倒填 `occurred_at` 时报 `violates check constraint "ledger_entries_kind_shape"`。应用角色把人工调账的 `occurred_at` 和 `created_at` 一起写成 `2026-09-01` 时报 `42501` `created_at 由数据库生成`。不写这两列的调账成功，且 `occurred_at = created_at = transaction_timestamp()`。
 - [x] **未归属与正式话单共用 UUID 登记表。** 先进未归属话单的 UUID 登记为 `tenant_id = NULL`，之后写入 ABC001 的正式话单时认领成功（测试读回登记表为该租户）；同一 UUID 再给 GZT007：`duplicate key value violates unique constraint "call_uuids_pkey"`；已在正式话单中的 UUID 再进未归属话单：同样报 `call_uuids_pkey`。
-- [x] **原始话单逐字节保存，按收到时间分区。** 含换行、制表符、多余空格、非字母序键和重复键 `"billsec"` 的 124 字节原文：读回 `body` 与写入的字面量完全相同，`payload` 为规范化副本 `{"a": [1, 2], "z": 1, "variables": {…, "billsec": "231"}}`；北京时间 `2026-10-31 23:59:59` 收到的落入 `raw_cdrs_2026_10`。截断的原文、含 `\u0000` 的原文，以及数值 `{"n":1e1000000}` 照样保存，`payload` 为空。
+- [x] **原始话单按 UTF-8 文本原样保存，按收到时间分区。** 数据库编码是 UTF-8，`body` 是 `text`。含换行、制表符、多余空格、非字母序键和重复键 `"billsec"` 的 124 字节原文：读回 `body` 与写入的字面量完全相同，`payload` 为规范化副本 `{"a": [1, 2], "z": 1, "variables": {…, "billsec": "231"}}`；北京时间 `2026-10-31 23:59:59` 收到的落入 `raw_cdrs_2026_10`。截断的原文、含 `\u0000` 的原文，以及数值 `{"n":1e1000000}` 照样保存，`payload` 为空。
 - [x] **分区已存在时不加锁。** 另一个连接持有 `cdrs_2026_10` 与 `cdrs_2031_03` 的建分区锁时，`lock_timeout = 300ms` 下 `cdr_ensure_partitions('2026-10-12')` 立即返回 4 个分区名；`cdr_ensure_partitions('2031-03-15')`（分区不存在）报 `55P03 canceling statement due to lock timeout`。把加锁移回检查之前，这个测试失败。
 - [x] **系统告警可记录建分区失败。** `INSERT INTO system_alerts (kind, …) VALUES ('partition_failed', …)` 成功；未定义的类型报 `violates check constraint "system_alerts_kind_check"`。
 
@@ -200,10 +204,8 @@ DETAIL:  Key (call_uuid)=(a0000001-0000-4000-8000-000000000001) already exists.
 ---------+--------------+---------
  2026-09 |     -2486.30 |      28
 
--- 9-30 23:59（北京时间）接通、10-01 00:00:30 写入的扣费
- statement_month | written_month | amount
------------------+---------------+--------
- 2026-09         | 2026-10       |  -0.05
+-- 应用角色回填 created_at 的人工调账被拒绝
+ERROR:  created_at 由数据库生成
 
 -- 人工操作倒填发生时间
 ERROR:  new row for relation "ledger_entries" violates check constraint "ledger_entries_kind_shape"
@@ -217,6 +219,11 @@ ERROR:  new row for relation "ledger_entries" violates check constraint "ledger_
     partition     |        body         | payload_null
 ------------------+---------------------+--------------
  raw_cdrs_2026_11 | {"uuid": "truncated | t
+
+-- 数值超出 numeric 的 JSON 原文也保存，payload 为空
+      body       | payload_null
+-----------------+--------------
+ {"n":1e1000000} | t
 
                                                                   Partitioned table "public.raw_cdrs"
 …
@@ -257,9 +264,15 @@ Indexes:
     "cdrs_pkey" PRIMARY KEY, btree (call_uuid, started_at)
     "cdrs_tenant_answered_at" btree (tenant_id, answered_at)
 Policies:
-    POLICY "tenant_isolation"
+    POLICY "operator_delete" FOR DELETE
+      USING (app_is_operator())
+    POLICY "operator_insert" FOR INSERT
+      WITH CHECK (app_is_operator())
+    POLICY "operator_update" FOR UPDATE
       USING (app_can_see(tenant_id))
-      WITH CHECK (app_can_see(tenant_id))
+      WITH CHECK (app_is_operator())
+    POLICY "tenant_read" FOR SELECT
+      USING (app_can_see(tenant_id))
 Triggers:
     cdrs_register_call_uuid BEFORE INSERT ON cdrs FOR EACH ROW EXECUTE FUNCTION cdrs_register_call_uuid()
 Partitions: cdrs_2026_09 FOR VALUES FROM ('2026-08-31 16:00:00+00') TO ('2026-09-30 16:00:00+00'),
@@ -273,14 +286,14 @@ ERROR:  duplicate key value violates unique constraint "rate_versions_tenant_eff
 == 费率版本：已排定未来版本时新建立即生效版本
         effective_from
 ------------------------------
- 2026-10-20 00:32:59.604318+00
+ 2026-10-20 01:43:19.278455+00
 
-ERROR:  已排定 2026-10-20 00:32:59.604318+00 生效的新版本，请先修改该未来版本
+ERROR:  已排定 2026-10-20 01:43:19.278455+00 生效的新版本，请先修改该未来版本
 
 == 费率版本：开户后首个立即生效版本
         effective_from         | effective_now
 -------------------------------+---------------
- 2026-10-13 00:32:59.605864+00 | t
+ 2026-10-13 01:43:19.280066+00 | t
 ```
 
 以 owner（超级用户）执行：
@@ -298,21 +311,21 @@ ERROR:  ledger_entries 只能新增，禁止 DELETE
 
 ## 本地运行证据
 
-环境：Linux x64，Node.js 24.21.0，pnpm 10.34.7，PostgreSQL 17.9（`pnpm db:up`），验证日期 2026-10-12。
+环境：Linux x64，Node.js 24.21.0，pnpm 10.34.7，PostgreSQL 17.9（`pnpm db:up`），验证日期 2026-10-13。
 
-| 命令            | 结果                                                                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`    | 0 退出；ESLint（金额规则已覆盖 `packages/db`）、Prettier、TypeScript 全部通过；Vitest 9 个文件 116 个测试通过（不连接数据库）                                             |
-| `pnpm test:db`  | 0 退出；5 个文件 49 个测试通过（`migrate`、`ledger`、`rls`、`cdrs`、`rates`）                                                                                             |
-| `pnpm coverage` | `packages/rating` 行覆盖率 100%（137/137），阈值 95% 不变                                                                                                                 |
-| `pnpm build`    | 0 退出，含 `packages/db`                                                                                                                                                  |
-| DB 测试的覆盖率 | 以 `--coverage` 运行 `test:db`：`ledger.ts`、`rates.ts` 行覆盖 100%，`client.ts` 91.7%。`seed.ts` 显示 0%，因为它在 `globalSetup`（主进程）中执行，不在被统计的工作进程里 |
+| 命令            | 结果                                                                                                                                                                                |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`    | 0 退出；ESLint（金额规则已覆盖 `packages/db`）、Prettier、TypeScript 全部通过；Vitest 9 个文件 116 个测试通过（不连接数据库）                                                       |
+| `pnpm test:db`  | 0 退出；5 个文件 58 个测试通过（`migrate`、`ledger`、`rls`、`cdrs`、`rates`）                                                                                                       |
+| `pnpm coverage` | `packages/rating` 行覆盖率 100%（137/137），阈值 95% 不变                                                                                                                           |
+| `pnpm build`    | 0 退出，含 `packages/db`                                                                                                                                                            |
+| DB 测试的覆盖率 | 以 `--coverage` 运行 `test:db`：`ledger.ts`、`rates.ts` 行覆盖 100%，`client.ts` 92.85%（13/14）。`seed.ts` 显示 0%，因为它在 `globalSetup`（主进程）中执行，不在被统计的工作进程里 |
 
-新增测试能失败：临时把 `ensure_month_partition` 的加锁移到检查之前、把 `cdrs` 触发器改回普通 `INSERT`，`pnpm test:db` 中“分区已存在时不等待建分区锁”“由正式话单认领”“再给第二个租户被拒绝”3 个测试失败；恢复后 49 个全部通过。
+新增测试能失败：临时把 `ensure_month_partition` 的加锁移到检查之前、把 `cdrs` 触发器改回普通 `INSERT`，`pnpm test:db` 中“分区已存在时不等待建分区锁”“由正式话单认领”“再给第二个租户被拒绝”3 个测试失败；当时恢复后 49 个全部通过。当前套件是 58 个。
 
 CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:seed && pnpm db:migrate`，以及 `pnpm test:db`。
 
-上述命令在本轮修改（`occurred_at`、共用登记表、`raw_cdrs` 分区、先查后锁、`partition_failed`）之后重新执行，表中数字为重新执行的结果。
+上述命令在本轮修改之后重新执行。表中数字是 2026-10-13 这次执行的结果。空库上 `pnpm db:migrate`、`pnpm db:seed`、再一次 `pnpm db:migrate` 都以 0 退出。第二次迁移打印“迁移完成”。种子余额 ABC001 为 `-35.20`。
 
 ## 设计取舍
 
@@ -320,14 +333,14 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 - **“费率表”即租户。** design §6.1 每个租户一张费率表，所以不建 `rate_tables`，唯一约束为 `(tenant_id, effective_from)`。
 - **修改当前版本的规则选“禁止并提示”**，实现为“新版本必须晚于所有已有版本”这一条不变量，而不是针对“立即生效”的特殊判断；同时挡住倒填历史。
 - **立即生效取数据库时间。** 不传 `effective_from`，由列默认值 `now()` 填写；对照测试证明应用时钟快几秒就会让开户后立即授权变成“无费率”。
-- **RLS 身份用事务级会话变量，默认拒绝。** 未声明身份时任何业务表 0 行；管理员/系统身份（Worker 按租户编码查租户时需要）可见全部。各分区不授予应用角色权限，只能经父表访问。
+- **RLS 身份用事务级会话变量，默认拒绝。** 未声明身份时任何业务表 0 行。管理员与系统身份可见全部。各分区不授予应用角色权限，只能经父表访问。应用角色不是超级用户。租户编号和 `app.scope` 由应用设置，见上文“RLS 的信任边界”。
 - **流水双重保护。** 触发器对所有角色（含 owner）拒绝 `UPDATE`/`DELETE`/`TRUNCATE`；应用角色另外没有这些权限，所以应用侧看到的是 `permission denied`，owner 看到的是触发器信息。
 - **收款状态是事件。** `receivable_settlements` 独立成表，复合外键保证只能结算本租户的赊账充值，唯一约束保证只能结算一次；状态由 `receivables` 视图派生。
 - **话单 UUID 全局唯一用登记表，正式与未归属话单共用。** 分区表的唯一约束必须含分区键；`call_uuids` 主键挡住跨分区的重复，且删除话单后仍保留，防止同一通话重复计费。流水的幂等键唯一约束是按租户的，挡不住同一 UUID 分别记到两个租户；只有一张全局登记表能从结构上排除，而“先查两处再写”在并发下有竞态。
 - **`cdrs` 分区键用 `started_at`。** 未接通的话单没有接通时间；呼叫开始与接通相差几秒，只影响月底最后几秒的分区归属，不影响按接通时间的账务统计。
 - **流水加 `occurred_at` 而不是改用 `created_at` 统计。** 扣费在接通之后才写入，跨月的电话按写入时间会算进下个月，plan 阶段 7 的“期末余额 = 截至月末的流水合计”在月底失败。没有加 `occurred_at ≤ created_at` 检查：接通时间来自 FreeSWITCH 的时钟，与数据库时钟有偏差时会让扣费写入失败。应用角色的 `created_at` 必须是数据库 `now()`。不用列权限，因为 Drizzle 的 INSERT 会列出该列并写 `DEFAULT`，列权限会拒绝这次合法插入。种子的历史时间走 owner 连接，触发器不限制 owner。
-- **`raw_cdrs` 按 `received_at` 分区，原文存 `text`。** 6 个月后归档就是整月分离分区再导出，不在大表上逐行删除；`jsonb` 会规范空白、重排键、合并重复键，做不到 plan 阶段 8 要求的逐字节恢复，所以原文另存，`payload` 由原文生成，两者不会不一致。解析函数只捕获 `22P02`（`invalid_text_representation`）、`22P05`（`untranslatable_character`，`\u0000`）和 `22003`（`numeric_value_out_of_range`），其他错误照常抛出。
-- **建分区先查后锁。** 阶段 3 会在入库路径上调用建分区函数；分区几乎总是已存在，先锁后查会把所有并发入库串行化。
+- **`raw_cdrs` 按 `received_at` 分区，原文存 `text`。** 数据库编码是 UTF-8，`body` 保存解码后的文本。6 个月后归档就是整月分离分区再导出，不在大表上逐行删除。`jsonb` 会规范空白、重排键、合并重复键，不能按收到的文本原样恢复，所以原文另存，`payload` 由原文生成，两者不会不一致。解析函数只捕获 `22P02`（`invalid_text_representation`）、`22P05`（`untranslatable_character`，`\u0000`）和 `22003`（`numeric_value_out_of_range`），其他错误照常抛出。
+- **建分区先查后锁，且只允许管理员或系统身份。** 阶段 3 会在入库路径上调用建分区函数。分区几乎总是已存在，先锁后查会把所有并发入库串行化。应用角色可以执行 `cdr_ensure_partitions`，函数内部仍要求 `app.scope` 为 `admin` 或 `system`。`ensure_month_partition` 不授予应用角色。
 - **不建 DEFAULT 分区。** 落在未建分区月份的话单直接报错（Worker 重试、FreeSWITCH 落盘重推），而不是悄悄进入兜底分区。
 - **币种一致在类型层保证。** `appendLedgerEntry(tx, tenant: TenantRef<C>, entry: LedgerEntryInput<NoInfer<C>>)`，CNY 金额记入 USD 租户是类型错误（测试中的 `@ts-expect-error`）。数据库的金额列不带币种，由租户币种决定。
 - **金额按 `Decimal.toFixed()` 原样写入。** 不补零也不舍入，例如 `100.00` 存为 `100`；显示时用阶段 1 的 `formatMoney`。
