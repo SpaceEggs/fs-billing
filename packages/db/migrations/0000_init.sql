@@ -196,6 +196,20 @@ CREATE TRIGGER ledger_entries_append_only BEFORE UPDATE OR DELETE ON ledger_entr
 CREATE TRIGGER ledger_entries_no_truncate BEFORE TRUNCATE ON ledger_entries
   FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
 
+-- 应用角色不能指定写入时间。Drizzle 的 INSERT 会列出 created_at 并写 DEFAULT，
+-- 列权限会把这次合法插入一起拒绝，所以在这里拒绝非 now() 的值。owner 写种子的历史时间。
+CREATE FUNCTION ledger_entries_stamp_created_at() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF current_user = 'fs_billing_app' AND NEW.created_at IS DISTINCT FROM now() THEN
+    RAISE EXCEPTION 'created_at 由数据库生成' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER ledger_entries_stamp_created_at BEFORE INSERT ON ledger_entries
+  FOR EACH ROW EXECUTE FUNCTION ledger_entries_stamp_created_at();
+
 -- 待收款 → 已收款：结算是一条独立事件，原流水不变。
 CREATE TABLE receivable_settlements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -558,7 +572,7 @@ BEGIN
   END LOOP;
 END $$;
 
--- 应用角色权限：流水、结算、日志、发送记录只有 SELECT/INSERT。
+-- 应用角色权限：流水、结算、日志、发送记录只有 SELECT/INSERT。该表没有 UPDATE。
 
 GRANT SELECT, INSERT, UPDATE ON tenants, admins, portal_accounts, unassigned_cdrs,
   monthly_statements, system_alerts, balance_alert_settings TO fs_billing_app;

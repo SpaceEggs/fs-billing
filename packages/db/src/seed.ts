@@ -11,7 +11,6 @@ import {
   type RateEntry,
 } from '@fs-billing/rating';
 import { withAdmin, type Db, type Tx } from './client.js';
-import { appendLedgerEntry, type LedgerEntryInput } from './ledger.js';
 import { createRateVersion } from './rates.js';
 import {
   admins,
@@ -473,22 +472,26 @@ export function seedDatabase(db: Db): Promise<void> {
       }
 
       const ledger = t.code === 'ABC001' ? abc001Ledger() : summaryLedger(t);
+      // 历史时间只有 owner 连接能写。应用角色没有 created_at 的 INSERT 权限。
       for (const e of ledger) {
-        const base = {
-          amount: money(t.currency, e.amount),
-          note: e.note,
-          idempotencyKey: `seed:${e.at}:${e.kind}`,
-          createdAt: beijingTime(e.at),
-        };
-        const entry: LedgerEntryInput<Currency> =
-          e.kind === 'call_charge'
-            ? { ...base, kind: e.kind, occurredAt: beijingTime(e.occurredAt) }
-            : { ...base, kind: e.kind, adminId: adminIds[e.admin] };
-        await appendLedgerEntry(
-          tx,
-          { id: tenantId, currency: t.currency },
-          entry,
-        );
+        const createdAt = beijingTime(e.at);
+        const occurredAt =
+          e.kind === 'call_charge' ? beijingTime(e.occurredAt) : createdAt;
+        await tx.execute(sql`
+          insert into ledger_entries (
+            tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at
+          ) values (
+            ${tenantId},
+            ${e.kind},
+            ${money(t.currency, e.amount).value.toFixed()},
+            ${e.note},
+            ${e.kind === 'call_charge' ? null : adminIds[e.admin]},
+            ${`seed:${e.at}:${e.kind}`},
+            ${occurredAt},
+            ${createdAt}
+          )
+          on conflict (tenant_id, idempotency_key) do nothing
+        `);
       }
     }
 

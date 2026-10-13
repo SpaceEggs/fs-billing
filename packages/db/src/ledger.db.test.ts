@@ -196,15 +196,11 @@ describe('appendLedgerEntry', () => {
 describe('流水按发生时间归属月份', () => {
   it('9-30 23:59（北京时间）接通、10-01 才写入的扣费，按 occurred_at 归属 9 月', async () => {
     const tenant = await createTenant(app, 'CNY');
-    await withAdmin(app.db, (tx) =>
-      appendLedgerEntry(tx, tenant, {
-        kind: 'call_charge',
-        amount: money('CNY', '-0.05'),
-        note: '8613800138000 通话 1分0秒',
-        idempotencyKey: callChargeKey('5d0b7c1e-2f4a-4b8e-9c61-0e3a9f1d2c30'),
-        occurredAt: beijingTime('2026-09-30 23:59:00'),
-        createdAt: beijingTime('2026-10-01 00:00:30'),
-      }),
+    await owner.pool.query(
+      `INSERT INTO ledger_entries (tenant_id, kind, amount, note, idempotency_key, occurred_at, created_at)
+       VALUES ($1, 'call_charge', -0.05, '8613800138000 通话 1分0秒', $2,
+               '2026-09-30 23:59:00+08', '2026-10-01 00:00:30+08')`,
+      [tenant.id, callChargeKey('5d0b7c1e-2f4a-4b8e-9c61-0e3a9f1d2c30')],
     );
     const { rows } = await withTenant(app.db, tenant.id, (tx) =>
       tx.execute(sql`
@@ -245,6 +241,39 @@ describe('流水按发生时间归属月份', () => {
     expect(backdated).toMatchObject({
       code: '23514',
       constraint: 'ledger_entries_kind_shape',
+    });
+  });
+
+  it('应用角色不能回填 created_at，人工调账的两列都是数据库 now()', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    const written = await withAdmin(app.db, async (tx) => {
+      const entry = await appendLedgerEntry(tx, tenant, {
+        kind: 'adjustment',
+        amount: money('CNY', '-1.00'),
+        note: '冲正',
+        adminId: admin,
+        idempotencyKey: 'adjust:now',
+      });
+      const { rows } = await tx.execute<{ same: boolean; at_db_now: boolean }>(
+        sql`select occurred_at = created_at as same,
+                   created_at = transaction_timestamp() as at_db_now
+            from ledger_entries where id = ${entry.id}`,
+      );
+      return rows[0];
+    });
+    const backfill = await pgError(
+      withAdmin(app.db, (tx) =>
+        tx.execute(sql`insert into ledger_entries
+          (tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at)
+          values (${tenant.id}, 'adjustment', -5.00, '倒填', ${admin}, 'adjust:backfill',
+                  '2026-09-01 00:00:00+08', '2026-09-01 00:00:00+08')`),
+      ),
+    );
+    expect(written).toEqual({ same: true, at_db_now: true });
+    expect(backfill).toMatchObject({
+      code: '42501',
+      message: 'created_at 由数据库生成',
     });
   });
 });

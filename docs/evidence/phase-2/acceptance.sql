@@ -75,13 +75,11 @@ SET LOCAL app.scope = 'admin';
 SELECT to_char(occurred_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM') AS month,
        sum(amount) AS call_charges, count(*) AS entries
 FROM ledger_entries WHERE tenant_id = :'abc001' AND kind = 'call_charge' GROUP BY 1 ORDER BY 1;
-\echo '-- 9-30 23:59（北京时间）接通、10-01 00:00:30 写入的扣费'
-INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key, occurred_at, created_at)
-VALUES (:'abc001', 'call_charge', -0.05, 'call:e0000000-0000-4000-8000-000000000004',
-        '2026-09-30 23:59:00+08', '2026-10-01 00:00:30+08');
-SELECT to_char(occurred_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM') AS statement_month,
-       to_char(created_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM') AS written_month, amount
-FROM ledger_entries WHERE idempotency_key = 'call:e0000000-0000-4000-8000-000000000004';
+\echo '-- 应用角色回填 created_at 的人工调账被拒绝'
+INSERT INTO ledger_entries (tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at)
+SELECT :'abc001', 'adjustment', -1, '倒填', id, 'adjust-backfill',
+       '2026-09-01 00:00:00+08', '2026-09-01 00:00:00+08'
+FROM admins WHERE email = 'lijun@example.com';
 \echo '-- 人工操作倒填发生时间'
 INSERT INTO ledger_entries (tenant_id, kind, amount, created_by, idempotency_key, occurred_at)
 SELECT :'abc001', 'recharge', 100, id, 'recharge-backdated', '2026-09-30 12:00:00+08'

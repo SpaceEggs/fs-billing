@@ -12,13 +12,12 @@ export type LedgerEntry = typeof ledgerEntries.$inferSelect;
 
 /**
  * 符号与必填规则由数据库检查约束 ledger_entries_kind_shape 保证。
- * 发生时间：通话扣费为接通时间（occurredAt），人工操作即写入时间（createdAt，默认数据库 now()）。
+ * 通话扣费的 occurredAt 是接通时间。人工操作不写时间，occurred_at 与 created_at 都取数据库 now()。
  */
 export type LedgerEntryInput<C extends Currency> = {
   readonly amount: Money<C>;
   readonly note: string;
   readonly idempotencyKey: string;
-  readonly createdAt?: Date;
 } & (
   | {
       readonly kind: Exclude<LedgerKind, 'call_charge'>;
@@ -49,10 +48,6 @@ export async function appendLedgerEntry<C extends Currency>(
       note: entry.note,
       createdBy: entry.kind === 'call_charge' ? null : entry.adminId,
       idempotencyKey: entry.idempotencyKey,
-      ...(entry.createdAt && {
-        createdAt: entry.createdAt,
-        occurredAt: entry.createdAt,
-      }),
       ...(entry.kind === 'call_charge' && { occurredAt: entry.occurredAt }),
     })
     .onConflictDoNothing({

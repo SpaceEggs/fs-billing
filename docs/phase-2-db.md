@@ -55,7 +55,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 4. **缓存余额可重算核对。** `tenant_balances.balance` 由流水插入触发器在同一事务内累加；`balance_discrepancies` 视图返回缓存与流水合计不同的租户，正常情况下为空。
 5. **按类型的符号。** `recharge`、`credit_recharge`、`gift`：金额 > 0，必须有操作管理员；`adjustment`：金额 ≠ 0，必须有操作管理员和非空原因；`call_charge`：金额 < 0，无操作管理员。由检查约束保证。
 6. **重试收敛。** 每笔流水带幂等键（通话扣费为 `call:<通话 UUID>`）；`appendLedgerEntry` 以 `ON CONFLICT DO NOTHING` 写入，重试返回原记录，键相同但内容不同则报错。
-7. **发生时间决定归属。** `occurred_at` 是流水在账务上发生的时刻，门户按天合并、月账单和核对任务一律按它的北京日期/月份统计，`created_at` 只是写入时间。通话扣费的 `occurred_at` 是接通时间（`LedgerEntryInput` 的 `call_charge` 分支必须给 `occurredAt`）；人工操作的 `occurred_at` 必须等于 `created_at`（检查约束 `ledger_entries_kind_shape`），不能倒填进已出账的月份。9-30 23:59 接通、10-01 00:00:30 才写入的扣费归属 9 月。
+7. **发生时间决定归属。** `occurred_at` 是流水在账务上发生的时刻，门户按天合并、月账单和核对任务一律按它的北京日期/月份统计，`created_at` 只是写入时间。通话扣费的 `occurred_at` 是接通时间（`LedgerEntryInput` 的 `call_charge` 分支必须给 `occurredAt`）。人工操作不写这两列，都取这次 `INSERT` 的 `now()`，检查约束 `ledger_entries_kind_shape` 要求它们相等。`fs_billing_app` 插入时若 `created_at` 不是 `now()`，触发器 `ledger_entries_stamp_created_at` 拒绝。该表没有 `UPDATE`。历史种子由 owner 连接写入 `created_at`。9-30 23:59 接通、10-01 00:00:30 才写入的扣费归属 9 月。
 
 ### 费率版本规则
 
@@ -95,7 +95,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`（`packages/db/
 
 评审后追加的结构决定（见“已决定事项”），同样由 `pnpm test:db` 与上面的 psql 脚本验证：
 
-- [x] **流水按发生时间归属月份。** 北京时间 9-30 23:59 接通、10-01 00:00:30 写入的扣费：`statement_month = 2026-09`，`written_month = 2026-10`。种子中 ABC001 的 28 笔通话扣费全部归属 2026-09，合计 `-2486.30`（设计稿本月消费）。人工充值的 `occurred_at` 不等于 `created_at` 时报 `violates check constraint "ledger_entries_kind_shape"`。
+- [x] **流水按发生时间归属月份。** owner 写入北京时间 9-30 23:59 接通、10-01 00:00:30 入账的扣费：`statement_month = 2026-09`，`written_month = 2026-10`。种子中 ABC001 的 28 笔通话扣费全部归属 2026-09，合计 `-2486.30`（设计稿本月消费）。人工充值只倒填 `occurred_at` 时报 `violates check constraint "ledger_entries_kind_shape"`。应用角色把人工调账的 `occurred_at` 和 `created_at` 一起写成 `2026-09-01` 时报 `42501` `created_at 由数据库生成`。不写这两列的调账成功，且 `occurred_at = created_at = transaction_timestamp()`。
 - [x] **未归属与正式话单共用 UUID 登记表。** 先进未归属话单的 UUID 登记为 `tenant_id = NULL`，之后写入 ABC001 的正式话单时认领成功（测试读回登记表为该租户）；同一 UUID 再给 GZT007：`duplicate key value violates unique constraint "call_uuids_pkey"`；已在正式话单中的 UUID 再进未归属话单：同样报 `call_uuids_pkey`。
 - [x] **原始话单逐字节保存，按收到时间分区。** 含换行、制表符、多余空格、非字母序键和重复键 `"billsec"` 的 124 字节原文：读回 `body` 与写入的字面量完全相同，`payload` 为规范化副本 `{"a": [1, 2], "z": 1, "variables": {…, "billsec": "231"}}`；北京时间 `2026-10-31 23:59:59` 收到的落入 `raw_cdrs_2026_10`。截断的原文与含 `\u0000` 的原文照样保存，`payload` 为空。
 - [x] **分区已存在时不加锁。** 另一个连接持有 `cdrs_2026_10` 与 `cdrs_2031_03` 的建分区锁时，`lock_timeout = 300ms` 下 `cdr_ensure_partitions('2026-10-12')` 立即返回 4 个分区名；`cdr_ensure_partitions('2031-03-15')`（分区不存在）报 `55P03 canceling statement due to lock timeout`。把加锁移回检查之前，这个测试失败。
@@ -325,7 +325,7 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 - **收款状态是事件。** `receivable_settlements` 独立成表，复合外键保证只能结算本租户的赊账充值，唯一约束保证只能结算一次；状态由 `receivables` 视图派生。
 - **话单 UUID 全局唯一用登记表，正式与未归属话单共用。** 分区表的唯一约束必须含分区键；`call_uuids` 主键挡住跨分区的重复，且删除话单后仍保留，防止同一通话重复计费。流水的幂等键唯一约束是按租户的，挡不住同一 UUID 分别记到两个租户；只有一张全局登记表能从结构上排除，而“先查两处再写”在并发下有竞态。
 - **`cdrs` 分区键用 `started_at`。** 未接通的话单没有接通时间；呼叫开始与接通相差几秒，只影响月底最后几秒的分区归属，不影响按接通时间的账务统计。
-- **流水加 `occurred_at` 而不是改用 `created_at` 统计。** 扣费在接通之后才写入，跨月的电话按写入时间会算进下个月，plan 阶段 7 的“期末余额 = 截至月末的流水合计”在月底失败。没有加 `occurred_at ≤ created_at` 检查：接通时间来自 FreeSWITCH 的时钟，与数据库时钟有偏差时会让扣费写入失败。
+- **流水加 `occurred_at` 而不是改用 `created_at` 统计。** 扣费在接通之后才写入，跨月的电话按写入时间会算进下个月，plan 阶段 7 的“期末余额 = 截至月末的流水合计”在月底失败。没有加 `occurred_at ≤ created_at` 检查：接通时间来自 FreeSWITCH 的时钟，与数据库时钟有偏差时会让扣费写入失败。应用角色的 `created_at` 必须是数据库 `now()`。不用列权限，因为 Drizzle 的 INSERT 会列出该列并写 `DEFAULT`，列权限会拒绝这次合法插入。种子的历史时间走 owner 连接，触发器不限制 owner。
 - **`raw_cdrs` 按 `received_at` 分区，原文存 `text`。** 6 个月后归档就是整月分离分区再导出，不在大表上逐行删除；`jsonb` 会规范空白、重排键、合并重复键，做不到 plan 阶段 8 要求的逐字节恢复，所以原文另存，`payload` 由原文生成，两者不会不一致。解析函数只捕获 `invalid_text_representation` 与 `untranslatable_character`（`\u0000`），其他错误照常抛出。
 - **建分区先查后锁。** 阶段 3 会在入库路径上调用建分区函数；分区几乎总是已存在，先锁后查会把所有并发入库串行化。
 - **不建 DEFAULT 分区。** 落在未建分区月份的话单直接报错（Worker 重试、FreeSWITCH 落盘重推），而不是悄悄进入兜底分区。
