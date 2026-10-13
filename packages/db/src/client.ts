@@ -58,13 +58,35 @@ export function withSystem<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return withOperator(db, 'system', fn);
 }
 
-function withOperator<T>(
+// 死锁（40P01）与序列化失败（40001）回滚整个事务，重跑 fn 是安全的。
+const RETRYABLE = new Set(['40P01', '40001']);
+const MAX_ATTEMPTS = 3;
+
+async function withOperator<T>(
   db: Db,
   scope: 'admin' | 'system',
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('app.scope', ${scope}, true)`);
-    return fn(tx);
-  });
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await db.transaction(async (tx) => {
+        await tx.execute(sql`select set_config('app.scope', ${scope}, true)`);
+        return fn(tx);
+      });
+    } catch (error) {
+      if (attempt >= MAX_ATTEMPTS || !RETRYABLE.has(sqlState(error) ?? '')) {
+        throw error;
+      }
+    }
+  }
+}
+
+/** drizzle 把驱动错误包在 cause 里。 */
+function sqlState(error: unknown): string | undefined {
+  for (let current = error; current instanceof Error; current = current.cause) {
+    if ('code' in current && typeof current.code === 'string') {
+      return current.code;
+    }
+  }
+  return undefined;
 }
