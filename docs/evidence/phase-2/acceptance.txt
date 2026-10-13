@@ -9,11 +9,11 @@ COMMIT
 == 余额流水 UPDATE / DELETE
 BEGIN
 SET
-psql:docs/evidence/phase-2/acceptance.sql:18: ERROR:  permission denied for table ledger_entries
+psql:docs/evidence/phase-2/acceptance.sql:20: ERROR:  permission denied for table ledger_entries
 ROLLBACK
 BEGIN
 SET
-psql:docs/evidence/phase-2/acceptance.sql:22: ERROR:  permission denied for table ledger_entries
+psql:docs/evidence/phase-2/acceptance.sql:24: ERROR:  permission denied for table ledger_entries
 ROLLBACK
 == 以 ABC001 身份 SELECT * FROM cdrs（SQL 中没有租户条件）
 BEGIN
@@ -22,11 +22,11 @@ SET
 ------------
  t
 
-              tenant_id               |              call_uuid               |       started_at       |      answered_at       |        ended_at        |    caller    |    callee     | duration_seconds | billed_minutes | matched_prefix | country  |  rate  | charge |  hangup_cause   | unverified |         received_at          
---------------------------------------+--------------------------------------+------------------------+------------------------+------------------------+--------------+---------------+------------------+----------------+----------------+----------+--------+--------+-----------------+------------+------------------------------
- f86a25a5-54b9-4f4b-9e2a-f94bca649a81 | a0000001-0000-4000-8000-000000000001 | 2026-09-28 06:03:10+00 | 2026-09-28 06:03:22+00 | 2026-09-28 06:07:12+00 | 075586001234 | 447700900123  |              230 |              4 | 447            | 英国手机 | 0.0450 |   0.18 | NORMAL_CLEARING | f          | 2026-10-13 00:10:49.65996+00
- f86a25a5-54b9-4f4b-9e2a-f94bca649a81 | a0000001-0000-4000-8000-000000000002 | 2026-09-28 06:10:00+00 | 2026-09-28 06:10:05+00 | 2026-09-28 06:10:06+00 | 075586001234 | 18765550100   |                1 |              1 | 1876           | 牙买加   | 0.2500 |   0.25 | NORMAL_CLEARING | f          | 2026-10-13 00:10:49.65996+00
- f86a25a5-54b9-4f4b-9e2a-f94bca649a81 | a0000001-0000-4000-8000-000000000003 | 2026-09-28 06:20:00+00 |                        | 2026-09-28 06:20:30+00 | 075586001234 | 8613800138000 |                0 |              0 |                |          |        |      0 | NO_ANSWER       | f          | 2026-10-13 00:10:49.65996+00
+              tenant_id               |              call_uuid               |       started_at       |      answered_at       |        ended_at        |    caller    |    callee     | duration_seconds | billed_minutes | matched_prefix | country  |  rate  | charge |  hangup_cause   | unverified |          received_at          
+--------------------------------------+--------------------------------------+------------------------+------------------------+------------------------+--------------+---------------+------------------+----------------+----------------+----------+--------+--------+-----------------+------------+-------------------------------
+ 0d3c98d0-cb4b-47c1-87dc-bd5b8211f7e9 | a0000001-0000-4000-8000-000000000001 | 2026-09-28 06:03:10+00 | 2026-09-28 06:03:22+00 | 2026-09-28 06:07:12+00 | 075586001234 | 447700900123  |              230 |              4 | 447            | 英国手机 | 0.0450 |   0.18 | NORMAL_CLEARING | f          | 2026-10-13 00:32:02.999133+00
+ 0d3c98d0-cb4b-47c1-87dc-bd5b8211f7e9 | a0000001-0000-4000-8000-000000000002 | 2026-09-28 06:10:00+00 | 2026-09-28 06:10:05+00 | 2026-09-28 06:10:06+00 | 075586001234 | 18765550100   |                1 |              1 | 1876           | 牙买加   | 0.2500 |   0.25 | NORMAL_CLEARING | f          | 2026-10-13 00:32:02.999133+00
+ 0d3c98d0-cb4b-47c1-87dc-bd5b8211f7e9 | a0000001-0000-4000-8000-000000000003 | 2026-09-28 06:20:00+00 |                        | 2026-09-28 06:20:30+00 | 075586001234 | 8613800138000 |                0 |              0 |                |          |        |      0 | NO_ANSWER       | f          | 2026-10-13 00:32:02.999133+00
 
  cdrs | tenants 
 ------+---------
@@ -51,11 +51,90 @@ ROLLBACK
 BEGIN
 SET
 INSERT 0 1
-psql:docs/evidence/phase-2/acceptance.sql:46: ERROR:  duplicate key value violates unique constraint "cdr_call_uuids_pkey"
+psql:docs/evidence/phase-2/acceptance.sql:48: ERROR:  duplicate key value violates unique constraint "call_uuids_pkey"
 DETAIL:  Key (call_uuid)=(e0000000-0000-4000-8000-000000000001) already exists.
-CONTEXT:  SQL statement "INSERT INTO cdr_call_uuids (call_uuid, tenant_id, started_at)
-  VALUES (NEW.call_uuid, NEW.tenant_id, NEW.started_at)"
-PL/pgSQL function cdrs_register_call_uuid() line 3 at SQL statement
+CONTEXT:  PL/pgSQL function cdrs_register_call_uuid() line 8 at RAISE
+ROLLBACK
+== 未归属与正式话单共用 UUID 登记表
+BEGIN
+SET
+INSERT 0 1
+-- 分配给 ABC001：认领未归属的登记
+INSERT 0 1
+-- 同一 UUID 再给 GZT007
+psql:docs/evidence/phase-2/acceptance.sql:64: ERROR:  duplicate key value violates unique constraint "call_uuids_pkey"
+DETAIL:  Key (call_uuid)=(e0000000-0000-4000-8000-000000000003) already exists.
+CONTEXT:  PL/pgSQL function cdrs_register_call_uuid() line 8 at RAISE
+-- 已在正式话单中的 UUID 再进未归属话单
+psql:docs/evidence/phase-2/acceptance.sql:68: ERROR:  duplicate key value violates unique constraint "call_uuids_pkey"
+DETAIL:  Key (call_uuid)=(a0000001-0000-4000-8000-000000000001) already exists.
+CONTEXT:  SQL statement "INSERT INTO call_uuids (call_uuid, tenant_id, started_at)
+  VALUES (NEW.call_uuid, NULL, NEW.started_at)"
+PL/pgSQL function unassigned_cdrs_register_call_uuid() line 3 at SQL statement
+ROLLBACK
+== 流水发生时间
+BEGIN
+SET
+-- 种子中 ABC001 按 occurred_at 的北京月份汇总通话扣费
+  month  | call_charges | entries 
+---------+--------------+---------
+ 2026-09 |     -2486.30 |      28
+
+-- 9-30 23:59（北京时间）接通、10-01 00:00:30 写入的扣费
+INSERT 0 1
+ statement_month | written_month | amount 
+-----------------+---------------+--------
+ 2026-09         | 2026-10       |  -0.05
+
+-- 人工操作倒填发生时间
+psql:docs/evidence/phase-2/acceptance.sql:88: ERROR:  new row for relation "ledger_entries" violates check constraint "ledger_entries_kind_shape"
+ROLLBACK
+== 原始话单：原文逐字节保存（空白、键序、重复键），payload 为规范化副本
+BEGIN
+SET
+    partition     | body_identical | bytes |                                                payload                                                 
+------------------+----------------+-------+--------------------------------------------------------------------------------------------------------
+ raw_cdrs_2026_10 | t              |   124 | {"a": [1, 2], "z": 1, "variables": {"uuid": "7f1c2a9e-0d3b-4c5e-8a6f-1b2c3d4e5f60", "billsec": "231"}}
+
+INSERT 0 1
+-- 不是合法 JSON 的原文也保存，payload 为空
+    partition     |        body         | payload_null 
+------------------+---------------------+--------------
+ raw_cdrs_2026_11 | {"uuid": "truncated | t
+
+INSERT 0 1
+ROLLBACK
+                                                                  Partitioned table "public.raw_cdrs"
+   Column    |           Type           | Collation | Nullable |                     Default                      | Storage  | Compression | Stats target | Description 
+-------------+--------------------------+-----------+----------+--------------------------------------------------+----------+-------------+--------------+-------------
+ id          | uuid                     |           | not null | gen_random_uuid()                                | plain    |             |              | 
+ tenant_id   | uuid                     |           |          |                                                  | plain    |             |              | 
+ call_uuid   | uuid                     |           |          |                                                  | plain    |             |              | 
+ body        | text                     |           | not null |                                                  | extended |             |              | 
+ payload     | jsonb                    |           |          | generated always as (jsonb_or_null(body)) stored | extended |             |              | 
+ received_at | timestamp with time zone |           | not null | now()                                            | plain    |             |              | 
+Partition key: RANGE (received_at)
+Indexes:
+    "raw_cdrs_pkey" PRIMARY KEY, btree (id, received_at)
+Foreign-key constraints:
+    "raw_cdrs_tenant_id_fkey" FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+Policies:
+    POLICY "admin_only"
+      USING ((app_scope() = 'admin'::text))
+      WITH CHECK ((app_scope() = 'admin'::text))
+Partitions: raw_cdrs_2026_09 FOR VALUES FROM ('2026-08-31 16:00:00+00') TO ('2026-09-30 16:00:00+00'),
+            raw_cdrs_2026_10 FOR VALUES FROM ('2026-09-30 16:00:00+00') TO ('2026-10-31 16:00:00+00'),
+            raw_cdrs_2026_11 FOR VALUES FROM ('2026-10-31 16:00:00+00') TO ('2026-11-30 16:00:00+00')
+
+== 系统告警类型含 partition_failed
+BEGIN
+SET
+       kind       |       description        
+------------------+--------------------------
+ partition_failed | 建分区 cdrs_2026_12 失败
+
+INSERT 0 1
+psql:docs/evidence/phase-2/acceptance.sql:111: ERROR:  new row for relation "system_alerts" violates check constraint "system_alerts_kind_check"
 ROLLBACK
 == 下月分区：迁移已建出当月与下月，下月话单直接落入分区；下月的每日任务再建出其后一个月
 BEGIN
@@ -69,6 +148,8 @@ INSERT 0 1
 -----------------------
  cdrs_2026_11
  cdrs_2026_12
+ raw_cdrs_2026_11
+ raw_cdrs_2026_12
 
                                                    Partitioned table "public.cdrs"
       Column      |           Type           | Collation | Nullable | Default  | Storage  | Compression | Stats target | Description 
@@ -121,17 +202,17 @@ ROLLBACK
 == 费率版本：同一费率表相同生效时间
 BEGIN
 SET
-psql:docs/evidence/phase-2/acceptance.sql:65: ERROR:  duplicate key value violates unique constraint "rate_versions_tenant_effective_from_key"
+psql:docs/evidence/phase-2/acceptance.sql:130: ERROR:  duplicate key value violates unique constraint "rate_versions_tenant_effective_from_key"
 ROLLBACK
 == 费率版本：已排定未来版本时新建立即生效版本
 BEGIN
 SET
-        effective_from         
--------------------------------
- 2026-10-20 00:11:13.193759+00
+        effective_from        
+------------------------------
+ 2026-10-20 00:33:26.02002+00
 
 INSERT 0 1
-psql:docs/evidence/phase-2/acceptance.sql:73: ERROR:  已排定 2026-10-20 00:11:13.193759+00 生效的新版本，请先修改该未来版本
+psql:docs/evidence/phase-2/acceptance.sql:138: ERROR:  已排定 2026-10-20 00:33:26.02002+00 生效的新版本，请先修改该未来版本
 CONTEXT:  PL/pgSQL function rate_versions_guard() line 18 at RAISE
 ROLLBACK
 == 费率版本：开户后首个立即生效版本
@@ -139,7 +220,7 @@ BEGIN
 SET
         effective_from         | effective_now 
 -------------------------------+---------------
- 2026-10-13 00:11:13.195136+00 | t
+ 2026-10-13 00:33:26.021422+00 | t
 
 INSERT 0 1
 ROLLBACK
