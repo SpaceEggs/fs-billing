@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { TransactionRollbackError } from 'drizzle-orm';
 import pg from 'pg';
 import { describe, expect, inject, it } from 'vitest';
 import { money } from '@fs-billing/rating';
@@ -179,12 +180,21 @@ describe('回滚到保存点清掉标记', () => {
     const tenant = await createTenant(app, 'CNY');
     const error = await pgError(
       withAdmin(app.db, async (tx) => {
-        await tx
-          .transaction(async (savepoint) => {
+        const marker = async () =>
+          (
+            await tx.execute<{ ids: string[] }>(sql`
+            select coalesce(nullif(current_setting('app.tenant_locks', true), '')::uuid[], '{}') as ids
+          `)
+          ).rows[0]!.ids;
+        expect(await marker()).toEqual([]);
+        await expect(
+          tx.transaction(async (savepoint) => {
             await lockTenants(savepoint, [tenant.id]);
+            expect(await marker()).toEqual([tenant.id]);
             savepoint.rollback();
-          })
-          .catch(() => undefined);
+          }),
+        ).rejects.toBeInstanceOf(TransactionRollbackError);
+        expect(await marker()).toEqual([]);
         await tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
                              values (${tenant.id}, 'call_charge', -1, 'call:after-savepoint')`);
       }),

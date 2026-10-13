@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { withSystem, type Db } from './client.js';
+import { withSystem, type PoolDb } from './client.js';
 
 /**
  * 维护操作：建 cdrs 与 raw_cdrs 从 moment（默认数据库 now()）所在月起、往后 monthsAhead 个月的分区，返回分区名。
@@ -7,7 +7,7 @@ import { withSystem, type Db } from './client.js';
  * （见迁移里 ensure_month_partition 的注释）。pnpm db:migrate 与种子调用它，阶段 3 由 Worker 每日调度。
  */
 export async function ensureCdrPartitions(
-  db: Db,
+  db: PoolDb,
   { moment, monthsAhead = 1 }: { moment?: Date; monthsAhead?: number } = {},
 ): Promise<string[]> {
   const { rows } = await withSystem(db, (tx) =>

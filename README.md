@@ -15,6 +15,7 @@ cp .env.example .env
 pnpm dev:setup
 pnpm db:migrate
 pnpm db:seed
+pnpm --filter @fs-billing/worker queue:migrate
 pnpm dev
 ```
 
@@ -27,7 +28,7 @@ pnpm dev
 | Worker     | http://127.0.0.1:3001/health     | 返回 `{"status":"ok","service":"worker"}` |
 | PostgreSQL | 127.0.0.1:5432                   | `docker compose ps` 显示 healthy          |
 
-Web 开发服务器代理 `/api` 到 3000 端口。自定义 API 端口时需同步修改 `apps/web/vite.config.ts` 的代理。API 与 Worker 各自启动，健康接口暂不检查数据库，也尚未提供业务接口。
+Web 开发服务器代理 `/api` 到 3000 端口。自定义 API 端口时需同步修改 `apps/web/vite.config.ts` 的代理。API 与 Worker 各自启动，健康接口暂不检查数据库。Worker 已提供授权、话单与扣费任务，见 [Worker 接口](docs/worker-api.md) 与 [FreeSWITCH 配置](freeswitch/README.md)。
 
 ```sh
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version(); SHOW timezone;"'
@@ -56,7 +57,7 @@ apps/worker      Fastify Worker 独立进程
 packages/shared  Zod 数据格式
 packages/db      表结构与迁移（SQL）、Drizzle 描述、RLS 身份、流水与费率读写、种子
 packages/rating  计费核心纯函数：金额/费率品牌类型、计费、前缀匹配、授权、CSV
-freeswitch/      阶段 3 加入配置与脚本
+freeswitch/      授权 Lua、拨号计划、mod_json_cdr、内网 relay 与落盘重推
 tooling/eslint/  金额保护规则
 tests/           工具与跨包测试
 docs/            设计、计划与验收记录
@@ -87,3 +88,5 @@ const fee = decimal('0.1').mul('3');
 ## 运行验证
 
 项目内 [verify 技能](apps/web/.agents/skills/verify/SKILL.md) 提供进程归属检查、真实 HTTP 与浏览器验证，以及清理步骤。[功能图](apps/web/.agents/skills/verify/features/README.md) 记录当前可验证的用户路径。验证证据默认保存在 `artifacts/verify/`，清理后保留。
+
+阶段 3 验证路径：[授权](apps/web/.agents/skills/verify/features/worker-authorize.md)、[话单入库](apps/web/.agents/skills/verify/features/worker-cdr-ingest.md)、[扣费任务](apps/web/.agents/skills/verify/features/worker-charge-job.md)、[接口安全](apps/web/.agents/skills/verify/features/worker-security.md)、[分区维护](apps/web/.agents/skills/verify/features/worker-partitions.md)。实机通话按 FreeSWITCH 接入文档另行保存证据。

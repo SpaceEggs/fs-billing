@@ -34,4 +34,4 @@ For a direct Worker process, migrate DB and install the queue before starting. B
 - Bad JSON/invalid shapes are raw-only with alerts and HTTP 200; unassigned rows require a valid UUID and call timeline.
 - Raw CDR UUID/tenant columns remain NULL because original rows are inserted before parsing and are append-only. Inspect body/payload or returned rawId.
 - Formal CDRs preserve billing_unverified; unanswered and zero-price calls produce no ledger entry.
-- Job crash recovery, queue supervision and daily partition scheduling are covered by the DB suite. FreeSWITCH dialplan integration remains a later phase 3 unit. Simulated transaction failure and queue restart do not prove an actual FreeSWITCH call.
+- Job crash recovery, queue supervision and daily partition scheduling are covered by the DB suite. FreeSWITCH examples and disk replay are documented in [Worker authorization](worker-authorize.md) and [CDR ingestion](worker-cdr-ingest.md). Simulated transaction failure and queue restart do not prove an actual FreeSWITCH call.

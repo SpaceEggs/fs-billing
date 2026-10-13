@@ -10,7 +10,7 @@ import {
   type Currency,
   type RateEntry,
 } from '@fs-billing/rating';
-import { lockTenants, withAdmin, type Db, type Tx } from './client.js';
+import { lockTenants, withAdmin, type PoolDb, type Tx } from './client.js';
 import { ensureCdrPartitions } from './partitions.js';
 import { createRateVersion } from './rates.js';
 import {
@@ -398,7 +398,7 @@ const seconds = (at: Date, n: number) => new Date(at.getTime() + n * 1000);
  * 写入开发种子数据。幂等：重复执行不新增任何行。
  * 分两个事务：lock_tenants 要在事务的任何写入之前调用，所以先提交管理员与租户，再在新事务里锁租户写费率和流水。
  */
-export async function seedDatabase(db: Db): Promise<void> {
+export async function seedDatabase(db: PoolDb): Promise<void> {
   const { adminIds, tenantIds } = await withAdmin(db, seedTenants);
   const idOf = (code: string) => tenantIds.get(code)!;
   // 样例话单落在 2026 年 9、10 月。建分区不能放进下面持租户锁的事务。

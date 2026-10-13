@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { connections, createTenant, pgError } from '../test/support.js';
 import { withAdmin, type Tx } from './client.js';
+import { ensureCdrPartitions } from './partitions.js';
 import { cdrs, rawCdrs, unassignedCdrs } from './schema.js';
 
 const { app, owner } = connections();
@@ -27,11 +28,9 @@ const partitionOf = (tx: Tx, callUuid: string) =>
 
 describe('话单按通话 UUID 唯一', () => {
   beforeAll(() =>
-    withAdmin(app.db, (tx) =>
-      tx.execute(
-        sql`select cdr_ensure_partitions('2026-10-12T00:00:00+08:00')`,
-      ),
-    ),
+    ensureCdrPartitions(app.db, {
+      moment: new Date('2026-10-12T00:00:00+08:00'),
+    }),
   );
 
   it('同一 UUID 插入两次，第二次被唯一约束挡住', async () => {
@@ -190,22 +189,28 @@ describe('原始话单', () => {
 });
 
 describe('按月分区', () => {
+  it('维护入口在类型层拒绝事务，只接受连接池数据库', () => {
+    const insideWrite = (tx: Tx) => {
+      // @ts-expect-error 事务没有连接池 $client，维护不能嵌套在写事务里
+      return ensureCdrPartitions(tx);
+    };
+    expect(insideWrite).toBeTypeOf('function');
+  });
+
   it('建分区任务幂等地建出 cdrs 与 raw_cdrs 的当月与下月（北京时间），之后下月的话单落入新分区', async () => {
     const tenant = await createTenant(app, 'CNY');
     const ensure = () =>
-      withAdmin(app.db, (tx) =>
-        tx.execute<{ name: string }>(
-          sql`select cdr_ensure_partitions('2027-01-15T12:00:00+08:00') as name`,
-        ),
-      );
+      ensureCdrPartitions(app.db, {
+        moment: new Date('2027-01-15T12:00:00+08:00'),
+      });
     const expected = [
-      { name: 'cdrs_2027_01' },
-      { name: 'cdrs_2027_02' },
-      { name: 'raw_cdrs_2027_01' },
-      { name: 'raw_cdrs_2027_02' },
+      'cdrs_2027_01',
+      'cdrs_2027_02',
+      'raw_cdrs_2027_01',
+      'raw_cdrs_2027_02',
     ];
-    expect((await ensure()).rows).toEqual(expected);
-    expect((await ensure()).rows).toEqual(expected);
+    expect(await ensure()).toEqual(expected);
+    expect(await ensure()).toEqual(expected);
 
     const lastOfJanuary = randomUUID();
     const firstOfFebruary = randomUUID();

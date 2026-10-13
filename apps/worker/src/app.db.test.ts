@@ -142,6 +142,16 @@ describe('Worker HTTP 与真实数据库', () => {
     expect(second.json()).toMatchObject({ status: 'duplicate' });
     expect(
       (
+        await owner.pool.query(
+          "select kind, tenant_id, affected_calls from system_alerts where kind = 'auth_timeout' and description like $1",
+          [`${uuid}:%`],
+        )
+      ).rows,
+    ).toEqual([
+      { kind: 'auth_timeout', tenant_id: tenant.id, affected_calls: 1 },
+    ]);
+    expect(
+      (
         await owner.pool.query('select body from raw_cdrs where body = $1', [
           payload,
         ])
@@ -216,11 +226,11 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(
         (
           await owner.pool.query(
-            'select kind from system_alerts where description like $1',
+            'select kind from system_alerts where description like $1 order by kind',
             [`${uuid}:%`],
           )
         ).rows,
-      ).toEqual([{ kind: 'cdr_failed' }]);
+      ).toEqual([{ kind: 'auth_timeout' }, { kind: 'cdr_failed' }]);
     },
   );
 

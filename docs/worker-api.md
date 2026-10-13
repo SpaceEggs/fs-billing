@@ -1,4 +1,4 @@
-# Worker 接口（阶段 3：a–e）
+# Worker 接口（阶段 3）
 
 Worker 独立于 Web/API，默认监听 `127.0.0.1:3001`。生产环境设置内网 IPv4 地址。运行时只使用 `APP_DATABASE_URL`（`fs_billing_app`）；业务与队列写入经 `withSystem`，写入前调用 `lockTenants`，不新增业务锁。金额由阶段 1 的 decimal.js 计价函数计算，不舍入。
 
@@ -58,11 +58,11 @@ pnpm --filter @fs-billing/worker start
 | 无费率       | 404           | 200  |
 | 余额不足     | 402           | 200  |
 
-号码字段缺失或类型错误同样返回 `号码格式错误`。其他无效请求（例如 UUID 错误）返回 HTTP 400 `{"error":"授权请求格式错误"}`。数据库不可用时返回服务错误；FreeSWITCH 的超时放行策略由后续拨号计划实现。
+号码字段缺失或类型错误同样返回 `号码格式错误`。其他无效请求（例如 UUID 错误）返回 HTTP 400 `{"error":"授权请求格式错误"}`。数据库不可用时返回服务错误；FreeSWITCH 的 [授权脚本](../freeswitch/scripts/billing_authorize.lua) 在整个请求超过 1.5 秒或无有效响应时放行 1800 秒并设置 `billing_unverified=true`。正常放行在接通后执行 `sched_hangup +N`，拒绝执行建议的 SIP code。
 
 ## POST /cdr
 
-正文是直接的 mod_json_cdr JSON 文本，可使用 `application/json` 或 `text/plain`。不接受 `cdr=<urlencoded JSON>` 包装；FreeSWITCH 的直传配置在后续单元提供。真实字段布局见 [sample-cdr.json](../freeswitch/examples/sample-cdr.json)。`times` 位于 `callflow[]` 中，单位为微秒；业务解析以 `variables` 中的秒数为准。
+正文是直接的 mod_json_cdr JSON 文本，可使用 `application/json` 或 `text/plain`。不接受 `cdr=<urlencoded JSON>` 包装；FreeSWITCH 设置 `encode=false` 与 `encode-values=false`，经本机 relay 添加 `X-Billing-Key` 后转发。配置与落盘重推步骤见 [FreeSWITCH 接入](../freeswitch/README.md)。真实字段布局见 [sample-cdr.json](../freeswitch/examples/sample-cdr.json)。`times` 位于 `callflow[]` 中，单位为微秒；业务解析以 `variables` 中的秒数为准。
 
 | variables 字段                            | 解析与不变量                                                                                                              |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -83,7 +83,7 @@ pnpm --filter @fs-billing/worker start
 2. JSON 或结构无效时返回 200 `invalid`，写 `cdr_failed` 告警。缺 UUID 或错误时间无法构造正式/未归属话单，保留原文供人工排查。
 3. 解析成功后检查 `call_uuids`。已登记即返回 `duplicate`，不会将重推变成未归属话单的认领。入口设置事务级 `app.cdr_ingest=true`，登记触发器也禁止认领，因此并发插入同样只允许一条；只将 `23505` 且约束为 `call_uuids_pkey` 的冲突识别为重复，不使用话单 `ON CONFLICT DO NOTHING`。
 4. 缺标签、未知租户（包括 `ABC01`）、错误被叫进入 `unassigned_cdrs(status=pending)` 并写 `cdr_failed`，HTTP 200，不入扣费队列。重复推送不重复告警。
-5. 接通电话按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费。
+5. 接通电话按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务写一条 `auth_timeout` 告警，重推不重复写。Worker 不可能在断网时立即收到超时信号，告警随话单到达。
 6. CDR 插入与 `charge-cdr` 入队在同一事务内提交。队列失败时两者和 UUID 登记全部回滚，原文保留，返回 503 供 FreeSWITCH 重推。
 
 成功响应均为 HTTP 200：
@@ -94,11 +94,11 @@ pnpm --filter @fs-billing/worker start
 
 `status` 为 `queued`、`duplicate`、`unassigned` 或 `invalid`。只有数据库/队列保存失败时返回 503 `{"error":"话单保存失败，请重推"}`；坏话单不返回 400。HTTP 层仍限制正文大小（Fastify 默认 1 MiB）；文本列不能保存非法 UTF-8 字节或实际 NUL 字符。
 
-## 扣费队列边界与后续单元
+## 扣费队列边界
 
 `ChargeQueue.enqueue(tx, {tenantId, callUuid})` 只做数据库操作，使用 pg-boss `fromDrizzle(tx, sql)` 与话单共用事务。`chargeCdr(db, unknown)` 在任务边界校验形状，再读取已保存的计价快照，调用 `appendLedgerEntry`，幂等键为 `call:<UUID>`、`occurred_at=answered_at`。零费率或未接通不产生零元流水（数据库只接受负值通话扣费）。余额缓存由流水触发器更新。
 
-当前提供最小处理器并在启动后消费扣费任务。DB 测试从真实 pg-boss 队列 fetch，重复运行同一 handler，断言账本和余额。完整的崩溃恢复、失败任务维护和每日分区调度属于后续单元。当前关闭 pg-boss `supervise`、`schedule`，避免应用角色触发它的建队列/维护 advisory 锁；不放开阶段 2 对 advisory 锁的限制。
+启动后消费真实 pg-boss 扣费任务；开启 `supervise` 与 `schedule`，使用固定版本补丁禁用额外 advisory 锁。DB 测试通过真实队列领取、重复执行处理器、模拟提交前崩溃与提交后未确认任务的重投，断言账本与余额。
 
 Worker 启动时在独立维护事务调用一次 `ensureCdrPartitions`。CDR 写入路径不建分区；遇到 SQLSTATE 23514 `no partition of relation … found for row` 时记日志、独立写 `partition_failed`、返回 503。缺分区的写入回滚，不登记 UUID，原文（若收到月份分区存在）保留，等待维护后重推。原文分区也缺失时同样告警并返回 503。维护启动失败记录 `partition_failed` 并退出。
 
@@ -120,8 +120,14 @@ pnpm coverage
 
 扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败记日志与告警，错误继续向队列抛出。
 
-Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 Db，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed` 告警并抛错；启动失败不监听 HTTP。入库路径缺分区返回 503、记录同类告警，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。
+Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 PoolDb，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed` 告警并抛错；启动失败不监听 HTTP。入库路径缺分区返回 503、记录同类告警，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。
 
 `patches/pg-boss@12.37.1.patch` 为固定版本提供 `noAdvisoryLocks` 配置，并让 Drizzle adapter 保留调用方事务的提交权。运行时禁止队列额外 advisory 锁，关闭队列统计分区和索引 DDL；队列安装仍是 owner 部署操作。升级 pg-boss 时需重新核对该补丁与崩溃重投验收。
 
 验收：`pnpm test:db apps/worker/src/app.db.test.ts` 覆盖 HTTP 401/403、原文/UUID 去重、费率切换无匹配、跨月归属、插入流水后的模拟崩溃、队列重启与重投、启动/每日分区维护、缺分区重推。`pnpm test apps/worker/src/config.test.ts` 覆盖启动配置边界。
+
+## FreeSWITCH 配置
+
+[拨号计划与 Lua](../freeswitch/README.md) 在 bridge 前剥掉被叫的 `+` 与 `00`，同时更新 A-leg 的 `destination_number`，让授权与话单号码一致。脚本使用 Lua-cURL 的毫秒超时，密钥从全局变量读取，不写进通道变量。
+
+`mod_json_cdr` 原生只支持 `cred` 的 HTTP Basic 认证，不能配置 `X-Billing-Key`。示例在 FreeSWITCH 机器放一个仅回环监听的 nginx relay，添加共享密钥后向 Worker 内网地址转发；Worker 的 IP 白名单填写 FreeSWITCH 机器来源 IP。配置只推 A-leg、直传 JSON，并保留 archive 与失败 retry 原文。HTTP 重试耗尽后由独立脚本扫描 retry 重推，2xx 才移除失败副本。缺分区或其他保存故障的 503 原样传回，不能在代理上改为成功。

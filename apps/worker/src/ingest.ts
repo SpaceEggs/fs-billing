@@ -88,6 +88,15 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         .from(schema.callUuids)
         .where(eq(schema.callUuids.callUuid, cdr.callUuid));
       if (registered) return 'duplicate' as const;
+      // FreeSWITCH 超时放行的信号随首次有效话单到达；去重后告警，重推不重复记。
+      if (cdr.unverified) {
+        await tx.insert(schema.systemAlerts).values({
+          tenantId: tenant?.id ?? null,
+          kind: 'auth_timeout',
+          description: `${cdr.callUuid}: FreeSWITCH 授权未验证，按 1800 秒放行`,
+          affectedCalls: 1,
+        });
+      }
       if (!tenant)
         return park(tx, cdr, cdr.tenantTag ? '租户不存在' : '缺少租户标签');
       const dialed = parseDialedNumber(cdr.callee);
