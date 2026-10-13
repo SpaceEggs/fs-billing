@@ -1,15 +1,17 @@
 ---
 name: verify
-description: Launch and drive the FS-Billing stage-0 Web page and real API and Worker HTTP endpoints. Use to verify local runtime behavior, capture evidence, and check cleanup after changes to these surfaces.
+description: Verify FS-Billing phase 0 Web and HTTP health, phase 1 rating capabilities, and phase 2 database operations. Use to drive real entry points, capture evidence, and check cleanup.
 ---
 
 # Verify FS-Billing
 
-Use this skill from the repository root. Read the [feature index](features/README.md), then the feature being verified. The primary surface is the Web page. The secondary surfaces are the API and Worker HTTP endpoints.
+Use this skill from the repository root. Read the [feature index](features/README.md), then the feature being verified. Phase 0 uses an owned Web/API/Worker session; phase 1 uses short-lived package acceptance commands; phase 2 uses migration/seed commands, database acceptance tests, and operator SQL.
 
-The current scaffold has no authentication, seed data, billing operations, or database-backed routes. PostgreSQL readiness is a separate infrastructure check. A healthy Web page or health endpoint does not prove database readiness.
+**Stale claim (phase 0):** the repository has no seed data or billing operations. Phase 1 implements pure rating functions and phase 2 implements database operations and seed data. Authentication and database-backed HTTP routes are still absent. A healthy Web page or health endpoint does not prove database readiness.
 
 ## Launch
+
+For Web and HTTP features, follow the owned server launch below. Rating and database features use the separate command sessions in [Package and database sessions](#package-and-database-sessions); they do not require `pnpm dev` or browser access.
 
 1. Run `pnpm install --frozen-lockfile` if dependencies are absent. Run `pnpm check && pnpm build` before driving a changed checkout.
 2. Create a fresh evidence directory from the repository root, then start the launcher in the same terminal command.
@@ -57,6 +59,27 @@ Read a fresh accessibility or DOM snapshot. Require the heading `电话计费系
 
 For terminal entry points, use the literal URLs in the feature files. Preserve the command, HTTP status, body, and exit code. Assert the whole JSON body rather than checking that one substring exists.
 
+## Package and database sessions
+
+Create a fresh evidence directory as in Launch, without starting the launcher. Run phase 1 commands from the feature files; `pnpm test packages/rating/src` drives all six rating suites without PostgreSQL. Pass filters directly after `pnpm test` or `pnpm test:db`; adding `--` makes Vitest treat them as positional arguments after its option terminator and can leave the run unfiltered.
+
+For phase 2, use the existing `.env` with `DATABASE_URL` (migration/seed owner) and `APP_DATABASE_URL` (`fs_billing_app`). The package CLI scripts load the root `.env`; `psql` does not. In a shell, load the repository's local development file before the documented SQL:
+
+```sh
+set -a
+. ./.env
+set +a
+psql "$APP_DATABASE_URL" -X -v ON_ERROR_STOP=1 -c 'SELECT current_user;'
+```
+
+If `.env` is absent, prepare it from `.env.example` as the root README describes. Do not overwrite an existing configuration. Before each fresh database drive, require a successful connection and verify the role. App-role evidence requires `fs_billing_app`, `rolsuper = false`, and `rolbypassrls = false`; an owner read cannot prove RLS. The SQL feature files use transaction-local `app.scope` and, for tenant reads, `app.tenant_id`, matching `withTenant`, `withAdmin`, and `withSystem`.
+
+`pnpm test:db` **drops `fs_billing_test` WITH (FORCE) and recreates it**, migrates it, and seeds it before tests, including filtered runs. Use a local owner with database creation privileges and a disposable `fs_billing_test`; run database suites serially. Setup also resets the cluster-wide application role password and revokes public advisory-function execution through the migration. It leaves the test database behind. Do not run it against an unrelated cluster. `pnpm db:migrate` and `pnpm db:seed` instead target `DATABASE_URL`; they perform persistent writes.
+
+Use `pnpm test:db` once for a full phase 2 pass, or the filtered commands for a focused drive. Tests call the actual PostgreSQL functions and wrappers and inspect stored rows. Run migrate/seed separately when verifying their CLI output on a prepared local database. Manual SQL mutation recipes use rollback where possible; the owner-only balance rebuild commits internally and requires standalone autocommit.
+
+The HTTP Doctor does not apply to these short-lived sessions. Record commands, exit codes, complete test summaries, and independent SQL results. After a failed connection, recheck connectivity before further database drives. A permission-denied socket is a runtime prerequisite failure, not proof that PostgreSQL is down; preserve the underlying error and report unverified features.
+
 ## Evidence
 
 Keep proof under the generated run directory. The default `artifacts/verify/run-*` directory is ignored by Git. `VERIFY_EVIDENCE_ROOT` can select a shared writable location outside the checkout. Both locations remain after Cleanup.
@@ -65,7 +88,7 @@ Capture the user action and the resulting state. For the Web feature, save the n
 
 `doctor.json` contains the real requests, responses, listening PIDs, checkout, and revision. `dev.log` records startup. Save terminal commands and exit codes for any additional drive. Record skipped feature IDs with their reason. A connected Web screenshot does not verify the unavailable state, Worker independence, or PostgreSQL.
 
-There are no business writes in the current mapped endpoints. When later features add mutations, verify their persistent side effects through an independent read alongside the UI result. Do not infer persistence from a success label.
+The mapped HTTP endpoints perform no business writes. Database features do: verify persistent side effects through independent reads of the ledger, balance cache, rate versions, UUID registry, or partition catalog, as described in each feature. Do not infer persistence from a success label.
 
 ## Cleanup
 
@@ -76,7 +99,7 @@ There are no business writes in the current mapped endpoints. When later feature
 
 If the terminal is lost, inspect the recorded launcher PID's current command, working directory, and descendants before sending SIGTERM to that PID. Do not run `pkill`, `killall`, or a process-name match. If ownership cannot be established, stop and report the unresolved process.
 
-This run creates no Compose project or volume. Leave all existing PostgreSQL resources untouched. To inspect a developer-owned database, use `docker compose ps` and the read-only SQL command in the root README. Label that evidence as an existing instance.
+The Web launcher creates no Compose project or volume. Leave existing PostgreSQL containers and volumes running. For package/SQL sessions, wait for commands to exit and close any interactive SQL connection; tests close their pools. Record the retained `fs_billing_test` database and any intentional migrate/seed/partition/rebuild writes. Never delete a developer's database as cleanup. Confirm terminal evidence still exists. Use `docker compose ps` and the root README's read-only SQL for infrastructure checks when Docker access is available; label that evidence as an existing instance.
 
 ## Helpers
 
