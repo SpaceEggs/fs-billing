@@ -98,6 +98,9 @@ RETURNING tableoid::regclass AS partition,
 \echo '-- 不是合法 JSON 的原文也保存，payload 为空'
 INSERT INTO raw_cdrs (body, received_at) VALUES ('{"uuid": "truncated', '2026-11-01 00:00:00+08')
 RETURNING tableoid::regclass AS partition, body, payload IS NULL AS payload_null;
+\echo '-- 数值超出 numeric 的 JSON 原文也保存，payload 为空'
+INSERT INTO raw_cdrs (body) VALUES ('{"n":1e1000000}')
+RETURNING body, payload IS NULL AS payload_null;
 ROLLBACK;
 \d+ raw_cdrs
 

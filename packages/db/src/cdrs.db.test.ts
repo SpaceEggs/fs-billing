@@ -174,6 +174,19 @@ describe('原始话单', () => {
       { body: '{"uuid": "truncated', payload: null },
     ]);
   });
+
+  it('数值溢出的 JSON 原文仍保存，payload 为空', async () => {
+    const body = '{"n":1e1000000}';
+    const rows = await withAdmin(app.db, async (tx) => {
+      await tx.insert(rawCdrs).values({ body });
+      return (
+        await tx.execute(
+          sql`select body, payload from raw_cdrs where body = ${body}`,
+        )
+      ).rows;
+    });
+    expect(rows).toEqual([{ body: '{"n":1e1000000}', payload: null }]);
+  });
 });
 
 describe('按月分区', () => {

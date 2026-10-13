@@ -364,13 +364,15 @@ END $$;
 CREATE TRIGGER cdrs_register_call_uuid BEFORE INSERT ON cdrs
   FOR EACH ROW EXECUTE FUNCTION cdrs_register_call_uuid();
 
--- 原始话单：body 是收到的原文（逐字节），payload 由它派生、供查询；原文不是合法 JSON 时为空。
+-- 原始话单：body 是收到的原文，payload 由它派生。下列转换错误得到 NULL，原文仍写入。
+-- 22P02 非法 JSON，22P05 jsonb 不接受的转义（\u0000），22003 数值超出 numeric。
 CREATE FUNCTION jsonb_or_null(body text) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE AS $$
 BEGIN
   RETURN body::jsonb;
-EXCEPTION WHEN invalid_text_representation OR untranslatable_character THEN
-  RETURN NULL;
+EXCEPTION
+  WHEN SQLSTATE '22P02' OR SQLSTATE '22P05' OR SQLSTATE '22003' THEN
+    RETURN NULL;
 END $$;
 
 CREATE TABLE raw_cdrs (
