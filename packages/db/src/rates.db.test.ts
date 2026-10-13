@@ -23,6 +23,19 @@ function entries(csv: string): readonly RateEntry<Currency>[] {
 const CHINA = entries('86,中国,0.0500');
 const CHINA_RAISED = entries('86,中国,0.0550');
 
+/** 等到 `pid` 被 `blockerPid` 堵住。 */
+async function waitUntilBlocked(pid: number, blockerPid: number) {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const { rows } = await owner.pool.query<{ blocked: boolean }>(
+      'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
+      [pid, blockerPid],
+    );
+    if (rows[0]!.blocked) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`连接 ${pid} 没有被连接 ${blockerPid} 堵住`);
+}
+
 const dbNow = async (tx: Tx) => {
   const { rows } = await tx.execute<{ ms: string }>(
     sql`select (extract(epoch from clock_timestamp()) * 1000)::bigint::text as ms`,
@@ -249,6 +262,68 @@ describe('费率版本', () => {
       code: '23514',
       constraint: 'rate_entries_rate_check',
     });
+  });
+
+  it('删未来条目后插入，同时删除该版本，两个事务都提交', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const version = await withAdmin(app.db, (tx) =>
+      createRateVersion(
+        tx,
+        tenant.id,
+        entries('86,中国,0.0500\n44,英国,0.0200'),
+        { effectiveFrom: new Date('2031-06-01T00:00:00Z') },
+      ),
+    );
+    const editor = await app.pool.connect();
+    const deleter = await app.pool.connect();
+    const jobs: Promise<unknown>[] = [];
+    try {
+      const pidOf = async (client: PoolClient) =>
+        (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
+          .rows[0]!.pid;
+      const editorPid = await pidOf(editor);
+      const deleterPid = await pidOf(deleter);
+
+      await editor.query('BEGIN');
+      await editor.query(`SELECT set_config('app.scope', 'admin', true)`);
+      await editor.query(
+        `DELETE FROM rate_entries WHERE rate_version_id = $1 AND prefix = '44'`,
+        [version.id],
+      );
+
+      const deleting = (async () => {
+        await deleter.query('BEGIN');
+        await deleter.query(`SELECT set_config('app.scope', 'admin', true)`);
+        await deleter.query('DELETE FROM rate_versions WHERE id = $1', [
+          version.id,
+        ]);
+      })();
+      jobs.push(deleting);
+      await waitUntilBlocked(deleterPid, editorPid);
+
+      await editor.query(
+        `INSERT INTO rate_entries (tenant_id, rate_version_id, prefix, country, rate)
+         VALUES ($1, $2, '1', '美国', 0.0100)`,
+        [tenant.id, version.id],
+      );
+      await editor.query('COMMIT');
+      await deleting;
+      await deleter.query('COMMIT');
+
+      const { rows } = await owner.pool.query(
+        `SELECT
+           (SELECT count(*)::int FROM rate_versions WHERE id = $1) AS versions,
+           (SELECT count(*)::int FROM rate_entries WHERE tenant_id = $2) AS entries`,
+        [version.id, tenant.id],
+      );
+      expect(rows).toEqual([{ versions: 0, entries: 0 }]);
+    } finally {
+      await editor.query('ROLLBACK').catch(() => undefined);
+      await deleter.query('ROLLBACK').catch(() => undefined);
+      await Promise.allSettled(jobs);
+      editor.release();
+      deleter.release();
+    }
   });
 });
 

@@ -112,7 +112,14 @@ BEGIN
     RAISE EXCEPTION '费率版本不可修改' USING ERRCODE = 'insufficient_privilege';
   END IF;
   -- 先锁再读时钟。now() 停在事务开始，等锁期间可能跨过生效时间。
+  -- 删除时执行器已经 FOR UPDATE 锁住这一行。这里再锁一次，顺序就写在函数里：
+  -- 先版本行，再 advisory。rate_entries_guard 用 FOR KEY SHARE 走同一顺序。
+  -- 倒过来会 40P01：删未来条目的事务拿着 advisory 锁，删版本的事务拿着版本行锁，
+  -- 前者插入时的外键检查再等这把行锁。
   tenant := CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+  IF TG_OP = 'DELETE' THEN
+    PERFORM 1 FROM rate_versions WHERE id = OLD.id FOR UPDATE;
+  END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || tenant::text, 0));
   IF TG_OP = 'DELETE' THEN
     IF OLD.effective_from <= clock_timestamp() THEN
@@ -142,17 +149,20 @@ DECLARE
   version rate_versions%ROWTYPE;
   row_version uuid;
   tenant uuid;
+  version_found boolean;
 BEGIN
   IF TG_OP = 'UPDATE' THEN
     RAISE EXCEPTION '费率条目不可修改，请新建版本' USING ERRCODE = 'insufficient_privilege';
   END IF;
   row_version := CASE TG_OP WHEN 'INSERT' THEN NEW.rate_version_id ELSE OLD.rate_version_id END;
   tenant := CASE TG_OP WHEN 'INSERT' THEN NEW.tenant_id ELSE OLD.tenant_id END;
-  -- 与 rate_versions_guard 同一把锁，拿到之后再用 clock_timestamp() 判断是否已生效。
+  -- 先 FOR KEY SHARE 父版本行（与外键检查同一强度，并和删除版本的 FOR UPDATE 冲突），
+  -- 再拿 rate_versions_guard 的 advisory 锁。PERFORM 会改写 FOUND，所以先记下。
+  SELECT * INTO version FROM rate_versions WHERE id = row_version FOR KEY SHARE;
+  version_found := FOUND;
   PERFORM pg_advisory_xact_lock(hashtextextended('rate_versions:' || tenant::text, 0));
-  SELECT * INTO version FROM rate_versions WHERE id = row_version;
   -- 插入时由外键报错；删除时版本已不存在，说明是取消未来版本的级联删除。
-  IF NOT FOUND THEN
+  IF NOT version_found THEN
     RETURN CASE TG_OP WHEN 'INSERT' THEN NEW ELSE OLD END;
   END IF;
   IF version.effective_from <= clock_timestamp()
