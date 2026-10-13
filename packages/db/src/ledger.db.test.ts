@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { formatMoney, money } from '@fs-billing/rating';
+import { beijingTime, formatMoney, money } from '@fs-billing/rating';
 import {
   connections,
   createTenant,
@@ -95,6 +95,7 @@ describe('appendLedgerEntry', () => {
       amount: money('CNY', '-0.18'),
       note: '447700900123 通话 3分50秒',
       idempotencyKey: callChargeKey(callUuid),
+      occurredAt: beijingTime('2026-10-12 10:00:12'),
     } as const;
     const first = await withAdmin(app.db, (tx) =>
       appendLedgerEntry(tx, tenant, charge),
@@ -148,6 +149,7 @@ describe('appendLedgerEntry', () => {
           amount: money('CNY', '-1'),
           note: '',
           idempotencyKey: 'k',
+          occurredAt: new Date(0),
         },
       );
     expect(mixed).toBeTypeOf('function');
@@ -163,6 +165,7 @@ describe('appendLedgerEntry', () => {
           amount: money('CNY', '0.18'),
           note: '',
           idempotencyKey: 'call:positive',
+          occurredAt: beijingTime('2026-10-12 10:00:12'),
         }),
       ),
     );
@@ -181,6 +184,62 @@ describe('appendLedgerEntry', () => {
       { code: '23514', constraint: 'ledger_entries_kind_shape' },
       { code: '23514', constraint: 'ledger_entries_kind_shape' },
     ]);
+  });
+});
+
+describe('流水按发生时间归属月份', () => {
+  it('9-30 23:59（北京时间）接通、10-01 才写入的扣费，按 occurred_at 归属 9 月', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await withAdmin(app.db, (tx) =>
+      appendLedgerEntry(tx, tenant, {
+        kind: 'call_charge',
+        amount: money('CNY', '-0.05'),
+        note: '8613800138000 通话 1分0秒',
+        idempotencyKey: callChargeKey('5d0b7c1e-2f4a-4b8e-9c61-0e3a9f1d2c30'),
+        occurredAt: beijingTime('2026-09-30 23:59:00'),
+        createdAt: beijingTime('2026-10-01 00:00:30'),
+      }),
+    );
+    const { rows } = await withTenant(app.db, tenant.id, (tx) =>
+      tx.execute(sql`
+        select to_char(occurred_at at time zone 'Asia/Shanghai', 'YYYY-MM') as month,
+               to_char(created_at at time zone 'Asia/Shanghai', 'YYYY-MM') as written,
+               sum(amount)::text as charges
+        from ledger_entries where kind = 'call_charge' group by 1, 2`),
+    );
+    expect(rows).toEqual([
+      { month: '2026-09', written: '2026-10', charges: '-0.05' },
+    ]);
+  });
+
+  it('种子中 ABC001 的通话扣费全部归属 9 月，合计 −2486.30（设计稿本月消费）', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const { rows } = await withTenant(app.db, abc001, (tx) =>
+      tx.execute(sql`
+        select to_char(occurred_at at time zone 'Asia/Shanghai', 'YYYY-MM') as month,
+               sum(amount)::text as charges, count(*)::int as entries
+        from ledger_entries where kind = 'call_charge' group by 1`),
+    );
+    expect(rows).toEqual([
+      { month: '2026-09', charges: '-2486.30', entries: 28 },
+    ]);
+  });
+
+  it('人工操作的发生时间只能是写入时间', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId();
+    const backdated = await pgError(
+      withAdmin(app.db, (tx) =>
+        tx.execute(sql`insert into ledger_entries
+          (tenant_id, kind, amount, created_by, idempotency_key, occurred_at)
+          values (${tenant.id}, 'recharge', 100, ${admin}, 'recharge-backdated',
+                  '2026-09-30T12:00:00+08:00')`),
+      ),
+    );
+    expect(backdated).toMatchObject({
+      code: '23514',
+      constraint: 'ledger_entries_kind_shape',
+    });
   });
 });
 

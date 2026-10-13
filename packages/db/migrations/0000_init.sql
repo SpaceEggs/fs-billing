@@ -157,7 +157,8 @@ END $$;
 CREATE TRIGGER rate_entries_guard BEFORE INSERT OR UPDATE OR DELETE ON rate_entries
   FOR EACH ROW EXECUTE FUNCTION rate_entries_guard();
 
--- 余额流水：只增；余额 = 合计。
+-- 余额流水：只增；余额 = 合计。账单按 occurred_at（北京时间日/月）归属：
+-- 通话扣费为接通时间，人工操作即写入时间。
 
 CREATE TABLE ledger_entries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -168,17 +169,19 @@ CREATE TABLE ledger_entries (
   note text NOT NULL DEFAULT '',
   created_by uuid REFERENCES admins,
   idempotency_key text NOT NULL CHECK (idempotency_key <> ''),
+  occurred_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ledger_entries_tenant_idempotency_key UNIQUE (tenant_id, idempotency_key),
   UNIQUE (id, tenant_id, kind),
   CONSTRAINT ledger_entries_kind_shape CHECK (CASE kind
     WHEN 'call_charge' THEN amount < 0 AND created_by IS NULL
     WHEN 'adjustment' THEN amount <> 0 AND created_by IS NOT NULL AND btrim(note) <> ''
-    ELSE amount > 0 AND created_by IS NOT NULL
+      AND occurred_at = created_at
+    ELSE amount > 0 AND created_by IS NOT NULL AND occurred_at = created_at
   END)
 );
 
-CREATE INDEX ledger_entries_tenant_created_at ON ledger_entries (tenant_id, created_at);
+CREATE INDEX ledger_entries_tenant_occurred_at ON ledger_entries (tenant_id, occurred_at);
 
 CREATE TRIGGER ledger_entries_append_only BEFORE UPDATE OR DELETE ON ledger_entries
   FOR EACH ROW EXECUTE FUNCTION reject_mutation();
@@ -272,11 +275,12 @@ LANGUAGE sql AS $$
   SELECT count(*)::integer FROM fixed
 $$;
 
--- 话单：按北京时间自然月分区；通话 UUID 由非分区登记表保证全局唯一。
+-- 话单：按北京时间自然月分区。通话 UUID 由非分区登记表保证全局唯一，
+-- 正式话单与未归属话单共用：tenant_id 为空表示未归属，只能被认领一次。
 
-CREATE TABLE cdr_call_uuids (
+CREATE TABLE call_uuids (
   call_uuid uuid PRIMARY KEY,
-  tenant_id uuid NOT NULL REFERENCES tenants,
+  tenant_id uuid REFERENCES tenants,
   started_at timestamptz NOT NULL
 );
 
@@ -310,28 +314,63 @@ CREATE TABLE cdrs (
 
 CREATE INDEX cdrs_tenant_answered_at ON cdrs (tenant_id, answered_at);
 
+-- 认领未归属的登记，或新登记；登记已属于某个租户时与普通唯一冲突相同地报错。
 CREATE FUNCTION cdrs_register_call_uuid() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
-  INSERT INTO cdr_call_uuids (call_uuid, tenant_id, started_at)
-  VALUES (NEW.call_uuid, NEW.tenant_id, NEW.started_at);
+  INSERT INTO call_uuids AS registered (call_uuid, tenant_id, started_at)
+  VALUES (NEW.call_uuid, NEW.tenant_id, NEW.started_at)
+  ON CONFLICT (call_uuid) DO UPDATE SET tenant_id = EXCLUDED.tenant_id
+    WHERE registered.tenant_id IS NULL;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'duplicate key value violates unique constraint "call_uuids_pkey"'
+      USING ERRCODE = 'unique_violation', CONSTRAINT = 'call_uuids_pkey', TABLE = 'call_uuids',
+        DETAIL = format('Key (call_uuid)=(%s) already exists.', NEW.call_uuid);
+  END IF;
   RETURN NEW;
 END $$;
 
 CREATE TRIGGER cdrs_register_call_uuid BEFORE INSERT ON cdrs
   FOR EACH ROW EXECUTE FUNCTION cdrs_register_call_uuid();
 
-CREATE FUNCTION cdr_ensure_partition(moment timestamptz) RETURNS text
+-- 原始话单：body 是收到的原文（逐字节），payload 由它派生、供查询；原文不是合法 JSON 时为空。
+CREATE FUNCTION jsonb_or_null(body text) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+  RETURN body::jsonb;
+EXCEPTION WHEN invalid_text_representation OR untranslatable_character THEN
+  RETURN NULL;
+END $$;
+
+CREATE TABLE raw_cdrs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tenant_id uuid REFERENCES tenants,
+  call_uuid uuid,
+  body text NOT NULL,
+  payload jsonb GENERATED ALWAYS AS (jsonb_or_null(body)) STORED,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (id, received_at)
+) PARTITION BY RANGE (received_at);
+
+-- 先无锁检查，缺分区时才加锁并再查一次，入库路径上调用不会互相串行。
+CREATE FUNCTION ensure_month_partition(parent text, moment timestamptz) RETURNS text
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   month_start timestamp := date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai');
-  partition_name text := 'cdrs_' || to_char(month_start, 'YYYY_MM');
+  partition_name text := parent || '_' || to_char(month_start, 'YYYY_MM');
 BEGIN
-  PERFORM pg_advisory_xact_lock(hashtextextended('cdr_partitions', 0));
+  IF parent NOT IN ('cdrs', 'raw_cdrs') THEN
+    RAISE EXCEPTION '% 不是按月分区的表', parent USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+  IF to_regclass(partition_name) IS NOT NULL THEN
+    RETURN partition_name;
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('partition:' || partition_name, 0));
   IF to_regclass(partition_name) IS NULL THEN
     EXECUTE format(
-      'CREATE TABLE %I PARTITION OF cdrs FOR VALUES FROM (%L) TO (%L)',
+      'CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)',
       partition_name,
+      parent,
       month_start AT TIME ZONE 'Asia/Shanghai',
       (month_start + interval '1 month') AT TIME ZONE 'Asia/Shanghai'
     );
@@ -340,24 +379,18 @@ BEGIN
   RETURN partition_name;
 END $$;
 
--- 建当月与下月分区；幂等，可每日调度。
+-- 建 cdrs 与 raw_cdrs 的当月与下月分区；幂等，可每日调度。
 CREATE FUNCTION cdr_ensure_partitions(moment timestamptz DEFAULT now()) RETURNS SETOF text
 LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  SELECT cdr_ensure_partition(moment)
-  UNION ALL
-  SELECT cdr_ensure_partition(
-    (date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai') + interval '1 month')
-      AT TIME ZONE 'Asia/Shanghai'
-  )
+  SELECT ensure_month_partition(parent, month)
+  FROM unnest(ARRAY['cdrs', 'raw_cdrs']) AS parent,
+    unnest(ARRAY[
+      moment,
+      (date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai') + interval '1 month')
+        AT TIME ZONE 'Asia/Shanghai'
+    ]) WITH ORDINALITY AS months (month, n)
+  ORDER BY parent, n
 $$;
-
-CREATE TABLE raw_cdrs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES tenants,
-  call_uuid uuid NOT NULL UNIQUE,
-  payload jsonb NOT NULL,
-  received_at timestamptz NOT NULL DEFAULT now()
-);
 
 -- 租户标签缺失、找不到租户、无费率或号码格式错误的话单，等待人工处理。
 CREATE TABLE unassigned_cdrs (
@@ -386,6 +419,17 @@ CREATE TABLE unassigned_cdrs (
       AND resolved_by IS NOT NULL AND resolved_at IS NOT NULL
   END)
 );
+
+CREATE FUNCTION unassigned_cdrs_register_call_uuid() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO call_uuids (call_uuid, tenant_id, started_at)
+  VALUES (NEW.call_uuid, NULL, NEW.started_at);
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER unassigned_cdrs_register_call_uuid BEFORE INSERT ON unassigned_cdrs
+  FOR EACH ROW EXECUTE FUNCTION unassigned_cdrs_register_call_uuid();
 
 -- 账单、日志、告警、余额提醒
 
@@ -426,7 +470,8 @@ CREATE TRIGGER operation_logs_no_truncate BEFORE TRUNCATE ON operation_logs
 CREATE TABLE system_alerts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid REFERENCES tenants,
-  kind text NOT NULL CHECK (kind IN ('auth_timeout', 'cdr_failed', 'email_failed')),
+  kind text NOT NULL
+    CHECK (kind IN ('auth_timeout', 'cdr_failed', 'email_failed', 'partition_failed')),
   description text NOT NULL,
   started_at timestamptz NOT NULL DEFAULT now(),
   recovered_at timestamptz CHECK (recovered_at >= started_at),
@@ -475,7 +520,7 @@ BEGIN
     );
   END LOOP;
   FOREACH name IN ARRAY ARRAY[
-    'admins', 'raw_cdrs', 'unassigned_cdrs', 'operation_logs', 'system_alerts', 'cdr_call_uuids'
+    'admins', 'raw_cdrs', 'unassigned_cdrs', 'operation_logs', 'system_alerts', 'call_uuids'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', name);
     EXECUTE format(
@@ -496,6 +541,6 @@ GRANT SELECT ON tenant_balances, receivables, balance_discrepancies TO fs_billin
 
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_can_see(uuid),
-  cdr_ensure_partitions(timestamptz) TO fs_billing_app;
+  jsonb_or_null(text), cdr_ensure_partitions(timestamptz) TO fs_billing_app;
 
 SELECT cdr_ensure_partitions();

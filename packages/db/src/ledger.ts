@@ -10,7 +10,10 @@ export interface TenantRef<C extends Currency> {
 
 export type LedgerEntry = typeof ledgerEntries.$inferSelect;
 
-/** 符号与必填规则由数据库检查约束 ledger_entries_kind_shape 保证。 */
+/**
+ * 符号与必填规则由数据库检查约束 ledger_entries_kind_shape 保证。
+ * 发生时间：通话扣费为接通时间（occurredAt），人工操作即写入时间（createdAt，默认数据库 now()）。
+ */
 export type LedgerEntryInput<C extends Currency> = {
   readonly amount: Money<C>;
   readonly note: string;
@@ -21,7 +24,7 @@ export type LedgerEntryInput<C extends Currency> = {
       readonly kind: Exclude<LedgerKind, 'call_charge'>;
       readonly adminId: string;
     }
-  | { readonly kind: 'call_charge' }
+  | { readonly kind: 'call_charge'; readonly occurredAt: Date }
 );
 
 export function callChargeKey(callUuid: string): string {
@@ -46,7 +49,11 @@ export async function appendLedgerEntry<C extends Currency>(
       note: entry.note,
       createdBy: entry.kind === 'call_charge' ? null : entry.adminId,
       idempotencyKey: entry.idempotencyKey,
-      ...(entry.createdAt && { createdAt: entry.createdAt }),
+      ...(entry.createdAt && {
+        createdAt: entry.createdAt,
+        occurredAt: entry.createdAt,
+      }),
+      ...(entry.kind === 'call_charge' && { occurredAt: entry.occurredAt }),
     })
     .onConflictDoNothing({
       target: [ledgerEntries.tenantId, ledgerEntries.idempotencyKey],

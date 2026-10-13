@@ -16,7 +16,7 @@ import { createRateVersion } from './rates.js';
 import {
   admins,
   balanceAlertSettings,
-  cdrCallUuids,
+  callUuids,
   cdrs,
   portalAccounts,
   rateVersions,
@@ -161,17 +161,29 @@ const FIRST_VERSION_AT = '2026-09-01 00:00:00';
 // 阶段 1 的调价示例：447 自 2026-10-01 00:00（北京时间）起 0.0480。
 const ABC001_OCTOBER_AT = '2026-10-01 00:00:00';
 
-interface SeedEntry {
+type SeedEntry = {
+  /** 写入时间（北京时间）。 */
   readonly at: string;
-  readonly kind: LedgerKind;
   readonly amount: string;
   readonly note: string;
-  readonly admin?: AdminKey;
-}
+} & (
+  | { readonly kind: 'call_charge'; readonly occurredAt: string }
+  | {
+      readonly kind: Exclude<LedgerKind, 'call_charge'>;
+      readonly admin: AdminKey;
+    }
+);
 
-const callCharge = (at: string, amount: string, note: string): SeedEntry => ({
+/** 按日汇总的通话扣费：发生在通话当日（取当日最后一秒），次日写入。 */
+const callCharge = (
+  callDay: string,
+  at: string,
+  amount: string,
+  note: string,
+): SeedEntry => ({
   at,
   kind: 'call_charge',
+  occurredAt: `${callDay} 23:59:59`,
   amount,
   note,
 });
@@ -193,6 +205,7 @@ function abc001Ledger(): SeedEntry[] {
     const postedAt = `2026-09-${String(day + 1).padStart(2, '0')} 00:05:00`;
     history.push(
       callCharge(
+        callDay,
         postedAt,
         day === 22 ? '-89.66' : '-89.58',
         `${callDay} 通话扣费（种子汇总）`,
@@ -209,11 +222,13 @@ function abc001Ledger(): SeedEntry[] {
       admin: 'li',
     },
     callCharge(
+      '2026-09-23',
       '2026-09-24 00:05:12',
       '-86.05',
       '2026-09-23 通话扣费，共 1,692 通',
     ),
     callCharge(
+      '2026-09-24',
       '2026-09-25 00:05:08',
       '-83.48',
       '2026-09-24 通话扣费，共 1,610 通',
@@ -233,11 +248,13 @@ function abc001Ledger(): SeedEntry[] {
       admin: 'wang',
     },
     callCharge(
+      '2026-09-25',
       '2026-09-26 00:05:10',
       '-90.12',
       '2026-09-25 通话扣费，共 1,731 通',
     ),
     callCharge(
+      '2026-09-26',
       '2026-09-27 00:05:11',
       '-85.90',
       '2026-09-26 通话扣费，共 1,655 通',
@@ -250,11 +267,13 @@ function abc001Ledger(): SeedEntry[] {
       admin: 'wang',
     },
     callCharge(
+      '2026-09-27',
       '2026-09-28 00:05:09',
       '-81.27',
       '2026-09-27 通话扣费，共 1,588 通',
     ),
     callCharge(
+      '2026-09-28',
       '2026-09-29 00:05:12',
       '-88.64',
       '2026-09-28 通话扣费，共 1,702 通',
@@ -289,6 +308,7 @@ function summaryLedger(tenant: SeedTenant): SeedEntry[] {
   if (decimal(tenant.monthSpend).gt(0)) {
     entries.push(
       callCharge(
+        '2026-09-28',
         '2026-09-29 00:05:00',
         decimal(tenant.monthSpend).neg().toFixed(2),
         '2026-09-01 至 2026-09-28 通话扣费（种子汇总）',
@@ -462,8 +482,8 @@ export function seedDatabase(db: Db): Promise<void> {
         };
         const entry: LedgerEntryInput<Currency> =
           e.kind === 'call_charge'
-            ? { ...base, kind: e.kind }
-            : { ...base, kind: e.kind, adminId: adminIds[e.admin!] };
+            ? { ...base, kind: e.kind, occurredAt: beijingTime(e.occurredAt) }
+            : { ...base, kind: e.kind, adminId: adminIds[e.admin] };
         await appendLedgerEntry(
           tx,
           { id: tenantId, currency: t.currency },
@@ -472,12 +492,12 @@ export function seedDatabase(db: Db): Promise<void> {
       }
     }
 
-    await seedCdrs(tx, idOf);
-    await tx
-      .insert(unassignedCdrs)
-      .values({
+    const registered = await registeredCallUuids(tx);
+    await seedCdrs(tx, idOf, registered);
+    if (!registered.has(UNASSIGNED_CALL_UUID)) {
+      await tx.insert(unassignedCdrs).values({
         tenantTag: 'ABC01',
-        callUuid: 'a00000ff-0000-4000-8000-000000000001',
+        callUuid: UNASSIGNED_CALL_UUID,
         reason: '找不到租户',
         startedAt: beijingTime('2026-09-28 15:00:00'),
         answeredAt: beijingTime('2026-09-28 15:00:09'),
@@ -485,9 +505,25 @@ export function seedDatabase(db: Db): Promise<void> {
         caller: '075586001299',
         callee: '6591234567',
         durationSeconds: 120,
-      })
-      .onConflictDoNothing({ target: unassignedCdrs.callUuid });
+      });
+    }
   });
+}
+
+const UNASSIGNED_CALL_UUID = 'a00000ff-0000-4000-8000-000000000001';
+
+/** 插入触发器在唯一冲突前就写登记表，ON CONFLICT 挡不住；重复执行时先查登记表跳过。 */
+async function registeredCallUuids(tx: Tx): Promise<Set<string>> {
+  const rows = await tx
+    .select({ callUuid: callUuids.callUuid })
+    .from(callUuids)
+    .where(
+      inArray(callUuids.callUuid, [
+        ...CDRS.map((c) => c.callUuid),
+        UNASSIGNED_CALL_UUID,
+      ]),
+    );
+  return new Set(rows.map((r) => r.callUuid));
 }
 
 async function seedAdmins(tx: Tx): Promise<Record<AdminKey, string>> {
@@ -511,22 +547,13 @@ async function seedAdmins(tx: Tx): Promise<Record<AdminKey, string>> {
   };
 }
 
-async function seedCdrs(tx: Tx, idOf: (code: string) => string): Promise<void> {
+async function seedCdrs(
+  tx: Tx,
+  idOf: (code: string) => string,
+  existing: ReadonlySet<string>,
+): Promise<void> {
   await tx.execute(
-    sql`select cdr_ensure_partition(${beijingTime('2026-09-01 00:00:00')})`,
-  );
-  const existing = new Set(
-    (
-      await tx
-        .select({ callUuid: cdrCallUuids.callUuid })
-        .from(cdrCallUuids)
-        .where(
-          inArray(
-            cdrCallUuids.callUuid,
-            CDRS.map((c) => c.callUuid),
-          ),
-        )
-    ).map((r) => r.callUuid),
+    sql`select cdr_ensure_partitions(${beijingTime('2026-09-01 00:00:00')})`,
   );
   const entries = sampleRates('CNY');
   for (const c of CDRS.filter((c) => !existing.has(c.callUuid))) {

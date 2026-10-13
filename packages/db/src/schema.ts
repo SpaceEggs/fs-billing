@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   date,
@@ -12,7 +13,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-// 结构的唯一来源是 migrations/*.sql；这里是供查询使用的类型描述，schema.db.test.ts 核对列名一致。
+// 结构的唯一来源是 migrations/*.sql；这里是供查询使用的类型描述，migrate.db.test.ts 核对列名一致。
 
 const at = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -87,6 +88,7 @@ export const ledgerEntries = pgTable('ledger_entries', {
   note: text('note').notNull().default(''),
   createdBy: uuid('created_by'),
   idempotencyKey: text('idempotency_key').notNull(),
+  occurredAt: at('occurred_at').notNull().defaultNow(),
   createdAt: at('created_at').notNull().defaultNow(),
 });
 
@@ -128,9 +130,10 @@ export const balanceDiscrepancies = pgView('balance_discrepancies', {
   ledgerTotal: numeric('ledger_total').notNull(),
 }).existing();
 
-export const cdrCallUuids = pgTable('cdr_call_uuids', {
+export const callUuids = pgTable('call_uuids', {
   callUuid: uuid('call_uuid').primaryKey(),
-  tenantId: uuid('tenant_id').notNull(),
+  /** null：未归属话单登记的 UUID，尚未被任何租户的话单认领。 */
+  tenantId: uuid('tenant_id'),
   startedAt: at('started_at').notNull(),
 });
 
@@ -157,13 +160,18 @@ export const cdrs = pgTable(
   (table) => [primaryKey({ columns: [table.callUuid, table.startedAt] })],
 );
 
-export const rawCdrs = pgTable('raw_cdrs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id'),
-  callUuid: uuid('call_uuid').notNull(),
-  payload: jsonb('payload').notNull(),
-  receivedAt: at('received_at').notNull().defaultNow(),
-});
+export const rawCdrs = pgTable(
+  'raw_cdrs',
+  {
+    id: uuid('id').notNull().defaultRandom(),
+    tenantId: uuid('tenant_id'),
+    callUuid: uuid('call_uuid'),
+    body: text('body').notNull(),
+    payload: jsonb('payload').generatedAlwaysAs(sql`jsonb_or_null(body)`),
+    receivedAt: at('received_at').notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.id, table.receivedAt] })],
+);
 
 export const unassignedCdrs = pgTable('unassigned_cdrs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -215,7 +223,7 @@ export const systemAlerts = pgTable('system_alerts', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id'),
   kind: text('kind', {
-    enum: ['auth_timeout', 'cdr_failed', 'email_failed'],
+    enum: ['auth_timeout', 'cdr_failed', 'email_failed', 'partition_failed'],
   }).notNull(),
   description: text('description').notNull(),
   startedAt: at('started_at').notNull().defaultNow(),
