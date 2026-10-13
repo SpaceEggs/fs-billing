@@ -2,11 +2,12 @@ import type {} from '../../../packages/db/test/global-setup.js';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
-import { afterAll, beforeAll, expect, inject, it } from 'vitest';
+import { afterAll, beforeAll, expect, inject, it, vi } from 'vitest';
 import { z } from 'zod';
 import {
   connect,
   createRateVersion,
+  ensureCdrPartitions,
   lockTenants,
   withSystem,
 } from '@fs-billing/db';
@@ -22,6 +23,7 @@ import {
   CHARGE_QUEUE,
   RECONCILE_QUEUE,
   chargeQueue,
+  chargeJobId,
   createBoss,
   installQueue,
 } from './queue.js';
@@ -55,15 +57,20 @@ const template = z
       ),
     ),
   );
-const options = { minAgeMinutes: 5, alertAttempts: 2 };
+const options = { minAgeMinutes: 5, alertAttempts: 2, lookbackDays: 30 };
+const tenantIds: string[] = [];
 function body(
   code: string,
   uuid: string,
   overrides: Record<string, unknown> = {},
 ) {
+  const start = Math.floor(Date.now() / 1000) - 3600;
   return JSON.stringify({
     variables: {
       ...template.variables,
+      start_epoch: start,
+      answer_epoch: start + 9,
+      end_epoch: start + 199,
       billing_tenant: code,
       uuid,
       ...overrides,
@@ -82,6 +89,7 @@ const post = (payload: string, app = worker) =>
   });
 async function fixture() {
   const tenant = await createTenant(connection, 'CNY');
+  tenantIds.push(tenant.id);
   await withSystem(connection.db, (tx) =>
     createRateVersion(
       tx,
@@ -100,35 +108,57 @@ async function age(tenantId: string, uuid: string) {
       WHERE call_uuid = ${uuid}`);
   });
 }
-async function fetchCall(uuid: string) {
-  const job = (
-    await boss.fetch<unknown>(CHARGE_QUEUE, { batchSize: 1000 })
-  ).find(
-    (job) =>
-      z.object({ callUuid: z.string() }).parse(job.data).callUuid === uuid,
-  );
+async function fetchCall(uuid: string, cycle = 0) {
+  const id = chargeJobId(uuid, cycle);
+  // pg-boss 12 的 fetch 不支持 ID 过滤；只推进本测试任务的领取状态，再按主键读取。
+  const claimed = await withSystem(connection.db, async (tx) => {
+    await lockTenants(tx, []);
+    return tx.execute(sql`UPDATE pgboss.job SET state = 'active', started_on = pgboss.job_now(),
+      retry_count = CASE WHEN started_on IS NOT NULL THEN retry_count + 1 ELSE retry_count END
+      WHERE name = ${CHARGE_QUEUE} AND id = ${id} AND state IN ('created', 'retry')
+        AND start_after <= pgboss.job_now() RETURNING id`);
+  });
+  expect(claimed.rows).toEqual([{ id }]);
+  const job = await boss.getJobById<unknown>(CHARGE_QUEUE, id);
   if (!job) throw new Error(`没有可执行的任务 ${uuid}`);
   return job;
 }
-async function exhaust(uuid: string, run: (data: unknown) => Promise<void>) {
+async function exhaust(
+  uuid: string,
+  run: (data: unknown) => Promise<void>,
+  cycle = 0,
+) {
   for (let attempt = 0; attempt <= 3; attempt++) {
-    const job = await fetchCall(uuid);
+    const job = await fetchCall(uuid, cycle);
     await expect(run(job.data)).rejects.toThrow();
     await boss.fail(CHARGE_QUEUE, job.id, { message: '模拟持续故障' });
   }
-  const { rows } = await owner.pool.query(
-    "select state, retry_count from pgboss.job where name = $1 and data->>'callUuid' = $2 order by created_on desc limit 1",
-    [CHARGE_QUEUE, uuid],
-  );
-  expect(rows).toEqual([{ state: 'failed', retry_count: 3 }]);
+  expect(
+    await boss.getJobById(CHARGE_QUEUE, chargeJobId(uuid, cycle)),
+  ).toMatchObject({
+    state: 'failed',
+    retryCount: 3,
+  });
 }
 beforeAll(async () => {
+  await ensureCdrPartitions(connection.db, {
+    moment: new Date(Date.now() - 3600000),
+  });
   await installQueue(owner);
   await boss.start();
 });
 afterAll(async () => {
   await worker.close();
   await boss.stop();
+  // 只清理本文件的队列任务，其他测试文件不应依赖执行顺序。
+  await withSystem(queueConnection.db, async (tx) => {
+    await lockTenants(tx, []);
+    await tx.execute(sql`DELETE FROM pgboss.job WHERE name = ${CHARGE_QUEUE}
+      AND data->>'tenantId' = ANY(ARRAY[${sql.join(
+        tenantIds.map((id) => sql`${id}`),
+        sql`, `,
+      )}]::text[])`);
+  });
   await queueConnection.pool.end();
 });
 
@@ -208,20 +238,30 @@ it('重试耗尽后对账重新入队，并发/重复对账与重复扣费只产
   expect((await post(body(tenant.code, uuid))).statusCode).toBe(200);
   await exhaust(uuid, () => Promise.reject(new Error('模拟任务进程失败')));
   // 未到宽限期不补投。
-  await reconcileCharges(connection.db, boss, options);
+  await reconcileCharges(connection.db, boss, options, worker.log);
+  expect(
+    (
+      await owner.pool.query(
+        `select reconcile_attempts,
+      (select count(*)::int from pgboss.job where name = $2 and singleton_key = $1::text) as jobs
+      from cdrs where call_uuid = $1::uuid`,
+        [uuid, CHARGE_QUEUE],
+      )
+    ).rows,
+  ).toEqual([{ reconcile_attempts: 0, jobs: 1 }]);
   await age(tenant.id, uuid);
   await Promise.all([
-    reconcileCharges(connection.db, boss, options),
-    reconcileCharges(connection.db, boss, options),
+    reconcileCharges(connection.db, boss, options, worker.log),
+    reconcileCharges(connection.db, boss, options, worker.log),
   ]);
-  const job = await fetchCall(uuid);
+  const job = await fetchCall(uuid, 1);
   await Promise.all([
     chargeCdr(connection.db, job.data),
     chargeCdr(connection.db, job.data),
   ]);
   await boss.complete(CHARGE_QUEUE, job.id);
   await age(tenant.id, uuid);
-  await reconcileCharges(connection.db, boss, options);
+  await reconcileCharges(connection.db, boss, options, worker.log);
   expect(
     (
       await owner.pool.query(
@@ -256,21 +296,178 @@ it('重试耗尽后对账重新入队，并发/重复对账与重复扣费只产
   ).toEqual([{ n: 2 }]);
 });
 
+it('只对账窗口内开始的通话，较早话单保留给人工处理', async () => {
+  const tenant = await fixture();
+  const oldUuid = randomUUID();
+  const recentUuid = randomUUID();
+  const start = Math.floor(Date.now() / 1000) - 31 * 86400;
+  await ensureCdrPartitions(connection.db, { moment: new Date(start * 1000) });
+  expect(
+    (
+      await post(
+        body(tenant.code, oldUuid, {
+          start_epoch: start,
+          answer_epoch: start + 9,
+          end_epoch: start + 199,
+        }),
+      )
+    ).json(),
+  ).toMatchObject({ status: 'queued' });
+  expect((await post(body(tenant.code, recentUuid))).json()).toMatchObject({
+    status: 'queued',
+  });
+  for (const uuid of [oldUuid, recentUuid]) {
+    await boss.cancel(CHARGE_QUEUE, chargeJobId(uuid));
+    await age(tenant.id, uuid);
+  }
+  await reconcileCharges(connection.db, boss, options, worker.log);
+  for (const [uuid, attempts, jobs] of [
+    [oldUuid, 0, 1],
+    [recentUuid, 1, 2],
+  ] as const) {
+    expect(
+      (
+        await owner.pool.query(
+          `select reconcile_attempts,
+        (select count(*)::int from pgboss.job where name = $2 and singleton_key = $1::text) as jobs
+        from cdrs where call_uuid = $1::uuid`,
+          [uuid, CHARGE_QUEUE],
+        )
+      ).rows,
+    ).toEqual([{ reconcile_attempts: attempts, jobs }]);
+  }
+});
+
+it.each(['created', 'retry', 'active'] as const)(
+  '按确定性 ID 找到 %s 任务，不依赖 singleton_key',
+  async (state) => {
+    const tenant = await fixture();
+    const uuid = randomUUID();
+    expect((await post(body(tenant.code, uuid))).json()).toMatchObject({
+      status: 'queued',
+    });
+    await withSystem(connection.db, async (tx) => {
+      await lockTenants(tx, []);
+      await tx.execute(sql`UPDATE pgboss.job SET singleton_key = NULL, state = ${state}::pgboss.job_state
+      WHERE name = ${CHARGE_QUEUE} AND id = ${chargeJobId(uuid)}`);
+    });
+    await age(tenant.id, uuid);
+    await reconcileCharges(connection.db, boss, options, worker.log);
+    expect(
+      (
+        await owner.pool.query(
+          'select reconcile_attempts from cdrs where call_uuid = $1',
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([{ reconcile_attempts: 0 }]);
+    expect(
+      await boss.getJobById(CHARGE_QUEUE, chargeJobId(uuid, 1)),
+    ).toBeNull();
+    expect(
+      await boss.getJobById(CHARGE_QUEUE, chargeJobId(uuid)),
+    ).toMatchObject({ state });
+  },
+);
+
+it('候选事务失败仍处理其余话单，汇总错误且失败候选的补投整体回滚', async () => {
+  const tenant = await fixture();
+  const failed = [randomUUID(), randomUUID()];
+  const healthy = randomUUID();
+  for (const uuid of [...failed, healthy]) {
+    expect((await post(body(tenant.code, uuid))).json()).toMatchObject({
+      status: 'queued',
+    });
+    await boss.cancel(CHARGE_QUEUE, chargeJobId(uuid));
+    await age(tenant.id, uuid);
+  }
+  await owner.pool
+    .query(`CREATE FUNCTION test_reconcile_failure() RETURNS trigger
+    LANGUAGE plpgsql AS $$ BEGIN
+      IF NEW.call_uuid::text IN (TG_ARGV[0], TG_ARGV[1]) THEN
+        RAISE EXCEPTION '模拟对账计数写入失败';
+      END IF;
+      RETURN NEW;
+    END $$`);
+  await owner.pool
+    .query(`CREATE TRIGGER test_reconcile_failure BEFORE UPDATE ON cdrs
+    FOR EACH ROW EXECUTE FUNCTION test_reconcile_failure('${failed[0]}', '${failed[1]}')`);
+  const logger = { error: vi.fn() };
+  try {
+    await expect(
+      reconcileCharges(connection.db, boss, options, logger),
+    ).rejects.toMatchObject({
+      name: 'AggregateError',
+      errors: [expect.any(Error), expect.any(Error)],
+    });
+    expect(logger.error).toHaveBeenCalledTimes(2);
+    for (const uuid of failed) {
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: tenant.id, callUuid: uuid }),
+        '话单扣费对账失败',
+      );
+      expect(
+        await boss.getJobById(CHARGE_QUEUE, chargeJobId(uuid, 1)),
+      ).toBeNull();
+      expect(
+        (
+          await owner.pool.query(
+            'select reconcile_attempts, reconciled_at from cdrs where call_uuid = $1',
+            [uuid],
+          )
+        ).rows,
+      ).toEqual([{ reconcile_attempts: 0, reconciled_at: null }]);
+    }
+    expect(
+      await boss.getJobById(CHARGE_QUEUE, chargeJobId(healthy, 1)),
+    ).toMatchObject({ state: 'created' });
+    const job = await fetchCall(healthy, 1);
+    await chargeCdr(connection.db, job.data);
+    await boss.complete(CHARGE_QUEUE, job.id);
+  } finally {
+    await owner.pool.query('DROP TRIGGER test_reconcile_failure ON cdrs');
+    await owner.pool.query('DROP FUNCTION test_reconcile_failure()');
+  }
+  await reconcileCharges(connection.db, boss, options, worker.log);
+  for (const uuid of failed) {
+    const job = await fetchCall(uuid, 1);
+    await chargeCdr(connection.db, job.data);
+    await boss.complete(CHARGE_QUEUE, job.id);
+  }
+  expect(
+    (
+      await owner.pool.query(
+        'select amount::text from ledger_entries where tenant_id = $1',
+        [tenant.id],
+      )
+    ).rows,
+  ).toEqual([{ amount: '-0.192' }, { amount: '-0.192' }, { amount: '-0.192' }]);
+  expect(
+    (
+      await owner.pool.query(
+        'select balance::text from tenant_balances where tenant_id = $1',
+        [tenant.id],
+      )
+    ).rows,
+  ).toEqual([{ balance: '-0.576' }]);
+});
+
 it('真实扣费持续失败，补投次数持久保存且告警只写一次，恢复后仍可收费', async () => {
   const tenant = await fixture();
   const uuid = randomUUID();
   await post(body(tenant.code, uuid));
+  // 此测试修改共享角色权限，依赖 vitest.db.config.ts 的 fileParallelism: false。
   await owner.pool.query('revoke insert on ledger_entries from fs_billing_app');
   try {
     for (let cycle = 0; cycle <= options.alertAttempts; cycle++) {
-      await exhaust(uuid, (data) => chargeCdr(connection.db, data));
+      await exhaust(uuid, (data) => chargeCdr(connection.db, data), cycle);
       await age(tenant.id, uuid);
-      await reconcileCharges(connection.db, boss, options);
+      await reconcileCharges(connection.db, boss, options, worker.log);
     }
     await age(tenant.id, uuid);
     await Promise.all([
-      reconcileCharges(connection.db, boss, options),
-      reconcileCharges(connection.db, boss, options),
+      reconcileCharges(connection.db, boss, options, worker.log),
+      reconcileCharges(connection.db, boss, options, worker.log),
     ]);
     expect(
       (
@@ -291,7 +488,7 @@ it('真实扣费持续失败，补投次数持久保存且告警只写一次，�
   } finally {
     await owner.pool.query('grant insert on ledger_entries to fs_billing_app');
   }
-  const job = await fetchCall(uuid);
+  const job = await fetchCall(uuid, options.alertAttempts + 1);
   await chargeCdr(connection.db, job.data);
   await boss.complete(CHARGE_QUEUE, job.id);
   expect(
@@ -354,34 +551,64 @@ it.each([
   ).toEqual([{ kind: 'cdr_failed' }]);
 });
 
-it('无效时间但有效 UUID 的并发推送共用 UUID 闸门，修正重推也不绕过人工处理', async () => {
+it('无效时间但有效 UUID 的推送保留原文，修正重推只收费一次', async () => {
   const tenant = await fixture();
   const uuid = randomUUID();
   const payload = body(tenant.code, uuid, { end_epoch: 'bad' });
   const responses = await Promise.all([post(payload), post(payload)]);
+  expect(responses.map((r) => r.statusCode)).toEqual([200, 200]);
   expect(
-    responses.map((r) => cdrResponseSchema.parse(r.json()).status).sort(),
-  ).toEqual(['duplicate', 'unassigned']);
+    responses.map((r) => cdrResponseSchema.parse(r.json()).status),
+  ).toEqual(['unassigned', 'unassigned']);
+  const rawIds = responses.map((r) => cdrResponseSchema.parse(r.json()).rawId);
+  expect(
+    (
+      await owner.pool.query(
+        `select u.call_uuid, u.status, r.body from unassigned_cdrs u
+         join raw_cdrs r on (r.id, r.received_at) = (u.raw_id, u.raw_received_at)
+         where r.id = any($1::uuid[])`,
+        [rawIds],
+      )
+    ).rows,
+  ).toEqual([
+    { call_uuid: null, status: 'pending', body: payload },
+    { call_uuid: null, status: 'pending', body: payload },
+  ]);
+  expect(
+    (
+      await owner.pool.query(
+        'select count(*)::int as n from call_uuids where call_uuid = $1',
+        [uuid],
+      )
+    ).rows,
+  ).toEqual([{ n: 0 }]);
+  const corrected = await post(body(tenant.code, uuid));
+  expect(corrected.statusCode).toBe(200);
+  expect(cdrResponseSchema.parse(corrected.json()).status).toBe('queued');
   expect(
     cdrResponseSchema.parse((await post(body(tenant.code, uuid))).json())
       .status,
   ).toBe('duplicate');
+  const job = await fetchCall(uuid);
+  await chargeCdr(connection.db, job.data);
+  await chargeCdr(connection.db, job.data);
+  await boss.complete(CHARGE_QUEUE, job.id);
   expect(
     (
       await owner.pool.query(
-        'select count(*)::int as n from unassigned_cdrs where call_uuid = $1',
-        [uuid],
-      )
-    ).rows,
-  ).toEqual([{ n: 1 }]);
-  expect(
-    (
-      await owner.pool.query(
-        'select count(*)::int as n from ledger_entries where idempotency_key = $1',
+        'select amount::text from ledger_entries where idempotency_key = $1',
         [`call:${uuid}`],
       )
     ).rows,
-  ).toEqual([{ n: 0 }]);
+  ).toEqual([{ amount: '-0.192' }]);
+  expect(
+    (
+      await owner.pool.query(
+        'select balance::text from tenant_balances where tenant_id = $1',
+        [tenant.id],
+      )
+    ).rows,
+  ).toEqual([{ balance: '-0.192' }]);
 });
 
 it('/authorize 缺失/错误密钥返回 401，白名单外返回 403', async () => {
@@ -416,7 +643,7 @@ it('/authorize 缺失/错误密钥返回 401，白名单外返回 403', async ()
 });
 
 it('对账调度每分钟执行真实任务', async () => {
-  await startReconciliation(boss, connection.db, options);
+  await startReconciliation(boss, connection.db, options, worker.log);
   expect(await boss.getSchedules(RECONCILE_QUEUE)).toMatchObject([
     { cron: '* * * * *', timezone: 'Asia/Shanghai' },
   ]);

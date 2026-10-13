@@ -40,18 +40,21 @@ export function createBoss(db: Db): PgBoss {
   });
 }
 
+// 每轮补投有稳定任务 ID；同一轮事务重跑也不能产生第二个任务。
+export function chargeJobId(callUuid: string, attempt = 0): string {
+  const hex = createHash('sha256')
+    .update(`${callUuid}:${attempt}`)
+    .digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 export function chargeQueue(boss: PgBoss): ChargeQueue {
   return {
     async enqueue(tx, job, attempt = 0) {
-      // 每轮补投有稳定任务 ID；同一轮事务重跑也不能产生第二个任务。
-      const hex = createHash('sha256')
-        .update(`${job.callUuid}:${attempt}`)
-        .digest('hex');
-      const idempotencyId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
       const id = await boss.send(CHARGE_QUEUE, job, {
         db: fromDrizzle(tx, sql),
         singletonKey: job.callUuid,
-        id: idempotencyId,
+        id: chargeJobId(job.callUuid, attempt),
       });
       if (id === null) throw new Error('话单扣费任务未入队');
     },

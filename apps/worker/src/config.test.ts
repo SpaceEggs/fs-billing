@@ -14,6 +14,7 @@ describe('Worker 启动配置边界', () => {
       WORKER_HOST: '127.0.0.1',
       WORKER_PORT: 3001,
       WORKER_ALLOWED_IPS: ['127.0.0.1', '10.0.0.10'],
+      WORKER_RECONCILE_LOOKBACK_DAYS: 30,
     });
     expect(
       workerEnvironmentSchema.parse({
@@ -40,6 +41,10 @@ describe('Worker 启动配置边界', () => {
     { WORKER_DB_CONNECTION_TIMEOUT_MS: 'Infinity' },
     { WORKER_RECONCILE_MIN_AGE_MINUTES: '-1' },
     { WORKER_RECONCILE_ALERT_ATTEMPTS: '0' },
+    { WORKER_RECONCILE_LOOKBACK_DAYS: '0' },
+    { WORKER_RECONCILE_LOOKBACK_DAYS: '366' },
+    { WORKER_RECONCILE_LOOKBACK_DAYS: '1.5' },
+    { WORKER_RECONCILE_LOOKBACK_DAYS: 'Infinity' },
     { WORKER_PORT: '0' },
     { WORKER_PORT: '65536' },
     { WORKER_PORT: '1.5' },

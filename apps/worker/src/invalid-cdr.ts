@@ -5,17 +5,11 @@ export const invalidCdrIdentitySchema = z
   .object({
     variables: z
       .object({
-        uuid: z
-          .uuid()
-          .transform((value) => value.toLowerCase())
-          .nullable()
-          .catch(null),
         billing_tenant: z.string().catch(''),
         caller_id_number: z.string().catch(''),
         destination_number: z.string().catch(''),
       })
       .catch({
-        uuid: null,
         billing_tenant: '',
         caller_id_number: '',
         destination_number: '',
@@ -23,7 +17,6 @@ export const invalidCdrIdentitySchema = z
   })
   .catch({
     variables: {
-      uuid: null,
       billing_tenant: '',
       caller_id_number: '',
       destination_number: '',

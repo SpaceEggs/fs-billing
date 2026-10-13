@@ -59,10 +59,16 @@ try {
       }
     }
   });
-  await startReconciliation(boss, connection.db, {
-    minAgeMinutes: config.WORKER_RECONCILE_MIN_AGE_MINUTES,
-    alertAttempts: config.WORKER_RECONCILE_ALERT_ATTEMPTS,
-  });
+  await startReconciliation(
+    boss,
+    connection.db,
+    {
+      minAgeMinutes: config.WORKER_RECONCILE_MIN_AGE_MINUTES,
+      alertAttempts: config.WORKER_RECONCILE_ALERT_ATTEMPTS,
+      lookbackDays: config.WORKER_RECONCILE_LOOKBACK_DAYS,
+    },
+    app.log,
+  );
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,
   );

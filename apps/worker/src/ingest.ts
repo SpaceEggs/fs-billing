@@ -76,32 +76,25 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
   const parsed = modJsonCdrSchema.safeParse(payload);
   if (!parsed.success) {
     const { variables: identity } = invalidCdrIdentitySchema.parse(payload);
-    try {
-      await withSystem(db, async (tx) => {
-        await lockTenants(tx, []);
-        await tx.insert(schema.unassignedCdrs).values({
-          callUuid: identity.uuid,
-          tenantTag: identity.billing_tenant,
-          caller: identity.caller_id_number,
-          callee: identity.destination_number,
-          rawId: raw.id,
-          rawReceivedAt: raw.receivedAt,
-          reason: `话单校验失败: ${parsed.error.message}`,
-        });
-        await tx.insert(schema.systemAlerts).values({
-          kind: 'cdr_failed',
-          description: `${raw.id}: 话单校验失败: ${parsed.error.message}`,
-          affectedCalls: 1,
-        });
+    await withSystem(db, async (tx) => {
+      await lockTenants(tx, []);
+      await tx.insert(schema.unassignedCdrs).values({
+        // 无效推送以原文定位，UUID 留在原文中，不能占用通话去重闸门。
+        callUuid: null,
+        tenantTag: identity.billing_tenant,
+        caller: identity.caller_id_number,
+        callee: identity.destination_number,
+        rawId: raw.id,
+        rawReceivedAt: raw.receivedAt,
+        reason: `话单校验失败: ${parsed.error.message}`,
       });
-      return { status: 'unassigned' as const, rawId: raw.id };
-    } catch (error) {
-      const pg = postgresError(error);
-      if (pg?.code === '23505' && pg.constraint === 'call_uuids_pkey') {
-        return { status: 'duplicate' as const, rawId: raw.id };
-      }
-      throw error;
-    }
+      await tx.insert(schema.systemAlerts).values({
+        kind: 'cdr_failed',
+        description: `${raw.id}: 话单校验失败: ${parsed.error.message}`,
+        affectedCalls: 1,
+      });
+    });
+    return { status: 'unassigned' as const, rawId: raw.id };
   }
   const cdr = parsed.data;
   try {

@@ -34,6 +34,12 @@ export const workerEnvironmentSchema = z.object({
     .min(1)
     .max(1000)
     .default(3),
+  WORKER_RECONCILE_LOOKBACK_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(365)
+    .default(30),
   WORKER_HOST: z
     .string()
     .refine(privateIpv4, '只能监听内网或回环 IPv4 地址')
