@@ -1,7 +1,7 @@
 -- 阶段 2 验收查询。以应用角色执行，预期中的报错会原样打印：
 --   psql "$APP_DATABASE_URL" -X -f docs/evidence/phase-2/acceptance.sql
 -- 所有写操作都在 ROLLBACK 的事务里，不改变库中数据。
--- 写费率和流水的事务先调用 lock_tenants。
+-- 写费率和流水的事务在任何写入之前调用 lock_tenants。
 \set ON_ERROR_STOP 0
 \set ON_ERROR_ROLLBACK on
 \pset footer off
@@ -146,9 +146,11 @@ ROLLBACK;
 \echo '== 费率版本：开户后首个立即生效版本'
 BEGIN;
 SET LOCAL app.scope = 'admin';
-INSERT INTO tenants (code, name, currency, overdraft_limit)
-VALUES ('NEW001', '验收新开户', 'CNY', 100) RETURNING id AS new001 \gset
+\echo '-- lock_tenants 要在任何写入之前：先生成新租户的编号并锁上，再开户、建版本'
+SELECT gen_random_uuid() AS new001 \gset
 SELECT lock_tenants(ARRAY[:'new001']::uuid[]);
+INSERT INTO tenants (id, code, name, currency, overdraft_limit)
+VALUES (:'new001', 'NEW001', '验收新开户', 'CNY', 100);
 INSERT INTO rate_versions (tenant_id) VALUES (:'new001')
 RETURNING effective_from, effective_from <= now() AS effective_now;
 ROLLBACK;

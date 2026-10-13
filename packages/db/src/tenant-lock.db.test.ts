@@ -1,7 +1,10 @@
+import { sql } from 'drizzle-orm';
 import type pg from 'pg';
 import { describe, expect, it } from 'vitest';
+import { money } from '@fs-billing/rating';
 import { connections, createTenant, pgError } from '../test/support.js';
-import { lockTenants, withTenant } from './client.js';
+import { lockTenants, withAdmin, withTenant } from './client.js';
+import { appendLedgerEntry } from './ledger.js';
 
 const { app } = connections();
 
@@ -23,6 +26,21 @@ async function queryError(
   values: unknown[],
 ) {
   return pgError(client.query(text, values));
+}
+
+/** 成功返回 'ok'，数据库报错返回“SQLSTATE 消息”。 */
+function outcome(promise: Promise<unknown>): Promise<string> {
+  return pgError(promise).then(
+    (error) => `${error.code} ${error.message}`,
+    () => 'ok',
+  );
+}
+
+async function balance(tenant: string): Promise<string> {
+  const { rows } = await withTenant(app.db, tenant, (tx) =>
+    tx.execute<{ balance: string }>(sql`select balance from tenant_balances`),
+  );
+  return rows[0]!.balance;
 }
 
 describe('lock_tenants 只锁当前身份有权访问的租户', () => {
@@ -76,6 +94,22 @@ describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
     });
   });
 
+  it('持有会话级同键锁时 lock_tenants 报 55000，而不是跳过加锁', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await onAppClient(async (client) => {
+      await client.query(sessionLock, [tenant.id]);
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.scope', 'admin', true)`);
+      return queryError(client, 'SELECT lock_tenants(ARRAY[$1]::uuid[])', [
+        tenant.id,
+      ]);
+    });
+    expect(error).toMatchObject({
+      code: '55000',
+      message: `租户 ${tenant.id} 的锁要在本事务的任何写入、行锁和其他锁之前拿`,
+    });
+  });
+
   it('上一个事务的锁随提交释放，同一连接的下一个事务直接写入被拒绝', async () => {
     const tenant = await createTenant(app, 'CNY');
     const error = await onAppClient(async (client) => {
@@ -93,5 +127,76 @@ describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
       );
     });
     expect(error).toMatchObject({ code: '55000' });
+  });
+});
+
+describe('先加行锁再等租户锁会被拒绝，不会死锁', () => {
+  it('A 先 FOR UPDATE 租户行再 lock_tenants 报 55000；持锁的 B 照常写流水并提交', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const holder = await app.pool.connect();
+    const locker = await app.pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query(`SELECT set_config('app.scope', 'admin', true)`);
+      await holder.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
+
+      await locker.query('BEGIN');
+      await locker.query(`SELECT set_config('app.scope', 'admin', true)`);
+      await locker.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [
+        tenant.id,
+      ]);
+      // 旧实现里 A 在这里排队等 B；B 的外键 KEY SHARE 再等 A 的行锁，1 秒后 B 收到 40P01。
+      const [lockerOutcome, holderOutcome] = await Promise.all([
+        outcome(
+          locker.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]),
+        ),
+        outcome(
+          (async () => {
+            await holder.query(
+              `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+               VALUES ($1, 'call_charge', -2, 'call:row-lock-first')`,
+              [tenant.id],
+            );
+            await holder.query('COMMIT');
+          })(),
+        ),
+      ]);
+      expect({
+        locker: lockerOutcome,
+        holder: holderOutcome,
+        balance: await balance(tenant.id),
+      }).toEqual({
+        locker: `55000 租户 ${tenant.id} 的锁要在本事务的任何写入、行锁和其他锁之前拿`,
+        holder: 'ok',
+        balance: '-2',
+      });
+    } finally {
+      await locker.query('ROLLBACK');
+      await holder.query('ROLLBACK');
+      locker.release();
+      holder.release();
+    }
+  });
+
+  it('改过租户行的事务再调用 lockTenants 报 55000', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await pgError(
+      withAdmin(app.db, async (tx) => {
+        await tx.execute(
+          sql`update tenants set remark = 'touched' where id = ${tenant.id}`,
+        );
+        await appendLedgerEntry(tx, tenant, {
+          kind: 'call_charge',
+          amount: money('CNY', '-1.00'),
+          note: '',
+          idempotencyKey: 'call:after-update',
+          occurredAt: new Date(),
+        });
+      }),
+    );
+    expect(error).toMatchObject({
+      code: '55000',
+      message: `租户 ${tenant.id} 的锁要在本事务的任何写入、行锁和其他锁之前拿`,
+    });
   });
 });

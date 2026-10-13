@@ -393,54 +393,15 @@ function sampleRates<C extends Currency>(
 
 const seconds = (at: Date, n: number) => new Date(at.getTime() + n * 1000);
 
-/** 写入开发种子数据。幂等：重复执行不新增任何行。 */
-export function seedDatabase(db: Db): Promise<void> {
-  return withAdmin(db, async (tx) => {
-    const adminIds = await seedAdmins(tx);
-    await tx
-      .insert(tenants)
-      .values(
-        TENANTS.map((t) => ({
-          code: t.code,
-          name: t.name,
-          currency: t.currency,
-          status: t.status,
-          overdraftLimit: t.overdraft,
-        })),
-      )
-      .onConflictDoNothing({ target: tenants.code });
-    const rows = await tx
-      .select({ id: tenants.id, code: tenants.code })
-      .from(tenants)
-      .where(
-        inArray(
-          tenants.code,
-          TENANTS.map((t) => t.code),
-        ),
-      );
-    const tenantIds = new Map(rows.map((r) => [r.code, r.id]));
-    const idOf = (code: string) => tenantIds.get(code)!;
-
-    await tx
-      .insert(portalAccounts)
-      .values(
-        TENANTS.map((t) => ({
-          tenantId: idOf(t.code),
-          email: `${t.code.toLowerCase()}@example.com`,
-        })),
-      )
-      .onConflictDoNothing({ target: portalAccounts.email });
-    await tx
-      .insert(balanceAlertSettings)
-      .values(
-        TENANTS.map((t) => ({
-          tenantId: idOf(t.code),
-          threshold: t.currency === 'CNY' ? '100.00' : '20.00',
-          emails: ['billing-ops@example.com'],
-        })),
-      )
-      .onConflictDoNothing({ target: balanceAlertSettings.tenantId });
-
+/**
+ * 写入开发种子数据。幂等：重复执行不新增任何行。
+ * 分两个事务：lock_tenants 要在事务的任何写入之前调用，所以先提交管理员与租户，再在新事务里锁租户写费率和流水。
+ */
+export async function seedDatabase(db: Db): Promise<void> {
+  const { adminIds, tenantIds } = await withAdmin(db, seedTenants);
+  const idOf = (code: string) => tenantIds.get(code)!;
+  await withAdmin(db, async (tx) => {
+    await lockTenants(tx, [...tenantIds.values()]);
     const seeded = new Set(
       (
         await tx
@@ -448,7 +409,6 @@ export function seedDatabase(db: Db): Promise<void> {
           .from(rateVersions)
       ).map((r) => r.tenantId),
     );
-    await lockTenants(tx, [...tenantIds.values()]);
     for (const t of TENANTS) {
       const tenantId = idOf(t.code);
       if (!seeded.has(tenantId)) {
@@ -512,6 +472,57 @@ export function seedDatabase(db: Db): Promise<void> {
       });
     }
   });
+}
+
+async function seedTenants(tx: Tx): Promise<{
+  adminIds: Record<AdminKey, string>;
+  tenantIds: Map<string, string>;
+}> {
+  const adminIds = await seedAdmins(tx);
+  await tx
+    .insert(tenants)
+    .values(
+      TENANTS.map((t) => ({
+        code: t.code,
+        name: t.name,
+        currency: t.currency,
+        status: t.status,
+        overdraftLimit: t.overdraft,
+      })),
+    )
+    .onConflictDoNothing({ target: tenants.code });
+  const rows = await tx
+    .select({ id: tenants.id, code: tenants.code })
+    .from(tenants)
+    .where(
+      inArray(
+        tenants.code,
+        TENANTS.map((t) => t.code),
+      ),
+    );
+  const tenantIds = new Map(rows.map((r) => [r.code, r.id]));
+  const idOf = (code: string) => tenantIds.get(code)!;
+
+  await tx
+    .insert(portalAccounts)
+    .values(
+      TENANTS.map((t) => ({
+        tenantId: idOf(t.code),
+        email: `${t.code.toLowerCase()}@example.com`,
+      })),
+    )
+    .onConflictDoNothing({ target: portalAccounts.email });
+  await tx
+    .insert(balanceAlertSettings)
+    .values(
+      TENANTS.map((t) => ({
+        tenantId: idOf(t.code),
+        threshold: t.currency === 'CNY' ? '100.00' : '20.00',
+        emails: ['billing-ops@example.com'],
+      })),
+    )
+    .onConflictDoNothing({ target: balanceAlertSettings.tenantId });
+  return { adminIds, tenantIds };
 }
 
 const UNASSIGNED_CALL_UUID = 'a00000ff-0000-4000-8000-000000000001';

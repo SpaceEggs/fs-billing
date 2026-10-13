@@ -101,11 +101,18 @@ CREATE TABLE rate_entries (
   UNIQUE (rate_version_id, prefix)
 );
 
--- 租户互斥：改费率和写流水的事务在任何 DML 之前调用 lock_tenants，同一租户的这些事务串行执行。
+-- 租户互斥：改费率和写流水的事务在任何写入之前调用 lock_tenants，同一租户的这些事务串行执行。
 -- 已持有 = 本事务通过 lock_tenants 拿到：事务级标记 app.tenant_locks 里有该租户，且 pg_locks 里有这把锁。
 -- 标记随事务（或回滚的保存点）一起消失，会话级的同键 advisory 锁和连接池里上一个事务都不算持有。
--- 外键检查、唯一索引等待、执行器的 FOR UPDATE 都在拿到这把锁之后发生，不会成环。
--- 同一事务只能按 tenant_id 升序加锁：已经拿过更大的租户后，再拿未持有的更小租户报错。
+--
+-- 为什么不会成环：lock_tenants 只在本事务除了以下锁之外什么都没拿时才排队等新租户的锁：
+--   1. 本事务通过 lock_tenants 拿到的租户锁，按 tenant_id 升序，只会等更大的租户；
+--   2. AccessShare、RowShare、RowExclusive 表锁，与 DML 要的表锁互不冲突；
+--   3. 自己的 virtualxid 和可串行化隔离的 SIReadLock，都不阻塞任何人。
+-- 没有 transactionid 锁说明还没分配事务号：没写过行，也没加过行锁（FOR UPDATE / FOR SHARE 等），
+-- 别的事务不会在它的行或事务号上等待。所以排队者手里没有持锁者会等的东西；
+-- 持锁者在锁内做的外键 KEY SHARE、唯一索引等待、执行器的 FOR UPDATE 只可能等其他已持锁的事务或不在排队的事务。
+-- 先加行锁或强表锁再调用 lock_tenants 报 55000，而不是排队后形成死锁。
 CREATE FUNCTION tenant_lock_key(tenant uuid) RETURNS bigint
 LANGUAGE sql IMMUTABLE AS $$ SELECT hashtextextended('tenant:' || tenant::text, 0) $$;
 
@@ -141,6 +148,18 @@ BEGIN
     IF tid < held[cardinality(held)] THEN
       RAISE EXCEPTION '租户 % 早于本事务已锁的租户 %：同一事务的租户要在一次 lock_tenants 调用里加锁',
         tid, held[cardinality(held)]
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF EXISTS (
+      SELECT FROM pg_locks
+      WHERE pid = pg_backend_pid() AND granted
+        AND locktype <> 'virtualxid' AND mode <> 'SIReadLock'
+        AND NOT (locktype = 'relation'
+          AND mode IN ('AccessShareLock', 'RowShareLock', 'RowExclusiveLock'))
+        AND NOT (locktype = 'advisory' AND objsubid = 1
+          AND ((classid::bigint << 32) | objid::bigint) IN (SELECT tenant_lock_key(h) FROM unnest(held) AS h))
+    ) THEN
+      RAISE EXCEPTION '租户 % 的锁要在本事务的任何写入、行锁和其他锁之前拿', tid
         USING ERRCODE = 'object_not_in_prerequisite_state';
     END IF;
     PERFORM pg_advisory_xact_lock(tenant_lock_key(tid));

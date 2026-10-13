@@ -71,10 +71,19 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 ### 租户锁
 
-改费率和写流水的事务，在任何写入之前调用 `lock_tenants(uuid[])`。函数对传入的租户去重、按 `uuid` 升序，逐个拿事务级 advisory 锁 `pg_advisory_xact_lock(tenant_lock_key(id))`。费率和流水共用每个租户的这一把锁。同一租户的这些事务因此串行执行，外键检查、唯一索引等待、执行器为 `BEFORE DELETE` 触发器拿的 `FOR UPDATE` 都发生在拿到租户锁之后，不会成环。
+改费率和写流水的事务，在任何写入之前调用 `lock_tenants(uuid[])`。函数对传入的租户去重、按 `uuid` 升序，逐个拿事务级 advisory 锁 `pg_advisory_xact_lock(tenant_lock_key(id))`。费率和流水共用每个租户的这一把锁。同一租户的这些事务因此串行执行。外键检查、唯一索引等待、执行器为 `BEFORE DELETE` 触发器拿的 `FOR UPDATE` 都发生在拿到租户锁之后。
+
+为什么不会成环：`lock_tenants` 只在本事务除了以下锁之外什么都没拿时，才排队等一把新的租户锁。
+
+1. 本事务通过 `lock_tenants` 拿到的租户锁。它们按 `tenant_id` 升序获取，所以排队者只会等更大的租户。
+2. `AccessShare`、`RowShare`、`RowExclusive` 表锁。这几种表锁与 DML 需要的表锁互不冲突。
+3. 自己的 `virtualxid`，以及可串行化隔离的 `SIReadLock`。这些锁不阻塞任何人。
+
+没有 `transactionid` 锁说明本事务还没有分配事务号，也就是没写过行，也没加过行锁（`FOR UPDATE`、`FOR SHARE` 等）。所以别的事务不会在它的行或事务号上等待。排队者手里没有持锁者会等的东西。持锁者在锁内的等待只可能指向其他已持锁的事务，或者不在排队的事务。否则 `lock_tenants` 报 SQLSTATE 55000 `租户 <id> 的锁要在本事务的任何写入、行锁和其他锁之前拿`，不排队。原来的死锁是这样形成的：A 先 `SELECT ... FOR UPDATE` 租户行再等租户锁，持锁的 B 写流水时外键 `KEY SHARE` 又等 A 的行锁，结果报 40P01。现在 A 在第一步之后调用 `lock_tenants` 就直接报错。这个规则没有增加任何锁。
 
 - 只能锁当前身份有权访问的租户：租户身份（`app.scope = 'tenant'`）只能锁 `app.tenant_id`，管理员与系统身份可以锁任意租户，未声明身份一律不行。越权时报 SQLSTATE 42501 `当前身份不能锁租户 <id>`，不拿任何锁。函数是 `SECURITY DEFINER`，检查在函数体里做，应用侧绕不过去。
 - 函数每拿到一把锁，就用 `set_config('app.tenant_locks', ..., true)` 把该租户追加到事务级标记里。“已持有”指本事务通过 `lock_tenants` 拿到：标记里有该租户，并且 `pg_locks` 里有这把锁。标记随事务结束或保存点回滚一起消失，所以会话级的同键 `pg_advisory_lock` 和连接池里上一个事务留下的状态都不算持有。
+- 新开户并在同一事务里建首个费率版本时，先生成租户编号并 `lock_tenants`，再插入租户。种子分两个事务：先写管理员与租户，再在新事务里锁租户，然后写费率、流水和话单。
 - 同一事务的全部租户放进一次调用。标记按加锁顺序是升序的。之后再锁一个尚未持有、但比标记里最大租户更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。
 - `rate_versions`、`rate_entries` 的增删和 `ledger_entries` 的插入由触发器检查本事务已持有该租户的锁。没有持有时报 55000，不写入。
 - 应用侧 `createRateVersion`、`appendLedgerEntry`、`appendLedgerEntries` 自己调用 `lockTenants`。`appendLedgerEntries` 先校验并规范全部 `tenant_id`，非法值在发出任何 SQL 之前抛出，再一次锁齐全部租户。直接写 SQL 的事务自己先调用 `lock_tenants`。
