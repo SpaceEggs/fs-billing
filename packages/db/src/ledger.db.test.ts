@@ -630,19 +630,22 @@ describe('同一事务的多租户流水按 tenant_id 升序加锁', () => {
         idempotencyKey,
       },
     });
-    await expect(
-      withAdmin(app.db, (tx) =>
-        appendLedgerEntries(tx, [
-          gift(tenant.id, 'valid-before-invalid'),
-          gift('not-a-uuid', 'invalid-tenant'),
-        ]),
-      ),
-    ).rejects.toThrow(/不是合法的 UUID：not-a-uuid/);
-    const { rows } = await owner.pool.query(
-      'SELECT balance::text FROM tenant_balances WHERE tenant_id = $1',
-      [tenant.id],
+    const { error, rows } = await withAdmin(app.db, async (tx) => {
+      const error = await appendLedgerEntries(tx, [
+        gift(tenant.id, 'valid-before-invalid'),
+        gift('not-a-uuid', 'invalid-tenant'),
+      ]).catch((rejected: unknown) => rejected);
+      const { rows } = await tx.execute(
+        sql`select count(*)::int as entries, (select balance::text from tenant_balances where tenant_id = ${tenant.id}) as balance
+            from ledger_entries where tenant_id = ${tenant.id}`,
+      );
+      return { error, rows };
+    });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      'tenant_id 不是合法的 UUID：not-a-uuid',
     );
-    expect(rows).toEqual([{ balance: '0' }]);
+    expect(rows).toEqual([{ entries: 0, balance: '0' }]);
   });
 
   it('同一事务对同一个租户写两次仍然成功', async () => {
