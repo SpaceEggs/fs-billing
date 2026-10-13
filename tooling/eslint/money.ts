@@ -1,9 +1,28 @@
+import type { Rule, Scope, SourceCode } from 'eslint';
+
+type Node = Parameters<SourceCode['getScope']>[0];
+type FunctionContext = Node & {
+  id?: Node | null;
+  key?: Node;
+  parent?: FunctionContext;
+};
+type Operation = Extract<
+  Rule.Node,
+  {
+    type:
+      | 'AssignmentExpression'
+      | 'BinaryExpression'
+      | 'UnaryExpression'
+      | 'UpdateExpression';
+  }
+>;
+
 const monetaryName =
   /(?:fee|rate|amount|balance|price|cost|credit|debit|money|overdraft|total|subtotal|费用|费率|金额|余额)/i;
 const arithmetic = new Set(['+', '-', '*', '/', '%', '**']);
 
 // 除金额命名外，还跟踪变量初始化与赋值中的来源，防止改名绕过。
-export const noNumberMoney = {
+export const noNumberMoney: Rule.RuleModule = {
   meta: {
     type: 'problem',
     docs: { description: '金额必须使用 decimal.js，禁止原生数值运算。' },
@@ -14,12 +33,15 @@ export const noNumberMoney = {
   },
   create(context) {
     const source = context.sourceCode;
-    const declarations = new Map();
-    const assignments = new Map();
+    const declarations = new Map<
+      Scope.Variable | undefined,
+      Node | null | undefined
+    >();
+    const assignments = new Map<Scope.Variable | undefined, Node[]>();
 
-    function symbol(node) {
+    function symbol(node: Node) {
       if (node.type !== 'Identifier') return undefined;
-      let scope = source.getScope(node);
+      let scope: Scope.Scope | null = source.getScope(node);
       while (scope) {
         const variable = scope.set.get(node.name);
         if (variable) return variable;
@@ -27,7 +49,10 @@ export const noNumberMoney = {
       }
     }
 
-    function monetary(node, seen = new Set()) {
+    function monetary(
+      node: Node | null | undefined,
+      seen = new Set<Scope.Variable>(),
+    ): boolean {
       if (!node) return false;
       if (node.type === 'Identifier') {
         if (monetaryName.test(node.name)) return true;
@@ -49,7 +74,9 @@ export const noNumberMoney = {
               (node.property.type === 'Literal' &&
                 typeof node.property.value === 'string' &&
                 monetaryName.test(node.property.value))
-            : monetaryName.test(node.property.name ?? ''))
+            : monetaryName.test(
+                (node.property as { name?: string }).name ?? '',
+              ))
         );
       }
       if (node.type === 'Literal') {
@@ -84,13 +111,14 @@ export const noNumberMoney = {
           'AwaitExpression',
         ].includes(node.type)
       ) {
-        return monetary(node.expression ?? node.argument, seen);
+        const wrapper = node as { expression?: Node; argument?: Node };
+        return monetary(wrapper.expression ?? wrapper.argument, seen);
       }
       return false;
     }
 
-    function contextIsMoney(node) {
-      let parent = node.parent;
+    function contextIsMoney(node: Rule.Node) {
+      let parent: Rule.Node | null = node.parent;
       while (parent) {
         if (parent.type === 'VariableDeclarator') return monetary(parent.id);
         if (parent.type === 'AssignmentExpression')
@@ -99,31 +127,34 @@ export const noNumberMoney = {
         if (parent.type === 'ReturnStatement') {
           while (parent && !/Function/.test(parent.type))
             parent = parent.parent;
+          const functionContext = parent as FunctionContext | null;
           return (
-            monetary(parent?.id) ||
-            monetary(parent?.parent?.id) ||
-            monetary(parent?.parent?.key)
+            monetary(functionContext?.id) ||
+            monetary(functionContext?.parent?.id) ||
+            monetary(functionContext?.parent?.key)
           );
         }
-        if (/Function/.test(parent.type))
+        if (/Function/.test(parent.type)) {
+          const functionContext = parent as FunctionContext;
           return (
-            monetary(parent.id) ||
-            monetary(parent.parent?.id) ||
-            monetary(parent.parent?.key)
+            monetary(functionContext.id) ||
+            monetary(functionContext.parent?.id) ||
+            monetary(functionContext.parent?.key)
           );
+        }
         if (/Statement/.test(parent.type)) return false;
         parent = parent.parent;
       }
       return false;
     }
 
-    const pending = [];
-    const calls = [];
-    function check(node) {
+    const pending: Operation[] = [];
+    const calls: Extract<Rule.Node, { type: 'CallExpression' }>[] = [];
+    function check(node: Operation) {
       pending.push(node);
     }
 
-    function trackPattern(pattern, value) {
+    function trackPattern(pattern: Node, value: Node | null | undefined) {
       if (pattern.type === 'Identifier') {
         declarations.set(symbol(pattern), value);
       } else if (pattern.type === 'ObjectPattern') {
@@ -166,9 +197,11 @@ export const noNumberMoney = {
       },
       'Program:exit'() {
         for (const node of pending) {
+          const operation: { left?: Node; argument?: Node; right?: Node } =
+            node;
           if (
-            monetary(node.left ?? node.argument) ||
-            monetary(node.right) ||
+            monetary(operation.left ?? operation.argument) ||
+            monetary(operation.right) ||
             contextIsMoney(node)
           ) {
             context.report({ node, messageId: 'unsafe' });
