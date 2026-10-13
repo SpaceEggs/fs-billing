@@ -3,9 +3,9 @@ set +x
 set -euo pipefail
 
 # 官方包与 mod_lua 的 Lua ABI 一起锁定；不安装含无关模块的 meta-all。
-FS_VERSION='1.11.3-release-33213556856-ef32e20529~bookworm~amd64-1~bookworm+1'
+FS_VERSION='1.11.3-release-33213556856-ef32e20529~trixie~amd64-1~trixie+1'
 LUA_CURL_VERSION='0.3.13-1'
-LUA_CJSON_VERSION='2.1.0+dfsg-2.2'
+LUA_CJSON_VERSION='2.1.0+dfsg-2.2+b2'
 token_file=${1:-${SIGNALWIRE_TOKEN_FILE:-/run/secrets/signalwire_token}}
 auth_file=/etc/apt/auth.conf.d/fs-billing-signalwire.conf
 source_file=/etc/apt/sources.list.d/fs-billing-signalwire.list
@@ -20,10 +20,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 rm -f "$auth_file" "$source_file"
-# 精确版本是 amd64 bookworm 包；其他平台不能静默安装别的版本。
+# 精确版本是 amd64 trixie 包；其他平台不能静默安装别的版本。
 . /etc/os-release
-[[ $ID == debian && $VERSION_ID == 12 && $(dpkg --print-architecture) == amd64 ]] || {
-    echo '仅支持 Debian 12 amd64' >&2; exit 1;
+[[ $ID == debian && $VERSION_ID == 13 && $(dpkg --print-architecture) == amd64 ]] || {
+    echo '仅支持 Debian 13 amd64' >&2; exit 1;
 }
 [[ -s $token_file && -r $token_file ]] || { echo 'SignalWire token 文件不可读或为空' >&2; exit 1; }
 token=$(cat "$token_file")
@@ -46,7 +46,7 @@ else
 fi
 install -m 0644 "$work_dir/key.gpg" /usr/share/keyrings/fs-billing-signalwire.gpg
 umask 022
-printf '%s\n' 'deb [signed-by=/usr/share/keyrings/fs-billing-signalwire.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ bookworm main' > "$source_file"
+printf '%s\n' 'deb [signed-by=/usr/share/keyrings/fs-billing-signalwire.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ trixie main' > "$source_file"
 cat > /etc/apt/preferences.d/fs-billing-freeswitch <<PINS
 Package: freeswitch* libfreeswitch1
 Pin: version $FS_VERSION
@@ -61,11 +61,11 @@ packages=(freeswitch libfreeswitch1 freeswitch-conf-vanilla freeswitch-systemd
 pinned=()
 for package in "${packages[@]}"; do pinned+=("$package=$FS_VERSION"); done
 apt-get install -y --allow-downgrades --no-install-recommends "${pinned[@]}" \
-    "lua-cjson=$LUA_CJSON_VERSION" lua5.3 libcurl4
+    "lua-cjson=$LUA_CJSON_VERSION" lua5.3 libcurl4t64
 if [[ $(cat /proc/1/comm) == systemd ]]; then
     systemctl disable --now freeswitch
 fi
-apt-mark manual libcurl4
+apt-mark manual libcurl4t64
 
 # Debian lua-curl 是 v2 且缺少 5.3；显式构建 Lua-cURLv3 的 5.3 模块。
 if ! lua5.3 -e "assert(require('cURL')._VERSION == '0.3.13'); require('cURL.safe')" 2>/dev/null; then

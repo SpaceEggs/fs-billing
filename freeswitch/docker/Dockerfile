@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM debian:bookworm
+FROM debian:trixie
 COPY freeswitch/install/install.sh /usr/local/sbin/install-freeswitch
 RUN --mount=type=secret,id=signalwire_token,required=true \
     bash /usr/local/sbin/install-freeswitch && rm -rf /var/lib/apt/lists/*
