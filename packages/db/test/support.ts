@@ -55,6 +55,14 @@ export async function createTenant<C extends Currency>(
   return { id: row!.id, code, currency };
 }
 
+/** 种子管理员王敏的编号。 */
+export async function adminId({ pool }: Connection): Promise<string> {
+  const { rows } = await pool.query<{ id: string }>(
+    `SELECT id FROM admins WHERE email = 'wangmin@example.com'`,
+  );
+  return rows[0]!.id;
+}
+
 export async function tenantId({ db }: Connection, code: string) {
   const { rows } = await withAdmin(db, (tx) =>
     tx.execute<{ id: string }>(

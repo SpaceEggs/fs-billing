@@ -34,7 +34,7 @@ export function connect(url: string): Connection {
   return { pool, db: drizzle(pool, { schema }) };
 }
 
-/** 以租户身份执行：RLS 只放行该租户的行。 */
+/** 以租户身份执行（客户门户）：RLS 只放行读取该租户的行，任何写入都被拒绝。 */
 export function withTenant<T>(
   db: Db,
   tenantId: string,
@@ -48,10 +48,23 @@ export function withTenant<T>(
   });
 }
 
-/** 以管理员/系统身份执行：可见全部租户。 */
+/** 以管理员身份执行（管理后台）：可见并可写全部租户。 */
 export function withAdmin<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return withOperator(db, 'admin', fn);
+}
+
+/** 以系统身份执行（Worker：入库、扣费、建分区）：可见并可写全部租户。 */
+export function withSystem<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return withOperator(db, 'system', fn);
+}
+
+function withOperator<T>(
+  db: Db,
+  scope: 'admin' | 'system',
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T> {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('app.scope', 'admin', true)`);
+    await tx.execute(sql`select set_config('app.scope', ${scope}, true)`);
     return fn(tx);
   });
 }

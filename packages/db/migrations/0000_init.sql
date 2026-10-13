@@ -9,20 +9,21 @@ GRANT USAGE ON SCHEMA public TO fs_billing_app;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
--- 会话身份：事务内 set_config('app.scope', 'tenant' | 'admin', true)；未设置时策略为假。
+-- 会话身份：事务内 set_config('app.scope', 'tenant' | 'admin' | 'system', true)；未设置时策略为假。
+-- tenant（客户门户）只读本租户；admin（管理后台）与 system（Worker）可见全部并可写。
 CREATE FUNCTION app_scope() RETURNS text
 LANGUAGE sql STABLE AS $$ SELECT current_setting('app.scope', true) $$;
 
 CREATE FUNCTION app_tenant_id() RETURNS uuid
 LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('app.tenant_id', true), '')::uuid $$;
 
+CREATE FUNCTION app_is_operator() RETURNS boolean
+LANGUAGE sql STABLE AS $$ SELECT coalesce(app_scope() IN ('admin', 'system'), false) $$;
+
 CREATE FUNCTION app_can_see(row_tenant uuid) RETURNS boolean
 LANGUAGE sql STABLE AS $$
-  SELECT CASE app_scope()
-    WHEN 'admin' THEN true
-    WHEN 'tenant' THEN coalesce(row_tenant = app_tenant_id(), false)
-    ELSE false
-  END
+  SELECT app_is_operator()
+    OR (app_scope() = 'tenant' AND coalesce(row_tenant = app_tenant_id(), false))
 $$;
 
 CREATE FUNCTION reject_mutation() RETURNS trigger
@@ -359,6 +360,9 @@ DECLARE
   month_start timestamp := date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai');
   partition_name text := parent || '_' || to_char(month_start, 'YYYY_MM');
 BEGIN
+  IF NOT app_is_operator() THEN
+    RAISE EXCEPTION '建分区只允许管理员或系统身份' USING ERRCODE = 'insufficient_privilege';
+  END IF;
   IF parent NOT IN ('cdrs', 'raw_cdrs') THEN
     RAISE EXCEPTION '% 不是按月分区的表', parent USING ERRCODE = 'invalid_parameter_value';
   END IF;
@@ -500,33 +504,41 @@ CREATE TRIGGER balance_alert_deliveries_no_truncate BEFORE TRUNCATE ON balance_a
 
 -- 行级安全
 
-ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON tenants
-  USING (app_can_see(id)) WITH CHECK (app_can_see(id));
+-- 行级安全：按命令分开的策略（同一命令的多条 permissive 策略是 OR 合并，所以没有 ALL 策略）。
+-- 租户身份只能 SELECT 本租户；写入只允许管理员与系统身份。UPDATE 的 USING 用可见性、
+-- WITH CHECK 用写权限，租户改自己的行会报错而不是静默影响 0 行；DELETE 没有 WITH CHECK，
+-- 租户的删除影响 0 行。
 
 DO $$
 DECLARE
-  name text;
+  target record;
 BEGIN
-  FOREACH name IN ARRAY ARRAY[
-    'portal_accounts', 'rate_versions', 'rate_entries', 'ledger_entries',
-    'receivable_settlements', 'tenant_balances', 'cdrs', 'monthly_statements',
-    'balance_alert_settings', 'balance_alert_deliveries'
-  ] LOOP
-    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', name);
+  FOR target IN SELECT * FROM (VALUES
+    ('tenants', 'id'), ('portal_accounts', 'tenant_id'), ('rate_versions', 'tenant_id'),
+    ('rate_entries', 'tenant_id'), ('ledger_entries', 'tenant_id'),
+    ('receivable_settlements', 'tenant_id'), ('tenant_balances', 'tenant_id'),
+    ('cdrs', 'tenant_id'), ('monthly_statements', 'tenant_id'),
+    ('balance_alert_settings', 'tenant_id'), ('balance_alert_deliveries', 'tenant_id')
+  ) AS t (name, tenant_column) LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', target.name);
+    EXECUTE format('CREATE POLICY tenant_read ON %I FOR SELECT USING (app_can_see(%I))',
+      target.name, target.tenant_column);
+    EXECUTE format('CREATE POLICY operator_insert ON %I FOR INSERT WITH CHECK (app_is_operator())',
+      target.name);
     EXECUTE format(
-      'CREATE POLICY tenant_isolation ON %I USING (app_can_see(tenant_id)) WITH CHECK (app_can_see(tenant_id))',
-      name
-    );
+      'CREATE POLICY operator_update ON %I FOR UPDATE USING (app_can_see(%I)) WITH CHECK (app_is_operator())',
+      target.name, target.tenant_column);
+    EXECUTE format('CREATE POLICY operator_delete ON %I FOR DELETE USING (app_is_operator())',
+      target.name);
   END LOOP;
-  FOREACH name IN ARRAY ARRAY[
-    'admins', 'raw_cdrs', 'unassigned_cdrs', 'operation_logs', 'system_alerts', 'call_uuids'
-  ] LOOP
-    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', name);
-    EXECUTE format(
-      'CREATE POLICY admin_only ON %I USING (app_scope() = ''admin'') WITH CHECK (app_scope() = ''admin'')',
-      name
-    );
+  FOR target IN SELECT * FROM (VALUES
+    ('admins', 'app_scope() = ''admin'''), ('operation_logs', 'app_scope() = ''admin'''),
+    ('raw_cdrs', 'app_is_operator()'), ('unassigned_cdrs', 'app_is_operator()'),
+    ('system_alerts', 'app_is_operator()'), ('call_uuids', 'app_is_operator()')
+  ) AS t (name, allowed) LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', target.name);
+    EXECUTE format('CREATE POLICY staff_only ON %I USING (%s) WITH CHECK (%s)',
+      target.name, target.allowed, target.allowed);
   END LOOP;
 END $$;
 
@@ -540,7 +552,5 @@ GRANT SELECT, INSERT ON ledger_entries, receivable_settlements, raw_cdrs, operat
 GRANT SELECT ON tenant_balances, receivables, balance_discrepancies TO fs_billing_app;
 
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_can_see(uuid),
+GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_is_operator(), app_can_see(uuid),
   jsonb_or_null(text), cdr_ensure_partitions(timestamptz) TO fs_billing_app;
-
-SELECT cdr_ensure_partitions();

@@ -1,7 +1,12 @@
 import { fileURLToPath } from 'node:url';
 import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { APP_ROLE, connect, type DatabaseEnvironment } from './client.js';
+import {
+  APP_ROLE,
+  connect,
+  withSystem,
+  type DatabaseEnvironment,
+} from './client.js';
 
 const migrationsFolder = fileURLToPath(
   new URL('../migrations', import.meta.url),
@@ -21,7 +26,9 @@ export async function migrateDatabase(env: DatabaseEnvironment): Promise<void> {
       ['ALTER ROLE %I WITH LOGIN PASSWORD %L', APP_ROLE, password],
     );
     await pool.query(rows[0]!.statement);
-    await db.execute(sql`select cdr_ensure_partitions()`);
+    await withSystem(db, (tx) =>
+      tx.execute(sql`select cdr_ensure_partitions()`),
+    );
   } finally {
     await pool.end();
   }

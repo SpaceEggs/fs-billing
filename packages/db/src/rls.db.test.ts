@@ -1,9 +1,16 @@
+import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { connections, pgError, tenantId } from '../test/support.js';
-import { withAdmin, withTenant } from './client.js';
+import {
+  adminId,
+  connections,
+  createTenant,
+  pgError,
+  tenantId,
+} from '../test/support.js';
+import { withAdmin, withSystem, withTenant } from './client.js';
 
-const { app } = connections();
+const { app, owner } = connections();
 
 const tenantsOf = (rows: Record<string, unknown>[]) =>
   [...new Set(rows.map((r) => r.code))].sort();
@@ -94,6 +101,98 @@ describe('RLS 租户隔离', () => {
       code: '42501',
       message:
         'new row violates row-level security policy for table "ledger_entries"',
+    });
+  });
+
+  it('租户身份不能给自己充值：冒用管理员编号插入充值流水被拒绝，余额不变', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    const error = await pgError(
+      withTenant(app.db, tenant.id, (tx) =>
+        tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, created_by, idempotency_key)
+                       values (${tenant.id}, 'recharge', 1000, ${admin}, 'recharge:self')`),
+      ),
+    );
+    const { rows } = await withTenant(app.db, tenant.id, (tx) =>
+      tx.execute(
+        sql`select (select count(*)::int from ledger_entries) as entries, balance::text from tenant_balances`,
+      ),
+    );
+    expect({ error, rows }).toMatchObject({
+      error: {
+        code: '42501',
+        message:
+          'new row violates row-level security policy for table "ledger_entries"',
+      },
+      rows: [{ entries: 0, balance: '0' }],
+    });
+  });
+
+  it('租户身份不能修改自己的透支额度', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await pgError(
+      withTenant(app.db, tenant.id, (tx) =>
+        tx.execute(sql`update tenants set overdraft_limit = 999999`),
+      ),
+    );
+    const { rows } = await withTenant(app.db, tenant.id, (tx) =>
+      tx.execute(sql`select overdraft_limit::text from tenants`),
+    );
+    expect({ error, rows }).toMatchObject({
+      error: {
+        code: '42501',
+        message:
+          'new row violates row-level security policy for table "tenants"',
+      },
+      rows: [{ overdraft_limit: '100.00' }],
+    });
+  });
+
+  it('租户身份删除自己的话单：0 行受影响，话单仍在', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await withSystem(app.db, (tx) =>
+      tx.execute(sql`insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee)
+                     values (${tenant.id}, ${randomUUID()}, '2026-10-12T10:00:00+08:00',
+                             '2026-10-12T10:00:30+08:00', '075586001234', '8613800138000')`),
+    );
+    const result = await withTenant(app.db, tenant.id, async (tx) => ({
+      deleted: (await tx.execute(sql`delete from cdrs`)).rowCount,
+      remaining: (await tx.execute(sql`select count(*)::int as n from cdrs`))
+        .rows,
+    }));
+    expect(result).toEqual({ deleted: 0, remaining: [{ n: 1 }] });
+  });
+
+  it('系统身份（Worker）可以写入任一租户的扣费', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await withSystem(app.db, (tx) =>
+      tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
+                     values (${tenant.id}, 'call_charge', -0.18, 'call:system-scope')`),
+    );
+    const { rows } = await withTenant(app.db, tenant.id, (tx) =>
+      tx.execute(sql`select balance::text from tenant_balances`),
+    );
+    expect(rows).toEqual([{ balance: '-0.18' }]);
+  });
+
+  it('建分区只允许管理员或系统身份：租户身份与未声明身份调用被拒绝', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const call = sql`select cdr_ensure_partitions('2026-10-12T00:00:00+08:00')`;
+    const errors = [
+      await pgError(withTenant(app.db, tenant.id, (tx) => tx.execute(call))),
+      await pgError(
+        app.pool.query(
+          `SELECT cdr_ensure_partitions('2026-10-12T00:00:00+08:00')`,
+        ),
+      ),
+    ];
+    const { rows } = await withSystem(app.db, (tx) => tx.execute(call));
+    expect({ errors, created: rows.length }).toMatchObject({
+      errors: [
+        { code: '42501', message: '建分区只允许管理员或系统身份' },
+        { code: '42501', message: '建分区只允许管理员或系统身份' },
+      ],
+      created: 4,
     });
   });
 
