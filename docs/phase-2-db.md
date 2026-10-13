@@ -73,6 +73,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 改费率和写流水的事务，在任何写入之前调用 `lock_tenants(uuid[])`。函数对传入的租户去重、按 `uuid` 升序，逐个拿事务级 advisory 锁 `pg_advisory_xact_lock(tenant_lock_key(id))`。费率和流水共用每个租户的这一把锁。同一租户的这些事务因此串行执行，外键检查、唯一索引等待、执行器为 `BEFORE DELETE` 触发器拿的 `FOR UPDATE` 都发生在拿到租户锁之后，不会成环。
 
+- 只能锁当前身份有权访问的租户：租户身份（`app.scope = 'tenant'`）只能锁 `app.tenant_id`，管理员与系统身份可以锁任意租户，未声明身份一律不行。越权时报 SQLSTATE 42501 `当前身份不能锁租户 <id>`，不拿任何锁。函数是 `SECURITY DEFINER`，检查在函数体里做，应用侧绕不过去。
 - 同一事务的全部租户放进一次调用。函数用 `app.tenant_lock_highwater` 记下本事务锁过的最大租户。之后再锁一个尚未持有、但更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。
 - `rate_versions`、`rate_entries` 的增删和 `ledger_entries` 的插入由触发器检查 `pg_locks`。本事务没有持有该租户的锁时报 55000，不写入。
 - 应用侧 `createRateVersion`、`appendLedgerEntry`、`appendLedgerEntries` 自己调用 `lockTenants`。`appendLedgerEntries` 先校验并规范全部 `tenant_id`，非法值在发出任何 SQL 之前抛出，再一次锁齐全部租户。直接写 SQL 的事务自己先调用 `lock_tenants`。

@@ -100,8 +100,7 @@ describe('RLS 租户隔离', () => {
     );
     expect(error).toMatchObject({
       code: '42501',
-      message:
-        'new row violates row-level security policy for table "ledger_entries"',
+      message: `当前身份不能锁租户 ${gzt007}`,
     });
   });
 

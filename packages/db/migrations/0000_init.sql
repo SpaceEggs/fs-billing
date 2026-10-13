@@ -117,12 +117,17 @@ LANGUAGE sql SET search_path = public, pg_temp AS $$
   )
 $$;
 
+-- 租户身份只能锁 app.tenant_id；管理员与系统身份可锁任意租户；未设置身份时一律拒绝。
 CREATE FUNCTION lock_tenants(tenant_ids uuid[]) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
   highwater uuid := nullif(current_setting('app.tenant_lock_highwater', true), '')::uuid;
   tid uuid;
 BEGIN
+  SELECT t INTO tid FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL AND NOT app_can_see(t) LIMIT 1;
+  IF FOUND THEN
+    RAISE EXCEPTION '当前身份不能锁租户 %', tid USING ERRCODE = 'insufficient_privilege';
+  END IF;
   FOR tid IN SELECT DISTINCT t FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL ORDER BY t LOOP
     CONTINUE WHEN tenant_lock_held(tid);
     IF tid < highwater THEN

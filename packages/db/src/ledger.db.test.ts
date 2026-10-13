@@ -212,6 +212,7 @@ describe('流水按发生时间归属月份', () => {
   it('9-30 23:59（北京时间）接通、10-01 才写入的扣费，按 occurred_at 归属 9 月', async () => {
     const tenant = await createTenant(app, 'CNY');
     await owner.db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.scope', 'system', true)`);
       await lockTenants(tx, [tenant.id]);
       await tx.execute(sql`
         insert into ledger_entries (tenant_id, kind, amount, note, idempotency_key, occurred_at, created_at)
@@ -909,6 +910,7 @@ describe('缓存余额可重算核对', () => {
          RETURNING id`,
       );
       await opener.query('BEGIN');
+      await opener.query(`SELECT set_config('app.scope', 'system', true)`);
       await opener.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [
         created!.id,
       ]);
@@ -923,6 +925,7 @@ describe('缓存余额可重算核对', () => {
         [created!.id],
       );
       await opener.query('BEGIN');
+      await opener.query(`SELECT set_config('app.scope', 'system', true)`);
       await opener.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [
         created!.id,
       ]);
@@ -992,6 +995,7 @@ describe('缓存余额可重算核对', () => {
       const rebuildingPid = await pidOf(rebuilding);
 
       await writer.query('BEGIN');
+      await writer.query(`SELECT set_config('app.scope', 'system', true)`);
       await writer.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
       await writer.query('UPDATE tenants SET remark = remark WHERE id = $1', [
         tenant.id,
@@ -1063,6 +1067,7 @@ describe('缓存余额可重算核对', () => {
       const writerPid = await pidOf(writer);
 
       await holder.query('BEGIN');
+      await holder.query(`SELECT set_config('app.scope', 'system', true)`);
       await holder.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [highId]);
       await holder.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
@@ -1082,6 +1087,7 @@ describe('缓存余额可重算核对', () => {
         [lowId],
       );
       await writer.query('BEGIN');
+      await writer.query(`SELECT set_config('app.scope', 'system', true)`);
       await writer.query('SELECT lock_tenants(ARRAY[$1, $2]::uuid[])', [
         lowId,
         midId,
@@ -1159,6 +1165,7 @@ describe('缓存余额可重算核对', () => {
       const rebuildingPid = await pidOf(rebuilding);
 
       await writer.query('BEGIN');
+      await writer.query(`SELECT set_config('app.scope', 'system', true)`);
       await writer.query('SELECT lock_tenants(ARRAY[$1, $2]::uuid[])', [
         highId,
         lowId,
