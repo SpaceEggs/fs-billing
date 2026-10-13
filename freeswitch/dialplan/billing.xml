@@ -2,12 +2,15 @@
   <!-- 客户 directory/IP 路由选用 billing context；租户标签来自可信配置。 -->
   <context name="billing">
     <extension name="billing-outbound">
-      <condition field="destination_number" expression="^(.+)$">
+      <!-- 15 位上限是 FreeSWITCH 侧的 E.164 限制，叠加在 rating 号码规则之上。 -->
+      <condition field="destination_number" expression="^\+?(?:00)?([0-9]{1,15})$">
         <action application="set" data="billing_authorized=false" />
         <action application="lua" data="billing_authorize.lua" />
         <!-- 单独 context 重新求值授权结果，避免 XML 在 Lua 执行前就求值。 -->
         <action application="execute_extension" data="billing-bridge XML billing-authorized" />
         <action application="hangup" data="NORMAL_CLEARING" />
+        <anti-action application="respond" data="484" />
+        <anti-action application="hangup" data="INVALID_NUMBER_FORMAT" />
       </condition>
     </extension>
   </context>
@@ -15,6 +18,10 @@
   <context name="billing-authorized">
     <extension name="billing-bridge">
       <condition field="destination_number" expression="^billing-bridge$" />
+      <condition field="${billing_destination}" expression="^(?!00)[0-9]{1,15}$">
+        <anti-action application="respond" data="484" />
+        <anti-action application="hangup" data="INVALID_NUMBER_FORMAT" />
+      </condition>
       <condition field="${billing_authorized}" expression="^true$">
         <action application="set" data="hangup_after_bridge=true" />
         <action application="bridge" data="sofia/gateway/upstream/${billing_destination}" />

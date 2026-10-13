@@ -1,0 +1,12 @@
+== A: Postgres 停机时 POST /cdr
+   postgres: exited
+   /cdr -> {"error":"话单保存失败，请重推"} HTTP 503
+   /authorize -> {"error":"授权服务暂不可用"} HTTP 503
+   postgres: starting
+   重推(FreeSWITCH 重试) -> {"status":"queued","rawId":"87ccce31-cce1-4e84-b5cf-98209cc341dd"} HTTP 200
+   cdrs=1 ledger=1
+== B: .500 费率变更后 .900 应答
+   rate_versions: 2026-10-12 03:00:00+00=>0.01 ; 2026-10-12 03:00:00.5+00=>0.99
+   /cdr -> {"status":"queued","rawId":"b0b99c03-1156-4ff6-9c48-cb25bf329ef7"} HTTP 200
+   cdr: 0.99|0.99|2026-10-12 02:59:51.1+00|2026-10-12 03:00:00.9+00|2026-10-12 03:01:00.95+00
+   ledger: -0.99|2026-10-12 03:00:00.9+00

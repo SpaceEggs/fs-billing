@@ -1,0 +1,22 @@
+API 进程: 无（API 未运行）
+worker pid 830985
+[1] 同一话单 POST 两次: 200 200
+    raw_cdrs=2 cdrs=1 ledger=1
+    cdr: 0.192|t|2026-10-12 02:00:09+00  ledger: call_charge|-0.192|2026-10-12 02:00:09+00
+    余额变化 -57.902 -> -58.094
+[4] 无密钥: 401  错密钥: 401
+[5] ABC01: 200
+    unassigned: ABC01|租户不存在|pending  ledger=0
+[10] 授权 +44 / 0044 / 44abc:
+    +447700900123 -> {"allowed":false,"reason":"号码格式错误","sipCode":400} 400
+    00447700900123 -> {"allowed":false,"reason":"号码格式错误","sipCode":400} 400
+    44abc -> {"allowed":false,"reason":"号码格式错误","sipCode":400} 400
+    正常 447700900123 -> {"allowed":true,"maxSeconds":14400} 200
+    话单 +447700900123: HTTP 200
+    unassigned: 号码格式错误|pending ledger=0 alerts: auth_timeout
+cdr_failed
+[7] POST 后立即 kill -9 worker: 200
+    杀后: cdrs=1 ledger=0
+    重启 pid 831521
+    重启+重推后: cdrs=1 ledger=1
+[4] 白名单 127.0.0.2，自 127.0.0.1 带正确密钥: 403

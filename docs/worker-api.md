@@ -58,22 +58,24 @@ pnpm --filter @fs-billing/worker start
 | 无费率       | 404           | 200  |
 | 余额不足     | 402           | 200  |
 
-号码字段缺失或类型错误同样返回 `号码格式错误`。其他无效请求（例如 UUID 错误）返回 HTTP 400 `{"error":"授权请求格式错误"}`。数据库不可用时返回服务错误；FreeSWITCH 的 [授权脚本](../freeswitch/scripts/billing_authorize.lua) 在整个请求超过 1.5 秒或无有效响应时放行 1800 秒并设置 `billing_unverified=true`。正常放行在接通后执行 `sched_hangup +N`，拒绝执行建议的 SIP code。
+号码字段缺失或类型错误同样返回 `号码格式错误`。其他无效请求（例如 UUID 错误）返回 HTTP 400 `{"error":"授权请求格式错误"}`。数据库不可用时返回 HTTP 503 `{"error":"授权服务暂不可用"}`，不向客户端暴露数据库错误详情。FreeSWITCH 的 [授权脚本](../freeswitch/scripts/billing_authorize.lua) 先校验号码，只有合法号码在授权返回 503、整个请求超过 1.5 秒或无有效响应时才放行 1800 秒并设置 `billing_unverified=true`。非法号码在调用 `/authorize` 前返回 SIP 484 并挂断。正常放行在接通后执行 `sched_hangup +N`，拒绝执行建议的 SIP code。
 
 ## POST /cdr
 
-正文是直接的 mod_json_cdr JSON 文本，可使用 `application/json` 或 `text/plain`。不接受 `cdr=<urlencoded JSON>` 包装；FreeSWITCH 设置 `encode=false` 与 `encode-values=false`，经本机 relay 添加 `X-Billing-Key` 后转发。配置与落盘重推步骤见 [FreeSWITCH 接入](../freeswitch/README.md)。真实字段布局见 [sample-cdr.json](../freeswitch/examples/sample-cdr.json)。`times` 位于 `callflow[]` 中，单位为微秒；业务解析以 `variables` 中的秒数为准。
+正文是直接的 mod_json_cdr JSON 文本，可使用 `application/json` 或 `text/plain`。不接受 `cdr=<urlencoded JSON>` 包装；FreeSWITCH 设置 `encode=false` 与 `encode-values=false`，经本机 relay 添加 `X-Billing-Key` 后转发。配置与落盘重推步骤见 [FreeSWITCH 接入](../freeswitch/README.md)。真实字段布局见 [sample-cdr.json](../freeswitch/examples/sample-cdr.json)。`times` 位于 `callflow[]` 中，单位为微秒；业务解析使用 `variables` 中的时间戳，优先取 `*_uepoch` 微秒，缺失时才回退到 `*_epoch` 秒。两者同时提供时必须属于同一整秒，否则按时间校验失败处理；保存到 Date 与数据库时截断到毫秒，不四舍五入。
 
 | variables 字段                            | 解析与不变量                                                                                                              |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `uuid`                                    | UUID，规范成小写；去重的唯一键                                                                                            |
 | `billing_tenant`                          | 精确的租户编码，缺失按空标签处理                                                                                          |
 | `start_epoch` / `end_epoch`               | 正整数 epoch 秒，支持数字字符串或整数                                                                                     |
-| `answer_epoch`                            | 默认 0，0 表示未接通；接通时必须在开始与结束之间                                                                          |
+| `answer_epoch`                            | 缺失时从 `answer_uepoch` 取整秒，两者都缺失按 0；0 表示未接通；接通时必须在开始与结束之间                                 |
 | `billsec` / `duration`                    | 非负整数秒（最大 2147483647），支持数字字符串；duration 等于结束减开始，billsec 不超过接通后秒数；未接通 billsec 必须为 0 |
 | `billing_unverified`                      | 布尔值或字符串 `true` / `false`，缺失为 false                                                                             |
 | `caller_id_number` / `destination_number` | 主叫/被叫字符串；被叫格式单独校验，错误也保存为未归属话单                                                                 |
 | `hangup_cause`                            | 挂断原因，缺失为空字符串                                                                                                  |
+
+`start_uepoch`、`answer_uepoch`、`end_uepoch` 接受非负整数或数字字符串；无效值不能回退到秒数。时间先按微秒校验先后顺序，再截断到毫秒。
 
 `caller_id_number` 与 `destination_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。缺主叫不拒绝话单；缺被叫按号码格式错误保存为未归属话单。
 
@@ -94,7 +96,7 @@ pnpm --filter @fs-billing/worker start
 { "status": "queued", "rawId": "a865a8ae-f220-4f21-b54c-40cb3aab26a8" }
 ```
 
-`status` 为 `queued`、`duplicate`、`unassigned` 或 `invalid`。只有数据库/队列保存失败时返回 503 `{"error":"话单保存失败，请重推"}`；坏话单不返回 400。HTTP 层仍限制正文大小（Fastify 默认 1 MiB）；文本列不能保存非法 UTF-8 字节或实际 NUL 字符。
+`status` 为 `queued`、`duplicate`、`unassigned` 或 `invalid`。只有数据库/队列保存失败时返回 503 `{"error":"话单保存失败，请重推"}`，不暴露数据库错误详情。失败告警尽力写入，数据库故障导致告警也无法保存时只记日志，仍返回同一 503 正文；坏话单不返回 400。HTTP 层仍限制正文大小（Fastify 默认 1 MiB）；文本列不能保存非法 UTF-8 字节或实际 NUL 字符。
 
 ## 扣费队列边界
 

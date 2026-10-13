@@ -7,13 +7,13 @@
 1. 加载 `mod_lua` 与 `mod_json_cdr`。在 **mod_lua 使用的 Lua 版本**中安装 `Lua-cURL` 与 `lua-cjson`，确认 `require('cURL.safe')` 和 `require('cjson.safe')` 成功。脚本用 libcurl 的 `timeout_ms=1500` 限制整个 HTTP 请求，含连接与响应读取，不用只支持整数秒的 `mod_curl timeout`。
 2. 将 [billing_authorize.lua](scripts/billing_authorize.lua) 放进 FreeSWITCH 的 scripts 目录。在受限的 `vars.xml` 设置全局变量 `billing_worker_url=http://10.0.0.20:3001`、`billing_shared_key=<WORKER_SHARED_KEY>`，执行 `reloadxml`。密钥不放通道变量，避免进入原始话单。
 3. 从可信的 directory 用户或 IP 路由设置 `billing_tenant=ABC001`。拒绝客户端用 SIP header 覆盖租户标签。将 [billing.xml](dialplan/billing.xml) 放进 dialplan 目录，客户使用 `billing` context，将 `upstream` 换成实际 gateway。`billing-authorized` 只供脚本之后的内部寻路，不给客户配置为入口。
-4. 设置租户并发上限。Worker 故障时每通均放行 1800 秒，并发上限用于控制透支。
+4. 设置租户并发上限。Worker 故障时合法号码每通放行 1800 秒，并发上限用于控制透支。
 
-脚本先去掉被叫开头的 `+`、再去掉 `00`，把规范化结果同时写回 A-leg 的 `destination_number` 与桥接变量 `billing_destination`。授权请求只包含租户编码、被叫与 A-leg UUID；余额不保存在交换机。含非数字字符的号码仍交给 Worker 返回 `号码格式错误`。
+脚本先去掉被叫开头的 `+`、再去掉 `00`，把规范化结果同时写回 A-leg 的 `destination_number` 与桥接变量 `billing_destination`。授权请求只包含租户编码、被叫与 A-leg UUID；余额不保存在交换机。拨号计划与 Lua 在调用 `/authorize` 前校验号码；非数字、规范化后仍以 `00` 开头或超过 15 位的号码返回 SIP 484 并以 `INVALID_NUMBER_FORMAT` 挂断。15 位上限是 FreeSWITCH 侧的 E.164 限制，叠加在 rating 的号码规则之上；rating 本身不限制长度。
 
 放行设置 `billing_authorized=true`。未接通时设置 `execute_on_answer=sched_hangup +N ALLOTTED_TIMEOUT`，接通后才开始计时；已接通的通道直接执行 `sched_hangup +N ALLOTTED_TIMEOUT`。本示例占用 `execute_on_answer`，其他接通动作需要合并到同一接通处理流程。拨号计划不要在授权前 `answer`。Lua 执行后用单独的 `billing-authorized` context 重新判断放行标记；XML 条件在执行应用之前求值，不能在同一轮条件里依赖 Lua 刚设置的变量。
 
-业务拒绝用返回的 `sipCode` 执行 `respond` 并挂断，不执行 bridge。超时、无响应、5xx 或无法解析的成功响应放行 1800 秒并设置 `billing_unverified=true`。401、403、无业务拒绝形状的 400 以及本机配置错误返回 503，修正配置后再试。正常授权设该标记为 false。脚本不重试授权，也不记录共享密钥。
+业务拒绝用返回的 `sipCode` 执行 `respond` 并挂断，不执行 bridge。合法号码遇到超时、无响应、5xx（包括 `/authorize` 的 503）或无法解析的成功响应放行 1800 秒并设置 `billing_unverified=true`。401、403、无业务拒绝形状的 400 以及本机配置错误返回 503，修正配置后再试。正常授权设该标记为 false。脚本不重试授权，也不记录共享密钥。
 
 ## 配置话单推送与落盘重推
 
@@ -35,6 +35,18 @@ curl --noproxy '*' --fail-with-body --silent --show-error \
 ```
 
 收到 `queued`、`duplicate`、`unassigned` 或 `invalid` 都表示 Worker 已保存原文。重复推送由 `call_uuids` 去重，不重复扣费；`unassigned` 与 `invalid` 需要查看数据库告警，不要通过改标签重推来认领已有 UUID。
+
+## 本地回归验证
+
+在仓库根目录执行 Lua harness：
+
+```sh
+lua5.3 freeswitch/tests/billing_authorize_test.lua
+```
+
+该测试用模拟 session 与 HTTP 响应运行真实授权脚本，覆盖非法号码在请求前返回 484、合法号码遇到授权 503/超时才降级、正常授权与接通后限时挂断。`pnpm check` 同时运行 Lua harness 和拨号计划条件测试；CI 缺少 `lua5.3` 时失败，本地缺少时可跳过对应测试。
+
+[现场复现脚本](../docs/evidence/phase-3/live-repro-pstack.sh) 使用真实 Worker HTTP 与数据库验证毫秒费率切换、故障 503 和恢复重推。它不替代 FreeSWITCH 测试机通话。
 
 ## 测试机验收
 
