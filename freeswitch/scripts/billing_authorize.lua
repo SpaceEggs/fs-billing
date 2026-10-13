@@ -38,6 +38,12 @@ if not session:ready() then return end
 session:setVariable('billing_authorized', 'false')
 local destination = session:getVariable('destination_number') or ''
 destination = destination:gsub('^%+', ''):gsub('^00', '')
+-- 15 位上限是 FreeSWITCH 侧的 E.164 限制，叠加在 rating 号码规则之上。
+if not destination:match('^[0-9]+$') or destination:match('^00') or #destination > 15 then
+    session:execute('respond', '484')
+    session:hangup('INVALID_NUMBER_FORMAT')
+    return
+end
 -- 同时改写 A-leg 的话单字段与桥接号码，避免授权成功但话单被判格式错误。
 session:setVariable('destination_number', destination)
 session:setVariable('billing_destination', destination)

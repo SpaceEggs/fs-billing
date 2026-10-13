@@ -56,18 +56,23 @@ export function createWorker(dependencies?: WorkerDependencies) {
         return reply.code(400).send({ error: '授权请求格式错误' });
       }
       const { tenant, callee } = parsed.data;
-      const result = await withSystem(db, async (tx) =>
-        authorizeRaw(await loadRatingTenant(tx, tenant), callee, new Date()),
-      );
-      return authorizeResponseSchema.parse(
-        result.allowed
-          ? { allowed: true, maxSeconds: result.maxSeconds }
-          : {
-              allowed: false,
-              reason: result.reason,
-              sipCode: sipCodes[result.reason],
-            },
-      );
+      try {
+        const result = await withSystem(db, async (tx) =>
+          authorizeRaw(await loadRatingTenant(tx, tenant), callee, new Date()),
+        );
+        return authorizeResponseSchema.parse(
+          result.allowed
+            ? { allowed: true, maxSeconds: result.maxSeconds }
+            : {
+                allowed: false,
+                reason: result.reason,
+                sipCode: sipCodes[result.reason],
+              },
+        );
+      } catch (error) {
+        request.log.error({ err: error }, '授权失败');
+        return reply.code(503).send({ error: '授权服务暂不可用' });
+      }
     });
     await routes.register((cdrRoutes, _options, done) => {
       // 由话单处理器解析 JSON，Fastify 不提前拒绝损坏的正文。
@@ -88,11 +93,15 @@ export function createWorker(dependencies?: WorkerDependencies) {
             pg?.code === '23514' &&
             /no partition of relation .* found for row/.test(pg.message);
           request.log.error({ err: error }, '话单入库失败');
-          await recordAlert(
-            db,
-            partitionFailed ? 'partition_failed' : 'cdr_failed',
-            pg?.message ?? '话单入库或任务入队失败',
-          );
+          try {
+            await recordAlert(
+              db,
+              partitionFailed ? 'partition_failed' : 'cdr_failed',
+              pg?.message ?? '话单入库或任务入队失败',
+            );
+          } catch (alertError) {
+            request.log.error({ err: alertError }, '话单失败告警保存失败');
+          }
           return reply.code(503).send({ error: '话单保存失败，请重推' });
         }
       });

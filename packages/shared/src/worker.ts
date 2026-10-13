@@ -38,24 +38,43 @@ const seconds = z
   .union([z.string().regex(/^[0-9]+$/), z.number()])
   .pipe(z.coerce.number<string | number>().int().min(0).max(2147483647));
 const epoch = seconds;
+const microseconds = z.union([z.string().regex(/^[0-9]+$/), z.number()]).pipe(
+  z.coerce
+    .number<string | number>()
+    .int()
+    .min(0)
+    .max(2147483647 * 1_000_000 + 999_999),
+);
 const flag = z
   .union([z.boolean(), z.enum(['true', 'false'])])
   .transform((value) => value === true || value === 'true');
 export const modJsonCdrSchema = z
   .object({
-    variables: z.object({
-      uuid: z.uuid().transform((value) => value.toLowerCase()),
-      billing_tenant: z.string().default(''),
-      start_epoch: epoch.refine((value) => value > 0),
-      answer_epoch: epoch.default(0),
-      end_epoch: epoch.refine((value) => value > 0),
-      billsec: seconds,
-      duration: seconds,
-      billing_unverified: flag.default(false),
-      caller_id_number: z.string().optional(),
-      destination_number: z.string().optional(),
-      hangup_cause: z.string().default(''),
-    }),
+    variables: z
+      .object({
+        uuid: z.uuid().transform((value) => value.toLowerCase()),
+        billing_tenant: z.string().default(''),
+        start_epoch: epoch.refine((value) => value > 0),
+        start_uepoch: microseconds.optional(),
+        answer_epoch: epoch.optional(),
+        answer_uepoch: microseconds.optional(),
+        end_epoch: epoch.refine((value) => value > 0),
+        end_uepoch: microseconds.optional(),
+        billsec: seconds,
+        duration: seconds,
+        billing_unverified: flag.default(false),
+        caller_id_number: z.string().optional(),
+        destination_number: z.string().optional(),
+        hangup_cause: z.string().default(''),
+      })
+      .transform((v) => ({
+        ...v,
+        answer_epoch:
+          v.answer_epoch ?? Math.floor((v.answer_uepoch ?? 0) / 1_000_000),
+        startMicros: v.start_uepoch ?? v.start_epoch * 1_000_000,
+        answerMicros: v.answer_uepoch ?? (v.answer_epoch ?? 0) * 1_000_000,
+        endMicros: v.end_uepoch ?? v.end_epoch * 1_000_000,
+      })),
     callflow: z
       .array(
         z.object({
@@ -71,6 +90,15 @@ export const modJsonCdrSchema = z
   })
   .superRefine(({ variables: v }, ctx) => {
     if (
+      (v.start_uepoch !== undefined &&
+        Math.floor(v.start_uepoch / 1_000_000) !== v.start_epoch) ||
+      (v.answer_uepoch !== undefined &&
+        Math.floor(v.answer_uepoch / 1_000_000) !== v.answer_epoch) ||
+      (v.end_uepoch !== undefined &&
+        Math.floor(v.end_uepoch / 1_000_000) !== v.end_epoch) ||
+      v.endMicros < v.startMicros ||
+      (v.answerMicros !== 0 &&
+        (v.answerMicros < v.startMicros || v.answerMicros > v.endMicros)) ||
       v.end_epoch < v.start_epoch ||
       (v.answer_epoch !== 0 &&
         (v.answer_epoch < v.start_epoch || v.answer_epoch > v.end_epoch)) ||
@@ -86,9 +114,11 @@ export const modJsonCdrSchema = z
   .transform(({ variables: v, callflow }) => ({
     callUuid: v.uuid,
     tenantTag: v.billing_tenant,
-    startedAt: new Date(v.start_epoch * 1000),
-    answeredAt: v.answer_epoch === 0 ? null : new Date(v.answer_epoch * 1000),
-    endedAt: new Date(v.end_epoch * 1000),
+    // Date and the database driver retain milliseconds; truncate the remaining microseconds.
+    startedAt: new Date(Math.floor(v.startMicros / 1000)),
+    answeredAt:
+      v.answerMicros === 0 ? null : new Date(Math.floor(v.answerMicros / 1000)),
+    endedAt: new Date(Math.floor(v.endMicros / 1000)),
     billsec: v.billsec,
     duration: v.duration,
     unverified: v.billing_unverified,

@@ -54,3 +54,15 @@ Claude Code 只读评审（`claude -p … --permission-mode plan`）：无 BLOCK
 本轮评审修正：`0002` 去掉补投计数 CHECK，未归属话单新增 CHECK 使用 `NOT VALID`，避免迁移时扫描历史行。可靠性测试按确定性 ID 读取任务，只推进目标任务的领取状态；宽限期直接断言 0 次补投、1 个任务，并注明撤销共享角色权限依赖 `fileParallelism: false`。新增回看窗口、无 singleton_key 的活动任务和单条失败不阻断其余候选的回归用例。
 
 本次修改后执行：`pnpm check` 通过（11 文件 / 146 测试）；`pnpm coverage` 通过，rating 行覆盖率 100%。`pnpm test:db` 在全局初始化连接 `127.0.0.1:5432` 时被沙箱以 `EPERM` 拒绝，迁移和 DB 回归用例均未执行，不能据此标记通过。
+
+## pstack 评审修复
+
+本轮修复三处行为问题：
+
+- CDR 优先使用 `variables.*_uepoch`，与同名 `*_epoch` 必须属于同一整秒；微秒只解析一次，校验后截断到毫秒。接通在同一秒内跨过费率生效时刻时使用新费率，账本 `occurred_at` 保留接通毫秒。
+- `/cdr` 与 `/authorize` 在数据库不可用时返回固定 503 正文，不暴露底层错误；话单失败告警尽力保存，告警写入失败不改变响应。
+- FreeSWITCH 在授权请求前拒绝非法号码，Lua 与拨号计划均返回 484 并挂断；桥接 context 再校验规范化号码。15 位是 FreeSWITCH 侧的 E.164 限制，rating 规则不新增长度上限。合法号码遇到授权 503 才可降级为 1800 秒并标记未验证。
+
+新增 `tests/cdr-time.test.ts` 覆盖微秒优先、缺失回退、同秒一致性、毫秒截断、未接通与同秒费率切换；`apps/worker/src/cdr-time.db.test.ts` 验证真实入库费率和账本接通时间。`apps/worker/src/app.test.ts` 对故障仅断言 HTTP 状态和正文，不绑定事务调用次数。
+
+`tests/billing-authorize.test.ts` 读取实际拨号计划，覆盖号码与桥接分隔符校验以及两个号码条件的 484/挂断分支，并执行 `lua5.3 freeswitch/tests/billing_authorize_test.lua`。CI 安装 `lua5.3`，缺少解释器时测试失败；Lua harness 覆盖合法号码故障降级与非法号码在请求前拒绝。真实 HTTP/DB 复现步骤见 [live-repro-pstack.sh](evidence/phase-3/live-repro-pstack.sh)。
