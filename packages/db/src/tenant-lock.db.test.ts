@@ -53,3 +53,45 @@ describe('lock_tenants 只锁当前身份有权访问的租户', () => {
     });
   });
 });
+
+describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
+  const sessionLock = `SELECT pg_advisory_lock(hashtextextended('tenant:' || $1, 0))`;
+
+  it('会话级同键 advisory 锁不能代替 lock_tenants 写流水', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await onAppClient(async (client) => {
+      await client.query(sessionLock, [tenant.id]);
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.scope', 'admin', true)`);
+      return queryError(
+        client,
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -1, 'call:session-lock')`,
+        [tenant.id],
+      );
+    });
+    expect(error).toMatchObject({
+      code: '55000',
+      message: `写租户 ${tenant.id} 的费率或流水之前，先在本事务调用 lock_tenants`,
+    });
+  });
+
+  it('上一个事务的锁随提交释放，同一连接的下一个事务直接写入被拒绝', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await onAppClient(async (client) => {
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.scope', 'admin', true)`);
+      await client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
+      await client.query('COMMIT');
+      await client.query('BEGIN');
+      await client.query(`SELECT set_config('app.scope', 'admin', true)`);
+      return queryError(
+        client,
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -1, 'call:stale-connection')`,
+        [tenant.id],
+      );
+    });
+    expect(error).toMatchObject({ code: '55000' });
+  });
+});

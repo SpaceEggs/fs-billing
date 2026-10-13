@@ -102,14 +102,21 @@ CREATE TABLE rate_entries (
 );
 
 -- 租户互斥：改费率和写流水的事务在任何 DML 之前调用 lock_tenants，同一租户的这些事务串行执行。
+-- 已持有 = 本事务通过 lock_tenants 拿到：事务级标记 app.tenant_locks 里有该租户，且 pg_locks 里有这把锁。
+-- 标记随事务（或回滚的保存点）一起消失，会话级的同键 advisory 锁和连接池里上一个事务都不算持有。
 -- 外键检查、唯一索引等待、执行器的 FOR UPDATE 都在拿到这把锁之后发生，不会成环。
 -- 同一事务只能按 tenant_id 升序加锁：已经拿过更大的租户后，再拿未持有的更小租户报错。
 CREATE FUNCTION tenant_lock_key(tenant uuid) RETURNS bigint
 LANGUAGE sql IMMUTABLE AS $$ SELECT hashtextextended('tenant:' || tenant::text, 0) $$;
 
+CREATE FUNCTION tenant_locks_marked() RETURNS uuid[]
+LANGUAGE sql STABLE AS $$
+  SELECT coalesce(nullif(current_setting('app.tenant_locks', true), '')::uuid[], '{}')
+$$;
+
 CREATE FUNCTION tenant_lock_held(tenant uuid) RETURNS boolean
 LANGUAGE sql SET search_path = public, pg_temp AS $$
-  SELECT EXISTS (
+  SELECT tenant = ANY (tenant_locks_marked()) AND EXISTS (
     SELECT FROM pg_locks
     WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
       AND mode = 'ExclusiveLock' AND objsubid = 1
@@ -121,7 +128,7 @@ $$;
 CREATE FUNCTION lock_tenants(tenant_ids uuid[]) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
-  highwater uuid := nullif(current_setting('app.tenant_lock_highwater', true), '')::uuid;
+  held uuid[] := tenant_locks_marked();
   tid uuid;
 BEGIN
   SELECT t INTO tid FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL AND NOT app_can_see(t) LIMIT 1;
@@ -129,14 +136,16 @@ BEGIN
     RAISE EXCEPTION '当前身份不能锁租户 %', tid USING ERRCODE = 'insufficient_privilege';
   END IF;
   FOR tid IN SELECT DISTINCT t FROM unnest(tenant_ids) AS t WHERE t IS NOT NULL ORDER BY t LOOP
-    CONTINUE WHEN tenant_lock_held(tid);
-    IF tid < highwater THEN
-      RAISE EXCEPTION '租户 % 早于本事务已锁的租户 %：同一事务的租户要在一次 lock_tenants 调用里加锁', tid, highwater
+    CONTINUE WHEN tid = ANY (held);
+    -- held 按加锁顺序追加，只追加更大的租户，所以是升序的，末尾最大。
+    IF tid < held[cardinality(held)] THEN
+      RAISE EXCEPTION '租户 % 早于本事务已锁的租户 %：同一事务的租户要在一次 lock_tenants 调用里加锁',
+        tid, held[cardinality(held)]
         USING ERRCODE = 'object_not_in_prerequisite_state';
     END IF;
     PERFORM pg_advisory_xact_lock(tenant_lock_key(tid));
-    highwater := tid;
-    PERFORM set_config('app.tenant_lock_highwater', tid::text, true);
+    held := held || tid;
+    PERFORM set_config('app.tenant_locks', held::text, true);
   END LOOP;
 END $$;
 

@@ -74,8 +74,9 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 改费率和写流水的事务，在任何写入之前调用 `lock_tenants(uuid[])`。函数对传入的租户去重、按 `uuid` 升序，逐个拿事务级 advisory 锁 `pg_advisory_xact_lock(tenant_lock_key(id))`。费率和流水共用每个租户的这一把锁。同一租户的这些事务因此串行执行，外键检查、唯一索引等待、执行器为 `BEFORE DELETE` 触发器拿的 `FOR UPDATE` 都发生在拿到租户锁之后，不会成环。
 
 - 只能锁当前身份有权访问的租户：租户身份（`app.scope = 'tenant'`）只能锁 `app.tenant_id`，管理员与系统身份可以锁任意租户，未声明身份一律不行。越权时报 SQLSTATE 42501 `当前身份不能锁租户 <id>`，不拿任何锁。函数是 `SECURITY DEFINER`，检查在函数体里做，应用侧绕不过去。
-- 同一事务的全部租户放进一次调用。函数用 `app.tenant_lock_highwater` 记下本事务锁过的最大租户。之后再锁一个尚未持有、但更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。
-- `rate_versions`、`rate_entries` 的增删和 `ledger_entries` 的插入由触发器检查 `pg_locks`。本事务没有持有该租户的锁时报 55000，不写入。
+- 函数每拿到一把锁，就用 `set_config('app.tenant_locks', ..., true)` 把该租户追加到事务级标记里。“已持有”指本事务通过 `lock_tenants` 拿到：标记里有该租户，并且 `pg_locks` 里有这把锁。标记随事务结束或保存点回滚一起消失，所以会话级的同键 `pg_advisory_lock` 和连接池里上一个事务留下的状态都不算持有。
+- 同一事务的全部租户放进一次调用。标记按加锁顺序是升序的。之后再锁一个尚未持有、但比标记里最大租户更小的租户时报 SQLSTATE 55000，不等待。已经持有的租户可以重复传入。
+- `rate_versions`、`rate_entries` 的增删和 `ledger_entries` 的插入由触发器检查本事务已持有该租户的锁。没有持有时报 55000，不写入。
 - 应用侧 `createRateVersion`、`appendLedgerEntry`、`appendLedgerEntries` 自己调用 `lockTenants`。`appendLedgerEntries` 先校验并规范全部 `tenant_id`，非法值在发出任何 SQL 之前抛出，再一次锁齐全部租户。直接写 SQL 的事务自己先调用 `lock_tenants`。
 - `withAdmin`、`withSystem` 遇到 `40P01`、`40001` 时重跑整个事务，最多 3 次。这只是兜底。租户锁下的写入路径不会产生 `40P01`。
 
