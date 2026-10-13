@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
-import money from './tooling/eslint/money.mjs';
+import money from './tooling/eslint/money.ts';
 
 export default tseslint.config(
   {

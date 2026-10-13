@@ -1,7 +1,7 @@
 import { ESLint, Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { expect, test } from 'vitest';
-import money from '../tooling/eslint/money.mjs';
+import money from '../tooling/eslint/money.ts';
 
 function lint(code: string) {
   return new Linter().verify(code, {
