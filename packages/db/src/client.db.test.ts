@@ -124,4 +124,26 @@ describe('withAdmin / withSystem 重试', () => {
       inner: 3,
     });
   });
+
+  it('嵌套在普通 db.transaction 里：设置管理员身份，不重试，错误抛给外层', async () => {
+    let inner = 0;
+    let scope = '';
+    const error = await pgError(
+      app.db.transaction((tx) =>
+        withAdmin(tx, async (nested) => {
+          inner += 1;
+          const { rows } = await nested.execute<{ scope: string }>(
+            sql`select current_setting('app.scope') as scope`,
+          );
+          scope = rows[0]!.scope;
+          await nested.execute(raise('40P01'));
+        }),
+      ),
+    );
+    expect({ code: error.code, inner, scope }).toEqual({
+      code: '40P01',
+      inner: 1,
+      scope: 'admin',
+    });
+  });
 });

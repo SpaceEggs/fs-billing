@@ -174,6 +174,28 @@ describe('已持有只认本事务通过 lock_tenants 拿到的锁', () => {
   });
 });
 
+describe('回滚到保存点清掉标记', () => {
+  it('在保存点里 lockTenants 后回滚该保存点，外层事务直接写流水报 55000', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await pgError(
+      withAdmin(app.db, async (tx) => {
+        await tx
+          .transaction(async (savepoint) => {
+            await lockTenants(savepoint, [tenant.id]);
+            savepoint.rollback();
+          })
+          .catch(() => undefined);
+        await tx.execute(sql`insert into ledger_entries (tenant_id, kind, amount, idempotency_key)
+                             values (${tenant.id}, 'call_charge', -1, 'call:after-savepoint')`);
+      }),
+    );
+    expect(error).toMatchObject({
+      code: '55000',
+      message: `写租户 ${tenant.id} 的费率或流水之前，先在本事务调用 lock_tenants`,
+    });
+  });
+});
+
 describe('不调用 lock_tenants 的写入被拒绝', () => {
   it('直接插入流水和费率版本都报 55000，余额不变', async () => {
     const tenant = await createTenant(app, 'CNY');
@@ -245,6 +267,20 @@ describe('先加行锁再等租户锁会被拒绝，不会死锁', () => {
       locker.release();
       holder.release();
     }
+  });
+
+  it('先拿强表锁再调用 lockTenants 报 55000', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await pgError(
+      withAdmin(app.db, async (tx) => {
+        await tx.execute(sql`lock table tenants in share mode`);
+        await lockTenants(tx, [tenant.id]);
+      }),
+    );
+    expect(error).toMatchObject({
+      code: '55000',
+      message: `租户 ${tenant.id} 的锁要在本事务的任何写入、行锁和其他锁之前拿`,
+    });
   });
 
   it('改过租户行的事务再调用 lockTenants 报 55000', async () => {
