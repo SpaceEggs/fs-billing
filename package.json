@@ -21,7 +21,8 @@
     "db:migrate": "pnpm --filter @fs-billing/db migrate",
     "db:seed": "pnpm --filter @fs-billing/db seed",
     "dev:setup": "pnpm check && pnpm db:up",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "perf:authorize": "pnpm --filter @fs-billing/worker perf:authorize"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

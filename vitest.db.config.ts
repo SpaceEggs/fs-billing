@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['packages/**/*.db.test.ts'],
+    include: ['packages/**/*.db.test.ts', 'apps/**/*.db.test.ts'],
     globalSetup: ['packages/db/test/global-setup.ts'],
     fileParallelism: false,
     testTimeout: 20_000,

@@ -24,6 +24,6 @@ Preconditions:
 ## Gotchas
 
 - Use `/health` on port 3001. `/api/health` belongs to the API.
-- The current Worker has no authorization, CDR, queue, or database-backed routes.
+- Worker startup now requires `APP_DATABASE_URL`, `WORKER_SHARED_KEY`, `WORKER_ALLOWED_IPS`, DB migrations, and `pnpm --filter @fs-billing/worker queue:migrate`. See [Worker interfaces](worker-api.md). Health still reports process status without checking DB readiness.
 - A Worker response without stopping the API does not prove independence.
 - Doctor expects the healthy baseline and must fail after the API is intentionally stopped. That failure is expected during this sub-feature.

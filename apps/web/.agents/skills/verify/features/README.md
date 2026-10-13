@@ -1,6 +1,6 @@
 # FS-Billing verification map
 
-Read this index before a run. This map covers implemented phase 0, 1, and 2 behavior. Package functions and database operator paths currently have no business UI or HTTP route.
+Read this index before a run. This map covers implemented phase 0, 1, and 2 behavior plus phase 3 units a–c. Worker authorization and CDR ingestion now have HTTP paths; business UI remains unimplemented.
 
 ## Baseline preconditions
 
@@ -48,5 +48,9 @@ Read this index before a run. This map covers implemented phase 0, 1, and 2 beha
 - [Stored rate versions](db-rate-versions.md): immutable history, future version management, rating reads.
 - [CDR storage](db-cdr-storage.md): answered/unanswered constraints, raw text and unassigned calls.
 - [Receivable settlement](db-receivable-settlement.md): credit recharge confirmation as an independent event.
+
+### Phase 3: Worker interfaces
+
+- [Worker authorization and CDR ingestion](worker-api.md): HTTP contracts, raw preservation, UUID deduplication, unassigned handling, transactional queue and minimal charge handler.
 
 **Stale claim (phase 0):** PostgreSQL was only a supporting check and business features had no real paths. Database operations and rating acceptance commands now have paths above. The three phase 0 endpoints still perform no business writes. Monetary lint and build remain supporting checks in the root README.

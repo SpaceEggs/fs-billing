@@ -29,4 +29,4 @@ pnpm test:db packages/db/src/ledger.db.test.ts packages/db/src/cdrs.db.test.ts
 - Library replay compares only kind and numeric amount, not note, admin, or occurrence time. It returns the original row for matching kind/amount.
 - Raw SQL duplicates without conflict handling fail `23505`. SQL `ON CONFLICT DO NOTHING` does not implement the library's mismatch check.
 - CDR BEFORE INSERT UUID registration occurs before ordinary conflict handling; a CDR `ON CONFLICT` clause does not safely suppress registry duplicates. Seed checks registered UUIDs before inserting.
-- These protections do not implement HTTP request idempotency or call ingestion retries; those routes do not exist yet.
+- Worker HTTP ingestion uses this UUID gate and returns 200 on duplicate pushes; see [Worker interfaces](worker-api.md). Its transaction-local `app.cdr_ingest` flag prohibits automatic claims of existing unassigned UUIDs. Full crash recovery remains a later phase 3 unit.

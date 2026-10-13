@@ -1,0 +1,65 @@
+{
+  "core-uuid": "6e63f580-8b19-4d42-af0e-e9223642eb60",
+  "switchname": "fs-a",
+  "channel_data": {
+    "state": "CS_REPORTING",
+    "direction": "inbound",
+    "state_number": "11",
+    "flags": "0=1;1=1;",
+    "caps": "1=1;2=1;"
+  },
+  "variables": {
+    "uuid": "7f1c2a9e-0d3b-4c5e-8a6f-1b2c3d4e5f60",
+    "billing_tenant": "ABC001",
+    "billing_unverified": "true",
+    "start_epoch": "1791770400",
+    "answer_epoch": "1791770409",
+    "end_epoch": "1791770599",
+    "billsec": "190",
+    "duration": "199",
+    "caller_id_number": "075586001234",
+    "destination_number": "447700900123",
+    "hangup_cause": "NORMAL_CLEARING",
+    "channel_name": "sofia/internal/ABC001@10.0.0.10",
+    "sip_call_id": "a1b2c3d4@10.0.0.10",
+    "read_codec": "PCMA",
+    "write_codec": "PCMA"
+  },
+  "app_log": {
+    "applications": [
+      {
+        "app_name": "set",
+        "app_data": "billing_tenant=ABC001",
+        "app_stamp": "1791770400000000"
+      },
+      {
+        "app_name": "bridge",
+        "app_data": "sofia/gateway/upstream/447700900123",
+        "app_stamp": "1791770400000000"
+      }
+    ]
+  },
+  "callflow": [
+    {
+      "dialplan": "XML",
+      "profile_index": "1",
+      "caller_profile": {
+        "username": "ABC001",
+        "caller_id_name": "ABC001",
+        "caller_id_number": "075586001234",
+        "destination_number": "447700900123",
+        "context": "billing",
+        "uuid": "7f1c2a9e-0d3b-4c5e-8a6f-1b2c3d4e5f60"
+      },
+      "times": {
+        "created_time": "1791770400000000",
+        "profile_created_time": "1791770400000000",
+        "progress_time": "1791770401000000",
+        "progress_media_time": "0",
+        "answered_time": "1791770409000000",
+        "hangup_time": "1791770599000000",
+        "transfer_time": "0"
+      }
+    }
+  ]
+}
