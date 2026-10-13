@@ -1,0 +1,63 @@
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 真实格式样本推送两次：两份原文、一条话单、一个任务和一笔扣费；任务重复执行也不重扣 133ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > variables 缺少号码、callflow 主叫为 075586001234 时保存话单且只扣费一次 51ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > variables 缺少号码、callflow 主叫为 undefined 时保存话单且只扣费一次 41ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签 ABC01 进入 pending，并告警且不扣费 19ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签  进入 pending，并告警且不扣费 18ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签 UNKNOWN99 进入 pending，并告警且不扣费 17ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 +447700900123 返回 200，原文与未归属告警保留 14ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 00447700900123 返回 200，原文与未归属告警保留 27ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 447x 返回 200，原文与未归属告警保留 15ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫  返回 200，原文与未归属告警保留 14ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 损坏或缺字段的正文 { "broken": 不返回 400，先保存原文并告警 5ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 损坏或缺字段的正文 {} 不返回 400，先保存原文并告警 5ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 接通时无费率进入待人工处理，不按零元计费 12ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 缺分区返回 503 留给重推，保留原文并写 partition_failed，不在写入路径建分区 67ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 原文分区缺失返回 503 并告警，恢复维护后重推成功 38ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 入队失败回滚话单和 UUID 登记，原文保留，恢复后重推成功 29ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 授权读取实时余额、状态与费率：放行或给出拒绝原因，错误号码返回 400 24ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 同一 UUID 并发推送只入一条话单和一个任务 22ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 已有未归属 UUID 改标签重推仍重复，HTTP 入库触发器也禁止并发认领 31ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 缺密钥或不在 IP 白名单的请求在保存正文前拒绝 1ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 接通时刻选择整表版本，跨月处理仍按九月入账 60ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 授权有费率，接通时新版移除前缀：pending 与告警，不回退旧费率也不扣零元 20ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 流水已插入后模拟崩溃：回滚余额，重新执行只扣一次 43ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 扣费提交但任务未确认：重启队列，过期任务重投不重复扣费 135ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > pg-boss 维护 SQL 不提前提交调用方事务，后续失败时队列写入回滚 4ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 启动维护立即建分区，每日北京时间调度可重复运行 2083ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 启动及维护任务失败写 partition_failed，错误向外抛出 231ms
+ ✓ packages/db/src/cdrs.db.test.ts > 话单按通话 UUID 唯一 > 同一 UUID 插入两次，第二次被唯一约束挡住 17ms
+ ✓ packages/db/src/cdrs.db.test.ts > 话单按通话 UUID 唯一 > 同一 UUID 换了开始时间（落在另一个分区）也被挡住 8ms
+ ✓ packages/db/src/cdrs.db.test.ts > 正式话单与未归属话单共用 UUID 登记表 > 未归属话单登记的 UUID，之后由正式话单认领 20ms
+ ✓ packages/db/src/cdrs.db.test.ts > 正式话单与未归属话单共用 UUID 登记表 > 已在正式话单中的 UUID 再进未归属话单被拒绝 8ms
+ ✓ packages/db/src/cdrs.db.test.ts > 正式话单与未归属话单共用 UUID 登记表 > 同一 UUID 已归属一个租户后，再给第二个租户被拒绝 10ms
+ ✓ packages/db/src/cdrs.db.test.ts > 原始话单 > 原文逐字节保存：空白、键序、重复键原样读回；payload 是可查询的规范化副本 7ms
+ ✓ packages/db/src/cdrs.db.test.ts > 原始话单 > 不是合法 JSON 的原文也保存，payload 为空 4ms
+ ✓ packages/db/src/cdrs.db.test.ts > 原始话单 > 数值溢出的 JSON 原文仍保存，payload 为空 3ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 维护入口在类型层拒绝事务，只接受连接池数据库 0ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 建分区任务幂等地建出 cdrs 与 raw_cdrs 的当月与下月（北京时间），之后下月的话单落入新分区 37ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 没有分区的月份插入失败，不会悄悄落入兜底分区 5ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 分区已存在时不等待建分区锁；缺分区时才加锁 306ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 迁移已建出 cdrs 与 raw_cdrs 当前月与下个月的分区 6ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > lock_tenants 只锁当前身份有权访问的租户 > 租户身份锁其他租户报 42501；锁自己的租户可以 57ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > lock_tenants 只锁当前身份有权访问的租户 > 未设置身份的连接锁任何租户都报 42501 15ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > lock_tenants 只锁当前身份有权访问的租户 > 新连接只设置 app.tenant_id、没有 app.scope，锁该租户报 42501 19ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 已持有只认本事务通过 lock_tenants 拿到的锁 > 会话级同键 advisory 锁不能代替 lock_tenants 写流水 9ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 已持有只认本事务通过 lock_tenants 拿到的锁 > 持有会话级同键锁时 lock_tenants 报 55000，而不是跳过加锁 7ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 已持有只认本事务通过 lock_tenants 拿到的锁 > 上一个事务的锁随提交释放，同一连接的下一个事务直接写入被拒绝 7ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 回滚到保存点清掉标记 > 在保存点里 lockTenants 后回滚该保存点，外层事务直接写流水报 55000 10ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 不调用 lock_tenants 的写入被拒绝 > 直接插入流水和费率版本都报 55000，余额不变 9ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 先加行锁再等租户锁会被拒绝，不会死锁 > A 先 FOR UPDATE 租户行再 lock_tenants 报 55000；持锁的 B 照常写流水并提交 32ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 先加行锁再等租户锁会被拒绝，不会死锁 > 先拿强表锁再调用 lockTenants 报 55000 5ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 先加行锁再等租户锁会被拒绝，不会死锁 > 改过租户行的事务再调用 lockTenants 报 55000 6ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 建分区不在租户锁内进行 > 持有租户锁时调用 cdr_ensure_partitions 报 55000，分区已存在也一样 6ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 建分区不在租户锁内进行 > A 持租户锁、B 读过话单后等 A 的锁，A 再建缺失的分区：A 报 55000，不出现 40P01 14ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 应用角色不能直接调用 advisory 锁函数 > pg_advisory_lock 报 42501；所有 advisory 锁函数的重载都没有 EXECUTE；lock_tenants 照常可用 10ms
+
+ Test Files  3 passed (3)
+      Tests  54 passed (54)
+   Start at  04:05:21
+   Duration  7.32s (tests 70%, import 28%, transform 2%)
+
