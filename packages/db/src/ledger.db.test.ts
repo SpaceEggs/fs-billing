@@ -660,6 +660,31 @@ describe('同一事务的多租户流水按 tenant_id 升序加锁', () => {
 });
 
 describe('缓存余额可重算核对', () => {
+  it('显式事务里 CALL rebuild_tenant_balances 报 2D000，不提交外层修改', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const client = await owner.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE tenants SET remark = $2 WHERE id = $1', [
+        tenant.id,
+        'should-rollback',
+      ]);
+      const error = await pgError(
+        client.query('CALL rebuild_tenant_balances(NULL)'),
+      );
+      expect(error.code).toBe('2D000');
+      await client.query('ROLLBACK');
+    } finally {
+      await client.query('ROLLBACK').catch(() => undefined);
+      client.release();
+    }
+    const { rows } = await owner.pool.query(
+      'SELECT remark FROM tenants WHERE id = $1',
+      [tenant.id],
+    );
+    expect(rows).toEqual([{ remark: '' }]);
+  });
+
   it('缓存被改坏后，balance_discrepancies 列出该租户，rebuild_tenant_balances 修复', async () => {
     const tenant = await createTenant(app, 'CNY');
     const admin = await adminId(owner);

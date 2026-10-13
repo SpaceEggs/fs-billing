@@ -294,7 +294,8 @@ WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
 
 -- 一次只锁一个租户的余额行，写回后 COMMIT，再处理下一个。任何时刻只拿着一个租户的锁。
 -- 调用：自动提交的连接上执行 CALL rebuild_tenant_balances(NULL)。
--- 不要包在已经 BEGIN 的事务里。过程里的 COMMIT 会把那个事务一起提交。
+-- 不要包在已经 BEGIN 的事务里。显式事务中调用报 SQLSTATE 2D000
+-- （invalid transaction termination），过程里的 COMMIT 不会提交外层事务。
 -- fixed 是余额发生变化的租户数。
 -- 未提交的扣费占着该租户的余额行锁。这一轮 FOR UPDATE 等到它提交，下一句求和能看见这笔流水。
 -- 每轮提交后重新查找还没处理的余额行，所以调用期间新开的户会在后面的轮次被算进去。
