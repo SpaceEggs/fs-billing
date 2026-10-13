@@ -163,6 +163,9 @@
 - [ ] 通话扣费流水的 `occurred_at` = 话单的 `answered_at`（不是写入时间）；9-30 23:59（北京时间）接通、10-01 才处理的话单，扣费归属 9 月（来自阶段 2）
 - [ ] 话单去重以 `call_uuids` 登记表为唯一闸门：`cdrs`/`unassigned_cdrs` 的插入触发器在 `ON CONFLICT` 判断之前写登记表，所以入口不能用 `ON CONFLICT DO NOTHING` 去重，而是识别 `23505 call_uuids_pkey`（或先查登记表）并按“重复推送”处理；原始话单 `raw_cdrs.body` 保存收到的原文（来自阶段 2）
 - [ ] 建分区是维护操作：pg-boss 每日任务（`tz: Asia/Shanghai`）在单独的事务里调用 `ensureCdrPartitions(db)`；Worker 启动时先执行一次。扣费与入库的写入路径不建分区：遇到 `23514 no partition of relation … found for row` 时报错、记日志并写入 `system_alerts`（`kind = 'partition_failed'`，阶段 2 已加入检查约束），话单留给重推。持租户锁时建分区数据库报 `55000`（会与读话单后等租户锁的事务成环，见 phase-2-db.md）。维护任务失败同样写 `partition_failed`。各有测试覆盖（来自阶段 2）
+- [ ] 加强 savepoint 标记测试：直接断言标记，不依赖 advisory lock 的释放，并去掉笼统的 `.catch()`（来自阶段 2 评审）
+- [ ] `ensureCdrPartitions` 不再接受事务参数：只接收连接池/连接，使维护操作无法在写事务内执行（来自阶段 2 评审）
+- [ ] 修正 `phase-2-db.md:102` 与迁移注释的措辞：只有在分区已存在时，并发调用才不会互相串行（来自阶段 2 评审）
 
 ---
 
