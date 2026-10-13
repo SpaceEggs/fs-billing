@@ -24,7 +24,7 @@
 
 TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(db, fn)`（`packages/db/src/client.ts`）。分区表的各分区也启用 RLS 且不授予应用角色任何权限，只能经父表访问。
 
-**RLS 的信任边界。** 租户编号来自登录之后应用写入的 `app.tenant_id`，不来自 SQL 里客户端自己写的租户条件。`app.scope` 由 `withTenant`、`withAdmin`、`withSystem` 在同一事务里设置。`fs_billing_app` 是 `NOSUPERUSER NOBYPASSRLS`，不能绕过 RLS。拿到 `APP_DATABASE_URL` 并能执行任意 SQL 的主体可以自己 `set_config` 这两个变量。RLS 兜底的是应用漏写过滤，不隔离共享数据库凭据。
+**RLS 的信任边界。** 租户编号来自登录之后应用写入的 `app.tenant_id`，不来自 SQL 里客户端自己写的租户条件。`app.scope` 由 `withTenant`、`withAdmin`、`withSystem` 在同一事务里设置。`fs_billing_app` 是 `NOSUPERUSER NOBYPASSRLS`，不能绕过 RLS。拿到 `APP_DATABASE_URL` 并能执行任意 SQL 的主体可以自己 `set_config` 这两个变量。RLS 兜底的是应用漏写过滤，不隔离共享数据库凭据。租户锁的事务级标记 `app.tenant_locks` 也一样：它和 `app.scope` 一样是普通的会话变量，前提是后端代码可信，只经 `lock_tenants` 写它。能执行任意 SQL 的主体故意伪造这个标记，不在威胁模型内。“已持有”还要求 `pg_locks` 里有这把锁，而应用角色不能直接调用 advisory 锁函数（见“租户锁”），所以伪造标记只剩“同键锁由别处拿到”这一条路，范围比单靠标记时更窄。
 
 ### 表
 

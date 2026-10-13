@@ -104,6 +104,9 @@ CREATE TABLE rate_entries (
 -- 租户互斥：改费率和写流水的事务在任何写入之前调用 lock_tenants，同一租户的这些事务串行执行。
 -- 已持有 = 本事务通过 lock_tenants 拿到：事务级标记 app.tenant_locks 里有该租户，且 pg_locks 里有这把锁。
 -- 标记随事务（或回滚的保存点）一起消失，会话级的同键 advisory 锁和连接池里上一个事务都不算持有。
+-- 信任模型：app.tenant_locks 和 app.scope 一样是普通会话变量，假定后端代码可信、只经本函数写它；
+-- 能执行任意 SQL 的主体故意伪造标记不在威胁模型内。应用角色没有 pg_advisory_* 的 EXECUTE（迁移末尾），
+-- 拿不到同键锁，伪造标记也过不了 pg_locks 那一半检查，这缩小了上述假设的范围。
 --
 -- 为什么不会成环：lock_tenants 只在本事务除了以下锁之外什么都没拿时才排队等新租户的锁：
 --   1. 本事务通过 lock_tenants 拿到的租户锁，按 tenant_id 升序，只会等更大的租户；
