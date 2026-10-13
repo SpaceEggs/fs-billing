@@ -509,6 +509,128 @@ describe('缓存余额可重算核对', () => {
     }
   });
 
+  it('先更新租户再写流水，与重算交错不发生死锁，结束后缓存 = 流水合计', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await owner.pool.query(
+      'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
+      [tenant.id],
+    );
+    const writer = await owner.pool.connect();
+    const rebuilding = await owner.pool.connect();
+    let rebuilt: Promise<unknown> = Promise.resolve();
+    try {
+      const pidOf = async (client: typeof writer) =>
+        (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
+          .rows[0]!.pid;
+      const writerPid = await pidOf(writer);
+      const rebuildingPid = await pidOf(rebuilding);
+
+      await writer.query('BEGIN');
+      await writer.query('UPDATE tenants SET remark = remark WHERE id = $1', [
+        tenant.id,
+      ]);
+      rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      const settled = rebuilt.then(
+        () => 'done' as const,
+        () => 'done' as const,
+      );
+      let outcome: 'blocked' | 'done' | 'pending' = 'pending';
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const state = await Promise.race([
+          settled,
+          new Promise<'pending'>((resolve) =>
+            setTimeout(() => resolve('pending'), 10),
+          ),
+        ]);
+        if (state === 'done') {
+          outcome = 'done';
+          break;
+        }
+        const { rows } = await owner.pool.query<{ blocked: boolean }>(
+          'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
+          [rebuildingPid, writerPid],
+        );
+        if (rows[0]!.blocked) {
+          outcome = 'blocked';
+          break;
+        }
+      }
+      expect(outcome).toBe('done');
+
+      await writer.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -1, 'call:tenant-then-ledger')`,
+        [tenant.id],
+      );
+      await writer.query('COMMIT');
+      await rebuilt;
+
+      const { rows } = await owner.pool.query(
+        `SELECT balance::text AS cached,
+                (SELECT coalesce(sum(amount), 0)::text FROM ledger_entries WHERE tenant_id = $1) AS ledger_total
+         FROM tenant_balances WHERE tenant_id = $1`,
+        [tenant.id],
+      );
+      expect(rows).toEqual([{ cached: '-1', ledger_total: '-1' }]);
+      expect(
+        (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
+      ).toEqual([]);
+    } finally {
+      await writer.query('ROLLBACK');
+      await rebuilt.catch(() => undefined);
+      writer.release();
+      rebuilding.release();
+    }
+  });
+
+  it('先写流水再更新租户，与重算交错不发生死锁，结束后缓存 = 流水合计', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await owner.pool.query(
+      'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
+      [tenant.id],
+    );
+    const writer = await owner.pool.connect();
+    const rebuilding = await owner.pool.connect();
+    let rebuilt: Promise<unknown> = Promise.resolve();
+    try {
+      const pidOf = async (client: typeof writer) =>
+        (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
+          .rows[0]!.pid;
+      const writerPid = await pidOf(writer);
+      const rebuildingPid = await pidOf(rebuilding);
+
+      await writer.query('BEGIN');
+      await writer.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -1, 'call:ledger-then-tenant')`,
+        [tenant.id],
+      );
+      rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      await waitUntilBlocked(rebuildingPid, writerPid);
+      await writer.query('UPDATE tenants SET remark = remark WHERE id = $1', [
+        tenant.id,
+      ]);
+      await writer.query('COMMIT');
+      await rebuilt;
+
+      const { rows } = await owner.pool.query(
+        `SELECT balance::text AS cached,
+                (SELECT coalesce(sum(amount), 0)::text FROM ledger_entries WHERE tenant_id = $1) AS ledger_total
+         FROM tenant_balances WHERE tenant_id = $1`,
+        [tenant.id],
+      );
+      expect(rows).toEqual([{ cached: '-1', ledger_total: '-1' }]);
+      expect(
+        (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
+      ).toEqual([]);
+    } finally {
+      await writer.query('ROLLBACK');
+      await rebuilt.catch(() => undefined);
+      writer.release();
+      rebuilding.release();
+    }
+  });
+
   it('应用角色不能直接修改缓存余额', async () => {
     const error = await pgError(
       withAdmin(app.db, (tx) =>
