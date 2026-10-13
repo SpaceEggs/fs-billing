@@ -2,11 +2,16 @@ import { sql } from 'drizzle-orm';
 import pg from 'pg';
 import { describe, expect, inject, it } from 'vitest';
 import { money } from '@fs-billing/rating';
-import { connections, createTenant, pgError } from '../test/support.js';
-import { lockTenants, withAdmin, withTenant } from './client.js';
+import {
+  connections,
+  createTenant,
+  pgError,
+  waitForTenantLock,
+} from '../test/support.js';
+import { lockTenants, withAdmin, withSystem, withTenant } from './client.js';
 import { appendLedgerEntry } from './ledger.js';
 
-const { app } = connections();
+const { app, owner } = connections();
 
 /** 在一条应用角色连接上执行 fn，结束时回滚、放掉会话级 advisory 锁并归还连接。 */
 async function onAppClient<T>(fn: (client: pg.PoolClient) => Promise<T>) {
@@ -245,5 +250,62 @@ describe('先加行锁再等租户锁会被拒绝，不会死锁', () => {
       code: '55000',
       message: `租户 ${tenant.id} 的锁要在本事务的任何写入、行锁和其他锁之前拿`,
     });
+  });
+});
+
+describe('建分区不在租户锁内进行', () => {
+  it('持有租户锁时调用 cdr_ensure_partitions 报 55000，分区已存在也一样', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const error = await pgError(
+      withSystem(app.db, async (tx) => {
+        await lockTenants(tx, [tenant.id]);
+        await tx.execute(
+          sql`select cdr_ensure_partitions('2026-10-12T00:00:00+08:00')`,
+        );
+      }),
+    );
+    expect(error).toMatchObject({
+      code: '55000',
+      message: '建分区要在单独的事务里进行，不能在持有租户锁的事务里',
+    });
+  });
+
+  it('A 持租户锁、B 读过话单后等 A 的锁，A 再建缺失的分区：A 报 55000，不出现 40P01', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const holder = await app.pool.connect();
+    const reader = await app.pool.connect();
+    try {
+      await holder.query('BEGIN');
+      await holder.query(`SELECT set_config('app.scope', 'system', true)`);
+      await holder.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]);
+
+      await reader.query('BEGIN');
+      await reader.query(`SELECT set_config('app.scope', 'system', true)`);
+      await reader.query('SELECT count(*) FROM cdrs');
+      const { rows } = await reader.query<{ pid: number }>(
+        'SELECT pg_backend_pid() AS pid',
+      );
+      const readerLock = outcome(
+        reader.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenant.id]),
+      );
+      await waitForTenantLock(owner, rows[0]!.pid, tenant.id);
+
+      // 旧实现里 A 建分区要 cdrs 的 AccessExclusive，等 B 的 AccessShare；B 等 A 的租户锁，1 秒后 40P01。
+      const holderOutcome = await outcome(
+        holder.query(
+          `SELECT cdr_ensure_partitions('2032-05-15T00:00:00+08:00')`,
+        ),
+      );
+      await holder.query('ROLLBACK');
+      expect({ holder: holderOutcome, reader: await readerLock }).toEqual({
+        holder: '55000 建分区要在单独的事务里进行，不能在持有租户锁的事务里',
+        reader: 'ok',
+      });
+    } finally {
+      await reader.query('ROLLBACK');
+      await holder.query('ROLLBACK');
+      reader.release();
+      holder.release();
+    }
   });
 });

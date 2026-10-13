@@ -491,7 +491,10 @@ CREATE TABLE raw_cdrs (
   PRIMARY KEY (id, received_at)
 ) PARTITION BY RANGE (received_at);
 
--- 先无锁检查，缺分区时才加锁并再查一次，入库路径上调用不会互相串行。
+-- 先无锁检查，缺分区时才加锁并再查一次，并发调用不会互相串行。
+-- 建分区要父表的 AccessExclusive 锁，会等所有读过该表的事务。持租户锁的事务若在这里等，
+-- 而读过话单的事务正排队等它的租户锁，就成环（40P01）。所以建分区是单独事务里的维护操作，
+-- 持有租户锁时一律拒绝（分区已存在也拒绝，错误在开发时就暴露）；写入路径缺分区直接报错，不建分区。
 CREATE FUNCTION ensure_month_partition(parent text, moment timestamptz) RETURNS text
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
@@ -500,6 +503,10 @@ DECLARE
 BEGIN
   IF NOT app_is_operator() THEN
     RAISE EXCEPTION '建分区只允许管理员或系统身份' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF cardinality(tenant_locks_marked()) > 0 THEN
+    RAISE EXCEPTION '建分区要在单独的事务里进行，不能在持有租户锁的事务里'
+      USING ERRCODE = 'object_not_in_prerequisite_state';
   END IF;
   IF parent NOT IN ('cdrs', 'raw_cdrs') THEN
     RAISE EXCEPTION '% 不是按月分区的表', parent USING ERRCODE = 'invalid_parameter_value';
@@ -521,16 +528,14 @@ BEGIN
   RETURN partition_name;
 END $$;
 
--- 建 cdrs 与 raw_cdrs 的当月与下月分区；幂等，可每日调度。
-CREATE FUNCTION cdr_ensure_partitions(moment timestamptz DEFAULT now()) RETURNS SETOF text
+-- 维护操作：建 cdrs 与 raw_cdrs 从 moment 所在月起、往后 months_ahead 个月的分区；幂等，每日调度。
+CREATE FUNCTION cdr_ensure_partitions(moment timestamptz DEFAULT now(), months_ahead integer DEFAULT 1)
+RETURNS SETOF text
 LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
-  SELECT ensure_month_partition(parent, month)
-  FROM unnest(ARRAY['cdrs', 'raw_cdrs']) AS parent,
-    unnest(ARRAY[
-      moment,
-      (date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai') + interval '1 month')
-        AT TIME ZONE 'Asia/Shanghai'
-    ]) WITH ORDINALITY AS months (month, n)
+  SELECT ensure_month_partition(parent,
+    (date_trunc('month', moment AT TIME ZONE 'Asia/Shanghai') + n * interval '1 month')
+      AT TIME ZONE 'Asia/Shanghai')
+  FROM unnest(ARRAY['cdrs', 'raw_cdrs']) AS parent, generate_series(0, months_ahead) AS n
   ORDER BY parent, n
 $$;
 
@@ -692,4 +697,4 @@ GRANT SELECT ON tenant_balances, receivables, balance_discrepancies TO fs_billin
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
 REVOKE EXECUTE ON ALL PROCEDURES IN SCHEMA public FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_is_operator(), app_can_see(uuid),
-  jsonb_or_null(text), cdr_ensure_partitions(timestamptz), lock_tenants(uuid[]) TO fs_billing_app;
+  jsonb_or_null(text), cdr_ensure_partitions(timestamptz, integer), lock_tenants(uuid[]) TO fs_billing_app;

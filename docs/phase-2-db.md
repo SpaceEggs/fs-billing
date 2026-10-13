@@ -98,8 +98,11 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
   - 因此同一通电话最多归属一个租户、最多扣费一次，阶段 8 把已计费的 UUID 再分配给另一个租户会被数据库拒绝。
   - 触发器在 `ON CONFLICT` 判断之前执行，`INSERT … ON CONFLICT DO NOTHING` 挡不住登记表的冲突；去重的调用方识别 `23505 call_uuids_pkey`（种子先查登记表再插入）。
 - `raw_cdrs` 按 `received_at`（收到推送的时间，解析失败时也一定有）的北京月份分区，归档时可以整月分离分区。数据库编码是 UTF-8。`body text` 保存的是按 UTF-8 解码后的文本，不是任意字节。合法 UTF-8 原文的字符原样读回。非法 UTF-8 或正文中的 NUL 不能写入 `text`。`payload jsonb` 是由 `body` 生成的列（`jsonb_or_null(body)`），供查询使用。`body::jsonb` 报 `22P02`、`22P05`（`\u0000`）或 `22003`（数值超出 numeric）时 `payload` 为空，原文照样保存，其他错误照常抛出。`call_uuid` 可空，原文中解析不出 UUID 也能保存；去重不在这张表做。
-- `ensure_month_partition(parent, moment)` 幂等地建出 `cdrs` 或 `raw_cdrs` 在 `moment` 所在北京时间月份的分区。调用者的 `app.scope` 必须是 `admin` 或 `system`，否则在加锁之前拒绝。应用角色没有这个函数的 `EXECUTE`。先用 `to_regclass` 检查，已存在就直接返回，不加锁。不存在时才拿该分区的事务级 advisory 锁并再检查一次，然后建表并启用 RLS。入库路径上调用它不会把并发入库串行化。
-- `cdr_ensure_partitions(moment timestamptz DEFAULT now())` 以 owner 身份（`SECURITY DEFINER`）建两张表的当月与下月分区，返回 4 个分区名。应用角色有这个函数的 `EXECUTE`。函数体仍调用 `ensure_month_partition`，所以租户身份和未声明身份报 `42501` `建分区只允许管理员或系统身份`。`pnpm db:migrate` 在 `withSystem` 里调用它，种子在 `withAdmin` 里调用它。阶段 3 的 Worker 用系统身份每日调度、启动时执行一次、缺分区时按该行时间调用后重试，失败写 `partition_failed` 告警（见 plan.md 阶段 3）。没有 DEFAULT 分区。落在未建分区月份的插入直接报错，而不是悄悄进入兜底分区。
+- `ensure_month_partition(parent, moment)` 幂等地建出 `cdrs` 或 `raw_cdrs` 在 `moment` 所在北京时间月份的分区。调用者的 `app.scope` 必须是 `admin` 或 `system`，否则在加锁之前拒绝。应用角色没有这个函数的 `EXECUTE`。先用 `to_regclass` 检查，已存在就直接返回，不加锁。不存在时才拿该分区的事务级 advisory 锁并再检查一次，然后建表并启用 RLS。并发调用不会互相串行。本事务持有租户锁（`app.tenant_locks` 标记非空）时一律报 `55000` `建分区要在单独的事务里进行，不能在持有租户锁的事务里`，分区已存在也报，让错误在开发时就暴露。原因见下文“建分区是维护操作”。
+- `cdr_ensure_partitions(moment timestamptz DEFAULT now(), months_ahead integer DEFAULT 1)` 以 owner 身份（`SECURITY DEFINER`）建两张表从 `moment` 所在月起、往后 `months_ahead` 个月的分区，默认返回当月与下月共 4 个分区名。应用角色有这个函数的 `EXECUTE`。函数体仍调用 `ensure_month_partition`，所以租户身份和未声明身份报 `42501` `建分区只允许管理员或系统身份`。没有 DEFAULT 分区。落在未建分区月份的插入直接报错，而不是悄悄进入兜底分区。
+- **建分区是维护操作，不在写入路径上。** `ensureCdrPartitions(db, { moment?, monthsAhead? })`（`packages/db/src/partitions.ts`）在自己的系统身份事务里调用 `cdr_ensure_partitions`。`pnpm db:migrate` 和种子各调用一次，种子在持租户锁的事务之前调用。阶段 3 由 Worker 每日调度、启动时执行一次（见 plan.md 阶段 3）。扣费与入库的写入路径遇到缺分区时报 `23514 no partition of relation "cdrs" found for row`，Worker 记日志、写 `partition_failed` 告警，不建分区。
+  - 为什么不能在写入路径上建：`CREATE TABLE … PARTITION OF cdrs` 要父表的 AccessExclusive 锁，会等所有读过 `cdrs` 的事务。事务 A 持租户锁，事务 B 读过 `cdrs` 后在 `lock_tenants` 排队等 A（AccessShare 表锁允许排队，见上文“为什么不会成环”），这时 A 建分区就要等 B，成环，1 秒后 `40P01`。`ensure_month_partition` 在持有租户锁时报 `55000`，测试复现了这个交错。
+  - 单独的维护事务不在环里：它等读者释放 AccessShare 时，排在它后面的持锁事务的 RowExclusive 请求是软等待，PostgreSQL 的死锁检测会把它调到维护事务前面，不报错。
 
 ## 验收标准
 
@@ -122,6 +125,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 - [x] **流水按发生时间归属月份。** owner 写入北京时间 9-30 23:59 接通、10-01 00:00:30 入账的扣费：`statement_month = 2026-09`，`written_month = 2026-10`。种子中 ABC001 的 28 笔通话扣费全部归属 2026-09，合计 `-2486.30`（设计稿本月消费）。人工充值只倒填 `occurred_at` 时报 `violates check constraint "ledger_entries_kind_shape"`。应用角色把人工调账的 `occurred_at` 和 `created_at` 一起写成 `2026-09-01` 时报 `42501` `created_at 由数据库生成`。不写这两列的调账成功，且 `occurred_at = created_at = transaction_timestamp()`。
 - [x] **未归属与正式话单共用 UUID 登记表。** 先进未归属话单的 UUID 登记为 `tenant_id = NULL`，之后写入 ABC001 的正式话单时认领成功（测试读回登记表为该租户）；同一 UUID 再给 GZT007：`duplicate key value violates unique constraint "call_uuids_pkey"`；已在正式话单中的 UUID 再进未归属话单：同样报 `call_uuids_pkey`。
 - [x] **原始话单按 UTF-8 文本原样保存，按收到时间分区。** 数据库编码是 UTF-8，`body` 是 `text`。含换行、制表符、多余空格、非字母序键和重复键 `"billsec"` 的 124 字节原文：读回 `body` 与写入的字面量完全相同，`payload` 为规范化副本 `{"a": [1, 2], "z": 1, "variables": {…, "billsec": "231"}}`；北京时间 `2026-10-31 23:59:59` 收到的落入 `raw_cdrs_2026_10`。截断的原文、含 `\u0000` 的原文，以及数值 `{"n":1e1000000}` 照样保存，`payload` 为空。
+- [x] **持有租户锁时建分区被拒绝，不再死锁。** A 持租户锁，B 读过 `cdrs` 后在 `lock_tenants` 上排队，A 再调用 `cdr_ensure_partitions('2032-05-15')`（分区不存在）：A 报 `55000 建分区要在单独的事务里进行，不能在持有租户锁的事务里`，A 回滚后 B 拿到锁。旧实现里 B 收到 `40P01 deadlock detected`。分区已存在时持锁调用同样报 `55000`。
 - [x] **分区已存在时不加锁。** 另一个连接持有 `cdrs_2026_10` 与 `cdrs_2031_03` 的建分区锁时，`lock_timeout = 300ms` 下 `cdr_ensure_partitions('2026-10-12')` 立即返回 4 个分区名；`cdr_ensure_partitions('2031-03-15')`（分区不存在）报 `55P03 canceling statement due to lock timeout`。把加锁移回检查之前，这个测试失败。
 - [x] **系统告警可记录建分区失败。** `INSERT INTO system_alerts (kind, …) VALUES ('partition_failed', …)` 成功；未定义的类型报 `violates check constraint "system_alerts_kind_check"`。
 
@@ -360,8 +364,8 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 - **`cdrs` 分区键用 `started_at`。** 未接通的话单没有接通时间；呼叫开始与接通相差几秒，只影响月底最后几秒的分区归属，不影响按接通时间的账务统计。
 - **流水加 `occurred_at` 而不是改用 `created_at` 统计。** 扣费在接通之后才写入，跨月的电话按写入时间会算进下个月，plan 阶段 7 的“期末余额 = 截至月末的流水合计”在月底失败。没有加 `occurred_at ≤ created_at` 检查：接通时间来自 FreeSWITCH 的时钟，与数据库时钟有偏差时会让扣费写入失败。应用角色的 `created_at` 必须是数据库 `now()`。不用列权限，因为 Drizzle 的 INSERT 会列出该列并写 `DEFAULT`，列权限会拒绝这次合法插入。种子的历史时间走 owner 连接，触发器不限制 owner。
 - **`raw_cdrs` 按 `received_at` 分区，原文存 `text`。** 数据库编码是 UTF-8，`body` 保存解码后的文本。6 个月后归档就是整月分离分区再导出，不在大表上逐行删除。`jsonb` 会规范空白、重排键、合并重复键，不能按收到的文本原样恢复，所以原文另存，`payload` 由原文生成，两者不会不一致。解析函数只捕获 `22P02`（`invalid_text_representation`）、`22P05`（`untranslatable_character`，`\u0000`）和 `22003`（`numeric_value_out_of_range`），其他错误照常抛出。
-- **建分区先查后锁，且只允许管理员或系统身份。** 阶段 3 会在入库路径上调用建分区函数。分区几乎总是已存在，先锁后查会把所有并发入库串行化。应用角色可以执行 `cdr_ensure_partitions`，函数内部仍要求 `app.scope` 为 `admin` 或 `system`。`ensure_month_partition` 不授予应用角色。
-- **不建 DEFAULT 分区。** 落在未建分区月份的话单直接报错（Worker 重试、FreeSWITCH 落盘重推），而不是悄悄进入兜底分区。
+- **建分区先查后锁，且只允许管理员或系统身份。** 每日任务和启动时的调用几乎总是遇到已存在的分区，先查后锁让它们不互相等待。应用角色可以执行 `cdr_ensure_partitions`，函数内部仍要求 `app.scope` 为 `admin` 或 `system`。`ensure_month_partition` 不授予应用角色。
+- **不建 DEFAULT 分区，写入路径不建分区。** 落在未建分区月份的话单直接报错并告警（FreeSWITCH 落盘重推，维护任务补建分区后成功），而不是悄悄进入兜底分区，也不在持租户锁的写入事务里建分区。
 - **币种一致在类型层保证。** `appendLedgerEntry(tx, tenant: TenantRef<C>, entry: LedgerEntryInput<NoInfer<C>>)`，CNY 金额记入 USD 租户是类型错误（测试中的 `@ts-expect-error`）。数据库的金额列不带币种，由租户币种决定。
 - **金额按 `Decimal.toFixed()` 原样写入。** 不补零也不舍入，例如 `100.00` 存为 `100`；显示时用阶段 1 的 `formatMoney`。
 - **种子中的通话扣费是按日汇总的流水**（与设计稿余额流水一致），`occurred_at` 取通话当日北京时间 23:59:59，`created_at` 是次日 00:05 左右的扣费时间；未逐通生成话单；种子另含 5 条示例话单（ABC001 3 条、GZT007 2 条），其费用由阶段 1 的 `priceCall` 计算，用于演示 RLS，不计入流水。
@@ -375,7 +379,7 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 3. **登录凭据用 Better Auth 自带表：已决定，阶段 4 实现。** 认证表放在不启用 RLS 的 `auth` schema（登录时还不知道租户）；`admins`、`portal_accounts` 保留为业务资料表，各加 `auth_user_id` 一对一关联；邮箱以认证表为唯一来源；Better Auth 用单独授权的数据库角色。代价是管理员和客户不能共用一个邮箱。已列入 plan.md 阶段 4 验收标准；本阶段两张表不含密码列，不需要改。
 4. **UUID 登记表两类话单共用：已决定并实现。** 见上文“话单唯一与分区”。
 5. **原始话单按月分区并保存原文：已决定并实现。** 见上文“话单唯一与分区”。归档与恢复在阶段 8。
-6. **建分区先查后锁，覆盖 `raw_cdrs`：已决定并实现。** pg-boss 每日任务、Worker 启动时执行、缺分区重试、`partition_failed` 告警已列入 plan.md 阶段 3 验收标准；告警类型已加入检查约束。
+6. **建分区先查后锁，覆盖 `raw_cdrs`：已决定并实现。** 建分区只作为维护操作运行：pg-boss 每日任务、Worker 启动时执行；写入路径缺分区报错并写 `partition_failed` 告警，不建分区。已列入 plan.md 阶段 3 验收标准；告警类型已加入检查约束。
 
 ## 待决定事项
 

@@ -11,6 +11,7 @@ import {
   type RateEntry,
 } from '@fs-billing/rating';
 import { lockTenants, withAdmin, type Db, type Tx } from './client.js';
+import { ensureCdrPartitions } from './partitions.js';
 import { createRateVersion } from './rates.js';
 import {
   admins,
@@ -400,6 +401,10 @@ const seconds = (at: Date, n: number) => new Date(at.getTime() + n * 1000);
 export async function seedDatabase(db: Db): Promise<void> {
   const { adminIds, tenantIds } = await withAdmin(db, seedTenants);
   const idOf = (code: string) => tenantIds.get(code)!;
+  // 样例话单落在 2026 年 9、10 月。建分区不能放进下面持租户锁的事务。
+  await ensureCdrPartitions(db, {
+    moment: beijingTime('2026-09-01 00:00:00'),
+  });
   await withAdmin(db, async (tx) => {
     await lockTenants(tx, [...tenantIds.values()]);
     const seeded = new Set(
@@ -567,9 +572,6 @@ async function seedCdrs(
   idOf: (code: string) => string,
   existing: ReadonlySet<string>,
 ): Promise<void> {
-  await tx.execute(
-    sql`select cdr_ensure_partitions(${beijingTime('2026-09-01 00:00:00')})`,
-  );
   const entries = sampleRates('CNY');
   for (const c of CDRS.filter((c) => !existing.has(c.callUuid))) {
     const startedAt = beijingTime(c.startedAt);
