@@ -14,16 +14,23 @@ import { loadRatingTenant } from './rates.js';
 
 const { app, owner } = connections();
 
-async function waitUntilBlocked(pid: number) {
+/** 等到 `pid` 进入锁等待。给出 `blockerPid` 时，必须是这个后端拿着锁。 */
+async function waitUntilBlocked(pid: number, blockerPid?: number) {
   for (let attempt = 0; attempt < 200; attempt++) {
     const { rows } = await owner.pool.query<{ blocked: boolean }>(
-      'SELECT cardinality(pg_blocking_pids($1)) > 0 AS blocked',
-      [pid],
+      blockerPid === undefined
+        ? 'SELECT cardinality(pg_blocking_pids($1)) > 0 AS blocked'
+        : 'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
+      blockerPid === undefined ? [pid] : [pid, blockerPid],
     );
     if (rows[0]!.blocked) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  throw new Error(`连接 ${pid} 没有进入锁等待`);
+  throw new Error(
+    blockerPid === undefined
+      ? `连接 ${pid} 没有进入锁等待`
+      : `连接 ${pid} 没有被连接 ${blockerPid} 堵住`,
+  );
 }
 
 describe('ABC001 种子余额', () => {
@@ -428,6 +435,78 @@ describe('缓存余额可重算核对', () => {
       [tenant.id],
     );
     expect(rows).toEqual([{ cached: '15', ledger_total: '15' }]);
+  });
+
+  it('A 持有余额行锁时 B 开始重算，等待期间 C 开户 Q6NEW 并留下未提交扣费：结束后缓存与流水合计都是 -25', async () => {
+    const holder = await owner.pool.connect();
+    const rebuilding = await owner.pool.connect();
+    const opener = await owner.pool.connect();
+    let rebuilt: Promise<unknown> = Promise.resolve();
+    try {
+      const pidOf = async (client: typeof holder) =>
+        (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
+          .rows[0]!.pid;
+      const holderPid = await pidOf(holder);
+      const rebuildingPid = await pidOf(rebuilding);
+      const openerPid = await pidOf(opener);
+
+      await holder.query('BEGIN');
+      await holder.query(
+        'SELECT tenant_id FROM tenant_balances ORDER BY tenant_id FOR UPDATE',
+      );
+      rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      await waitUntilBlocked(rebuildingPid, holderPid);
+
+      const {
+        rows: [created],
+      } = await opener.query<{ id: string }>(
+        `INSERT INTO tenants (code, name, currency, overdraft_limit)
+         VALUES ('Q6NEW', '并发开户', 'CNY', 0)
+         RETURNING id`,
+      );
+      await opener.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -20, 'call:q6new-20')`,
+        [created!.id],
+      );
+      await opener.query(
+        'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
+        [created!.id],
+      );
+      await opener.query('BEGIN');
+      await opener.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -5, 'call:q6new-5')`,
+        [created!.id],
+      );
+
+      await holder.query('ROLLBACK');
+      await waitUntilBlocked(rebuildingPid, openerPid);
+      await opener.query('COMMIT');
+      await rebuilt;
+
+      const { rows } = await owner.pool.query(
+        `SELECT t.code,
+                b.balance::text AS cached,
+                (SELECT sum(e.amount)::text FROM ledger_entries e WHERE e.tenant_id = t.id) AS ledger_total
+         FROM tenants t
+         JOIN tenant_balances b ON b.tenant_id = t.id
+         WHERE t.code = 'Q6NEW'`,
+      );
+      expect(rows).toEqual([
+        { code: 'Q6NEW', cached: '-25', ledger_total: '-25' },
+      ]);
+      expect(
+        (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
+      ).toEqual([]);
+    } finally {
+      await holder.query('ROLLBACK');
+      await opener.query('ROLLBACK');
+      await rebuilt.catch(() => undefined);
+      holder.release();
+      rebuilding.release();
+      opener.release();
+    }
   });
 
   it('应用角色不能直接修改缓存余额', async () => {

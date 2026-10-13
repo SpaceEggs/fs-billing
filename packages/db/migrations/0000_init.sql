@@ -282,20 +282,30 @@ LEFT JOIN (
 ) l ON l.tenant_id = t.id
 WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
 
--- 锁协议：tenant_balances 的行锁。流水插入在同一事务内由触发器更新该行（持有到提交）；
--- 重算先按租户顺序锁住全部余额行，再用下一条语句（READ COMMITTED 下是新快照）求和。
--- 先更新了缓存的插入：重算等它提交，求和时已计入。重算拿锁后才到的插入：等重算提交，
--- 再在重算后的余额上累加（balance = balance + amount 读取最新版本）。
+-- 锁协议：按 tenant_id 顺序锁 tenant_balances 的行。流水触发器更新该行，锁持有到提交。
+-- READ COMMITTED 下每条语句各取快照。第一条 FOR UPDATE 只锁住自己快照里的余额行。
+-- 锁等待期间提交的新租户不在这个集合里。下一条语句若用新快照把它算进合计再 UPDATE，
+-- 而它还有未提交扣费，UPDATE 会等扣费提交后用旧合计覆盖触发器刚写上的金额。
+-- 所以第一条锁返回后对 tenants 加 SHARE：挡住之后的开户，并等正在进行的开户提交。
+-- SHARE 与扣费在 tenants 上的外键 FOR KEY SHARE 不冲突，不会和已持有的余额行锁死锁。
+-- 接着再按 tenant_id 锁住当前快照的全部余额行，未提交扣费等到提交。求和与 UPDATE
+-- 只处理这个锁住的集合，并用再下一条语句的新快照，刚等到的扣费已经计入。
+-- 重算拿到某行的锁之后才插入的流水会等重算提交，再按 balance = balance + amount 累加。
 CREATE FUNCTION rebuild_tenant_balances() RETURNS integer
 LANGUAGE plpgsql AS $$
 DECLARE
+  locked uuid[];
   fixed integer;
 BEGIN
   PERFORM 1 FROM tenant_balances ORDER BY tenant_id FOR UPDATE;
+  LOCK TABLE tenants IN SHARE MODE;
+  SELECT coalesce(array_agg(tenant_id ORDER BY tenant_id), '{}'::uuid[]) INTO locked
+  FROM (SELECT tenant_id FROM tenant_balances ORDER BY tenant_id FOR UPDATE) AS held;
   WITH totals AS (
-    SELECT t.id AS tenant_id, coalesce(sum(e.amount), 0) AS total
-    FROM tenants t LEFT JOIN ledger_entries e ON e.tenant_id = t.id
-    GROUP BY t.id
+    SELECT held_id AS tenant_id, coalesce(sum(e.amount), 0) AS total
+    FROM unnest(locked) AS held_id
+    LEFT JOIN ledger_entries e ON e.tenant_id = held_id
+    GROUP BY held_id
   ), updated AS (
     UPDATE tenant_balances b SET balance = totals.total, updated_at = now()
     FROM totals
