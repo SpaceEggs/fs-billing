@@ -282,41 +282,46 @@ LEFT JOIN (
 ) l ON l.tenant_id = t.id
 WHERE b.balance IS DISTINCT FROM coalesce(l.total, 0);
 
--- 锁顺序：只按 tenant_id 锁 tenant_balances，全程不对 tenants 加锁。
--- 先改租户再写流水，和先写流水再改租户，都会拿到余额行锁。
--- 重算若在这两步之间再锁 tenants，两种顺序必有一种与重算成环（40P01）。
--- READ COMMITTED 下一次 FOR UPDATE 只锁本快照的行。等待期间提交的新租户不在里面。
--- 下一条语句若把它们算进合计再 UPDATE，未提交扣费提交后会被旧合计覆盖。
--- 所以循环锁到快照里没有未锁的余额行，再在下一条语句求和并更新这个集合。
--- 未提交扣费在 FOR UPDATE 上等到提交，合计包含它。
--- 集合确定后才提交的开户不更新，触发器写入的余额仍等于流水合计。
--- 拿到行锁之后才插入的流水会等重算提交，再按 balance = balance + amount 累加。
-CREATE FUNCTION rebuild_tenant_balances() RETURNS integer
+-- 一次只锁一个租户的余额行，写回后 COMMIT，再处理下一个。任何时刻只拿着一个租户的锁。
+-- 调用：自动提交的连接上执行 CALL rebuild_tenant_balances(NULL)。
+-- 不要包在已经 BEGIN 的事务里。过程里的 COMMIT 会把那个事务一起提交。
+-- fixed 是余额发生变化的租户数。
+-- 未提交的扣费占着该租户的余额行锁。这一轮 FOR UPDATE 等到它提交，下一句求和能看见这笔流水。
+-- 每轮提交后重新查找还没处理的余额行，所以调用期间新开的户会在后面的轮次被算进去。
+-- 最后一次查找之后才提交的开户不在这次调用里。开户触发器写下的余额仍等于流水合计。
+-- 拿到行锁之后才插入的流水会等这次 COMMIT，再按 balance = balance + amount 累加。
+-- 同一事务给多个租户写流水时，按 tenant_id 升序 INSERT。应用侧用 appendLedgerEntries。
+CREATE PROCEDURE rebuild_tenant_balances(OUT fixed integer)
 LANGUAGE plpgsql AS $$
 DECLARE
-  locked uuid[];
-  fixed integer;
+  done uuid[] := '{}';
+  tid uuid;
+  total numeric;
+  changed integer;
 BEGIN
+  fixed := 0;
   LOOP
-    SELECT coalesce(array_agg(tenant_id ORDER BY tenant_id), '{}'::uuid[]) INTO locked
-    FROM (SELECT tenant_id FROM tenant_balances ORDER BY tenant_id FOR UPDATE) AS held;
-    EXIT WHEN NOT EXISTS (
-      SELECT 1 FROM tenant_balances WHERE tenant_id <> ALL (locked)
-    );
+    SELECT b.tenant_id INTO tid
+    FROM tenant_balances b
+    WHERE b.tenant_id <> ALL (done)
+    ORDER BY b.tenant_id
+    LIMIT 1
+    FOR UPDATE;
+
+    EXIT WHEN NOT FOUND;
+
+    SELECT coalesce(sum(e.amount), 0) INTO total
+    FROM ledger_entries e
+    WHERE e.tenant_id = tid;
+
+    UPDATE tenant_balances
+    SET balance = total, updated_at = now()
+    WHERE tenant_id = tid AND balance IS DISTINCT FROM total;
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    fixed := fixed + changed;
+    done := done || tid;
+    COMMIT;
   END LOOP;
-  WITH totals AS (
-    SELECT held_id AS tenant_id, coalesce(sum(e.amount), 0) AS total
-    FROM unnest(locked) AS held_id
-    LEFT JOIN ledger_entries e ON e.tenant_id = held_id
-    GROUP BY held_id
-  ), updated AS (
-    UPDATE tenant_balances b SET balance = totals.total, updated_at = now()
-    FROM totals
-    WHERE b.tenant_id = totals.tenant_id AND b.balance <> totals.total
-    RETURNING 1
-  )
-  SELECT count(*)::integer INTO fixed FROM updated;
-  RETURN fixed;
 END $$;
 
 -- 话单：按北京时间自然月分区。通话 UUID 由非分区登记表保证全局唯一，
@@ -597,5 +602,6 @@ GRANT SELECT, INSERT ON ledger_entries, receivable_settlements, raw_cdrs, operat
 GRANT SELECT ON tenant_balances, receivables, balance_discrepancies TO fs_billing_app;
 
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+REVOKE EXECUTE ON ALL PROCEDURES IN SCHEMA public FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_scope(), app_tenant_id(), app_is_operator(), app_can_see(uuid),
   jsonb_or_null(text), cdr_ensure_partitions(timestamptz) TO fs_billing_app;

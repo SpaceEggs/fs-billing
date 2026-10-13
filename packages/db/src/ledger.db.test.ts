@@ -9,7 +9,11 @@ import {
   tenantId,
 } from '../test/support.js';
 import { withAdmin, withTenant, type Tx } from './client.js';
-import { appendLedgerEntry, callChargeKey } from './ledger.js';
+import {
+  appendLedgerEntries,
+  appendLedgerEntry,
+  callChargeKey,
+} from './ledger.js';
 import { loadRatingTenant } from './rates.js';
 
 const { app, owner } = connections();
@@ -356,6 +360,108 @@ describe('待收款 → 已收款', () => {
   });
 });
 
+describe('同一事务的多租户流水按 tenant_id 升序加锁', () => {
+  it('输入顺序相反的两个事务都先锁较小的 tenant_id，互相等待后都能提交', async () => {
+    const firstTenant = await createTenant(app, 'CNY');
+    const secondTenant = await createTenant(app, 'CNY');
+    const [low, high] =
+      firstTenant.id < secondTenant.id
+        ? [firstTenant, secondTenant]
+        : [secondTenant, firstTenant];
+    const admin = await adminId(owner);
+    const gift = (
+      tenant: typeof low,
+      idempotencyKey: string,
+      amount: string,
+    ) => ({
+      tenant,
+      entry: {
+        kind: 'gift' as const,
+        amount: money('CNY', amount),
+        note: '并发加锁',
+        adminId: admin,
+        idempotencyKey,
+      },
+    });
+
+    const holder = await owner.pool.connect();
+    const jobs: Promise<unknown>[] = [];
+    let markHighWaiting: () => void = () => undefined;
+    const highWaiting = new Promise<void>((resolve) => {
+      markHighWaiting = resolve;
+    });
+    let markLowWaiting: () => void = () => undefined;
+    const lowWaiting = new Promise<void>((resolve) => {
+      markLowWaiting = resolve;
+    });
+    try {
+      const holderPid = (
+        await holder.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')
+      ).rows[0]!.pid;
+      await holder.query('BEGIN');
+      await holder.query(
+        'SELECT tenant_id FROM tenant_balances WHERE tenant_id = $1 FOR UPDATE',
+        [high.id],
+      );
+
+      let highFirstPid = 0;
+      const highFirst = withAdmin(app.db, async (tx) => {
+        const pid = await tx.execute<{ pid: number }>(
+          sql`select pg_backend_pid() as pid`,
+        );
+        highFirstPid = pid.rows[0]!.pid;
+        markHighWaiting();
+        return appendLedgerEntries(tx, [
+          gift(high, 'order-high-20', '20'),
+          gift(low, 'order-low-10', '10'),
+        ]);
+      });
+      jobs.push(highFirst);
+      await highWaiting;
+      await waitUntilBlocked(highFirstPid, holderPid);
+
+      let lowFirstPid = 0;
+      const lowFirst = withAdmin(app.db, async (tx) => {
+        const pid = await tx.execute<{ pid: number }>(
+          sql`select pg_backend_pid() as pid`,
+        );
+        lowFirstPid = pid.rows[0]!.pid;
+        markLowWaiting();
+        return appendLedgerEntries(tx, [
+          gift(low, 'order-low-1', '1'),
+          gift(high, 'order-high-2', '2'),
+        ]);
+      });
+      jobs.push(lowFirst);
+      await lowWaiting;
+      await waitUntilBlocked(lowFirstPid, highFirstPid);
+
+      await holder.query('COMMIT');
+      await highFirst;
+      await lowFirst;
+
+      const { rows } = await owner.pool.query(
+        `SELECT tenant_id, balance::text
+         FROM tenant_balances
+         WHERE tenant_id = ANY($1::uuid[])
+         ORDER BY tenant_id`,
+        [[low.id, high.id]],
+      );
+      expect(rows).toEqual([
+        { tenant_id: low.id, balance: '11' },
+        { tenant_id: high.id, balance: '22' },
+      ]);
+      expect(
+        (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
+      ).toEqual([]);
+    } finally {
+      await holder.query('ROLLBACK').catch(() => undefined);
+      await Promise.allSettled(jobs);
+      holder.release();
+    }
+  });
+});
+
 describe('缓存余额可重算核对', () => {
   it('缓存被改坏后，balance_discrepancies 列出该租户，rebuild_tenant_balances 修复', async () => {
     const tenant = await createTenant(app, 'CNY');
@@ -382,8 +488,7 @@ describe('缓存余额可重算核对', () => {
       { code: tenant.code, cached_balance: '999', ledger_total: '20' },
     ]);
     expect(
-      (await owner.pool.query('SELECT rebuild_tenant_balances() AS fixed'))
-        .rows,
+      (await owner.pool.query('CALL rebuild_tenant_balances(NULL)')).rows,
     ).toEqual([{ fixed: 1 }]);
     expect((await discrepancies()).rows).toEqual([]);
   });
@@ -418,7 +523,7 @@ describe('缓存余额可重算核对', () => {
       const { rows } = await rebuilding.query<{ pid: number }>(
         'SELECT pg_backend_pid() AS pid',
       );
-      const rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      const rebuilt = rebuilding.query('CALL rebuild_tenant_balances(NULL)');
       await waitUntilBlocked(rows[0]!.pid);
       await charging.query('COMMIT');
       await rebuilt;
@@ -454,7 +559,7 @@ describe('缓存余额可重算核对', () => {
       await holder.query(
         'SELECT tenant_id FROM tenant_balances ORDER BY tenant_id FOR UPDATE',
       );
-      rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      rebuilt = rebuilding.query('CALL rebuild_tenant_balances(NULL)');
       await waitUntilBlocked(rebuildingPid, holderPid);
 
       const {
@@ -509,59 +614,55 @@ describe('缓存余额可重算核对', () => {
     }
   });
 
-  it('先更新租户再写流水，与重算交错不发生死锁，结束后缓存 = 流水合计', async () => {
+  it('先改租户，再重算，再写流水：两边都进入锁等待，提交后缓存等于流水合计', async () => {
     const tenant = await createTenant(app, 'CNY');
+    const admin = await adminId(owner);
+    await withAdmin(app.db, (tx) =>
+      appendLedgerEntry(tx, tenant, {
+        kind: 'gift',
+        amount: money('CNY', '20'),
+        note: '线路故障补偿',
+        adminId: admin,
+        idempotencyKey: 'gift-before-rebuild',
+      }),
+    );
     await owner.pool.query(
       'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
       [tenant.id],
     );
+
     const writer = await owner.pool.connect();
+    const holder = await owner.pool.connect();
     const rebuilding = await owner.pool.connect();
     let rebuilt: Promise<unknown> = Promise.resolve();
+    let inserted: Promise<unknown> = Promise.resolve();
     try {
       const pidOf = async (client: typeof writer) =>
         (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
           .rows[0]!.pid;
       const writerPid = await pidOf(writer);
+      const holderPid = await pidOf(holder);
       const rebuildingPid = await pidOf(rebuilding);
 
       await writer.query('BEGIN');
       await writer.query('UPDATE tenants SET remark = remark WHERE id = $1', [
         tenant.id,
       ]);
-      rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
-      const settled = rebuilt.then(
-        () => 'done' as const,
-        () => 'done' as const,
-      );
-      let outcome: 'blocked' | 'done' | 'pending' = 'pending';
-      for (let attempt = 0; attempt < 200; attempt++) {
-        const state = await Promise.race([
-          settled,
-          new Promise<'pending'>((resolve) =>
-            setTimeout(() => resolve('pending'), 10),
-          ),
-        ]);
-        if (state === 'done') {
-          outcome = 'done';
-          break;
-        }
-        const { rows } = await owner.pool.query<{ blocked: boolean }>(
-          'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
-          [rebuildingPid, writerPid],
-        );
-        if (rows[0]!.blocked) {
-          outcome = 'blocked';
-          break;
-        }
-      }
-      expect(outcome).toBe('done');
-
-      await writer.query(
-        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
-         VALUES ($1, 'call_charge', -1, 'call:tenant-then-ledger')`,
+      await holder.query('BEGIN');
+      await holder.query(
+        'SELECT tenant_id FROM tenant_balances WHERE tenant_id = $1 FOR UPDATE',
         [tenant.id],
       );
+      rebuilt = rebuilding.query('CALL rebuild_tenant_balances(NULL)');
+      await waitUntilBlocked(rebuildingPid, holderPid);
+      inserted = writer.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -7, 'call:tenant-then-rebuild')`,
+        [tenant.id],
+      );
+      await waitUntilBlocked(writerPid, rebuildingPid);
+      await holder.query('ROLLBACK');
+      await inserted;
       await writer.query('COMMIT');
       await rebuilt;
 
@@ -571,24 +672,129 @@ describe('缓存余额可重算核对', () => {
          FROM tenant_balances WHERE tenant_id = $1`,
         [tenant.id],
       );
-      expect(rows).toEqual([{ cached: '-1', ledger_total: '-1' }]);
+      expect(rows).toEqual([{ cached: '13', ledger_total: '13' }]);
       expect(
         (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
       ).toEqual([]);
     } finally {
-      await writer.query('ROLLBACK');
+      await holder.query('ROLLBACK').catch(() => undefined);
+      await inserted.catch(() => undefined);
       await rebuilt.catch(() => undefined);
+      await writer.query('ROLLBACK').catch(() => undefined);
       writer.release();
+      holder.release();
       rebuilding.release();
     }
   });
 
-  it('先写流水再更新租户，与重算交错不发生死锁，结束后缓存 = 流水合计', async () => {
-    const tenant = await createTenant(app, 'CNY');
+  it('重算等在高位租户上时，中途开户并按 tenant_id 升序扣两个租户，不发生死锁', async () => {
+    const lowId = '00000000-0000-0000-0000-000000000012';
+    const midId = 'ffffffff-ffff-ffff-ffff-fffffffffff2';
+    const highId = 'ffffffff-ffff-ffff-ffff-fffffffffff3';
     await owner.pool.query(
-      'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
-      [tenant.id],
+      `INSERT INTO tenants (id, code, name, currency, overdraft_limit) VALUES
+         ($1, 'TENB2', '乙', 'CNY', 0),
+         ($2, 'TENC3', '丙', 'CNY', 0)`,
+      [midId, highId],
     );
+    await owner.pool.query(
+      'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = ANY($1::uuid[])',
+      [[midId, highId]],
+    );
+
+    const holder = await owner.pool.connect();
+    const rebuilding = await owner.pool.connect();
+    const writer = await owner.pool.connect();
+    let rebuilt: Promise<unknown> = Promise.resolve();
+    try {
+      const pidOf = async (client: typeof holder) =>
+        (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid'))
+          .rows[0]!.pid;
+      const holderPid = await pidOf(holder);
+      const rebuildingPid = await pidOf(rebuilding);
+      const writerPid = await pidOf(writer);
+
+      await holder.query('BEGIN');
+      await holder.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -4, 'call:high-open')`,
+        [highId],
+      );
+      rebuilt = rebuilding.query('CALL rebuild_tenant_balances(NULL)');
+      await waitUntilBlocked(rebuildingPid, holderPid);
+
+      await writer.query(
+        `INSERT INTO tenants (id, code, name, currency, overdraft_limit)
+         VALUES ($1, 'TENA12', '甲', 'CNY', 0)`,
+        [lowId],
+      );
+      await writer.query(
+        'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = $1',
+        [lowId],
+      );
+      await writer.query('BEGIN');
+      await writer.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -8, 'call:low-open')`,
+        [lowId],
+      );
+      await writer.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -3, 'call:mid-open')`,
+        [midId],
+      );
+      const { rows: waiting } = await owner.pool.query<{ blocked: boolean }>(
+        'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
+        [writerPid, rebuildingPid],
+      );
+      expect(waiting).toEqual([{ blocked: false }]);
+
+      await holder.query('COMMIT');
+      await waitUntilBlocked(rebuildingPid, writerPid);
+      await writer.query('COMMIT');
+      await rebuilt;
+
+      const { rows } = await owner.pool.query(
+        `SELECT t.code, b.balance::text AS cached,
+                (SELECT coalesce(sum(e.amount), 0)::text FROM ledger_entries e WHERE e.tenant_id = t.id) AS ledger_total
+         FROM tenants t
+         JOIN tenant_balances b ON b.tenant_id = t.id
+         WHERE t.id = ANY($1::uuid[])
+         ORDER BY t.id`,
+        [[lowId, midId, highId]],
+      );
+      expect(rows).toEqual([
+        { code: 'TENA12', cached: '-8', ledger_total: '-8' },
+        { code: 'TENB2', cached: '-3', ledger_total: '-3' },
+        { code: 'TENC3', cached: '-4', ledger_total: '-4' },
+      ]);
+      expect(
+        (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
+      ).toEqual([]);
+    } finally {
+      await holder.query('ROLLBACK').catch(() => undefined);
+      await writer.query('ROLLBACK').catch(() => undefined);
+      await rebuilt.catch(() => undefined);
+      holder.release();
+      rebuilding.release();
+      writer.release();
+    }
+  });
+
+  it('先扣高位租户再扣低位租户，与重算交错，不发生死锁且缓存等于流水合计', async () => {
+    const lowId = '00000000-0000-0000-0000-000000000011';
+    const highId = 'ffffffff-ffff-ffff-ffff-fffffffffff1';
+    await owner.pool.query(
+      `INSERT INTO tenants (id, code, name, currency, overdraft_limit) VALUES
+         ($1, 'LOW011', '低位', 'CNY', 0),
+         ($2, 'HIGHF1', '高位', 'CNY', 0)`,
+      [lowId, highId],
+    );
+    await owner.pool.query(
+      'UPDATE tenant_balances SET balance = 999 WHERE tenant_id = ANY($1::uuid[])',
+      [[lowId, highId]],
+    );
+
     const writer = await owner.pool.connect();
     const rebuilding = await owner.pool.connect();
     let rebuilt: Promise<unknown> = Promise.resolve();
@@ -602,29 +808,42 @@ describe('缓存余额可重算核对', () => {
       await writer.query('BEGIN');
       await writer.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
-         VALUES ($1, 'call_charge', -1, 'call:ledger-then-tenant')`,
-        [tenant.id],
+         VALUES ($1, 'call_charge', -1, 'call:high-then-low')`,
+        [highId],
       );
-      rebuilt = rebuilding.query('SELECT rebuild_tenant_balances()');
+      rebuilt = rebuilding.query('CALL rebuild_tenant_balances(NULL)');
       await waitUntilBlocked(rebuildingPid, writerPid);
-      await writer.query('UPDATE tenants SET remark = remark WHERE id = $1', [
-        tenant.id,
-      ]);
+      await writer.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key)
+         VALUES ($1, 'call_charge', -2, 'call:low-while-rebuild')`,
+        [lowId],
+      );
+      const { rows: still } = await owner.pool.query<{ blocked: boolean }>(
+        'SELECT $2::integer = ANY (pg_blocking_pids($1)) AS blocked',
+        [rebuildingPid, writerPid],
+      );
+      expect(still).toEqual([{ blocked: true }]);
       await writer.query('COMMIT');
       await rebuilt;
 
       const { rows } = await owner.pool.query(
-        `SELECT balance::text AS cached,
-                (SELECT coalesce(sum(amount), 0)::text FROM ledger_entries WHERE tenant_id = $1) AS ledger_total
-         FROM tenant_balances WHERE tenant_id = $1`,
-        [tenant.id],
+        `SELECT t.code, b.balance::text AS cached,
+                (SELECT coalesce(sum(e.amount), 0)::text FROM ledger_entries e WHERE e.tenant_id = t.id) AS ledger_total
+         FROM tenants t
+         JOIN tenant_balances b ON b.tenant_id = t.id
+         WHERE t.id = ANY($1::uuid[])
+         ORDER BY t.id`,
+        [[lowId, highId]],
       );
-      expect(rows).toEqual([{ cached: '-1', ledger_total: '-1' }]);
+      expect(rows).toEqual([
+        { code: 'LOW011', cached: '-2', ledger_total: '-2' },
+        { code: 'HIGHF1', cached: '-1', ledger_total: '-1' },
+      ]);
       expect(
         (await owner.pool.query('SELECT code FROM balance_discrepancies')).rows,
       ).toEqual([]);
     } finally {
-      await writer.query('ROLLBACK');
+      await writer.query('ROLLBACK').catch(() => undefined);
       await rebuilt.catch(() => undefined);
       writer.release();
       rebuilding.release();

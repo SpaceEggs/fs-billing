@@ -55,7 +55,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 1. **余额 = 流水合计。** `balance(t) = SUM(ledger_entries.amount WHERE tenant_id = t)`，没有任何流水时为 0。
 2. **流水只增。** 任何角色（包括 owner）对 `ledger_entries` 的 `UPDATE`、`DELETE`、`TRUNCATE` 都被触发器拒绝；应用角色另外没有这三项权限。改错用一笔反向“调账”冲正。
 3. **状态变化另记。** 赊账充值的收款状态 = 是否存在对应的 `receivable_settlements` 行；`receivables` 视图（`security_invoker`，受 RLS 约束）给出 `pending` / `received`。
-4. **缓存余额可重算核对。** `tenant_balances.balance` 由流水插入触发器在同一事务内累加（`balance = balance + amount`，行锁持有到提交）。`balance_discrepancies` 列出缓存与流水合计不同的租户，正常情况下为空。`rebuild_tenant_balances()` 只按 `tenant_id` 顺序锁 `tenant_balances` 行，不对 `tenants` 加锁。先改 `tenants` 再写流水，与先写流水再改 `tenants`，都会拿到余额行锁。重算若在这两步之间再锁 `tenants`，两种顺序里必有一种成环。`READ COMMITTED` 下每条语句各取快照，一次 `FOR UPDATE` 只锁住本快照里的行。等待期间可以开户，这些新行不在该快照里。若下一条语句直接把它们算进合计再 `UPDATE`，租户上未提交的扣费提交后，更新会用旧合计覆盖缓存。函数因此循环加锁，直到当前快照里没有未锁的余额行。未提交的扣费会等到提交。求和与 `UPDATE` 只处理这批锁住的租户，并用下一条语句的新快照，所以刚提交的扣费已经计入。这批锁确定之后才提交的开户不被覆盖，触发器维护的余额仍等于流水合计。重算拿到行锁之后才插入的流水会等重算提交，再在新余额上累加。
+4. **缓存余额可重算核对。** `tenant_balances.balance` 由流水插入触发器在同一事务内累加（`balance = balance + amount`，行锁持有到提交）。`balance_discrepancies` 列出缓存与流水合计不同的租户，正常情况下为空。重算是过程 `rebuild_tenant_balances(OUT fixed integer)`。在自动提交的连接上调用 `CALL rebuild_tenant_balances(NULL)`，`fixed` 是这次余额有变化的租户数。不要把这次 `CALL` 放进已经 `BEGIN` 的事务，过程内部的 `COMMIT` 会把那个事务一起提交。每一轮只锁一个还没处理过的 `tenant_balances` 行（`FOR UPDATE`），把该租户的流水求和后写回缓存，然后 `COMMIT`。任何时刻只拿着一个租户的锁，所以重算不会和扣费事务死锁。未提交的扣费占着该租户的余额行锁，这一轮 `FOR UPDATE` 会等到它提交，下一句求和已经能看见这笔流水。重算提交之后才插入的流水会等这把锁，再按 `balance = balance + amount` 累加。每轮提交后重新查找还没处理的余额行，调用期间新开的户会在后面的轮次被算进去。最后一次查找之后才提交的开户不在这次调用里，开户触发器写下的余额仍等于当时的流水合计。同一个事务要给多个租户写流水时，必须按 `tenant_id` 升序拿余额行锁。应用代码用 `appendLedgerEntries`，它先排序再逐笔调用 `appendLedgerEntry`。直接写 SQL 时也按这个顺序 `INSERT`。两个多租户事务的加锁顺序相反时会互相死锁。重算每次只锁一个租户，不参与这个环。
 5. **按类型的符号。** `recharge`、`credit_recharge`、`gift`：金额 > 0，必须有操作管理员；`adjustment`：金额 ≠ 0，必须有操作管理员和非空原因；`call_charge`：金额 < 0，无操作管理员。由检查约束保证。
 6. **重试收敛。** 每笔流水带幂等键（通话扣费为 `call:<通话 UUID>`）；`appendLedgerEntry` 以 `ON CONFLICT DO NOTHING` 写入，重试返回原记录，键相同但内容不同则报错。
 7. **发生时间决定归属。** `occurred_at` 是流水在账务上发生的时刻，门户按天合并、月账单和核对任务一律按它的北京日期/月份统计，`created_at` 只是写入时间。通话扣费的 `occurred_at` 是接通时间（`LedgerEntryInput` 的 `call_charge` 分支必须给 `occurredAt`）。人工操作不写这两列，都取这次 `INSERT` 的 `now()`，检查约束 `ledger_entries_kind_shape` 要求它们相等。`fs_billing_app` 插入时若 `created_at` 不是 `now()`，触发器 `ledger_entries_stamp_created_at` 拒绝。该表没有 `UPDATE`。历史种子由 owner 连接写入 `created_at`。9-30 23:59 接通、10-01 00:00:30 才写入的扣费归属 9 月。
@@ -366,4 +366,4 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 
 ## 范围边界
 
-本阶段只提供表结构、约束、身份与少量读写函数（`appendLedgerEntry`、`createRateVersion`、`loadRatingTenant`）。话单入库与扣费流程（阶段 3）、登录（阶段 4）、开户与余额操作界面（阶段 5）在后续阶段实现。
+本阶段只提供表结构、约束、身份与少量读写函数（`appendLedgerEntry`、`appendLedgerEntries`、`createRateVersion`、`loadRatingTenant`）。话单入库与扣费流程（阶段 3）、登录（阶段 4）、开户与余额操作界面（阶段 5）在后续阶段实现。
