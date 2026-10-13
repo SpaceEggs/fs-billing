@@ -13,10 +13,13 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "vitest run",
+    "test:db": "vitest run --config vitest.db.config.ts",
     "build": "pnpm -r build",
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @fs-billing/db migrate",
+    "db:seed": "pnpm --filter @fs-billing/db seed",
     "dev:setup": "pnpm check && pnpm db:up",
     "coverage": "vitest run --coverage"
   },
