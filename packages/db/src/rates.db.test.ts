@@ -186,7 +186,7 @@ describe('费率版本', () => {
       expect(started.rows[0]!.still_future).toBe(true);
       const wait = Number(started.rows[0]!.wait_seconds);
       expect(wait).toBeGreaterThan(0);
-      await editor.query('SELECT pg_sleep($1)', [wait + 0.3]);
+      await editor.query('SELECT pg_sleep($1::double precision + 0.3)', [wait]);
       const crossed = await editor.query<{
         past: boolean;
         txn_before: boolean;
