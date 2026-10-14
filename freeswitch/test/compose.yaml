@@ -1,0 +1,59 @@
+services:
+  freeswitch:
+    image: ${FS_IMAGE:-fs-billing-freeswitch:local}
+    network_mode: host
+    environment:
+      WORKER_SHARED_KEY: ${WORKER_SHARED_KEY:?WORKER_SHARED_KEY is required}
+      BILLING_WORKER_URL: ${BILLING_WORKER_URL:-http://127.0.0.1:3001}
+    volumes:
+      - ./conf:/opt/fs-integration/conf:ro
+      - ../scripts:/usr/share/freeswitch/scripts:ro
+      - ./fs_check.lua:/opt/fs-integration/fs_check.lua:ro
+      - ../dialplan:/opt/fs-billing/dialplan:ro
+      - ../autoload_configs:/opt/fs-billing/autoload_configs:ro
+      - ${FS_LOG_DIR:?FS_LOG_DIR is required}/cdr:/var/lib/freeswitch/cdr
+    healthcheck:
+      test: ['CMD', 'fs_cli', '-x', 'status']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  nginx:
+    image: nginx:1.28.0-bookworm
+    network_mode: host
+    environment:
+      WORKER_SHARED_KEY: ${WORKER_SHARED_KEY:?WORKER_SHARED_KEY is required}
+    entrypoint: ['/bin/sh', '/templates/entrypoint.sh']
+    volumes:
+      - ./nginx:/templates:ro
+  sipp:
+    image: fs-billing-sipp:local
+    build:
+      context: .
+      dockerfile: sipp.Dockerfile
+    network_mode: host
+    profiles: ['tools']
+    volumes:
+      - ./sipp:/scenarios:ro
+      - ${FS_LOG_DIR:?FS_LOG_DIR is required}:/logs
+    working_dir: /logs
+  stall:
+    image: python:3.13.7-slim-bookworm
+    network_mode: host
+    profiles: ['tools']
+    command:
+      - python
+      - -u
+      - -c
+      - |
+        import socket, threading
+        listener = socket.socket()
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(('127.0.0.1', 3003))
+        listener.listen()
+        def stall(connection):
+            with connection:
+                while connection.recv(65536):
+                    pass
+        while True:
+            connection, _ = listener.accept()
+            threading.Thread(target=stall, args=(connection,), daemon=True).start()

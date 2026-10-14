@@ -2,9 +2,23 @@
 
 示例实现 [design.md](../docs/design.md) §4 的呼叫前授权与话单推送。测试机准备见 [准备清单](../docs/freeswitch.md)，HTTP 契约见 [Worker 接口](../docs/worker-api.md)。地址、gateway 与密钥都需要替换成测试机配置。
 
+## 服务器 A 安装与启动
+
+以 root 运行 [install.sh](install/install.sh)，令牌放在受限文件 `/run/secrets/signalwire_token`。脚本安装固定版本的 `freeswitch-systemd`。安装包之前写入返回 101 的 `/usr/sbin/policy-rc.d`，systemd 主机上再 `systemctl mask freeswitch.service`，包脚本不能启动带 vanilla 配置的服务。全部步骤成功后解除屏蔽并执行 `systemctl disable --now freeswitch.service`；任何一步失败，服务保持屏蔽且停止，修复后重新执行脚本。`policy-rc.d` 在退出时移除或恢复原文件。Docker 构建没有 systemd，只使用 `policy-rc.d`。
+
+vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_password` 为 `1234`。服务停用期间完成以下步骤：
+
+1. 替换 `/etc/freeswitch/autoload_configs/event_socket.conf.xml`，将 `listen-ip` 设为 `127.0.0.1`，将 `password` 换成新的强密码。
+2. 修改 `/etc/freeswitch/vars.xml` 的 `default_password`，换成新的强密码。
+3. 替换 `/etc/freeswitch/sip_profiles/`、`directory/` 与 `dialplan/` 中的 vanilla 示例，使用服务器 A 的 SIP 接入、租户、上游网关与下述 billing 拨号计划配置。
+4. 替换 `/etc/freeswitch/autoload_configs/modules.conf.xml`，只加载已安装且需要的模块，包括 `mod_lua` 与 `mod_json_cdr`。完成下述授权脚本与话单推送配置。
+5. 完成上述配置后，执行 `systemctl enable --now freeswitch`。
+
 ## 安装授权脚本与拨号计划
 
-1. 加载 `mod_lua` 与 `mod_json_cdr`。在 **mod_lua 使用的 Lua 版本**中安装 `Lua-cURL` 与 `lua-cjson`，确认 `require('cURL.safe')` 和 `require('cjson.safe')` 成功。脚本用 libcurl 的 `timeout_ms=1500` 限制整个 HTTP 请求，含连接与响应读取，不用只支持整数秒的 `mod_curl timeout`。
+自定义 `lua.conf.xml` 的 `script-directory` 时，在路径末尾保留 `;;`，以保留 Lua 默认模块搜索路径。
+
+1. 加载 `mod_lua` 与 `mod_json_cdr`。在 **mod_lua 使用的 Lua 版本**中安装 `Lua-cURL`（Lua-cURLv3）与 `lua-cjson`，确认 `require('cURL.safe')` 和 `require('cjson.safe')` 成功。脚本用 libcurl 的 `timeout_ms=1500` 限制整个 HTTP 请求，含连接与响应读取，不用只支持整数秒的 `mod_curl timeout`。
 2. 将 [billing_authorize.lua](scripts/billing_authorize.lua) 放进 FreeSWITCH 的 scripts 目录。在受限的 `vars.xml` 设置全局变量 `billing_worker_url=http://10.0.0.20:3001`、`billing_shared_key=<WORKER_SHARED_KEY>`，执行 `reloadxml`。密钥不放通道变量，避免进入原始话单。
 3. 从可信的 directory 用户或 IP 路由设置 `billing_tenant=ABC001`。拒绝客户端用 SIP header 覆盖租户标签。将 [billing.xml](dialplan/billing.xml) 放进 dialplan 目录，客户使用 `billing` context，将 `upstream` 换成实际 gateway。`billing-authorized` 只供脚本之后的内部寻路，不给客户配置为入口。
 4. 设置租户并发上限。Worker 故障时合法号码每通放行 1800 秒，并发上限用于控制透支。
@@ -45,6 +59,21 @@ lua5.3 freeswitch/tests/billing_authorize_test.lua
 ```
 
 该测试用模拟 session 与 HTTP 响应运行真实授权脚本，覆盖非法号码在请求前返回 484、合法号码遇到授权 503/超时才降级、正常授权与接通后限时挂断。`pnpm check` 同时运行 Lua harness 和拨号计划条件测试；CI 缺少 `lua5.3` 时失败，本地缺少时可跳过对应测试。
+
+完整 FreeSWITCH 联调使用 [run-integration.sh](test/run-integration.sh)，需要 Linux、Docker Compose、Node、pnpm、Python 3 与 curl。SIP 观测容器使用 `NET_RAW` 权限，只捕获回环 INVITE；授权代理记录号码与 UUID，不记录密钥。脚本启动本机 Worker、FreeSWITCH、nginx relay 与容器内 SIPp，使用数据库中的 `FSI` 前缀测试租户。租户编码不含下划线，遵守数据库约束。测试包含真实 60 秒计费限时：断言时长 59–60 秒（调度器按整秒触发；61 秒起会计成 2 分钟）、计费 1 分钟、话单金额 0.01、扣费流水 −0.01、余额从 0.01 扣到 0，并按受控 Call-ID 验证原始话单、正式话单与唯一扣费。
+
+`ALLOTTED_TIMEOUT` 的话单结束时间依赖媒体持续流动，无媒体的通话腿在现场复现中会延迟约 5 秒拆线，因此 SIPp 的客户与运营商两端在通话期间持续发送 RTP。
+
+```sh
+# 已有镜像，默认 fs-billing-freeswitch:local。
+FS_IMAGE=fs-billing-freeswitch:local bash freeswitch/test/run-integration.sh
+# 先用环境中的 SIGNALWIRE_TOKEN 作为 BuildKit secret 构建。
+bash freeswitch/test/run-integration.sh --build
+# 指定日志目录。
+bash freeswitch/test/run-integration.sh /tmp/fs-integration-local
+```
+
+`WORKER_SHARED_KEY` 未设置时脚本生成临时密钥，不写入仓库。脚本输出 PASS/FAIL 表，失败返回非零，退出时停止测试容器、Worker 与本次启动的 PostgreSQL；保留日志及测试租户，避免删除其他开发数据。[fs_check.lua](test/fs_check.lua) 在 `mod_lua` 中检查 Lua 5.3、真实 `cURL.safe` 与 `cjson.safe`，以及 JSON 整数转换。
 
 [现场复现脚本](../docs/evidence/phase-3/live-repro-pstack.sh) 使用真实 Worker HTTP 与数据库验证毫秒费率切换、故障 503 和恢复重推。它不替代 FreeSWITCH 测试机通话。
 

@@ -1,0 +1,5 @@
+<configuration name="lua.conf" description="测试 Lua 脚本路径">
+  <settings>
+    <param name="script-directory" value="/usr/share/freeswitch/scripts/?.lua;;" />
+  </settings>
+</configuration>

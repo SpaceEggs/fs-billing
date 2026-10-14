@@ -1,0 +1,8 @@
+#10 217.4   build-essential* libcurl4-openssl-dev* liblua5.3-dev* luarocks*
+#10 217.7 Removing liblua5.3-dev:amd64 (5.3.6-2) ...
+#10 222.1 	liblua5.3.so.0 => /lib/x86_64-linux-gnu/liblua5.3.so.0 (0x00007f62daff9000)
+#10 DONE 222.1s
+#11 [stage-0 4/4] COPY freeswitch/docker/entrypoint.sh /usr/local/bin/fs-in#11 [stage-0 4/4] COP#11 DONE 2.2s
+#12 naming to docker.io/library/fs-billing-freeswitch:local done
+#12 DONE 1.8s
+#12 DONE 1.7s

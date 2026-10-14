@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scenario name="计费拒绝客户呼叫">
+  <send retrans="500">
+    <![CDATA[
+INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-fsi-[call_number]
+From: <sip:fsi@[local_ip]>;tag=fsi-[call_number]
+To: <sip:[service]@[remote_ip]>
+Call-ID: [call_id]
+CSeq: 1 INVITE
+Contact: <sip:fsi@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=fsi 1 1 IN IP4 [local_ip]
+s=fsi
+c=IN IP4 [local_ip]
+t=0 0
+m=audio 6000 RTP/AVP 0
+a=rtpmap:0 PCMU/8000
+a=ptime:20
+a=sendrecv
+    ]]>
+  </send>
+  <recv response="100" optional="true" />
+  <!-- SIPp 在载入 XML 时解析整数状态码，由 runner 为每个拒绝用例替换此值。 -->
+  <recv response="484" timeout="10000" />
+  <send>
+    <![CDATA[
+ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-fsi-[call_number]
+From: <sip:fsi@[local_ip]>;tag=fsi-[call_number]
+To: <sip:[service]@[remote_ip]>[peer_tag_param]
+Call-ID: [call_id]
+CSeq: 1 ACK
+Max-Forwards: 70
+Content-Length: 0
+    ]]>
+  </send>
+</scenario>

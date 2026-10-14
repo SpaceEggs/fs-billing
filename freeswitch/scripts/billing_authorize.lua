@@ -10,14 +10,15 @@ local sip_codes = { [400] = true, [402] = true, [403] = true, [404] = true }
 local function decision(body)
     local value = json.decode(body)
     if type(value) ~= 'table' then return nil end
-    if value.allowed == true and type(value.maxSeconds) == 'number'
-        and value.maxSeconds >= 1 and value.maxSeconds <= 14400
-        and value.maxSeconds % 1 == 0 then
-        return { allowed = true, seconds = value.maxSeconds }
+    -- cjson 将 JSON 整数解成浮点数；先转整数，避免拼出 +60.0 或 SIP 402.0。
+    local seconds = type(value.maxSeconds) == 'number' and math.tointeger(value.maxSeconds)
+    local sip_code = type(value.sipCode) == 'number' and math.tointeger(value.sipCode)
+    if value.allowed == true and seconds and seconds >= 1 and seconds <= 14400 then
+        return { allowed = true, seconds = seconds }
     end
-    if value.allowed == false and sip_codes[value.sipCode]
+    if value.allowed == false and sip_codes[sip_code]
         and type(value.reason) == 'string' then
-        return { allowed = false, sip_code = value.sipCode }
+        return { allowed = false, sip_code = sip_code }
     end
     return nil
 end

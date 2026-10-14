@@ -1,0 +1,10 @@
+<include>
+  <X-PRE-PROCESS cmd="set" data="domain=127.0.0.1" />
+  <X-PRE-PROCESS cmd="set" data="local_ip_v4=127.0.0.1" />
+  <X-PRE-PROCESS cmd="set" data="external_sip_ip=127.0.0.1" />
+  <X-PRE-PROCESS cmd="set" data="external_rtp_ip=127.0.0.1" />
+  <X-PRE-PROCESS cmd="set" data="global_codec_prefs=PCMU,PCMA" />
+  <X-PRE-PROCESS cmd="set" data="outbound_codec_prefs=PCMU,PCMA" />
+  <X-PRE-PROCESS cmd="set" data="billing_worker_url=@BILLING_WORKER_URL@" />
+  <X-PRE-PROCESS cmd="set" data="billing_shared_key=@WORKER_SHARED_KEY@" />
+</include>

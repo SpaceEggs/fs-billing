@@ -1,0 +1,34 @@
+<include>
+  <domain name="$${domain}">
+    <groups>
+      <group name="billing-test">
+        <users>
+          <user id="FSIOK" cidr="127.0.0.2/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSIOK" />
+            </variables>
+          </user>
+          <user id="FSIOFF" cidr="127.0.0.3/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSIOFF" />
+            </variables>
+          </user>
+          <user id="FSILOW" cidr="127.0.0.4/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSILOW" />
+            </variables>
+          </user>
+          <user id="FSI60" cidr="127.0.0.5/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSI60" />
+            </variables>
+          </user>
+        </users>
+      </group>
+    </groups>
+  </domain>
+</include>
