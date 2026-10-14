@@ -1,6 +1,0 @@
-- dialog "导航":
-  - heading "导航" [level=2]
-  - text: FS-Billing 客户门户
-  - navigation "主导航":
-    - link "首页":
-      - /url: /

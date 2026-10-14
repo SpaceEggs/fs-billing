@@ -142,7 +142,7 @@ Evidence goes to `docs/evidence/verify-fs-billing/<RUN_ID>/<feature-id>/`. Clean
 - `NN-name.sql.txt`: the query and its rows from our container. `NN-name.cli.txt`: CLI commands and their output.
 - `launch/ready-login.http` and, after cleanup, `logs/` (`*.log.txt`: api, web, build, db-setup, and auth-seed logs, redacted) plus `revision.txt`.
 
-No evidence file ends in `.log`, because the repo's `.gitignore` ignores `*.log`. Every file the helpers write is committable as is: `git add docs/evidence/verify-fs-billing/<RUN_ID>` picks up all of it. Check with `git status --ignored --short docs/evidence/verify-fs-billing/<RUN_ID>`, which must list no `!!` entries.
+Run directories `docs/evidence/verify-fs-billing/<RUN_ID>/` are gitignored and must not be committed (screenshots bloat history). To retain a run beyond the checkout, copy it out of the repo: `cp -a docs/evidence/verify-fs-billing/<RUN_ID> /workspace/fsb-evidence/verify-fs-billing/`. Only `docs/evidence/verify-fs-billing/README.md` (a short summary) is tracked; summarize a run there and link to the retained copy.
 
 Every file written into evidence passes through redaction. Secret values from `run.env` become `[REDACTED]`, and so do `session_token=` cookie values and the JSON fields `password`, `currentPassword`, `newPassword`, `temporaryPassword`, `token`, and `secret`. The JSON rule covers values the run never knew, such as the temporary password a real reset returns. It matches across lines, so pretty-printed JSON with the key, colon, and value on separate lines is redacted too, and it handles escaped quotes inside the value. Never paste `run.env` or a raw cookie into evidence by hand.
 
@@ -180,7 +180,7 @@ VERIFY_RUN_ID=<id> $S/cleanup.sh        # a specific run
 
 Run cleanup after every run, including failed launches. Confirm with `ls docs/evidence/verify-fs-billing/<RUN_ID>/` and `docker ps --filter label=fs-billing-verify`.
 
-Commit evidence only when a PR needs the proof. Every file is committable (see [Evidence](#evidence)).
+Never commit run directories; they are gitignored. Copy runs worth keeping to `/workspace/fsb-evidence/verify-fs-billing/` and summarize them in `docs/evidence/verify-fs-billing/README.md` (see [Evidence](#evidence)).
 
 ## Helpers
 

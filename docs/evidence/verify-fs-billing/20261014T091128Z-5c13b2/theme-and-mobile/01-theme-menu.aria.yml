@@ -1,5 +1,0 @@
-- menu "主题":
-  - group:
-    - menuitemradio "浅色"
-    - menuitemradio "深色"
-    - menuitemradio "跟随系统 ✓" [checked]

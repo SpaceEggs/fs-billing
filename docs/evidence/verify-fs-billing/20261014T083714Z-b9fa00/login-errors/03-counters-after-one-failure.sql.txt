@@ -1,7 +1,0 @@
--- SELECT email_key, failed_count, locked_until FROM auth.login_failures WHERE email_key IN ('nobody-verify@example.com','abc001@example.com') ORDER BY 1
-         email_key         | failed_count | locked_until 
----------------------------+--------------+--------------
- abc001@example.com        |            1 | 
- nobody-verify@example.com |            1 | 
-(2 rows)
-

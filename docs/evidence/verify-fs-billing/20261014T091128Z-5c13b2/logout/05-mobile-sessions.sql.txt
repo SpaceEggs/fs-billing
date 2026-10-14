@@ -1,3 +1,0 @@
--- SELECT count(*) FROM auth.session s JOIN auth."user" u ON u.id = s.user_id WHERE u.email = 'abc001@example.com' AND s.expires_at > now()
-before logout: 3
-after logout: 2

@@ -1,6 +1,0 @@
-$ pnpm --filter @fs-billing/api auth:unlock hzx014@example.com
-
-> @fs-billing/api@ auth:unlock /workspace/fs-billing/apps/api
-> node --env-file-if-exists=../../.env --import tsx scripts/unlock-account.ts hzx014@example.com
-
-解除锁定计数 1 行

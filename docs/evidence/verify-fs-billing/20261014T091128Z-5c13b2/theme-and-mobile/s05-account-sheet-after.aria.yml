@@ -1,7 +1,0 @@
-- banner:
-  - button "打开导航": ☰
-  - text: 首页
-  - button "账号菜单"
-- main:
-  - region "当前余额": 当前余额 -¥35.20 CNY
-  - paragraph: 话单、月账单与余额流水将在后续版本开放。
