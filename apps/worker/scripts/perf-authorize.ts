@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
+import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
 import {
   createRateVersion,
@@ -59,15 +60,12 @@ try {
       }),
     });
     const result: unknown = await response.json();
-    if (
-      response.status !== 200 ||
-      JSON.stringify(result) !==
-        JSON.stringify({ allowed: true, maxSeconds: 14400 })
-    ) {
-      throw new Error(
-        `授权压测失败：HTTP ${response.status} ${JSON.stringify(result)}`,
-      );
-    }
+    assert.equal(response.status, 200);
+    assert.deepEqual(result, {
+      allowed: true,
+      maxSeconds: 14400,
+      billingNumber: '149912345678',
+    });
     times.push(performance.now() - start);
   }
   times.sort((a, b) => a - b);

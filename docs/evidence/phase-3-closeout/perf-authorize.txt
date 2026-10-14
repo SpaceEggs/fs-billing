@@ -1,0 +1,15 @@
+Commit: working tree on phase-3-closeout based on dc814a0 (dc814a031885c1b6effa4f036c1ee186f6d858b2), including the perf assertion fix
+Command: WORKER_SHARED_KEY=<local 26-char test key> WORKER_ALLOWED_IPS=127.0.0.1 pnpm -s perf:authorize
+Environment: Node v24.21.0, local Docker PostgreSQL 17.9, outside the Codex sandbox
+Workload: 500 rates, 1000 sequential HTTP authorizations per run
+Timing: Runs executed sequentially around 20:29–20:30 PDT, about 16 seconds total. Header timestamps mark when the batch was logged, not each run's start.
+Execution: The bot executed these runs because the Codex sandbox could not reach Docker/Postgres.
+Result: all 3 runs passed; p95 5.54 / 6.30 / 5.98 ms, below the 50 ms acceptance threshold.
+Earlier attempt: sandbox execution was blocked by Node v20.11.1 and denied Docker/Postgres access; it produced no p95 measurement.
+
+=== run 1 (batch logged at 2026-10-13 20:30:24 PDT, node v24.21.0, cmd: WORKER_SHARED_KEY=<local 26-char test key> WORKER_ALLOWED_IPS=127.0.0.1 pnpm -s perf:authorize, local docker postgres 17.9) ===
+{"entries":500,"requests":1000,"p95Ms":5.54108199999996,"maxMs":52.33035600000005,"passed":true}
+=== run 2 (batch logged at 2026-10-13 20:30:24 PDT, node v24.21.0, cmd: WORKER_SHARED_KEY=<local 26-char test key> WORKER_ALLOWED_IPS=127.0.0.1 pnpm -s perf:authorize, local docker postgres 17.9) ===
+{"entries":500,"requests":1000,"p95Ms":6.300133000000642,"maxMs":56.76063700000009,"passed":true}
+=== run 3 (batch logged at 2026-10-13 20:30:24 PDT, node v24.21.0, cmd: WORKER_SHARED_KEY=<local 26-char test key> WORKER_ALLOWED_IPS=127.0.0.1 pnpm -s perf:authorize, local docker postgres 17.9) ===
+{"entries":500,"requests":1000,"p95Ms":5.980359000000135,"maxMs":42.58106899999996,"passed":true}
