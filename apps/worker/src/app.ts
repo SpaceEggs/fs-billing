@@ -72,10 +72,17 @@ export function createWorker(dependencies?: WorkerDependencies) {
       if ('error' in resolved) {
         if (resolved.error === 'mismatch') {
           request.log.error(
-            { uuid: parsed.data.uuid, billingNumber: resolved.billingNumber },
+            {
+              uuid: parsed.data.uuid,
+              tenant,
+              dialedNumber: parsed.data.dialedNumber,
+              callee: parsed.data.callee,
+              luaBillingNumber: parsed.data.billingNumber,
+              billingNumber: resolved.billingNumber,
+            },
             '授权计费号码不一致',
           );
-          return reply.code(503).send({ error: '授权计费号码不一致' });
+          return reply.code(400).send({ error: '授权计费号码不一致' });
         }
         return reply.code(400).send({
           allowed: false,

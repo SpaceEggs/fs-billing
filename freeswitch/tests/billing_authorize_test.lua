@@ -145,6 +145,16 @@ check(bad_request.billing_authorized == 'false' and bad_request_actions.bridge =
 check(bad_request_actions.respond == '503' and bad_request_hangup == 'CALL_REJECTED',
     'HTTP 400 with unsupported SIP code must respond 503')
 
+local mismatch, mismatch_actions, mismatch_requests, mismatch_hangup = run('07551234567',
+    { error = '授权计费号码不一致' }, true, 400)
+check(mismatch_requests == 1, 'HTTP 400 mismatch must request authorization exactly once')
+check(mismatch_actions.respond == '503' and mismatch_hangup == 'CALL_REJECTED',
+    'HTTP 400 mismatch must respond 503 and reject the call')
+check(mismatch.billing_authorized == 'false' and mismatch_actions.bridge == nil,
+    'HTTP 400 mismatch must not authorize or bridge')
+check(mismatch.billing_unverified ~= 'true' and mismatch.execute_on_answer == nil,
+    'HTTP 400 mismatch must not use fallback or schedule an answer timer')
+
 local invalid_code = run('44712345678',
     { allowed = false, sipCode = 402.5, reason = 'insufficient_balance' })
 check(invalid_code.billing_unverified == 'true', 'fractional SIP code must use invalid-response fallback')

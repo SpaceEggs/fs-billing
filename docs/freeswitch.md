@@ -49,11 +49,11 @@
 |---|---|
 | 租户不存在或已停用 | 403 Forbidden |
 | 号码格式错误 | 484 Address Incomplete |
-| Lua 检测到 HTTP 200 响应的计费投影不一致 | 503 Service Unavailable |
+| Worker 返回 HTTP 400 或 Lua 检测到 HTTP 200 响应的计费投影不一致 | 503 Service Unavailable |
 | 计费号码匹配不到费率 | 404 Not Found |
 | 余额不足（已停机） | 402 Payment Required |
 
-Worker 检测到计费投影不一致时返回 HTTP 503，Lua 按授权服务不可用放行 1800 秒并设置 `billing_unverified=true`；对应话单停放，不计费。
+Worker 检测到计费投影不一致时返回 HTTP 400 `{"error":"授权计费号码不一致"}`，Lua 返回 SIP 503 并以 `CALL_REJECTED` 挂断，不降级、不桥接，不设置 `billing_unverified=true`。A-leg 话单以 `计费号码不一致` 原因进入 `unassigned_cdrs`，保存 Worker 计算的号码与通话 UUID；不写正式话单、不入扣费队列、不记账。每个 UUID 只写一条 `cdr_failed` 告警，不写 `auth_timeout`。
 
 ### 3.2 话单推送（mod_json_cdr）
 

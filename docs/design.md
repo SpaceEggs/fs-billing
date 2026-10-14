@@ -131,7 +131,7 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 **计费系统的判断逻辑**：
 
-0. 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber`。从原始拨号归一化，核验 `callee` 和可选投影。格式错误返回 HTTP 400，使用 SIP 484；号码不一致单独记录错误并返回 HTTP 503。
+0. 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber`。从原始拨号归一化，核验 `callee` 和可选投影。格式错误返回 HTTP 400，使用 SIP 484；号码不一致单独记录错误并返回 HTTP 400 `{"error":"授权计费号码不一致"}`，Lua 返回 SIP 503 与 `CALL_REJECTED`，不降级、不桥接。此路径不访问数据库、不写入、不加锁。
 1. 租户不存在或已停用 → 拒绝
 2. `billing_number` 匹配不到费率 → 拒绝
 3. 可用金额 = 余额 + 透支额度
@@ -160,7 +160,7 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 桥接保留原始 `destination_number`，不做号码改写。路由号码只接受一个可选的开头 `+` 和 1–17 位 ASCII 数字，拒绝 `|`、`,`、空格等字符，返回 SIP 484。17 位上限允许 `00` 加 15 位国际号码；计费号码另行要求首位为 1–9、总长 6–15 位。E.164 的 15 位限制只作用于 `billing_number`，不能拿来截断或改写上游号码。
 
-Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBillingNumber`，使用规范化结果匹配费率并保存到数据库。Lua 仅为请求前校验和授权超时放行生成同规则投影，在脚本开始时设置 `billing_dialed_number`，校验后设置 `billing_number`。提前返回的话单也保留原始拨号。Worker 从原始拨号重新计算，拒绝不一致的投影；Lua 要求授权成功响应包含一致的号码，缺失或不一致均返回 SIP 503。这样不会仅凭 Lua 的结果收费，也不会让授权和话单分别维护归一化逻辑。Worker 故障时原始拨号与投影仍随话单落盘，恢复后由同一函数重新核验。
+Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBillingNumber`，使用规范化结果匹配费率并保存到数据库。Lua 仅为请求前校验和授权超时放行生成同规则投影，在脚本开始时设置 `billing_dialed_number`，校验后设置 `billing_number`。提前返回的话单也保留原始拨号。Worker 从原始拨号重新计算，以 HTTP 400 拒绝不一致的投影。Lua 返回 SIP 503，不设置 `billing_unverified=true`；A-leg CDR 以 `计费号码不一致` 原因停放在 `unassigned_cdrs`，保存 Worker 计算的号码和通话 UUID，不写正式话单、不入扣费队列、不记账。每个 UUID 只写一条 `cdr_failed` 告警，不写 `auth_timeout`。Lua 要求授权成功响应包含一致的号码，缺失或不一致均返回 SIP 503。这样不会仅凭 Lua 的结果收费，也不会让授权和话单分别维护归一化逻辑。Worker 故障时原始拨号与投影仍随话单落盘，恢复后由同一函数重新核验。
 
 话单的 `callee` 保存原始拨号，`billing_number` 保存费率与账本使用的国际号码。解析使用 `billing_dialed_number`，避免 FreeSWITCH 的 `execute_extension` 改变展示号码。有效的未归属话单也保存规范化号码；号码格式错误或话单校验失败时该列为 NULL；投影不一致时保存 Worker 计算的号码，以独立原因停放并记录告警。扣费备注为 `通话扣费 <UUID> <billing_number>`。
 

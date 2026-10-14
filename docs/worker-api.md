@@ -38,7 +38,7 @@ pnpm --filter @fs-billing/worker start
 
 `tenant` 是非空字母数字编码，精确匹配（不补零、不改大小写）。`uuid` 必须为 UUID；授权不登记 UUID、不冻结余额、不产生扣费。`callee` 传规范化计费号码，`dialedNumber` 传原始拨号。`dialedNumber` 是必填的归一化输入，`billingNumber` 是可选投影。Worker 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber` 重新计算；投影必须与结果完全一致。
 
-`dialedNumber` 只允许一个可选的开头 `+` 和 1–17 位 ASCII 数字。`+` 或 `00` 开头表示国际号码，去掉该冠字；没有冠字表示国内号码，先去掉一个开头的 `0`，再加 `86`。最终计费号码必须以 1–9 开头、长度为 6–15 位。`+13055551234` 得到 `13055551234`，裸拨 `13055551234` 得到 `8613055551234`。非法字符或长度超限返回 HTTP 400、SIP 484。`callee` 或投影不一致返回 HTTP 503，并记录计费号码不一致日志。
+`dialedNumber` 只允许一个可选的开头 `+` 和 1–17 位 ASCII 数字。`+` 或 `00` 开头表示国际号码，去掉该冠字；没有冠字表示国内号码，先去掉一个开头的 `0`，再加 `86`。最终计费号码必须以 1–9 开头、长度为 6–15 位。`+13055551234` 得到 `13055551234`，裸拨 `13055551234` 得到 `8613055551234`。非法字符或长度超限返回 HTTP 400、SIP 484。`callee` 或投影不一致返回 HTTP 400 `{"error":"授权计费号码不一致"}`，日志包含 UUID、租户、原始拨号、callee、Lua 投影与 Worker 计算的号码。此路径不访问数据库、不写入、不加锁。Lua 返回 SIP 503 与 `CALL_REJECTED`，不降级、不桥接、不设置 `billing_unverified=true`。
 
 放行返回 HTTP 200：
 
@@ -85,7 +85,7 @@ pnpm --filter @fs-billing/worker start
 
 `caller_id_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。`destination_number` 不参与计费；话单校验失败且缺少 `billing_dialed_number` 时，用它作为展示被叫的回退。`billing_dialed_number` 用于展示被叫，避免 `execute_extension` 改变 `destination_number` 后丢失客户原始拨号。缺主叫不拒绝话单；原始拨号为空按号码格式错误保存为未归属话单，缺少 `billing_dialed_number` 按话单校验失败保存。
 
-CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并写 `cdr_failed` 告警，不登记通话 UUID、不入队、不收费。投影不一致的话单以 `计费号码不一致` 原因停放，保存 Worker 计算的号码并告警。
+CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并写 `cdr_failed` 告警，不登记通话 UUID、不入队、不收费。投影不一致的 A-leg 话单以 `计费号码不一致` 原因停放在 `unassigned_cdrs`，保存 Worker 计算的号码和通话 UUID，不写 `cdrs`、不入扣费队列、不记账。授权因不一致被拒绝时，每个 UUID 只写一条 `cdr_failed` 告警，重推不重复写；不写 `auth_timeout`。
 
 迁移 `0004_billing_number_not_null` 要求 `cdrs.billing_number` 非空且为首位非零的 6–15 位数字。`unassigned_cdrs.billing_number` 仅在原因是 `号码格式错误` 或以 `话单校验失败: ` 开头时允许且要求 NULL。格式错误无法生成号码，结构或时间校验失败则无法产生可信的完整话单。其他停放原因必须保存有效号码，包括投影不一致。数据库 CHECK 约束保证该对应关系。
 
