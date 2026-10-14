@@ -39,8 +39,8 @@ apps/api typecheck: Done
 
  Test Files  16 passed (16)
       Tests  309 passed (309)
-   Start at  01:04:21
-   Duration  2.33s (import 57%, tests 37%, transform 5%, worker 1%)
+   Start at  01:12:01
+   Duration  2.26s (import 58%, tests 36%, transform 5%, worker 1%)
 
 
 > @fs-billing/web@ test /workspace/fs-billing/apps/web
@@ -51,9 +51,9 @@ apps/api typecheck: Done
 
 
  Test Files  5 passed (5)
-      Tests  75 passed (75)
-   Start at  01:04:24
-   Duration  8.72s (tests 67%, environment 23%, import 4%, setup 4%, transform 2%)
+      Tests  76 passed (76)
+   Start at  01:12:04
+   Duration  8.70s (tests 67%, environment 23%, import 5%, setup 3%, transform 2%)
 
 
 > @fs-billing/web@ build /workspace/fs-billing/apps/web
@@ -66,11 +66,11 @@ rendering chunks...
 computing gzip size...
 dist/index.html                   1.10 kB │ gzip:   0.65 kB
 dist/assets/index-ZS9E1OBc.css   25.30 kB │ gzip:   5.89 kB
-dist/assets/index-BtoFmS_J.js   606.24 kB │ gzip: 193.51 kB
+dist/assets/index-bxvhbycR.js   606.24 kB │ gzip: 193.51 kB
 
 [plugin builtin:vite-reporter] 
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 327ms
+✓ built in 331ms

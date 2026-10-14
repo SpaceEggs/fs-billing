@@ -105,7 +105,7 @@ CI 新增 `web-e2e` job：安装 Chromium，启动 PostgreSQL，迁移和写入�
 
 - `apps/web/src/lib/format.test.ts`：`-35.2` CNY 为 `-¥35.20`，USD 使用 `$`，千分位、四舍五入、负零，费率 4 位小数与单位，北京时间跨日、月份与时长。
 - `apps/web/src/lib/login-errors.test.ts`：未知邮箱与密码错误同一文案，停用、身份不可用、锁定倒计时、限流和服务不可用。
-- `apps/web/src/lib/return-to.test.ts`：同区域路径保留 query 和 hash，拒绝外站、`//`、反斜杠、控制字符、其他区域和登录页，包括 `/login/`、`/%6cogin`、`/LOGIN`、`/%61dmin`、`/admin/login/` 和点段归一化后的 `//evil.example`。`sessionStorage` 抛错或不可用时从内存取回路径。
+- `apps/web/src/lib/return-to.test.ts`：同区域路径保留 query 和 hash，拒绝外站、`//`、反斜杠、控制字符、其他区域和登录页，包括 `/login/`、`/%6cogin`、`/LOGIN`、`/%61dmin`、`/admin/login/` 和点段归一化后的 `//evil.example`。`sessionStorage` 抛错或不可用时从内存取回路径；写入失败但读取成功时，以本次内存中的路径为准，不用存储中的旧路径。
 - `apps/web/src/components/theme-controls.test.tsx`：手机主题分段选择只占一个 Tab 停靠点，方向键切换并应用主题。
 - `apps/web/src/app.test.tsx`：在内存路由中渲染完整应用，验证页面内 401 弹窗、重新登录后回到原页面并显示 `-¥35.20`，未登录跳转，403 显示无权限提示且不重新登录，首页 503 与网络错误显示可重试的错误并能恢复，`sessionStorage` 不可用时过期跳转和登录后返回仍正常，退出失败（503、429、网络错误）保留会话并可重试，退出时 401 视为已退出，停用页面，锁定倒计时，登录响应决定区域，404。
 - `apps/web/e2e/auth.spec.ts`：连接真实 API 与 PostgreSQL，共 16 个场景。客户进入门户并显示种子余额 `-¥35.20`，USD 客户显示 `-$15.02`，管理员进入后台，错误登录页仍按身份进入区域，删除 cookie 和数据库撤销会话后重新登录并回到原页面，其他区域返回路径被拒绝，404，连续失败锁定并显示倒计时，未知邮箱与错误密码响应相同，停用账号，账号菜单退出，退出接口 503 时留在原页面、显示错误并可重试，首页上下文 403 显示无权限提示，主题持久化且显式浅色或深色不随系统变化、跟随系统随 `emulateMedia` 变化，375px 手机登录、账号面板用鼠标和方向键切换主题、Tab 离开分组后退出。
@@ -123,3 +123,11 @@ CI 新增 `web-e2e` job：安装 Chromium，启动 PostgreSQL，迁移和写入�
 - **小问题：“跟随系统”未断言结果。** e2e 主题用例在显式深色、浅色下切换 `emulateMedia`，断言主题不变；在跟随系统下切换，断言主题随之变化并在刷新后保持。手机用例也在跟随系统下切换 `emulateMedia`。
 
 `pnpm check` 与 `pnpm test:e2e`（16 个场景）通过。`pnpm screenshots` 已重新运行；截图页面（登录页、404）没有变化。
+
+## Codex review 2
+
+结论：APPROVE，无阻塞、无应修复项，记录见 [codex-review-2.log](evidence/phase-4-web/codex-review-2.log)。review 1 的七项均已确认修复。
+
+- **小问题：存储中的旧路径覆盖本次路径。** `setItem` 失败而 `getItem` 成功时，`takeReturnPath` 返回 `sessionStorage` 中上一次保存的路径，而不是本次过期时记下的路径。已改为优先使用内存路径（`remembered ?? stored`），只有页面重新加载、内存为空时才读存储。`return-to.test.ts` 新增“写入失败、读取返回旧路径”用例，修复前失败，修复后通过。
+
+`pnpm check` 通过。Bot 已验证 `pnpm check`、`pnpm test:e2e` 16 个场景通过，CI `check` 与 `web-e2e` 均为绿色。

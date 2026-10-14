@@ -19,30 +19,30 @@
 
 Running 16 tests using 1 worker
 
-(node:544894) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:554661) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓   1 [chromium] › e2e/auth.spec.ts:12:1 › customer login enters the portal and shows the CNY balance (661ms)
-  ✓   2 [chromium] › e2e/auth.spec.ts:24:1 › USD customer balance uses the dollar sign (419ms)
-  ✓   3 [chromium] › e2e/auth.spec.ts:31:1 › admin login enters the admin shell (472ms)
-  ✓   4 [chromium] › e2e/auth.spec.ts:41:1 › the login response kind decides the zone, not the login page used (937ms)
-  ✓   5 [chromium] › e2e/auth.spec.ts:56:1 › an expired cookie redirects to login and returns to the original page (911ms)
-  ✓   6 [chromium] › e2e/auth.spec.ts:70:1 › a session revoked in the database prompts re-login and returns to the page (904ms)
-  ✓   7 [chromium] › e2e/auth.spec.ts:96:1 › a return path from the other zone falls back to the identity home (540ms)
-  ✓   8 [chromium] › e2e/auth.spec.ts:105:1 › unknown pages show the 404 page and link home (884ms)
-[WebServer] 2026-10-14T08:04:47.245Z WARN [Better Auth]: Invalid password
-[WebServer] 2026-10-14T08:04:47.439Z WARN [Better Auth]: Invalid password
-[WebServer] 2026-10-14T08:04:47.590Z WARN [Better Auth]: Invalid password
-[WebServer] 2026-10-14T08:04:47.739Z WARN [Better Auth]: Invalid password
-[WebServer] 2026-10-14T08:04:47.898Z WARN [Better Auth]: Invalid password
+  ✓   1 [chromium] › e2e/auth.spec.ts:12:1 › customer login enters the portal and shows the CNY balance (645ms)
+  ✓   2 [chromium] › e2e/auth.spec.ts:24:1 › USD customer balance uses the dollar sign (438ms)
+  ✓   3 [chromium] › e2e/auth.spec.ts:31:1 › admin login enters the admin shell (485ms)
+  ✓   4 [chromium] › e2e/auth.spec.ts:41:1 › the login response kind decides the zone, not the login page used (899ms)
+  ✓   5 [chromium] › e2e/auth.spec.ts:56:1 › an expired cookie redirects to login and returns to the original page (909ms)
+  ✓   6 [chromium] › e2e/auth.spec.ts:70:1 › a session revoked in the database prompts re-login and returns to the page (943ms)
+  ✓   7 [chromium] › e2e/auth.spec.ts:96:1 › a return path from the other zone falls back to the identity home (556ms)
+  ✓   8 [chromium] › e2e/auth.spec.ts:105:1 › unknown pages show the 404 page and link home (739ms)
+[WebServer] 2026-10-14T08:12:26.628Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T08:12:26.831Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T08:12:26.986Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T08:12:27.141Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T08:12:27.312Z WARN [Better Auth]: Invalid password
   ✓   9 [chromium] › e2e/auth.spec.ts:126:1 › wrong passwords lock the account and show the retry countdown (1.1s)
-[WebServer] 2026-10-14T08:04:48.293Z WARN [Better Auth]: User not found
-[WebServer] 2026-10-14T08:04:48.478Z WARN [Better Auth]: Invalid password
-  ✓  10 [chromium] › e2e/auth.spec.ts:160:1 › unknown email and wrong password show the same message (570ms)
-  ✓  11 [chromium] › e2e/auth.spec.ts:192:1 › a disabled account sees the disabled message (361ms)
-  ✓  12 [chromium] › e2e/auth.spec.ts:200:1 › logout from the account menu returns to the login page (718ms)
-  ✓  13 [chromium] › e2e/auth.spec.ts:214:1 › a failed logout keeps the session and offers a retry (899ms)
+[WebServer] 2026-10-14T08:12:27.696Z WARN [Better Auth]: User not found
+[WebServer] 2026-10-14T08:12:27.865Z WARN [Better Auth]: Invalid password
+  ✓  10 [chromium] › e2e/auth.spec.ts:160:1 › unknown email and wrong password show the same message (563ms)
+  ✓  11 [chromium] › e2e/auth.spec.ts:192:1 › a disabled account sees the disabled message (390ms)
+  ✓  12 [chromium] › e2e/auth.spec.ts:200:1 › logout from the account menu returns to the login page (732ms)
+  ✓  13 [chromium] › e2e/auth.spec.ts:214:1 › a failed logout keeps the session and offers a retry (924ms)
   ✓  14 [chromium] › e2e/auth.spec.ts:246:1 › a forbidden home context shows an explicit error, not a skeleton (469ms)
-  ✓  15 [chromium] › e2e/auth.spec.ts:265:1 › theme choice is applied and persisted (846ms)
-  ✓  16 [chromium] › e2e/auth.spec.ts:299:3 › mobile 375px › mobile login, account sheet theme switch and logout (725ms)
+  ✓  15 [chromium] › e2e/auth.spec.ts:265:1 › theme choice is applied and persisted (899ms)
+  ✓  16 [chromium] › e2e/auth.spec.ts:299:3 › mobile 375px › mobile login, account sheet theme switch and logout (802ms)
 
   16 passed (17.4s)

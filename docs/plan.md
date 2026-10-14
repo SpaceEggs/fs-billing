@@ -173,14 +173,14 @@
 
 后端步骤 3 代码、行为测试和 CI 已实现。退款按已指定的 `window_id` UUID 实施细节完成，详见 [API 设计 §11.1](phase-4-api-design.md#111-api-自有-sql-账户锁定)。本地验证和 Bot 命令见 [运行与证据](phase-4-api.md)。Bot 已运行 `pnpm check`（309 pass）、`test:db` 连续三次（每次 235 pass）、`test:idor`（15 pass）、`prove:idor`、OpenAPI 导出及 build。依赖已安装并锁定。这些是 Bot 验证结果；PR #18 的 CI 与 FreeSWITCH integration 均通过，所有 SIPp e2e 用例均为 PASS，见 [CI 与联调证据](evidence/phase-4-api/ci.txt)。
 
-前端 Web 外壳代码、Vitest 行为测试、连接真实 API 的 Playwright e2e、截图脚本和 CI `web-e2e` job 已在分支 `phase-4-web` 实现，运行方法、决定和设计差异见 [阶段 4 Web 外壳](phase-4-web.md)。前端验收项待 Bot 验证后勾选。
+前端 Web 外壳代码、Vitest 行为测试、连接真实 API 的 Playwright e2e、截图脚本和 CI `web-e2e` job 已在分支 `phase-4-web` 实现，运行方法、决定和设计差异见 [阶段 4 Web 外壳](phase-4-web.md)。Bot 已验证 `pnpm check`、`pnpm test:e2e`（16 个场景）通过，CI `check` 与 `web-e2e` 均为绿色；Codex review 2 已批准，证据见 [evidence/phase-4-web](evidence/phase-4-web/)。
 
 后端 criteria 状态如下。
 
-- 身份、客户到后台 403、401 形状、资料停用退出已实现并有 DB 场景，Bot 已验证 DB 场景；页面导航属前端。
+- 身份、客户到后台 403、401 形状、资料停用退出已实现并有 DB 场景，Bot 已验证 DB 场景；页面导航已由前端实现。
 - auth schema、角色隔离、身份函数、锁定、共享计数、退款、撤销和重置原子性已实现并有 catalog 与行为场景，包含 race/bootstrap 修复的 DB 场景已由 Bot 验证。
 - live OpenAPI 全量客户操作 IDOR 和隔离变异证明已实现并接入 CI，Bot 已验证运行结果。
-- 过期会话响应契约已有本地单测和 DB 场景，浏览器跳转与返回原页面仍待前端实现。
+- 过期会话响应契约已有本地单测和 DB 场景，浏览器跳转与返回原页面已由前端实现并有 e2e 覆盖。
 
 **范围**
 
@@ -196,12 +196,12 @@
 
 **验收标准**
 
-- [ ] 客户账号登录后进入门户，管理员账号登录后进入后台；客户账号访问后台接口返回 403。后端已完成；页面导航在后续前端步骤实现
+- [x] 客户账号登录后进入门户，管理员账号登录后进入后台；客户账号访问后台接口返回 403。后端 DB 场景与前端 e2e 均已覆盖，见 [阶段 4 Web 外壳 §测试证据](phase-4-web.md#测试证据) 与 [e2e 结果](evidence/phase-4-web/e2e.txt)
 - [x] Better Auth 表结构按阶段 2 的决定落地：认证表放在不启用 RLS 的 `auth` schema；`admins`、`portal_accounts` 各加 `auth_user_id`（`UNIQUE NOT NULL`）与认证用户一对一关联，身份类型由哪张资料表有这个人决定；邮箱以认证表为唯一来源（删去资料表的 `email`）；Better Auth 使用单独的数据库角色，只授予认证表的权限。连续失败锁定、撤销其他会话、管理员重置密码按实际版本核实（来自阶段 2）
 - [x] 越权测试覆盖 OpenAPI 中 100% 的客户端点，在 CI 中运行；临时去掉一个端点的租户过滤，越权测试和 RLS 都能挡住
-- [ ] 登录过期后操作，跳转登录页，登录后回到原页面。后端 401 响应契约已完成；页面跳转与返回原页面在后续前端步骤实现
-- [ ] 金额格式组件：`-35.2` 显示为 `-¥35.20`，USD 显示 `$`；费率显示 4 位小数
-- [ ] 浅色、深色、手机宽度（375px）下的登录页和 404 截图与设计稿一致
+- [x] 登录过期后操作，跳转登录页，登录后回到原页面。后端 401 响应契约与前端跳转、返回原页面均已实现，e2e 覆盖删除 cookie 与数据库撤销会话两种过期，见 [阶段 4 Web 外壳](phase-4-web.md#测试证据) 与 [e2e 结果](evidence/phase-4-web/e2e.txt)
+- [x] 金额格式组件：`-35.2` 显示为 `-¥35.20`，USD 显示 `$`；费率显示 4 位小数。见 `apps/web/src/lib/format.test.ts` 与 e2e 种子余额断言，记录于 [阶段 4 Web 外壳](phase-4-web.md#测试证据)
+- [x] 浅色、深色、手机宽度（375px）下的登录页和 404 截图与设计稿一致。截图见 [evidence/phase-4-web/screenshots](evidence/phase-4-web/screenshots/)，与设计稿的差异见 [阶段 4 Web 外壳 §与设计稿的差异](phase-4-web.md#与设计稿的差异)
 
 ---
 
