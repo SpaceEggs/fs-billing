@@ -14,3 +14,6 @@ artifacts/verify/
 .audit/
 apps/web/test-results/
 apps/web/playwright-report/
+
+# verify-fs-billing run evidence (kept outside repo: /workspace/fsb-evidence/verify-fs-billing/)
+docs/evidence/verify-fs-billing/*/

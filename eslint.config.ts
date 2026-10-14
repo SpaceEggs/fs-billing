@@ -30,6 +30,30 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    files: ['.cursor/skills/verify-fs-billing/scripts/*.mjs'],
+    ignores: ['.cursor/skills/verify-fs-billing/scripts/browser-fns.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+      },
+    },
+  },
+  {
+    // page.evaluate 回调在浏览器内执行，只有这个文件拿浏览器全局变量、不拿 Node 的。
+    files: ['.cursor/skills/verify-fs-billing/scripts/browser-fns.mjs'],
+    languageOptions: {
+      globals: {
+        document: 'readonly',
+        Event: 'readonly',
+        localStorage: 'readonly',
+      },
+    },
+  },
+  {
     files: [
       'packages/rating/**/*.ts',
       'packages/db/**/*.ts',
