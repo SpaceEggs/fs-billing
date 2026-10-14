@@ -1,6 +1,18 @@
 import { connect } from '@fs-billing/db';
 import { expect, test, vi } from 'vitest';
 import { createWorker } from './app.js';
+import { invalidCdrIdentitySchema } from './invalid-cdr.js';
+
+test('invalid new CDR retains the original dialed number for display', () => {
+  const identity = invalidCdrIdentitySchema.parse({
+    variables: {
+      destination_number: 'billing-bridge',
+      billing_dialed_number: '+447700900123',
+      billing_number: 123,
+    },
+  });
+  expect(identity.variables.destination_number).toBe('+447700900123');
+});
 
 test('worker runs without an API or database process', async () => {
   const app = createWorker();
@@ -12,6 +24,55 @@ test('worker runs without an API or database process', async () => {
     await app.close();
   }
 });
+
+test.each([
+  {
+    callee: '13800138000',
+    dialedNumber: '13800138000',
+    billingNumber: '13800138000',
+  },
+  { callee: '+1234567890123456', dialedNumber: '+1234567890123456' },
+  { callee: '138|evil', dialedNumber: '138|evil' },
+  { callee: '138,evil', dialedNumber: '138,evil' },
+  { callee: '123\n', dialedNumber: '123\n' },
+  { callee: '13800138000', billingNumber: '8613800138000' },
+  { callee: '13800138000', dialedNumber: 13800138000 },
+  { callee: '1234567890123456' },
+])(
+  'authorize rejects invalid number input before reading the DB %j',
+  async (numbers) => {
+    const connection = connect('postgresql://localhost/unused');
+    const transaction = vi.spyOn(connection.db, 'transaction');
+    const app = createWorker({
+      db: connection.db,
+      queue: { enqueue: async () => {} },
+      security: { secret: 'test-worker-key', allowedIps: ['127.0.0.1'] },
+    });
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/authorize',
+        headers: { 'x-billing-key': 'test-worker-key' },
+        payload: {
+          tenant: 'ABC01',
+          uuid: 'debf1234-1234-4234-8234-123456789abc',
+          ...numbers,
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        allowed: false,
+        reason: '号码格式错误',
+        sipCode: 484,
+      });
+      expect(transaction).not.toHaveBeenCalled();
+    } finally {
+      transaction.mockRestore();
+      await app.close();
+      await connection.pool.end();
+    }
+  },
+);
 
 test.each([
   {

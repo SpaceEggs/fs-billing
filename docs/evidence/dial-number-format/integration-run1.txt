@@ -1,0 +1,40 @@
+Unable to find image 'python:3.13.7-slim-bookworm' locally
+3.13.7-slim-bookworm: Pulling from library/python
+5c32499ab806: Pulling fs layer
+79dc17963468: Pulling fs layer
+5c36186b8d84: Pulling fs layer
+4ce903582132: Pulling fs layer
+4ce903582132: Waiting
+79dc17963468: Verifying Checksum
+79dc17963468: Download complete
+4ce903582132: Download complete
+5c36186b8d84: Verifying Checksum
+5c36186b8d84: Download complete
+5c32499ab806: Verifying Checksum
+5c32499ab806: Download complete
+5c32499ab806: Pull complete
+79dc17963468: Pull complete
+5c36186b8d84: Pull complete
+4ce903582132: Pull complete
+Digest: sha256:adafcc17694d715c905b4c7bebd96907a1fd5cf183395f0ebc4d3428bd22d92d
+Status: Downloaded newer image for python:3.13.7-slim-bookworm
+ Container fsi-11b8bd55fb88-nginx-1  Stopping
+ Container fsi-11b8bd55fb88-nginx-1  Stopped
+ Container fsi-11b8bd55fb88-nginx-1  Starting
+ Container fsi-11b8bd55fb88-nginx-1  Started
+用例	结果
+准备	PASS
+归一化 plus	PASS
+归一化 doublezero	PASS
+归一化 domestic-mobile	PASS
+归一化 domestic-landline	PASS
+归一化 nanp-international	PASS
+归一化 nanp-domestic	PASS
+拒绝 484	PASS
+拒绝 403	PASS
+拒绝 402	PASS
+ALLOTTED_TIMEOUT	PASS
+授权降级 refused	PASS
+授权降级 stalled	PASS
+话单重试与去重	PASS
+日志 /tmp/fsi-run1

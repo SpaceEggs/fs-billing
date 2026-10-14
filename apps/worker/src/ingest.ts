@@ -7,7 +7,7 @@ import {
   type Db,
   type Tx,
 } from '@fs-billing/db';
-import { findRate, parseDialedNumber, priceCall } from '@fs-billing/rating';
+import { findRate, resolveBillingNumber, priceCall } from '@fs-billing/rating';
 import { modJsonCdrSchema, type ParsedCdr } from '@fs-billing/shared';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
 import type { ChargeQueue } from './queue.js';
@@ -40,9 +40,15 @@ export async function recordAlert(
   });
 }
 
-async function park(tx: Tx, cdr: ParsedCdr, reason: string) {
+async function park(
+  tx: Tx,
+  cdr: ParsedCdr,
+  reason: string,
+  billingNumber: string | null,
+) {
   await tx.insert(schema.unassignedCdrs).values({
     ...cdr,
+    billingNumber,
     durationSeconds: cdr.billsec,
     reason,
   });
@@ -97,6 +103,7 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
     return { status: 'unassigned' as const, rawId: raw.id };
   }
   const cdr = parsed.data;
+  const billingNumber = resolveBillingNumber(cdr);
   try {
     const status = await withSystem(db, async (tx) => {
       const [tenant] = await tx
@@ -121,20 +128,26 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         });
       }
       if (!tenant)
-        return park(tx, cdr, cdr.tenantTag ? '租户不存在' : '缺少租户标签');
-      const dialed = parseDialedNumber(cdr.callee);
-      if (!dialed) return park(tx, cdr, '号码格式错误');
+        return park(
+          tx,
+          cdr,
+          cdr.tenantTag ? '租户不存在' : '缺少租户标签',
+          billingNumber ?? null,
+        );
+      if (!billingNumber) return park(tx, cdr, '号码格式错误', null);
       const ratingTenant = await loadRatingTenant(tx, tenant.code);
       const entry =
         cdr.answeredAt &&
         ratingTenant &&
-        findRate(ratingTenant.rates, dialed, cdr.answeredAt);
-      if (cdr.answeredAt && !entry) return park(tx, cdr, '接通时无费率');
+        findRate(ratingTenant.rates, billingNumber, cdr.answeredAt);
+      if (cdr.answeredAt && !entry)
+        return park(tx, cdr, '接通时无费率', billingNumber);
       const priced = entry
         ? priceCall(cdr.billsec, entry.perMinute)
         : undefined;
       await tx.insert(schema.cdrs).values({
         ...cdr,
+        billingNumber,
         tenantId: tenant.id,
         durationSeconds: cdr.billsec,
         billedMinutes: priced?.billedMinutes.toFixed() ?? '0',

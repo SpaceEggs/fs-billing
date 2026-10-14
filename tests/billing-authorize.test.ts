@@ -5,7 +5,7 @@ import { expect, test } from 'vitest';
 const lua = spawnSync('lua5.3', ['-v']);
 
 test.skipIf(!process.env.CI && lua.error?.message.includes('ENOENT') === true)(
-  'FreeSWITCH rejects malformed destinations before fallback authorization',
+  'FreeSWITCH preserves dialed destinations and verifies billing numbers',
   () => {
     const result = spawnSync(
       'lua5.3',
@@ -36,33 +36,52 @@ test.each([
   '44712345678,evil',
   '44712345678/evil',
   '+4471x',
+  '44 71',
+  ' 4471',
+  '4471 ',
+  '4471\n',
+  '4471\r',
+  '44\t71',
+  '123456789012345678',
 ])('dialplan rejects bridge separators in %s', (destination) => {
   expect(outbound.test(destination)).toBe(false);
 });
 
-test.each(['44712345678', '+44712345678', '0044712345678'])(
-  'dialplan routes valid number %s to authorization',
-  (destination) => {
-    expect(outbound.test(destination)).toBe(true);
-  },
-);
+test.each([
+  '13800138000',
+  '07551234567',
+  '+13051234567',
+  '13051234567',
+  '+44712345678',
+  '0044712345678',
+  '00123456789012345',
+])('dialplan routes valid number %s to authorization', (destination) => {
+  expect(outbound.test(destination)).toBe(true);
+});
 
 test.each([
   '44712345678|evil',
   '44712345678,evil',
   '44712345678/evil',
-  '0044712345678',
-  '1234567890123456',
+  '44 71',
+  '4471\n',
+  '4471\r',
+  '44\t71',
+  '123456789012345678',
 ])('bridge context refuses unsafe destination %s', (destination) => {
   expect(bridgeDestination.test(destination)).toBe(false);
 });
 
-test.each(['1', '44712345678', '123456789012345'])(
-  'bridge context accepts normalized destination %s',
-  (destination) => {
-    expect(bridgeDestination.test(destination)).toBe(true);
-  },
-);
+test.each([
+  '1',
+  '13800138000',
+  '07551234567',
+  '+44712345678',
+  '0044712345678',
+  '00123456789012345',
+])('bridge context accepts original destination %s', (destination) => {
+  expect(bridgeDestination.test(destination)).toBe(true);
+});
 
 test.each(['destination_number', '${billing_destination}'])(
   'dialplan responds 484 and hangs up for a failed %s condition',

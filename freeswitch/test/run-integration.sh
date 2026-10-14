@@ -195,6 +195,7 @@ PYCOUNT
 call() {
   case_name=$1
   local ip=$2 destination=$3 scenario=${4:-caller.xml}
+  dialed_number=$destination
   cid=$case_name-$run_id@fsi
   kill -0 "$carrier_pid" 2>/dev/null || fail 'Carrier 已退出'
   invites_before=$(carrier_invites)
@@ -221,7 +222,7 @@ sip_assert() {
   else
     (( invites_after > invites_before )) || fail 'carrier INVITE 日志缺失'
   fi
-  python3 - "$FS_LOG_DIR/events.jsonl" "$cid" "$1" "${2:-}" <<'PY'
+  python3 - "$FS_LOG_DIR/events.jsonl" "$cid" "$1" "$dialed_number" "${2:-}" <<'PY'
 import json, sys
 rows=[json.loads(line) for line in open(sys.argv[1])]
 start=next(r['at'] for r in rows if r['kind']=='invite' and r['port']==5060 and r['call_id']==sys.argv[2])
@@ -231,27 +232,36 @@ if mode=='none':
     assert len(out)==0,out
 else:
     assert len(out)==1,out
-    assert out[0]['request']=='INVITE sip:447700900123@127.0.0.1:5090 SIP/2.0',out
+    assert out[0]['request']==f'INVITE sip:{sys.argv[4]}@127.0.0.1:5090 SIP/2.0',out
     if mode=='stalled':
         elapsed=out[0]['at']-start
         print('stalled INVITE seconds',elapsed)
         assert 1.3 <= elapsed <= 2.5,elapsed
     if mode=='normalized':
         auth=[r for r in rows if r['kind']=='authorize' and r['at']>=start]
-        assert len(auth)==1 and auth[0]['callee']=='447700900123' and auth[0]['tenant']=='FSIOK',auth
+        assert len(auth)==1,auth
+        assert auth[0]['callee']==sys.argv[4] and auth[0]['dialedNumber']==sys.argv[4],auth
+        assert auth[0]['billingNumber']==sys.argv[5] and auth[0]['tenant']=='FSIOK',auth
 PY
 }
-for prefix in plus doublezero; do
-  current="归一化 $prefix"
-  number=+447700900123
-  [[ $prefix == doublezero ]] && number=00447700900123
-  call "$prefix" 127.0.0.2 "$number" /scenarios/caller.xml
+for normalization in \
+  'plus +447700900123 447700900123 44 0.01' \
+  'doublezero 00447700900123 447700900123 44 0.01' \
+  'domestic-mobile 13800138000 8613800138000 8613 0.02' \
+  'domestic-landline 07551234567 867551234567 86755 0.04' \
+  'nanp-international +13055551234 13055551234 1 0.03' \
+  'nanp-domestic 13055551234 8613055551234 861305 0.05'; do
+  read -r label number billing_number matched_prefix rate <<< "$normalization"
+  current="归一化 $label"
+  call "$label" 127.0.0.2 "$number" /scenarios/caller.xml
   charged
-  sip_assert normalized >> "$FS_LOG_DIR/assertions.log"
-  wait_sql "SELECT count(*)=1 AND bool_and(callee='447700900123') FROM cdrs WHERE call_uuid::text IN ($uuids);"
+  sip_assert normalized "$billing_number" >> "$FS_LOG_DIR/assertions.log"
+  wait_sql "SELECT count(*)=1 AND bool_and(callee='$number' AND billing_number='$billing_number' AND matched_prefix='$matched_prefix' AND rate=$rate AND duration_seconds BETWEEN 1 AND 60 AND billed_minutes=1 AND charge=$rate) FROM cdrs WHERE call_uuid::text IN ($uuids);"
+  wait_sql "SELECT count(*)>=1 AND bool_and(payload->'variables'->>'billing_dialed_number'='$number' AND payload->'variables'->>'billing_number'='$billing_number') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';"
+  wait_sql "SELECT count(*)=1 AND bool_and(amount=-$rate AND note='通话扣费 ' || substring(idempotency_key FROM 6) || ' $billing_number') FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid');"
   pass
 done
-for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 447700900123 403' 'low 127.0.0.4 447700900123 402'; do
+for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 +447700900123 403' 'low 127.0.0.4 +447700900123 402'; do
   read -r label ip number status <<< "$rejection"
   current="拒绝 $status"
   sed "s/response=\"484\"/response=\"$status\"/" freeswitch/test/sipp/caller-reject.xml > "$FS_LOG_DIR/$label.xml"
@@ -269,7 +279,7 @@ for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 447700900123 403' '
   pass
 done
 current=ALLOTTED_TIMEOUT
-call allotted 127.0.0.5 447700900123 /scenarios/caller-timed.xml
+call allotted 127.0.0.5 +447700900123 /scenarios/caller-timed.xml
 charged
 sip_assert outbound >> "$FS_LOG_DIR/assertions.log"
 # FSI60 余额 0.01、透支 0、费率 0.01/分钟，授权 maxSeconds=60。FreeSWITCH 调度器按整秒触发，
@@ -289,7 +299,7 @@ for outage in refused stalled; do
   else
     cli 'global_setvar billing_worker_url=http://127.0.0.1:3003' >/dev/null
   fi
-  call "$outage" 127.0.0.2 447700900123 /scenarios/caller.xml
+  call "$outage" 127.0.0.2 +447700900123 /scenarios/caller.xml
   sip_assert "$outage" >> "$FS_LOG_DIR/assertions.log"
   if [[ $outage == refused ]]; then start_worker; fi
   cli 'global_setvar billing_worker_url=http://127.0.0.1:3004' >/dev/null
@@ -309,7 +319,7 @@ case_name=replay
 cid=replay-$run_id@fsi
 # 停 relay 只阻断 CDR；授权仍走 Worker，通话接通后挂断触发落盘。
 "${compose[@]}" stop nginx >/dev/null
-call replay 127.0.0.2 447700900123 /scenarios/caller.xml
+call replay 127.0.0.2 +447700900123 /scenarios/caller.xml
 sip_assert outbound >> "$FS_LOG_DIR/assertions.log"
 retry_file=
 for _ in $(seq 1 100); do

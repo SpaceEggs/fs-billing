@@ -7,12 +7,16 @@ import {
   healthResponseSchema,
 } from '@fs-billing/shared';
 import { loadRatingTenant, withSystem, type Db } from '@fs-billing/db';
-import { authorizeRaw, type RejectReason } from '@fs-billing/rating';
+import {
+  authorize,
+  resolveBillingNumber,
+  type RejectReason,
+} from '@fs-billing/rating';
 import { ingestCdr, postgresError, recordAlert } from './ingest.js';
 import type { ChargeQueue } from './queue.js';
 
 const sipCodes = {
-  号码格式错误: 400,
+  号码格式错误: 484,
   租户不存在: 404,
   租户已停用: 403,
   无费率: 404,
@@ -48,21 +52,40 @@ export function createWorker(dependencies?: WorkerDependencies) {
     routes.post('/authorize', async (request, reply) => {
       const parsed = authorizeRequestSchema.safeParse(request.body);
       if (!parsed.success) {
-        if (parsed.error.issues.some((issue) => issue.path[0] === 'callee')) {
+        if (
+          parsed.error.issues.some((issue) =>
+            ['callee', 'dialedNumber', 'billingNumber'].includes(
+              String(issue.path[0]),
+            ),
+          )
+        ) {
           return reply
             .code(400)
-            .send({ allowed: false, reason: '号码格式错误', sipCode: 400 });
+            .send({ allowed: false, reason: '号码格式错误', sipCode: 484 });
         }
         return reply.code(400).send({ error: '授权请求格式错误' });
       }
-      const { tenant, callee } = parsed.data;
+      const { tenant, dialedNumber } = parsed.data;
+      const billingNumber = resolveBillingNumber(parsed.data);
+      if (!billingNumber)
+        return reply
+          .code(400)
+          .send({ allowed: false, reason: '号码格式错误', sipCode: 484 });
       try {
         const result = await withSystem(db, async (tx) =>
-          authorizeRaw(await loadRatingTenant(tx, tenant), callee, new Date()),
+          authorize(
+            await loadRatingTenant(tx, tenant),
+            billingNumber,
+            new Date(),
+          ),
         );
         return authorizeResponseSchema.parse(
           result.allowed
-            ? { allowed: true, maxSeconds: result.maxSeconds }
+            ? {
+                allowed: true,
+                maxSeconds: result.maxSeconds,
+                ...(dialedNumber === undefined ? {} : { billingNumber }),
+              }
             : {
                 allowed: false,
                 reason: result.reason,

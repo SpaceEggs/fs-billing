@@ -8,7 +8,12 @@ export const invalidCdrIdentitySchema = z
         billing_tenant: z.string().catch(''),
         caller_id_number: z.string().catch(''),
         destination_number: z.string().catch(''),
+        billing_dialed_number: z.string().optional().catch(undefined),
       })
+      .transform((v) => ({
+        ...v,
+        destination_number: v.billing_dialed_number ?? v.destination_number,
+      }))
       .catch({
         billing_tenant: '',
         caller_id_number: '',

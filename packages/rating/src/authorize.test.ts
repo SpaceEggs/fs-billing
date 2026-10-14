@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   authorize,
   authorizeRaw,
+  resolveBillingNumber,
   parseDialedNumber,
   beijingTime,
   money,
@@ -111,6 +112,36 @@ describe('authorize', () => {
 });
 
 describe('dialed number boundary', () => {
+  test.each([
+    ['+13055551234', '1'],
+    ['13055551234', '86'],
+    ['13800138000', '86'],
+    ['075586001234', '86'],
+    ['0013055551234', '1'],
+  ])('new dialed form %s authorizes against prefix %s', (raw, prefix) => {
+    const billing = resolveBillingNumber({ callee: raw, dialedNumber: raw });
+    if (!billing) throw new Error('Invalid fixture');
+    const t = tenant('50', {
+      rates: {
+        currency: 'CNY',
+        versions: [
+          {
+            effectiveFrom: at,
+            entries: [
+              { prefix: '1', country: 'NANP', perMinute: rate('CNY', '1') },
+              { prefix: '86', country: '中国', perMinute: rate('CNY', '0.1') },
+            ],
+          },
+        ],
+      },
+    });
+    const result = authorize(t, billing, at);
+    expect(result.allowed && result.entry.prefix).toBe(prefix);
+    expect(result.allowed && result.maxSeconds).toBe(
+      prefix === '1' ? 9000 : 14400,
+    );
+  });
+
   test.each(['+44712345678', '0044712345678', '', '4471234567x', ' 4471'])(
     '%j → 号码格式错误',
     (raw) => {
