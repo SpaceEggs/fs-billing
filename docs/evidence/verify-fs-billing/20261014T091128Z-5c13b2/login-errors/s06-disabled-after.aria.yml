@@ -1,0 +1,16 @@
+- main:
+  - text: FS-Billing 客户门户
+  - heading "登录" [level=1]
+  - text: 使用为你开通的登录邮箱和密码
+  - alert: 该账号已停用 如需恢复使用，请联系客服
+  - text: 登录邮箱
+  - textbox "登录邮箱":
+    - /placeholder: name@company.com
+    - text: cdt018@example.com
+  - text: 密码
+  - button "忘记密码？"
+  - textbox "密码":
+    - /placeholder: 请输入密码
+    - text: [REDACTED]
+  - button "显示密码": 显示
+  - button "登录"

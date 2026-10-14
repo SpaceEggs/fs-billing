@@ -1,0 +1,12 @@
+- complementary:
+  - text: FS-Billing 管理后台
+  - navigation "主导航":
+    - link "概览":
+      - /url: /admin
+- banner:
+  - text: 概览
+  - button "主题": ◐
+  - button "账号菜单": 李俊
+- main:
+  - heading "概览" [level=1]
+  - paragraph: 欢迎，李俊。租户、待收款等后台功能将在后续版本开放。

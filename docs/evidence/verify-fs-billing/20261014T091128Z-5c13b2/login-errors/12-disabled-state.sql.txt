@@ -1,0 +1,6 @@
+-- SELECT t.code, t.status, (SELECT count(*) FROM auth.session s JOIN auth."user" u ON u.id=s.user_id WHERE u.email='cdt018@example.com') AS sessions FROM tenants t WHERE t.code='CDT018'
+  code  |  status  | sessions 
+--------+----------+----------
+ CDT018 | disabled |        0
+(1 row)
+

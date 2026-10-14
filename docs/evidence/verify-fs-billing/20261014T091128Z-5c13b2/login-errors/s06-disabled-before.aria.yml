@@ -1,0 +1,13 @@
+- complementary:
+  - text: FS-Billing 客户门户
+  - navigation "主导航":
+    - link "首页":
+      - /url: /
+- banner:
+  - text: HZX014 · 杭州星讯通信有限公司
+  - button "主题": ◐
+  - button "账号菜单": hzx014@example.com
+- main:
+  - heading "首页" [level=1]
+  - region "当前余额": 当前余额 -¥100.36 CNY
+  - paragraph: 话单、月账单与余额流水将在后续版本开放。

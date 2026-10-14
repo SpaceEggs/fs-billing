@@ -1,0 +1,6 @@
+-- SELECT email_key, failed_count, locked_until > now() + interval '14 minutes' AS locked_15m FROM auth.login_failures WHERE email_key='hzx014@example.com'
+     email_key      | failed_count | locked_15m 
+--------------------+--------------+------------
+ hzx014@example.com |            5 | t
+(1 row)
+

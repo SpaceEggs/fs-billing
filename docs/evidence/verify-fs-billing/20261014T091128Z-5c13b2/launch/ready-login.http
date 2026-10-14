@@ -1,0 +1,32 @@
+> POST http://127.0.0.1:53769/api/auth/login
+> Origin: http://127.0.0.1:53769
+> Cookie: (jar ready)
+> Body: {"email":"bjh003@example.com","password":"[REDACTED]"}
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: http://127.0.0.1:53769
+Vary: Origin
+x-ratelimit-limit: 30
+x-ratelimit-remaining: 29
+x-ratelimit-reset: 60
+cache-control: no-store
+set-cookie: better-auth.session_token=[REDACTED]; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax
+content-type: application/json; charset=utf-8
+content-length: 285
+date: Wed, 14 Oct 2026 09:11:38 GMT
+connection: close
+
+{"identity":{"kind":"customer","profileId":"4978bf19-1b6d-4056-8997-f125c2885070","email":"bjh003@example.com","tenant":{"id":"71d20f04-3569-4d58-b643-8897df546982","code":"BJH003","name":"北京华联信息技术有限公司","currency":"CNY"}},"expiresAt":"2026-10-21T09:11:38.071Z"}
+> POST http://127.0.0.1:53769/api/auth/logout
+> Origin: http://127.0.0.1:53769
+> Cookie: (jar ready)
+
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: http://127.0.0.1:53769
+Vary: Origin
+cache-control: no-store
+set-cookie: better-auth.session_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0
+date: Wed, 14 Oct 2026 09:11:38 GMT
+connection: close
+
+
