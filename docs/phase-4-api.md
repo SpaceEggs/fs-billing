@@ -72,9 +72,8 @@ pnpm --filter @fs-billing/api auth:unlock admin@example.com
 - `apps/api/src/auth.db.test.ts` 验证真实登录 cookie、锁定矩阵、未知邮箱响应与时间容差、改密码共享计数、撤销、重置原子性、竞态、安装核心 schema 和 stale-refund 确定性交错。
 - `apps/api/src/bootstrap.db.test.ts` 验证 owner bootstrap、创建与替换、并行初始化、撤销失败回滚、CLI 密码输出与拒绝参数；CLI 子进程测试与 DB 测试一起由 Bot 运行，sandbox 拒绝嵌套进程。
 - `apps/api/src/idor.db.test.ts` 与 `apps/api/scripts/prove-idor.ts` 验证 live OpenAPI 全量覆盖与显式过滤、RLS 两道防线。
-- `.audit/phase-4-api.tsv` 与 `.audit/phase-4-api.todo.md` 保存本地实施记录。
 
-Bot 已验证 `pnpm check`（309 pass）、`pnpm test:db` 连续三次（每次 235 pass）、`pnpm test:idor`（15 pass）、`prove:idor`、OpenAPI 导出和 build。Better Auth 1.7.7、@fastify/rate-limit 10.3.0 等依赖已安装并固定于锁文件。CI 结果在推送后记录到 evidence。前端验收状态不变。
+Bot 已验证 `pnpm check`（309 pass）、`pnpm test:db` 连续三次（每次 235 pass）、`pnpm test:idor`（15 pass）、`prove:idor`、OpenAPI 导出和 build。Better Auth 1.7.7、@fastify/rate-limit 10.3.0 等依赖已安装并固定于锁文件。PR #18 的 CI 与 FreeSWITCH integration 均通过，所有 SIPp e2e 用例均为 PASS，见 [CI 与联调证据](evidence/phase-4-api/ci.txt)。前端验收状态不变。
 
 ## 变更文件
 
@@ -135,21 +134,9 @@ packages/shared/src/api/contract.ts
 pnpm-lock.yaml
 ```
 
-## 移植到 PR #17
+## 共享契约状态
 
-相对 `bb3f7c2`，`packages/shared` 与 `docs` 的差异文件完整清单如下。以 `git diff bb3f7c2 --name-only -- packages/shared docs` 核对；移植时按 PR #17 的现有内容合并文档，避免覆盖后端说明。
-
-```text
-packages/shared/src/api/contract.ts
-packages/shared/src/api/api.test.ts
-docs/design.md
-docs/evidence/phase-4-api/contract-claude-review.md
-docs/phase-4-api-design.md
-docs/phase-4-api.md
-docs/plan.md
-```
-
-共享契约变化仅为 login 的 403 允许 `FORBIDDEN` 与既有 identity errors，logout 新增 403 `FORBIDDEN`，均用于不可信 Origin。logout 不接受 ACCOUNT_DISABLED 或 IDENTITY_UNAVAILABLE，不扩大其身份检查。没有新增错误码。未知路由使用 NOT_FOUND，413/415 等请求解析错误适配为既有 VALIDATION_ERROR。
+login/logout 的 403 共享契约变更已包含在 PR #17 的 `99f98ca` 中。`packages/shared` 与 `origin/phase-4-contract` 完全一致。
 
 ## 本次评审修复文件
 

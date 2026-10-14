@@ -412,7 +412,7 @@ RLS 开启时，去掉 WHERE 仍然看不到 B，因此普通生产模式 IDOR �
 
 CI 在数据库 setup 后执行 DB suite 与变异证明，并上传隔离证据。API 脚本使用 `node --import tsx`，避免 tsx CLI 的 IPC socket 对 sandbox 的额外要求。生产只接受业务 app 角色与 auth 角色连接，owner lane 只存在于测试支持。
 
-Bot 已完成 `pnpm check`（309 pass）、`pnpm test:db` 连续三次（每次 235 pass）、`pnpm test:idor`（15 pass）、`prove:idor`、OpenAPI 导出和 build。依赖已安装并锁定。这是 Bot 验证记录；CI 结果在推送后记录到 evidence。没有新的用户产品决定，前端验收状态不变。
+Bot 已完成 `pnpm check`（309 pass）、`pnpm test:db` 连续三次（每次 235 pass）、`pnpm test:idor`（15 pass）、`prove:idor`、OpenAPI 导出和 build。依赖已安装并锁定。这是 Bot 验证记录；PR #18 的 CI 与 FreeSWITCH integration 均通过，所有 SIPp e2e 用例均为 PASS，见 [CI 与联调证据](evidence/phase-4-api/ci.txt)。没有新的用户产品决定，前端验收状态不变。
 
 ### 12.4 评审修复的运维边界
 
