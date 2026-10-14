@@ -65,7 +65,7 @@ jobs:
         run: pnpm --filter @fs-billing/api prove:idor "$GITHUB_WORKSPACE/artifacts/phase-4-api"
       - name: Upload OpenAPI and isolation proof
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v6.0.0
         with:
           name: phase-4-api-isolation
           path: artifacts/phase-4-api

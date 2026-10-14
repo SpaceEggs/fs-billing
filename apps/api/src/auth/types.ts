@@ -8,6 +8,7 @@ export class GatewayError extends Error {
   constructor(
     readonly code: ApiErrorCode,
     readonly retryAfterSeconds?: number,
+    readonly setCookie: string[] = [],
   ) {
     super(code);
     this.name = 'GatewayError';

@@ -10,7 +10,8 @@
     "openapi": "node --import tsx scripts/export-openapi.ts",
     "auth:unlock": "node --env-file-if-exists=../../.env --import tsx scripts/unlock-account.ts",
     "auth:seed": "node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts",
-    "prove:idor": "node --import tsx scripts/prove-idor.ts"
+    "prove:idor": "node --import tsx scripts/prove-idor.ts",
+    "auth:bootstrap": "node --env-file-if-exists=../../.env --import tsx scripts/bootstrap-credential.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "10.3.0",

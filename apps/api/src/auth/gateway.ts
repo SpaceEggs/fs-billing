@@ -120,7 +120,9 @@ export function createAuthGateway(
       logger.info(
         {
           event: 'auth.account_locked',
-          emailKey: email,
+          emailKey: createHmac('sha256', options.secret)
+            .update(email)
+            .digest('hex'),
           lockedUntil: attempt.locked_until,
         },
         'Account lock entered',
@@ -162,15 +164,36 @@ export function createAuthGateway(
       expiresAt: row.expires_at,
     };
   }
-  async function guardedSession(token: string, userId: string, t0: string) {
-    const changed = await pool.query(
-      `SELECT 1 FROM auth.account WHERE user_id=$1 AND provider_id='credential' AND updated_at > $2::timestamptz`,
-      [userId, t0],
-    );
-    if (changed.rowCount !== 0) {
-      await discardSession(token);
-      throw new GatewayError('INVALID_CREDENTIALS');
+  async function guardedSession(
+    token: string,
+    userId: string,
+    version: string | undefined,
+  ) {
+    const client = await pool.connect();
+    let changed = false;
+    try {
+      await client.query('BEGIN');
+      // FOR SHARE waits for an in-flight reset's credential UPDATE to commit.
+      const current = await client.query<{ version: string }>(
+        `SELECT updated_at::text AS version FROM auth.account WHERE user_id=$1 AND provider_id='credential' FOR SHARE`,
+        [userId],
+      );
+      if (
+        version === undefined ||
+        current.rowCount !== 1 ||
+        current.rows[0]?.version !== version
+      ) {
+        await client.query('DELETE FROM auth.session WHERE token=$1', [token]);
+        changed = true;
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
+    if (changed) throw new GatewayError('INVALID_CREDENTIALS');
     return loadSession(token);
   }
   return {
@@ -190,16 +213,29 @@ export function createAuthGateway(
     async logout(headers) {
       const token = readToken(headers);
       if (!token) throw new GatewayError('UNAUTHENTICATED');
-      await loadSession(token);
+      try {
+        await loadSession(token);
+      } catch (error) {
+        if (error instanceof GatewayError) {
+          await discardSession(token);
+          throw new GatewayError(error.code, undefined, [clearCookie()]);
+        }
+        throw error;
+      }
       await discardSession(token);
       return [clearCookie()];
     },
     async login(body, headers) {
       const email = normalizeEmail(body.email);
-      const t0 = await timestamp();
       const attempt = await reserve(email);
       let token: string | undefined;
       try {
+        const before = await pool.query<{ version: string }>(
+          `SELECT a.updated_at::text AS version FROM auth.account a JOIN auth."user" u ON u.id=a.user_id WHERE u.email=$1 AND a.provider_id='credential'`,
+          [email],
+        );
+        const version =
+          before.rowCount === 1 ? before.rows[0]?.version : undefined;
         const response = await auth.api.signInEmail({
           body,
           headers,
@@ -228,7 +264,7 @@ export function createAuthGateway(
         const signed = signInSchema.parse(payload);
         token = signed.token;
         await hooks.afterLoginCreated?.();
-        const session = await guardedSession(token, signed.user.id, t0);
+        const session = await guardedSession(token, signed.user.id, version);
         await clear(email);
         const setCookie = response.headers.getSetCookie();
         return { ...session, setCookie };
@@ -348,10 +384,13 @@ export function createAuthGateway(
         await client.query('DELETE FROM auth.session WHERE user_id=$1', [
           targetAuthUserId,
         ]);
-        await client.query(
-          `DELETE FROM auth.login_failures WHERE email_key=(SELECT lower(email) FROM auth."user" WHERE id=$1)`,
+        const user = await client.query<{ email: string }>(
+          'SELECT email FROM auth."user" WHERE id=$1',
           [targetAuthUserId],
         );
+        const email = user.rows[0]?.email;
+        if (email === undefined) throw new Error('Auth user missing');
+        await clear(normalizeEmail(email), client);
         await client.query('COMMIT');
         return { temporaryPassword };
       } catch (error) {

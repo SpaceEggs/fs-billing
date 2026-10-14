@@ -3,6 +3,7 @@ import type { CustomerPrincipal } from '../types.js';
 import { ApiFailure } from '../errors.js';
 
 export async function readPortalBalance(tx: Tx, principal: CustomerPrincipal) {
+  // Stable ordering and one row make the missing-WHERE mutation proof deterministic.
   const [row] = await tx
     .select({ amount: schema.tenantBalances.balance })
     .from(schema.tenantBalances)

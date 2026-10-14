@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { getAuthTables } from 'better-auth/db';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -105,7 +106,7 @@ it('normalizes email exactly as installed Better Auth and resets prior failures 
   expect((await counter(fixture.a.email))?.failed_count ?? 0).toBe(0);
 });
 
-it('returns identical invalid credentials for wrong passwords and unknown email, including timing parity', async () => {
+it('returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound', async () => {
   const knownDurations: number[] = [];
   const unknownDurations: number[] = [];
   const unknown = `unknown-${fixture.prefix}@example.com`;
@@ -168,7 +169,12 @@ it('locks the fifth attempt for a fixed fifteen minutes and never verifies, incr
   expect(logs).toContainEqual(
     expect.objectContaining({
       event: 'auth.account_locked',
-      emailKey: fixture.a.email,
+      emailKey: createHmac(
+        'sha256',
+        'test-only-secret-with-at-least-32-characters',
+      )
+        .update(fixture.a.email)
+        .digest('hex'),
     }),
   );
   expect(JSON.stringify(logs)).not.toContain(password);
@@ -700,6 +706,129 @@ it('login race guard deletes a session created by an old credential before a con
   expect(response.headers['set-cookie']).toBeUndefined();
   expect(await sessionCount(fixture.a.userId)).toBe(0);
   await login(api, fixture.a, temporaryPassword);
+});
+
+it('login started after an uncommitted reset UPDATE waits for that reset and rejects the old credential', async () => {
+  function signal() {
+    let resolve = () => {};
+    const promise = new Promise<void>((done) => {
+      resolve = done;
+    });
+    return { resolve, promise };
+  }
+  const updated = signal();
+  const release = signal();
+  const created = signal();
+  const resetter = fixtureApi(connections, {
+    hooks: {
+      afterCredentialUpdated: async () => {
+        updated.resolve();
+        await release.promise;
+      },
+    },
+  });
+  const signing = fixtureApi(connections, {
+    hooks: {
+      afterLoginCreated: () => {
+        created.resolve();
+        return Promise.resolve();
+      },
+    },
+  });
+  const reset = resetter.auth.resetPassword({
+    actorAuthUserId: fixture.admin.userId,
+    targetAuthUserId: fixture.a.userId,
+  });
+  let responsePromise:
+    Promise<Awaited<ReturnType<typeof signing.api.inject>>> | undefined;
+  try {
+    await updated.promise;
+    responsePromise = signing.api.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { origin },
+      payload: { email: fixture.a.email, password },
+    });
+    const response = responsePromise;
+    await created.promise;
+    await expect
+      .poll(async () => {
+        const result = await connections.authPool.query<{ waiting: boolean }>(
+          `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND query LIKE 'SELECT updated_at::text AS version FROM auth.account%FOR SHARE' AND cardinality(pg_blocking_pids(pid)) > 0) AS waiting`,
+        );
+        return result.rows[0]?.waiting;
+      })
+      .toBe(true);
+    release.resolve();
+    const result = await reset;
+    const denied = await response;
+    expect(denied.statusCode).toBe(401);
+    expect(errorCode(denied)).toBe('INVALID_CREDENTIALS');
+    expect(denied.headers['set-cookie']).toBeUndefined();
+    expect(await sessionCount(fixture.a.userId)).toBe(0);
+    await login(api, fixture.a, result.temporaryPassword);
+  } finally {
+    release.resolve();
+    await reset;
+    if (responsePromise) await responsePromise;
+  }
+});
+
+it('rejects any credential version change even when its timestamp moves backwards', async () => {
+  const signing = fixtureApi(connections, {
+    hooks: {
+      afterLoginCreated: async () => {
+        await connections.owner.pool.query(
+          "UPDATE auth.account SET updated_at=updated_at-interval '1 day' WHERE user_id=$1",
+          [fixture.a.userId],
+        );
+      },
+    },
+  });
+  const denied = await signing.api.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    headers: { origin },
+    payload: { email: fixture.a.email, password },
+  });
+  expect(denied.statusCode).toBe(401);
+  expect(errorCode(denied)).toBe('INVALID_CREDENTIALS');
+  expect(denied.headers['set-cookie']).toBeUndefined();
+  expect(await sessionCount(fixture.a.userId)).toBe(0);
+});
+
+it('reset clears counters with JavaScript normalization even when SQL collation differs', async () => {
+  const email = 'İ@example.com';
+  await connections.owner.pool.query(
+    'UPDATE auth."user" SET email=$1 WHERE id=$2',
+    [email, fixture.a.userId],
+  );
+  await connections.owner.pool.query(
+    'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now())',
+    [email.toLowerCase()],
+  );
+  await auth.resetPassword({
+    actorAuthUserId: fixture.admin.userId,
+    targetAuthUserId: fixture.a.userId,
+  });
+  expect(await counter(email.toLowerCase())).toBeUndefined();
+});
+
+it('logout with an expired session still clears its cookie and returns SESSION_EXPIRED', async () => {
+  const current = await login(api, fixture.a);
+  await connections.owner.pool.query(
+    "UPDATE auth.session SET expires_at=now()-interval '1 second' WHERE user_id=$1",
+    [fixture.a.userId],
+  );
+  const response = await api.inject({
+    method: 'POST',
+    url: '/api/auth/logout',
+    headers: requestHeaders(current.cookie),
+  });
+  expect(response.statusCode).toBe(401);
+  expect(errorCode(response)).toBe('SESSION_EXPIRED');
+  expect(String(response.headers['set-cookie'])).toContain('Max-Age=0');
+  expect(await sessionCount(fixture.a.userId)).toBe(0);
 });
 
 it('change-password cannot overwrite a concurrent reset after validating the old credential or leave a session', async () => {

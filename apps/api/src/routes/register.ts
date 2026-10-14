@@ -99,11 +99,11 @@ export function registerRoutes(
       },
       handler: async (request, reply) => {
         reply.header('Cache-Control', 'no-store');
-        const context = await authorize(
-          operation.access,
-          requestHeaders(request),
-          deps,
-        );
+        // Logout validates its own session so expired cookies can still be cleared.
+        const context =
+          operation.operationId === 'logout'
+            ? { kind: 'public' as const }
+            : await authorize(operation.access, requestHeaders(request), deps);
         return handlers[operation.operationId](context, request, reply);
       },
     });

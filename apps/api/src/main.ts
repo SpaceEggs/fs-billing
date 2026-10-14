@@ -3,6 +3,7 @@ import { APP_ROLE, AUTH_ROLE, connect } from '@fs-billing/db';
 import { createApi } from './app.js';
 import { apiEnvironmentSchema } from './config.js';
 import { createAuthGateway } from './auth/gateway.js';
+import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 
 const config = apiEnvironmentSchema.parse(process.env);
 const business = connect(config.APP_DATABASE_URL);
@@ -51,7 +52,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const)
   });
 try {
   await app.ready();
-  await auth.auth.$context;
+  await assertEffectiveAuthOptions(auth.auth);
   const [businessRole, authRole] = await Promise.all([
     business.pool.query<{ role: string }>('SELECT current_user AS role'),
     authPool.query<{ role: string }>('SELECT current_user AS role'),

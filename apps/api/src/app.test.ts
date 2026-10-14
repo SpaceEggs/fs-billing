@@ -2,6 +2,7 @@ import pg from 'pg';
 import { afterAll, expect, test } from 'vitest';
 import { connect } from '@fs-billing/db';
 import { apiContract, apiErrorSchema } from '@fs-billing/shared';
+import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 import { createApi } from './app.js';
 import {
   assertAuthOptions,
@@ -156,7 +157,32 @@ test('Better Auth internal sign-up and reset HTTP routes are not exposed', async
   }
 });
 
-test('startup rejects session caching and secondary storage', () => {
+test('startup rejects session caching and secondary storage on effective Better Auth options', async () => {
+  const context = await auth.auth.$context;
+  await expect(assertEffectiveAuthOptions(auth.auth)).resolves.toBeUndefined();
+  const cache = context.options.session?.cookieCache;
+  if (!cache) throw new Error('Expected configured cookie cache options');
+  const originalEnabled = cache.enabled;
+  try {
+    cache.enabled = true;
+    await expect(assertEffectiveAuthOptions(auth.auth)).rejects.toThrow(
+      'cookieCache.enabled=false',
+    );
+  } finally {
+    cache.enabled = originalEnabled;
+  }
+  try {
+    Reflect.set(context.options, 'secondaryStorage', {
+      get: () => Promise.resolve(null),
+      set: () => Promise.resolve(),
+      delete: () => Promise.resolve(),
+    });
+    await expect(assertEffectiveAuthOptions(auth.auth)).rejects.toThrow(
+      'cookieCache.enabled=false',
+    );
+  } finally {
+    Reflect.deleteProperty(context.options, 'secondaryStorage');
+  }
   expect(() =>
     assertAuthOptions({ session: { cookieCache: { enabled: false } } }),
   ).not.toThrow();
@@ -198,4 +224,27 @@ test('runtime environment enforces the auth and business roles and production HT
   expect(
     apiEnvironmentSchema.safeParse({ ...env, NODE_ENV: 'production' }).success,
   ).toBe(false);
+});
+
+test('framework not-found and request parsing failures use contract envelopes', async () => {
+  const missing = await app.inject('/api/does-not-exist');
+  expect(missing.statusCode).toBe(404);
+  expect(apiErrorSchema.parse(missing.json()).error.code).toBe('NOT_FOUND');
+  for (const [contentType, payload] of [
+    ['application/octet-stream', 'not-json'],
+    ['application/json', '{'],
+    ['application/json', 'x'.repeat(1024 * 1024 + 1)],
+  ] as const) {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { 'content-type': contentType },
+      payload,
+    });
+    expect(response.statusCode).toBe(400);
+    expect(apiErrorSchema.parse(response.json()).error.code).toBe(
+      'VALIDATION_ERROR',
+    );
+    expect(response.headers['cache-control']).toBe('no-store');
+  }
 });

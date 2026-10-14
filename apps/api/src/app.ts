@@ -61,22 +61,29 @@ export function createApi(deps: ApiDependencies) {
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiFailure) return sendFailure(request, reply, error);
-    if (error instanceof GatewayError)
+    if (error instanceof GatewayError) {
+      sendCookies(reply, error.setCookie);
       return sendFailure(
         request,
         reply,
         new ApiFailure(error.code, error.retryAfterSeconds),
       );
+    }
     if (
       hasZodFastifySchemaValidationErrors(error) ||
       (error instanceof Error &&
         'statusCode' in error &&
-        error.statusCode === 400)
+        typeof error.statusCode === 'number' &&
+        error.statusCode >= 400 &&
+        error.statusCode < 500)
     )
       return sendFailure(request, reply, new ApiFailure('VALIDATION_ERROR'));
     app.log.error({ err: error, requestId: request.id }, 'API request failed');
     return sendFailure(request, reply, new ApiFailure('SERVICE_UNAVAILABLE'));
   });
+  app.setNotFoundHandler((request, reply) =>
+    sendFailure(request, reply, new ApiFailure('NOT_FOUND')),
+  );
   const handlers: RouteHandlers = {
     health: () => Promise.resolve({ status: 'ok', service: 'api' }),
     login: async (_context, request, reply) => {

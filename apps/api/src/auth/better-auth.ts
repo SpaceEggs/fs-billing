@@ -85,7 +85,12 @@ export function createBetterAuth(input: {
       },
     },
   };
-  assertAuthOptions(configured);
   return betterAuth(configured);
 }
 export type BillingAuth = ReturnType<typeof createBetterAuth>;
+
+export async function assertEffectiveAuthOptions(
+  auth: Pick<BillingAuth, '$context'>,
+) {
+  assertAuthOptions((await auth.$context).options);
+}
