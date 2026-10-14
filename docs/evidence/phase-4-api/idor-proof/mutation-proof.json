@@ -1,0 +1,34 @@
+{
+  "mutation": "remove portal balance tenant WHERE",
+  "sourceCheckoutUnchanged": true,
+  "proof": [
+    {
+      "lane": "app",
+      "mutation": false,
+      "expectedFailure": false,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "lane": "owner",
+      "mutation": false,
+      "expectedFailure": false,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "lane": "owner",
+      "mutation": true,
+      "expectedFailure": true,
+      "passed": 7,
+      "failed": 1
+    },
+    {
+      "lane": "app",
+      "mutation": true,
+      "expectedFailure": false,
+      "passed": 8,
+      "failed": 0
+    }
+  ]
+}

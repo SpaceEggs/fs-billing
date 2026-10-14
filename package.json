@@ -14,6 +14,7 @@
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "vitest run",
     "test:db": "vitest run --config vitest.db.config.ts",
+    "test:idor": "vitest run --config vitest.db.config.ts apps/api/src/idor.db.test.ts",
     "build": "pnpm -r build",
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "db:up": "docker compose up -d --wait",

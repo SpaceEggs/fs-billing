@@ -2,8 +2,9 @@
 BEGIN;
 SELECT set_config('app.scope', 'admin', true);
 SELECT lock_tenants(ARRAY[]::uuid[]);
-INSERT INTO admins(email, name) VALUES ('fsi@example.invalid', 'FreeSWITCH 集成验证')
-ON CONFLICT(email) DO NOTHING;
+INSERT INTO auth."user"(id, email, name) VALUES ('fsi-admin', 'fsi@example.invalid', 'FreeSWITCH 集成验证') ON CONFLICT(email) DO NOTHING;
+INSERT INTO admins(auth_user_id, name) SELECT id, name FROM auth."user" WHERE email='fsi@example.invalid'
+ON CONFLICT(auth_user_id) DO NOTHING;
 INSERT INTO tenants(code, name, currency, status, overdraft_limit)
 VALUES ('FSIOK', 'FreeSWITCH 放行验证', 'CNY', 'active', 0),
        ('FSIOFF', 'FreeSWITCH 停用验证', 'CNY', 'disabled', 0),
@@ -36,6 +37,6 @@ SELECT t.id,'adjustment', target.amount-b.balance,'集成验证恢复测试余�
 FROM tenants t JOIN tenant_balances b ON b.tenant_id=t.id
 JOIN (VALUES ('FSIOK',100::numeric),('FSIOFF',100::numeric),('FSILOW',0::numeric),('FSI60',0.01::numeric)) target(code,amount)
 ON target.code=t.code CROSS JOIN admins a
-WHERE a.email='fsi@example.invalid' AND target.amount<>b.balance
+WHERE a.auth_user_id=(SELECT id FROM auth."user" WHERE email='fsi@example.invalid') AND target.amount<>b.balance
 ON CONFLICT(tenant_id,idempotency_key) DO NOTHING;
 COMMIT;

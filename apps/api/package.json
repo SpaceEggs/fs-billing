@@ -4,15 +4,31 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
-    "start": "tsx --env-file-if-exists=../../.env src/main.ts",
+    "start": "node --env-file-if-exists=../../.env --import tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "tsc -p tsconfig.build.json",
+    "openapi": "node --import tsx scripts/export-openapi.ts",
+    "auth:unlock": "node --env-file-if-exists=../../.env --import tsx scripts/unlock-account.ts",
+    "auth:seed": "node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts",
+    "prove:idor": "node --import tsx scripts/prove-idor.ts",
+    "auth:bootstrap": "node --env-file-if-exists=../../.env --import tsx scripts/bootstrap-credential.ts"
   },
   "dependencies": {
+    "@fastify/rate-limit": "10.3.0",
+    "@fastify/swagger": "9.9.2",
+    "@fs-billing/db": "workspace:*",
     "@fs-billing/shared": "workspace:*",
-    "fastify": "^5.0.0"
+    "better-auth": "1.7.7",
+    "drizzle-orm": "0.45.4",
+    "fastify": "^5.0.0",
+    "fastify-type-provider-zod": "7.0.0",
+    "kysely": "0.29.6",
+    "pg": "8.23.1",
+    "zod": "4.6.6"
   },
   "devDependencies": {
+    "@fs-billing/rating": "workspace:*",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.0.0"
   }
 }

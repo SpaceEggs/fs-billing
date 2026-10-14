@@ -1,4 +1,5 @@
-import { inArray, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
+import { authAccounts, authUsers } from './auth-schema.js';
 import {
   beijingTime,
   decimal,
@@ -398,8 +399,38 @@ const seconds = (at: Date, n: number) => new Date(at.getTime() + n * 1000);
  * 写入开发种子数据。幂等：重复执行不新增任何行。
  * 分两个事务：lock_tenants 要在事务的任何写入之前调用，所以先提交管理员与租户，再在新事务里锁租户写费率和流水。
  */
-export async function seedDatabase(db: PoolDb): Promise<void> {
+export async function seedDatabase(
+  db: PoolDb,
+  options: { passwordHash?: string } = {},
+): Promise<void> {
   const { adminIds, tenantIds } = await withAdmin(db, seedTenants);
+  if (options.passwordHash !== undefined) {
+    const passwordHash = options.passwordHash;
+    await db.transaction(async (tx) => {
+      const users = await tx
+        .select({ id: authUsers.id })
+        .from(authUsers)
+        .where(
+          inArray(authUsers.email, [
+            ...Object.values(ADMINS).map((a) => a.email),
+            ...TENANTS.map((t) => `${t.code.toLowerCase()}@example.com`),
+          ]),
+        );
+      for (const user of users) {
+        await tx
+          .insert(authAccounts)
+          .values({
+            id: `seed:credential:${user.id}`,
+            accountId: user.id,
+            providerId: 'credential',
+            userId: user.id,
+            password: passwordHash,
+            updatedAt: new Date(),
+          })
+          .onConflictDoNothing({ target: authAccounts.id });
+      }
+    });
+  }
   const idOf = (code: string) => tenantIds.get(code)!;
   // 样例话单落在 2026 年 9、10 月。建分区不能放进下面持租户锁的事务。
   await ensureCdrPartitions(db, {
@@ -512,15 +543,35 @@ async function seedTenants(tx: Tx): Promise<{
   const tenantIds = new Map(rows.map((r) => [r.code, r.id]));
   const idOf = (code: string) => tenantIds.get(code)!;
 
+  for (const t of TENANTS) {
+    await tx
+      .insert(authUsers)
+      .values({
+        id: `seed:portal:${t.code}`,
+        name: t.name,
+        email: `${t.code.toLowerCase()}@example.com`,
+      })
+      .onConflictDoNothing({ target: authUsers.email });
+  }
+  const portalUsers = await tx
+    .select({ id: authUsers.id, email: authUsers.email })
+    .from(authUsers)
+    .where(
+      inArray(
+        authUsers.email,
+        TENANTS.map((t) => `${t.code.toLowerCase()}@example.com`),
+      ),
+    );
+  const portalUserIds = new Map(portalUsers.map((u) => [u.email, u.id]));
   await tx
     .insert(portalAccounts)
     .values(
       TENANTS.map((t) => ({
         tenantId: idOf(t.code),
-        email: `${t.code.toLowerCase()}@example.com`,
+        authUserId: portalUserIds.get(`${t.code.toLowerCase()}@example.com`)!,
       })),
     )
-    .onConflictDoNothing({ target: portalAccounts.email });
+    .onConflictDoNothing({ target: portalAccounts.authUserId });
   await tx
     .insert(balanceAlertSettings)
     .values(
@@ -551,20 +602,26 @@ async function registeredCallUuids(tx: Tx): Promise<Set<string>> {
 }
 
 async function seedAdmins(tx: Tx): Promise<Record<AdminKey, string>> {
-  await tx
-    .insert(admins)
-    .values(Object.values(ADMINS))
-    .onConflictDoNothing({ target: admins.email });
-  const rows = await tx
-    .select({ id: admins.id, email: admins.email })
-    .from(admins)
-    .where(
-      inArray(
-        admins.email,
-        Object.values(ADMINS).map((a) => a.email),
-      ),
-    );
-  const byEmail = new Map(rows.map((r) => [r.email, r.id]));
+  const byEmail = new Map<string, string>();
+  for (const [key, admin] of Object.entries(ADMINS)) {
+    await tx
+      .insert(authUsers)
+      .values({ id: `seed:admin:${key}`, ...admin })
+      .onConflictDoNothing({ target: authUsers.email });
+    const [user] = await tx
+      .select({ id: authUsers.id })
+      .from(authUsers)
+      .where(eq(authUsers.email, admin.email));
+    await tx
+      .insert(admins)
+      .values({ authUserId: user!.id, name: admin.name })
+      .onConflictDoNothing({ target: admins.authUserId });
+    const [profile] = await tx
+      .select({ id: admins.id })
+      .from(admins)
+      .where(eq(admins.authUserId, user!.id));
+    byEmail.set(admin.email, profile!.id);
+  }
   return {
     wang: byEmail.get(ADMINS.wang.email)!,
     li: byEmail.get(ADMINS.li.email)!,

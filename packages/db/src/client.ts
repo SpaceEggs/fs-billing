@@ -6,6 +6,7 @@ import { z } from 'zod';
 import * as schema from './schema.js';
 
 export const APP_ROLE = 'fs_billing_app';
+export const AUTH_ROLE = 'fs_billing_auth';
 
 const postgresUrl = z.url().refine((value) => /^postgres(?:ql)?:/.test(value), {
   message: '必须使用 PostgreSQL 协议',
@@ -14,6 +15,12 @@ const postgresUrl = z.url().refine((value) => /^postgres(?:ql)?:/.test(value), {
 /** DATABASE_URL：owner，用于迁移与种子；APP_DATABASE_URL：应用角色，RLS 生效。 */
 export const databaseEnvironmentSchema = z.object({
   DATABASE_URL: postgresUrl,
+  AUTH_DATABASE_URL: postgresUrl
+    .refine(
+      (value) => decodeURIComponent(new URL(value).username) === AUTH_ROLE,
+      { message: `认证连接必须使用 ${AUTH_ROLE} 角色` },
+    )
+    .optional(),
   APP_DATABASE_URL: postgresUrl.refine(
     (value) => decodeURIComponent(new URL(value).username) === APP_ROLE,
     { message: `应用连接必须使用 ${APP_ROLE} 角色` },

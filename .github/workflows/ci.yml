@@ -18,6 +18,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://fs_billing:local-development-only@127.0.0.1:5432/fs_billing
       APP_DATABASE_URL: postgresql://fs_billing_app:local-app-only@127.0.0.1:5432/fs_billing
+      AUTH_DATABASE_URL: postgresql://fs_billing_auth:local-auth-only@127.0.0.1:5432/fs_billing
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: pnpm/action-setup@v6.1.0
@@ -60,6 +61,15 @@ jobs:
         run: pnpm db:migrate && pnpm db:seed && pnpm db:migrate
       - name: Database acceptance tests
         run: pnpm test:db
+      - name: Live OpenAPI customer IDOR coverage and tenant filter mutation proof
+        run: pnpm --filter @fs-billing/api prove:idor "$GITHUB_WORKSPACE/artifacts/phase-4-api"
+      - name: Upload OpenAPI and isolation proof
+        if: always()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: phase-4-api-isolation
+          path: artifacts/phase-4-api
+          if-no-files-found: warn
       - name: PostgreSQL logs
         if: failure()
         run: docker compose logs

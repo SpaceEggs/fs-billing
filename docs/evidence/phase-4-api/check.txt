@@ -1,0 +1,44 @@
+
+> fs-billing@ check /workspace/fs-billing
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test
+
+
+> fs-billing@ lint /workspace/fs-billing
+> eslint . --max-warnings 0
+
+
+> fs-billing@ format:check /workspace/fs-billing
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> fs-billing@ typecheck /workspace/fs-billing
+> pnpm -r typecheck && tsc -p tsconfig.json
+
+Scope: 6 of 7 workspace projects
+packages/rating typecheck$ tsc -p tsconfig.json
+packages/shared typecheck$ tsc -p tsconfig.json
+packages/rating typecheck: Done
+packages/shared typecheck: Done
+apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
+apps/web typecheck: Done
+packages/db typecheck: Done
+apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck$ tsc -p tsconfig.json
+apps/worker typecheck: Done
+apps/api typecheck: Done
+
+> fs-billing@ test /workspace/fs-billing
+> vitest run
+
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+
+ Test Files  16 passed (16)
+      Tests  309 passed (309)
+   Start at  23:19:59
+   Duration  2.67s (import 58%, tests 33%, transform 8%, worker 1%)
+

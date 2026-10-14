@@ -11,6 +11,7 @@ declare module 'vitest' {
   export interface ProvidedContext {
     ownerUrl: string;
     appUrl: string;
+    authUrl: string;
   }
 }
 
@@ -38,9 +39,12 @@ export default async function setup(project: TestProject) {
   await admin.query(`CREATE DATABASE ${TEST_DATABASE}`);
   await admin.end();
 
+  const authUrl = new URL(env.AUTH_DATABASE_URL ?? env.APP_DATABASE_URL);
+  authUrl.username = 'fs_billing_auth';
   const testEnv = {
     DATABASE_URL: onDatabase(env.DATABASE_URL, TEST_DATABASE),
     APP_DATABASE_URL: onDatabase(env.APP_DATABASE_URL, TEST_DATABASE),
+    AUTH_DATABASE_URL: onDatabase(authUrl.toString(), TEST_DATABASE),
   };
   await migrateDatabase(testEnv);
   const { db, pool } = connect(testEnv.DATABASE_URL);
@@ -49,4 +53,18 @@ export default async function setup(project: TestProject) {
 
   project.provide('ownerUrl', testEnv.DATABASE_URL);
   project.provide('appUrl', testEnv.APP_DATABASE_URL);
+  project.provide('authUrl', testEnv.AUTH_DATABASE_URL);
+
+  // Ledger and audit fixtures are append-only, so cleanup owns the whole test database.
+  return async () => {
+    const cleanup = new pg.Client({ connectionString: env.DATABASE_URL });
+    try {
+      await cleanup.connect();
+      await cleanup.query(
+        `DROP DATABASE IF EXISTS ${TEST_DATABASE} WITH (FORCE)`,
+      );
+    } finally {
+      await cleanup.end();
+    }
+  };
 }

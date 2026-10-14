@@ -382,3 +382,6 @@ Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBi
 
 1. ~~根据 `docs/pages.md`（页面说明书）在 Claude Design 中设计界面~~ 已完成：已确认的设计稿在 `design/设计系统规范确认/`
 2. ~~界面确认后，制定开发阶段计划（每个阶段含验收标准）~~ 已完成：见 [`plan.md`](plan.md)，当前进度以其中的阶段表为准
+
+
+阶段 4 API 的认证 schema、受限身份函数及 API 自有账户锁定实现记录见 [后端设计 §11.1](phase-4-api-design.md#111-api-自有-sql-账户锁定) 与 [实施证据](phase-4-api.md)。`auth.login_failures.window_id UUID NOT NULL` 标识计数窗口，新窗口生成新 UUID，基础设施失败退款只递减同一 UUID，避免旧请求解除新窗口的锁。API、角色迁移、实时 OpenAPI 越权测试与 CI 已实现，数据库和变异证明待 Bot 运行；前端验收状态不变。
