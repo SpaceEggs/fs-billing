@@ -1,0 +1,21 @@
+{
+  "id": "580c0798-5474-4400-9925-25d031abe907",
+  "tenant_tag": "FSIOK",
+  "call_uuid": "79e11e80-5945-41fb-9c7b-2b6b1eb768e2",
+  "reason": "计费号码不一致",
+  "started_at": "2026-10-14T03:06:06.741+00:00",
+  "answered_at": null,
+  "ended_at": "2026-10-14T03:06:06.761+00:00",
+  "caller": "fsi",
+  "callee": "07551234567",
+  "duration_seconds": 0,
+  "status": "pending",
+  "ignore_reason": null,
+  "assigned_tenant_id": null,
+  "resolved_by": null,
+  "resolved_at": null,
+  "received_at": "2026-10-14T03:06:06.781417+00:00",
+  "raw_id": null,
+  "raw_received_at": null,
+  "billing_number": "867551234567"
+}

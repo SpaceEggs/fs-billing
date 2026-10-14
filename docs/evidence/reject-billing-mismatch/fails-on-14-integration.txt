@@ -1,0 +1,27 @@
+run-integration.sh with #14 apps/worker/src/app.ts and new test script
+用例	结果
+准备	PASS
+归一化 plus	PASS
+归一化 doublezero	PASS
+归一化 domestic-mobile	PASS
+归一化 domestic-landline	PASS
+归一化 nanp-international	PASS
+归一化 nanp-domestic	PASS
+拒绝 484	PASS
+拒绝 403	PASS
+拒绝 402	PASS
+计费号码不一致 HTTP 400 / SIP 503	FAIL
+准备	PASS
+归一化 plus	PASS
+归一化 doublezero	PASS
+归一化 domestic-mobile	PASS
+归一化 domestic-landline	PASS
+归一化 nanp-international	PASS
+归一化 nanp-domestic	PASS
+拒绝 484	PASS
+拒绝 403	PASS
+拒绝 402	PASS
+计费号码不一致 HTTP 400 / SIP 503	FAIL
+日志 /tmp/fsi-mm-14
+      1 SIP/2.0 100 Trying
+      2 SIP/2.0 200 OK

@@ -1,0 +1,22 @@
+ Container fsi-7cfd4ddfa295-nginx-1  Stopping
+ Container fsi-7cfd4ddfa295-nginx-1  Stopped
+ Container fsi-7cfd4ddfa295-nginx-1  Starting
+ Container fsi-7cfd4ddfa295-nginx-1  Started
+用例	结果
+准备	PASS
+归一化 plus	PASS
+归一化 doublezero	PASS
+归一化 domestic-mobile	PASS
+归一化 domestic-landline	PASS
+归一化 nanp-international	PASS
+归一化 nanp-domestic	PASS
+拒绝 484	PASS
+拒绝 403	PASS
+拒绝 402	PASS
+计费号码不一致 HTTP 400 / SIP 503	PASS
+ALLOTTED_TIMEOUT	PASS
+授权降级 refused	PASS
+授权降级 stalled	PASS
+话单重试与去重	PASS
+日志 /tmp/fsi-mm-r2
+exit=0

@@ -1,0 +1,7 @@
+ t | count 
+---+-------
+(0 rows)
+
+23
+
+public tables: 23, drizzle migrations applied: 5 (all user tables 0 rows)

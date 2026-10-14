@@ -1,0 +1,23 @@
+            t            | count 
+-------------------------+-------
+ pgboss.instance         |    14
+ pgboss.job              |    78
+ pgboss.job_common       |    78
+ pgboss.queue            |     4
+ pgboss.schedule         |     2
+ pgboss.version          |     1
+ public.admins           |     1
+ public.call_uuids       |    65
+ public.cdrs             |    56
+ public.cdrs_2026_10     |    56
+ public.ledger_entries   |    56
+ public.rate_entries     |   100
+ public.rate_versions    |    20
+ public.raw_cdrs         |    69
+ public.raw_cdrs_2026_10 |    69
+ public.system_alerts    |    17
+ public.tenant_balances  |     4
+ public.tenants          |     4
+ public.unassigned_cdrs  |     9
+(19 rows)
+
