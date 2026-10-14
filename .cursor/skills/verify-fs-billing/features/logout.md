@@ -21,13 +21,14 @@ Preconditions:
 - `$S/doctor.sh` is healthy. `abc001@example.com` is not locked.
 
 - **Whole journey.** Run `$S/drive.mjs logout`. Exit `0`, three steps PASS.
-- **Desktop logout.** Log in as `abc001`. The journey reads this browser's session token from the cookie and confirms `SELECT count(*) FROM auth.session WHERE token=<token>` is `1`. Click `button '账号菜单'`. `menu` contains `abc001@example.com` (`01-account-menu.png`, `.aria.yml`). Click `menuitem '退出登录'`. The URL becomes `/login` and the same query returns `0`. `02-session-row.sql.txt` records the before and after; the token itself is not written. No `better-auth.session_token` cookie remains (`03-after-logout.png`). `http.log` shows `POST /api/auth/logout -> 204`.
-- **Revisit.** Open `/`. The URL becomes `/login`. Send `GET /api/auth/session` with the old token as the cookie. The response is `401 {"code":"UNAUTHENTICATED"}`, logged in `http.log`.
+- **Desktop logout.** Log in as `abc001`. The journey reads this browser's session cookie and confirms its session row exists (matched on `sha256(token)`, so the token never appears in a command line). Replaying the complete signed cookie outside the browser on `GET /api/auth/session` returns `200` for `abc001@example.com`. Click `button '账号菜单'`. `menu` contains `abc001@example.com` (`01-account-menu.png`, `.aria.yml`). Click `menuitem '退出登录'`. The URL becomes `/login` and the same query returns `0`. `02-session-row.sql.txt` records the before and after; the token itself is not written. No `better-auth.session_token` cookie remains (`03-after-logout.png`). `browser-http.txt` shows `POST /api/auth/logout -> 204`.
+- **Revisit.** Open `/`. The URL becomes `/login`. Replay the same complete signed cookie on `GET /api/auth/session`. The response is now `401 {"code":"UNAUTHENTICATED"}`. Both replays are logged in `browser-http.txt`, so the pair proves the server revoked a cookie that was valid a moment earlier.
 - **Mobile logout.** In a 375×812 touch context, log in as `abc001`. Count live sessions with `$S/sql.sh "SELECT count(*) FROM auth.session s JOIN auth.\"user\" u ON u.id=s.user_id WHERE u.email='abc001@example.com' AND s.expires_at > now()"`. Tap `button '账号菜单'`, then `button '退出登录'` inside `dialog '账号菜单'`. The URL becomes `/login` and the count drops by 1 (`04-mobile-after-logout.png`).
 - **API view.** Run `$S/api.sh login abc001@example.com l`, then `$S/api.sh POST /api/auth/logout l` returns `204` with `set-cookie: better-auth.session_token=; … Max-Age=0`. Running `$S/api.sh POST /api/auth/logout l` again returns `401`.
 
 ## Gotchas
 
+- A replay must send the whole cookie value, `<token>.<signature>`. The API rejects an unsigned token even before logout, so replaying only the token proves nothing.
 - Logout deletes only this browser's session. Other sessions for the same user (other journeys, other contexts) stay live. Assert on this token, or on the count dropping by exactly one, never on "zero sessions for the user".
 - On desktop the menu item is a Radix `menuitem` inside `menu`. On mobile it is a plain `button` inside `dialog '账号菜单'`. The same selector does not work for both.
 - If the logout request fails for a reason other than 401, the UI stays signed in and shows `退出失败，请检查网络后重试`. If you see that, check API health before you retry.

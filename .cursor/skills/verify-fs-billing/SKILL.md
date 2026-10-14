@@ -38,7 +38,7 @@ From an empty database, `launch.sh` does the following:
 4. It runs migrate, seed, and migrate again to check idempotence (`packages/db/src/bin/*.ts` via `tsx`), then `apps/api/scripts/seed-auth.ts` (`auth:seed`). Every seeded account gets `SEED_AUTH_PASSWORD`.
 5. It starts the API (`node --import tsx src/main.ts`) under `setsid` on a free port. `BETTER_AUTH_URL` is set to the API origin, and `BETTER_AUTH_TRUSTED_ORIGINS` to the API and web origins.
 6. It runs `vite build --outDir <state>/web-dist`, so `apps/web/dist` is never touched. Then it starts `vite preview --strictPort` under `setsid` on a free port, with `FS_BILLING_API_ORIGIN` set so `/api` proxies to this run's API.
-7. **Ready** means a real `POST /api/auth/login` as `bjh003@example.com` through the web origin returns 200 with `"kind":"customer"`, followed by a logout. The transcript is saved to `docs/evidence/verify-fs-billing/<RUN_ID>/launch/ready-login.http`.
+7. **Ready** means a real `POST /api/auth/login` as `bjh003@example.com` through the web origin returns 200 with `"kind":"customer"` and `"email":"bjh003@example.com"`, and the logout that follows returns 204. Both transcripts are saved to `docs/evidence/verify-fs-billing/<RUN_ID>/launch/ready-login.http`. This is the stack's only login check outside the journeys.
 
 It prints `READY` with the web, API, and Postgres addresses. If it fails, it prints the cleanup command to run for that `RUN_ID`. Prerequisites: Docker, Node 22/24, pnpm 10.34.7, `pnpm install --frozen-lockfile` already done, Playwright Chromium (`pnpm --filter @fs-billing/web exec playwright install chromium` if missing), `ss`, and `python3`.
 
@@ -52,15 +52,14 @@ $S/doctor.sh            # exit 0 = healthy, 1 = at least one FAIL line
 
 Doctor prints one `OK` or `FAIL` line per check:
 
-- The container is running and is ours: id, label, and port all match.
+- The container is running and is ours: id, label, and port all match. If it is not, doctor does not query the database at all.
 - The API and web PIDs are alive and carry `VERIFY_RUN_ID=<RUN_ID>` in `/proc/<pid>/environ`. The listener on each port belongs to that process group.
 - The git HEAD equals the revision recorded at launch. If HEAD moved, relaunch.
-- Applied migrations equal the entries in `packages/db/migrations/meta/_journal.json`. Tenants and credentials exist.
+- Applied migrations equal the entries in `packages/db/migrations/meta/_journal.json`. Tenants and credentials exist. The query goes through `sql.sh`, which repeats the container guards.
 - `/api/health` returns `{"status":"ok","service":"api"}`.
 - The web serves the built `index.html`, and `/api` proxies to our API.
-- A seeded login as `bjh003@example.com` works.
 
-The login is the only write: one session row, which is deleted again at once. No journey uses `bjh003`. Run doctor first, and again whenever something looks wrong. Do not drive a run that fails doctor.
+Doctor is read-only. It sends no login, writes no row, and creates no file, so it is safe to run at any time and never uses up the credential rate limit. Launch's ready check is the login proof. Run doctor first, and again whenever something looks wrong. Do not drive a run that fails doctor.
 
 ## Drive
 
@@ -69,7 +68,10 @@ The browser harness is Playwright (`@playwright/test` 1.64 from `apps/web` devDe
 ```sh
 $S/drive.mjs customer-login          # or: admin-login login-errors session-expiry cross-tenant logout theme-and-mobile not-found
 $S/drive.mjs customer-login --headed # watch it
+$S/drive.mjs all                     # every feature in order, one child process each, then a summary table
 ```
+
+Before it opens a browser, each journey waits until 61 s have passed since the run's last credential request (see [Gotchas](#gotchas)). It prints `waiting N s for the API's credential rate-limit window (30/min/IP) to reset` when it does. Expect `all` to spend up to a minute per feature on these waits.
 
 Each journey runs headless Chromium (`locale zh-CN`, `Asia/Shanghai`) against the run's web origin. It prints a step table and exits `0` on PASS, `1` on FAIL, or `2` on BLOCKED (precondition missing; the reason is printed). Journeys use only ARIA roles and names taken from `apps/web/src`:
 
@@ -103,6 +105,7 @@ Database access always goes into OUR container through `docker exec`, as the own
 
 ```sh
 $S/sql.sh "SELECT email_key, failed_count, locked_until FROM auth.login_failures"
+$S/sql.sh --value "SELECT count(*) FROM auth.session"   # bare value, for scripts
 $S/sql.sh < some.sql
 ```
 
@@ -133,12 +136,21 @@ Seeded accounts (from `packages/db/src/seed.ts`; all use `SEED_AUTH_PASSWORD`):
 Evidence goes to `docs/evidence/verify-fs-billing/<RUN_ID>/<feature-id>/`. Cleanup never deletes it.
 
 - `steps.md` and `result.json`: each step's action, PASS/FAIL/BLOCKED, and the observed detail.
-- `NN-name.png` (full-page screenshot) and `NN-name.aria.yml` (Playwright `ariaSnapshot`) before and after each user action.
-- `http.log`: every `/api/*` response the browser saw, with the request body (password `[REDACTED]`), status, and JSON body. `NN-name.http` holds the curl transcripts from `api.sh`.
+- `sNN-<step>-before` and `sNN-<step>-after` (`.png` full-page screenshot and `.aria.yml` Playwright `ariaSnapshot`): taken automatically around every step, of the page the journey last opened or acted on. A step that drives only HTTP has no page to capture; its proof is the `.http` transcript.
+- `NN-name.png` and `NN-name.aria.yml`: named captures of the states a feature file cites, such as `05-locked`.
+- `browser-http.txt`: every `/api/*` response the browser saw, with the request body, status, and JSON body. Credential fields are `[REDACTED]`. `NN-name.http` holds the curl transcripts from `api.sh`.
 - `NN-name.sql.txt`: the query and its rows from our container. `NN-name.cli.txt`: CLI commands and their output.
-- `launch/ready-login.http` and, after cleanup, `logs/` (api, web, build, db-setup, and auth-seed logs, redacted) plus `revision.txt`.
+- `launch/ready-login.http` and, after cleanup, `logs/` (`*.log.txt`: api, web, build, db-setup, and auth-seed logs, redacted) plus `revision.txt`.
 
-Every file written into evidence passes through redaction: secret values from `run.env` and `session_token=` cookie values become `[REDACTED]`. Never paste `run.env` or a raw cookie into evidence by hand. To check for leaks: `grep -rF -e "$(grep ^SEED_AUTH_PASSWORD= /tmp/verify-fs-billing/<RUN_ID>/run.env | cut -d= -f2)" docs/evidence/verify-fs-billing/<RUN_ID>` should print nothing.
+No evidence file ends in `.log`, because the repo's `.gitignore` ignores `*.log`. Every file the helpers write is committable as is: `git add docs/evidence/verify-fs-billing/<RUN_ID>` picks up all of it. Check with `git status --ignored --short docs/evidence/verify-fs-billing/<RUN_ID>`, which must list no `!!` entries.
+
+Every file written into evidence passes through redaction. Secret values from `run.env` become `[REDACTED]`, and so do `session_token=` cookie values and the JSON fields `password`, `currentPassword`, `newPassword`, `temporaryPassword`, `token`, and `secret`. The JSON rule covers values the run never knew, such as the temporary password a real reset returns. Never paste `run.env` or a raw cookie into evidence by hand.
+
+`cleanup.sh` scans the evidence for every `run.env` secret before it deletes the state, and fails, keeping the state, if any file matches. It prints file names only. To scan by hand while the run is live, use `-l` so a hit shows the file and never the secret:
+
+```sh
+grep -rlF -e "$(grep ^SEED_AUTH_PASSWORD= /tmp/verify-fs-billing/<RUN_ID>/run.env | cut -d= -f2)" docs/evidence/verify-fs-billing/<RUN_ID>   # must print nothing
+```
 
 Proof standards:
 
@@ -159,27 +171,27 @@ VERIFY_RUN_ID=<id> $S/cleanup.sh        # a specific run
 
 `cleanup.sh` does the following:
 
-- It sends TERM, then KILL after 5 s, to the API and web process groups recorded in `api.pid` and `web.pid`. It does this only while each PID still carries this run's `VERIFY_RUN_ID`. It never kills by name or port.
-- It runs `docker rm -f` on the recorded container id, and only if the id carries label `fs-billing-verify=<RUN_ID>`.
-- It copies redacted logs to `<evidence>/logs/`, then deletes `/tmp/verify-fs-billing/<RUN_ID>/` (secrets, cookie jars, web build).
-- It prints `evidence kept: <dir> (<n> files)` and exits non-zero if the evidence dir is missing.
+- It sends TERM, then KILL after 5 s, to the API and web process groups recorded in `api.pid` and `web.pid`. It does this only while each PID still carries this run's `VERIFY_RUN_ID`. It never kills by name or port. A group that survives KILL is a failure.
+- It runs `docker rm -f` on the recorded container id, and only if the id carries label `fs-billing-verify=<RUN_ID>`, then confirms the container is gone. A container that is already gone is fine. A failed removal, or an id with another label, is a failure.
+- It copies redacted logs to `<evidence>/logs/` as `*.log.txt`, then runs the leak scan above.
+- Only if every step succeeded does it delete `/tmp/verify-fs-billing/<RUN_ID>/` (secrets, cookie jars, web build) and print `evidence kept: <dir> (<n> files)`. Otherwise it prints each failure, keeps the state so you can fix the cause and rerun it, and exits 1.
 
 Run cleanup after every run, including failed launches. Confirm with `ls docs/evidence/verify-fs-billing/<RUN_ID>/` and `docker ps --filter label=fs-billing-verify`.
 
-Evidence under `docs/evidence/` is not gitignored. Commit it only when a PR needs the proof.
+Commit evidence only when a PR needs the proof. Every file is committable (see [Evidence](#evidence)).
 
 ## Helpers
 
 | Script | Invocation | Purpose |
 | --- | --- | --- |
 | `launch.sh` | `$S/launch.sh` | Isolated stack from an empty DB; prints RUN_ID |
-| `doctor.sh` | `$S/doctor.sh` | Read-only health and ownership check |
-| `drive.mjs` | `$S/drive.mjs <feature> [--headed]` | Playwright journey and evidence for one feature |
+| `doctor.sh` | `$S/doctor.sh` | Read-only health and ownership check (no login, no writes) |
+| `drive.mjs` | `$S/drive.mjs <feature\|all> [--headed]` | Playwright journey and evidence for one feature, or all in turn |
 | `api.sh` | `$S/api.sh login <email> <jar> [--wrong]` / `$S/api.sh <METHOD> <PATH> [jar] [json]` | Redacted HTTP transcript via the web proxy |
-| `sql.sh` | `$S/sql.sh "<sql>"` / `$S/sql.sh < file.sql` | psql as owner in OUR container only |
+| `sql.sh` | `$S/sql.sh [--value] "<sql>"` / `$S/sql.sh < file.sql` | psql as owner in OUR container only |
 | `with-env.sh` | `$S/with-env.sh <command...>` | Repo CLI with the run's env, output redacted |
-| `cleanup.sh` | `$S/cleanup.sh` | Kill our process groups, remove our container, keep evidence |
-| `lib.sh` | sourced | Run resolution, redaction, ownership checks |
+| `cleanup.sh` | `$S/cleanup.sh` | Kill our process groups, remove our container, keep evidence; exit 1 and keep state on any failure |
+| `lib.sh` | sourced | Run resolution, redaction, leak scan, ownership checks |
 
 Typical loop:
 
@@ -187,9 +199,14 @@ Typical loop:
 S=.cursor/skills/verify-fs-billing/scripts
 RUN_ID=$($S/launch.sh | tail -n1)
 $S/doctor.sh
-$S/drive.mjs customer-login
+$S/drive.mjs customer-login    # or: $S/drive.mjs all
 $S/cleanup.sh
 ls docs/evidence/verify-fs-billing/$RUN_ID/customer-login
 ```
+
+## Gotchas
+
+- **Credential rate limit.** `POST /api/auth/login` and `/api/auth/change-password` allow 30 requests per minute per client IP, in a fixed window that opens at the first request. Every browser and `api.sh` request in a run comes from `127.0.0.1`, so they all share one budget. Running features back to back used to hit it: `not-found` got `429 RATE_LIMITED` right after `login-errors`. Each journey now waits until 61 s have passed since the run's last credential request, which `api.sh` and `drive.mjs` record in the state dir. If you send logins by hand between journeys, they count too, and the next journey waits for them. Never raise or disable the API's limit to make a run pass. A `429 RATE_LIMITED` in a journey means the wait was bypassed; wait a minute and rerun that feature.
+- **Doctor is read-only on purpose.** Do not add a login to it. A login uses up the rate-limit budget and writes a session row. Launch's ready check already proves login and logout.
 
 Keep the map honest as the app grows: run `/maintain-verification-skill`.

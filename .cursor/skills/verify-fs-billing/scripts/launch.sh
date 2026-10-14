@@ -14,7 +14,7 @@ umask 077
 mkdir -p "$STATE" "$EVIDENCE/launch"
 chmod 700 "$VERIFY_STATE_ROOT" "$STATE"
 printf '%s\n' "$RUN_ID" > "$VERIFY_STATE_ROOT/current"
-trap 'echo "launch failed; logs in $STATE; tear down with: VERIFY_RUN_ID=$RUN_ID $(dirname "$0")/cleanup.sh" >&2' ERR
+trap 'status=$?; (( status == 0 )) || echo "launch failed; logs in $STATE; tear down with: VERIFY_RUN_ID=$RUN_ID $(dirname "$0")/cleanup.sh" >&2' EXIT
 
 container=fsb-verify-$RUN_ID
 pg_port=$(verify_free_port)
@@ -106,11 +106,15 @@ for _ in $(seq 1 60); do
   sleep 0.5
 done
 
-echo '[6/6] ready check: real seeded login through the web origin'
-"$(dirname "$0")/api.sh" login bjh003@example.com ready > "$EVIDENCE/launch/ready-login.http"
-grep -q '^HTTP/1.1 200' "$EVIDENCE/launch/ready-login.http" || die "ready login failed; see $EVIDENCE/launch/ready-login.http"
-"$(dirname "$0")/api.sh" POST /api/auth/logout ready >> "$EVIDENCE/launch/ready-login.http"
-trap - ERR
+echo '[6/6] ready check: real seeded login and logout through the web origin'
+ready=$EVIDENCE/launch/ready-login.http
+"$(dirname "$0")/api.sh" login bjh003@example.com ready > "$ready"
+grep -q '^HTTP/1.1 200' "$ready" && grep -q '"kind":"customer"' "$ready" && grep -q '"email":"bjh003@example.com"' "$ready" \
+  || die "ready login is not 200 customer bjh003@example.com; see $ready"
+"$(dirname "$0")/api.sh" POST /api/auth/logout ready > "$STATE/ready-logout.http"
+cat "$STATE/ready-logout.http" >> "$ready"
+grep -q '^HTTP/1.1 204' "$STATE/ready-logout.http" || die "ready logout is not 204; see $ready"
+rm -f "$STATE/ready-logout.http" "$STATE/jars/ready.txt"
 
 cat <<EOF
 READY

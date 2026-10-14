@@ -32,15 +32,39 @@ verify_load() {
   export RUN_ID STATE EVIDENCE
 }
 
-# Replace every secret value from run.env with [REDACTED], plus cookie values.
+VERIFY_SECRET_KEYS=(BETTER_AUTH_SECRET SEED_AUTH_PASSWORD PG_OWNER_PASSWORD PG_APP_PASSWORD PG_AUTH_PASSWORD)
+# JSON fields that carry a credential, including ones the run never knew (a reset's
+# temporaryPassword). Keep in sync with sensitiveJsonFields in drive.mjs.
+VERIFY_SENSITIVE_JSON='password|currentPassword|newPassword|temporaryPassword|token|secret'
+
+# Replace every secret value from run.env with [REDACTED], plus cookie values and
+# sensitive JSON fields.
 verify_redact() {
   local args=() key value
-  for key in BETTER_AUTH_SECRET SEED_AUTH_PASSWORD PG_OWNER_PASSWORD PG_APP_PASSWORD PG_AUTH_PASSWORD; do
+  for key in "${VERIFY_SECRET_KEYS[@]}"; do
     value=${!key:-}
     [[ -n $value ]] && args+=(-e "s|${value}|[REDACTED]|g")
   done
   args+=(-e 's/(session_token=)[^;[:space:]"]+/\1[REDACTED]/g')
+  args+=(-e "s/(\"(${VERIFY_SENSITIVE_JSON})\"[[:space:]]*:[[:space:]]*\")([^\"\\\\]|\\\\.)*\"/\\1[REDACTED]\"/g")
   sed -E "${args[@]}"
+}
+
+# Evidence files that contain any run.env secret. Prints file names only, never the match.
+verify_leak_scan() {
+  local key value found=0
+  for key in "${VERIFY_SECRET_KEYS[@]}"; do
+    value=${!key:-}
+    [[ -n $value ]] || continue
+    grep -rlF -e "$value" -- "$1" && found=1
+  done
+  return $(( found ))
+}
+
+# The API allows 30 credential requests (login, change-password) per minute per IP in a
+# fixed window. Record each one so the next journey can wait out the window.
+verify_note_credential_request() {
+  date +%s > "$STATE/credential-at"
 }
 
 verify_free_port() {

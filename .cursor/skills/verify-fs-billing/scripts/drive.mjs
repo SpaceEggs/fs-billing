@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Drive one mapped feature of a launched run through the real browser path.
-// Usage: drive.mjs <feature> [--headed]
+// Usage: drive.mjs <feature|all> [--headed]
 //   features: customer-login admin-login login-errors session-expiry cross-tenant
 //             logout theme-and-mobile not-found
 // Evidence: docs/evidence/verify-fs-billing/<RUN_ID>/<feature>/ (steps.md, result.json,
-//           *.png, *.aria.yml, http.log, *.sql.txt). Exit 0 PASS, 1 FAIL, 2 precondition missing.
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+//           *.png, *.aria.yml, browser-http.txt, *.sql.txt). Exit 0 PASS, 1 FAIL, 2 precondition missing.
+import { createHash } from 'node:crypto';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,10 +34,19 @@ const out = join(repo, 'docs/evidence/verify-fs-billing', runId, feature ?? 'non
 const secrets = ['BETTER_AUTH_SECRET', 'SEED_AUTH_PASSWORD', 'PG_OWNER_PASSWORD', 'PG_APP_PASSWORD', 'PG_AUTH_PASSWORD']
   .map((key) => env[key])
   .filter(Boolean);
+// Keep in sync with VERIFY_SENSITIVE_JSON in lib.sh.
+const sensitiveJsonFields = /("(?:password|currentPassword|newPassword|temporaryPassword|token|secret)"\s*:\s*")(?:[^"\\]|\\.)*"/g;
 const redact = (text) =>
   secrets
     .reduce((acc, secret) => acc.split(secret).join('[REDACTED]'), String(text))
-    .replace(/(session_token=)[^;\s"]+/g, '$1[REDACTED]');
+    .replace(/(session_token=)[^;\s"]+/g, '$1[REDACTED]')
+    .replace(sensitiveJsonFields, '$1[REDACTED]"');
+const httpLog = 'browser-http.txt';
+const credentialStamp = join(state, 'credential-at');
+const credentialPaths = new Set(['/api/auth/login', '/api/auth/change-password']);
+// The API allows 30 credential requests per minute per IP in a fixed window that opens at
+// the first request. 61 s after the last one, the window has reset.
+const rateLimitWindowMs = 61_000;
 
 class Precondition extends Error {}
 const steps = [];
@@ -48,11 +58,9 @@ function sql(name, query) {
   write(`${name}.sql.txt`, `-- ${query}\n${result}`);
   return result;
 }
-/** Single value from the run's DB (owner role, our container only). */
+/** Single value from the run's DB, through sql.sh's container guards. */
 function scalar(query) {
-  return execFileSync('docker', ['exec', env.VERIFY_CONTAINER, 'psql', '-U', 'fs_billing', '-d', 'fs_billing', '-XAtqc', query], {
-    encoding: 'utf8',
-  }).trim();
+  return execFileSync(join(scripts, 'sql.sh'), ['--value', query], { encoding: 'utf8', env: { ...process.env, VERIFY_RUN_ID: runId } }).trim();
 }
 function api(name, args) {
   const result = execFileSync(join(scripts, 'api.sh'), args, { encoding: 'utf8', env: { ...process.env, VERIFY_RUN_ID: runId } });
@@ -77,14 +85,27 @@ function cli(name, args) {
   write(`${name}.cli.txt`, `$ ${args.join(' ')}\n${result}`);
   return result;
 }
+/** The page the journey last opened or acted on; steps capture it before and after. */
+let focus;
+async function capture(name) {
+  if (!focus || focus.isClosed() || focus.url() === 'about:blank') return;
+  try {
+    await aria(focus, name);
+    await shot(focus, name);
+  } catch {}
+}
 async function step(id, action, fn) {
   const started = Date.now();
+  const prefix = `s${String(steps.length + 1).padStart(2, '0')}-${id}`;
+  await capture(`${prefix}-before`);
   try {
     const detail = await fn();
     steps.push({ id, action, result: 'PASS', detail: detail ?? '', ms: Date.now() - started });
   } catch (error) {
     steps.push({ id, action, result: error instanceof Precondition ? 'BLOCKED' : 'FAIL', detail: String(error?.message ?? error).split('\n').slice(0, 6).join(' / '), ms: Date.now() - started });
     throw error;
+  } finally {
+    await capture(`${prefix}-after`);
   }
 }
 
@@ -92,6 +113,10 @@ let browser;
 async function newPage(options = {}) {
   const context = await browser.newContext({ baseURL: web, locale: 'zh-CN', timezoneId: 'Asia/Shanghai', ...options });
   const page = await context.newPage();
+  focus = page;
+  page.on('request', (request) => {
+    if (credentialPaths.has(new URL(request.url()).pathname)) writeFileSync(credentialStamp, String(Math.floor(Date.now() / 1000)));
+  });
   page.on('response', async (response) => {
     const url = new URL(response.url());
     if (!url.pathname.startsWith('/api/')) return;
@@ -100,8 +125,8 @@ async function newPage(options = {}) {
       body = await response.text();
     } catch {}
     const sent = response.request().postData();
-    const shown = sent ? sent.replace(/("password"\s*:\s*")[^"]*"/, '$1[REDACTED]"') : '';
-    appendFileSync(join(out, 'http.log'), redact(`${new Date().toISOString()} ${response.request().method()} ${url.pathname}${url.search} ${shown} -> ${response.status()} ${body}\n`));
+    const shown = sent ?? '';
+    appendFileSync(join(out, httpLog), redact(`${new Date().toISOString()} ${response.request().method()} ${url.pathname}${url.search} ${shown} -> ${response.status()} ${body}\n`));
   });
   return page;
 }
@@ -116,10 +141,12 @@ function path(page) {
   return `${url.pathname}${url.search}`;
 }
 async function expectPath(page, expected) {
+  focus = page;
   await expect.poll(() => path(page), { timeout: 10_000 }).toBe(expected);
 }
 /** Fill and submit the login form; resolves with the /api/auth/login response. */
 async function submitLogin(page, email, secret = password) {
+  focus = page;
   await page.getByLabel('登录邮箱').fill(email);
   await page.getByLabel('密码', { exact: true }).fill(secret);
   const response = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/auth/login' && r.request().method() === 'POST');
@@ -248,6 +275,8 @@ const journeys = {
       expect([wrong.status, wrong.code, wrong.message]).toEqual([unknown.status, unknown.code, unknown.message]);
       expect(wrong.status).toBe(401);
       sql('03-counters-after-one-failure', `SELECT email_key, failed_count, locked_until FROM auth.login_failures WHERE email_key IN ('nobody-verify@example.com','abc001@example.com') ORDER BY 1`);
+      const counters = scalar(`SELECT string_agg(email_key || '=' || failed_count || '/' || (locked_until IS NULL), ',' ORDER BY email_key) FROM auth.login_failures WHERE email_key IN ('nobody-verify@example.com','abc001@example.com')`);
+      expect(counters).toBe('abc001@example.com=1/true,nobody-verify@example.com=1/true');
       return `both ${wrong.status} ${wrong.code} "${wrong.message}"`;
     });
     await step('clear-abc001', 'correct password clears abc001 counter', async () => {
@@ -371,16 +400,24 @@ const journeys = {
 
   async 'cross-tenant'() {
     for (const email of ['abc001@example.com', 'glb009@example.com', 'wangmin@example.com']) requireUnlocked(email);
-    const ids = Object.fromEntries(
-      scalar(`SELECT string_agg(code || '=' || id, ',') FROM tenants WHERE code IN ('ABC001','GLB009')`).split(',').map((pair) => pair.split('=')),
-    );
+    /** The complete /api/portal/context body this customer may see, built from our DB. */
+    const permittedContext = (email, amount) =>
+      JSON.parse(
+        scalar(
+          `SELECT json_build_object('identity', json_build_object('kind', 'customer', 'profileId', p.id, 'email', u.email, 'tenant', json_build_object('id', t.id, 'code', t.code, 'name', t.name, 'currency', t.currency)), 'balance', json_build_object('currency', t.currency, 'amount', '${amount}')) FROM portal_accounts p JOIN tenants t ON t.id = p.tenant_id JOIN auth."user" u ON u.id = p.auth_user_id WHERE u.email = '${email}'`,
+        ),
+      );
+    const expectedA = permittedContext('abc001@example.com', '-35.20');
+    const expectedB = permittedContext('glb009@example.com', '-15.02');
     await step('own-tenant-only', 'A and B each read /api/portal/context and only see their own tenant', async () => {
       expect(api('01-login-a', ['login', 'abc001@example.com', 'a']).status).toBe(200);
       expect(api('02-login-b', ['login', 'glb009@example.com', 'b']).status).toBe(200);
       const a = api('03-context-a', ['GET', '/api/portal/context', 'a']);
       const b = api('04-context-b', ['GET', '/api/portal/context', 'b']);
-      expect([a.status, a.body.identity.tenant.id, a.body.balance]).toEqual([200, ids.ABC001, { currency: 'CNY', amount: '-35.20' }]);
-      expect([b.status, b.body.identity.tenant.id, b.body.balance]).toEqual([200, ids.GLB009, { currency: 'USD', amount: '-15.02' }]);
+      expect([expectedA.identity.tenant.code, expectedA.balance.currency]).toEqual(['ABC001', 'CNY']);
+      expect([expectedB.identity.tenant.code, expectedB.balance.currency]).toEqual(['GLB009', 'USD']);
+      expect([a.status, a.body]).toStrictEqual([200, expectedA]);
+      expect([b.status, b.body]).toStrictEqual([200, expectedB]);
       sql('05-tenant-ids', `SELECT t.code, t.id, b.balance FROM tenants t JOIN tenant_balances b ON b.tenant_id=t.id WHERE t.code IN ('ABC001','GLB009') ORDER BY 1`);
       return 'A sees ABC001 -35.20 CNY only; B sees GLB009 -15.02 USD only';
     });
@@ -418,13 +455,25 @@ const journeys = {
   async logout() {
     requireUnlocked('abc001@example.com');
     const page = await newPage();
-    let token;
+    let cookie;
+    /** Send the browser's complete signed session cookie, outside the browser. */
+    const replay = async (label) => {
+      const r = await fetch(`${web}/api/auth/session`, { headers: { cookie: `${cookie.name}=${cookie.value}` } });
+      const body = await r.json();
+      appendFileSync(join(out, httpLog), redact(`${new Date().toISOString()} replay ${label}: GET /api/auth/session (full signed cookie) -> ${r.status} ${JSON.stringify(body)}\n`));
+      return { status: r.status, body };
+    };
     await step('desktop-menu', 'account menu -> 退出登录 removes the session row', async () => {
       await loginAs(page, '/login', 'abc001@example.com');
       await expectPath(page, '/');
-      const cookie = (await page.context().cookies()).find((c) => c.name === 'better-auth.session_token');
-      token = decodeURIComponent(cookie.value).split('.')[0];
-      expect(scalar(`SELECT count(*) FROM auth.session WHERE token='${token}'`)).toBe('1');
+      cookie = (await page.context().cookies()).find((c) => c.name === 'better-auth.session_token');
+      const token = decodeURIComponent(cookie.value).split('.')[0];
+      secrets.push(token, cookie.value);
+      // Match on a hash so the token never appears in a command line or error message.
+      const sessionRows = `SELECT count(*) FROM auth.session WHERE encode(sha256(convert_to(token, 'UTF8')), 'hex') = '${createHash('sha256').update(token).digest('hex')}'`;
+      expect(scalar(sessionRows)).toBe('1');
+      const live = await replay('before logout');
+      expect([live.status, live.body.identity?.email]).toEqual([200, 'abc001@example.com']);
       await page.getByRole('button', { name: '账号菜单' }).click();
       const menu = page.getByRole('menu');
       await expect(menu).toContainText('abc001@example.com');
@@ -432,19 +481,18 @@ const journeys = {
       await shot(page, '01-account-menu');
       await page.getByRole('menuitem', { name: '退出登录' }).click();
       await expectPath(page, '/login');
-      expect(scalar(`SELECT count(*) FROM auth.session WHERE token='${token}'`)).toBe('0');
+      expect(scalar(sessionRows)).toBe('0');
       write('02-session-row.sql.txt', `-- SELECT count(*) FROM auth.session WHERE token=<this browser's session token>\nbefore logout: 1\nafter logout: 0\n`);
       expect((await page.context().cookies()).some((c) => c.name === 'better-auth.session_token')).toBe(false);
       await shot(page, '03-after-logout');
       return 'session row for this cookie deleted; cookie cleared';
     });
-    await step('revisit', 'revisit / after logout -> /login; old token -> 401', async () => {
+    await step('revisit', 'revisit / after logout -> /login; the same signed cookie that worked before logout -> 401', async () => {
       await page.goto('/');
       await expectPath(page, '/login');
-      const r = await fetch(`${web}/api/auth/session`, { headers: { cookie: `better-auth.session_token=${token}` } });
-      const body = await r.json();
-      expect([r.status, body.error.code]).toEqual([401, 'UNAUTHENTICATED']);
-      appendFileSync(join(out, 'http.log'), `replay old token GET /api/auth/session -> ${r.status} ${JSON.stringify(body)}\n`);
+      const r = await replay('after logout');
+      expect([r.status, r.body.error.code]).toEqual([401, 'UNAUTHENTICATED']);
+      return 'old cookie: 200 before logout, 401 UNAUTHENTICATED after';
     });
     await step('mobile-sheet', '375px: 账号菜单 sheet -> 退出登录', async () => {
       const mobile = await newPage({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
@@ -577,10 +625,28 @@ const journeys = {
   },
 };
 
+if (feature === 'all') {
+  // One child per feature, so each gets its own evidence dir and its own rate-limit wait.
+  const results = [];
+  for (const name of Object.keys(journeys)) {
+    const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), name, ...process.argv.slice(3)], { stdio: 'inherit' });
+    results.push([name, child.status === 0 ? 'PASS' : child.status === 2 ? 'BLOCKED' : 'FAIL']);
+  }
+  console.log(['', '| feature | result |', '|---|---|', ...results.map(([name, result]) => `| ${name} | ${result} |`)].join('\n'));
+  const outcomes = results.map(([, result]) => result);
+  process.exit(outcomes.includes('FAIL') ? 1 : outcomes.includes('BLOCKED') ? 2 : 0);
+}
 if (!journeys[feature]) {
-  console.error(`usage: drive.mjs <${Object.keys(journeys).join('|')}> [--headed]`);
+  console.error(`usage: drive.mjs <${Object.keys(journeys).join('|')}|all> [--headed]`);
   if (feature === 'freeswitch-sipp') console.error('freeswitch-sipp is a separate surface; see features/freeswitch-sipp.md');
   process.exit(2);
+}
+if (existsSync(credentialStamp)) {
+  const wait = Number(readFileSync(credentialStamp, 'utf8')) * 1000 + rateLimitWindowMs - Date.now();
+  if (wait > 0) {
+    console.log(`waiting ${Math.ceil(wait / 1000)} s for the API's credential rate-limit window (30/min/IP) to reset`);
+    await new Promise((resolve) => setTimeout(resolve, wait));
+  }
 }
 mkdirSync(out, { recursive: true });
 browser = await chromium.launch({ headless: !headed });

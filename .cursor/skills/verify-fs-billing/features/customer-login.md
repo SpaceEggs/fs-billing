@@ -26,7 +26,7 @@ Preconditions:
 
 - **Whole journey.** Run `$S/drive.mjs customer-login`. Exit `0` and every step shows PASS in `docs/evidence/verify-fs-billing/<RUN_ID>/customer-login/steps.md`.
 - **Signed-out redirect.** Open `/`. Step `entry-redirect`. The URL becomes `/login` and `heading '登录'` is visible. Evidence: `01-login-form.png`, `01-login-form.aria.yml`.
-- **Log in.** Fill `登录邮箱` with `abc001@example.com` and `密码` with the seeded password, then click `button '登录'`. Step `portal-login`. `http.log` shows `POST /api/auth/login -> 200` with `"kind":"customer"` and `"code":"ABC001"`, and the URL becomes `/`.
+- **Log in.** Fill `登录邮箱` with `abc001@example.com` and `密码` with the seeded password, then click `button '登录'`. Step `portal-login`. `browser-http.txt` shows `POST /api/auth/login -> 200` with `"kind":"customer"` and `"code":"ABC001"`, and the URL becomes `/`.
 - **Balance shown.** Step `balance`. The page shows `heading '首页'`, the crumb `ABC001 · 深圳市某某科技有限公司`, and `region '当前余额'` containing `-¥35.20` and `CNY`, with `html[data-product=portal]`. Evidence: `02-portal-home.png`, `02-portal-home.aria.yml`.
 - **Session row and DB balance.** Step `db-side-effects` reads them with `$S/sql.sh`. `03-session-and-balance.sql.txt` shows `abc001@example.com | t | 127.0.0.1 | -35.20`: a session expiring more than 6 days out, and `tenant_balances` equal to the UI value.
 - **USD tenant.** Log in as `glb009@example.com` in a fresh context. Step `usd-balance`. `region '当前余额'` contains `-$15.02`. Evidence: `04-usd-home.png`.
@@ -38,4 +38,4 @@ Preconditions:
 - The balance renders only after `/api/portal/context` resolves, and a skeleton shows until then. Assert on the region text, not on the skeleton being gone.
 - `-¥35.20` is red because the balance is negative. Any change to the seed balance changes the expected string. Fix the seed expectation in this file and in `drive.mjs` together, and never loosen it to a regex.
 - A successful login also deletes that email's `auth.login_failures` row. Logging in before [login-errors](./login-errors.md) can hide a counter you meant to inspect.
-- `bjh003@example.com` belongs to launch and doctor. Do not use it in journeys.
+- `bjh003@example.com` belongs to the launch ready check. Do not use it in journeys.

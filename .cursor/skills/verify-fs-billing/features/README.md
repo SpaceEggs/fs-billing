@@ -20,12 +20,12 @@ This directory is the maintained source for verifying FS-Billing's user-facing b
 - HTTP actions go through `$S/api.sh`, via the web origin's `/api` proxy with the web `Origin` header.
 - DB reads go through `$S/sql.sh "<sql>"`, as the owner role in the run's container. Repo CLIs go through `$S/with-env.sh <command>`.
 - Use ARIA roles and accessible names from `apps/web/src`, quoted exactly as in the feature files (Chinese copy included). Do not use CSS classes or positions.
-- Journeys create sessions and failure counters as they run. Each one leaves the accounts it used unlocked. Run features one at a time: all credential routes share a 30-per-minute-per-IP rate limit.
+- Journeys create sessions and failure counters as they run. Each one leaves the accounts it used unlocked. Run features one at a time, or all of them with `$S/drive.mjs all`. Login and change-password share a 30-per-minute-per-IP rate limit, so each journey first waits until 61 s have passed since the run's last credential request.
 - A fresh launch is the reset. If a run's state is unclear, clean it up and launch again. Do not hand-edit rows to restore a baseline.
 
 ## Proof and skip reporting
 
-- Every step records the user action, the HTTP status and error `code` behind it, and the resulting screen as a `.png` and an `.aria.yml`.
+- Every browser step records the user action, the HTTP status and error `code` behind it, and the screen before and after as `.png` and `.aria.yml`. API-only steps record `.http` transcripts instead.
 - Every state change is also checked in rows: `auth.session`, `auth.login_failures`, `auth.account`, `operation_logs`, `tenant_balances`. The query and its rows are saved to `.sql.txt`.
 - A DB edit that stands in for elapsed time or an operator action is saved as its own `.sql.txt` and named in the step (expiring `auth.session.expires_at`, deleting session rows).
 - Evidence goes to `docs/evidence/verify-fs-billing/<RUN_ID>/<feature-id>/`. `steps.md` and `result.json` give PASS, FAIL, or BLOCKED per step.

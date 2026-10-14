@@ -35,6 +35,8 @@ else
   fi
 fi
 
+case $path in /api/auth/login|/api/auth/change-password) verify_note_credential_request ;; esac
+
 args=(-sS -i -X "$method" -H "Origin: $VERIFY_WEB_ORIGIN" --max-time 20)
 [[ -n $jar ]] && args+=(-b "$STATE/jars/$jar.txt" -c "$STATE/jars/$jar.txt")
 [[ -n $body_file ]] && args+=(-H 'Content-Type: application/json' --data-binary "@$body_file")
