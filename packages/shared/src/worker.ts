@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const dialedNumberSchema = z
   .string()
-  .regex(/^[1-9][0-9]{0,14}(?![\s\S])/, '号码格式错误');
+  .regex(/^[1-9][0-9]{5,14}(?![\s\S])/, '号码格式错误');
 export const authorizeRequestSchema = z.object({
   tenant: z.string().regex(/^[A-Za-z0-9]+$/),
   callee: z.string(),

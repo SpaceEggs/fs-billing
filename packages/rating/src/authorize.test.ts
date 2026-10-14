@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
   authorize,
-  authorizeRaw,
   resolveBillingNumber,
   parseDialedNumber,
   beijingTime,
@@ -12,6 +11,7 @@ import {
 } from './index.js';
 
 const at = beijingTime('2026-10-12 10:00:00');
+const ukNumber = parseDialedNumber('44712345678')!;
 const rates = (value: string): RateTable<'CNY'> => ({
   currency: 'CNY',
   versions: [
@@ -39,7 +39,7 @@ const tenant = (
 
 describe('authorize', () => {
   test('−35.20 + 100.00 at 0.0480 → 1350 minutes, capped to 14400 s', () => {
-    expect(authorizeRaw(tenant('-35.20'), '44712345678', at)).toMatchObject({
+    expect(authorize(tenant('-35.20'), ukNumber, at)).toMatchObject({
       allowed: true,
       callableMinutes: 1350,
       maxSeconds: 14400,
@@ -47,7 +47,7 @@ describe('authorize', () => {
   });
 
   test('small balance is not capped', () => {
-    expect(authorizeRaw(tenant('-99.00'), '44712345678', at)).toMatchObject({
+    expect(authorize(tenant('-99.00'), ukNumber, at)).toMatchObject({
       allowed: true,
       callableMinutes: 20,
       maxSeconds: 1200,
@@ -55,21 +55,21 @@ describe('authorize', () => {
   });
 
   test('−100.00 + 100.00 → 余额不足', () => {
-    expect(authorizeRaw(tenant('-100.00'), '44712345678', at)).toEqual({
+    expect(authorize(tenant('-100.00'), ukNumber, at)).toEqual({
       allowed: false,
       reason: '余额不足',
     });
   });
 
   test('less than one minute available → 余额不足', () => {
-    expect(authorizeRaw(tenant('-99.96'), '44712345678', at)).toEqual({
+    expect(authorize(tenant('-99.96'), ukNumber, at)).toEqual({
       allowed: false,
       reason: '余额不足',
     });
   });
 
   test('unknown tenant → 租户不存在', () => {
-    expect(authorizeRaw(undefined, '44712345678', at)).toEqual({
+    expect(authorize(undefined, ukNumber, at)).toEqual({
       allowed: false,
       reason: '租户不存在',
     });
@@ -77,19 +77,21 @@ describe('authorize', () => {
 
   test('disabled tenant → 租户已停用', () => {
     expect(
-      authorizeRaw(tenant('50', { status: 'disabled' }), '44712345678', at),
+      authorize(tenant('50', { status: 'disabled' }), ukNumber, at),
     ).toEqual({ allowed: false, reason: '租户已停用' });
   });
 
   test('no prefix match → 无费率', () => {
-    expect(authorizeRaw(tenant('50'), '8613800000000', at)).toEqual({
+    expect(
+      authorize(tenant('50'), parseDialedNumber('8613800000000')!, at),
+    ).toEqual({
       allowed: false,
       reason: '无费率',
     });
   });
 
   test('zero rate with positive funds → 240 minutes / 14400 s, JSON-safe', () => {
-    const result = authorizeRaw(tenant('0', {}, '0.0000'), '44712345678', at);
+    const result = authorize(tenant('0', {}, '0.0000'), ukNumber, at);
     expect(result).toMatchObject({
       allowed: true,
       callableMinutes: 240,
@@ -102,9 +104,7 @@ describe('authorize', () => {
   });
 
   test('zero rate without funds → 余额不足', () => {
-    expect(
-      authorizeRaw(tenant('-100', {}, '0.0000'), '44712345678', at),
-    ).toEqual({
+    expect(authorize(tenant('-100', {}, '0.0000'), ukNumber, at)).toEqual({
       allowed: false,
       reason: '余额不足',
     });
@@ -113,14 +113,17 @@ describe('authorize', () => {
 
 describe('dialed number boundary', () => {
   test.each([
-    ['+13055551234', '1'],
-    ['13055551234', '86'],
-    ['13800138000', '86'],
-    ['075586001234', '86'],
-    ['0013055551234', '1'],
-  ])('new dialed form %s authorizes against prefix %s', (raw, prefix) => {
-    const billing = resolveBillingNumber({ callee: raw, dialedNumber: raw });
-    if (!billing) throw new Error('Invalid fixture');
+    ['+13055551234', '13055551234', '1'],
+    ['13055551234', '8613055551234', '86'],
+    ['13800138000', '8613800138000', '86'],
+    ['075586001234', '8675586001234', '86'],
+    ['0013055551234', '13055551234', '1'],
+  ])('new dialed form %s uses %s and prefix %s', (raw, normalized, prefix) => {
+    const billing = resolveBillingNumber({
+      callee: normalized,
+      dialedNumber: raw,
+    });
+    if (!('ok' in billing)) throw new Error('Invalid fixture');
     const t = tenant('50', {
       rates: {
         currency: 'CNY',
@@ -129,13 +132,17 @@ describe('dialed number boundary', () => {
             effectiveFrom: at,
             entries: [
               { prefix: '1', country: 'NANP', perMinute: rate('CNY', '1') },
-              { prefix: '86', country: '中国', perMinute: rate('CNY', '0.1') },
+              {
+                prefix: '86',
+                country: '中国',
+                perMinute: rate('CNY', '0.1'),
+              },
             ],
           },
         ],
       },
     });
-    const result = authorize(t, billing, at);
+    const result = authorize(t, billing.billingNumber, at);
     expect(result.allowed && result.entry.prefix).toBe(prefix);
     expect(result.allowed && result.maxSeconds).toBe(
       prefix === '1' ? 9000 : 14400,
@@ -145,9 +152,8 @@ describe('dialed number boundary', () => {
   test.each(['+44712345678', '0044712345678', '', '4471234567x', ' 4471'])(
     '%j → 号码格式错误',
     (raw) => {
-      expect(authorizeRaw(tenant('50'), raw, at)).toEqual({
-        allowed: false,
-        reason: '号码格式错误',
+      expect(resolveBillingNumber({ callee: raw })).toEqual({
+        error: 'format',
       });
     },
   );

@@ -473,6 +473,7 @@ export async function seedDatabase(db: PoolDb): Promise<void> {
         endedAt: beijingTime('2026-09-28 15:02:09'),
         caller: '075586001299',
         callee: '6591234567',
+        billingNumber: '6591234567',
         durationSeconds: 120,
       });
     }
@@ -575,12 +576,15 @@ async function seedCdrs(
   const entries = sampleRates('CNY');
   for (const c of CDRS.filter((c) => !existing.has(c.callUuid))) {
     const startedAt = beijingTime(c.startedAt);
+    const dialed = parseDialedNumber(c.callee);
+    if (!dialed) throw new Error(`种子话单 ${c.callUuid} 号码格式错误`);
     const base = {
       tenantId: idOf(c.code),
       callUuid: c.callUuid,
       startedAt,
       caller: c.caller,
       callee: c.callee,
+      billingNumber: dialed,
       hangupCause: c.hangupCause,
     };
     if (c.ringSeconds === undefined) {
@@ -589,8 +593,7 @@ async function seedCdrs(
         .values({ ...base, endedAt: seconds(startedAt, c.talkSeconds) });
       continue;
     }
-    const dialed = parseDialedNumber(c.callee);
-    const entry = dialed && longestPrefix(entries, dialed);
+    const entry = longestPrefix(entries, dialed);
     if (!entry) throw new Error(`种子话单 ${c.callUuid} 无费率`);
     const answeredAt = seconds(startedAt, c.ringSeconds);
     const priced = priceCall(c.talkSeconds, entry.perMinute);

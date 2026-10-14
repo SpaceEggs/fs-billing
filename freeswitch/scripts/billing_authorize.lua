@@ -1,3 +1,6 @@
+local destination = session:getVariable('destination_number') or ''
+session:setVariable('billing_dialed_number', destination)
+
 -- 依赖与 mod_lua 使用相同 Lua ABI 的 Lua-cURL 和 lua-cjson；密钥只放全局配置，不写通道变量。
 local curl = require('cURL.safe')
 local json = require('cjson.safe')
@@ -37,7 +40,6 @@ end
 
 if not session:ready() then return end
 session:setVariable('billing_authorized', 'false')
-local destination = session:getVariable('destination_number') or ''
 local routed_digits = destination:gsub('^%+', '')
 local billing_number
 if destination:match('^%+') then
@@ -49,13 +51,12 @@ else
 end
 -- Worker 核验此投影；本地校验也覆盖授权超时放行的通话。
 if not routed_digits:match('^[0-9]+$') or #routed_digits > 17
-    or not billing_number:match('^[1-9][0-9]*$') or #billing_number > 15 then
+    or not billing_number:match('^[1-9][0-9]*$') or #billing_number < 6 or #billing_number > 15 then
     session:execute('respond', '484')
     session:hangup('INVALID_NUMBER_FORMAT')
     return
 end
 session:setVariable('billing_destination', destination)
-session:setVariable('billing_dialed_number', destination)
 session:setVariable('billing_number', billing_number)
 
 if not url or not url:match('^http://[%d%.]+:%d+$') or not key or #key < 16
@@ -68,7 +69,7 @@ end
 
 local request = assert(json.encode({
     tenant = session:getVariable('billing_tenant') or '',
-    callee = destination,
+    callee = billing_number,
     dialedNumber = destination,
     billingNumber = billing_number,
     uuid = session:get_uuid(),
@@ -97,13 +98,12 @@ local result = completed and (status == 200 or status == 400)
     and decision(table.concat(chunks)) or nil
 if result then
     if result.allowed then
-        if result.billing_number ~= nil and result.billing_number ~= billing_number then
+        if result.billing_number ~= billing_number then
             freeswitch.consoleLog('ERR', '计费授权号码不一致\n')
             session:execute('respond', '503')
             session:hangup('CALL_REJECTED')
             return
         end
-        session:setVariable('billing_number', result.billing_number or billing_number)
         allow(result.seconds, false)
     else
         session:execute('respond', tostring(result.sip_code))

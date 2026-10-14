@@ -59,18 +59,36 @@ export function createWorker(dependencies?: WorkerDependencies) {
             ),
           )
         ) {
-          return reply
-            .code(400)
-            .send({ allowed: false, reason: '号码格式错误', sipCode: 484 });
+          return reply.code(400).send({
+            allowed: false,
+            reason: '号码格式错误',
+            sipCode:
+              typeof request.body === 'object' &&
+              request.body !== null &&
+              'dialedNumber' in request.body
+                ? 484
+                : 400,
+          });
         }
         return reply.code(400).send({ error: '授权请求格式错误' });
       }
       const { tenant, dialedNumber } = parsed.data;
-      const billingNumber = resolveBillingNumber(parsed.data);
-      if (!billingNumber)
-        return reply
-          .code(400)
-          .send({ allowed: false, reason: '号码格式错误', sipCode: 484 });
+      const resolved = resolveBillingNumber(parsed.data);
+      if ('error' in resolved) {
+        if (resolved.error === 'mismatch') {
+          request.log.error(
+            { uuid: parsed.data.uuid, billingNumber: resolved.billingNumber },
+            '授权计费号码不一致',
+          );
+          return reply.code(503).send({ error: '授权计费号码不一致' });
+        }
+        return reply.code(400).send({
+          allowed: false,
+          reason: '号码格式错误',
+          sipCode: dialedNumber === undefined ? 400 : 484,
+        });
+      }
+      const { billingNumber } = resolved;
       try {
         const result = await withSystem(db, async (tx) =>
           authorize(

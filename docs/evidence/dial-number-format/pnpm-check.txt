@@ -22,8 +22,8 @@ packages/shared typecheck$ tsc -p tsconfig.json
 packages/shared typecheck: Done
 packages/rating typecheck: Done
 apps/api typecheck$ tsc -p tsconfig.json
-apps/web typecheck$ tsc -p tsconfig.json
 packages/db typecheck$ tsc -p tsconfig.json
+apps/web typecheck$ tsc -p tsconfig.json
 apps/api typecheck: Done
 apps/web typecheck: Done
 packages/db typecheck: Done
@@ -38,7 +38,7 @@ apps/worker typecheck: Done
 
 
  Test Files  15 passed (15)
-      Tests  235 passed | 1 skipped (236)
-   Start at  17:35:19
-   Duration  2.25s (import 53%, tests 41%, transform 4%, worker 1%)
+      Tests  263 passed (263)
+   Start at  18:00:09
+   Duration  2.44s (import 54%, tests 39%, transform 6%, worker 1%)
 

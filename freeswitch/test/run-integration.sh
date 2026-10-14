@@ -222,12 +222,19 @@ sip_assert() {
   else
     (( invites_after > invites_before )) || fail 'carrier INVITE 日志缺失'
   fi
-  python3 - "$FS_LOG_DIR/events.jsonl" "$cid" "$1" "$dialed_number" "${2:-}" <<'PY'
+  python3 - "$FS_LOG_DIR/events.jsonl" "$cid" "$1" "$dialed_number" "${2:-}" "${3:-FSIOK}" <<'PY'
 import json, sys
 rows=[json.loads(line) for line in open(sys.argv[1])]
 start=next(r['at'] for r in rows if r['kind']=='invite' and r['port']==5060 and r['call_id']==sys.argv[2])
 out=[r for r in rows if r['kind']=='invite' and r['port']==5090 and r['at']>=start]
 mode=sys.argv[3]
+auth=[r for r in rows if r['kind']=='authorize' and r['at']>=start]
+if sys.argv[5]:
+    assert len(auth)==1,auth
+    assert auth[0]['callee']==auth[0]['billingNumber']==sys.argv[5],auth
+    assert auth[0]['dialedNumber']==sys.argv[4] and auth[0]['tenant']==sys.argv[6],auth
+else:
+    assert len(auth)==0,auth
 if mode=='none':
     assert len(out)==0,out
 else:
@@ -237,11 +244,6 @@ else:
         elapsed=out[0]['at']-start
         print('stalled INVITE seconds',elapsed)
         assert 1.3 <= elapsed <= 2.5,elapsed
-    if mode=='normalized':
-        auth=[r for r in rows if r['kind']=='authorize' and r['at']>=start]
-        assert len(auth)==1,auth
-        assert auth[0]['callee']==sys.argv[4] and auth[0]['dialedNumber']==sys.argv[4],auth
-        assert auth[0]['billingNumber']==sys.argv[5] and auth[0]['tenant']=='FSIOK',auth
 PY
 }
 for normalization in \
@@ -261,12 +263,12 @@ for normalization in \
   wait_sql "SELECT count(*)=1 AND bool_and(amount=-$rate AND note='通话扣费 ' || substring(idempotency_key FROM 6) || ' $billing_number') FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid');"
   pass
 done
-for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 +447700900123 403' 'low 127.0.0.4 +447700900123 402'; do
-  read -r label ip number status <<< "$rejection"
+for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 +447700900123 403 447700900123 FSIOFF' 'low 127.0.0.4 +447700900123 402 447700900123 FSILOW'; do
+  read -r label ip number status billing_number tenant <<< "$rejection"
   current="拒绝 $status"
   sed "s/response=\"484\"/response=\"$status\"/" freeswitch/test/sipp/caller-reject.xml > "$FS_LOG_DIR/$label.xml"
   call "$label" "$ip" "$number" "/logs/$label.xml"
-  sip_assert none >> "$FS_LOG_DIR/assertions.log"
+  sip_assert none "$billing_number" "$tenant" >> "$FS_LOG_DIR/assertions.log"
   identify
   wait_sql "SELECT count(*)>=1 FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';"
   if [[ $label == bad ]]; then
@@ -281,7 +283,7 @@ done
 current=ALLOTTED_TIMEOUT
 call allotted 127.0.0.5 +447700900123 /scenarios/caller-timed.xml
 charged
-sip_assert outbound >> "$FS_LOG_DIR/assertions.log"
+sip_assert outbound 447700900123 FSI60 >> "$FS_LOG_DIR/assertions.log"
 # FSI60 余额 0.01、透支 0、费率 0.01/分钟，授权 maxSeconds=60。FreeSWITCH 调度器按整秒触发，
 # sched_hangup +60 在接通后 59–60 秒挂断：时长允许误差为 59–60 秒。61 秒起按 60/60 计成 2 分钟，必须失败。
 wait_sql "SELECT count(*)=1 AND bool_and(hangup_cause='ALLOTTED_TIMEOUT' AND duration_seconds BETWEEN 59 AND 60 AND billed_minutes=1 AND rate=0.01 AND charge=0.01) FROM cdrs WHERE call_uuid::text IN ($uuids);"
@@ -320,7 +322,7 @@ cid=replay-$run_id@fsi
 # 停 relay 只阻断 CDR；授权仍走 Worker，通话接通后挂断触发落盘。
 "${compose[@]}" stop nginx >/dev/null
 call replay 127.0.0.2 +447700900123 /scenarios/caller.xml
-sip_assert outbound >> "$FS_LOG_DIR/assertions.log"
+sip_assert outbound 447700900123 >> "$FS_LOG_DIR/assertions.log"
 retry_file=
 for _ in $(seq 1 100); do
   retry_file=$("${compose[@]}" exec -T freeswitch sh -c 'for f in /var/lib/freeswitch/cdr/retry/*.cdr.json; do [ -f "$f" ] || continue; grep -Fq "$1" "$f" && { printf "%s" "$f"; break; }; done; true' sh "$cid")

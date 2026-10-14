@@ -1,13 +1,13 @@
 local script = arg[1] or 'freeswitch/scripts/billing_authorize.lua'
 
-local function run(destination, response)
+local function run(destination, response, ready)
     local variables = { destination_number = destination, billing_tenant = 'tenant1' }
     local actions = {}
     local requests = 0
     local request
     local hangup
     session = {
-        ready = function() return hangup == nil end,
+        ready = function() return ready ~= false and hangup == nil end,
         answered = function() return false end,
         getVariable = function(_, name) return variables[name] end,
         setVariable = function(_, name, value) variables[name] = value end,
@@ -57,7 +57,7 @@ end
 for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
     for _, destination in ipairs({
         '44712345678|evil', '44712345678,evil', '44712345678/evil',
-        '', '+', '000044712345678', '4471x', ' 4471', '4471 ', '44 71',
+        '', '+', '0', '1', '+1', '0044', '000044712345678', '4471x', ' 4471', '4471 ', '44 71',
         '4471\n', '4471\r', '44\t71',
         '1234567890123456', '+1234567890123456', '001234567890123456',
         '00123456789012345678', '+0044712345678',
@@ -65,6 +65,7 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         local variables, actions, requests, hangup = run(destination, response)
         local label = response .. ' ' .. destination
         check(variables.billing_authorized == 'false', label .. ' must not be allowed')
+        check(variables.billing_dialed_number == destination, label .. ' must mark new CDR before rejecting')
         check(actions.bridge == nil, label .. ' must not bridge')
         check(requests == 0, label .. ' must reject before requesting authorization')
         check(actions.respond == '484', label .. ' must respond 484')
@@ -80,7 +81,7 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         { '00123456789012345', '123456789012345' },
     }) do
         local destination, expected_billing = case[1], case[2]
-        local variables, actions, requests, hangup = run(destination, response)
+        local variables, actions, requests, hangup, request = run(destination, response)
         check(variables.billing_authorized == 'true', response .. ' valid number must be allowed')
         check(variables.billing_unverified == 'true', response .. ' must mark billing unverified')
         check(variables.execute_on_answer == 'sched_hangup +1800 ALLOTTED_TIMEOUT',
@@ -90,6 +91,8 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         check(variables.billing_dialed_number == destination, response .. ' must preserve CDR dialed number')
         check(variables.billing_number == expected_billing, response .. ' must set normalized billing_number')
         check(requests == 1 and hangup == nil, response .. ' must attempt authorization without hanging up')
+        check(request.callee == expected_billing and request.dialedNumber == destination,
+            response .. ' must send normalized callee and original dialedNumber')
     end
 end
 
@@ -101,18 +104,22 @@ for _, seconds in ipairs({ 60, 60.0 }) do
     check(variables.billing_unverified == 'false', 'valid allowance must be verified')
     check(actions.bridge == 'sofia/gateway/upstream/+44712345678', 'valid allowance must bridge original number')
     check(variables.billing_number == '44712345678', 'valid allowance must set verified billing number')
-    check(request.callee == '+44712345678' and request.dialedNumber == '+44712345678'
+    check(request.callee == '44712345678' and request.dialedNumber == '+44712345678'
         and request.billingNumber == '44712345678', 'authorize must send dialed number and billing projection')
 end
 
-for _, wrong_billing in ipairs({ '8613800138000', 1234, false }) do
+for _, wrong_billing in ipairs({ '8613800138000', 1234, false, 'missing' }) do
     local variables, actions, _, hangup = run('+44712345678',
-        { allowed = true, maxSeconds = 60, billingNumber = wrong_billing })
+        { allowed = true, maxSeconds = 60, billingNumber = wrong_billing ~= 'missing' and wrong_billing or nil })
     check(variables.billing_authorized == 'false' and actions.bridge == nil,
         'worker billing mismatch must fail closed')
     check(actions.respond == '503' and hangup == 'CALL_REJECTED',
         'worker billing mismatch must reject without fallback')
 end
+
+local not_ready, _, not_ready_requests = run('+44712345678', 'timeout', false)
+check(not_ready.billing_dialed_number == '+44712345678' and not_ready_requests == 0,
+    'unready session must mark new CDR before returning')
 
 local fractional = run('44712345678', { allowed = true, maxSeconds = 60.5 })
 check(fractional.billing_unverified == 'true', 'fractional allowance must use invalid-response fallback')

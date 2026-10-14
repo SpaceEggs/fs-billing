@@ -530,7 +530,7 @@ describe('Worker HTTP 与真实数据库', () => {
       reason: '租户不存在',
       sipCode: 404,
     });
-    expect((await authorize(tenant.code, '86138')).json()).toEqual({
+    expect((await authorize(tenant.code, '861380')).json()).toEqual({
       allowed: false,
       reason: '无费率',
       sipCode: 404,
@@ -541,7 +541,7 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(response.json()).toEqual({
         allowed: false,
         reason: '号码格式错误',
-        sipCode: 484,
+        sipCode: 400,
       });
     }
     await withSystem(connection.db, async (tx) => {
@@ -990,7 +990,7 @@ describe('Worker HTTP 与真实数据库', () => {
         payload: {
           tenant: tenant.code,
           uuid,
-          callee: dialed,
+          callee: billingNumber,
           dialedNumber: dialed,
           billingNumber,
         },
@@ -1045,7 +1045,7 @@ describe('Worker HTTP 与真实数据库', () => {
     },
   );
 
-  it('新话单不带投影时重新计算；投影不一致不计费，保存原拨号供处理', async () => {
+  it('新话单不带投影时重新计算；投影不一致保存工作端投影供处理', async () => {
     const tenant = await fixture();
     const accepted = randomUUID();
     expect(
@@ -1088,8 +1088,8 @@ describe('Worker HTTP 与真实数据库', () => {
     ).toEqual([
       {
         callee: '+447700900123',
-        billing_number: null,
-        reason: '号码格式错误',
+        billing_number: '447700900123',
+        reason: '计费号码不一致',
       },
     ]);
     expect(await state(rejected)).toEqual({
@@ -1098,5 +1098,178 @@ describe('Worker HTTP 与真实数据库', () => {
       charges: 0,
       jobs: 0,
     });
+    expect(
+      (
+        await owner.pool.query(
+          'select kind from system_alerts where description = $1',
+          [`${rejected}: 计费号码不一致`],
+        )
+      ).rows,
+    ).toEqual([{ kind: 'cdr_failed' }]);
   });
+
+  it.each([
+    {
+      dialed: '13800138000',
+      callee: '13800138000',
+      newForm: false,
+      prefix: '1',
+      billingNumber: '13800138000',
+      reason: undefined,
+    },
+    {
+      dialed: '075586001234',
+      callee: '075586001234',
+      newForm: false,
+      prefix: undefined,
+      billingNumber: null,
+      reason: '号码格式错误',
+    },
+    {
+      dialed: '13800138000',
+      callee: '8613800138000',
+      newForm: true,
+      prefix: '86',
+      billingNumber: '8613800138000',
+      reason: undefined,
+    },
+    {
+      dialed: '075586001234',
+      callee: '8675586001234',
+      newForm: true,
+      prefix: '86',
+      billingNumber: '8675586001234',
+      reason: undefined,
+    },
+  ])(
+    'mixed rollout request and CDR $newForm / $dialed use one handler',
+    async ({ dialed, callee, newForm, prefix, billingNumber, reason }) => {
+      const tenant = await createTenant(connection, 'CNY');
+      await withSystem(connection.db, (tx) =>
+        createRateVersion(
+          tx,
+          tenant.id,
+          [
+            { prefix: '1', country: 'NANP', perMinute: rate('CNY', '0.03') },
+            { prefix: '86', country: '中国', perMinute: rate('CNY', '0.02') },
+          ],
+          { effectiveFrom: new Date('2026-09-01T00:00:00Z') },
+        ),
+      );
+      const uuid = randomUUID();
+      const authorization = await worker.inject({
+        method: 'POST',
+        url: '/authorize',
+        headers: { 'x-billing-key': security.secret },
+        payload: {
+          tenant: tenant.code,
+          uuid,
+          callee,
+          ...(newForm ? { dialedNumber: dialed, billingNumber } : {}),
+        },
+      });
+      expect(authorization.statusCode).toBe(reason ? 400 : 200);
+      expect(authorization.json()).toEqual(
+        reason
+          ? { allowed: false, reason, sipCode: 400 }
+          : {
+              allowed: true,
+              maxSeconds: 14400,
+              ...(newForm ? { billingNumber } : {}),
+            },
+      );
+      expect(
+        (
+          await post(
+            body(tenant.code, uuid, {
+              destination_number: dialed,
+              ...(newForm
+                ? {
+                    billing_dialed_number: dialed,
+                    billing_number: billingNumber,
+                  }
+                : {}),
+            }),
+          )
+        ).json(),
+      ).toMatchObject({ status: reason ? 'unassigned' : 'queued' });
+      if (reason) {
+        expect(
+          (
+            await owner.pool.query(
+              'select reason, callee, billing_number from unassigned_cdrs where call_uuid = $1',
+              [uuid],
+            )
+          ).rows,
+        ).toEqual([{ reason, callee: dialed, billing_number: null }]);
+      } else {
+        await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+        expect(
+          (
+            await owner.pool.query(
+              'select callee, billing_number, matched_prefix, charge::text from cdrs where call_uuid = $1',
+              [uuid],
+            )
+          ).rows,
+        ).toEqual([
+          {
+            callee: dialed,
+            billing_number: billingNumber,
+            matched_prefix: prefix,
+            charge: prefix === '1' ? '0.12' : '0.08',
+          },
+        ]);
+      }
+    },
+  );
+
+  it.each([
+    { dialed: '12345678901234', billingNumber: null, reason: '号码格式错误' },
+    {
+      dialed: '0044',
+      billingNumber: null,
+      reason: '号码格式错误',
+    },
+  ])(
+    'new Lua early return CDR marker $dialed cannot use legacy billing',
+    async ({ dialed, billingNumber, reason }) => {
+      const tenant = await fixture();
+      const uuid = randomUUID();
+      expect(
+        (
+          await post(
+            body(tenant.code, uuid, {
+              destination_number: dialed,
+              billing_dialed_number: dialed,
+              answer_epoch: '0',
+              billsec: '0',
+              hangup_cause: 'INVALID_NUMBER_FORMAT',
+            }),
+          )
+        ).json(),
+      ).toMatchObject({ status: 'unassigned' });
+      expect(
+        (
+          await owner.pool.query(
+            'select reason, callee, billing_number from unassigned_cdrs where call_uuid = $1',
+            [uuid],
+          )
+        ).rows,
+      ).toEqual([{ reason, callee: dialed, billing_number: billingNumber }]);
+      expect(
+        (
+          await owner.pool.query(
+            'select kind from system_alerts where description = $1',
+            [`${uuid}: ${reason}`],
+          )
+        ).rows,
+      ).toEqual([{ kind: 'cdr_failed' }]);
+      expect(await state(uuid)).toEqual({
+        cdrs: 0,
+        unassigned: 1,
+        charges: 0,
+        jobs: 0,
+      });
+    },
+  );
 });

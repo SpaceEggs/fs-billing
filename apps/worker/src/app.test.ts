@@ -27,20 +27,28 @@ test('worker runs without an API or database process', async () => {
 
 test.each([
   {
-    callee: '13800138000',
-    dialedNumber: '13800138000',
-    billingNumber: '13800138000',
+    numbers: { callee: '+1234567890123456', dialedNumber: '+1234567890123456' },
+    sipCode: 484,
   },
-  { callee: '+1234567890123456', dialedNumber: '+1234567890123456' },
-  { callee: '138|evil', dialedNumber: '138|evil' },
-  { callee: '138,evil', dialedNumber: '138,evil' },
-  { callee: '123\n', dialedNumber: '123\n' },
-  { callee: '13800138000', billingNumber: '8613800138000' },
-  { callee: '13800138000', dialedNumber: 13800138000 },
-  { callee: '1234567890123456' },
+  { numbers: { callee: '138|evil', dialedNumber: '138|evil' }, sipCode: 484 },
+  { numbers: { callee: '138,evil', dialedNumber: '138,evil' }, sipCode: 484 },
+  { numbers: { callee: '123\n', dialedNumber: '123\n' }, sipCode: 484 },
+  {
+    numbers: { callee: '13800138000', dialedNumber: 13800138000 },
+    sipCode: 484,
+  },
+  { numbers: { callee: '1234567890123456' }, sipCode: 400 },
+  ...['0', '1', '+1', '0044', '075586001234'].map((callee) => ({
+    numbers: { callee },
+    sipCode: 400,
+  })),
+  ...['0', '1', '+1', '0044'].map((dialedNumber) => ({
+    numbers: { callee: dialedNumber, dialedNumber },
+    sipCode: 484,
+  })),
 ])(
   'authorize rejects invalid number input before reading the DB %j',
-  async (numbers) => {
+  async ({ numbers, sipCode }) => {
     const connection = connect('postgresql://localhost/unused');
     const transaction = vi.spyOn(connection.db, 'transaction');
     const app = createWorker({
@@ -63,7 +71,7 @@ test.each([
       expect(response.json()).toEqual({
         allowed: false,
         reason: '号码格式错误',
-        sipCode: 484,
+        sipCode,
       });
       expect(transaction).not.toHaveBeenCalled();
     } finally {
@@ -73,6 +81,43 @@ test.each([
     }
   },
 );
+
+test.each([
+  { callee: '13800138000', billingNumber: '8613800138000' },
+  { callee: '13800138000', dialedNumber: '13800138000' },
+  {
+    callee: '8613800138000',
+    dialedNumber: '13800138000',
+    billingNumber: '13055551234',
+  },
+])('authorize fails closed on projection mismatch %j', async (numbers) => {
+  const connection = connect('postgresql://localhost/unused');
+  const transaction = vi.spyOn(connection.db, 'transaction');
+  const app = createWorker({
+    db: connection.db,
+    queue: { enqueue: async () => {} },
+    security: { secret: 'test-worker-key', allowedIps: ['127.0.0.1'] },
+  });
+  try {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/authorize',
+      headers: { 'x-billing-key': 'test-worker-key' },
+      payload: {
+        tenant: 'ABC01',
+        uuid: 'debf1234-1234-4234-8234-123456789abc',
+        ...numbers,
+      },
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ error: '授权计费号码不一致' });
+    expect(transaction).not.toHaveBeenCalled();
+  } finally {
+    transaction.mockRestore();
+    await app.close();
+    await connection.pool.end();
+  }
+});
 
 test.each([
   {

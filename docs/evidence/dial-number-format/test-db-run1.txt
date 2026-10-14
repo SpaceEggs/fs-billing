@@ -7,7 +7,7 @@
 
 
  Test Files  10 passed (10)
-      Tests  144 passed (144)
-   Start at  17:33:54
-   Duration  19.84s (tests 69%, import 28%, transform 2%)
+      Tests  150 passed (150)
+   Start at  17:52:36
+   Duration  19.13s (tests 70%, import 28%, transform 1%)
 

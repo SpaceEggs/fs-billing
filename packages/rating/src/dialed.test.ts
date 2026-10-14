@@ -16,6 +16,10 @@ test.each([
 
 test.each([
   '',
+  '0',
+  '1',
+  '+1',
+  '0044',
   '+',
   '00',
   '+001234',
@@ -36,40 +40,59 @@ test.each([
 });
 
 test('distinguishes legacy canonical numbers from new domestic numbers', () => {
-  expect(resolveBillingNumber({ callee: '13055551234' })).toBe('13055551234');
+  expect(resolveBillingNumber({ callee: '13055551234' })).toEqual({
+    ok: true,
+    billingNumber: '13055551234',
+  });
+  expect(
+    resolveBillingNumber({
+      callee: '8613055551234',
+      dialedNumber: '13055551234',
+    }),
+  ).toEqual({ ok: true, billingNumber: '8613055551234' });
+});
+
+test('verifies the normalized callee and claimed billing number', () => {
   expect(
     resolveBillingNumber({
       callee: '13055551234',
-      dialedNumber: '13055551234',
-    }),
-  ).toBe('8613055551234');
-});
-
-test('verifies claimed billing number and rejects incomplete new forms', () => {
-  expect(
-    resolveBillingNumber({
-      callee: '+13055551234',
       dialedNumber: '+13055551234',
       billingNumber: '13055551234',
     }),
-  ).toBe('13055551234');
-  expect(
-    resolveBillingNumber({
-      callee: '13800138000',
+  ).toEqual({ ok: true, billingNumber: '13055551234' });
+  for (const input of [
+    { callee: '13800138000', dialedNumber: '13800138000' },
+    {
+      callee: '8613800138000',
       dialedNumber: '13800138000',
       billingNumber: '13800138000',
-    }),
-  ).toBeUndefined();
+    },
+  ]) {
+    expect(resolveBillingNumber(input)).toEqual({
+      error: 'mismatch',
+      billingNumber: '8613800138000',
+    });
+  }
   expect(
     resolveBillingNumber({
       callee: '13800138000',
       billingNumber: '8613800138000',
     }),
-  ).toBeUndefined();
-  expect(
-    resolveBillingNumber({ callee: '', dialedNumber: '' }),
-  ).toBeUndefined();
-  expect(
-    resolveBillingNumber({ callee: '4471|evil', dialedNumber: '+4471' }),
-  ).toBeUndefined();
+  ).toEqual({ error: 'mismatch', billingNumber: '13800138000' });
 });
+
+test.each(['', '0', '1', '+1', '0044', '075586001234'])(
+  'rejects invalid legacy number %j',
+  (callee) => {
+    expect(resolveBillingNumber({ callee })).toEqual({ error: 'format' });
+  },
+);
+
+test.each(['', '0', '1', '+1', '0044', '12345678901234', '+4471'])(
+  'rejects invalid new number %j before checking its projection',
+  (dialedNumber) => {
+    expect(resolveBillingNumber({ callee: '', dialedNumber })).toEqual({
+      error: 'format',
+    });
+  },
+);
