@@ -1,0 +1,128 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 2,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 8,
+  "numPassedTests": 8,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1791956905165,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
+          "status": "passed",
+          "title": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
+          "duration": 1.7416189999999006,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation rejects unauthenticated protected operations and customer access to all live admin operations",
+          "status": "passed",
+          "title": "rejects unauthenticated protected operations and customer access to all live admin operations",
+          "duration": 170.26543900000001,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation logout positive behavior and A to B attack",
+          "status": "passed",
+          "title": "logout positive behavior and A to B attack",
+          "duration": 217.42545399999995,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation session positive behavior and A to B attack",
+          "status": "passed",
+          "title": "session positive behavior and A to B attack",
+          "duration": 196.879189,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation changePassword positive behavior and A to B attack",
+          "status": "passed",
+          "title": "changePassword positive behavior and A to B attack",
+          "duration": 866.5628129999998,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation revokeOtherSessions positive behavior and A to B attack",
+          "status": "passed",
+          "title": "revokeOtherSessions positive behavior and A to B attack",
+          "duration": 296.8337929999998,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation portalContext positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalContext positive behavior and A to B attack",
+          "duration": 308.348657,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[owner] live OpenAPI customer isolation"],
+          "fullName": "[owner] live OpenAPI customer isolation unfiltered SQL proves the owner bypass and the app RLS boundary",
+          "status": "passed",
+          "title": "unfiltered SQL proves the owner bypass and the app RLS boundary",
+          "duration": 2.1774279999999635,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791956907280,
+      "endTime": 1791956909340.1775,
+      "status": "passed",
+      "message": "",
+      "name": "/tmp/fs-billing-idor-checkout-83TjpM/apps/api/src/idor.db.test.ts"
+    }
+  ]
+}

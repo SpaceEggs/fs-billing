@@ -1,0 +1,74 @@
+{
+  "source": "live Fastify OpenAPI",
+  "denominator": 5,
+  "operations": [
+    {
+      "operationId": "logout",
+      "access": "session",
+      "isolationCase": "self-session-mutation"
+    },
+    {
+      "operationId": "session",
+      "access": "authenticated",
+      "isolationCase": "self-session"
+    },
+    {
+      "operationId": "changePassword",
+      "access": "authenticated",
+      "isolationCase": "self-credential"
+    },
+    {
+      "operationId": "revokeOtherSessions",
+      "access": "authenticated",
+      "isolationCase": "self-session-mutation"
+    },
+    {
+      "operationId": "portalContext",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    }
+  ],
+  "difference": {
+    "missing": [],
+    "extra": []
+  },
+  "coverage": [
+    {
+      "lane": "app",
+      "numerator": 5,
+      "denominator": 5
+    }
+  ],
+  "results": [
+    {
+      "lane": "app",
+      "operationId": "logout",
+      "isolationCase": "self-session-mutation",
+      "status": "passed"
+    },
+    {
+      "lane": "app",
+      "operationId": "session",
+      "isolationCase": "self-session",
+      "status": "passed"
+    },
+    {
+      "lane": "app",
+      "operationId": "changePassword",
+      "isolationCase": "self-credential",
+      "status": "passed"
+    },
+    {
+      "lane": "app",
+      "operationId": "revokeOtherSessions",
+      "isolationCase": "self-session-mutation",
+      "status": "passed"
+    },
+    {
+      "lane": "app",
+      "operationId": "portalContext",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    }
+  ]
+}

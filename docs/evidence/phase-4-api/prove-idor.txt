@@ -1,0 +1,9 @@
+
+> @fs-billing/api@ prove:idor /workspace/fs-billing/apps/api
+> node --import tsx scripts/prove-idor.ts /workspace/fs-billing/docs/evidence/phase-4-api/idor-proof
+
+baseline-app: all isolation assertions passed
+baseline-owner: all isolation assertions passed
+mutation-owner: detected B balance leak
+mutation-app: all isolation assertions passed
+IDOR double-defense proof passed. Evidence in /workspace/fs-billing/docs/evidence/phase-4-api/idor-proof
