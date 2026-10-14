@@ -453,17 +453,22 @@ describe('operation registry', () => {
       disabled,
     );
     expect(apiContract.logout.access).toBe('session');
-    expect(apiContract.logout.responses).not.toHaveProperty('403');
+    expect(apiContract.logout.responses[403].safeParse(disabled).success).toBe(
+      false,
+    );
     expect(apiContract.logout.responses[204].parse(undefined)).toBeUndefined();
     expect(apiContract.logout.responses[401].safeParse(disabled).success).toBe(
       false,
     );
   });
 
-  it('rejects forbidden login errors and permits forbidden admin self-reset errors', () => {
+  it('permits forbidden origin errors on login and logout and forbidden admin self-reset errors', () => {
     const forbidden = { error: { code: 'FORBIDDEN', ...errorFields } };
     expect(apiContract.login.responses[403].safeParse(forbidden).success).toBe(
-      false,
+      true,
+    );
+    expect(apiContract.logout.responses[403].parse(forbidden)).toEqual(
+      forbidden,
     );
     expect(
       apiContract.resetAdminPassword.responses[403].parse(forbidden),
