@@ -129,7 +129,7 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 **计费系统的判断逻辑**：
 
-0. 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber`。新协议从原始拨号归一化，核验 `callee` 和可选投影。格式错误返回 HTTP 400，新协议使用 SIP 484，旧协议使用 SIP 400；号码不一致单独记录错误并返回 HTTP 503。
+0. 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber`。从原始拨号归一化，核验 `callee` 和可选投影。格式错误返回 HTTP 400，使用 SIP 484；号码不一致单独记录错误并返回 HTTP 503。
 1. 租户不存在或已停用 → 拒绝
 2. `billing_number` 匹配不到费率 → 拒绝
 3. 可用金额 = 余额 + 透支额度
@@ -158,21 +158,13 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 桥接保留原始 `destination_number`，不做号码改写。路由号码只接受一个可选的开头 `+` 和 1–17 位 ASCII 数字，拒绝 `|`、`,`、空格等字符，返回 SIP 484。17 位上限允许 `00` 加 15 位国际号码；计费号码另行要求首位为 1–9、总长 6–15 位。E.164 的 15 位限制只作用于 `billing_number`，不能拿来截断或改写上游号码。
 
-Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBillingNumber`，使用规范化结果匹配费率并保存到数据库。Lua 仅为请求前校验和授权超时放行生成同规则投影，在脚本开始时设置 `billing_dialed_number`，校验后设置 `billing_number`。提前返回的话单也按新协议解析。Worker 从原始拨号重新计算，拒绝不一致的投影；Lua 要求授权成功响应包含一致的号码，缺失或不一致均返回 SIP 503。这样不会仅凭 Lua 的结果收费，也不会让授权和话单分别维护归一化逻辑。Worker 故障时原始拨号与投影仍随话单落盘，恢复后由同一函数重新核验。
+Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBillingNumber`，使用规范化结果匹配费率并保存到数据库。Lua 仅为请求前校验和授权超时放行生成同规则投影，在脚本开始时设置 `billing_dialed_number`，校验后设置 `billing_number`。提前返回的话单也保留原始拨号。Worker 从原始拨号重新计算，拒绝不一致的投影；Lua 要求授权成功响应包含一致的号码，缺失或不一致均返回 SIP 503。这样不会仅凭 Lua 的结果收费，也不会让授权和话单分别维护归一化逻辑。Worker 故障时原始拨号与投影仍随话单落盘，恢复后由同一函数重新核验。
 
-新话单的 `callee` 保存原始拨号，`billing_number` 保存费率与账本使用的国际号码。解析优先使用 `billing_dialed_number`，避免 FreeSWITCH 的 `execute_extension` 改变展示号码。有效的未归属话单也保存规范化号码；号码格式无效时该列为 NULL；投影不一致时保存 Worker 计算的号码，以独立原因停放并记录告警。扣费备注为 `通话扣费 <UUID> <billing_number>`，旧行没有该列时回退到已有 `callee`。
+话单的 `callee` 保存原始拨号，`billing_number` 保存费率与账本使用的国际号码。解析优先使用 `billing_dialed_number`，避免 FreeSWITCH 的 `execute_extension` 改变展示号码。有效的未归属话单也保存规范化号码；号码格式无效时该列为 NULL；投影不一致时保存 Worker 计算的号码，以独立原因停放并记录告警。扣费备注为 `通话扣费 <UUID> <billing_number>`。
 
-旧协议没有 `dialedNumber` 或 `billing_dialed_number`，Worker 将其 `callee` 或 `destination_number` 直接按 6–15 位规范号码校验，不再补 `86`，旧授权成功响应也保留原形状。旧 Lua 的国内号码并非国际号码，更新窗口内裸拨 `138…` 仍匹配 `1` 前缀，可能误按 NANP 计费；以 `0` 开头的旧协议号码改为格式错误，授权返回 SIP 400，兼容旧 Lua 的错误码映射。缩短更新窗口，切换前回放旧 retry 文件并确认处理完成。单独提供 `billingNumber` 或 `billing_number`、却没有原始拨号标记的请求不属于旧协议，按号码不一致处理。
+只接受包含原始拨号的号码格式。授权缺少 `dialedNumber` 返回 HTTP 400、SIP 484、`号码格式错误`。CDR 缺少 `billing_dialed_number` 按话单校验失败进入未归属待办并告警，不计费。
 
-迁移 `0003_billing_number` 为 `cdrs` 与 `unassigned_cdrs` 添加可空字段和格式约束，不回填历史记录，不增加业务锁。已有计价快照和账本不重算。业务写入仍先执行 `lock_tenants`，分区只在维护路径创建，重试保留在最外层，金额继续由 decimal.js 计算。
-
-按以下顺序滚动部署，允许新 Worker 同时服务新旧 FreeSWITCH：
-
-1. 执行数据库迁移，保留历史 NULL 行。
-2. 升级全部 Worker，确认旧协议仍可授权、接收话单。
-3. 将 Lua 与拨号计划作为一组逐台更新 FreeSWITCH，再执行 SIPp 国内和国际通话验收。旧 retry 文件继续按旧协议处理。
-
-回滚时先恢复 FreeSWITCH 的 Lua 与拨号计划，等待新协议通话结束，并回放新协议 retry 话单、确认话单与待处理扣费处理完成后再降级 Worker。旧 Worker 无法处理新协议原始拨号，不能先回滚 Worker。可空字段保留，无需反向删除迁移。
+迁移 `0004_billing_number_not_null` 将正式话单的 `billing_number` 设为非空，格式约束统一为首位非零的 6–15 位数字。未归属话单仅在 `号码格式错误` 或 `话单校验失败: ...` 时允许且要求 NULL，因为这两类输入没有可信计费号码。其他原因必须保存计算后的号码。业务写入仍先执行 `lock_tenants`，不增加业务锁，分区只在维护路径创建，重试保留在最外层，金额继续由 decimal.js 计算。
 
 > "未经验证"标记**只在管理后台显示**，客户门户中不显示，也不向客户透露计费系统故障信息。这些话单对客户照常计费。
 

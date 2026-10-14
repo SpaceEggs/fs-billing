@@ -9,7 +9,7 @@ local url = api:execute('global_getvar', 'billing_worker_url')
 local key = api:execute('global_getvar', 'billing_shared_key')
 
 -- 边界：授权响应与 packages/shared/src/worker.ts 的放行/拒绝形状一致。
-local sip_codes = { [400] = true, [402] = true, [403] = true, [404] = true, [484] = true }
+local sip_codes = { [402] = true, [403] = true, [404] = true, [484] = true }
 local function decision(body)
     local value = json.decode(body)
     if type(value) ~= 'table' then return nil end

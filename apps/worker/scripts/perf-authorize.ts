@@ -54,6 +54,7 @@ try {
       body: JSON.stringify({
         tenant: code,
         callee: '149912345678',
+        dialedNumber: '+149912345678',
         uuid: randomUUID(),
       }),
     });

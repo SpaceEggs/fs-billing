@@ -51,7 +51,9 @@ it('stores the newer rate and uses the .900 answer timestamp for the ledger char
       variables: {
         uuid,
         billing_tenant: tenant.code,
-        destination_number: '447700900123',
+        destination_number: '+447700900123',
+        billing_dialed_number: '+447700900123',
+        billing_number: '447700900123',
         start_epoch: second - 9,
         start_uepoch: (second - 9) * 1e6 + 100123,
         answer_epoch: second,

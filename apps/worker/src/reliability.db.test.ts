@@ -615,6 +615,7 @@ it('/authorize 缺失/错误密钥返回 401，白名单外返回 403', async ()
   const payload = {
     tenant: 'ABC001',
     callee: '447700900123',
+    dialedNumber: '+447700900123',
     uuid: randomUUID(),
   };
   for (const key of [undefined, 'bad-key']) {

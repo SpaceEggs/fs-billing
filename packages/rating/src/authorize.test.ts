@@ -118,7 +118,7 @@ describe('dialed number boundary', () => {
     ['13800138000', '8613800138000', '86'],
     ['075586001234', '8675586001234', '86'],
     ['0013055551234', '13055551234', '1'],
-  ])('new dialed form %s uses %s and prefix %s', (raw, normalized, prefix) => {
+  ])('dialed form %s uses %s and prefix %s', (raw, normalized, prefix) => {
     const billing = resolveBillingNumber({
       callee: normalized,
       dialedNumber: raw,
@@ -149,10 +149,10 @@ describe('dialed number boundary', () => {
     );
   });
 
-  test.each(['+44712345678', '0044712345678', '', '4471234567x', ' 4471'])(
+  test.each(['+44', '0044', '', '4471234567x', ' 4471'])(
     '%j → 号码格式错误',
     (raw) => {
-      expect(resolveBillingNumber({ callee: raw })).toEqual({
+      expect(resolveBillingNumber({ dialedNumber: raw })).toEqual({
         error: 'format',
       });
     },

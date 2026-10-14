@@ -103,13 +103,10 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
     return { status: 'unassigned' as const, rawId: raw.id };
   }
   const cdr = parsed.data;
-  const resolved = resolveBillingNumber(
-    cdr.dialedNumber === undefined
-      ? { callee: cdr.callee, billingNumber: cdr.billingNumber }
-      : { dialedNumber: cdr.dialedNumber, billingNumber: cdr.billingNumber },
-  );
-  const billingNumber =
-    'billingNumber' in resolved ? resolved.billingNumber : null;
+  const resolved = resolveBillingNumber({
+    dialedNumber: cdr.callee,
+    billingNumber: cdr.billingNumber,
+  });
   try {
     const status = await withSystem(db, async (tx) => {
       const [tenant] = await tx
@@ -138,14 +135,14 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
           tx,
           cdr,
           resolved.error === 'mismatch' ? '计费号码不一致' : '号码格式错误',
-          billingNumber,
+          resolved.error === 'mismatch' ? resolved.billingNumber : null,
         );
       if (!tenant)
         return park(
           tx,
           cdr,
           cdr.tenantTag ? '租户不存在' : '缺少租户标签',
-          billingNumber ?? null,
+          resolved.billingNumber,
         );
       const verifiedBillingNumber = resolved.billingNumber;
       const ratingTenant = await loadRatingTenant(tx, tenant.code);
@@ -154,13 +151,13 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         ratingTenant &&
         findRate(ratingTenant.rates, verifiedBillingNumber, cdr.answeredAt);
       if (cdr.answeredAt && !entry)
-        return park(tx, cdr, '接通时无费率', billingNumber);
+        return park(tx, cdr, '接通时无费率', verifiedBillingNumber);
       const priced = entry
         ? priceCall(cdr.billsec, entry.perMinute)
         : undefined;
       await tx.insert(schema.cdrs).values({
         ...cdr,
-        billingNumber,
+        billingNumber: verifiedBillingNumber,
         tenantId: tenant.id,
         durationSeconds: cdr.billsec,
         billedMinutes: priced?.billedMinutes.toFixed() ?? '0',

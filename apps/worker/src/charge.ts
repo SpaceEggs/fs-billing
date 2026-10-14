@@ -19,7 +19,6 @@ export async function chargeCdr(db: Db, input: unknown): Promise<void> {
       .select({
         rate: schema.cdrs.rate,
         billingNumber: schema.cdrs.billingNumber,
-        callee: schema.cdrs.callee,
         durationSeconds: schema.cdrs.durationSeconds,
         answeredAt: schema.cdrs.answeredAt,
         currency: schema.tenants.currency,
@@ -44,7 +43,7 @@ export async function chargeCdr(db: Db, input: unknown): Promise<void> {
         kind: 'call_charge',
         amount: money(row.currency, priced.charge.value.neg().toFixed()),
         occurredAt: row.answeredAt,
-        note: `通话扣费 ${job.callUuid} ${row.billingNumber ?? row.callee}`,
+        note: `通话扣费 ${job.callUuid} ${row.billingNumber}`,
         idempotencyKey: callChargeKey(job.callUuid),
       },
     );

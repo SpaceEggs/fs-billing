@@ -152,9 +152,9 @@ describe('RLS 租户隔离', () => {
   it('租户身份删除自己的话单：0 行受影响，话单仍在', async () => {
     const tenant = await createTenant(app, 'CNY');
     await withSystem(app.db, (tx) =>
-      tx.execute(sql`insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee)
+      tx.execute(sql`insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee, billing_number)
                      values (${tenant.id}, ${randomUUID()}, '2026-10-12T10:00:00+08:00',
-                             '2026-10-12T10:00:30+08:00', '075586001234', '8613800138000')`),
+                             '2026-10-12T10:00:30+08:00', '075586001234', '8613800138000', '8613800138000')`),
     );
     const result = await withTenant(app.db, tenant.id, async (tx) => ({
       deleted: (await tx.execute(sql`delete from cdrs`)).rowCount,

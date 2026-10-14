@@ -65,7 +65,7 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         local variables, actions, requests, hangup = run(destination, response)
         local label = response .. ' ' .. destination
         check(variables.billing_authorized == 'false', label .. ' must not be allowed')
-        check(variables.billing_dialed_number == destination, label .. ' must mark new CDR before rejecting')
+        check(variables.billing_dialed_number == destination, label .. ' must preserve original dialed number before rejecting')
         check(actions.bridge == nil, label .. ' must not bridge')
         check(requests == 0, label .. ' must reject before requesting authorization')
         check(actions.respond == '484', label .. ' must respond 484')
@@ -119,7 +119,7 @@ end
 
 local not_ready, _, not_ready_requests = run('+44712345678', 'timeout', false)
 check(not_ready.billing_dialed_number == '+44712345678' and not_ready_requests == 0,
-    'unready session must mark new CDR before returning')
+    'unready session must preserve original dialed number before returning')
 
 local fractional = run('44712345678', { allowed = true, maxSeconds = 60.5 })
 check(fractional.billing_unverified == 'true', 'fractional allowance must use invalid-response fallback')

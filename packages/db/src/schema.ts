@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   date,
   integer,
   jsonb,
@@ -147,7 +148,7 @@ export const cdrs = pgTable(
     endedAt: at('ended_at').notNull(),
     caller: text('caller').notNull(),
     callee: text('callee').notNull(),
-    billingNumber: text('billing_number'),
+    billingNumber: text('billing_number').notNull(),
     durationSeconds: integer('duration_seconds').notNull().default(0),
     billedMinutes: numeric('billed_minutes').notNull().default('0'),
     matchedPrefix: text('matched_prefix'),
@@ -161,7 +162,13 @@ export const cdrs = pgTable(
     reconcileAlerted: boolean('reconcile_alerted').notNull().default(false),
     receivedAt: at('received_at').notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.callUuid, table.startedAt] })],
+  (table) => [
+    primaryKey({ columns: [table.callUuid, table.startedAt] }),
+    check(
+      'cdrs_billing_number_check',
+      sql`${table.billingNumber} ~ '^[1-9][0-9]{5,14}$`,
+    ),
+  ],
 );
 
 export const rawCdrs = pgTable(
@@ -177,29 +184,42 @@ export const rawCdrs = pgTable(
   (table) => [primaryKey({ columns: [table.id, table.receivedAt] })],
 );
 
-export const unassignedCdrs = pgTable('unassigned_cdrs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantTag: text('tenant_tag').notNull().default(''),
-  callUuid: uuid('call_uuid'),
-  rawId: uuid('raw_id'),
-  rawReceivedAt: at('raw_received_at'),
-  reason: text('reason').notNull(),
-  startedAt: at('started_at'),
-  answeredAt: at('answered_at'),
-  endedAt: at('ended_at'),
-  caller: text('caller').notNull(),
-  callee: text('callee').notNull(),
-  billingNumber: text('billing_number'),
-  durationSeconds: integer('duration_seconds').notNull().default(0),
-  status: text('status', { enum: ['pending', 'ignored', 'assigned'] })
-    .notNull()
-    .default('pending'),
-  ignoreReason: text('ignore_reason'),
-  assignedTenantId: uuid('assigned_tenant_id'),
-  resolvedBy: uuid('resolved_by'),
-  resolvedAt: at('resolved_at'),
-  receivedAt: at('received_at').notNull().defaultNow(),
-});
+export const unassignedCdrs = pgTable(
+  'unassigned_cdrs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantTag: text('tenant_tag').notNull().default(''),
+    callUuid: uuid('call_uuid'),
+    rawId: uuid('raw_id'),
+    rawReceivedAt: at('raw_received_at'),
+    reason: text('reason').notNull(),
+    startedAt: at('started_at'),
+    answeredAt: at('answered_at'),
+    endedAt: at('ended_at'),
+    caller: text('caller').notNull(),
+    callee: text('callee').notNull(),
+    billingNumber: text('billing_number'),
+    durationSeconds: integer('duration_seconds').notNull().default(0),
+    status: text('status', { enum: ['pending', 'ignored', 'assigned'] })
+      .notNull()
+      .default('pending'),
+    ignoreReason: text('ignore_reason'),
+    assignedTenantId: uuid('assigned_tenant_id'),
+    resolvedBy: uuid('resolved_by'),
+    resolvedAt: at('resolved_at'),
+    receivedAt: at('received_at').notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'unassigned_cdrs_billing_number_check',
+      sql`${table.billingNumber} ~ '^[1-9][0-9]{5,14}$`,
+    ),
+    check(
+      'unassigned_cdrs_billing_number_reason_check',
+      sql`(${table.billingNumber} IS NULL) = (${table.reason} = '号码格式错误' OR ${table.reason} LIKE '话单校验失败: %')`,
+    ),
+  ],
+);
 
 export const monthlyStatements = pgTable('monthly_statements', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -29,6 +29,13 @@
       "when": 1792108800000,
       "tag": "0003_billing_number",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792195200000,
+      "tag": "0004_billing_number_not_null",
+      "breakpoints": true
     }
   ]
 }

@@ -6,7 +6,7 @@ export const dialedNumberSchema = z
 export const authorizeRequestSchema = z.object({
   tenant: z.string().regex(/^[A-Za-z0-9]+$/),
   callee: z.string(),
-  dialedNumber: z.string().optional(),
+  dialedNumber: z.string(),
   billingNumber: z.string().optional(),
   uuid: z.uuid(),
 });
@@ -15,7 +15,7 @@ export const authorizeResponseSchema = z.discriminatedUnion('allowed', [
   z.object({
     allowed: z.literal(true),
     maxSeconds: z.number().int().positive().max(14400),
-    billingNumber: dialedNumberSchema.optional(),
+    billingNumber: dialedNumberSchema,
   }),
   z.object({
     allowed: z.literal(false),
@@ -27,7 +27,6 @@ export const authorizeResponseSchema = z.discriminatedUnion('allowed', [
       '余额不足',
     ]),
     sipCode: z.union([
-      z.literal(400),
       z.literal(403),
       z.literal(404),
       z.literal(402),
@@ -69,7 +68,7 @@ export const modJsonCdrSchema = z
         billing_unverified: flag.default(false),
         caller_id_number: z.string().optional(),
         destination_number: z.string().optional(),
-        billing_dialed_number: z.string().optional(),
+        billing_dialed_number: z.string(),
         billing_number: z.string().optional(),
         hangup_cause: z.string().default(''),
       })
@@ -132,12 +131,7 @@ export const modJsonCdrSchema = z
       v.caller_id_number ??
       callflow?.[0]?.caller_profile?.caller_id_number ??
       '',
-    callee:
-      v.billing_dialed_number ??
-      v.destination_number ??
-      callflow?.[0]?.caller_profile?.destination_number ??
-      '',
-    dialedNumber: v.billing_dialed_number,
+    callee: v.billing_dialed_number,
     billingNumber: v.billing_number,
     hangupCause: v.hangup_cause,
   }));

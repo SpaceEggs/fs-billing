@@ -23,31 +23,24 @@ export function normalizeDialedNumber(raw: string): DialedNumber | undefined {
 }
 
 export type BillingNumberInput = {
+  readonly dialedNumber: string;
+  readonly callee?: string | undefined;
   readonly billingNumber?: string | undefined;
-} & (
-  | { readonly callee: string; readonly dialedNumber?: undefined }
-  | { readonly dialedNumber: string; readonly callee?: string | undefined }
-);
+};
 
 export type BillingNumberResult =
   | { readonly ok: true; readonly billingNumber: DialedNumber }
   | { readonly error: 'format' }
   | { readonly error: 'mismatch'; readonly billingNumber: DialedNumber };
 
-/** 旧协议直接使用 callee；新协议以原拨号计算，并核对国际号码投影。 */
+/** 以原拨号计算，并核对国际号码投影。 */
 export function resolveBillingNumber(
   input: BillingNumberInput,
 ): BillingNumberResult {
-  const billingNumber =
-    input.dialedNumber === undefined
-      ? parseDialedNumber(input.callee)
-      : normalizeDialedNumber(input.dialedNumber);
+  const billingNumber = normalizeDialedNumber(input.dialedNumber);
   if (!billingNumber) return { error: 'format' };
   if (
-    (input.dialedNumber === undefined && input.billingNumber !== undefined) ||
-    (input.dialedNumber !== undefined &&
-      input.callee !== undefined &&
-      input.callee !== billingNumber) ||
+    (input.callee !== undefined && input.callee !== billingNumber) ||
     (input.billingNumber !== undefined && input.billingNumber !== billingNumber)
   ) {
     return { error: 'mismatch', billingNumber };
