@@ -234,10 +234,10 @@
 - [ ] 取消指定未来版本只允许 `effective_from > DB now()`，与生效竞态时拒绝；当前/历史费率不变，rate_schedule_cancel 保存取消版本 ID 和完整 entries；仅复用 lock_tenants
 - [ ] 管理员启用、门户账号停用/启用均要求管理员身份且成功写审计；门户停用撤销全部会话，不影响呼叫；账号启用不恢复旧会话
 - [ ] topup/credit_topup/gift 拒绝超过两位小数，adjustment 拒绝超过四位；正负金额都受可配置业务上限约束，默认最多 10 位整数，独立于传输长度；透支额度与阈值非负且最多两位
-- [ ] CSV 接受中文表头，文件 <=2 MiB，行数采用可配置 DEFAULT 10000（须按用户最大实际费率表复核）；超限整表不变，大表预览 TTL 按可配置默认 60 分钟提案实现
+- [ ] CSV 接受中文表头，文件 <=2 MiB，行数采用可配置 DEFAULT 10000（须按用户最大实际费率表复核）；超限整表不变，大表预览 TTL 可配置，默认值待用户确认（DEFAULT 提案 60 分钟）
 - [ ] 创建编码规范化大写，DB 不区分大小写唯一；邮箱小写去重后最多 20 个，空收件人可保存但设置页面在加载/保存后显示无法送达提醒
-- [ ] 门户开户先创建不可登录 auth 用户，再在业务事务关联 profile 与审计，最后启用；关联失败留下不可登录 orphan，业务 API 拒绝无 profile 用户
-- [ ] 停用租户提示不声称立即断开已接通电话；人工欺诈切断 runbook 可按租户核验 UUID 后执行 uuid_kill
+- [ ] 门户开户先创建 auth.user 且不创建 credential row，再在业务事务关联 profile 与审计，最后在 activate 写入 credential；关联失败留下无 credential 的不可登录 orphan，业务 API 拒绝无 profile 用户（故障测试仍为计划）
+- [ ] 停用租户提示不承诺呼叫停止，说明 Worker 超时时新呼叫仍可能放行最多 1800 秒；人工欺诈切断 runbook 按 billing_tenant 与租户编码不区分大小写核验 UUID 后执行 uuid_kill
 
 ---
 

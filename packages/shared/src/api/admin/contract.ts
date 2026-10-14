@@ -165,7 +165,7 @@ export const adminApiContract = {
     'adminTenantSettings',
     'POST',
     '/api/admin/tenants/{tenantId}/settings',
-    { ...tenantRequest, body: tenants.adminTenantSettingsSchema },
+    { ...tenantRequest, body: tenants.adminTenantSettingsRequestSchema },
     adminMutationResponseSchema,
     {},
   ),

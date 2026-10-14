@@ -157,3 +157,24 @@ test('Chinese header preserves the rating dialect and physical error lines', () 
     errors: [{ line: 2, reason: '前缀只能是数字：前缀' }],
   });
 });
+
+test.each([
+  '前缀,国家/地区,费率',
+  '前缀,国家,费率(元/分钟)',
+  '前缀，国家，费率',
+  'prefix，country，rate',
+  'prefix,country,price',
+  '前缀编号,国家,费率',
+])('near-miss header %s reports its physical line', (header) => {
+  expect(parseRateCsv(`\uFEFF\n\n${header}\n44,英国,0.04`, 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 3, reason: '表头无法识别' }],
+  });
+});
+
+test('malformed numeric prefixes remain data errors on the first row', () => {
+  expect(parseRateCsv('44a,英国,0.04', 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 1, reason: '前缀只能是数字：44a' }],
+  });
+});

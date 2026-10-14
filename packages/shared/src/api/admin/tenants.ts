@@ -19,15 +19,21 @@ export const adminTenantHealthSchema = z.enum([
   'normal',
   'disabled',
 ]);
-export const adminTenantSettingsSchema = z.strictObject({
+export const adminTenantSettingsRequestSchema = z.strictObject({
   overdraftLimit: adminInputAmountSchemas.settings,
   lowBalanceThreshold: adminInputAmountSchemas.settings,
   emails: z
     .array(z.email())
+    .max(100)
     .transform((emails) => [
       ...new Set(emails.map((email) => email.toLowerCase())),
     ])
     .pipe(z.array(z.email()).max(20)),
+});
+export const adminTenantSettingsResponseSchema = z.strictObject({
+  overdraftLimit: adminNonnegativeAmountSchema,
+  lowBalanceThreshold: moneyAmountSchema,
+  emails: z.array(z.email()),
 });
 const contactFields = {
   contactName: z.string().max(200).default(''),
@@ -62,10 +68,12 @@ export const adminTenantCreateRequestSchema =
       .max(64)
       .transform((code) => code.toUpperCase()),
     currency: currencySchema,
-    settings: adminTenantSettingsSchema.omit({ overdraftLimit: true }).extend({
-      overdraftLimit: adminInputAmountSchemas.settings.optional(),
-      emails: adminTenantSettingsSchema.shape.emails.optional(),
-    }),
+    settings: adminTenantSettingsRequestSchema
+      .omit({ overdraftLimit: true })
+      .extend({
+        overdraftLimit: adminInputAmountSchemas.settings.optional(),
+        emails: adminTenantSettingsRequestSchema.shape.emails.optional(),
+      }),
     initialRates: adminTenantInitialRatesSchema,
   });
 export const adminTenantSummarySchema = tenantIdentitySchema.extend({
@@ -89,7 +97,7 @@ export const adminTenantsResponseSchema = z.strictObject({
 });
 export const adminTenantDetailResponseSchema = adminTenantSummarySchema.extend({
   ...contactFields,
-  settings: adminTenantSettingsSchema,
+  settings: adminTenantSettingsResponseSchema,
   createdAt: adminTimestampSchema,
 });
 export const adminTenantCreateResponseSchema =
@@ -113,7 +121,12 @@ export const adminTenantOverviewResponseSchema = z.strictObject({
 });
 
 export type AdminTenantHealth = z.infer<typeof adminTenantHealthSchema>;
-export type AdminTenantSettings = z.infer<typeof adminTenantSettingsSchema>;
+export type AdminTenantSettingsRequest = z.infer<
+  typeof adminTenantSettingsRequestSchema
+>;
+export type AdminTenantSettingsResponse = z.infer<
+  typeof adminTenantSettingsResponseSchema
+>;
 export type AdminTenantEditRequest = z.infer<
   typeof adminTenantEditRequestSchema
 >;

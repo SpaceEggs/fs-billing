@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   adminApiContract,
-  adminTenantSettingsSchema,
+  adminTenantSettingsRequestSchema,
+  adminTenantSettingsResponseSchema,
+  adminRateVersionResponseSchema,
   createAdminInputAmountSchemas,
   createAdminRateEntriesSchema,
   createAdminCsvFileSchema,
@@ -807,12 +809,14 @@ describe('final Phase 5 decisions', () => {
       lowBalanceThreshold: '9999999999.99',
       emails: [],
     };
-    expect(adminTenantSettingsSchema.parse(settings)).toEqual(settings);
+    expect(adminTenantSettingsRequestSchema.parse(settings)).toEqual(settings);
     for (const field of ['overdraftLimit', 'lowBalanceThreshold']) {
       for (const value of ['-0.01', '1.001', '10000000000']) {
         expect(
-          adminTenantSettingsSchema.safeParse({ ...settings, [field]: value })
-            .success,
+          adminTenantSettingsRequestSchema.safeParse({
+            ...settings,
+            [field]: value,
+          }).success,
         ).toBe(false);
       }
     }
@@ -820,7 +824,7 @@ describe('final Phase 5 decisions', () => {
   it('recipients lowercase and deduplicate before the twenty-address cap', () => {
     const settings = { overdraftLimit: '100', lowBalanceThreshold: '200' };
     expect(
-      adminTenantSettingsSchema.parse({
+      adminTenantSettingsRequestSchema.parse({
         ...settings,
         emails: Array.from({ length: 30 }, (_, i) =>
           i % 2 ? 'ADMIN@example.com' : 'admin@example.com',
@@ -829,21 +833,85 @@ describe('final Phase 5 decisions', () => {
     ).toEqual(['admin@example.com']);
     const emails = Array.from({ length: 20 }, (_, i) => `user${i}@example.com`);
     expect(
-      adminTenantSettingsSchema.parse({
+      adminTenantSettingsRequestSchema.parse({
         ...settings,
         emails: [...emails, 'USER0@example.com'],
       }).emails,
     ).toEqual(emails);
     expect(
-      adminTenantSettingsSchema.safeParse({
+      adminTenantSettingsRequestSchema.safeParse({
         ...settings,
         emails: [...emails, 'extra@example.com'],
       }).success,
     ).toBe(false);
     expect(
-      adminTenantSettingsSchema.safeParse({ ...settings, emails: ['bad'] })
-        .success,
+      adminTenantSettingsRequestSchema.safeParse({
+        ...settings,
+        emails: ['bad'],
+      }).success,
     ).toBe(false);
+    expect(
+      adminTenantSettingsRequestSchema.parse({
+        ...settings,
+        emails: Array(100).fill('admin@example.com'),
+      }).emails,
+    ).toEqual(['admin@example.com']);
+    expect(
+      adminTenantSettingsRequestSchema.safeParse({
+        ...settings,
+        emails: Array(101).fill('admin@example.com'),
+      }).success,
+    ).toBe(false);
+  });
+  it('saved settings preserve historical precision, amounts and recipients', () => {
+    const settings = {
+      overdraftLimit: '123456789012.3456',
+      lowBalanceThreshold: '-1.23456',
+      emails: Array.from({ length: 21 }, (_, i) => `USER${i}@example.com`),
+    };
+    expect(adminTenantSettingsResponseSchema.parse(settings)).toEqual(settings);
+    expect(
+      adminSchemas.adminTenantDetailResponseSchema.shape.settings.parse(
+        settings,
+      ),
+    ).toEqual(settings);
+    expect(
+      adminSchemas.adminTenantCreateResponseSchema.shape.tenant.shape.settings.parse(
+        settings,
+      ),
+    ).toEqual(settings);
+    expect(adminTenantSettingsRequestSchema.safeParse(settings).success).toBe(
+      false,
+    );
+  });
+  it('raised row limits remain readable and cancellable with a complete audit', () => {
+    const entries = Array.from(
+      { length: DEFAULT_ADMIN_RATE_MAX_ROWS + 1 },
+      (_, i) => ({ prefix: String(i + 1), country: '测试', rate: '0.01' }),
+    );
+    expect(createAdminRateEntriesSchema(entries.length).parse(entries)).toEqual(
+      entries,
+    );
+    const version = { id, effectiveFrom: '2026-10-15T00:00:00Z', entries };
+    expect(
+      adminRateVersionResponseSchema.parse({ auditId: id, version }),
+    ).toEqual({ auditId: id, version });
+    expect(
+      adminSchemas.adminRatesResponseSchema.parse({
+        currency: 'CNY',
+        current: version,
+        scheduled: [version],
+      }),
+    ).toEqual({ currency: 'CNY', current: version, scheduled: [version] });
+    const content = {
+      summary: '取消排期',
+      changes: [],
+      cancelledVersionId: id,
+      entries,
+    };
+    expect(
+      auditContentSchema.parse({ action: 'rate_schedule_cancel', content }),
+    ).toEqual({ action: 'rate_schedule_cancel', content });
   });
   it('tenant codes normalize uppercase at creation', () => {
     expect(

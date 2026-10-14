@@ -34,6 +34,7 @@ export function createAdminRateEntriesSchema(
     );
 }
 export const adminRateEntriesSchema = createAdminRateEntriesSchema();
+export const adminRateEntriesResponseSchema = z.array(adminRateEntrySchema);
 export const adminRateScheduleSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('immediate') }),
   z.strictObject({
@@ -47,7 +48,7 @@ export const adminRateScheduleSchema = z.discriminatedUnion('kind', [
 export const adminRateVersionSchema = z.strictObject({
   id: z.uuid(),
   effectiveFrom: adminTimestampSchema,
-  entries: adminRateEntriesSchema,
+  entries: adminRateEntriesResponseSchema,
 });
 export const adminRatesQuerySchema = z.strictObject({
   search: z.string().max(200).optional(),
