@@ -1,0 +1,131 @@
+import { z } from 'zod';
+import { moneyAmountSchema } from '../money.js';
+import { newPasswordSchema } from '../auth.js';
+import { currencySchema, tenantIdentitySchema } from '../identity.js';
+import {
+  adminMutationResponseSchema,
+  adminNonnegativeAmountSchema,
+  adminPageInfoSchema,
+  adminPageQuerySchema,
+  adminStatusSchema,
+  adminTimestampSchema,
+} from './common.js';
+import { adminPortalAccountCreateRequestSchema } from './accounts.js';
+import { adminRateEntriesSchema, adminCsvFileSchema } from './rates.js';
+
+export const adminTenantHealthSchema = z.enum([
+  'suspended',
+  'overdraft',
+  'low_balance',
+  'normal',
+  'disabled',
+]);
+export const adminTenantSettingsSchema = z.strictObject({
+  overdraftLimit: adminNonnegativeAmountSchema,
+  lowBalanceThreshold: adminNonnegativeAmountSchema,
+  emails: z.array(z.email()).max(20),
+});
+const contactFields = {
+  contactName: z.string().max(200).default(''),
+  contactPhone: z.string().max(100).default(''),
+  remark: z.string().max(2000).default(''),
+};
+export const adminTenantEditRequestSchema = z.strictObject({
+  name: z.string().trim().min(1).max(200),
+  ...contactFields,
+});
+export const adminTenantInitialRatesSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('blank') }),
+  z.strictObject({
+    kind: z.literal('entries'),
+    entries: adminRateEntriesSchema,
+  }),
+  z.strictObject({
+    kind: z.literal('copy'),
+    sourceTenantId: z.uuid(),
+    sourceVersionId: z.uuid(),
+  }),
+  z.strictObject({ kind: z.literal('csv'), file: adminCsvFileSchema }),
+]);
+export const adminTenantCreateRequestSchema =
+  adminTenantEditRequestSchema.extend({
+    code: z
+      .string()
+      .regex(/^[A-Za-z0-9]+$/)
+      .max(64),
+    currency: currencySchema,
+    settings: adminTenantSettingsSchema.omit({ overdraftLimit: true }).extend({
+      overdraftLimit: adminNonnegativeAmountSchema.optional(),
+    }),
+    initialRates: adminTenantInitialRatesSchema,
+    portalAccount: adminPortalAccountCreateRequestSchema.optional(),
+  });
+export const adminTenantSummarySchema = tenantIdentitySchema.extend({
+  status: adminStatusSchema,
+  health: adminTenantHealthSchema,
+  balance: moneyAmountSchema,
+  overdraftLimit: adminNonnegativeAmountSchema,
+  availableBalance: moneyAmountSchema,
+  monthConsumption: adminNonnegativeAmountSchema,
+  pendingReceivable: adminNonnegativeAmountSchema,
+});
+export const adminTenantsQuerySchema = adminPageQuerySchema.extend({
+  search: z.string().max(200).optional(),
+  status: adminTenantHealthSchema.optional(),
+  currency: currencySchema.optional(),
+  sort: z.literal('status_currency_balance').default('status_currency_balance'),
+});
+export const adminTenantsResponseSchema = z.strictObject({
+  items: z.array(adminTenantSummarySchema),
+  pagination: adminPageInfoSchema,
+});
+export const adminTenantDetailResponseSchema = adminTenantSummarySchema.extend({
+  ...contactFields,
+  settings: adminTenantSettingsSchema,
+  createdAt: adminTimestampSchema,
+});
+export const adminTenantCreateResponseSchema =
+  adminMutationResponseSchema.extend({
+    tenant: adminTenantDetailResponseSchema,
+    initialRateVersionId: z.uuid(),
+    effectiveFrom: adminTimestampSchema,
+    portalAccountId: z.uuid().optional(),
+    temporaryPassword: newPasswordSchema.optional(),
+  });
+export const adminTenantOverviewResponseSchema = z.strictObject({
+  currency: currencySchema,
+  monthConsumption: adminNonnegativeAmountSchema,
+  monthCallMinutes: adminNonnegativeAmountSchema,
+  dailyConsumption: z
+    .array(
+      z.strictObject({
+        date: z.iso.date(),
+        amount: adminNonnegativeAmountSchema,
+      }),
+    )
+    .max(30),
+});
+
+export type AdminTenantHealth = z.infer<typeof adminTenantHealthSchema>;
+export type AdminTenantSettings = z.infer<typeof adminTenantSettingsSchema>;
+export type AdminTenantEditRequest = z.infer<
+  typeof adminTenantEditRequestSchema
+>;
+export type AdminTenantInitialRates = z.infer<
+  typeof adminTenantInitialRatesSchema
+>;
+export type AdminTenantCreateRequest = z.infer<
+  typeof adminTenantCreateRequestSchema
+>;
+export type AdminTenantSummary = z.infer<typeof adminTenantSummarySchema>;
+export type AdminTenantsQuery = z.infer<typeof adminTenantsQuerySchema>;
+export type AdminTenantsResponse = z.infer<typeof adminTenantsResponseSchema>;
+export type AdminTenantDetailResponse = z.infer<
+  typeof adminTenantDetailResponseSchema
+>;
+export type AdminTenantCreateResponse = z.infer<
+  typeof adminTenantCreateResponseSchema
+>;
+export type AdminTenantOverviewResponse = z.infer<
+  typeof adminTenantOverviewResponseSchema
+>;
