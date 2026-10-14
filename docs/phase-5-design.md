@@ -245,7 +245,7 @@ AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action�
 | 3   | 原建议，管理员首次登录强制改密，另步设计 | 管理员和门户账号首次登录、密码重置后均强制改密。临时密码默认 72 小时失效，认证状态与流程另步实现，见 j、k、l。                                                                                                                                                                                                            |
 | 4   | A，只支持整笔全额确认                    | confirm-payment 不接收 amount。部分到账先保留 pending，等全额到账后一次确认。独立作废、撤销误确认与重新确认已由 a、b 一起决定。                                                                                                                                                                                           |
 | 5   | 人工金额按操作限制精度且全部有上限       | topup/credit_topup/gift 最多 2 位小数，adjustment 最多 4 位；overdraftLimit、lowBalanceThreshold 非负且最多 2 位。默认最多 10 位整数，分别最大 9999999999.99 / 9999999999.9999，以命名常量与 schema factory 配置，独立于 128 字符传输保护。                                                                               |
-| 6   | B，限制 CSV 容量并保留 rating 方言       | 文件 <=2 MiB；DEFAULT_ADMIN_RATE_MAX_ROWS 暂为 10000，可配置，**须按用户最大实际费率表复核**，用户尚未提供规模。接受中文表头 `前缀,国家,费率`。预览 TTL 可配置，默认 60 分钟已决定（第 n 项）；提交时复查版本、时间与过期状态。                                                                                           |
+| 6   | B，限制 CSV 容量并保留 rating 方言       | 文件 <=2 MiB；DEFAULT_ADMIN_RATE_MAX_ROWS = 10000，可配置，已决定（2026-10-14，约 200+ 国家、每国若干费率，1 万行足够）。接受中文表头 `前缀,国家,费率`。预览 TTL 可配置，默认 60 分钟已决定（第 n 项）；提交时复查版本、时间与过期状态。                                                                                  |
 | 7   | 接受文本上限，租户编码输入转大写         | name/country 200、notes/remark 2000、idempotencyKey 200、code 64。Zod transform 将 code 转大写；DB 步骤须落实不区分大小写唯一约束，并检查存量碰撞。                                                                                                                                                                       |
 | 8   | A，状态内先按币种分组                    | suspended、overdraft、low_balance、normal、disabled；同状态 CNY、USD 分组，再组内 balance ASC，最后 code/id。不跨币种比较金额。                                                                                                                                                                                           |
 | 9   | A，停用拒绝正常授权，不承诺呼叫停止      | 提示须说明已接通电话继续按原上限结束并正常计费；Worker 超时可能继续放行新呼叫最多 1800 秒，不能承诺呼叫停止。欺诈紧急切断采用下述人工 runbook。                                                                                                                                                                           |
@@ -290,7 +290,7 @@ AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action�
 
 ## 待用户确认
 
-仅 CSV 行数上限仍待用户提供最大真实费率表行数。当前 `DEFAULT_ADMIN_RATE_MAX_ROWS = 10000` 为可配置暂定值；取得规模后复核行数上限与整表复制存储成本。
+无。CSV 行数上限已于 2026-10-14 决定为 10000（`DEFAULT_ADMIN_RATE_MAX_ROWS`，可配置）：约 200+ 国家、每国若干费率，1 万行足够。
 
 ## 本步验证
 
