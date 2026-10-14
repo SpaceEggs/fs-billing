@@ -8,6 +8,6 @@
 
  Test Files  1 passed (1)
       Tests  15 passed (15)
-   Start at  22:48:13
-   Duration  5.88s (tests 81%, import 17%, transform 3%)
+   Start at  23:03:23
+   Duration  6.16s (tests 80%, import 18%, transform 2%)
 

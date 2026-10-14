@@ -451,13 +451,14 @@ describe('identity cardinality before status', () => {
   });
 });
 
-async function legacyDatabase(run: (pool: pg.Pool) => Promise<void>) {
+async function legacyDatabase(run: (client: pg.Client) => Promise<void>) {
   const name = `auth_migration_${randomUUID().replaceAll('-', '')}`;
   await owner.pool.query(`CREATE DATABASE ${name}`);
   const url = new URL(inject('ownerUrl'));
   url.pathname = `/${name}`;
-  const pool = new pg.Pool({ connectionString: url.toString(), max: 1 });
+  const client = new pg.Client({ connectionString: url.toString() });
   try {
+    await client.connect();
     for (const file of [
       '0000_init',
       '0001_worker_gate',
@@ -465,28 +466,28 @@ async function legacyDatabase(run: (pool: pg.Pool) => Promise<void>) {
       '0003_billing_number',
       '0004_billing_number_not_null',
     ]) {
-      await pool.query(
+      await client.query(
         await readFile(
           new URL(`../migrations/${file}.sql`, import.meta.url),
           'utf8',
         ),
       );
     }
-    await run(pool);
+    await run(client);
   } finally {
-    await pool.end();
-    await owner.pool.query(`DROP DATABASE ${name} WITH (FORCE)`);
+    await client.end();
+    await owner.pool.query(`DROP DATABASE ${name}`);
   }
 }
 
 describe('legacy profile migration', () => {
   it('preserves profile IDs and references, normalizes email, creates no login credential', async () => {
-    await legacyDatabase(async (pool) => {
+    await legacyDatabase(async (client) => {
       const profile = z
         .object({ id: z.uuid() })
         .parse(
           (
-            await pool.query<{ id: string }>(
+            await client.query<{ id: string }>(
               "INSERT INTO admins(email,name) VALUES ('Legacy@Example.invalid','Legacy') RETURNING id",
             )
           ).rows[0],
@@ -495,7 +496,7 @@ describe('legacy profile migration', () => {
         .object({ id: z.uuid() })
         .parse(
           (
-            await pool.query<{ id: string }>(
+            await client.query<{ id: string }>(
               "INSERT INTO tenants(code,name,currency,overdraft_limit) VALUES ('LEG001','Legacy tenant','CNY',0) RETURNING id",
             )
           ).rows[0],
@@ -504,47 +505,47 @@ describe('legacy profile migration', () => {
         .object({ id: z.uuid() })
         .parse(
           (
-            await pool.query<{ id: string }>(
+            await client.query<{ id: string }>(
               "INSERT INTO portal_accounts(email,tenant_id) VALUES ('Portal@Example.invalid',$1) RETURNING id",
               [tenant.id],
             )
           ).rows[0],
         );
-      await pool.query('BEGIN');
-      await pool.query("SELECT set_config('app.scope','admin',true)");
-      await pool.query('SELECT lock_tenants(ARRAY[$1::uuid])', [tenant.id]);
-      await pool.query(
+      await client.query('BEGIN');
+      await client.query("SELECT set_config('app.scope','admin',true)");
+      await client.query('SELECT lock_tenants(ARRAY[$1::uuid])', [tenant.id]);
+      await client.query(
         "INSERT INTO ledger_entries(tenant_id,kind,amount,created_by,idempotency_key) VALUES($1,'recharge',10,$2,'legacy:recharge')",
         [tenant.id, profile.id],
       );
-      await pool.query('COMMIT');
+      await client.query('COMMIT');
       const ledgerSql =
         'SELECT id,tenant_id,created_by,amount,idempotency_key FROM ledger_entries';
-      const beforeLedger = await pool.query<{
+      const beforeLedger = await client.query<{
         id: string;
         tenant_id: string;
         created_by: string;
         amount: string;
         idempotency_key: string;
       }>(ledgerSql);
-      await pool.query('BEGIN');
-      await pool.query(
+      await client.query('BEGIN');
+      await client.query(
         await readFile(
           new URL('../migrations/0005_auth.sql', import.meta.url),
           'utf8',
         ),
       );
-      await pool.query('COMMIT');
+      await client.query('COMMIT');
       expect(
         (
-          await pool.query(
+          await client.query(
             'SELECT a.id,u.email FROM admins a JOIN auth."user" u ON u.id=a.auth_user_id',
           )
         ).rows,
       ).toEqual([{ id: profile.id, email: 'legacy@example.invalid' }]);
       expect(
         (
-          await pool.query<{ id: string; tenant_id: string; email: string }>(
+          await client.query<{ id: string; tenant_id: string; email: string }>(
             'SELECT p.id,p.tenant_id,u.email FROM portal_accounts p JOIN auth."user" u ON u.id=p.auth_user_id',
           )
         ).rows,
@@ -563,7 +564,7 @@ describe('legacy profile migration', () => {
       });
       expect(
         (
-          await pool.query<{
+          await client.query<{
             id: string;
             tenant_id: string;
             created_by: string;
@@ -572,33 +573,33 @@ describe('legacy profile migration', () => {
           }>(ledgerSql)
         ).rows,
       ).toEqual(beforeLedger.rows);
-      expect((await pool.query('SELECT FROM auth.account')).rowCount).toBe(0);
+      expect((await client.query('SELECT FROM auth.account')).rowCount).toBe(0);
     });
   });
 
   it('normalized cross-table duplicate fails without partial structure', async () => {
-    await legacyDatabase(async (pool) => {
-      await pool.query(
+    await legacyDatabase(async (client) => {
+      await client.query(
         "INSERT INTO admins(email,name) VALUES ('Duplicate@Example.invalid','Legacy')",
       );
       const tenant = z
         .object({ id: z.uuid() })
         .parse(
           (
-            await pool.query<{ id: string }>(
+            await client.query<{ id: string }>(
               "INSERT INTO tenants(code,name,currency,overdraft_limit) VALUES ('DUP001','Duplicate','CNY',0) RETURNING id",
             )
           ).rows[0],
         );
-      await pool.query(
+      await client.query(
         'INSERT INTO portal_accounts(email,tenant_id) VALUES ($1,$2)',
         ['duplicate@example.invalid', tenant.id],
       );
-      await pool.query('BEGIN');
+      await client.query('BEGIN');
       expect(
         (
           await pgError(
-            pool.query(
+            client.query(
               await readFile(
                 new URL('../migrations/0005_auth.sql', import.meta.url),
                 'utf8',
@@ -607,13 +608,13 @@ describe('legacy profile migration', () => {
           )
         ).message,
       ).toContain('normalized profile email conflict');
-      await pool.query('ROLLBACK');
+      await client.query('ROLLBACK');
       expect(
-        (await pool.query("SELECT to_regnamespace('auth') AS schema")).rows,
+        (await client.query("SELECT to_regnamespace('auth') AS schema")).rows,
       ).toEqual([{ schema: null }]);
       expect(
         (
-          await pool.query(
+          await client.query(
             "SELECT column_name FROM information_schema.columns WHERE table_name='admins' AND column_name IN ('email','auth_user_id')",
           )
         ).rows,

@@ -7,8 +7,8 @@ packages/rating build$ tsc -p tsconfig.build.json
 packages/shared build$ tsc -p tsconfig.build.json
 packages/rating build: Done
 packages/shared build: Done
-apps/web build$ vite build
 packages/db build$ tsc -p tsconfig.build.json
+apps/web build$ vite build
 apps/web build: vite v8.3.4 building client environment for production...
 apps/web build: transforming...
 apps/web build: ✓ 120 modules transformed.
@@ -17,7 +17,7 @@ apps/web build: computing gzip size...
 apps/web build: dist/index.html                   0.39 kB │ gzip:  0.27 kB
 apps/web build: dist/assets/index-BBrDOMDQ.css    0.23 kB │ gzip:  0.19 kB
 apps/web build: dist/assets/index-RdAOokYQ.js   313.17 kB │ gzip: 95.71 kB
-apps/web build: ✓ built in 220ms
+apps/web build: ✓ built in 225ms
 apps/web build: Done
 packages/db build: Done
 apps/api build$ tsc -p tsconfig.build.json

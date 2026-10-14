@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { asc, schema, withTenant } from '@fs-billing/db';
+import { schema, withTenant } from '@fs-billing/db';
 import {
   apiErrorSchema,
   portalContextResponseSchema,
@@ -64,11 +65,37 @@ const cases = {
           : user === fixture.b
             ? b
             : await login(api, user);
-      const response = await api.inject({
-        method: 'GET',
-        url: operation.path,
-        headers: requestHeaders(current.cookie),
-      });
+      const balanceQueries = vi.spyOn(pg.Client.prototype, 'query');
+      const response = await (async () => {
+        try {
+          const response = await api.inject({
+            method: 'GET',
+            url: operation.path,
+            headers: requestHeaders(current.cookie),
+          });
+          const reads = balanceQueries.mock.calls.flatMap(([query], index) => {
+            const text = z
+              .union([
+                z.string(),
+                z.object({ text: z.string() }).transform((query) => query.text),
+              ])
+              .parse(query);
+            const result: unknown = balanceQueries.mock.results[index]?.value;
+            return text.includes('"tenant_balances"') ? [result] : [];
+          });
+          expect(reads).toHaveLength(1);
+          const result = z
+            .object({ rows: z.array(z.tuple([z.string()])) })
+            .parse(await reads[0]);
+          expect(
+            result.rows,
+            'TENANT_FILTER_LEAK: portalContext read another tenant balance',
+          ).toEqual([[user === fixture.b ? '999.75' : '111.25']]);
+          return response;
+        } finally {
+          balanceQueries.mockRestore();
+        }
+      })();
       expect(response.statusCode).toBe(200);
       const body = portalContextResponseSchema.parse(response.json());
       expect(body.identity.profileId).toBe(user.profileId);
@@ -283,14 +310,7 @@ const results: {
 }[] = [];
 let fixture: Fixture;
 beforeAll(async () => {
-  fixture = await createFixture(
-    connections,
-    '00000000-0000-1000-8000-000000000001',
-  );
-  const first = await connections.owner.pool.query<{ tenant_id: string }>(
-    'SELECT tenant_id FROM public.tenant_balances ORDER BY tenant_id LIMIT 1',
-  );
-  expect(first.rows[0]?.tenant_id).toBe(fixture.b.tenantId);
+  fixture = await createFixture(connections);
 });
 it('covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case', () => {
   expect(customerOperations.length).toBeGreaterThan(0);
@@ -389,16 +409,14 @@ for (const lane of lanes) {
             tenantId: schema.tenantBalances.tenantId,
             amount: schema.tenantBalances.balance,
           })
-          .from(schema.tenantBalances)
-          .orderBy(asc(schema.tenantBalances.tenantId)),
+          .from(schema.tenantBalances),
       );
       if (lane === 'owner') {
-        expect(rows[0]).toEqual({
-          tenantId: fixture.b.tenantId,
-          amount: '999.75',
-        });
-        expect(rows.some((row) => row.tenantId === fixture.a.tenantId)).toBe(
-          true,
+        expect(rows).toEqual(
+          expect.arrayContaining([
+            { tenantId: fixture.a.tenantId, amount: '111.25' },
+            { tenantId: fixture.b.tenantId, amount: '999.75' },
+          ]),
         );
       } else
         expect(rows).toEqual([

@@ -24,7 +24,7 @@
     "updated": 0,
     "didUpdate": false
   },
-  "startTime": 1791956909669,
+  "startTime": 1791957819973,
   "success": false,
   "testResults": [
     {
@@ -34,7 +34,7 @@
           "fullName": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
           "status": "passed",
           "title": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
-          "duration": 1.623817999999801,
+          "duration": 1.8592029999999795,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -45,7 +45,7 @@
           "fullName": "[owner] live OpenAPI customer isolation rejects unauthenticated protected operations and customer access to all live admin operations",
           "status": "passed",
           "title": "rejects unauthenticated protected operations and customer access to all live admin operations",
-          "duration": 193.06584899999984,
+          "duration": 196.7011950000001,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -56,7 +56,7 @@
           "fullName": "[owner] live OpenAPI customer isolation logout positive behavior and A to B attack",
           "status": "passed",
           "title": "logout positive behavior and A to B attack",
-          "duration": 232.90151500000002,
+          "duration": 190.93610000000012,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -67,7 +67,7 @@
           "fullName": "[owner] live OpenAPI customer isolation session positive behavior and A to B attack",
           "status": "passed",
           "title": "session positive behavior and A to B attack",
-          "duration": 214.32265600000005,
+          "duration": 203.81857000000014,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -78,7 +78,7 @@
           "fullName": "[owner] live OpenAPI customer isolation changePassword positive behavior and A to B attack",
           "status": "passed",
           "title": "changePassword positive behavior and A to B attack",
-          "duration": 844.2292199999999,
+          "duration": 825.8962790000003,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -89,7 +89,7 @@
           "fullName": "[owner] live OpenAPI customer isolation revokeOtherSessions positive behavior and A to B attack",
           "status": "passed",
           "title": "revokeOtherSessions positive behavior and A to B attack",
-          "duration": 278.2242190000002,
+          "duration": 295.7310510000002,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -100,9 +100,9 @@
           "fullName": "[owner] live OpenAPI customer isolation portalContext positive behavior and A to B attack",
           "status": "failed",
           "title": "portalContext positive behavior and A to B attack",
-          "duration": 199.05488300000025,
+          "duration": 195.66772400000036,
           "failureMessages": [
-            "AssertionError: TENANT_FILTER_LEAK: portalContext returned another tenant balance: expected '999.75' to be '111.25' // Object.is equality\n    at portalContext (/tmp/fs-billing-idor-checkout-83TjpM/apps/api/src/idor.db.test.ts:79:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at /tmp/fs-billing-idor-checkout-83TjpM/apps/api/src/idor.db.test.ts:380:9\n    at async file:///workspace/fs-billing/node_modules/.pnpm/vitest@5.0.4_@opentelemetry+api@1.9.1_@types+node@22.20.5_@vitest+coverage-v8@5.0.4_vit_eb38497a74daa8c858516e50955dbf47/node_modules/vitest/dist/chunks/run.Cm2sd7-x.js:2794:20"
+            "AssertionError: TENANT_FILTER_LEAK: portalContext read another tenant balance: expected [ [ '0' ], [ '-100.36' ], …(10) ] to deeply equal [ [ '111.25' ] ]\n    at /tmp/fs-billing-idor-checkout-RDBEs1/apps/api/src/idor.db.test.ts:93:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at portalContext (/tmp/fs-billing-idor-checkout-RDBEs1/apps/api/src/idor.db.test.ts:69:24)\n    at /tmp/fs-billing-idor-checkout-RDBEs1/apps/api/src/idor.db.test.ts:400:9\n    at async file:///workspace/fs-billing/node_modules/.pnpm/vitest@5.0.4_@opentelemetry+api@1.9.1_@types+node@22.20.5_@vitest+coverage-v8@5.0.4_vit_eb38497a74daa8c858516e50955dbf47/node_modules/vitest/dist/chunks/run.Cm2sd7-x.js:2794:20"
           ],
           "meta": {},
           "tags": [],
@@ -113,18 +113,18 @@
           "fullName": "[owner] live OpenAPI customer isolation unfiltered SQL proves the owner bypass and the app RLS boundary",
           "status": "passed",
           "title": "unfiltered SQL proves the owner bypass and the app RLS boundary",
-          "duration": 2.583918999999696,
+          "duration": 2.105113000000074,
           "failureMessages": [],
           "meta": {},
           "tags": [],
           "benchmarks": []
         }
       ],
-      "startTime": 1791956911756,
-      "endTime": 1791956913722.584,
+      "startTime": 1791957822042,
+      "endTime": 1791957823956.1052,
       "status": "failed",
       "message": "",
-      "name": "/tmp/fs-billing-idor-checkout-83TjpM/apps/api/src/idor.db.test.ts"
+      "name": "/tmp/fs-billing-idor-checkout-RDBEs1/apps/api/src/idor.db.test.ts"
     }
   ]
 }

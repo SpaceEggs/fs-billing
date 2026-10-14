@@ -24,7 +24,7 @@
     "updated": 0,
     "didUpdate": false
   },
-  "startTime": 1791956900563,
+  "startTime": 1791957810958,
   "success": true,
   "testResults": [
     {
@@ -34,7 +34,7 @@
           "fullName": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
           "status": "passed",
           "title": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
-          "duration": 2.2537929999998596,
+          "duration": 2.04051400000003,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -45,7 +45,7 @@
           "fullName": "[app] live OpenAPI customer isolation rejects unauthenticated protected operations and customer access to all live admin operations",
           "status": "passed",
           "title": "rejects unauthenticated protected operations and customer access to all live admin operations",
-          "duration": 208.59362499999997,
+          "duration": 183.45957599999997,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -56,7 +56,7 @@
           "fullName": "[app] live OpenAPI customer isolation logout positive behavior and A to B attack",
           "status": "passed",
           "title": "logout positive behavior and A to B attack",
-          "duration": 208.65206999999987,
+          "duration": 203.490724,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -67,7 +67,7 @@
           "fullName": "[app] live OpenAPI customer isolation session positive behavior and A to B attack",
           "status": "passed",
           "title": "session positive behavior and A to B attack",
-          "duration": 214.52434599999992,
+          "duration": 194.15293700000007,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -78,7 +78,7 @@
           "fullName": "[app] live OpenAPI customer isolation changePassword positive behavior and A to B attack",
           "status": "passed",
           "title": "changePassword positive behavior and A to B attack",
-          "duration": 810.3051330000001,
+          "duration": 819.6391269999999,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -89,7 +89,7 @@
           "fullName": "[app] live OpenAPI customer isolation revokeOtherSessions positive behavior and A to B attack",
           "status": "passed",
           "title": "revokeOtherSessions positive behavior and A to B attack",
-          "duration": 280.0992390000001,
+          "duration": 285.3760860000002,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -100,7 +100,7 @@
           "fullName": "[app] live OpenAPI customer isolation portalContext positive behavior and A to B attack",
           "status": "passed",
           "title": "portalContext positive behavior and A to B attack",
-          "duration": 309.96669900000006,
+          "duration": 326.6399940000001,
           "failureMessages": [],
           "meta": {},
           "tags": [],
@@ -111,18 +111,18 @@
           "fullName": "[app] live OpenAPI customer isolation unfiltered SQL proves the owner bypass and the app RLS boundary",
           "status": "passed",
           "title": "unfiltered SQL proves the owner bypass and the app RLS boundary",
-          "duration": 1.753458000000137,
+          "duration": 2.099637000000257,
           "failureMessages": [],
           "meta": {},
           "tags": [],
           "benchmarks": []
         }
       ],
-      "startTime": 1791956902798,
-      "endTime": 1791956904834.7534,
+      "startTime": 1791957813189,
+      "endTime": 1791957815207.0996,
       "status": "passed",
       "message": "",
-      "name": "/tmp/fs-billing-idor-checkout-83TjpM/apps/api/src/idor.db.test.ts"
+      "name": "/tmp/fs-billing-idor-checkout-RDBEs1/apps/api/src/idor.db.test.ts"
     }
   ]
 }

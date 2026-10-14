@@ -132,12 +132,11 @@ try {
         !failures[0]?.failureMessages.some(
           (message) =>
             message.includes('TENANT_FILTER_LEAK') &&
-            message.includes('999.75') &&
-            message.includes('111.25'),
+            (message.includes('111.25') || message.includes('999.75')),
         )
       )
         throw new Error(
-          `${label} failed for something other than the expected B-balance leak. ${child.stdout}\n${child.stderr}`,
+          `${label} failed for something other than the expected tenant-balance leak. ${child.stdout}\n${child.stderr}`,
         );
     } else if (
       child.status !== 0 ||
@@ -157,7 +156,7 @@ try {
       failed: failures.length,
     });
     process.stdout.write(
-      `${label}: ${expectLeak ? 'detected B balance leak' : 'all isolation assertions passed'}\n`,
+      `${label}: ${expectLeak ? 'detected tenant balance leak' : 'all isolation assertions passed'}\n`,
     );
   };
   await run('app', false);
