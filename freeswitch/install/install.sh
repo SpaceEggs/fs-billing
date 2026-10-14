@@ -9,9 +9,25 @@ LUA_CJSON_VERSION='2.1.0+dfsg-2.2+b2'
 token_file=${1:-${SIGNALWIRE_TOKEN_FILE:-/run/secrets/signalwire_token}}
 auth_file=/etc/apt/auth.conf.d/fs-billing-signalwire.conf
 source_file=/etc/apt/sources.list.d/fs-billing-signalwire.list
+policy_file=/usr/sbin/policy-rc.d
 [[ $EUID == 0 ]] || { echo '必须以 root 执行' >&2; exit 1; }
 work_dir=$(mktemp -d)
+systemd=false
+[[ -d /run/systemd/system ]] && systemd=true
+guarded=false
+installed=false
 cleanup() {
+    # vanilla 配置的 event socket 与默认密码不安全；失败时保持屏蔽，包脚本或重启都不能启动服务。
+    if $guarded && ! $installed && $systemd; then
+        systemctl mask freeswitch.service || true
+        systemctl stop freeswitch.service || true
+        echo 'FreeSWITCH 安装失败，服务已屏蔽；修复后重新执行本脚本' >&2
+    fi
+    if [[ -e $work_dir/policy-rc.d ]]; then
+        mv -f "$work_dir/policy-rc.d" "$policy_file"
+    elif $guarded; then
+        rm -f "$policy_file"
+    fi
     rm -f "$auth_file" "$source_file"
     rm -rf "$work_dir"
 }
@@ -60,11 +76,14 @@ packages=(freeswitch libfreeswitch1 freeswitch-conf-vanilla freeswitch-systemd
     freeswitch-mod-logfile)
 pinned=()
 for package in "${packages[@]}"; do pinned+=("$package=$FS_VERSION"); done
+# 包脚本不得启动服务：policy-rc.d 返回 101 拒绝 invoke-rc.d 与 deb-systemd-invoke，systemd 下再屏蔽单元。
+if [[ -e $policy_file ]]; then cp -a "$policy_file" "$work_dir/policy-rc.d"; fi
+guarded=true
+printf '#!/bin/sh\nexit 101\n' > "$policy_file"
+chmod 0755 "$policy_file"
+if $systemd; then systemctl mask freeswitch.service; fi
 apt-get install -y --allow-downgrades --no-install-recommends "${pinned[@]}" \
     "lua-cjson=$LUA_CJSON_VERSION" lua5.3 libcurl4t64
-if [[ $(cat /proc/1/comm) == systemd ]]; then
-    systemctl disable --now freeswitch
-fi
 apt-mark manual libcurl4t64
 
 # Debian lua-curl 是 v2 且缺少 5.3；显式构建 Lua-cURLv3 的 5.3 模块。
@@ -92,3 +111,9 @@ if ! lua5.3 -e "assert(require('cURL')._VERSION == '0.3.13'); require('cURL.safe
 fi
 lua5.3 -e "require('cURL.safe'); require('cjson.safe')"
 ldd /usr/lib/freeswitch/mod/mod_lua.so | grep 'liblua5.3'
+# 解除屏蔽后立即停用；服务器 A 完成配置前不随开机启动。Docker 构建没有 systemd，跳过。
+if $systemd; then
+    systemctl unmask freeswitch.service
+    systemctl disable --now freeswitch.service
+fi
+installed=true

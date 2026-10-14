@@ -4,7 +4,7 @@
 
 ## 服务器 A 安装与启动
 
-以 root 运行 [install.sh](install/install.sh)，令牌放在受限文件 `/run/secrets/signalwire_token`。脚本安装固定版本的 `freeswitch-systemd`；PID 1 为 systemd 时，安装后执行 `systemctl disable --now freeswitch`。Docker 构建跳过此命令。
+以 root 运行 [install.sh](install/install.sh)，令牌放在受限文件 `/run/secrets/signalwire_token`。脚本安装固定版本的 `freeswitch-systemd`。安装包之前写入返回 101 的 `/usr/sbin/policy-rc.d`，systemd 主机上再 `systemctl mask freeswitch.service`，包脚本不能启动带 vanilla 配置的服务。全部步骤成功后解除屏蔽并执行 `systemctl disable --now freeswitch.service`；任何一步失败，服务保持屏蔽且停止，修复后重新执行脚本。`policy-rc.d` 在退出时移除或恢复原文件。Docker 构建没有 systemd，只使用 `policy-rc.d`。
 
 vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_password` 为 `1234`。服务停用期间完成以下步骤：
 
@@ -60,7 +60,7 @@ lua5.3 freeswitch/tests/billing_authorize_test.lua
 
 该测试用模拟 session 与 HTTP 响应运行真实授权脚本，覆盖非法号码在请求前返回 484、合法号码遇到授权 503/超时才降级、正常授权与接通后限时挂断。`pnpm check` 同时运行 Lua harness 和拨号计划条件测试；CI 缺少 `lua5.3` 时失败，本地缺少时可跳过对应测试。
 
-完整 FreeSWITCH 联调使用 [run-integration.sh](test/run-integration.sh)，需要 Linux、Docker Compose、Node、pnpm、Python 3 与 curl。SIP 观测容器使用 `NET_RAW` 权限，只捕获回环 INVITE；授权代理记录号码与 UUID，不记录密钥。脚本启动本机 Worker、FreeSWITCH、nginx relay 与容器内 SIPp，使用数据库中的 `FSI` 前缀测试租户。租户编码不含下划线，遵守数据库约束。测试包含真实 60 秒计费限时，并按受控 Call-ID 验证原始话单、正式话单与唯一扣费。
+完整 FreeSWITCH 联调使用 [run-integration.sh](test/run-integration.sh)，需要 Linux、Docker Compose、Node、pnpm、Python 3 与 curl。SIP 观测容器使用 `NET_RAW` 权限，只捕获回环 INVITE；授权代理记录号码与 UUID，不记录密钥。脚本启动本机 Worker、FreeSWITCH、nginx relay 与容器内 SIPp，使用数据库中的 `FSI` 前缀测试租户。租户编码不含下划线，遵守数据库约束。测试包含真实 60 秒计费限时：断言时长 59–60 秒（调度器按整秒触发；61 秒起会计成 2 分钟）、计费 1 分钟、话单金额 0.01、扣费流水 −0.01、余额从 0.01 扣到 0，并按受控 Call-ID 验证原始话单、正式话单与唯一扣费。
 
 `ALLOTTED_TIMEOUT` 的话单结束时间依赖媒体持续流动，无媒体的通话腿在现场复现中会延迟约 5 秒拆线，因此 SIPp 的客户与运营商两端在通话期间持续发送 RTP。
 

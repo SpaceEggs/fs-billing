@@ -272,8 +272,13 @@ current=ALLOTTED_TIMEOUT
 call allotted 127.0.0.5 447700900123 /scenarios/caller-timed.xml
 charged
 sip_assert outbound >> "$FS_LOG_DIR/assertions.log"
-wait_sql "SELECT count(*)=1 AND bool_and(hangup_cause='ALLOTTED_TIMEOUT' AND duration_seconds BETWEEN 59 AND 62) FROM cdrs WHERE call_uuid::text IN ($uuids);"
+# FSI60 余额 0.01、透支 0、费率 0.01/分钟，授权 maxSeconds=60。FreeSWITCH 调度器按整秒触发，
+# sched_hangup +60 在接通后 59–60 秒挂断：时长允许误差为 59–60 秒。61 秒起按 60/60 计成 2 分钟，必须失败。
+wait_sql "SELECT count(*)=1 AND bool_and(hangup_cause='ALLOTTED_TIMEOUT' AND duration_seconds BETWEEN 59 AND 60 AND billed_minutes=1 AND rate=0.01 AND charge=0.01) FROM cdrs WHERE call_uuid::text IN ($uuids);"
 wait_sql "SELECT bool_or(payload->'variables'->>'execute_on_answer'='sched_hangup +60 ALLOTTED_TIMEOUT') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';"
+# 扣费流水记为 -0.01；余额从 0.01 扣到 0，且等于该租户流水合计。
+wait_sql "SELECT count(*)=1 AND bool_and(amount=-0.01) FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid');"
+wait_sql "SELECT b.balance=0 AND b.balance=(SELECT sum(amount) FROM ledger_entries l WHERE l.tenant_id=t.id) FROM tenants t JOIN tenant_balances b ON b.tenant_id=t.id WHERE t.code='FSI60';"
 pass
 
 for outage in refused stalled; do

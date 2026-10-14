@@ -107,7 +107,7 @@
 
 ## 6. 阶段 3 的决定与验证
 
-- [x] 安装方式采用官方 SignalWire Debian 13 包。服务器 A 与镜像都执行 [install.sh](../freeswitch/install/install.sh)，固定完整版本 `1.11.3-release-33213556856-ef32e20529~trixie~amd64-1~trixie+1`，包括 `freeswitch-systemd`。包安装保留标准目录与 systemd 集成；PID 1 为 systemd 时，安装后执行 `systemctl disable --now freeswitch`，配置完成前保持服务停用。Docker 构建跳过此命令。
+- [x] 安装方式采用官方 SignalWire Debian 13 包。服务器 A 与镜像都执行 [install.sh](../freeswitch/install/install.sh)，固定完整版本 `1.11.3-release-33213556856-ef32e20529~trixie~amd64-1~trixie+1`，包括 `freeswitch-systemd`。包安装保留标准目录与 systemd 集成。vanilla 配置的 event socket 监听所有地址且使用默认密码，因此安装包之前用 `policy-rc.d`（返回 101）禁止包脚本启动服务，systemd 主机上同时屏蔽 `freeswitch.service`；成功后解除屏蔽并 `disable --now`，失败时保持屏蔽且停止。配置完成前服务保持停用。Docker 构建没有 systemd，只使用 `policy-rc.d`。由 `tests/install-freeswitch.test.ts` 覆盖。
 - [x] 只安装本项目需要的模块与 vanilla 基础配置，不安装 `freeswitch-meta-all`，减少无关模块、依赖与启动配置。
 - [x] `mod_lua` 链接 Lua 5.3。授权使用固定版本 Lua-cURL（Lua-cURLv3）`0.3.13-1` 和 Debian `lua-cjson` `2.1.0+dfsg-2.2+b2`。Debian `lua-curl` 是旧版接口且只提供 Lua 5.1、5.2，不能提供 `cURL.safe`。JSON 数字先用 `math.tointeger` 转成整数，再生成 SIP 与挂断命令；非整数响应按无效响应处理。
 - [x] 话单只推 A 腿，失败原文落入 retry。独立 [replay-cdr.sh](../freeswitch/scripts/replay-cdr.sh) 补推超过一分钟的文件，Worker 按 UUID 去重。
