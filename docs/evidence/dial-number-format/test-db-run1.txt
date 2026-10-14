@@ -1,0 +1,13 @@
+
+> fs-billing@ test:db /workspace/fs-billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+
+ Test Files  10 passed (10)
+      Tests  150 passed (150)
+   Start at  17:52:36
+   Duration  19.13s (tests 70%, import 28%, transform 1%)
+

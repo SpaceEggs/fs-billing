@@ -48,7 +48,8 @@
 | 拒绝原因 | SIP 错误码 |
 |---|---|
 | 租户不存在或已停用 | 403 Forbidden |
-| 被叫号码匹配不到费率 | 404 Not Found |
+| 号码格式错误或计费投影不一致 | 484 Address Incomplete |
+| 计费号码匹配不到费率 | 404 Not Found |
 | 余额不足（已停机） | 402 Payment Required |
 
 ### 3.2 话单推送（mod_json_cdr）
@@ -67,7 +68,8 @@
 |---|---|
 | `uuid` | 去重 |
 | `billing_tenant` | 确定租户 |
-| 被叫号码（规范化后） | 匹配费率 |
+| `billing_dialed_number` | 保存原始拨号，作为话单展示号码与归一化输入 |
+| `billing_number` | Lua 的规范化投影，Worker 重新计算并核验后用于费率与账本 |
 | 接通时间（`answer_epoch` 或 `answer_stamp`） | 确定费率版本、日期和月份归属 |
 | 计费时长（`billsec`） | 计算费用 |
 | `hangup_cause`、SIP 状态码 | 话单详情与排查 |
@@ -75,13 +77,36 @@
 
 ### 3.3 号码格式
 
-费率前缀是纯数字的国际号码格式（例如 `447`、`1876`）。被叫号码在调用授权接口和写入话单之前，必须统一成同样的格式：
+费率前缀使用带国家码的纯数字号码。客户拨号带 `+` 或 `00` 时是国际号码，计费时去掉该冠字；没有国际冠字时是国内号码，补 `86` 并先去掉一个开头的固话 `0`。例如 `13800138000` 计费为 `8613800138000`，`07551234567` 计费为 `867551234567`。`+13055551234` 计费为 `13055551234`，裸拨 `13055551234` 计费为 `8613055551234`。
 
-- 去掉开头的 `+`
-- 去掉国际冠字 `00`
-- 只保留数字
+桥接始终使用原始拨号，包括 `+`、`00` 和国内固话的 `0`。Lua 不改写 `destination_number`，只保存原始桥接变量与独立 `billing_number`。路由格式只允许开头可选的一个 `+` 和 1–17 位 ASCII 数字；`|`、`,`、空格等字符返回 SIP 484。规范化后的计费号码必须以 1–9 开头、总长 6–15 位，15 位限制不作用于桥接号码。
 
-客户实际拨号的格式（是否带 `+`、`00`，国内号码怎么拨）要先问清楚，规范化规则写在拨号计划里，授权和话单用同一个结果。
+Worker 的 `resolveBillingNumber` 同时处理授权与 CDR。Lua 投影用于请求前校验和超时降级，Worker 重新计算并核验投影，不能直接信任交换机提供的计费号码。Lua 在脚本开始时设置 `billing_dialed_number`，提前退出的话单也使用新协议。授权请求的 `callee` 是规范化计费号码，`dialedNumber` 保留原始拨号；授权成功响应缺少或返回不一致的 `billingNumber` 时返回 SIP 503。话单以 `billing_dialed_number` 保留原始展示号码，数据库 `callee` 与 `billing_number` 分别保存原始拨号与计费号码。
+
+先部署迁移 `0003_billing_number`，再升级全部 Worker，最后成组更新 Lua 与拨号计划。新 Worker 仍接受符合格式的旧授权和旧落盘话单，不再次补 `86`。旧协议裸拨国内手机号码在更新窗口仍可能按 `1` 国家码误计费；以 `0` 开头的旧号码改为格式错误，旧授权返回 SIP 400。缩短更新窗口，切换前回放旧 retry 文件并确认处理完成。回滚时先回滚 FreeSWITCH，等新协议通话及 retry 话单处理完，再降级 Worker。完整协议与部署边界见 [Worker 接口](worker-api.md)。
+
+在更新 FreeSWITCH 前，以 owner 身份检查每个租户当前生效版本的前缀：
+
+```sql
+WITH effective AS (
+  SELECT DISTINCT ON (tenant_id) id, tenant_id
+  FROM rate_versions
+  WHERE effective_from <= now()
+  ORDER BY tenant_id, effective_from DESC
+)
+SELECT t.code, e.prefix, e.country, e.rate
+FROM effective v
+JOIN rate_entries e ON e.rate_version_id = v.id AND e.tenant_id = v.tenant_id
+JOIN tenants t ON t.id = v.tenant_id
+WHERE e.prefix ~ '^0'
+   OR (e.prefix !~ '^86' AND (
+     e.country ~* '(中国|china|\ycn\y)'
+     OR e.prefix ~ '^1[3-9]'
+   ))
+ORDER BY t.code, e.prefix;
+```
+
+逐项核对结果，包括以 `0` 开头的固话前缀和未带 `86` 的国内前缀。国家名及 `1[3-9]` 只筛出候选，可能包含国际前缀，也可能遗漏短国内前缀；同时对照实际国内路由核验完整费率表。发现国内旧前缀时，在切换前发布使用 `86` 的新费率版本并确认生效。不要自动改写现有版本，CSV 校验和数据库前缀约束保持不变。
 
 ### 3.4 时间
 
@@ -111,9 +136,9 @@
 - [x] 只安装本项目需要的模块与 vanilla 基础配置，不安装 `freeswitch-meta-all`，减少无关模块、依赖与启动配置。
 - [x] `mod_lua` 链接 Lua 5.3。授权使用固定版本 Lua-cURL（Lua-cURLv3）`0.3.13-1` 和 Debian `lua-cjson` `2.1.0+dfsg-2.2+b2`。Debian `lua-curl` 是旧版接口且只提供 Lua 5.1、5.2，不能提供 `cURL.safe`。JSON 数字先用 `math.tointeger` 转成整数，再生成 SIP 与挂断命令；非整数响应按无效响应处理。
 - [x] 话单只推 A 腿，失败原文落入 retry。独立 [replay-cdr.sh](../freeswitch/scripts/replay-cdr.sh) 补推超过一分钟的文件，Worker 按 UUID 去重。
-- [x] 业务拒绝使用 SIP 402、403、404；非法号码使用 484。号码去掉开头的 `+` 和 `00`，其余必须为数字，并同时改写授权、桥接与话单字段。
+- [x] 业务拒绝使用 SIP 402、403、404；非法号码使用 484。桥接保留原始拨号，国际与国内号码分别归一化为独立 `billing_number`，授权与话单由 Worker 同一函数核验。
 - [x] 授权与话单路径为 `/authorize` 和 `/cdr`，请求格式见 [Worker 接口](worker-api.md)。
-- [ ] 用 [run-integration.sh](../freeswitch/test/run-integration.sh) 保存真实 SIP、CDR 与账本证据，验证 1500 ms 停滞超时、60 秒 `ALLOTTED_TIMEOUT`、失败落盘与重复补推。此脚本使用本机回环地址，不替代服务器 A 的网络与 TLS 验收。
+- [ ] 用 [run-integration.sh](../freeswitch/test/run-integration.sh) 保存真实 SIP、CDR 与账本证据，验证六种国内及国际拨号的上游原始 INVITE、规范化话单与账本，以及 1500 ms 停滞超时、60 秒 `ALLOTTED_TIMEOUT`、失败落盘与重复补推。此脚本使用本机回环地址，不替代服务器 A 的网络与 TLS 验收。
 
 服务器 A 安装后，按以下步骤配置，再启动服务。vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_password` 为 `1234`，不能直接用于服务器 A。
 

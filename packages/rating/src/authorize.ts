@@ -1,6 +1,6 @@
 import { Decimal } from 'decimal.js';
 import { addMoney, type Currency, type Money } from './money.js';
-import { parseDialedNumber, type DialedNumber } from './dialed.js';
+import type { DialedNumber } from './dialed.js';
 import { findRate, type RateEntry, type RateTable } from './rates.js';
 
 /** 单通最长 4 小时。 */
@@ -60,15 +60,4 @@ export function authorize<C extends Currency>(
     callableMinutes: minutes.toNumber(),
     maxSeconds: Decimal.min(minutes.mul(60), MAX_CALL_SECONDS).toNumber(),
   };
-}
-
-/** 接口边界：先校验原始被叫号码，再授权。 */
-export function authorizeRaw<C extends Currency>(
-  tenant: Tenant<C> | undefined,
-  rawDialed: string,
-  at: Date,
-): Authorization<C> {
-  const dialed = parseDialedNumber(rawDialed);
-  if (!dialed) return { allowed: false, reason: '号码格式错误' };
-  return authorize(tenant, dialed, at);
 }

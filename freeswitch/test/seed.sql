@@ -18,12 +18,16 @@ SELECT lock_tenants(ARRAY(SELECT id FROM tenants WHERE code IN ('FSIOK','FSIOFF'
 UPDATE tenants SET status = CASE WHEN code = 'FSIOFF' THEN 'disabled' ELSE 'active' END,
     overdraft_limit = 0 WHERE code IN ('FSIOK','FSIOFF','FSILOW','FSI60');
 INSERT INTO rate_versions(tenant_id, effective_from)
-SELECT id, '2020-01-01T00:00:00Z' FROM tenants WHERE code IN ('FSIOK','FSIOFF','FSILOW','FSI60')
+SELECT id, CURRENT_TIMESTAMP FROM tenants WHERE code IN ('FSIOK','FSIOFF','FSILOW','FSI60')
 ON CONFLICT(tenant_id,effective_from) DO NOTHING;
 INSERT INTO rate_entries(tenant_id,rate_version_id,prefix,country,rate)
-SELECT v.tenant_id,v.id,'44','集成测试',0.01 FROM rate_versions v JOIN tenants t ON t.id=v.tenant_id
-WHERE t.code IN ('FSIOK','FSIOFF','FSILOW','FSI60') AND v.effective_from='2020-01-01T00:00:00Z'
-AND NOT EXISTS (SELECT 1 FROM rate_entries e WHERE e.rate_version_id=v.id AND e.prefix='44')
+SELECT v.tenant_id,v.id,r.prefix,r.country,r.rate FROM rate_versions v JOIN tenants t ON t.id=v.tenant_id
+CROSS JOIN (VALUES ('44','英国集成测试',0.01::numeric),
+                   ('1','NANP 集成测试',0.03::numeric),
+                   ('8613','国内手机集成测试',0.02::numeric),
+                   ('86755','国内固话集成测试',0.04::numeric),
+                   ('861305','无国际前缀集成测试',0.05::numeric)) r(prefix,country,rate)
+WHERE t.code IN ('FSIOK','FSIOFF','FSILOW','FSI60') AND v.effective_from=CURRENT_TIMESTAMP
 ON CONFLICT(rate_version_id,prefix) DO NOTHING;
 -- 余额由追加调整流水恢复，保留以往话单和账本，不直接覆写余额投影。
 INSERT INTO ledger_entries(tenant_id,kind,amount,note,created_by,idempotency_key)

@@ -530,7 +530,7 @@ describe('Worker HTTP 与真实数据库', () => {
       reason: '租户不存在',
       sipCode: 404,
     });
-    expect((await authorize(tenant.code, '86138')).json()).toEqual({
+    expect((await authorize(tenant.code, '861380')).json()).toEqual({
       allowed: false,
       reason: '无费率',
       sipCode: 404,
@@ -944,4 +944,332 @@ describe('Worker HTTP 与真实数据库', () => {
       ).rows,
     ).toEqual([{ kind: 'partition_failed' }, { kind: 'partition_failed' }]);
   });
+
+  it.each([
+    ['+447700900123', '447700900123', '447', '0.01'],
+    ['00447700900123', '447700900123', '447', '0.01'],
+    ['13800138000', '8613800138000', '86138', '0.02'],
+    ['075586001234', '8675586001234', '86755', '0.04'],
+    ['+13055551234', '13055551234', '1', '0.03'],
+    ['13055551234', '8613055551234', '861305', '0.05'],
+  ])(
+    '新协议 %s 保留原拨号，授权、话单和流水使用 %s',
+    async (dialed, billingNumber, prefix, perMinute) => {
+      const tenant = await createTenant(connection, 'CNY');
+      await withSystem(connection.db, (tx) =>
+        createRateVersion(
+          tx,
+          tenant.id,
+          [
+            { prefix: '447', country: 'UK', perMinute: rate('CNY', '0.01') },
+            { prefix: '1', country: 'NANP', perMinute: rate('CNY', '0.03') },
+            {
+              prefix: '86138',
+              country: '中国手机',
+              perMinute: rate('CNY', '0.02'),
+            },
+            {
+              prefix: '86755',
+              country: '深圳',
+              perMinute: rate('CNY', '0.04'),
+            },
+            {
+              prefix: '861305',
+              country: '中国',
+              perMinute: rate('CNY', '0.05'),
+            },
+          ],
+          { effectiveFrom: new Date('2026-09-01T00:00:00Z') },
+        ),
+      );
+      const uuid = randomUUID();
+      const authorization = await worker.inject({
+        method: 'POST',
+        url: '/authorize',
+        headers: { 'x-billing-key': security.secret },
+        payload: {
+          tenant: tenant.code,
+          uuid,
+          callee: billingNumber,
+          dialedNumber: dialed,
+          billingNumber,
+        },
+      });
+      expect(authorization.json()).toEqual({
+        allowed: true,
+        maxSeconds: 14400,
+        billingNumber,
+      });
+      expect(
+        (
+          await post(
+            body(tenant.code, uuid, {
+              destination_number: dialed,
+              billing_dialed_number: dialed,
+              billing_number: billingNumber,
+            }),
+          )
+        ).json(),
+      ).toMatchObject({ status: 'queued' });
+      await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+      await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+      expect(
+        (
+          await owner.pool.query(
+            'select callee, billing_number, matched_prefix, rate = $2::numeric as correct_rate, charge = $2::numeric * 4 as correct_charge from cdrs where call_uuid = $1',
+            [uuid, perMinute],
+          )
+        ).rows,
+      ).toEqual([
+        {
+          callee: dialed,
+          billing_number: billingNumber,
+          matched_prefix: prefix,
+          correct_rate: true,
+          correct_charge: true,
+        },
+      ]);
+      expect(
+        (
+          await owner.pool.query(
+            'select note, amount = -$2::numeric * 4 as correct_amount from ledger_entries where idempotency_key = $1',
+            [`call:${uuid}`, perMinute],
+          )
+        ).rows,
+      ).toEqual([
+        {
+          note: `通话扣费 ${uuid} ${billingNumber}`,
+          correct_amount: true,
+        },
+      ]);
+    },
+  );
+
+  it('新话单不带投影时重新计算；投影不一致保存工作端投影供处理', async () => {
+    const tenant = await fixture();
+    const accepted = randomUUID();
+    expect(
+      (
+        await post(
+          body(tenant.code, accepted, {
+            destination_number: 'billing-bridge',
+            billing_dialed_number: '+447700900123',
+          }),
+        )
+      ).json(),
+    ).toMatchObject({ status: 'queued' });
+    expect(
+      (
+        await owner.pool.query(
+          'select callee, billing_number from cdrs where call_uuid = $1',
+          [accepted],
+        )
+      ).rows,
+    ).toEqual([{ callee: '+447700900123', billing_number: '447700900123' }]);
+    const rejected = randomUUID();
+    expect(
+      (
+        await post(
+          body(tenant.code, rejected, {
+            destination_number: 'billing-bridge',
+            billing_dialed_number: '+447700900123',
+            billing_number: '8613800138000',
+          }),
+        )
+      ).json(),
+    ).toMatchObject({ status: 'unassigned' });
+    expect(
+      (
+        await owner.pool.query(
+          'select callee, billing_number, reason from unassigned_cdrs where call_uuid = $1',
+          [rejected],
+        )
+      ).rows,
+    ).toEqual([
+      {
+        callee: '+447700900123',
+        billing_number: '447700900123',
+        reason: '计费号码不一致',
+      },
+    ]);
+    expect(await state(rejected)).toEqual({
+      cdrs: 0,
+      unassigned: 1,
+      charges: 0,
+      jobs: 0,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          'select kind from system_alerts where description = $1',
+          [`${rejected}: 计费号码不一致`],
+        )
+      ).rows,
+    ).toEqual([{ kind: 'cdr_failed' }]);
+  });
+
+  it.each([
+    {
+      dialed: '13800138000',
+      callee: '13800138000',
+      newForm: false,
+      prefix: '1',
+      billingNumber: '13800138000',
+      reason: undefined,
+    },
+    {
+      dialed: '075586001234',
+      callee: '075586001234',
+      newForm: false,
+      prefix: undefined,
+      billingNumber: null,
+      reason: '号码格式错误',
+    },
+    {
+      dialed: '13800138000',
+      callee: '8613800138000',
+      newForm: true,
+      prefix: '86',
+      billingNumber: '8613800138000',
+      reason: undefined,
+    },
+    {
+      dialed: '075586001234',
+      callee: '8675586001234',
+      newForm: true,
+      prefix: '86',
+      billingNumber: '8675586001234',
+      reason: undefined,
+    },
+  ])(
+    'mixed rollout request and CDR $newForm / $dialed use one handler',
+    async ({ dialed, callee, newForm, prefix, billingNumber, reason }) => {
+      const tenant = await createTenant(connection, 'CNY');
+      await withSystem(connection.db, (tx) =>
+        createRateVersion(
+          tx,
+          tenant.id,
+          [
+            { prefix: '1', country: 'NANP', perMinute: rate('CNY', '0.03') },
+            { prefix: '86', country: '中国', perMinute: rate('CNY', '0.02') },
+          ],
+          { effectiveFrom: new Date('2026-09-01T00:00:00Z') },
+        ),
+      );
+      const uuid = randomUUID();
+      const authorization = await worker.inject({
+        method: 'POST',
+        url: '/authorize',
+        headers: { 'x-billing-key': security.secret },
+        payload: {
+          tenant: tenant.code,
+          uuid,
+          callee,
+          ...(newForm ? { dialedNumber: dialed, billingNumber } : {}),
+        },
+      });
+      expect(authorization.statusCode).toBe(reason ? 400 : 200);
+      expect(authorization.json()).toEqual(
+        reason
+          ? { allowed: false, reason, sipCode: 400 }
+          : {
+              allowed: true,
+              maxSeconds: 14400,
+              ...(newForm ? { billingNumber } : {}),
+            },
+      );
+      expect(
+        (
+          await post(
+            body(tenant.code, uuid, {
+              destination_number: dialed,
+              ...(newForm
+                ? {
+                    billing_dialed_number: dialed,
+                    billing_number: billingNumber,
+                  }
+                : {}),
+            }),
+          )
+        ).json(),
+      ).toMatchObject({ status: reason ? 'unassigned' : 'queued' });
+      if (reason) {
+        expect(
+          (
+            await owner.pool.query(
+              'select reason, callee, billing_number from unassigned_cdrs where call_uuid = $1',
+              [uuid],
+            )
+          ).rows,
+        ).toEqual([{ reason, callee: dialed, billing_number: null }]);
+      } else {
+        await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+        expect(
+          (
+            await owner.pool.query(
+              'select callee, billing_number, matched_prefix, charge::text from cdrs where call_uuid = $1',
+              [uuid],
+            )
+          ).rows,
+        ).toEqual([
+          {
+            callee: dialed,
+            billing_number: billingNumber,
+            matched_prefix: prefix,
+            charge: prefix === '1' ? '0.12' : '0.08',
+          },
+        ]);
+      }
+    },
+  );
+
+  it.each([
+    { dialed: '12345678901234', billingNumber: null, reason: '号码格式错误' },
+    {
+      dialed: '0044',
+      billingNumber: null,
+      reason: '号码格式错误',
+    },
+  ])(
+    'new Lua early return CDR marker $dialed cannot use legacy billing',
+    async ({ dialed, billingNumber, reason }) => {
+      const tenant = await fixture();
+      const uuid = randomUUID();
+      expect(
+        (
+          await post(
+            body(tenant.code, uuid, {
+              destination_number: dialed,
+              billing_dialed_number: dialed,
+              answer_epoch: '0',
+              billsec: '0',
+              hangup_cause: 'INVALID_NUMBER_FORMAT',
+            }),
+          )
+        ).json(),
+      ).toMatchObject({ status: 'unassigned' });
+      expect(
+        (
+          await owner.pool.query(
+            'select reason, callee, billing_number from unassigned_cdrs where call_uuid = $1',
+            [uuid],
+          )
+        ).rows,
+      ).toEqual([{ reason, callee: dialed, billing_number: billingNumber }]);
+      expect(
+        (
+          await owner.pool.query(
+            'select kind from system_alerts where description = $1',
+            [`${uuid}: ${reason}`],
+          )
+        ).rows,
+      ).toEqual([{ kind: 'cdr_failed' }]);
+      expect(await state(uuid)).toEqual({
+        cdrs: 0,
+        unassigned: 1,
+        charges: 0,
+        jobs: 0,
+      });
+    },
+  );
 });

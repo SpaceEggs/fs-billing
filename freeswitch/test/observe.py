@@ -66,7 +66,8 @@ class Relay(BaseHTTPRequestHandler):
         body = self.rfile.read(int(self.headers.get('Content-Length', '0')))
         value = json.loads(body)
         record({'kind': 'authorize', 'tenant': value.get('tenant'),
-                'callee': value.get('callee'), 'uuid': value.get('uuid')})
+                'callee': value.get('callee'), 'dialedNumber': value.get('dialedNumber'),
+                'billingNumber': value.get('billingNumber'), 'uuid': value.get('uuid')})
         request = urllib.request.Request(
             'http://127.0.0.1:3001/authorize', data=body,
             headers={'Content-Type': 'application/json',

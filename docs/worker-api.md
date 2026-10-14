@@ -29,18 +29,24 @@ pnpm --filter @fs-billing/worker start
 ```json
 {
   "tenant": "ABC001",
-  "callee": "447700900123",
+  "callee": "867551234567",
+  "dialedNumber": "07551234567",
+  "billingNumber": "867551234567",
   "uuid": "7f1c2a9e-0d3b-4c5e-8a6f-1b2c3d4e5f60"
 }
 ```
 
-`tenant` 是非空字母数字编码，精确匹配（不补零、不改大小写）。`uuid` 必须为 UUID；授权不登记 UUID、不冻结余额、不产生扣费。`callee` 必须为非空 ASCII 数字且不能以 `00` 开头；拨号计划事先去掉 `+` 或 `00`。
+`tenant` 是非空字母数字编码，精确匹配（不补零、不改大小写）。`uuid` 必须为 UUID；授权不登记 UUID、不冻结余额、不产生扣费。新协议的 `callee` 传规范化计费号码，`dialedNumber` 传原始拨号。`dialedNumber` 是归一化输入，`billingNumber` 是可选投影。Worker 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber` 重新计算；投影必须与结果完全一致。
+
+`dialedNumber` 只允许一个可选的开头 `+` 和 1–17 位 ASCII 数字。`+` 或 `00` 开头表示国际号码，去掉该冠字；没有冠字表示国内号码，先去掉一个开头的 `0`，再加 `86`。最终计费号码必须以 1–9 开头、长度为 6–15 位。`+13055551234` 得到 `13055551234`，裸拨 `13055551234` 得到 `8613055551234`。非法字符或长度超限返回 HTTP 400、SIP 484。`callee` 或投影不一致返回 HTTP 503，并记录计费号码不一致日志。
 
 放行返回 HTTP 200：
 
 ```json
-{ "allowed": true, "maxSeconds": 14400 }
+{ "allowed": true, "maxSeconds": 14400, "billingNumber": "867551234567" }
 ```
+
+旧协议仅传 `tenant`、`callee` 与 `uuid`，其中 `callee` 按 6–15 位、首位非零的国际号码直接校验。旧 Lua 的裸拨国内号码并非国际号码，在滚动部署窗口仍可能匹配 `1` 前缀、误按 NANP 计费。以 `0` 开头的旧号码现在是格式错误，返回 HTTP 400、SIP 400，兼容旧 Lua 的错误码映射。没有 `dialedNumber` 时不补 `86`，成功响应仍为 `{"allowed":true,"maxSeconds":14400}`。`billingNumber` 不能单独出现；缺少 `dialedNumber` 却提供投影按号码不一致处理，返回 HTTP 503。
 
 `maxSeconds` 是整数，按实时余额加透支额度、当前生效版本的最长前缀费率计算，单通最多 14400 秒。每次从 DB 加载，不缓存余额或费率。
 
@@ -50,15 +56,15 @@ pnpm --filter @fs-billing/worker start
 { "allowed": false, "reason": "余额不足", "sipCode": 402 }
 ```
 
-| reason       | 建议 SIP code | HTTP |
-| ------------ | ------------- | ---- |
-| 号码格式错误 | 400           | 400  |
-| 租户不存在   | 404           | 200  |
-| 租户已停用   | 403           | 200  |
-| 无费率       | 404           | 200  |
-| 余额不足     | 402           | 200  |
+| reason       | 建议 SIP code          | HTTP |
+| ------------ | ---------------------- | ---- |
+| 号码格式错误 | 新协议 484，旧协议 400 | 400  |
+| 租户不存在   | 404                    | 200  |
+| 租户已停用   | 403                    | 200  |
+| 无费率       | 404                    | 200  |
+| 余额不足     | 402                    | 200  |
 
-号码字段缺失或类型错误同样返回 `号码格式错误`。其他无效请求（例如 UUID 错误）返回 HTTP 400 `{"error":"授权请求格式错误"}`。数据库不可用时返回 HTTP 503 `{"error":"授权服务暂不可用"}`，不向客户端暴露数据库错误详情。FreeSWITCH 的 [授权脚本](../freeswitch/scripts/billing_authorize.lua) 先校验号码，只有合法号码在授权返回 503、整个请求超过 1.5 秒或无有效响应时才放行 1800 秒并设置 `billing_unverified=true`。非法号码在调用 `/authorize` 前返回 SIP 484 并挂断。正常放行在接通后执行 `sched_hangup +N`，拒绝执行建议的 SIP code。
+号码字段缺失或类型错误同样返回 HTTP 400 `{"allowed":false,"reason":"号码格式错误","sipCode":484}`；没有 `dialedNumber` 的旧协议使用 `sipCode:400`。其他无效请求（例如 UUID 错误）返回 HTTP 400 `{"error":"授权请求格式错误"}`。数据库不可用时返回 HTTP 503 `{"error":"授权服务暂不可用"}`，不向客户端暴露数据库错误详情。FreeSWITCH 的 [授权脚本](../freeswitch/scripts/billing_authorize.lua) 先校验号码，只有合法号码在授权返回 503、整个请求超过 1.5 秒或无有效响应时才放行 1800 秒并设置 `billing_unverified=true`。非法号码在调用 `/authorize` 前返回 SIP 484 并挂断。正常放行在接通后执行 `sched_hangup +N`，拒绝执行建议的 SIP code。
 
 ## POST /cdr
 
@@ -72,12 +78,16 @@ pnpm --filter @fs-billing/worker start
 | `answer_epoch`                            | 缺失时从 `answer_uepoch` 取整秒，两者都缺失按 0；0 表示未接通；接通时必须在开始与结束之间                                 |
 | `billsec` / `duration`                    | 非负整数秒（最大 2147483647），支持数字字符串；duration 等于结束减开始，billsec 不超过接通后秒数；未接通 billsec 必须为 0 |
 | `billing_unverified`                      | 布尔值或字符串 `true` / `false`，缺失为 false                                                                             |
-| `caller_id_number` / `destination_number` | 主叫/被叫字符串；被叫格式单独校验，错误也保存为未归属话单                                                                 |
+| `caller_id_number` / `destination_number` | 主叫与被叫字符串；旧协议被叫直接按国际号码校验，错误也保存为未归属话单                                                    |
+| `billing_dialed_number`                   | 新协议原始拨号标记；优先作为展示被叫与归一化输入                                                                          |
+| `billing_number`                          | 可选计费投影；存在时必须与原始拨号重新计算的结果一致                                                                      |
 | `hangup_cause`                            | 挂断原因，缺失为空字符串                                                                                                  |
 
 `start_uepoch`、`answer_uepoch`、`end_uepoch` 接受非负整数或数字字符串；无效值不能回退到秒数。时间先按微秒校验先后顺序，再截断到毫秒。
 
-`caller_id_number` 与 `destination_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。缺主叫不拒绝话单；缺被叫按号码格式错误保存为未归属话单。
+`caller_id_number` 与 `destination_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。新协议的 `billing_dialed_number` 优先于这些被叫字段，避免 `execute_extension` 改变 `destination_number` 后丢失客户原始拨号。缺主叫不拒绝话单；缺被叫按号码格式错误保存为未归属话单。
+
+CDR 与授权调用同一个 `resolveBillingNumber`。存在 `billing_dialed_number` 时按新协议归一化并核验可选 `billing_number`；只有 `destination_number` 的旧话单直接按国际号码校验，不再次补 `86`，裸拨国内号码仍可能误按 NANP 计费，领先 `0` 的号码为格式错误。没有原始拨号标记却提供 `billing_number`，或投影不一致时，话单以 `计费号码不一致` 原因进入未归属待办，保存 Worker 计算的号码并写 `cdr_failed` 告警，不能收费。格式错误保存 NULL 计费号码。
 
 其他 mod_json_cdr 字段不参与业务解析，原文全部保留。输入形状和输出类型由 `packages/shared/src/worker.ts` 的 Zod schema 派生。
 
@@ -87,7 +97,7 @@ pnpm --filter @fs-billing/worker start
 2. JSON 语法损坏时仍保留原文、返回 200 `invalid` 并告警。JSON 可解析但结构/时间校验失败时，保存 `unassigned_cdrs(status=pending)`、原因和 `raw_id/raw_received_at` 原文引用，返回 200 `unassigned` 并写 `cdr_failed`。未知 UUID/开始/结束时间为 NULL，不伪造通话数据；有效 UUID 仍由 `call_uuids` 去重，缺开始时间时登记表使用收到时间作为占位，人工修正前不能认领。缺 UUID 的每次推送各有待办，人工按原文处理；不自动猜测两份正文是否同一通话。
 3. 解析成功后检查 `call_uuids`。已登记即返回 `duplicate`，不会将重推变成未归属话单的认领。入口设置事务级 `app.cdr_ingest=true`，登记触发器也禁止认领，因此并发插入同样只允许一条；只将 `23505` 且约束为 `call_uuids_pkey` 的冲突识别为重复，不使用话单 `ON CONFLICT DO NOTHING`。
 4. 缺标签、未知租户（包括 `ABC01`）、错误被叫进入 `unassigned_cdrs(status=pending)` 并写 `cdr_failed`，HTTP 200，不入扣费队列。重复推送不重复告警。
-5. 接通电话按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务写一条 `auth_timeout` 告警，重推不重复写。Worker 不可能在断网时立即收到超时信号，告警随话单到达。
+5. 将原始展示号码存入 `callee`，将重新计算并核验的号码存入 `billing_number`。有效的未归属号码也保存到该列，号码或投影错误时为 NULL。接通电话以 `billing_number` 按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务写一条 `auth_timeout` 告警，重推不重复写。Worker 不可能在断网时立即收到超时信号，告警随话单到达。
 6. CDR 插入与 `charge-cdr` 入队在同一事务内提交。队列失败时两者和 UUID 登记全部回滚，原文保留，返回 503 供 FreeSWITCH 重推。
 
 成功响应均为 HTTP 200：
@@ -100,7 +110,7 @@ pnpm --filter @fs-billing/worker start
 
 ## 扣费队列边界
 
-`ChargeQueue.enqueue(tx, {tenantId, callUuid})` 只做数据库操作，使用 pg-boss `fromDrizzle(tx, sql)` 与话单共用事务。`chargeCdr(db, unknown)` 在任务边界校验形状，再读取已保存的计价快照，调用 `appendLedgerEntry`，幂等键为 `call:<UUID>`、`occurred_at=answered_at`。零费率或未接通不产生零元流水（数据库只接受负值通话扣费）。余额缓存由流水触发器更新。
+`ChargeQueue.enqueue(tx, {tenantId, callUuid})` 只做数据库操作，使用 pg-boss `fromDrizzle(tx, sql)` 与话单共用事务。`chargeCdr(db, unknown)` 在任务边界校验形状，再读取已保存的计价快照，调用 `appendLedgerEntry`，幂等键为 `call:<UUID>`、`occurred_at=answered_at`。零费率或未接通不产生零元流水（数据库只接受负值通话扣费）。扣费备注为 `通话扣费 <UUID> <billing_number>`；历史 NULL 行回退到原 `callee`。余额缓存由流水触发器更新。
 
 启动后消费真实 pg-boss 扣费任务；开启 `supervise` 与 `schedule`，使用固定版本补丁禁用额外 advisory 锁。DB 测试通过真实队列领取、重复执行处理器、模拟提交前崩溃与提交后未确认任务的重投，断言账本与余额。
 
@@ -132,9 +142,21 @@ Worker 启动时执行一次分区维护，然后注册每日北京时间零点�
 
 ## FreeSWITCH 配置
 
-[拨号计划与 Lua](../freeswitch/README.md) 在 bridge 前剥掉被叫的 `+` 与 `00`，同时更新 A-leg 的 `destination_number`，让授权与话单号码一致。脚本使用 Lua-cURL 的毫秒超时，密钥从全局变量读取，不写进通道变量。
+[拨号计划与 Lua](../freeswitch/README.md) 保留原始被叫用于 bridge，不改写 `destination_number`。Lua 在任何校验或提前返回前设置 `billing_dialed_number`，校验后设置独立 `billing_number`，在请求前校验及超时放行时保留规范化投影；Worker 从原始拨号重新计算，核验请求与 CDR 的投影。脚本使用 Lua-cURL 的毫秒超时，密钥从全局变量读取，不写进通道变量。
 
 `mod_json_cdr` 原生只支持 `cred` 的 HTTP Basic 认证，不能配置 `X-Billing-Key`。示例在 FreeSWITCH 机器放一个仅回环监听的 nginx relay，添加共享密钥后向 Worker 内网地址转发；Worker 的 IP 白名单填写 FreeSWITCH 机器来源 IP。配置只推 A-leg、直传 JSON，并保留 archive 与失败 retry 原文。HTTP 重试耗尽后由独立脚本扫描 retry 重推，2xx 才移除失败副本。缺分区或其他保存故障的 503 原样传回，不能在代理上改为成功。
+
+## 号码协议滚动部署
+
+迁移 `0003_billing_number` 给 `cdrs` 与 `unassigned_cdrs` 增加可空 `billing_number` 及规范号码约束，不回填历史数据，不新增业务锁。旧 Worker 可继续写 NULL，新 Worker 接受旧请求和旧 retry 文件。规范化后的新话单号码必须持久化，不能只用于费率查询。先执行 [FreeSWITCH 接入的费率前缀检查](freeswitch.md)，缩短旧 Lua 更新窗口，切换前回放旧 retry 文件并确认处理完成。
+
+部署顺序如下：
+
+1. 执行 `pnpm db:migrate`。
+2. 升级全部 Worker，验证旧协议授权和旧话单重推。
+3. 成组更新各 FreeSWITCH 的 Lua 与拨号计划。执行 SIPp 验证国内手机、固话、国际 `+` 与 `00`，并比较上游原始 INVITE、CDR、费率与账本。
+
+回滚先恢复 FreeSWITCH。待新协议通话结束、新协议 retry 文件成功重推、相关扣费任务完成，再降级 Worker。保留可空列；无需回填、重算或反向迁移。先降级 Worker 会把新协议的原始拨号当成旧国际号码，导致拒绝或错误费率。
 
 ## 扣费对账与连接池
 

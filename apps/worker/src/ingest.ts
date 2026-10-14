@@ -7,7 +7,7 @@ import {
   type Db,
   type Tx,
 } from '@fs-billing/db';
-import { findRate, parseDialedNumber, priceCall } from '@fs-billing/rating';
+import { findRate, resolveBillingNumber, priceCall } from '@fs-billing/rating';
 import { modJsonCdrSchema, type ParsedCdr } from '@fs-billing/shared';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
 import type { ChargeQueue } from './queue.js';
@@ -40,9 +40,15 @@ export async function recordAlert(
   });
 }
 
-async function park(tx: Tx, cdr: ParsedCdr, reason: string) {
+async function park(
+  tx: Tx,
+  cdr: ParsedCdr,
+  reason: string,
+  billingNumber: string | null,
+) {
   await tx.insert(schema.unassignedCdrs).values({
     ...cdr,
+    billingNumber,
     durationSeconds: cdr.billsec,
     reason,
   });
@@ -97,6 +103,13 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
     return { status: 'unassigned' as const, rawId: raw.id };
   }
   const cdr = parsed.data;
+  const resolved = resolveBillingNumber(
+    cdr.dialedNumber === undefined
+      ? { callee: cdr.callee, billingNumber: cdr.billingNumber }
+      : { dialedNumber: cdr.dialedNumber, billingNumber: cdr.billingNumber },
+  );
+  const billingNumber =
+    'billingNumber' in resolved ? resolved.billingNumber : null;
   try {
     const status = await withSystem(db, async (tx) => {
       const [tenant] = await tx
@@ -120,21 +133,34 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
           affectedCalls: 1,
         });
       }
+      if ('error' in resolved)
+        return park(
+          tx,
+          cdr,
+          resolved.error === 'mismatch' ? '计费号码不一致' : '号码格式错误',
+          billingNumber,
+        );
       if (!tenant)
-        return park(tx, cdr, cdr.tenantTag ? '租户不存在' : '缺少租户标签');
-      const dialed = parseDialedNumber(cdr.callee);
-      if (!dialed) return park(tx, cdr, '号码格式错误');
+        return park(
+          tx,
+          cdr,
+          cdr.tenantTag ? '租户不存在' : '缺少租户标签',
+          billingNumber ?? null,
+        );
+      const verifiedBillingNumber = resolved.billingNumber;
       const ratingTenant = await loadRatingTenant(tx, tenant.code);
       const entry =
         cdr.answeredAt &&
         ratingTenant &&
-        findRate(ratingTenant.rates, dialed, cdr.answeredAt);
-      if (cdr.answeredAt && !entry) return park(tx, cdr, '接通时无费率');
+        findRate(ratingTenant.rates, verifiedBillingNumber, cdr.answeredAt);
+      if (cdr.answeredAt && !entry)
+        return park(tx, cdr, '接通时无费率', billingNumber);
       const priced = entry
         ? priceCall(cdr.billsec, entry.perMinute)
         : undefined;
       await tx.insert(schema.cdrs).values({
         ...cdr,
+        billingNumber,
         tenantId: tenant.id,
         durationSeconds: cdr.billsec,
         billedMinutes: priced?.billedMinutes.toFixed() ?? '0',

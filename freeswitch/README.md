@@ -23,11 +23,23 @@ vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_pass
 3. 从可信的 directory 用户或 IP 路由设置 `billing_tenant=ABC001`。拒绝客户端用 SIP header 覆盖租户标签。将 [billing.xml](dialplan/billing.xml) 放进 dialplan 目录，客户使用 `billing` context，将 `upstream` 换成实际 gateway。`billing-authorized` 只供脚本之后的内部寻路，不给客户配置为入口。
 4. 设置租户并发上限。Worker 故障时合法号码每通放行 1800 秒，并发上限用于控制透支。
 
-脚本先去掉被叫开头的 `+`、再去掉 `00`，把规范化结果同时写回 A-leg 的 `destination_number` 与桥接变量 `billing_destination`。授权请求只包含租户编码、被叫与 A-leg UUID；余额不保存在交换机。拨号计划与 Lua 在调用 `/authorize` 前校验号码；非数字、规范化后仍以 `00` 开头或超过 15 位的号码返回 SIP 484 并以 `INVALID_NUMBER_FORMAT` 挂断。15 位上限是 FreeSWITCH 侧的 E.164 限制，叠加在 rating 的号码规则之上；rating 本身不限制长度。
+脚本始终保留原始 `destination_number`，将原始号码写入 `billing_destination` 供桥接，在脚本开始时就写入 `billing_dialed_number`，使提前退出或校验失败的话单也使用新协议。`billing_number` 单独保存计费投影。带 `+` 或 `00` 的号码按国际号码去掉冠字；其他号码按国内号码先去掉一个开头的 `0`，再加 `86`。例如 `07551234567` 的计费号码是 `867551234567`，上游仍收到 `07551234567`。`+13055551234` 按国际号码计费，裸拨 `13055551234` 按 `8613055551234` 计费。
+
+桥接格式只接受一个可选的开头 `+` 和 1–17 位 ASCII 数字，拒绝 `|`、`,`、空格等字符。独立的计费号码必须首位为 1–9、长度为 6–15 位。非法路由或计费投影在请求前返回 SIP 484，以 `INVALID_NUMBER_FORMAT` 挂断。15 位 E.164 上限只校验 `billing_number`，不截断或改写上游号码。
+
+授权请求包含租户、A-leg UUID、规范化 `callee` 与原始 `dialedNumber`，以及 `billingNumber` 投影。Worker 的同一个 `resolveBillingNumber` 处理授权与 CDR，重新计算并核验 Lua 投影；授权成功响应中的号码必须存在且与本地投影一致，否则返回 SIP 503 并拒绝通话。旧 Worker 没有返回该号码，因此新 Lua 与旧 Worker 混用时也拒绝通话。Lua 投影用于授权前校验与超时降级，计费以 Worker 核验并持久化的结果为准。余额不保存在交换机。
 
 放行设置 `billing_authorized=true`。未接通时设置 `execute_on_answer=sched_hangup +N ALLOTTED_TIMEOUT`，接通后才开始计时；已接通的通道直接执行 `sched_hangup +N ALLOTTED_TIMEOUT`。本示例占用 `execute_on_answer`，其他接通动作需要合并到同一接通处理流程。拨号计划不要在授权前 `answer`。Lua 执行后用单独的 `billing-authorized` context 重新判断放行标记；XML 条件在执行应用之前求值，不能在同一轮条件里依赖 Lua 刚设置的变量。
 
 业务拒绝用返回的 `sipCode` 执行 `respond` 并挂断，不执行 bridge。合法号码遇到超时、无响应、5xx（包括 `/authorize` 的 503）或无法解析的成功响应放行 1800 秒并设置 `billing_unverified=true`。401、403、无业务拒绝形状的 400 以及本机配置错误返回 503，修正配置后再试。正常授权设该标记为 false。脚本不重试授权，也不记录共享密钥。
+
+## 滚动更新号码协议
+
+1. 在服务器 B 执行 `pnpm db:migrate`，应用 `0003_billing_number`。迁移为正式及未归属话单添加可空计费号码，不回填历史行。
+2. 升级全部 Worker。新 Worker 同时接受旧版预规范化被叫和新版原始拨号；旧授权成功响应保持原形状，旧 retry 文件不重复补 `86`。旧协议国内手机号码在更新窗口仍按原号码匹配费率，可能误按 `1` 国家码计费；以 `0` 开头的旧协议号码改为格式错误，授权返回 SIP 400。缩短更新窗口，切换前回放旧 retry 文件并确认处理完成。
+3. 将 Lua 与拨号计划作为一组更新各 FreeSWITCH，再执行下述 SIPp 验证。不要在旧 Worker 后面先启用新拨号计划。
+
+回滚先恢复 FreeSWITCH 的 Lua 与拨号计划。等待新协议通话结束，完成新协议 retry 重推及对应扣费，再回滚 Worker。保留数据库可空列；历史计价快照与账本不重算。
 
 ## 配置话单推送与落盘重推
 
@@ -58,9 +70,9 @@ curl --noproxy '*' --fail-with-body --silent --show-error \
 lua5.3 freeswitch/tests/billing_authorize_test.lua
 ```
 
-该测试用模拟 session 与 HTTP 响应运行真实授权脚本，覆盖非法号码在请求前返回 484、合法号码遇到授权 503/超时才降级、正常授权与接通后限时挂断。`pnpm check` 同时运行 Lua harness 和拨号计划条件测试；CI 缺少 `lua5.3` 时失败，本地缺少时可跳过对应测试。
+该测试用模拟 session 与 HTTP 响应运行真实授权脚本，覆盖桥接保留原始拨号、独立计费号码、国内与国际归一化、非法号码在请求前返回 484、投影核验、合法号码遇到授权 503/超时才降级、正常授权与接通后限时挂断。`pnpm check` 同时运行 Lua harness 和拨号计划条件测试；CI 缺少 `lua5.3` 时失败，本地缺少时可跳过对应测试。
 
-完整 FreeSWITCH 联调使用 [run-integration.sh](test/run-integration.sh)，需要 Linux、Docker Compose、Node、pnpm、Python 3 与 curl。SIP 观测容器使用 `NET_RAW` 权限，只捕获回环 INVITE；授权代理记录号码与 UUID，不记录密钥。脚本启动本机 Worker、FreeSWITCH、nginx relay 与容器内 SIPp，使用数据库中的 `FSI` 前缀测试租户。租户编码不含下划线，遵守数据库约束。测试包含真实 60 秒计费限时：断言时长 59–60 秒（调度器按整秒触发；61 秒起会计成 2 分钟）、计费 1 分钟、话单金额 0.01、扣费流水 −0.01、余额从 0.01 扣到 0，并按受控 Call-ID 验证原始话单、正式话单与唯一扣费。
+完整 FreeSWITCH 联调使用 [run-integration.sh](test/run-integration.sh)，需要 Linux、Docker Compose、Node、pnpm、Python 3 与 curl。SIP 观测容器使用 `NET_RAW` 权限，只捕获回环 INVITE；授权代理记录号码与 UUID，不记录密钥。脚本启动本机 Worker、FreeSWITCH、nginx relay 与容器内 SIPp，使用数据库中的 `FSI` 前缀测试租户。租户编码不含下划线，遵守数据库约束。测试先执行六个号码用例，包括 `+44`、`0044`、国内手机、国内固话、`+1305` 与裸拨 `1305`。每个用例断言上游 INVITE 保留原始号码，授权请求的 `callee == billingNumber` 等于规范化号码，`dialedNumber` 等于原始拨号。正式话单的 `callee` 保留原始拨号，`billing_number` 保存规范化号码；前缀、费率、扣费金额与账本备注使用规范化号码。停用、余额不足、计费限时与话单重推用例也核验同一授权请求格式及各自的租户。非法号码在请求前拒绝；连接拒绝与延迟用例绕过授权观测代理，这三类用例均断言代理没有授权记录。测试还包含真实 60 秒计费限时：断言时长 59–60 秒（调度器按整秒触发；61 秒起会计成 2 分钟）、计费 1 分钟、话单金额 0.01、扣费流水 −0.01、余额从 0.01 扣到 0，并按受控 Call-ID 验证原始话单、正式话单与唯一扣费。
 
 `ALLOTTED_TIMEOUT` 的话单结束时间依赖媒体持续流动，无媒体的通话腿在现场复现中会延迟约 5 秒拆线，因此 SIPp 的客户与运营商两端在通话期间持续发送 RTP。
 
@@ -79,7 +91,7 @@ bash freeswitch/test/run-integration.sh /tmp/fs-integration-local
 
 ## 测试机验收
 
-- 呼叫 `+447…` 与 `00447…`，确认授权请求、上游桥接与 A-leg CDR 都是纯数字。检查 UUID 与租户标签一致。
+- 呼叫 `+447…`、`00447…`、`138…` 与 `0755…`，确认上游 INVITE 与客户原始拨号完全一致。检查授权及 A-leg CDR 的原始拨号、独立计费号码、UUID 与租户标签；正式话单的计费前缀和账本备注必须使用 `billing_number`。
 - 用可用金额只够一分钟的测试租户打一通电话，保存授权 `maxSeconds=60`、接通日志、约 60 秒后 `ALLOTTED_TIMEOUT` 与账本记录。振铃时间不计入定时挂断。
 - 用停用或余额不足的租户呼叫，保存 SIP 403 或 402，确认没有上游 bridge。
 - 停 Worker 或将授权流量延迟超过 1.5 秒，确认拨号继续、接通后计时 1800 秒、CDR 带 `billing_unverified=true`。恢复后照常扣费，首次有效话单写一条 `auth_timeout` 告警。
