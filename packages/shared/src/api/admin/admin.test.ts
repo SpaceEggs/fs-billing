@@ -589,11 +589,20 @@ it('minutes accept fractional duration independently of money and payments rejec
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
   expect(
-    adminConfirmPaymentRequestSchema.parse({ receivedOn: '2026-10-14' }),
-  ).toEqual({ receivedOn: '2026-10-14', note: '' });
+    adminConfirmPaymentRequestSchema.parse({
+      receivedOn: '2026-10-14',
+      expectedLatestSettlementId: null,
+    }),
+  ).toEqual({
+    receivedOn: '2026-10-14',
+    expectedLatestSettlementId: null,
+    note: '',
+  });
   expect(
-    adminConfirmPaymentRequestSchema.safeParse({ receivedOn: '2026-10-15' })
-      .success,
+    adminConfirmPaymentRequestSchema.safeParse({
+      receivedOn: '2026-10-15',
+      expectedLatestSettlementId: null,
+    }).success,
   ).toBe(false);
 });
 
@@ -678,6 +687,7 @@ it('received receivables retain settlement notes and cannot be overdue', () => {
   vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
   const receivable = {
     ledgerEntryId: id,
+    latestSettlementId: id,
     tenant: { id, code: 'ABC001', name: '客户', currency: 'CNY' },
     amount: '500',
     internalNote: '合同账期',
@@ -709,19 +719,29 @@ it('payment dates use Beijing today at the UTC midnight boundary', () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-14T15:59:59Z'));
   expect(
-    adminConfirmPaymentRequestSchema.safeParse({ receivedOn: '2026-10-15' })
-      .success,
+    adminConfirmPaymentRequestSchema.safeParse({
+      receivedOn: '2026-10-15',
+      expectedLatestSettlementId: null,
+    }).success,
   ).toBe(false);
   vi.setSystemTime(new Date('2026-10-14T16:00:00Z'));
   expect(
-    adminConfirmPaymentRequestSchema.parse({ receivedOn: '2026-10-15' }),
-  ).toEqual({ receivedOn: '2026-10-15', note: '' });
+    adminConfirmPaymentRequestSchema.parse({
+      receivedOn: '2026-10-15',
+      expectedLatestSettlementId: null,
+    }),
+  ).toEqual({
+    receivedOn: '2026-10-15',
+    expectedLatestSettlementId: null,
+    note: '',
+  });
 });
 it('received receivables retain settlement notes and cannot predate the credit', () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-16T00:00:00Z'));
   const entry = {
     ledgerEntryId: id,
+    latestSettlementId: id,
     tenant: { id, code: 'ABC001', name: '客户', currency: 'CNY' },
     amount: '500.00',
     internalNote: '账期',

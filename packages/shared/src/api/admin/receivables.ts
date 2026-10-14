@@ -30,6 +30,7 @@ export const adminCurrencyTotalsSchema = z.strictObject({
 export const adminReceivableSchema = z
   .strictObject({
     ledgerEntryId: z.uuid(),
+    latestSettlementId: z.uuid().nullable(),
     tenant: tenantIdentitySchema,
     amount: adminPositiveAmountSchema,
     internalNote: z.string(),
@@ -58,6 +59,12 @@ export const adminReceivableSchema = z
   })
   .refine(
     (entry) =>
+      entry.payment.status !== 'received' ||
+      entry.latestSettlementId === entry.payment.settlementId,
+    { message: '已收款必须引用最新确认事件', path: ['latestSettlementId'] },
+  )
+  .refine(
+    (entry) =>
       entry.overdue ===
       (entry.payment.status === 'pending' && entry.ageDays > 30),
     { message: '待收款超过 30 天才标记逾期' },
@@ -79,6 +86,7 @@ export const adminReceivablesResponseSchema = z.strictObject({
   pagination: adminPageInfoSchema,
 });
 export const adminConfirmPaymentRequestSchema = z.strictObject({
+  expectedLatestSettlementId: z.uuid().nullable(),
   receivedOn: receivedOnSchema,
   note: z.string().max(2000).default(''),
 });

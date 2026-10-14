@@ -56,7 +56,6 @@ export function createAdminRateScheduleSchema(
     }),
   ]);
 }
-export const adminRateScheduleSchema = createAdminRateScheduleSchema();
 export const adminRateVersionSchema = z.strictObject({
   id: z.uuid(),
   effectiveFrom: adminTimestampSchema,
@@ -70,11 +69,7 @@ export const adminRatesResponseSchema = z.strictObject({
   current: adminRateVersionSchema,
   scheduled: z.array(adminRateVersionSchema),
 });
-export const adminRateEditRequestSchema = z.strictObject({
-  baseVersionId: z.uuid(),
-  entry: adminRateEntrySchema,
-  schedule: adminRateScheduleSchema,
-});
+
 export const adminRateVersionResponseSchema =
   adminMutationResponseSchema.extend({
     version: adminRateVersionSchema,
@@ -124,11 +119,7 @@ export const adminRateChangeSchema = z.discriminatedUnion('kind', [
   }),
   z.strictObject({ kind: z.literal('deleted'), before: adminRateEntrySchema }),
 ]);
-export const adminRateImportPreviewRequestSchema = z.strictObject({
-  file: adminCsvFileSchema,
-  baseVersionId: z.uuid(),
-  schedule: adminRateScheduleSchema,
-});
+
 export const adminRatePreviewResponseSchema = z.discriminatedUnion('ok', [
   z.strictObject({
     ok: z.literal(false),
@@ -174,12 +165,41 @@ export const adminRateExportResponseSchema = adminMutationResponseSchema.extend(
     csv: z.string(),
   },
 );
-export const adminRateCopyPreviewRequestSchema = z.strictObject({
-  sourceVersionId: z.uuid(),
-  targetTenantId: z.uuid(),
-  targetBaseVersionId: z.uuid(),
-  schedule: adminRateScheduleSchema,
-});
+
+export function createAdminRateRequestSchemas(
+  horizonMs = DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
+) {
+  const schedule = createAdminRateScheduleSchema(horizonMs);
+  const adminRateEditRequestSchema = z.strictObject({
+    baseVersionId: z.uuid(),
+    entry: adminRateEntrySchema,
+    schedule,
+  });
+  const adminRateImportPreviewRequestSchema = z.strictObject({
+    file: adminCsvFileSchema,
+    baseVersionId: z.uuid(),
+    schedule,
+  });
+  const adminRateCopyPreviewRequestSchema = z.strictObject({
+    sourceVersionId: z.uuid(),
+    targetTenantId: z.uuid(),
+    targetBaseVersionId: z.uuid(),
+    schedule,
+  });
+  return {
+    schedule,
+    editRequest: adminRateEditRequestSchema,
+    importPreviewRequest: adminRateImportPreviewRequestSchema,
+    copyPreviewRequest: adminRateCopyPreviewRequestSchema,
+  };
+}
+export const adminRateRequestSchemas = createAdminRateRequestSchemas();
+export const adminRateScheduleSchema = adminRateRequestSchemas.schedule;
+export const adminRateEditRequestSchema = adminRateRequestSchemas.editRequest;
+export const adminRateImportPreviewRequestSchema =
+  adminRateRequestSchemas.importPreviewRequest;
+export const adminRateCopyPreviewRequestSchema =
+  adminRateRequestSchemas.copyPreviewRequest;
 
 export type AdminRateAmount = z.infer<typeof adminRateAmountSchema>;
 export type AdminRateEntry = z.infer<typeof adminRateEntrySchema>;

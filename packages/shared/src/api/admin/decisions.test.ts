@@ -9,6 +9,8 @@ import {
   adminRateVersionSchema,
   auditContentSchema,
   createAdminRateScheduleSchema,
+  createAdminRateRequestSchemas,
+  createAdminApiContract,
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
   DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS,
   DEFAULT_ADMIN_RATE_CANCEL_CLOCK_SKEW_MARGIN_SECONDS,
@@ -137,6 +139,7 @@ it('receivable states retain settlement or void details and only pending can be 
   vi.setSystemTime(now);
   const entry = {
     ledgerEntryId: id,
+    latestSettlementId: otherId,
     tenant: { id, code: 'ABC001', name: '客户', currency: 'CNY' },
     amount: '500',
     internalNote: '内部',
@@ -262,3 +265,145 @@ it('later auth and cancellation services have the decided configuration defaults
   expect(DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS).toBe(259200000);
   expect(DEFAULT_ADMIN_RATE_CANCEL_CLOCK_SKEW_MARGIN_SECONDS).toBe(60);
 });
+
+it('confirm payment requires a latest-ever settlement token and maps stale requests to conflict', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(now);
+  const operation = adminApiContract.adminConfirmPayment;
+  for (const expectedLatestSettlementId of [null, otherId]) {
+    const input = { receivedOn: '2026-10-14', expectedLatestSettlementId };
+    expect(operation.request.body.parse(input)).toEqual({ ...input, note: '' });
+  }
+  for (const expectedLatestSettlementId of [undefined, '', 'invalid', 1]) {
+    expect(
+      operation.request.body.safeParse({
+        receivedOn: '2026-10-14',
+        expectedLatestSettlementId,
+      }).success,
+    ).toBe(false);
+  }
+  for (const code of [
+    'SETTLEMENT_CONFLICT',
+    'RECEIVABLE_VOIDED',
+    'ALREADY_RECEIVED',
+  ]) {
+    const response = { error: { code, message: '冲突', requestId: id } };
+    expect(operation.responses[409].parse(response)).toEqual(response);
+  }
+  expect(
+    operation.responses[409].safeParse({
+      error: {
+        code: 'RECEIVABLE_REVERSAL_MISMATCH',
+        message: '冲突',
+        requestId: id,
+      },
+    }).success,
+  ).toBe(false);
+});
+
+it('pending receivables expose the latest-ever settlement token for reconfirmation', () => {
+  const entry = {
+    ledgerEntryId: id,
+    tenant: { id, code: 'ABC001', name: '客户', currency: 'CNY' },
+    amount: '500',
+    internalNote: '',
+    createdAt: '2026-10-01T00:00:00Z',
+    actor: { id, name: '管理员' },
+    ageDays: 1,
+    overdue: false,
+    payment: { status: 'pending' },
+  };
+  for (const latestSettlementId of [null, otherId]) {
+    const response = { ...entry, latestSettlementId };
+    expect(adminReceivableSchema.parse(response)).toEqual(response);
+  }
+  expect(adminReceivableSchema.safeParse(entry).success).toBe(false);
+  expect(
+    adminReceivableSchema.safeParse({ ...entry, latestSettlementId: 'invalid' })
+      .success,
+  ).toBe(false);
+  vi.useFakeTimers();
+  vi.setSystemTime(now);
+  expect(
+    adminReceivableSchema.safeParse({
+      ...entry,
+      latestSettlementId: null,
+      payment: {
+        status: 'received',
+        settlementId: otherId,
+        receivedOn: '2026-10-14',
+        note: '',
+        confirmedBy: id,
+      },
+    }).success,
+  ).toBe(false);
+});
+
+it.each([1000, DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS + 1000])(
+  'configured horizon %s binds edit import copy and stored schedule reparse',
+  (horizonMs) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const rates = createAdminRateRequestSchemas(horizonMs);
+    const contract = createAdminApiContract(rates);
+    const requests = [
+      {
+        schema: contract.adminRateEdit.request.body,
+        body: {
+          baseVersionId: id,
+          entry: { prefix: '1', country: '美国', rate: '0.1' },
+        },
+      },
+      {
+        schema: contract.adminRateImportPreview.request.body,
+        body: {
+          baseVersionId: id,
+          file: { filename: 'rates.csv', contentBase64: 'YWJj' },
+        },
+      },
+      {
+        schema: contract.adminRateCopyPreview.request.body,
+        body: {
+          sourceVersionId: id,
+          targetTenantId: otherId,
+          targetBaseVersionId: otherId,
+        },
+      },
+    ];
+    for (const time of [now, now + 1, now + horizonMs]) {
+      const schedule = {
+        kind: 'scheduled',
+        effectiveFrom: new Date(time).toISOString(),
+      };
+      expect(rates.schedule.parse(schedule)).toEqual(schedule);
+      for (const { schema, body } of requests) {
+        expect(schema.parse({ ...body, schedule })).toEqual({
+          ...body,
+          schedule,
+        });
+      }
+    }
+    for (const time of [now - 1, now + horizonMs + 1]) {
+      const schedule = {
+        kind: 'scheduled',
+        effectiveFrom: new Date(time).toISOString(),
+      };
+      expect(rates.schedule.safeParse(schedule).success).toBe(false);
+      for (const { schema, body } of requests) {
+        expect(schema.safeParse({ ...body, schedule }).success).toBe(false);
+      }
+    }
+    const schedule = rates.schedule.parse({
+      kind: 'scheduled',
+      effectiveFrom: new Date(now + 1).toISOString(),
+    });
+    vi.setSystemTime(now + 2);
+    expect(rates.schedule.safeParse(schedule).success).toBe(false);
+    for (const { schema, body } of requests) {
+      expect(schema.safeParse({ ...body, schedule }).success).toBe(false);
+      expect(
+        schema.parse({ ...body, schedule: { kind: 'immediate' } }),
+      ).toEqual({ ...body, schedule: { kind: 'immediate' } });
+    }
+  },
+);

@@ -240,7 +240,7 @@
 - [ ] 门户与管理员开户均先创建 auth.user 且不创建 credential row，再在业务事务关联 profile 与审计，最后在 activate 写入 credential；关联失败留下无 credential 的不可登录 orphan，业务 API 拒绝无 profile 用户（故障测试仍为计划）
 - [ ] 停用租户提示不承诺呼叫停止，说明 Worker 超时时新呼叫仍可能放行最多 1800 秒；人工欺诈切断 runbook 按 billing_tenant 与租户编码不区分大小写核验 UUID 后执行 uuid_kill
 
-- [ ] 撤销误确认必填原因并追加每 settlement 唯一的 reversal；重新成为 pending 后可重新全额确认；保留 ALREADY_RECEIVED，重复/并发确认只存在一个未撤销 settlement（本步契约，后续 DB/服务/UI）。删除每 credit 单 settlement unique，view 取最新未撤销确认，仅用现有 lock_tenants，余额和原流水不变
+- [ ] 撤销误确认必填原因并追加每 settlement 唯一的 reversal；重新成为 pending 后可重新全额确认；confirm 必填 expectedLatestSettlementId，与含已撤销的最新历史确认匹配；响应暴露 latestSettlementId，旧重试返回 SETTLEMENT_CONFLICT。作废优先返回 RECEIVABLE_VOIDED，保留 ALREADY_RECEIVED，重复/并发确认只存在一个未撤销 settlement（本步契约，后续 DB/服务/UI）。删除每 credit 单 settlement unique，view 取最新未撤销确认，仅用现有 lock_tenants，余额和原流水不变
 - [ ] credit 冲正后独立 void 关联原 credit 与相反金额 adjustment，必填原因及 actor 审计，每 credit 一个事件；已收须先撤销确认，voided 不可再确认且不进入 pending totals（本步契约，后续 DB/服务/UI）
 - [ ] disabled 租户仍可充值、赊账、赠送且不自动启用，确认框说明状态（后续余额 service/UI）；大额 gift/credit 超过前端可配置 CNY 10000 / USD 1500 阈值才二次确认，API 不接收 confirm token（后续 UI）
 - [ ] 紧急改价按取消排期、修改当前、重新排期三步各自审计并提示中间状态（后续 UI/service）；preview 默认 60 分钟到期且 commit 重查版本和时间（后续 service）
