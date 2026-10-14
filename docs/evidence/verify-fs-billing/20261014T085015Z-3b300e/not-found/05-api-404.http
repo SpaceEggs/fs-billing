@@ -1,0 +1,13 @@
+> GET http://127.0.0.1:44029/api/no-such-route
+> Origin: http://127.0.0.1:44029
+
+HTTP/1.1 404 Not Found
+Access-Control-Allow-Origin: http://127.0.0.1:44029
+Vary: Origin
+cache-control: no-store
+content-type: application/json; charset=utf-8
+content-length: 79
+date: Wed, 14 Oct 2026 08:58:54 GMT
+connection: close
+
+{"error":{"message":"资源不存在","requestId":"req-2y","code":"NOT_FOUND"}}

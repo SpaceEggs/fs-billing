@@ -1,0 +1,9 @@
+{"level":30,"time":1791967823427,"pid":591127,"hostname":"grok-bot-vm-416516738","msg":"Server listening at http://127.0.0.1:33303"}
+2026-10-14T08:53:31.943Z WARN [Better Auth]: User not found
+2026-10-14T08:53:32.155Z WARN [Better Auth]: Invalid password
+2026-10-14T08:53:34.110Z WARN [Better Auth]: Invalid password
+2026-10-14T08:53:34.269Z WARN [Better Auth]: Invalid password
+2026-10-14T08:53:34.432Z WARN [Better Auth]: Invalid password
+2026-10-14T08:53:34.603Z WARN [Better Auth]: Invalid password
+{"level":30,"time":1791968014675,"pid":591127,"hostname":"grok-bot-vm-416516738","event":"auth.account_locked","emailKey":"35608aa0e98c4bc38d8c50c0bc094067d038b0761be60753cee180023c423937","lockedUntil":"2026-10-14T09:08:34.675Z","msg":"Account lock entered"}
+2026-10-14T08:53:34.775Z WARN [Better Auth]: Invalid password

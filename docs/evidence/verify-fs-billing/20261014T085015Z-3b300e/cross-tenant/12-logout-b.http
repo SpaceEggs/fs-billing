@@ -1,0 +1,13 @@
+> POST http://127.0.0.1:44029/api/auth/logout
+> Origin: http://127.0.0.1:44029
+> Cookie: (jar b)
+
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: http://127.0.0.1:44029
+Vary: Origin
+cache-control: no-store
+set-cookie: better-auth.session_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0
+date: Wed, 14 Oct 2026 08:55:45 GMT
+connection: close
+
+

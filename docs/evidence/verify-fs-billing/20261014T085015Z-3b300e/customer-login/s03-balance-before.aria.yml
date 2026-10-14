@@ -1,0 +1,13 @@
+- complementary:
+  - text: FS-Billing 客户门户
+  - navigation "主导航":
+    - link "首页":
+      - /url: /
+- banner:
+  - text: ABC001 · 深圳市某某科技有限公司
+  - button "主题": ◐
+  - button "账号菜单": abc001@example.com
+- main:
+  - heading "首页" [level=1]
+  - region "当前余额": 当前余额 -¥35.20 CNY
+  - paragraph: 话单、月账单与余额流水将在后续版本开放。

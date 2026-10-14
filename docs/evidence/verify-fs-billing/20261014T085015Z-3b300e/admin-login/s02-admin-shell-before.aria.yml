@@ -1,0 +1,13 @@
+- main:
+  - text: FS-Billing 管理后台
+  - heading "登录管理后台" [level=1]
+  - text: 仅限内部管理员使用 登录邮箱
+  - textbox "登录邮箱":
+    - /placeholder: name@fs-billing.com
+  - text: 密码
+  - button "忘记密码？"
+  - textbox "密码":
+    - /placeholder: 请输入密码
+  - button "显示密码": 显示
+  - button "登录"
+  - text: 客户请使用客户门户登录

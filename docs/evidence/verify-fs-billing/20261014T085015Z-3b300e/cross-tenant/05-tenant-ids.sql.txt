@@ -1,0 +1,7 @@
+-- SELECT t.code, t.id, b.balance FROM tenants t JOIN tenant_balances b ON b.tenant_id=t.id WHERE t.code IN ('ABC001','GLB009') ORDER BY 1
+  code  |                  id                  | balance 
+--------+--------------------------------------+---------
+ ABC001 | 616de549-9eef-4c2e-821a-3e1d079194f0 |  -35.20
+ GLB009 | f1cdd35e-d5fc-4714-bad5-d79ada600896 |  -15.02
+(2 rows)
+

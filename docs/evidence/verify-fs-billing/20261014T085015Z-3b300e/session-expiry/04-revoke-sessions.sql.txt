@@ -1,0 +1,7 @@
+-- DELETE FROM auth.session WHERE user_id = (SELECT id FROM auth."user" WHERE email='lijun@example.com') RETURNING 'revoked' AS result
+ result  
+---------
+ revoked
+(1 row)
+
+DELETE 1

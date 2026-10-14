@@ -1,0 +1,50 @@
+{
+  "runId": "20261014T085015Z-3b300e",
+  "feature": "theme-and-mobile",
+  "status": "PASS",
+  "reason": "",
+  "steps": [
+    {
+      "id": "desktop-dark",
+      "action": "◐ 主题 -> 深色, persists across reload",
+      "result": "PASS",
+      "detail": "",
+      "ms": 333
+    },
+    {
+      "id": "desktop-light",
+      "action": "主题 -> 浅色",
+      "result": "PASS",
+      "detail": "",
+      "ms": 165
+    },
+    {
+      "id": "system",
+      "action": "主题 -> 跟随系统 follows prefers-color-scheme live",
+      "result": "PASS",
+      "detail": "",
+      "ms": 376
+    },
+    {
+      "id": "mobile-layout",
+      "action": "375px portal home: no horizontal overflow, mobile header",
+      "result": "PASS",
+      "detail": "scrollWidth 375",
+      "ms": 485
+    },
+    {
+      "id": "account-sheet",
+      "action": "账号菜单 sheet shows identity and theme radios; 深色 applies",
+      "result": "PASS",
+      "detail": "",
+      "ms": 215
+    },
+    {
+      "id": "nav-drawer",
+      "action": "☰ 打开导航 shows the 导航 drawer with 首页",
+      "result": "PASS",
+      "detail": "",
+      "ms": 120
+    }
+  ]
+}

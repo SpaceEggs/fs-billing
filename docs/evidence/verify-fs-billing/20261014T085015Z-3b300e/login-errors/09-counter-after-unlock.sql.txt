@@ -1,0 +1,6 @@
+-- SELECT count(*) AS counter_rows FROM auth.login_failures WHERE email_key='hzx014@example.com'
+ counter_rows 
+--------------
+            0
+(1 row)
+

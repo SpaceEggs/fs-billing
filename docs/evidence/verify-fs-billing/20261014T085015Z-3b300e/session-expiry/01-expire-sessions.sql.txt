@@ -1,0 +1,10 @@
+-- UPDATE auth.session SET expires_at = now() - interval '1 minute' WHERE user_id = (SELECT id FROM auth."user" WHERE email='abc001@example.com') RETURNING expires_at < now() AS expired
+ expired 
+---------
+ t
+ t
+ t
+ t
+(4 rows)
+
+UPDATE 4

@@ -1,0 +1,13 @@
+> GET http://127.0.0.1:44029/api/portal/context
+> Origin: http://127.0.0.1:44029
+
+HTTP/1.1 401 Unauthorized
+Access-Control-Allow-Origin: http://127.0.0.1:44029
+Vary: Origin
+cache-control: no-store
+content-type: application/json; charset=utf-8
+content-length: 108
+date: Wed, 14 Oct 2026 08:55:45 GMT
+connection: close
+
+{"error":{"message":"请先登录","requestId":"req-1y","action":"reauthenticate","code":"UNAUTHENTICATED"}}
