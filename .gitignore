@@ -12,3 +12,5 @@ design/*.zip
 
 artifacts/verify/
 .audit/
+apps/web/test-results/
+apps/web/playwright-report/

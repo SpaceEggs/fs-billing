@@ -8,8 +8,8 @@ export default defineConfig({
       'packages/**/*.test.ts',
       'tests/**/*.test.ts',
     ],
-    // 数据库验收测试需要 PostgreSQL，由 pnpm test:db 运行。
-    exclude: ['**/node_modules/**', '**/*.db.test.ts'],
+    // 数据库验收测试需要 PostgreSQL，由 pnpm test:db 运行；Web 用自己的 jsdom 配置。
+    exclude: ['**/node_modules/**', '**/*.db.test.ts', 'apps/web/**'],
     clearMocks: true,
     coverage: {
       provider: 'v8',
