@@ -21,8 +21,8 @@ packages/rating typecheck$ tsc -p tsconfig.json
 packages/shared typecheck$ tsc -p tsconfig.json
 packages/rating typecheck: Done
 packages/shared typecheck: Done
-packages/db typecheck$ tsc -p tsconfig.json
 apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
 packages/db typecheck: Done
 apps/web typecheck: Done
 apps/api typecheck$ tsc -p tsconfig.json
@@ -39,8 +39,8 @@ apps/api typecheck: Done
 
  Test Files  16 passed (16)
       Tests  309 passed (309)
-   Start at  00:44:09
-   Duration  2.74s (import 52%, tests 31%, transform 16%, worker 1%)
+   Start at  01:04:21
+   Duration  2.33s (import 57%, tests 37%, transform 5%, worker 1%)
 
 
 > @fs-billing/web@ test /workspace/fs-billing/apps/web
@@ -50,10 +50,10 @@ apps/api typecheck: Done
  RUN  v5.0.4 /workspace/fs-billing/apps/web
 
 
- Test Files  4 passed (4)
-      Tests  53 passed (53)
-   Start at  00:44:12
-   Duration  2.20s (environment 51%, tests 24%, transform 9%, setup 9%, import 7%)
+ Test Files  5 passed (5)
+      Tests  75 passed (75)
+   Start at  01:04:24
+   Duration  8.72s (tests 67%, environment 23%, import 4%, setup 4%, transform 2%)
 
 
 > @fs-billing/web@ build /workspace/fs-billing/apps/web
@@ -61,16 +61,16 @@ apps/api typecheck: Done
 
 vite v8.3.4 building client environment for production...
 transforming...
-✓ 352 modules transformed.
+✓ 353 modules transformed.
 rendering chunks...
 computing gzip size...
 dist/index.html                   1.10 kB │ gzip:   0.65 kB
-dist/assets/index-Blc_syZe.css   24.46 kB │ gzip:   5.79 kB
-dist/assets/index-BmFHJOzA.js   604.30 kB │ gzip: 192.86 kB
+dist/assets/index-ZS9E1OBc.css   25.30 kB │ gzip:   5.89 kB
+dist/assets/index-BtoFmS_J.js   606.24 kB │ gzip: 193.51 kB
 
 [plugin builtin:vite-reporter] 
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 350ms
+✓ built in 327ms
