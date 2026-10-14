@@ -1,22 +1,174 @@
-:root {
-  font-family: system-ui, sans-serif;
-  color: #172b4d;
-  background: #f5f7fb;
-  font-synthesis: none;
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* 令牌取自 design/设计系统规范确认：设计系统与第三批设计稿。门户为中性主色，后台为蓝色主色。 */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #09090b;
+  --card: #ffffff;
+  --muted: #f4f4f5;
+  --muted-fg: #71717a;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
+  --primary: #18181b;
+  --primary-fg: #fafafa;
+  --destructive: #dc2626;
+  --neg: #dc2626;
+  --pos: #16a34a;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --skeleton: #ececee;
+  --row-hover: #fafafa;
+  --brand-soft: #f4f4f5;
+  --brand-bd: #e4e4e7;
+  --side: #fafafa;
+  --page: #fafafa;
+  --ok-bg: #f0fdf4;
+  --ok-fg: #15803d;
+  --ok-bd: #bbf7d0;
+  --warn-bg: #fff7ed;
+  --warn-fg: #c2410c;
+  --warn-bd: #fed7aa;
+  --err-bg: #fef2f2;
+  --err-fg: #b91c1c;
+  --err-bd: #fecaca;
+  --off-bg: #f4f4f5;
+  --off-fg: #52525b;
+  --off-bd: #e4e4e7;
+  --unv-bg: #fefce8;
+  --unv-fg: #a16207;
+  --unv-bd: #fde047;
+  --alert-neg-bg: #fef2f2;
+  --alert-neg-fg: var(--neg);
+  --alert-neg-bd: #fecaca;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #09090b;
+  --fg: #fafafa;
+  --card: #111113;
+  --muted: #27272a;
+  --muted-fg: #a1a1aa;
+  --border: #27272a;
+  --input: #3f3f46;
+  --ring: #71717a;
+  --primary: #fafafa;
+  --primary-fg: #18181b;
+  --destructive: #dc2626;
+  --neg: #f87171;
+  --pos: #4ade80;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --skeleton: #1f1f23;
+  --row-hover: #141416;
+  --brand-soft: #18181b;
+  --brand-bd: #27272a;
+  --side: #0c0c0e;
+  --page: #0c0c0e;
+  --ok-bg: rgba(34, 197, 94, 0.12);
+  --ok-fg: #4ade80;
+  --ok-bd: rgba(34, 197, 94, 0.32);
+  --warn-bg: rgba(249, 115, 22, 0.12);
+  --warn-fg: #fb923c;
+  --warn-bd: rgba(249, 115, 22, 0.35);
+  --err-bg: rgba(239, 68, 68, 0.13);
+  --err-fg: #f87171;
+  --err-bd: rgba(239, 68, 68, 0.38);
+  --off-bg: #1f1f23;
+  --off-fg: #a1a1aa;
+  --off-bd: #3f3f46;
+  --unv-bg: rgba(234, 179, 8, 0.12);
+  --unv-fg: #facc15;
+  --unv-bd: rgba(234, 179, 8, 0.4);
+  --alert-neg-bg: rgba(239, 68, 68, 0.12);
+  --alert-neg-fg: var(--neg);
+  --alert-neg-bd: rgba(239, 68, 68, 0.35);
+}
+
+[data-product='admin'][data-theme='light'] {
+  --primary: #2563eb;
+  --primary-fg: #ffffff;
+  --ring: #93c5fd;
+  --scrim: rgba(9, 9, 11, 0.45);
+  --brand-soft: #eff6ff;
+  --brand-bd: #bfdbfe;
+  --page: #f8fafc;
+  --alert-neg-bg: var(--err-bg);
+  --alert-neg-fg: var(--err-fg);
+  --alert-neg-bd: var(--err-bd);
+}
+
+[data-product='admin'][data-theme='dark'] {
+  --primary: #3b82f6;
+  --primary-fg: #ffffff;
+  --ring: #1d4ed8;
+  --destructive: #ef4444;
+  --scrim: rgba(0, 0, 0, 0.65);
+  --brand-soft: rgba(59, 130, 246, 0.12);
+  --brand-bd: rgba(59, 130, 246, 0.35);
+  --page: #0b0d12;
+  --alert-neg-bg: var(--err-bg);
+  --alert-neg-fg: var(--err-fg);
+  --alert-neg-bd: var(--err-bd);
+}
+
+@theme inline {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+    'Source Han Sans SC', 'Noto Sans CJK SC', 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-fg);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-fg);
+  --color-destructive: var(--destructive);
+  --color-neg: var(--neg);
+  --color-pos: var(--pos);
+  --color-scrim: var(--scrim);
+  --color-skeleton: var(--skeleton);
+  --color-row-hover: var(--row-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-border: var(--brand-bd);
+  --color-side: var(--side);
+  --color-page: var(--page);
+  --color-ok: var(--ok-fg);
+  --color-ok-soft: var(--ok-bg);
+  --color-ok-border: var(--ok-bd);
+  --color-warn: var(--warn-fg);
+  --color-warn-soft: var(--warn-bg);
+  --color-warn-border: var(--warn-bd);
+  --color-err: var(--err-fg);
+  --color-err-soft: var(--err-bg);
+  --color-err-border: var(--err-bd);
+  --color-off: var(--off-fg);
+  --color-off-soft: var(--off-bg);
+  --color-off-border: var(--off-bd);
+  --color-unv: var(--unv-fg);
+  --color-unv-soft: var(--unv-bg);
+  --color-unv-border: var(--unv-bd);
+  --color-alert-neg: var(--alert-neg-fg);
+  --color-alert-neg-soft: var(--alert-neg-bg);
+  --color-alert-neg-border: var(--alert-neg-bd);
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  margin: 0;
-}
-main {
-  max-width: 48rem;
-  margin: 15vh auto;
-  padding: 2rem;
-}
-.eyebrow {
-  color: #455b89;
-  font-weight: 600;
-}
-h1 {
-  font-size: clamp(2rem, 6vw, 3rem);
+  font-size: 14px;
 }
