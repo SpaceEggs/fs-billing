@@ -171,7 +171,9 @@
 
 ### 阶段 4：API、登录与网页外壳
 
-后端步骤 3 代码、行为测试和 CI 已实现。退款按已指定的 `window_id` UUID 实施细节完成，详见 [API 设计 §11.1](phase-4-api-design.md#111-api-自有-sql-账户锁定)。本地验证和 Bot 命令见 [运行与证据](phase-4-api.md)。Bot 已运行 `pnpm check`（309 pass）、`test:db` 连续三次（每次 235 pass）、`test:idor`（15 pass）、`prove:idor`、OpenAPI 导出及 build。依赖已安装并锁定。这些是 Bot 验证结果；PR #18 的 CI 与 FreeSWITCH integration 均通过，所有 SIPp e2e 用例均为 PASS，见 [CI 与联调证据](evidence/phase-4-api/ci.txt)。前端状态不变。
+后端步骤 3 代码、行为测试和 CI 已实现。退款按已指定的 `window_id` UUID 实施细节完成，详见 [API 设计 §11.1](phase-4-api-design.md#111-api-自有-sql-账户锁定)。本地验证和 Bot 命令见 [运行与证据](phase-4-api.md)。Bot 已运行 `pnpm check`（309 pass）、`test:db` 连续三次（每次 235 pass）、`test:idor`（15 pass）、`prove:idor`、OpenAPI 导出及 build。依赖已安装并锁定。这些是 Bot 验证结果；PR #18 的 CI 与 FreeSWITCH integration 均通过，所有 SIPp e2e 用例均为 PASS，见 [CI 与联调证据](evidence/phase-4-api/ci.txt)。
+
+前端 Web 外壳代码、Vitest 行为测试、连接真实 API 的 Playwright e2e、截图脚本和 CI `web-e2e` job 已在分支 `phase-4-web` 实现，运行方法、决定和设计差异见 [阶段 4 Web 外壳](phase-4-web.md)。前端验收项待 Bot 验证后勾选。
 
 后端 criteria 状态如下。
 

@@ -1,0 +1,46 @@
+
+> fs-billing@ test:e2e /workspace/fs-billing
+> pnpm --filter @fs-billing/web test:e2e
+
+
+> @fs-billing/web@ test:e2e /workspace/fs-billing/apps/web
+> playwright test
+
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+> @fs-billing/api@ auth:seed /workspace/fs-billing/apps/api
+> node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts
+
+开发种子凭据已初始化，已有凭据保持不变。
+
+Running 14 tests using 1 worker
+
+(node:527924) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › e2e/auth.spec.ts:6:1 › customer login enters the portal and shows the CNY balance (681ms)
+  ✓   2 [chromium] › e2e/auth.spec.ts:18:1 › USD customer balance uses the dollar sign (427ms)
+  ✓   3 [chromium] › e2e/auth.spec.ts:25:1 › admin login enters the admin shell (502ms)
+  ✓   4 [chromium] › e2e/auth.spec.ts:35:1 › the login response kind decides the zone, not the login page used (933ms)
+  ✓   5 [chromium] › e2e/auth.spec.ts:50:1 › an expired cookie redirects to login and returns to the original page (933ms)
+  ✓   6 [chromium] › e2e/auth.spec.ts:64:1 › a session revoked in the database prompts re-login and returns to the page (954ms)
+  ✓   7 [chromium] › e2e/auth.spec.ts:90:1 › a return path from the other zone falls back to the identity home (549ms)
+  ✓   8 [chromium] › e2e/auth.spec.ts:99:1 › unknown pages show the 404 page and link home (647ms)
+[WebServer] 2026-10-14T07:44:33.224Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T07:44:33.431Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T07:44:33.607Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T07:44:33.785Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-14T07:44:33.969Z WARN [Better Auth]: Invalid password
+  ✓   9 [chromium] › e2e/auth.spec.ts:120:1 › wrong passwords lock the account and show the retry countdown (1.2s)
+[WebServer] 2026-10-14T07:44:34.382Z WARN [Better Auth]: User not found
+[WebServer] 2026-10-14T07:44:34.573Z WARN [Better Auth]: Invalid password
+  ✓  10 [chromium] › e2e/auth.spec.ts:146:1 › unknown email and wrong password show the same message (595ms)
+  ✓  11 [chromium] › e2e/auth.spec.ts:174:1 › a disabled account sees the disabled message (365ms)
+  ✓  12 [chromium] › e2e/auth.spec.ts:182:1 › logout from the account menu returns to the login page (747ms)
+  ✓  13 [chromium] › e2e/auth.spec.ts:196:1 › theme choice is applied and persisted (684ms)
+  ✓  14 [chromium] › e2e/auth.spec.ts:215:3 › mobile 375px › mobile login, account sheet theme switch and logout (745ms)
+
+  14 passed (16.1s)
