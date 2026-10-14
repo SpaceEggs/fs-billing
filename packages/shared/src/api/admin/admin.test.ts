@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   adminApiContract,
+  adminTenantSettingsSchema,
+  createAdminInputAmountSchemas,
+  createAdminRateEntriesSchema,
+  createAdminCsvFileSchema,
+  adminCsvFileSchema,
+  DEFAULT_ADMIN_CSV_MAX_BYTES,
+  DEFAULT_ADMIN_RATE_MAX_ROWS,
+  DEFAULT_ADMIN_RATE_PREVIEW_TTL_MS,
   adminLedgerEntrySchema,
   adminTenantCopyConsistencySchema,
   adminTenantOverviewResponseSchema,
@@ -738,4 +746,236 @@ it('received receivables retain settlement notes and cannot predate the credit',
       payment: { ...entry.payment, receivedOn: '2026-10-14' },
     }).success,
   ).toBe(false);
+});
+
+describe('final Phase 5 decisions', () => {
+  it.each(['topup', 'credit_topup', 'gift'])(
+    '%s accepts two decimals and ten integer digits only',
+    (kind) => {
+      const input = { kind, currency: 'CNY', idempotencyKey: 'manual:limits' };
+      for (const amount of ['0.01', '9999999999.99']) {
+        expect(
+          adminBalanceOperationRequestSchema.parse({ ...input, amount }).amount,
+        ).toBe(amount);
+      }
+      for (const amount of ['1.001', '1.000', '10000000000', '0', '-0.01']) {
+        expect(
+          adminBalanceOperationRequestSchema.safeParse({ ...input, amount })
+            .success,
+        ).toBe(false);
+      }
+    },
+  );
+  it('adjustments accept four decimals and cap both signs without rounding', () => {
+    for (const amount of [
+      '0.0001',
+      '-0.1350',
+      '9999999999.9999',
+      '-9999999999.9999',
+    ]) {
+      expect(
+        adminBalanceOperationRequestSchema.parse({
+          ...balanceInput,
+          amount,
+          reason: '冲正',
+        }).amount,
+      ).toBe(amount);
+    }
+    for (const amount of [
+      '0.00001',
+      '-0.00001',
+      '10000000000',
+      '-10000000000',
+    ]) {
+      expect(
+        adminBalanceOperationRequestSchema.safeParse({
+          ...balanceInput,
+          amount,
+          reason: '冲正',
+        }).success,
+      ).toBe(false);
+    }
+    const configured = createAdminInputAmountSchemas(3);
+    expect(configured.positive.parse('999.99')).toBe('999.99');
+    expect(configured.positive.safeParse('1000').success).toBe(false);
+    expect(configured.adjustment.safeParse('-1000').success).toBe(false);
+    expect(configured.settings.safeParse('1000').success).toBe(false);
+  });
+  it('settings require nonnegative two-decimal capped values', () => {
+    const settings = {
+      overdraftLimit: '0',
+      lowBalanceThreshold: '9999999999.99',
+      emails: [],
+    };
+    expect(adminTenantSettingsSchema.parse(settings)).toEqual(settings);
+    for (const field of ['overdraftLimit', 'lowBalanceThreshold']) {
+      for (const value of ['-0.01', '1.001', '10000000000']) {
+        expect(
+          adminTenantSettingsSchema.safeParse({ ...settings, [field]: value })
+            .success,
+        ).toBe(false);
+      }
+    }
+  });
+  it('recipients lowercase and deduplicate before the twenty-address cap', () => {
+    const settings = { overdraftLimit: '100', lowBalanceThreshold: '200' };
+    expect(
+      adminTenantSettingsSchema.parse({
+        ...settings,
+        emails: Array.from({ length: 30 }, (_, i) =>
+          i % 2 ? 'ADMIN@example.com' : 'admin@example.com',
+        ),
+      }).emails,
+    ).toEqual(['admin@example.com']);
+    const emails = Array.from({ length: 20 }, (_, i) => `user${i}@example.com`);
+    expect(
+      adminTenantSettingsSchema.parse({
+        ...settings,
+        emails: [...emails, 'USER0@example.com'],
+      }).emails,
+    ).toEqual(emails);
+    expect(
+      adminTenantSettingsSchema.safeParse({
+        ...settings,
+        emails: [...emails, 'extra@example.com'],
+      }).success,
+    ).toBe(false);
+    expect(
+      adminTenantSettingsSchema.safeParse({ ...settings, emails: ['bad'] })
+        .success,
+    ).toBe(false);
+  });
+  it('tenant codes normalize uppercase at creation', () => {
+    expect(
+      adminTenantCreateRequestSchema.parse({
+        code: 'abc001',
+        name: '客户',
+        currency: 'CNY',
+        settings: {
+          lowBalanceThreshold: '200',
+          emails: ['ADMIN@example.com', 'admin@example.com'],
+        },
+        initialRates: { kind: 'blank' },
+      }),
+    ).toMatchObject({
+      code: 'ABC001',
+      settings: { emails: ['admin@example.com'] },
+    });
+  });
+  it('CSV byte limits reject the extra byte hidden by base64 padding', () => {
+    const file = (bytes: number) => ({
+      filename: 'rates.csv',
+      contentBase64: Buffer.alloc(bytes).toString('base64'),
+    });
+    expect(adminCsvFileSchema.parse(file(DEFAULT_ADMIN_CSV_MAX_BYTES))).toEqual(
+      file(DEFAULT_ADMIN_CSV_MAX_BYTES),
+    );
+    expect(
+      adminCsvFileSchema.safeParse(file(DEFAULT_ADMIN_CSV_MAX_BYTES + 1))
+        .success,
+    ).toBe(false);
+    const configured = createAdminCsvFileSchema(2);
+    expect(configured.parse(file(2))).toEqual(file(2));
+    expect(configured.safeParse(file(3)).success).toBe(false);
+  });
+  it('rate row caps are named defaults and configurable', () => {
+    const entries = Array.from(
+      { length: DEFAULT_ADMIN_RATE_MAX_ROWS },
+      (_, i) => ({ prefix: String(i + 1), country: '测试', rate: '0.01' }),
+    );
+    expect(adminRateEntriesSchema.parse(entries)).toEqual(entries);
+    expect(
+      adminRateEntriesSchema.safeParse([
+        ...entries,
+        { prefix: '99999', country: '测试', rate: '0.01' },
+      ]).success,
+    ).toBe(false);
+    const configured = createAdminRateEntriesSchema(1);
+    expect(configured.parse(entries.slice(0, 1))).toEqual(entries.slice(0, 1));
+    expect(configured.safeParse(entries.slice(0, 2)).success).toBe(false);
+    expect(DEFAULT_ADMIN_RATE_PREVIEW_TTL_MS).toBe(3600000);
+  });
+  it('cancellation contract requires a version and a complete audit snapshot', () => {
+    const op = adminApiContract.adminRateCancelFutureVersion;
+    expect(op.path).toBe(
+      '/api/admin/tenants/{tenantId}/rates/cancel-future-version',
+    );
+    expect(op.method).toBe('POST');
+    expect(op.request.params.parse({ tenantId: id })).toEqual({ tenantId: id });
+    expect(op.request.body.parse({ versionId: id })).toEqual({ versionId: id });
+    expect(op.request.body.safeParse({}).success).toBe(false);
+    expect(
+      op.responses[200].parse({ auditId: id, cancelledVersionId: id }),
+    ).toEqual({ auditId: id, cancelledVersionId: id });
+    expect(
+      op.responses[409].parse({
+        error: {
+          code: 'RATE_VERSION_CONFLICT',
+          message: '已生效',
+          requestId: 'request',
+        },
+      }).error.code,
+    ).toBe('RATE_VERSION_CONFLICT');
+    const content = {
+      summary: '取消排期',
+      changes: [],
+      cancelledVersionId: id,
+      entries: [{ prefix: '86', country: '中国', rate: '0.01' }],
+    };
+    expect(
+      auditContentSchema.parse({ action: 'rate_schedule_cancel', content }),
+    ).toEqual({ action: 'rate_schedule_cancel', content });
+    for (const field of ['cancelledVersionId', 'entries']) {
+      expect(
+        auditContentSchema.safeParse({
+          action: 'rate_schedule_cancel',
+          content: { ...content, [field]: undefined },
+        }).success,
+      ).toBe(false);
+    }
+  });
+  it.each([
+    [
+      'adminAccountEnable',
+      '/api/admin/admins/{id}/enable',
+      'admin_enable',
+      'admin',
+    ],
+    [
+      'adminPortalAccountDisable',
+      '/api/admin/portal-accounts/{id}/disable',
+      'portal_account_disable',
+      'portal_account',
+    ],
+    [
+      'adminPortalAccountEnable',
+      '/api/admin/portal-accounts/{id}/enable',
+      'portal_account_enable',
+      'portal_account',
+    ],
+  ] as const)(
+    '%s exposes an admin-only POST and audit action',
+    (key, path, action, kind) => {
+      const op = adminApiContract[key];
+      expect(op.path).toBe(path);
+      expect(op.method).toBe('POST');
+      expect(op.access).toBe('admin');
+      expect(op.request.params.parse({ id })).toEqual({ id });
+      expect(op.request.body.parse(undefined)).toBeUndefined();
+      expect(op.responses[200].parse({ auditId: id })).toEqual({ auditId: id });
+      const payload = {
+        id,
+        action,
+        actor: { id, name: '管理员' },
+        occurredAt: '2026-10-14T10:00:00Z',
+        tenantId: kind === 'admin' ? null : id,
+        target: { kind, id },
+        content: {
+          summary: '账号状态变更',
+          changes: [{ field: 'status', before: 'disabled', after: 'active' }],
+        },
+      };
+      expect(auditPayloadSchema.parse(payload)).toEqual(payload);
+    },
+  );
 });

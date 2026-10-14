@@ -25,6 +25,44 @@ export const adminPositiveAmountSchema = adminNonnegativeAmountSchema.refine(
   (value) => /[1-9]/.test(value),
   { message: '金额必须大于零' },
 );
+export const DEFAULT_ADMIN_AMOUNT_MAX_INTEGER_DIGITS = 10;
+export const DEFAULT_ADMIN_TOPUP_DECIMAL_PLACES = 2;
+export const DEFAULT_ADMIN_ADJUSTMENT_DECIMAL_PLACES = 4;
+export const DEFAULT_ADMIN_SETTINGS_DECIMAL_PLACES = 2;
+
+export function createAdminInputAmountSchemas(
+  maxIntegerDigits = DEFAULT_ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
+) {
+  const digits = z.number().int().min(1).max(128).parse(maxIntegerDigits);
+  const bounded = (decimalPlaces: number) =>
+    moneyAmountSchema.refine(
+      (value) => {
+        const [integer = '', fraction = ''] = value
+          .replace(/^-/, '')
+          .split('.');
+        return integer.length <= digits && fraction.length <= decimalPlaces;
+      },
+      { message: `金额最多 ${digits} 位整数，且最多 ${decimalPlaces} 位小数` },
+    );
+  return {
+    positive: bounded(DEFAULT_ADMIN_TOPUP_DECIMAL_PLACES).refine(
+      (value) => !value.startsWith('-') && /[1-9]/.test(value),
+      {
+        message: '金额必须大于零',
+      },
+    ),
+    adjustment: bounded(DEFAULT_ADMIN_ADJUSTMENT_DECIMAL_PLACES).refine(
+      (value) => /[1-9]/.test(value),
+      { message: '金额不能为零' },
+    ),
+    settings: bounded(DEFAULT_ADMIN_SETTINGS_DECIMAL_PLACES).refine(
+      (value) => !value.startsWith('-'),
+      { message: '金额不能为负' },
+    ),
+  };
+}
+export const adminInputAmountSchemas = createAdminInputAmountSchemas();
+
 export const adminStatusSchema = z.enum(['active', 'disabled']);
 export const adminMutationResponseSchema = z.strictObject({
   auditId: z.uuid(),

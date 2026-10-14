@@ -3,6 +3,7 @@ import { moneyAmountSchema } from '../money.js';
 import { currencySchema, tenantIdentitySchema } from '../identity.js';
 import {
   adminMutationResponseSchema,
+  adminInputAmountSchemas,
   adminNonnegativeAmountSchema,
   adminPageInfoSchema,
   adminPageQuerySchema,
@@ -19,9 +20,14 @@ export const adminTenantHealthSchema = z.enum([
   'disabled',
 ]);
 export const adminTenantSettingsSchema = z.strictObject({
-  overdraftLimit: adminNonnegativeAmountSchema,
-  lowBalanceThreshold: adminNonnegativeAmountSchema,
-  emails: z.array(z.email()).max(20),
+  overdraftLimit: adminInputAmountSchemas.settings,
+  lowBalanceThreshold: adminInputAmountSchemas.settings,
+  emails: z
+    .array(z.email())
+    .transform((emails) => [
+      ...new Set(emails.map((email) => email.toLowerCase())),
+    ])
+    .pipe(z.array(z.email()).max(20)),
 });
 const contactFields = {
   contactName: z.string().max(200).default(''),
@@ -53,10 +59,11 @@ export const adminTenantCreateRequestSchema =
     code: z
       .string()
       .regex(/^[A-Za-z0-9]+$/)
-      .max(64),
+      .max(64)
+      .transform((code) => code.toUpperCase()),
     currency: currencySchema,
     settings: adminTenantSettingsSchema.omit({ overdraftLimit: true }).extend({
-      overdraftLimit: adminNonnegativeAmountSchema.optional(),
+      overdraftLimit: adminInputAmountSchemas.settings.optional(),
       emails: adminTenantSettingsSchema.shape.emails.optional(),
     }),
     initialRates: adminTenantInitialRatesSchema,

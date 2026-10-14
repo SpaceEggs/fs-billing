@@ -202,6 +202,22 @@ export const adminApiContract = {
     conflicts(['EMAIL_EXISTS', 'PORTAL_ACCOUNT_EXISTS']),
   ),
   resetPortalAccountPassword: apiContract.resetPortalAccountPassword,
+  adminPortalAccountDisable: operation(
+    'adminPortalAccountDisable',
+    'POST',
+    '/api/admin/portal-accounts/{id}/disable',
+    idRequest,
+    adminMutationResponseSchema,
+    {},
+  ),
+  adminPortalAccountEnable: operation(
+    'adminPortalAccountEnable',
+    'POST',
+    '/api/admin/portal-accounts/{id}/enable',
+    idRequest,
+    adminMutationResponseSchema,
+    {},
+  ),
   adminRates: operation(
     'adminRates',
     'GET',
@@ -209,6 +225,14 @@ export const adminApiContract = {
     { ...tenantRequest, query: rates.adminRatesQuerySchema },
     rates.adminRatesResponseSchema,
     {},
+  ),
+  adminRateCancelFutureVersion: operation(
+    'adminRateCancelFutureVersion',
+    'POST',
+    '/api/admin/tenants/{tenantId}/rates/cancel-future-version',
+    { ...tenantRequest, body: rates.adminRateCancelFutureVersionRequestSchema },
+    rates.adminRateCancelFutureVersionResponseSchema,
+    conflicts(['RATE_VERSION_CONFLICT']),
   ),
   adminRateEdit: operation(
     'adminRateEdit',
@@ -296,6 +320,14 @@ export const adminApiContract = {
     conflicts(['EMAIL_EXISTS']),
   ),
   resetAdminPassword: apiContract.resetAdminPassword,
+  adminAccountEnable: operation(
+    'adminAccountEnable',
+    'POST',
+    '/api/admin/admins/{id}/enable',
+    idRequest,
+    adminMutationResponseSchema,
+    {},
+  ),
   adminAccountDisable: operation(
     'adminAccountDisable',
     'POST',

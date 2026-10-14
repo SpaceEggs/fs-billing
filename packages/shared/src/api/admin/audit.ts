@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { currencySchema } from '../identity.js';
+import { adminRateEntriesSchema } from './rates.js';
 import {
   adminNonzeroAmountSchema,
   adminPositiveAmountSchema,
@@ -24,6 +25,7 @@ export const auditActionSchema = z.enum([
   'rate_import',
   'rate_export',
   'rate_copy',
+  'rate_schedule_cancel',
   'receivable_confirm',
   'admin_create',
   'admin_disable',
@@ -118,6 +120,10 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
     ...rateFields,
     sourceTenantId: z.uuid(),
     sourceVersionId: z.uuid(),
+  }),
+  auditVariant('rate_schedule_cancel', {
+    cancelledVersionId: z.uuid(),
+    entries: adminRateEntriesSchema,
   }),
   auditVariant('receivable_confirm', {
     ...balanceFields,

@@ -3,10 +3,9 @@ import { currencySchema } from '../identity.js';
 import { moneyAmountSchema } from '../money.js';
 import {
   adminMutationResponseSchema,
-  adminNonzeroAmountSchema,
+  adminInputAmountSchemas,
   adminPageInfoSchema,
   adminPageQuerySchema,
-  adminPositiveAmountSchema,
   adminTimestampSchema,
 } from './common.js';
 
@@ -25,25 +24,25 @@ export const adminBalanceOperationRequestSchema = z.discriminatedUnion('kind', [
   z.strictObject({
     ...balanceFields,
     kind: z.literal('topup'),
-    amount: adminPositiveAmountSchema,
+    amount: adminInputAmountSchemas.positive,
     note: z.string().max(2000).default(''),
   }),
   z.strictObject({
     ...balanceFields,
     kind: z.literal('credit_topup'),
-    amount: adminPositiveAmountSchema,
+    amount: adminInputAmountSchemas.positive,
     internalNote: z.string().max(2000).default(''),
   }),
   z.strictObject({
     ...balanceFields,
     kind: z.literal('gift'),
-    amount: adminPositiveAmountSchema,
+    amount: adminInputAmountSchemas.positive,
     note: z.string().max(2000).default(''),
   }),
   z.strictObject({
     ...balanceFields,
     kind: z.literal('adjustment'),
-    amount: adminNonzeroAmountSchema,
+    amount: adminInputAmountSchemas.adjustment,
     reason: z.string().trim().min(1).max(2000),
   }),
 ]);

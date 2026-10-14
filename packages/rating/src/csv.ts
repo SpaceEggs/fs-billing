@@ -12,6 +12,7 @@ export type CsvResult<C extends Currency> =
   | { readonly ok: false; readonly errors: readonly CsvError[] };
 
 const HEADER = ['prefix', 'country', 'rate'];
+const HEADER_ALIASES = [HEADER.join(','), '前缀,国家,费率'];
 const PREFIX = /^\d+$/;
 const RATE_TEXT = /^-?\d+(?:\.\d+)?$/;
 
@@ -71,7 +72,8 @@ export function parseRateCsv<C extends Currency>(
     while (cells.length > 3 && cells.at(-1) === '') cells.pop();
 
     const isHeader =
-      first && cells.map((c) => c.toLowerCase()).join(',') === HEADER.join(',');
+      first &&
+      HEADER_ALIASES.includes(cells.map((c) => c.toLowerCase()).join(','));
     first = false;
     if (isHeader) return;
 

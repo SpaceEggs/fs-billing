@@ -16,14 +16,24 @@ export const adminRateEntrySchema = z.strictObject({
   country: z.string().trim().min(1).max(200),
   rate: adminRateAmountSchema,
 });
-export const adminRateEntriesSchema = z
-  .array(adminRateEntrySchema)
-  .max(10000)
-  .refine(
-    (entries) =>
-      new Set(entries.map((entry) => entry.prefix)).size === entries.length,
-    { message: '前缀不能重复' },
-  );
+export const DEFAULT_ADMIN_CSV_MAX_BYTES = 2 * 1024 * 1024;
+export const DEFAULT_ADMIN_RATE_MAX_ROWS = 10000;
+export const DEFAULT_ADMIN_RATE_PREVIEW_TTL_MS = 60 * 60 * 1000;
+
+export function createAdminRateEntriesSchema(
+  maxRows = DEFAULT_ADMIN_RATE_MAX_ROWS,
+) {
+  const limit = z.number().int().positive().parse(maxRows);
+  return z
+    .array(adminRateEntrySchema)
+    .max(limit)
+    .refine(
+      (entries) =>
+        new Set(entries.map((entry) => entry.prefix)).size === entries.length,
+      { message: '前缀不能重复' },
+    );
+}
+export const adminRateEntriesSchema = createAdminRateEntriesSchema();
 export const adminRateScheduleSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('immediate') }),
   z.strictObject({
@@ -56,14 +66,38 @@ export const adminRateVersionResponseSchema =
   adminMutationResponseSchema.extend({
     version: adminRateVersionSchema,
   });
-export const adminCsvFileSchema = z.strictObject({
-  filename: z.string().min(1).max(255),
-  contentBase64: z
-    .string()
-    .min(4)
-    .max(2796204)
-    .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+export function createAdminCsvFileSchema(
+  maxBytes = DEFAULT_ADMIN_CSV_MAX_BYTES,
+) {
+  const limit = z.number().int().positive().parse(maxBytes);
+  return z.strictObject({
+    filename: z.string().min(1).max(255),
+    contentBase64: z
+      .string()
+      .min(4)
+      .max(4 * Math.ceil(limit / 3))
+      .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
+      .refine(
+        (value) => {
+          const padding = value.endsWith('==')
+            ? 2
+            : value.endsWith('=')
+              ? 1
+              : 0;
+          return (value.length / 4) * 3 - padding <= limit;
+        },
+        { message: 'CSV 解码字节超限' },
+      ),
+  });
+}
+export const adminCsvFileSchema = createAdminCsvFileSchema();
+export const adminRateCancelFutureVersionRequestSchema = z.strictObject({
+  versionId: z.uuid(),
 });
+export const adminRateCancelFutureVersionResponseSchema =
+  adminMutationResponseSchema.extend({
+    cancelledVersionId: z.uuid(),
+  });
 export const adminCsvRowErrorSchema = z.strictObject({
   line: z.number().int().positive(),
   reason: z.string().min(1),
@@ -165,4 +199,11 @@ export type AdminRateExportResponse = z.infer<
 >;
 export type AdminRateCopyPreviewRequest = z.infer<
   typeof adminRateCopyPreviewRequestSchema
+>;
+
+export type AdminRateCancelFutureVersionRequest = z.infer<
+  typeof adminRateCancelFutureVersionRequestSchema
+>;
+export type AdminRateCancelFutureVersionResponse = z.infer<
+  typeof adminRateCancelFutureVersionResponseSchema
 >;
