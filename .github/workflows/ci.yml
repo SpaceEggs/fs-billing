@@ -76,3 +76,43 @@ jobs:
       - name: Stop PostgreSQL
         if: always()
         run: docker compose down
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://fs_billing:local-development-only@127.0.0.1:5432/fs_billing
+      APP_DATABASE_URL: postgresql://fs_billing_app:local-app-only@127.0.0.1:5432/fs_billing
+      AUTH_DATABASE_URL: postgresql://fs_billing_auth:local-auth-only@127.0.0.1:5432/fs_billing
+      # 仅用于 CI 一次性数据库的开发种子密码；会话签名密钥由 Playwright 配置每次随机生成。
+      SEED_AUTH_PASSWORD: ci-web-e2e-only-password
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fs-billing/web exec playwright install --with-deps chromium
+      - name: Start PostgreSQL, migrate and seed
+        run: |
+          docker compose up -d --wait
+          pnpm db:migrate && pnpm db:seed
+      - name: Web e2e against the real API and PostgreSQL
+        run: pnpm test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: phase-4-web-playwright
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          if-no-files-found: ignore
+      - name: PostgreSQL logs
+        if: failure()
+        run: docker compose logs
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down

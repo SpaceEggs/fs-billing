@@ -11,3 +11,5 @@ docs/freeswitch.md
 
 artifacts/verify/
 .audit/
+apps/web/test-results/
+apps/web/playwright-report/

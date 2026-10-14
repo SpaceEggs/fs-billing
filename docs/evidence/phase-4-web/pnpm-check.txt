@@ -1,0 +1,76 @@
+
+> fs-billing@ check /workspace/fs-billing
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm --filter @fs-billing/web build
+
+
+> fs-billing@ lint /workspace/fs-billing
+> eslint . --max-warnings 0
+
+
+> fs-billing@ format:check /workspace/fs-billing
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> fs-billing@ typecheck /workspace/fs-billing
+> pnpm -r typecheck && tsc -p tsconfig.json
+
+Scope: 6 of 7 workspace projects
+packages/rating typecheck$ tsc -p tsconfig.json
+packages/shared typecheck$ tsc -p tsconfig.json
+packages/rating typecheck: Done
+packages/shared typecheck: Done
+apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
+packages/db typecheck: Done
+apps/web typecheck: Done
+apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck$ tsc -p tsconfig.json
+apps/worker typecheck: Done
+apps/api typecheck: Done
+
+> fs-billing@ test /workspace/fs-billing
+> vitest run && pnpm --filter @fs-billing/web test
+
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+
+ Test Files  16 passed (16)
+      Tests  309 passed (309)
+   Start at  01:12:01
+   Duration  2.26s (import 58%, tests 36%, transform 5%, worker 1%)
+
+
+> @fs-billing/web@ test /workspace/fs-billing/apps/web
+> vitest run
+
+
+ RUN  v5.0.4 /workspace/fs-billing/apps/web
+
+
+ Test Files  5 passed (5)
+      Tests  76 passed (76)
+   Start at  01:12:04
+   Duration  8.70s (tests 67%, environment 23%, import 5%, setup 3%, transform 2%)
+
+
+> @fs-billing/web@ build /workspace/fs-billing/apps/web
+> vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 353 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   1.10 kB │ gzip:   0.65 kB
+dist/assets/index-ZS9E1OBc.css   25.30 kB │ gzip:   5.89 kB
+dist/assets/index-bxvhbycR.js   606.24 kB │ gzip: 193.51 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 331ms

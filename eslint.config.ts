@@ -10,6 +10,8 @@ export default tseslint.config(
       '**/dist/**',
       '**/coverage/**',
       'design/**',
+      'apps/web/test-results/**',
+      'apps/web/playwright-report/**',
     ],
   },
   js.configs.recommended,
@@ -32,9 +34,28 @@ export default tseslint.config(
       'packages/rating/**/*.ts',
       'packages/db/**/*.ts',
       'apps/worker/**/*.ts',
+      'apps/web/src/**/*.{ts,tsx}',
     ],
     plugins: { money },
     rules: { 'money/no-number-money': 'error' },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    rules: {
+      // TanStack Router 以抛出 redirect() 结果的方式跳转。
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        {
+          allow: [
+            {
+              from: 'package',
+              package: '@tanstack/router-core',
+              name: 'Redirect',
+            },
+          ],
+        },
+      ],
+    },
   },
   prettier,
 );
