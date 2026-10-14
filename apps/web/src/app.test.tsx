@@ -82,10 +82,13 @@ describe('session expiry', () => {
         return { status: 200, body: customerSession };
       return { status: 403, body: apiError('FORBIDDEN') };
     });
-    expect(
-      await screen.findAllByText('ABC001 · 深圳市某某科技有限公司'),
-    ).not.toHaveLength(0);
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(
+      '没有权限查看当前账号无权查看此内容，如有疑问请联系管理员',
+    );
+    expect(within(alert).queryByRole('button', { name: '重试' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '当前余额' })).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('a disabled profile sees the disabled page with logout only', async () => {
@@ -101,6 +104,218 @@ describe('session expiry', () => {
     await userEvent.click(screen.getByRole('button', { name: '退出登录' }));
     await waitFor(() => expect(location()).toBe('/login'));
   });
+});
+
+describe('unavailable sessionStorage', () => {
+  it('still redirects on expiry and returns to the original page after login', async () => {
+    const storage = vi
+      .spyOn(window, 'sessionStorage', 'get')
+      .mockImplementation(() => {
+        throw new DOMException('denied', 'SecurityError');
+      });
+    try {
+      let sessionCalls = 0;
+      const { location } = renderApp('/?tab=ledger', (path) => {
+        if (path === '/api/auth/session') {
+          sessionCalls += 1;
+          return sessionCalls === 1
+            ? {
+                status: 401,
+                body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+              }
+            : { status: 200, body: customerSession };
+        }
+        if (path === '/api/auth/login')
+          return { status: 200, body: customerSession };
+        if (path === '/api/portal/context')
+          return { status: 200, body: balance };
+        throw new Error(`unexpected ${path}`);
+      });
+      await waitFor(() => expect(location()).toBe('/login?reason=expired'));
+      await signIn('abc001@example.com', 'correct-password');
+      await waitFor(() => expect(location()).toBe('/?tab=ledger'));
+      expect(screen.queryByRole('alert')).toBeNull();
+    } finally {
+      storage.mockRestore();
+    }
+  });
+
+  it('a storage read failure after login still lands on the home page', async () => {
+    const { location } = renderApp('/login', (path) => {
+      if (path === '/api/auth/login' || path === '/api/auth/session')
+        return { status: 200, body: customerSession };
+      if (path === '/api/portal/context') return { status: 200, body: balance };
+      throw new Error(`unexpected ${path}`);
+    });
+    const getItem = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockImplementation(() => {
+        throw new DOMException('denied', 'SecurityError');
+      });
+    try {
+      await signIn('abc001@example.com', 'correct-password');
+      await waitFor(() => expect(location()).toBe('/'));
+      expect(await screen.findByText('-¥35.20')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).toBeNull();
+    } finally {
+      getItem.mockRestore();
+    }
+  });
+});
+
+describe('logout', () => {
+  function accountSheetTrigger() {
+    return screen
+      .getAllByRole('button', { name: '账号菜单' })
+      .find((button) => button.getAttribute('aria-haspopup') === 'dialog')!;
+  }
+
+  it('a failed logout keeps the session and can be retried', async () => {
+    let logoutCalls = 0;
+    const { location } = renderApp('/', (path) => {
+      if (path === '/api/auth/session')
+        return { status: 200, body: customerSession };
+      if (path === '/api/portal/context') return { status: 200, body: balance };
+      if (path === '/api/auth/logout') {
+        logoutCalls += 1;
+        return logoutCalls === 1
+          ? { status: 503, body: apiError('SERVICE_UNAVAILABLE') }
+          : { status: 204 };
+      }
+      throw new Error(`unexpected ${path}`);
+    });
+    await screen.findByText('-¥35.20');
+    const user = userEvent.setup();
+    await user.click(accountSheetTrigger());
+    const sheet = await screen.findByRole('dialog', { name: '账号菜单' });
+    await user.click(within(sheet).getByRole('button', { name: '退出登录' }));
+
+    expect(await within(sheet).findByRole('alert')).toHaveTextContent(
+      '退出失败，请检查网络后重试',
+    );
+    expect(location()).toBe('/');
+    expect(
+      screen.getByRole('region', { name: '当前余额', hidden: true }),
+    ).toHaveTextContent('-¥35.20');
+
+    await user.click(within(sheet).getByRole('button', { name: '退出登录' }));
+    await waitFor(() => expect(location()).toBe('/login'));
+    expect(logoutCalls).toBe(2);
+  });
+
+  it('the desktop menu shows a logout failure without leaving the page', async () => {
+    const { location } = renderApp('/', (path) => {
+      if (path === '/api/auth/session')
+        return { status: 200, body: customerSession };
+      if (path === '/api/portal/context') return { status: 200, body: balance };
+      if (path === '/api/auth/logout') throw new TypeError('network down');
+      throw new Error(`unexpected ${path}`);
+    });
+    await screen.findByText('-¥35.20');
+    const user = userEvent.setup();
+    screen
+      .getAllByRole('button', { name: '账号菜单' })
+      .find((button) => button.getAttribute('aria-haspopup') === 'menu')!
+      .focus();
+    await user.keyboard('{Enter}');
+    const menu = await screen.findByRole('menu');
+    await user.click(within(menu).getByRole('menuitem', { name: '退出登录' }));
+    expect(await within(menu).findByRole('alert')).toHaveTextContent(
+      '退出失败，请检查网络后重试',
+    );
+    expect(location()).toBe('/');
+  });
+
+  it('an already expired session (401) counts as logged out', async () => {
+    const { location } = renderApp('/', (path) => {
+      if (path === '/api/auth/session')
+        return { status: 403, body: apiError('ACCOUNT_DISABLED') };
+      if (path === '/api/auth/logout')
+        return {
+          status: 401,
+          body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+        };
+      throw new Error(`unexpected ${path}`);
+    });
+    await userEvent.click(
+      await screen.findByRole('button', { name: '退出登录' }),
+    );
+    await waitFor(() => expect(location()).toBe('/login'));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('a rejected logout on the disabled page stays put with an error', async () => {
+    const { location } = renderApp('/admin', (path) => {
+      if (path === '/api/auth/session')
+        return { status: 403, body: apiError('ACCOUNT_DISABLED') };
+      if (path === '/api/auth/logout')
+        return { status: 429, body: apiError('RATE_LIMITED') };
+      throw new Error(`unexpected ${path}`);
+    });
+    await userEvent.click(
+      await screen.findByRole('button', { name: '退出登录' }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '退出失败，请检查网络后重试',
+    );
+    expect(location()).toBe('/admin');
+    expect(
+      screen.getByRole('heading', { name: '该管理员账号已停用' }),
+    ).toBeVisible();
+  });
+});
+
+describe('home load errors', () => {
+  it('a server error shows a retryable error and recovers on retry', async () => {
+    let contextCalls = 0;
+    renderApp('/', (path) => {
+      if (path === '/api/auth/session')
+        return { status: 200, body: customerSession };
+      if (path === '/api/portal/context') {
+        contextCalls += 1;
+        return contextCalls <= 3
+          ? { status: 503, body: apiError('SERVICE_UNAVAILABLE') }
+          : { status: 200, body: balance };
+      }
+      throw new Error(`unexpected ${path}`);
+    });
+    const alert = await screen.findByRole('alert', {}, { timeout: 6000 });
+    expect(alert).toHaveTextContent('加载失败网络异常，请稍后重试');
+    expect(contextCalls).toBe(3);
+    await userEvent.click(within(alert).getByRole('button', { name: '重试' }));
+    expect(
+      await screen.findByRole('region', { name: '当前余额' }),
+    ).toHaveTextContent('-¥35.20');
+    expect(screen.queryByRole('alert')).toBeNull();
+  }, 10_000);
+
+  it('a network failure leaves the admin overview with a retry, not a blank page', async () => {
+    let contextCalls = 0;
+    renderApp('/admin', (path) => {
+      if (path === '/api/auth/session')
+        return {
+          status: 200,
+          body: {
+            identity: {
+              kind: 'admin',
+              profileId: customerSession.identity.profileId,
+              name: '王敏',
+              email: 'wangmin@example.com',
+            },
+            expiresAt: customerSession.expiresAt,
+          },
+        };
+      if (path === '/api/admin/context') {
+        contextCalls += 1;
+        throw new TypeError('network down');
+      }
+      throw new Error(`unexpected ${path}`);
+    });
+    const alert = await screen.findByRole('alert', {}, { timeout: 6000 });
+    expect(alert).toHaveTextContent('加载失败网络异常，请稍后重试');
+    expect(within(alert).getByRole('button', { name: '重试' })).toBeEnabled();
+    expect(contextCalls).toBe(3);
+  }, 10_000);
 });
 
 describe('login errors', () => {

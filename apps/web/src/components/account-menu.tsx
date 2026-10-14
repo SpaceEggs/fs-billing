@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import type { Identity } from '@fs-billing/shared';
-import { useLogout } from '../lib/use-logout';
+import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity } from '../lib/zone';
 import { menuContentClass, menuItemClass } from './menu';
@@ -81,10 +81,18 @@ export function AccountMenu({ identity }: { identity: Identity }) {
               {summary.subtitle}
             </span>
           </div>
+          {logout.isError ? (
+            <p role="alert" className="m-0 px-2.5 py-1.5 text-xs text-neg">
+              {logoutFailedMessage}
+            </p>
+          ) : null}
           <DropdownMenu.Item
             className={cn(menuItemClass, 'text-neg')}
             disabled={logout.isPending}
-            onSelect={() => logout.mutate()}
+            onSelect={(event) => {
+              event.preventDefault();
+              logout.mutate();
+            }}
           >
             退出登录
           </DropdownMenu.Item>
@@ -125,6 +133,11 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
         <span className="text-sm text-muted-foreground">主题</span>
         <ThemeSegmented className="flex w-full" />
       </div>
+      {logout.isError ? (
+        <p role="alert" className="m-0 pt-3 text-sm text-neg">
+          {logoutFailedMessage}
+        </p>
+      ) : null}
       <button
         type="button"
         disabled={logout.isPending}

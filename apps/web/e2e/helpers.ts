@@ -1,7 +1,7 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
 import { password } from './accounts';
 
-/** 提交登录表单并等待接口响应，避免读到上一次请求留下的提示。 */
+/** 提交登录表单并返回本次接口响应；调用方据此等待对应提示出现。 */
 export async function submitLogin(
   page: Page,
   email: string,
@@ -16,6 +16,22 @@ export async function submitLogin(
   );
   await page.getByRole('button', { name: '登录', exact: true }).click();
   return response;
+}
+
+export async function errorCode(response: Response) {
+  const body = (await response.json()) as { error?: { code?: string } };
+  return body.error?.code ?? null;
+}
+
+/**
+ * 等本次登录请求结束（按钮恢复可用）后再断言提示。
+ * 只看到响应还不够：React 可能尚未提交新提示，连续两次相同错误时会读到上一次的文字。
+ */
+export async function expectSettledAlert(page: Page, text: string) {
+  await expect(
+    page.getByRole('button', { name: '登录', exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByRole('alert')).toHaveText(text);
 }
 
 export async function loginAs(

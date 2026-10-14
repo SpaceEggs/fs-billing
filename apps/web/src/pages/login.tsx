@@ -138,7 +138,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
       const state: SessionState = { status: 'active', session };
       queryClient.setQueryData(sessionQueryKey, state);
       router.history.replace(
-        resolveReturnPath(takeReturnPath(), session.identity),
+        resolveReturnPath(takeReturnPath(), session.identity, router),
       );
     },
   });

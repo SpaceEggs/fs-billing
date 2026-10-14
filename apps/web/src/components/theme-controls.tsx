@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   setThemePreference,
@@ -51,9 +52,13 @@ export function ThemeMenu() {
   );
 }
 
-/** 分段选择器，取自客户门户账号设置的“主题”卡片；手机账号菜单内使用。 */
+/**
+ * 分段选择器，取自客户门户账号设置的“主题”卡片；手机账号菜单内使用。
+ * 用原生单选框：整组只占一个 Tab 停靠点，方向键切换选项。
+ */
 export function ThemeSegmented({ className }: { className?: string }) {
   const preference = useThemePreference();
+  const name = useId();
   return (
     <div
       role="radiogroup"
@@ -63,26 +68,22 @@ export function ThemeSegmented({ className }: { className?: string }) {
         className,
       )}
     >
-      {themeOptions.map((option) => {
-        const active = option.value === preference;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => setThemePreference(option.value)}
-            className={cn(
-              'flex h-[30px] flex-1 items-center justify-center rounded-[7px] px-3.5',
-              active
-                ? 'bg-background font-medium text-foreground shadow-[0_1px_2px_rgba(0,0,0,.08)]'
-                : 'text-muted-foreground',
-            )}
-          >
-            {option.label}
-          </button>
-        );
-      })}
+      {themeOptions.map((option) => (
+        <label
+          key={option.value}
+          className="flex h-[30px] flex-1 cursor-pointer items-center justify-center rounded-[7px] px-3.5 text-muted-foreground has-checked:bg-background has-checked:font-medium has-checked:text-foreground has-checked:shadow-[0_1px_2px_rgba(0,0,0,.08)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+        >
+          <input
+            type="radio"
+            name={name}
+            value={option.value}
+            checked={option.value === preference}
+            onChange={() => setThemePreference(option.value)}
+            className="sr-only"
+          />
+          {option.label}
+        </label>
+      ))}
     </div>
   );
 }

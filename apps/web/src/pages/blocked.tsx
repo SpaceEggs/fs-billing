@@ -1,6 +1,6 @@
 import { Button } from '../components/ui/button';
 import { loginAlert } from '../lib/login-errors';
-import { useLogout } from '../lib/use-logout';
+import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import type { Zone } from '../lib/zone';
 
 /** 资料停用或身份无法使用：不自动重登，只提供退出（API 设计 §3）。 */
@@ -34,6 +34,11 @@ export function BlockedPage({
       >
         退出登录
       </Button>
+      {logout.isError ? (
+        <p role="alert" className="m-0 text-sm text-neg">
+          {logoutFailedMessage}
+        </p>
+      ) : null}
     </div>
   );
 }

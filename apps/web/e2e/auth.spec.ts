@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { accounts } from './accounts';
 import { clearLoginFailures, revokeSessions } from './db';
-import { expectPath, loginAs, submitLogin } from './helpers';
+import {
+  errorCode,
+  expectPath,
+  expectSettledAlert,
+  loginAs,
+  submitLogin,
+} from './helpers';
 
 test('customer login enters the portal and shows the CNY balance', async ({
   page,
@@ -124,13 +130,21 @@ test('wrong passwords lock the account and show the retry countdown', async ({
   try {
     await page.goto('/login');
     const alert = page.getByRole('alert');
-    for (let attempt = 1; attempt <= 6; attempt += 1) {
-      await submitLogin(page, accounts.lockTarget, `wrong-password-${attempt}`);
-      await expect(alert).toBeVisible();
-      if ((await alert.textContent())?.includes('已暂时锁定')) break;
-      await expect(alert).toContainText('登录邮箱或密码错误');
-      await expect(alert).toContainText('请检查后重新输入');
+    let locked = false;
+    for (let attempt = 1; attempt <= 6 && !locked; attempt += 1) {
+      const response = await submitLogin(
+        page,
+        accounts.lockTarget,
+        `wrong-password-${attempt}`,
+      );
+      const code = await errorCode(response);
+      locked = code === 'ACCOUNT_LOCKED';
+      if (!locked) {
+        expect([response.status(), code]).toEqual([401, 'INVALID_CREDENTIALS']);
+        await expectSettledAlert(page, '登录邮箱或密码错误请检查后重新输入');
+      }
     }
+    expect(locked).toBe(true);
     await expect(alert).toContainText('登录失败次数过多，已暂时锁定');
     await expect(alert).toContainText(/请在 1[45]分\d{2}秒 后重试/);
     const wait = page.getByRole('button', {
@@ -153,18 +167,22 @@ test('unknown email and wrong password show the same message', async ({
       'nobody-here@example.com',
       'whatever-password',
     );
-    const unknown = await page.getByRole('alert').textContent();
+    expect([
+      unknownResponse.status(),
+      await errorCode(unknownResponse),
+    ]).toEqual([401, 'INVALID_CREDENTIALS']);
+    await expectSettledAlert(page, '登录邮箱或密码错误请检查后重新输入');
+
     const wrongResponse = await submitLogin(
       page,
       accounts.customer,
       'definitely-wrong-password',
     );
-    expect(unknownResponse.status()).toBe(401);
-    expect(wrongResponse.status()).toBe(401);
-    await expect(page.getByRole('alert')).toHaveText(unknown ?? '');
-    await expect(page.getByRole('alert')).toHaveText(
-      '登录邮箱或密码错误请检查后重新输入',
-    );
+    expect([wrongResponse.status(), await errorCode(wrongResponse)]).toEqual([
+      401,
+      'INVALID_CREDENTIALS',
+    ]);
+    await expectSettledAlert(page, '登录邮箱或密码错误请检查后重新输入');
   } finally {
     await clearLoginFailures('nobody-here@example.com');
     await clearLoginFailures(accounts.customer);
@@ -193,6 +211,57 @@ test('logout from the account menu returns to the login page', async ({
   await expectPath(page, '/login');
 });
 
+test('a failed logout keeps the session and offers a retry', async ({
+  page,
+}) => {
+  await loginAs(page, '/login', accounts.customer);
+  await expectPath(page, '/');
+  await page.route('/api/auth/logout', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: '服务暂不可用',
+          requestId: 'req-e2e',
+        },
+      }),
+    }),
+  );
+  await page.getByRole('button', { name: '账号菜单' }).click();
+  await page.getByRole('menuitem', { name: '退出登录' }).click();
+  await expect(page.getByRole('menu').getByRole('alert')).toHaveText(
+    '退出失败，请检查网络后重试',
+  );
+  await expectPath(page, '/');
+
+  await page.unroute('/api/auth/logout');
+  await page.getByRole('menuitem', { name: '退出登录' }).click();
+  await expectPath(page, '/login');
+  await page.goto('/');
+  await expectPath(page, '/login');
+});
+
+test('a forbidden home context shows an explicit error, not a skeleton', async ({
+  page,
+}) => {
+  await page.route('/api/portal/context', (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: { code: 'FORBIDDEN', message: '无权访问', requestId: 'req-e2e' },
+      }),
+    }),
+  );
+  await loginAs(page, '/login', accounts.customer);
+  await expectPath(page, '/');
+  await expect(page.getByRole('alert')).toContainText('没有权限查看');
+  await expect(page.getByRole('region', { name: '当前余额' })).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
 test('theme choice is applied and persisted', async ({ page }) => {
   await loginAs(page, '/admin/login', accounts.admin);
   await page.getByRole('button', { name: '主题' }).click();
@@ -200,9 +269,24 @@ test('theme choice is applied and persisted', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
   await page.getByRole('button', { name: '主题' }).click();
   await page.getByRole('menuitemradio', { name: '浅色' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.getByRole('button', { name: '主题' }).click();
+  await page.getByRole('menuitemradio', { name: '跟随系统' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
 test.describe('mobile 375px', () => {
@@ -223,9 +307,20 @@ test.describe('mobile 375px', () => {
     await expectPath(page, '/');
     await page.getByRole('button', { name: '账号菜单' }).click();
     const sheet = page.getByRole('dialog', { name: '账号菜单' });
-    await sheet.getByRole('radio', { name: '深色' }).click();
+    await page.emulateMedia({ colorScheme: 'light' });
+    await sheet.getByText('深色', { exact: true }).click();
+    await expect(sheet.getByRole('radio', { name: '深色' })).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await sheet.getByRole('radio', { name: '跟随系统' }).click();
+
+    await sheet.getByRole('radio', { name: '深色' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(sheet.getByRole('radio', { name: '跟随系统' })).toBeFocused();
+    await expect(sheet.getByRole('radio', { name: '跟随系统' })).toBeChecked();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.keyboard.press('Tab');
+    await expect(sheet.getByRole('button', { name: '退出登录' })).toBeFocused();
     await sheet.getByRole('button', { name: '退出登录' }).click();
     await expectPath(page, '/login');
   });

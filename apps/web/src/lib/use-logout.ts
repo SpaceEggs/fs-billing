@@ -4,7 +4,12 @@ import { ApiRequestError, callApi } from './api';
 import { sessionExpiry } from './session';
 import { zones, type Zone } from './zone';
 
-/** 退出后清除所有缓存的身份与受保护数据；会话已失效（401）也视为已退出。 */
+export const logoutFailedMessage = '退出失败，请检查网络后重试';
+
+/**
+ * 服务器确认退出后才清除缓存并回到登录页；会话已失效（401）也视为已退出。
+ * 其他失败保留当前会话，由调用方显示 logoutFailedMessage 供用户重试。
+ */
 export function useLogout(zone: Zone) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -18,7 +23,7 @@ export function useLogout(zone: Zone) {
           throw error;
       }
     },
-    onSettled: async () => {
+    onSuccess: async () => {
       queryClient.clear();
       sessionExpiry.clear();
       await router.navigate({ to: zones[zone].login, search: {} });
