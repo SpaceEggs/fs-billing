@@ -88,6 +88,10 @@ const cases = {
             .object({ rows: z.array(z.tuple([z.string()])) })
             .parse(await reads[0]);
           expect(
+            result.rows.length,
+            'TENANT_FILTER_LEAK_ROWS: portalContext read multiple tenant balances',
+          ).toBeLessThanOrEqual(1);
+          expect(
             result.rows,
             'TENANT_FILTER_LEAK: portalContext read another tenant balance',
           ).toEqual([[user === fixture.b ? '999.75' : '111.25']]);

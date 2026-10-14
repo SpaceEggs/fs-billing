@@ -17,8 +17,8 @@ All matched files use Prettier code style!
 > pnpm -r typecheck && tsc -p tsconfig.json
 
 Scope: 6 of 7 workspace projects
-packages/shared typecheck$ tsc -p tsconfig.json
 packages/rating typecheck$ tsc -p tsconfig.json
+packages/shared typecheck$ tsc -p tsconfig.json
 packages/rating typecheck: Done
 packages/shared typecheck: Done
 apps/web typecheck$ tsc -p tsconfig.json
@@ -39,6 +39,6 @@ apps/api typecheck: Done
 
  Test Files  16 passed (16)
       Tests  309 passed (309)
-   Start at  22:59:39
-   Duration  2.27s (import 58%, tests 34%, transform 7%, worker 1%)
+   Start at  23:19:59
+   Duration  2.67s (import 58%, tests 33%, transform 8%, worker 1%)
 

@@ -129,10 +129,8 @@ try {
         !failures[0]?.fullName.includes(
           '[owner] live OpenAPI customer isolation portalContext positive behavior and A to B attack',
         ) ||
-        !failures[0]?.failureMessages.some(
-          (message) =>
-            message.includes('TENANT_FILTER_LEAK') &&
-            (message.includes('111.25') || message.includes('999.75')),
+        !failures[0]?.failureMessages.some((message) =>
+          message.includes('TENANT_FILTER_LEAK_ROWS:'),
         )
       )
         throw new Error(
