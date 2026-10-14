@@ -141,7 +141,7 @@ ORDER BY t.code, e.prefix;
 - [x] 话单只推 A 腿，失败原文落入 retry。独立 [replay-cdr.sh](../freeswitch/scripts/replay-cdr.sh) 补推超过一分钟的文件，Worker 按 UUID 去重。
 - [x] 业务拒绝使用 SIP 402、403、404；非法号码使用 484。桥接保留原始拨号，国际与国内号码分别归一化为独立 `billing_number`，授权与话单由 Worker 同一函数核验。
 - [x] 授权与话单路径为 `/authorize` 和 `/cdr`，请求格式见 [Worker 接口](worker-api.md)。
-- [ ] 用 [run-integration.sh](../freeswitch/test/run-integration.sh) 保存真实 SIP、CDR 与账本证据，验证六种国内及国际拨号的上游原始 INVITE、规范化话单与账本，以及 1500 ms 停滞超时、60 秒 `ALLOTTED_TIMEOUT`、失败落盘与重复补推。此脚本使用本机回环地址，不替代服务器 A 的网络与 TLS 验收。
+- [x] 用 [run-integration.sh](../freeswitch/test/run-integration.sh) 保存真实 SIP、CDR 与账本证据，验证六种国内及国际拨号的上游原始 INVITE、规范化话单与账本，以及 1500 ms 停滞超时、60 秒 `ALLOTTED_TIMEOUT`、失败落盘与重复补推。已保存 [reject-billing-mismatch 联调证据](evidence/reject-billing-mismatch/README.md)，两次运行均 15/15 PASS；CI [FreeSWITCH integration / e2e](../.github/workflows/freeswitch.yml) 执行同一脚本并上传日志。此脚本使用本机回环地址，不替代阶段 10 的服务器 A 网络、TLS 与用户测试机验收；CI 镜像拉取失败可能跳过，须核对实际执行记录。
 
 服务器 A 安装后，按以下步骤配置，再启动服务。vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_password` 为 `1234`，不能直接用于服务器 A。
 

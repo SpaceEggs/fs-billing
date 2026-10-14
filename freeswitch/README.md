@@ -89,4 +89,4 @@ bash freeswitch/test/run-integration.sh /tmp/fs-integration-local
 - 停 Worker 或将授权流量延迟超过 1.5 秒，确认拨号继续、接通后计时 1800 秒、CDR 带 `billing_unverified=true`。恢复后照常扣费，首次有效话单写一条 `auth_timeout` 告警。
 - 停 Worker 后挂断通话，确认 archive 与 retry 有完整原文。恢复 Worker 后运行重推任务，确认 retry 文件移除、数据库只有一条正式话单和一笔扣费。再次 POST archive 副本只能得到 `duplicate`。
 
-本地 HTTP/DB 验证不替代 FreeSWITCH 测试机通话。保留实际 SIP、接通、定时挂断、推送日志与 UUID 对应的 DB 查询结果后，才能勾选 plan 阶段 3 的实机验收项。
+本地 HTTP/DB 验证不替代 FreeSWITCH 测试机通话。保留实际 SIP、接通、定时挂断、推送日志与 UUID 对应的 DB 查询结果后，才能勾选 [plan 阶段 10](../docs/plan.md#阶段-10部署与上线) 的用户测试机实机验收项。阶段 3 的功能验收已由 Docker/SIPp 联调完成。

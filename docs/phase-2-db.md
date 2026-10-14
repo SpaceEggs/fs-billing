@@ -382,12 +382,12 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 5. **原始话单按月分区并保存原文：已决定并实现。** 见上文“话单唯一与分区”。归档与恢复在阶段 8。
 6. **建分区先查后锁，覆盖 `raw_cdrs`：已决定并实现。** 建分区只作为维护操作运行：pg-boss 每日任务、Worker 启动时执行；写入路径缺分区报错并写 `partition_failed` 告警，不建分区。已列入 plan.md 阶段 3 验收标准；告警类型已加入检查约束。
 
-## 待决定事项
+## 后续决定与已解决事项
 
 1. **生产环境的应用角色密码** 由 `pnpm db:migrate` 按 `APP_DATABASE_URL` 设置；部署方式在阶段 10 确定。
 2. **认领登记时是否要求未归属话单已标记为“已分配”。** 现在 `cdrs` 能认领任何 `tenant_id IS NULL` 的登记，不检查对应的 `unassigned_cdrs` 行是否在同一事务中改为 `assigned` 且 `assigned_tenant_id` 一致。阶段 8 的分配流程在同一事务中完成这几步；是否要用触发器强制，阶段 8 决定。
-3. **重复推送的原文是否保存。** `raw_cdrs` 不再按 UUID 唯一，同一通话推送两次会存两份原文；阶段 3 决定只保存首次，还是全部保存以便排查。
-4. **pg-boss 的 schema 由谁安装。** 应用角色没有 `CREATE` 权限；建议 `pnpm db:migrate` 以 owner 安装 pg-boss 的 schema，Worker 关闭自动迁移，阶段 3 按实际版本确认。
+3. **重复推送的原文全部保存，阶段 3 已实现。** 每次收到的原始推送都写入 `raw_cdrs`，同一通话推送两次保留两份原文；正式话单和扣费仍按 UUID 去重。
+4. **pg-boss 由 owner 安装，阶段 3 已实现。** 应用角色没有 `CREATE` 权限；部署时执行 `pnpm --filter @fs-billing/worker queue:migrate`，脚本使用 `DATABASE_URL` 的 owner 连接安装队列 schema。Worker 使用应用角色且关闭自动迁移。
 
 ## 范围边界
 
