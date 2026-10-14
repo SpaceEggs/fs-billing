@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { moneyAmountSchema } from '../money.js';
-import { newPasswordSchema } from '../auth.js';
 import { currencySchema, tenantIdentitySchema } from '../identity.js';
 import {
   adminMutationResponseSchema,
@@ -10,7 +9,6 @@ import {
   adminStatusSchema,
   adminTimestampSchema,
 } from './common.js';
-import { adminPortalAccountCreateRequestSchema } from './accounts.js';
 import { adminRateEntriesSchema, adminCsvFileSchema } from './rates.js';
 
 export const adminTenantHealthSchema = z.enum([
@@ -32,7 +30,9 @@ const contactFields = {
 };
 export const adminTenantEditRequestSchema = z.strictObject({
   name: z.string().trim().min(1).max(200),
-  ...contactFields,
+  contactName: contactFields.contactName.removeDefault(),
+  contactPhone: contactFields.contactPhone.removeDefault(),
+  remark: contactFields.remark.removeDefault(),
 });
 export const adminTenantInitialRatesSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('blank') }),
@@ -49,6 +49,7 @@ export const adminTenantInitialRatesSchema = z.discriminatedUnion('kind', [
 ]);
 export const adminTenantCreateRequestSchema =
   adminTenantEditRequestSchema.extend({
+    ...contactFields,
     code: z
       .string()
       .regex(/^[A-Za-z0-9]+$/)
@@ -56,9 +57,9 @@ export const adminTenantCreateRequestSchema =
     currency: currencySchema,
     settings: adminTenantSettingsSchema.omit({ overdraftLimit: true }).extend({
       overdraftLimit: adminNonnegativeAmountSchema.optional(),
+      emails: adminTenantSettingsSchema.shape.emails.optional(),
     }),
     initialRates: adminTenantInitialRatesSchema,
-    portalAccount: adminPortalAccountCreateRequestSchema.optional(),
   });
 export const adminTenantSummarySchema = tenantIdentitySchema.extend({
   status: adminStatusSchema,
@@ -89,13 +90,11 @@ export const adminTenantCreateResponseSchema =
     tenant: adminTenantDetailResponseSchema,
     initialRateVersionId: z.uuid(),
     effectiveFrom: adminTimestampSchema,
-    portalAccountId: z.uuid().optional(),
-    temporaryPassword: newPasswordSchema.optional(),
   });
 export const adminTenantOverviewResponseSchema = z.strictObject({
   currency: currencySchema,
   monthConsumption: adminNonnegativeAmountSchema,
-  monthCallMinutes: adminNonnegativeAmountSchema,
+  monthCallMinutes: z.string().regex(/^\d+(?:\.\d+)?$/),
   dailyConsumption: z
     .array(
       z.strictObject({
@@ -129,3 +128,27 @@ export type AdminTenantCreateResponse = z.infer<
 export type AdminTenantOverviewResponse = z.infer<
   typeof adminTenantOverviewResponseSchema
 >;
+
+export const adminTenantCopyConsistencySchema =
+  adminTenantInitialRatesSchema.options[2]
+    .extend({
+      targetCurrency: currencySchema,
+      sourceVersion: z.strictObject({
+        id: z.uuid(),
+        tenantId: z.uuid(),
+        currency: currencySchema,
+      }),
+    })
+    .refine(
+      (copy) =>
+        copy.sourceVersion.id === copy.sourceVersionId &&
+        copy.sourceVersion.tenantId === copy.sourceTenantId,
+      {
+        message: '来源版本必须属于来源租户',
+        path: ['sourceVersionId'],
+      },
+    )
+    .refine((copy) => copy.sourceVersion.currency === copy.targetCurrency, {
+      message: '来源与目标币种必须一致',
+      path: ['targetCurrency'],
+    });

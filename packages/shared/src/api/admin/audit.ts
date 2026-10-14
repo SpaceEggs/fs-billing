@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { adminTimestampSchema } from './common.js';
+import { currencySchema } from '../identity.js';
+import {
+  adminNonzeroAmountSchema,
+  adminPositiveAmountSchema,
+  adminTimestampSchema,
+} from './common.js';
 
 export const auditActionSchema = z.enum([
   'tenant_create',
@@ -39,22 +44,20 @@ export const auditChangeSchema = z.strictObject({
     'prefix',
     'country',
     'rate',
+    'amount',
+    'receivedOn',
+    'code',
+    'currency',
   ]),
   before: z.union([z.string(), z.array(z.string()), z.null()]),
   after: z.union([z.string(), z.array(z.string()), z.null()]),
 });
-export const auditContentSchema = z.strictObject({
-  summary: z.string().min(1),
+const contentFields = {
+  summary: z.string().trim().min(1),
   changes: z.array(auditChangeSchema),
-  ledgerEntryId: z.uuid().optional(),
-  rateVersionId: z.uuid().optional(),
-  sourceTenantId: z.uuid().optional(),
-  settlementId: z.uuid().optional(),
-  reason: z.string().optional(),
-});
-export const auditPayloadSchema = z.strictObject({
+};
+const envelopeFields = {
   id: z.uuid(),
-  action: auditActionSchema,
   actor: z.strictObject({ id: z.uuid(), name: z.string().min(1) }),
   occurredAt: adminTimestampSchema,
   tenantId: z.uuid().nullable(),
@@ -69,8 +72,68 @@ export const auditPayloadSchema = z.strictObject({
     ]),
     id: z.uuid(),
   }),
-  content: auditContentSchema,
-});
+};
+function auditVariant<
+  const Action extends AuditAction,
+  Fields extends z.ZodRawShape,
+>(action: Action, fields: Fields) {
+  return z.strictObject({
+    ...envelopeFields,
+    action: z.literal(action),
+    content: z.strictObject({ ...contentFields, ...fields }),
+  });
+}
+const balanceFields = {
+  ledgerEntryId: z.uuid(),
+  amount: adminPositiveAmountSchema,
+  currency: currencySchema,
+};
+const rateFields = { rateVersionId: z.uuid() };
+export const auditPayloadSchema = z.discriminatedUnion('action', [
+  auditVariant('tenant_create', {
+    code: z.string().min(1),
+    currency: currencySchema,
+    rateVersionId: z.uuid(),
+  }),
+  auditVariant('tenant_edit', {}),
+  auditVariant('tenant_disable', {}),
+  auditVariant('tenant_enable', {}),
+  auditVariant('tenant_settings_update', {}),
+  auditVariant('portal_account_create', { email: z.email() }),
+  auditVariant('reset_password', {}),
+  auditVariant('portal_account_disable', {}),
+  auditVariant('portal_account_enable', {}),
+  auditVariant('balance_topup', balanceFields),
+  auditVariant('balance_credit_topup', balanceFields),
+  auditVariant('balance_gift', balanceFields),
+  auditVariant('balance_adjustment', {
+    ...balanceFields,
+    amount: adminNonzeroAmountSchema,
+    reason: z.string().trim().min(1).max(2000),
+  }),
+  auditVariant('rate_entry_edit', rateFields),
+  auditVariant('rate_import', rateFields),
+  auditVariant('rate_export', rateFields),
+  auditVariant('rate_copy', {
+    ...rateFields,
+    sourceTenantId: z.uuid(),
+    sourceVersionId: z.uuid(),
+  }),
+  auditVariant('receivable_confirm', {
+    ...balanceFields,
+    settlementId: z.uuid(),
+    receivedOn: z.iso.date(),
+  }),
+  auditVariant('admin_create', { email: z.email() }),
+  auditVariant('admin_disable', {}),
+  auditVariant('admin_enable', {}),
+]);
+export const auditContentSchema = z.discriminatedUnion('action', [
+  auditPayloadSchema.options[0].pick({ action: true, content: true }),
+  ...auditPayloadSchema.options
+    .slice(1)
+    .map((option) => option.pick({ action: true, content: true })),
+]);
 
 export type AuditChange = z.infer<typeof auditChangeSchema>;
 export type AuditContent = z.infer<typeof auditContentSchema>;

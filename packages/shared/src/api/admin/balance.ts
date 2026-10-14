@@ -12,7 +12,14 @@ import {
 
 const balanceFields = {
   currency: currencySchema,
-  idempotencyKey: z.string().trim().min(1).max(200),
+  idempotencyKey: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine((key) => !key.startsWith('call:'), {
+      message: 'call: 是通话扣费保留命名空间',
+    }),
 };
 export const adminBalanceOperationRequestSchema = z.discriminatedUnion('kind', [
   z.strictObject({

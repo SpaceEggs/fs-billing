@@ -8,21 +8,21 @@
 
 ### 核心数据形状
 
-| 类型 / schema                  | 结构与不变量                                                                                                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AdminTenantSummary`           | 租户身份带唯一币种；余额、可用额度、本月消费、待收款为 decimal strings。`status` 为 active/disabled，`health` 为 suspended/overdraft/low_balance/normal/disabled |
-| `AdminTenantCreateRequest`     | 编码、名称、币种、settings、initialRates、可选门户账号。initialRates 为 blank/entries/csv/copy 联合。没有客户端 effectiveFrom                                    |
-| `AdminTenantEditRequest`       | 仅名称、联系人、电话、备注。编码和币种创建后不可改                                                                                                               |
-| `AdminTenantSettings`          | overdraftLimit、lowBalanceThreshold 为非负 decimal strings，emails 为邮箱数组                                                                                    |
-| `AdminBalanceOperationRequest` | kind 联合。topup/credit_topup/gift 为正数；adjustment 为非零有符号数且 reason trim 后非空。每次请求带 idempotencyKey 和 currency，服务必须核验等于租户币种       |
-| `AdminLedgerEntry`             | 沿用 DB kind，含金额、变动后余额、操作人、时间、收款状态。credit_recharge 的 noteVisibility 必须为 admin，其余为 customer                                        |
-| `AdminRateSchedule`            | immediate 无时间字段；scheduled 带 ISO effectiveFrom。Zod 每次 parse 时调用 Date.now()，要求 effectiveFrom >= now                                                |
-| `AdminRateVersion`             | 版本 id、历史 effectiveFrom、完整 entries。历史响应时间没有未来时间 refinement                                                                                   |
-| `AdminRatePreviewResponse`     | ok=false 只有非空 errors 数组；ok=true 才有 previewId、expiresAt、encoding、currency、新增/修改/删除明细及 counts                                                |
-| `AdminCsvRowError`             | `{line: positive integer, reason: nonempty string}`，与 rating CsvError 一致，物理行从 1 开始，包含表头。一次返回所有错误行                                      |
-| `AdminCurrencyTotals`          | `{CNY: decimal string, USD: decimal string}`，即以 Currency 为键的完整 record。严格拒绝 total、缺币种和 number。无换算或混加字段                                 |
-| `AdminReceivable`              | ledgerEntryId、tenant、内部备注、金额、操作人、ageDays、overdue；payment 为 pending 或 received 联合。pending 且 ageDays > 30 才 overdue                         |
-| `AuditAction` / `AuditPayload` | enum、actor、occurredAt、tenantId、target、content。由服务构造，客户端不能指定 actor 或时间                                                                      |
+| 类型 / schema                  | 结构与不变量                                                                                                                                                                           |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AdminTenantSummary`           | 租户身份带唯一币种；余额、可用额度、本月消费、待收款为 decimal strings。`status` 为 active/disabled，`health` 为 suspended/overdraft/low_balance/normal/disabled                       |
+| `AdminTenantCreateRequest`     | 编码、名称、币种、settings、initialRates。门户账号单独创建。initialRates 为 blank/entries/csv/copy 联合，copy 必须同时提供 sourceTenantId 和 sourceVersionId。没有客户端 effectiveFrom |
+| `AdminTenantEditRequest`       | 名称、联系人、电话、备注均必传，整体替换这些字段。空字符串明确清空联系人、电话或备注。编码和币种创建后不可改                                                                           |
+| `AdminTenantSettings`          | overdraftLimit、lowBalanceThreshold 为非负 decimal strings。开户 emails 可省略，由服务填当前管理员邮箱；更新 settings 必须明确提交 emails 数组                                         |
+| `AdminBalanceOperationRequest` | kind 联合。topup/credit_topup/gift 为正数；adjustment 为非零有符号数且 reason trim 后非空。每次请求带 idempotencyKey 和 currency，服务必须核验等于租户币种                             |
+| `AdminLedgerEntry`             | 沿用 DB kind，含金额、变动后余额、操作人、时间、收款状态。credit_recharge 的 noteVisibility 必须为 admin，其余为 customer                                                              |
+| `AdminRateSchedule`            | immediate 无时间字段；scheduled 带 ISO effectiveFrom。Zod 每次 parse 时调用 Date.now()，要求 effectiveFrom >= now                                                                      |
+| `AdminRateVersion`             | 版本 id、历史 effectiveFrom、完整 entries。历史响应时间没有未来时间 refinement                                                                                                         |
+| `AdminRatePreviewResponse`     | ok=false 只有非空 errors 数组；ok=true 才有 previewId、expiresAt、encoding、currency、新增/修改/删除明细及 counts。counts 必须等于对应 changes 数量                                    |
+| `AdminCsvRowError`             | `{line: positive integer, reason: nonempty string}`，与 rating CsvError 一致，物理行从 1 开始，包含表头。一次返回所有错误行                                                            |
+| `AdminCurrencyTotals`          | `{CNY: decimal string, USD: decimal string}`，即以 Currency 为键的完整 record。严格拒绝 total、缺币种和 number。无换算或混加字段                                                       |
+| `AdminReceivable`              | ledgerEntryId、tenant、内部备注、金额、操作人、ageDays、overdue；payment 为 pending 或 received 联合。pending 且 ageDays > 30 才 overdue                                               |
+| `AuditAction` / `AuditPayload` | 以 action 区分的联合，actor、occurredAt、tenantId、target、content 必填，各 action 的 content 有独立必填字段。由服务构造，客户端不能指定 actor 或时间                                  |
 
 沿用 [money.ts](../packages/shared/src/api/money.ts) 的 canonical decimal string 格式，不在 wire 层使用 number 或 Decimal 对象。Money DTO 和 rating 的 `Money<C>` 不同。后续 service 在读到租户币种后用现有 `money(currency, amount)`、`rate(currency, rateText)` 创建 branded `Money<C>`、`Rate<C>`，不强转、不自行定义另一套品牌。[rating money.ts](../packages/rating/src/money.ts) 的 `addMoney` 保持跨币种编译期拒绝。显示两位小数不意味着提前舍入。
 
@@ -59,11 +59,11 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 
 每个 service 自己拥有业务策略与事务，不拆出通用 load/validate/save 转发层。路由不直接拼接账本写入。
 
-设计比较采用两个形状。一份全量 admin.ts 可以减少文件数，但把账户生命周期、流水和费率预览的规则放在同一文件。领域模块加单一 facade 让每个规则有归属，且下一步可按领域接入。选择后者。独立设计阅读者确认了现有路由注册器的 exhaustive `ApiOperationId` 和错误映射约束。本步保留 `apiContract` 与 `ApiErrorCode`，新契约不合并进去，避免要求实现 API handlers。此选择应用 Model the Domain 与 Type System Discipline，将余额操作和预览结果编码为联合，将类型从 schema 推导。
+设计比较采用两个形状。一份全量 admin.ts 可以减少文件数，但把账户生命周期、流水和费率预览的规则放在同一文件。领域模块加单一 facade 让每个规则有归属，且下一步可按领域接入。选择后者。现有路由注册器要求 exhaustive `ApiOperationId` 和错误映射。本步保留 `apiContract` 与 `ApiErrorCode`，新契约不合并进去，避免要求实现 API handlers。此选择应用 Model the Domain 与 Type System Discipline，将余额操作和预览结果编码为联合，将类型从 schema 推导。
 
 ## 端点
 
-以下全部要求 **admin session**。复用现有 cookie、身份解析、CSRF/Origin 校验、401/403 和 no-store 约定。修改用 POST 与现有 ApiOperation method 范围一致。params 统一为 `adminTenantParamsSchema` 的 tenantId 或 `adminIdParamsSchema` 的 id。未列 request 的部分使用 `emptyRequestSchema`，无 body 为其 optional 版本。响应统一 200；密码重置两条为已有端点。
+以下全部要求 **admin session**。复用现有 cookie、身份解析、CSRF/Origin 校验、401/403 和 no-store 约定。修改用 POST 与现有 ApiOperation method 范围一致。params 统一为 `adminTenantParamsSchema` 的 tenantId 或 `adminIdParamsSchema` 的 id。未列 request 的部分使用 `emptyRequestSchema`，无 body 为其 optional 版本。响应统一 200；密码重置两条引用已有 apiContract 定义，保持原有路径与错误映射，不能重复注册。各 operation 的错误映射仅包含其可能返回的 code，不套用全部后台错误。
 
 路径中的 `T` 仅为表格缩写，展开为 `/api/admin/tenants/{tenantId}`。
 
@@ -86,7 +86,7 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 | POST   | `T/rates/edit-entry`                             | adminRateEditRequestSchema            | adminRateVersionResponseSchema         |
 | POST   | `T/rates/import/preview`                         | adminRateImportPreviewRequestSchema   | adminRatePreviewResponseSchema         |
 | POST   | `T/rates/import/commit`                          | adminRateImportCommitRequestSchema    | adminRateVersionResponseSchema         |
-| GET    | `T/rates/export`                                 | adminRateExportQuerySchema            | adminRateExportResponseSchema          |
+| POST   | `T/rates/export`                                 | adminRateExportRequestSchema（body）  | adminRateExportResponseSchema          |
 | POST   | `T/rates/copy/preview`                           | adminRateCopyPreviewRequestSchema     | adminRatePreviewResponseSchema         |
 | POST   | `T/rates/copy/commit`                            | adminRateImportCommitRequestSchema    | adminRateVersionResponseSchema         |
 | GET    | `/api/admin/receivables`                         | adminReceivablesQuerySchema           | adminReceivablesResponseSchema         |
@@ -96,7 +96,7 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 | POST   | `/api/admin/admins/{id}/reset-password`          | resetPasswordParamsSchema，空 body    | resetPasswordResponseSchema            |
 | POST   | `/api/admin/admins/{id}/disable`                 | emptyRequestSchema                    | adminMutationResponseSchema            |
 
-租户详情包含余额卡片与 settings 快照，overview 为本月消费、分钟数和最近 30 个北京时间自然日消费。ledger 按 occurredAt DESC、id DESC 稳定分页，支持 kind/from/to；page 默认为 1，pageSize 默认为 25，最大 100。待收款 totals 按筛选后的完整结果集统计，不仅当前页。rates 的 current 为完整当前版本，scheduled 为未来版本，search 仅筛选展示条目，不改变版本基准。
+租户详情包含余额卡片与 settings 快照，overview 为本月消费、分钟数和最近 30 个北京时间自然日消费。monthCallMinutes 是非负 decimal string 表示的分钟数，使用独立分钟字符串校验，不带金额语义。ledger 按 occurredAt DESC、id DESC 稳定分页，支持 kind/from/to；page 默认为 1，pageSize 默认为 25，最大 100。待收款 totals 按筛选后的完整结果集统计，不仅当前页。status=pending 合计未收金额，received 合计已收金额。币种过滤时另一键为 "0"，只为固定 wire 结构；Web 不显示未选币种的合计，避免误读为该币种没有应收。rates 的 current 为完整当前版本，scheduled 为未来版本，search 仅筛选展示条目，不改变版本基准。
 
 状态计算优先检查手动 disabled；active 下先 balance+overdraftLimit <= 0 为 suspended，其次 balance < 0 为 overdraft，其次 balance < threshold 为 low_balance，其余 normal。列表筛选 search 编码/名称、health 状态和 currency。排序优先 suspended、overdraft、low_balance、normal、disabled；同状态先币种分组，再同币种 balance ASC，最后 code/id。不同币种之间不比较金额。
 
@@ -104,40 +104,44 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 
 错误仍为 `{error: {code, message, requestId, ...}}`。已有 `VALIDATION_ERROR` 400 带 issues，401 的 UNAUTHENTICATED/SESSION_EXPIRED，403 的 FORBIDDEN/ACCOUNT_DISABLED/IDENTITY_UNAVAILABLE，404 NOT_FOUND，429 RATE_LIMITED，500 INTERNAL_ERROR，503 SERVICE_UNAVAILABLE 均复用。
 
-| code                                                      | HTTP | 条件                                                                           |
-| --------------------------------------------------------- | ---- | ------------------------------------------------------------------------------ |
-| TENANT_CODE_EXISTS / EMAIL_EXISTS / PORTAL_ACCOUNT_EXISTS | 409  | 唯一冲突或第一版门户账号已存在                                                 |
-| CURRENCY_MISMATCH                                         | 409  | 余额请求或复制来源与租户币种不符                                               |
-| IDEMPOTENCY_CONFLICT                                      | 409  | 同租户同 key 已用于不同命令                                                    |
-| RATE_VERSION_CONFLICT                                     | 409  | 当前版本已变化、已有未来版本或时间不符合 DB 版本顺序                           |
-| PREVIEW_STALE / PREVIEW_EXPIRED                           | 409  | 内容基准变化或预览已过期                                                       |
-| ALREADY_RECEIVED                                          | 409  | 已存在独立收款确认事件                                                         |
-| SELF_DISABLE / LAST_ADMIN                                 | 409  | 自停用或会导致无启用管理员                                                     |
-| CSV_INVALID                                               | 400  | 开户内 CSV 无效，带 rows 全部行错误。普通 preview 以 200 ok=false 返回同形错误 |
-| CSV_ENCODING_UNSUPPORTED                                  | 400  | 不能解码为 UTF-8 或 GBK                                                        |
-| CSV_LIMIT_EXCEEDED                                        | 413  | 文件或行数超限                                                                 |
+| code                                                      | HTTP | 条件                                                                              |
+| --------------------------------------------------------- | ---- | --------------------------------------------------------------------------------- |
+| TENANT_CODE_EXISTS / EMAIL_EXISTS / PORTAL_ACCOUNT_EXISTS | 409  | 唯一冲突或第一版门户账号已存在                                                    |
+| CURRENCY_MISMATCH                                         | 409  | 余额请求或复制来源与租户币种不符                                                  |
+| IDEMPOTENCY_CONFLICT                                      | 409  | 同租户同 key 已用于不同命令                                                       |
+| RATE_VERSION_CONFLICT                                     | 409  | 当前版本已变化、已有未来版本、时间不符合 DB 版本顺序，或与已有 effectiveFrom 重复 |
+| PREVIEW_STALE / PREVIEW_EXPIRED                           | 409  | 内容基准变化、提交时指定生效时间已过去，或预览已过期                              |
+| ALREADY_RECEIVED                                          | 409  | 已存在独立收款确认事件                                                            |
+| SELF_DISABLE / LAST_ADMIN                                 | 409  | 自停用或会导致无启用管理员                                                        |
+| CSV_INVALID                                               | 400  | 开户内 CSV 无效，带 rows 全部行错误。普通 preview 以 200 ok=false 返回同形错误    |
+| CSV_ENCODING_UNSUPPORTED                                  | 400  | 不能解码为 UTF-8 或 GBK                                                           |
+| CSV_LIMIT_EXCEEDED                                        | 413  | 文件或行数超限                                                                    |
 
 ## 流程与事务约束
 
 ### 开户与身份
 
-新租户默认 active、余额 0；overdraftLimit 未传按 CNY 100、USD 15。lowBalanceThreshold 和 emails 明确由请求给出，不猜默认收件人。数据库已有 tenants、tenant_balances、balance_alert_settings、rate_versions、rate_entries。费率表逻辑上属于租户，现 schema 没有单独的 rate_tables 实体。
+新租户默认 active、余额 0；overdraftLimit 未传按 CNY 100、USD 15。lowBalanceThreshold 由请求明确给出。[design.md §8.1](design.md#81-余额提醒按租户设置)规定通知邮箱默认只填管理人员邮箱。开户省略 emails 时服务从已认证管理员资料取得邮箱并写入设置，不能由 Zod 静态默认值猜测；显式 [] 表示无收件人。settings 更新必须提交 emails，省略不会清空。数据库已有 tenants、tenant_balances、balance_alert_settings、rate_versions、rate_entries。费率表逻辑上属于租户，现 schema 没有单独的 rate_tables 实体。
 
-开户在事务内创建首个完整版本，**不传 effectiveFrom**，让 DB now() 填写，保证 effectiveFrom <= 授权查询时的 now。blank 也创建空版本，空表授权拒绝是预期；填充 entries、CSV 或同币种 copy 后立刻授权能匹配。entries 模式给非 CSV 调用者使用；Web 的 CSV 方式提交原始文件，服务端必须独立解码、调用 parseRateCsv，不能信任浏览器解析结果。CSV 错误、币种不符、门户账号开通失败时开户整体失败。
+开户在事务内创建首个完整版本，**不传 effectiveFrom**，让 DB now() 填写，保证 effectiveFrom <= 授权查询时的 now。blank 也创建空版本，空表授权拒绝是预期；填充 entries、CSV 或同币种 copy 后立刻授权能匹配。entries 模式给非 CSV 调用者使用；Web 的 CSV 方式提交原始文件，服务端必须独立解码、调用 parseRateCsv，不能信任浏览器解析结果。CSV 错误或币种不符时租户事务整体失败。copy 由服务在事务中读取 sourceVersionId，核验其 tenant_id 等于 sourceTenantId，并核验来源与新租户币种一致；copy 联合要求两个 ID 成对存在。服务读取数据库来源元数据后再调用 adminTenantCopyConsistencySchema，refine 核验版本 ID、租户归属和币种；请求中的 UUID 本身不能证明归属。本步已实现该 refinement 与拒绝错配的测试，后续服务必须接入。
 
-可先开户再单独创建门户账号，第一版最多一个。账号初始密码可指定或由系统生成，生成密码仅创建响应返回。账号不存在时返回空 items，重置复用阶段 4 路径与 temporaryPassword DTO，撤销全部目标会话，管理员安全渠道人工交付，不写日志、不再次查询密码。停止门户账号与停止租户是不同操作，前者不影响呼叫。
+租户创建响应只返回租户，不包含门户账号。Web 在租户事务成功后调用独立门户账号创建端点，第一版最多一个。门户创建失败保留已创建租户并显示可重试的未开户状态，不声称租户和 Better Auth 用户写入原子提交。账号初始密码可指定或由系统生成，创建响应以 passwordSource 区分 generated 和 supplied，temporaryPassword 仅在 generated 分支必填，supplied 分支禁止该字段。生成密码仅创建响应返回。账号不存在时返回空 items，重置复用阶段 4 路径与 temporaryPassword DTO，撤销全部目标会话，管理员安全渠道人工交付，不写日志、不再次查询密码。停止门户账号与停止租户是不同操作，前者不影响呼叫。
 
-Better Auth 1.7.7 已由 [apps/api/package.json](../apps/api/package.json) 锁定；认证表在 auth schema，admins/portal_accounts 引用 auth_user_id，邮箱不在业务资料表。后续账号创建需设计能同时写认证与业务资料及审计的受限事务边界，不能走开放注册。现有 password reset 在认证提交之后 best-effort 写审计，这不满足本阶段“每个人工操作有日志”的完整保证，下一步需改造为同一受控事务或可恢复的审计事件交付。此步不修改认证实现。
+Better Auth 1.7.7 已由 [apps/api/package.json](../apps/api/package.json) 锁定；认证表在 auth schema，admins/portal_accounts 引用 auth_user_id，邮箱不在业务资料表。Better Auth 使用不同角色和连接，业务事务不能回滚认证写入。后续门户与管理员账号创建采用受控的分步流程，先创建 auth.user，再在业务事务关联资料并写审计；后一阶段失败时撤销或删除本次未关联认证用户作为补偿，补偿失败进入可恢复任务并禁止该用户使用业务接口。该方案仍需实现和故障测试，不能走开放注册。现有 password reset 在认证提交之后 best-effort 写审计，这不满足本阶段“每个人工操作有日志”的完整保证，下一步需改造为同一受控事务或可恢复的审计事件交付。此步不修改认证实现。
 
 ### 余额与并发
 
-命令映射 topup -> recharge，credit_topup -> credit_recharge，gift -> gift，adjustment -> adjustment。币种来自租户，提交 currency 仅作一致性核验，赠送没有独立币种。credit_topup 追加流水就形成全额 pending receivable，内部备注仅在 admin 契约存在。以后客户投影将其显示为普通 recharge / “账户充值”，不输出 internalNote、收款状态或操作人内部字段。
+命令映射 topup -> recharge，credit_topup -> credit_recharge，gift -> gift，adjustment -> adjustment。币种来自租户，提交 currency 仅作一致性核验，赠送没有独立币种。credit_topup 追加流水就形成全额 pending receivable，内部备注仅在 admin 契约存在。客户接口必须构造独立 portal projection，将其显示为普通 recharge / “账户充值”，不输出 internalNote、收款状态或操作人内部字段。noteVisibility 只是后台展示约束，不能作为客户数据过滤器。门户 operation 不得引用 admin ledger 或 receivable schema；本步契约测试检查现有门户 operation 不使用 admin schema，独立 portalLedgerEntrySchema 与 projectPortalLedgerEntry 已实现并测试，credit_recharge 投影为 recharge 且 note 为空，移除 paymentStatus、actor、noteVisibility。防泄漏 integration 测试及路由接入留待门户流水实现。
 
 adjustment 将 reason 存入 ledger.note。冲正以相反金额追加一条 adjustment，不 UPDATE/DELETE 原流水。Zod 拒绝空原因、零金额及非十进制输入，DB 保留原有不可变和 kind shape 约束。
 
-所有影响余额的写入只使用 **现有 lock_tenants 每租户事务级 advisory lock**，复用 `lockTenants` 与 `appendLedgerEntry`。不增加 advisory key、进程 mutex 或另一套分布式锁。透支额度、租户状态和费率写入也在对应租户锁保护的事务内执行；锁在任何行写入之前取得。开户先生成 UUID，再取得租户锁后写入。复制同时涉及来源/目标时一次按 ID 顺序拿齐必要租户锁。锁顺序保持 [client.ts](../packages/db/src/client.ts) 与迁移的现有约束。
+所有影响余额的写入只使用 **现有 lock_tenants 每租户事务级 advisory lock**，复用 `lockTenants` 与 `appendLedgerEntry`。不增加 advisory key、进程 mutex 或另一套分布式锁。透支额度、租户状态和费率写入也在对应租户锁保护的事务内执行；锁在任何行写入之前取得。开户先生成 UUID，再取得租户锁后写入。copy commit 的变更锁与审计 tenantId 都指向目标租户。若开户 copy 还需稳定读取来源，使用同一 lock_tenants 按 ID 顺序一次拿齐来源和目标锁，不能另建锁。锁顺序保持 [client.ts](../packages/db/src/client.ts) 与迁移的现有约束。
 
-重试只在最外层事务调用处处理可重试 DB 错误，内部服务和 appendLedgerEntry 不自行 retry。人工余额操作每个确认动作创建一个 key，重试复用。同租户同 key 同 kind/amount/currency/note/reason 返回原 ledger 与 auditId，不重复审计；载荷不同返回 IDEMPOTENCY_CONFLICT。现有 appendLedgerEntry 只核验 kind 与金额，后续余额 service 必须在持锁情况下补齐备注比较，不能把现有检查当作完整请求幂等性。流水、余额缓存触发器和审计在同事务提交。
+重试只在最外层事务调用处处理可重试 DB 错误，内部服务和 appendLedgerEntry 不自行 retry。人工余额操作每个确认动作创建一个 key，重试复用。Zod 拒绝以 call: 开头的 key，保留 Worker 的计费命名空间。同租户同 key 同 kind/amount/currency/note/reason 返回原 ledger 与 auditId，不重复审计；载荷不同返回 IDEMPOTENCY_CONFLICT。现有 appendLedgerEntry 只核验 kind 与金额，后续余额 service 必须在持锁情况下补齐备注比较，不能把现有检查当作完整请求幂等性。流水、余额缓存触发器和审计在同事务提交。
+
+开户、门户账号创建、管理员创建未设计可重放的凭据响应，客户端不能自动 retry。若响应丢失，先查询唯一编码或邮箱确认是否已成功；已成功但生成密码丢失时走现有 reset-password 恢复，重复创建返回对应唯一冲突。confirm-payment 重试返回 ALREADY_RECEIVED，客户端随后查询已收状态，不重复写 settlement。rate commit 成功后再次提交同一 preview 返回 PREVIEW_STALE，客户端查询目标版本确认结果；不承诺重放首个响应或额外审计。
+
+ledger 的 balanceAfter 定义为该租户按 occurredAt ASC、id ASC 排序后，从初始 0 到当前条目 inclusive 的 amount 累加。DB 没有 balance_after 列，服务查询计算且分页前覆盖全部先前流水。此值是确定的历史顺序累计，不保证等于管理员提交当刻看到的缓存余额，特别是同一时间戳多笔流水的 UUID 顺序。
 
 管理员同权、禁止自停用、至少一个 active 已确定。管理员停用的并发安全使用一个 SQL 事务中的既有记录行锁与二次计数，不新增业务 advisory locks。需按稳定 ID 顺序锁住当前管理员记录并验证执行者仍 active，避免两个管理员互相停用后清零。停用撤销目标会话。管理员启用、门户账号停用/启用虽在稿中出现，但未列为本次 step 1 要求的端点，需产品决定是否纳入本阶段。
 
@@ -145,19 +149,19 @@ adjustment 将 reason 存入 ledger.note。冲正以相反金额追加一条 adj
 
 单条编辑提交 baseVersionId、完整 entry、schedule。服务用完整基准版本替换这一条，构造新整表版本，保持历史话单按 answeredAt 选版本的行为。已有未来版本时沿用 DB 的单调顺序与禁止修改当前版本规则，返回 RATE_VERSION_CONFLICT，不默默覆盖已排期条目。
 
-导入 wire 为 filename + contentBase64，保留字节供 API 自动识别 UTF-8/GBK。推荐 UTF-8 fatal 解码，失败尝试 GBK fatal 解码；不能默默替换坏字节。复用 [csv.ts](../packages/rating/src/csv.ts) 处理 Unicode 文本，支持 BOM、CRLF、空行、可选首行大小写不敏感表头，禁止跨行引号和重复前缀。CSV 替换整张表，包含与旧表相同前缀是修改，不是“重复行”。
+导入 wire 为 filename + contentBase64，保留字节供 API 自动识别 UTF-8/GBK。推荐 UTF-8 fatal 解码，失败尝试 GBK fatal 解码；不能默默替换坏字节。复用 [csv.ts](../packages/rating/src/csv.ts) 处理 Unicode 文本，支持 BOM、CRLF、空行、可选首行大小写不敏感表头，禁止跨行引号和重复前缀。CSV 替换整张表，包含与旧表相同前缀是修改，不是“重复行”。parseRateCsv 成功后，开户与 preview 服务都必须再用 adminRateEntriesSchema 校验完整 entries，包括 country <= 200 的限制。后续 handler 负责把失败映射回物理行号并返回全部错误；本步只有 schema，尚未实现该解析后调用，不能声称 CSV 服务已执行此限制。
 
-preview 不写费率/流水。逐行校验有错误返回全部 line/reason 且不生成 previewId。成功保存或签发服务端可验证的不可篡改预览，绑定 actor、tenant、baseVersionId、文件摘要、完整目标 entries、schedule、expiry。暂定 15 分钟有效，不让客户端自己提交 changes/counts。commit 持租户锁重读版本、校验 preview 绑定与 expiry，再对保存的 schedule **重新调用 adminRateScheduleSchema.parse**，防止预览时合法但提交时已过期的指定时间。任何行错误或 stale 均整表不变。仅用 previewId 的 commit 请求无法自己做时间校验，该步骤是服务端对存储计划的 Zod 验证。
+preview 不写费率/流水。逐行校验有错误返回全部 line/reason 且不生成 previewId。成功保存或签发服务端可验证的不可篡改预览，绑定 actor、tenant、baseVersionId、文件摘要、完整目标 entries、schedule、expiry。暂定 15 分钟有效，不让客户端自己提交 changes/counts。commit 持租户锁重读版本、校验 preview 绑定与 expiry，再对保存的 schedule **重新调用 adminRateScheduleSchema.parse**，防止预览时合法但提交时已过期的指定时间。成功 preview 的 counts 由 changes 逐类计数，响应 schema 拒绝不一致。提交时 stored schedule 重新 parse 若已过去，映射 PREVIEW_STALE；effectiveFrom 与已有版本重复或违反版本顺序，映射 RATE_VERSION_CONFLICT，不误报只有 previewId 的请求为 VALIDATION_ERROR。任何行错误或 stale 均整表不变。仅用 previewId 的 commit 请求无法自己做时间校验，该步骤是服务端对存储计划的 Zod 验证。
 
-copy preview 对来源、目标及版本进行存在性、不同租户、同币种校验，显示目标整表的新增/修改/删除。commit 与导入使用同一校验和整表版本创建逻辑，preview 路径绑定用途，不能把 import token 当 copy token。导出按指定版本调用 formatRateCsv，返回 UTF-8 CSV 字符串、filename 和 contentType；Web 下载为文件，四位费率，表头 prefix,country,rate。导出作为人工操作也记录审计。
+copy preview 和 commit 的路径 tenantId 始终是来源租户，preview body 的 targetTenantId 是目标。服务必须验证 sourceVersionId 属于路径来源租户，再核验来源、目标存在且不同、币种一致。预览绑定 actor、sourceTenantId、sourceVersionId、targetTenantId、目标 baseVersionId、entries、schedule 和 expiry，显示目标整表的新增/修改/删除。commit 从已验证预览恢复目标 tenantId，核验路径仍匹配来源；对目标取得现有 lock_tenants 锁并重读目标版本，写目标整表和审计，AuditPayload.tenantId 为目标租户，target 指向新建的目标费率版本，content.sourceTenantId 保存来源。commit 与导入使用同一校验和整表版本创建逻辑，preview 绑定用途，不能把 import token 当 copy token。导出按指定版本调用 formatRateCsv，返回 UTF-8 CSV 字符串、filename 和 contentType；Web 下载为文件，四位费率，表头 prefix,country,rate。导出使用 POST 和 CSRF/Origin 校验，成功响应必须含 auditId；纯 GET 不能承担写审计的导出操作。
 
 ### 收款与审计
 
-confirm-payment 对 credit_recharge 追加 receivable_settlements，写 receivedOn、note、confirmedBy，唯一 ledger_entry_id 保证只能全额确认一次。余额和原 ledger 不变，不再写一笔充值。ageDays 暂按北京时间自然日差计算，30 天不高亮、31 天才高亮。CNY 与 USD 分别求和，币种筛选仍返回两键，未选币种为 0。
+confirm-payment 对 credit_recharge 追加 receivable_settlements，写 receivedOn、note、confirmedBy，received 响应保留 settlement note。日期只接受有效 YYYY-MM-DD 且不晚于当前北京时间日期；服务在事务中还必须核验 receivedOn 不早于该 credit 的北京时间日期，此跨记录规则不能仅由请求 schema 证明；received 响应 schema 也拒绝早于创建日的日期。唯一 ledger_entry_id 保证只能全额确认一次。余额和原 ledger 不变，不再写一笔充值。ageDays 暂按北京时间自然日差计算，30 天不高亮、31 天才高亮。CNY 与 USD 分别求和，币种筛选仍返回两键，未选币种为 0。
 
 `AuditAction` 包含 tenant_create/edit/disable/enable/settings_update、portal_account_create/disable/enable、reset_password、balance_topup/credit_topup/gift/adjustment、rate_entry_edit/import/export/copy、receivable_confirm、admin_create/disable/enable。reset_password 沿用已有 action 名，target kind 区分 admin/portal_account。
 
-AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action、target、details。content 含 summary、changes 和关联 ledger/version/settlement/sourceTenant ID。changes 的 field 使用白名单，支持修改前后值。调账内容必须含 reason 和 ledgerEntryId，费率批量操作包含完整变更明细，后台查询由关联版本复原。actor/time 由 session/DB 生成。严禁把原请求整体写入 details，密码、cookie、token、CSV 原始文件不得落日志。每个成功人工修改、导入、复制、收款、账号操作及显式导出都有一条日志；纯查询、预览和校验失败不算修改。失败的安全日志不伪装为成功的操作日志。操作日志页本阶段不实现。
+AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action、target、details，并以 action 为 discriminator。content 不再用一组可选字段覆盖全部操作。balance_topup、balance_credit_topup、balance_gift 必须含 ledgerEntryId、amount、currency；balance_adjustment 还必须含 reason。receivable_confirm 必须含 ledgerEntryId、settlementId、amount、currency、receivedOn。费率修改与导入必含 rateVersionId，copy 还必含 sourceTenantId 和 sourceVersionId；export 必含导出版本 ID。租户、设置和账号操作使用各自的 content 字段。changes.field 白名单包括 amount、receivedOn、code 和 currency，支持修改前后值。费率批量日志记录关联版本 ID；changes 字段不承诺已包含完整整表差异。后台查询从关联历史版本复原完整差异为后续计划，本步 schema 不能证明重建已实现。actor/time 由 session/DB 生成。严禁把原请求整体写入 details，密码、cookie、token、CSV 原始文件不得落日志。每个成功人工修改、导入、复制、收款、账号操作及显式导出都有一条日志；纯查询、预览和校验失败不算修改。失败的安全日志不伪装为成功的操作日志。操作日志页本阶段不实现。
 
 ## 验收标准对应计划测试
 
@@ -178,21 +182,25 @@ AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action�
 
 ## 需要用户决定的问题
 
-只列已核对但未定的规则。已明确的管理员同权/自停用限制、赊账形成应收、adjustment 正负、gift 使用租户币种、同币种复制、CSV UTF-8/GBK 和文件内重复拒绝、密码人工交付不重复提问。下列均不阻塞本步 schema，暂按推荐选项实现契约。涉及上限的推荐已经进入 schema，后续确认后可统一调整。
+只列已核对但未定的规则。已明确的管理员同权/自停用限制、赊账形成应收、adjustment 正负、gift 使用租户币种、同币种复制、CSV UTF-8/GBK 和文件内重复拒绝、密码人工交付不重复提问。本步可交付已列端点的 schema，但表中涉及产品范围的决定仍待用户确认；尤其不能把缺少取消未来版本端点视为已批准。涉及上限的推荐已经进入 schema，后续确认后可统一调整。
 
-| 问题与来源                                                                                                                                                                                                                                                                                        | 选项                                           | 推荐与 TODO(decision)                                                                                                                                                           | 是否阻塞契约                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| 已排期版本如何取消/修改。[pages.md §3.6](pages.md#36-费率表租户详情内的标签页)未说明冲突处理；[第二批](../design/设计系统规范确认/管理后台%20第二批.dc.html)费率页与[CSV 原型](../design/设计系统规范确认/管理后台%20CSV%20导入原型.dc.html)有“取消排定”，DB `createRateVersion` 禁止早于最新版本 | 保持顺序并拒绝当前修改；提供未来版本取消/替换  | TODO(decision) 保留现有规则，暂不提供取消端点，后续如纳入需明确保留历史和审计规则                                                                                               | 否，RATE_VERSION_CONFLICT 已定义 |
-| 首次登录必须改密。[系统与账号](../design/设计系统规范确认/管理后台%20第三批%20·%20系统与账号.dc.html) §2c/2d 要求管理员首次改密；[design.md §10](design.md#10-账号与权限)与现 auth 表/会话契约无强制状态                                                                                          | 提示自行修改；强制阻止其他功能直到改密         | TODO(decision) 推荐强制管理员首次改密，但需另一步认证状态设计；本步复用 temporaryPassword 响应，不虚构 forceChange 已生效                                                       | 否，本步无认证行为改动           |
-| 部分付款。[第二批](../design/设计系统规范确认/管理后台%20第二批.dc.html) §6c 只有整笔确认；DB receivable_settlements 唯一且无 amount；[design.md §7.2](design.md#72-流水类型)只列状态转换                                                                                                         | 全额一次确认；支持部分付款与余款               | TODO(decision) 全额确认，不传 amount；部分付款需后续迁移和账务定义                                                                                                              | 否                               |
-| 人工金额精度/上限。[design.md §12](design.md#12-时间币种与格式)规定显示两位但无人工金额限制；[pages.md §3.7](pages.md#37-余额操作对话框)明确正负但未限定精度                                                                                                                                      | 任意精确小数；只允许两位；另设业务上限         | TODO(decision) 沿用 existing moneyAmountSchema，128 字符是传输保护，无擅定业务限额                                                                                              | 否                               |
-| CSV 容量和兼容方言。[pages.md §3.6](pages.md#36-费率表租户详情内的标签页)与[第二批上传稿](../design/设计系统规范确认/管理后台%20第二批.dc.html)无大小/行数上限；[csv.ts](../packages/rating/src/csv.ts)接受可选表头/BOM/空行/尾空列，不接受多行引号                                               | 无限制；限定大小行数；严格要求表头并收紧方言   | TODO(decision) 暂定解码字节 <= 2 MiB、10000 entries；base64 长度上限 2796204，API 必须再检查实际字节。保留 rating 方言及 BOM 行号，不再写第二解析器。UTF-8/GBK 已确定，不是选项 | 否，CSV_LIMIT_EXCEEDED 已定义    |
-| 跨币种状态内顺序。[pages.md §3.3](pages.md#33-租户列表)与[第一批列表](../design/设计系统规范确认/管理后台%20第一批.dc.html)只规定不比不同币种余额                                                                                                                                                 | 状态内 CNY/USD 分组；要求先筛选币种            | TODO(decision) 状态优先，再 CNY、USD，组内余额升序，code/id 保持稳定                                                                                                            | 否                               |
-| 租户停用对已接通电话。[design.md §4.2](design.md#42-呼叫前授权)拒绝新呼叫；[租户详情](../design/设计系统规范确认/管理后台%20第三批%20·%20租户详情.dc.html)停用提示暂停呼叫，未定义踢出已接通电话                                                                                                  | 只拒绝新授权；立即断开通话                     | TODO(decision) 新授权拒绝，门户登录/会话已由阶段 4 拒绝，已接通电话按原上限结束并正常计费。不添加 FreeSWITCH 控制接口                                                           | 否                               |
-| 逾期 30 天的起算。[pages.md §3.8](pages.md#38-待收款)和[第二批 §6](../design/设计系统规范确认/管理后台%20第二批.dc.html)只有已欠天数；[design.md §12](design.md#12-时间币种与格式)规定北京时区                                                                                                    | 自然日差；满 24 小时计天                       | TODO(decision) 北京时间自然日差，严格 >30，确认后不再 overdue                                                                                                                   | 否                               |
-| 启用管理员、停用/启用门户账号的阶段范围。[plan.md 阶段 5](plan.md#阶段-5管理后台开户与资金)只列管理员停用与门户创建/重置；[pages.md §3.5](pages.md#35-租户详情)与[两份第三批稿](../design/设计系统规范确认/管理后台%20第三批%20·%20系统与账号.dc.html)展示这些操作                                | 纳入阶段 5；推迟                               | TODO(decision) 推荐后续纳入以恢复误停用账号，此步只保留 AuditAction 名，不扩展指定端点范围                                                                                      | 否                               |
-| 阈值与收件人边界。[design.md §8.1](design.md#81-余额提醒按租户设置)只称数值/多个邮箱；[租户详情设置稿](../design/设计系统规范确认/管理后台%20第三批%20·%20租户详情.dc.html)无负阈值或禁用通知规则                                                                                                 | 非负阈值且允许空邮箱；允许负阈值；独立通知开关 | TODO(decision) 非负，最多 20 邮箱，空数组表示未配置收件人，通知行为到阶段 9 再落实。preview 有效期暂定 15 分钟也是实现默认，非既定产品保证                                      | 否                               |
+| 问题与来源                                                                                                                                                                                                                                                         | 选项                                                      | 推荐与 TODO(decision)                                                                                                                                                                                                                                                                       | 是否阻塞契约                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| 已排期版本如何取消/修改。[pages.md §3.6](pages.md#36-费率表租户详情内的标签页)与[CSV 原型](../design/设计系统规范确认/管理后台%20CSV%20导入原型.dc.html)展示“取消排定”；DB guard 已允许持现有租户锁删除未来版本                                                    | 提供 cancel-future-version 端点；用户明确接受暂缺取消能力 | TODO(decision) 推荐加入 `POST T/rates/cancel-future-version`，校验版本属于目标且仍未生效，在现有 lock_tenants 下删除并审计，保留已生效历史。端点与审计 action 待用户签署范围决定后补充。暂缺取消会使误排期无法立即纠正，后续通话可能按错误费率计费，不能以 RATE_VERSION_CONFLICT 掩盖此成本 | 阻塞完整费率流程范围验收，等待用户明确签署 |
+| 租户与门户账号开户边界。Better Auth 使用独立角色和连接，租户事务无法回滚 auth.user                                                                                                                                                                                 | 分步开户并补偿未关联认证用户；跨连接原子提交另行设计      | TODO(decision) 推荐租户成功后单独创建门户账号，门户失败保留租户并允许恢复。账号 auth.user、业务关联与审计的补偿及恢复任务仍需实现，不承诺整体原子性                                                                                                                                         | 不阻塞分离后的契约，阻塞账号可靠性实现验收 |
+| 首次登录必须改密。[系统与账号](../design/设计系统规范确认/管理后台%20第三批%20·%20系统与账号.dc.html) §2c/2d 要求管理员首次改密；[design.md §10](design.md#10-账号与权限)与现 auth 表/会话契约无强制状态                                                           | 提示自行修改；强制阻止其他功能直到改密                    | TODO(decision) 推荐强制管理员首次改密，但需另一步认证状态设计；本步复用 temporaryPassword 响应，不虚构 forceChange 已生效                                                                                                                                                                   | 否，本步无认证行为改动                     |
+| 部分付款。[第二批](../design/设计系统规范确认/管理后台%20第二批.dc.html) §6c 只有整笔确认；DB receivable_settlements 唯一且无 amount；[design.md §7.2](design.md#72-流水类型)只列状态转换                                                                          | 全额一次确认；支持部分付款与余款                          | TODO(decision) 全额确认，不传 amount；部分付款需后续迁移和账务定义                                                                                                                                                                                                                          | 否                                         |
+| 人工金额精度/上限。[design.md §12](design.md#12-时间币种与格式)规定显示两位但无人工金额限制；[pages.md §3.7](pages.md#37-余额操作对话框)明确正负但未限定精度                                                                                                       | 任意精确小数；只允许两位；另设业务上限                    | TODO(decision) 沿用 existing moneyAmountSchema，128 字符是传输保护，无擅定业务限额                                                                                                                                                                                                          | 否                                         |
+| CSV 容量和兼容方言。[pages.md §3.6](pages.md#36-费率表租户详情内的标签页)与[第二批上传稿](../design/设计系统规范确认/管理后台%20第二批.dc.html)无大小/行数上限；[csv.ts](../packages/rating/src/csv.ts)接受可选表头/BOM/空行/尾空列，不接受多行引号                | 无限制；限定大小行数；严格要求表头并收紧方言              | TODO(decision) 暂定解码字节 <= 2 MiB、10000 entries；base64 长度上限 2796204，API 必须再检查实际字节。保留 rating 方言及 BOM 行号，不再写第二解析器。UTF-8/GBK 已确定，不是选项                                                                                                             | 否，CSV_LIMIT_EXCEEDED 已定义              |
+| 文本与传输保护上限。来源文档未规定这些业务上限                                                                                                                                                                                                                     | 暂定保护上限；用户确认后调整                              | TODO(decision) name 与 country 200 字符，notes 与 remark 2000，idempotencyKey 200，code 64。country 在 CSV parse 后也必须经 adminRateEntriesSchema 校验；这些是当前契约限制，不宣称既定产品规则                                                                                             | 不阻塞本步，后续服务须落实解析后校验       |
+| 跨币种状态内顺序。[pages.md §3.3](pages.md#33-租户列表)与[第一批列表](../design/设计系统规范确认/管理后台%20第一批.dc.html)只规定不比不同币种余额                                                                                                                  | 状态内 CNY/USD 分组；要求先筛选币种                       | TODO(decision) 状态优先，再 CNY、USD，组内余额升序，code/id 保持稳定                                                                                                                                                                                                                        | 否                                         |
+| 租户停用对已接通电话。[design.md §4.2](design.md#42-呼叫前授权)拒绝新呼叫；[租户详情](../design/设计系统规范确认/管理后台%20第三批%20·%20租户详情.dc.html)停用提示暂停呼叫，未定义踢出已接通电话                                                                   | 只拒绝新授权；立即断开通话                                | TODO(decision) 新授权拒绝，门户登录/会话已由阶段 4 拒绝，已接通电话按原上限结束并正常计费。不添加 FreeSWITCH 控制接口                                                                                                                                                                       | 否                                         |
+| 逾期 30 天的起算。[pages.md §3.8](pages.md#38-待收款)和[第二批 §6](../design/设计系统规范确认/管理后台%20第二批.dc.html)只有已欠天数；[design.md §12](design.md#12-时间币种与格式)规定北京时区                                                                     | 自然日差；满 24 小时计天                                  | TODO(decision) 北京时间自然日差，严格 >30，确认后不再 overdue                                                                                                                                                                                                                               | 否                                         |
+| 启用管理员、停用/启用门户账号的阶段范围。[plan.md 阶段 5](plan.md#阶段-5管理后台开户与资金)只列管理员停用与门户创建/重置；[pages.md §3.5](pages.md#35-租户详情)与[两份第三批稿](../design/设计系统规范确认/管理后台%20第三批%20·%20系统与账号.dc.html)展示这些操作 | 纳入阶段 5；推迟                                          | TODO(decision) 推荐后续纳入以恢复误停用账号，此步只保留 AuditAction 名，不扩展指定端点范围                                                                                                                                                                                                  | 否                                         |
+| 阈值与收件人边界。[design.md §8.1](design.md#81-余额提醒按租户设置)规定多个邮箱、默认只填管理人员邮箱；[租户详情设置稿](../design/设计系统规范确认/管理后台%20第三批%20·%20租户详情.dc.html)无负阈值或禁用通知规则                                                 | 非负阈值且允许空邮箱；允许负阈值；独立通知开关            | TODO(decision) 非负，最多 20 邮箱。开户省略 emails 由服务填当前管理员邮箱；显式空数组表示未配置收件人。通知行为到阶段 9 再落实。preview 有效期暂定 15 分钟也是实现默认，非既定产品保证                                                                                                      | 否                                         |
 
 ## 本步验证
 
-共享契约测试覆盖 adjustment 原因、金额符号、内部备注字段、动态时间 refinement、CSV 行错误、重复前缀、currency totals、不可编辑编码币种、独立端点表和审计必填字段。完整 `pnpm check` 的结果以本次实际运行记录为准，不把计划中的 integration 或 Playwright 测试当成已完成。
+2026-10-14 使用 Node 24.21.0 运行 `PATH=/tmp/phase-5-bin:/usr/bin:$PATH pnpm check`，退出码为 0。lint、format:check、全仓 typecheck、344 个仓库测试（另 1 个跳过）、76 个 Web 测试和 Web production build 全部通过。后台契约文件包含 36 个通过的测试。完整输出保存在 `/tmp/p5-resumed-final-check.log`。
+
+API integration、CSV handler 解析后限制、portal projection 路由接入、凭据失败补偿与 Playwright 均为计划，不能用 schema 通过代替这些行为验证。本步包含独立门户流水 schema 与投影测试，以及现有 customer operation 的 schema 图不引用 admin schema 的检查；它们不能替代后续真实门户路由防泄漏测试。收款响应测试覆盖 settlement note、已收不逾期、早于赊账日期的拒绝与北京时间日期边界。审计测试覆盖缺失 actor、occurredAt、target、content、操作专属字段，以及单独 content 联合的验证。

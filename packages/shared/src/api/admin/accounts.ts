@@ -41,11 +41,20 @@ export const adminPortalAccountCreateRequestSchema = z.strictObject({
   email: z.email(),
   initialPassword: newPasswordSchema.optional(),
 });
-export const adminPortalAccountCreateResponseSchema =
-  adminMutationResponseSchema.extend({
-    account: adminPortalAccountSchema,
-    temporaryPassword: newPasswordSchema.optional(),
-  });
+export const adminPortalAccountCreateResponseSchema = z.discriminatedUnion(
+  'passwordSource',
+  [
+    adminMutationResponseSchema.extend({
+      account: adminPortalAccountSchema,
+      passwordSource: z.literal('generated'),
+      temporaryPassword: newPasswordSchema,
+    }),
+    adminMutationResponseSchema.extend({
+      account: adminPortalAccountSchema,
+      passwordSource: z.literal('supplied'),
+    }),
+  ],
+);
 
 export type AdminAccount = z.infer<typeof adminAccountSchema>;
 export type AdminAccountsQuery = z.infer<typeof adminAccountsQuerySchema>;

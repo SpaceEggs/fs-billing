@@ -87,32 +87,46 @@ export const adminRatePreviewResponseSchema = z.discriminatedUnion('ok', [
     ok: z.literal(false),
     errors: z.array(adminCsvRowErrorSchema).min(1),
   }),
-  z.strictObject({
-    ok: z.literal(true),
-    previewId: z.uuid(),
-    expiresAt: adminTimestampSchema,
-    currency: currencySchema,
-    encoding: z.enum(['UTF-8', 'GBK']),
-    counts: z.strictObject({
-      added: z.number().int().nonnegative(),
-      modified: z.number().int().nonnegative(),
-      deleted: z.number().int().nonnegative(),
-    }),
-    changes: z.array(adminRateChangeSchema),
-  }),
+  z
+    .strictObject({
+      ok: z.literal(true),
+      previewId: z.uuid(),
+      expiresAt: adminTimestampSchema,
+      currency: currencySchema,
+      encoding: z.enum(['UTF-8', 'GBK']),
+      counts: z.strictObject({
+        added: z.number().int().nonnegative(),
+        modified: z.number().int().nonnegative(),
+        deleted: z.number().int().nonnegative(),
+      }),
+      changes: z.array(adminRateChangeSchema),
+    })
+    .refine(
+      (preview) =>
+        preview.counts.added ===
+          preview.changes.filter((change) => change.kind === 'added').length &&
+        preview.counts.modified ===
+          preview.changes.filter((change) => change.kind === 'modified')
+            .length &&
+        preview.counts.deleted ===
+          preview.changes.filter((change) => change.kind === 'deleted').length,
+      { message: '预览计数必须与变更一致' },
+    ),
 ]);
 export const adminRateImportCommitRequestSchema = z.strictObject({
   previewId: z.uuid(),
 });
-export const adminRateExportQuerySchema = z.strictObject({
+export const adminRateExportRequestSchema = z.strictObject({
   versionId: z.uuid(),
 });
-export const adminRateExportResponseSchema = z.strictObject({
-  filename: z.string().min(1),
-  encoding: z.literal('UTF-8'),
-  contentType: z.literal('text/csv'),
-  csv: z.string(),
-});
+export const adminRateExportResponseSchema = adminMutationResponseSchema.extend(
+  {
+    filename: z.string().min(1),
+    encoding: z.literal('UTF-8'),
+    contentType: z.literal('text/csv'),
+    csv: z.string(),
+  },
+);
 export const adminRateCopyPreviewRequestSchema = z.strictObject({
   sourceVersionId: z.uuid(),
   targetTenantId: z.uuid(),
@@ -143,7 +157,9 @@ export type AdminRatePreviewResponse = z.infer<
 export type AdminRateImportCommitRequest = z.infer<
   typeof adminRateImportCommitRequestSchema
 >;
-export type AdminRateExportQuery = z.infer<typeof adminRateExportQuerySchema>;
+export type AdminRateExportRequest = z.infer<
+  typeof adminRateExportRequestSchema
+>;
 export type AdminRateExportResponse = z.infer<
   typeof adminRateExportResponseSchema
 >;

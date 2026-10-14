@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import {
-  resetPasswordParamsSchema,
-  resetPasswordResponseSchema,
-} from '../auth.js';
-import { emptyRequestSchema, type ApiOperation } from '../contract.js';
+  apiContract,
+  emptyRequestSchema,
+  type ApiOperation,
+} from '../contract.js';
 import { apiErrorSchemas } from '../errors.js';
 import * as accounts from './accounts.js';
 import * as balance from './balance.js';
@@ -16,6 +16,7 @@ import {
   adminTenantParamsSchema,
 } from './common.js';
 import {
+  adminConflictCodeSchema,
   adminConflictErrorSchema,
   adminCsvInputErrorSchema,
   adminCsvLimitErrorSchema,
@@ -23,7 +24,7 @@ import {
 
 const noBody = emptyRequestSchema.optional();
 const responses = {
-  400: z.union([apiErrorSchemas.VALIDATION_ERROR, adminCsvInputErrorSchema]),
+  400: apiErrorSchemas.VALIDATION_ERROR,
   401: z.union([
     apiErrorSchemas.UNAUTHENTICATED,
     apiErrorSchemas.SESSION_EXPIRED,
@@ -34,18 +35,47 @@ const responses = {
     apiErrorSchemas.IDENTITY_UNAVAILABLE,
   ]),
   404: apiErrorSchemas.NOT_FOUND,
-  409: adminConflictErrorSchema,
-  413: adminCsvLimitErrorSchema,
   429: apiErrorSchemas.RATE_LIMITED,
   500: apiErrorSchemas.INTERNAL_ERROR,
   503: apiErrorSchemas.SERVICE_UNAVAILABLE,
 };
-function operation(
-  operationId: string,
-  method: ApiOperation['method'],
-  path: ApiOperation['path'],
-  request: ApiOperation['request'],
-  response: z.ZodType,
+const csvErrors = {
+  400: z.union([apiErrorSchemas.VALIDATION_ERROR, adminCsvInputErrorSchema]),
+  413: adminCsvLimitErrorSchema,
+};
+function conflicts<
+  const Codes extends readonly [
+    z.infer<typeof adminConflictCodeSchema>,
+    ...z.infer<typeof adminConflictCodeSchema>[],
+  ],
+>(codes: Codes) {
+  return {
+    409: adminConflictErrorSchema.extend({
+      error: adminConflictErrorSchema.shape.error.extend({
+        code: adminConflictCodeSchema.extract(codes),
+      }),
+    }),
+  };
+}
+const rateCommitErrors = conflicts([
+  'PREVIEW_STALE',
+  'PREVIEW_EXPIRED',
+  'RATE_VERSION_CONFLICT',
+]);
+function operation<
+  const Id extends string,
+  const Method extends ApiOperation['method'],
+  const Path extends ApiOperation['path'],
+  Request extends ApiOperation['request'],
+  Response extends z.ZodType,
+  const Errors extends Partial<Record<number, z.ZodType>>,
+>(
+  operationId: Id,
+  method: Method,
+  path: Path,
+  request: Request,
+  response: Response,
+  extraResponses: Errors,
 ) {
   return {
     operationId,
@@ -54,9 +84,10 @@ function operation(
     access: 'admin',
     isolationCase: 'admin-only',
     request,
-    responses: { ...responses, 200: response },
+    responses: { ...responses, ...extraResponses, 200: response },
   } as const satisfies ApiOperation;
 }
+
 const tenantRequest = {
   params: adminTenantParamsSchema,
   query: emptyRequestSchema,
@@ -80,6 +111,7 @@ export const adminApiContract = {
     '/api/admin/tenants',
     { ...globalRequest, query: tenants.adminTenantsQuerySchema },
     tenants.adminTenantsResponseSchema,
+    {},
   ),
   adminTenantCreate: operation(
     'adminTenantCreate',
@@ -87,6 +119,7 @@ export const adminApiContract = {
     '/api/admin/tenants',
     { ...globalRequest, body: tenants.adminTenantCreateRequestSchema },
     tenants.adminTenantCreateResponseSchema,
+    { ...csvErrors, ...conflicts(['TENANT_CODE_EXISTS', 'CURRENCY_MISMATCH']) },
   ),
   adminTenantDetail: operation(
     'adminTenantDetail',
@@ -94,6 +127,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}',
     tenantRequest,
     tenants.adminTenantDetailResponseSchema,
+    {},
   ),
   adminTenantEdit: operation(
     'adminTenantEdit',
@@ -101,6 +135,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/edit',
     { ...tenantRequest, body: tenants.adminTenantEditRequestSchema },
     adminMutationResponseSchema,
+    {},
   ),
   adminTenantDisable: operation(
     'adminTenantDisable',
@@ -108,6 +143,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/disable',
     tenantRequest,
     adminMutationResponseSchema,
+    {},
   ),
   adminTenantEnable: operation(
     'adminTenantEnable',
@@ -115,6 +151,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/enable',
     tenantRequest,
     adminMutationResponseSchema,
+    {},
   ),
   adminTenantOverview: operation(
     'adminTenantOverview',
@@ -122,6 +159,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/overview',
     tenantRequest,
     tenants.adminTenantOverviewResponseSchema,
+    {},
   ),
   adminTenantSettings: operation(
     'adminTenantSettings',
@@ -129,6 +167,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/settings',
     { ...tenantRequest, body: tenants.adminTenantSettingsSchema },
     adminMutationResponseSchema,
+    {},
   ),
   adminTenantLedger: operation(
     'adminTenantLedger',
@@ -136,6 +175,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/ledger',
     { ...tenantRequest, query: balance.adminLedgerQuerySchema },
     balance.adminLedgerResponseSchema,
+    {},
   ),
   adminBalanceOperation: operation(
     'adminBalanceOperation',
@@ -143,6 +183,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/balance-operations',
     { ...tenantRequest, body: balance.adminBalanceOperationRequestSchema },
     balance.adminBalanceOperationResponseSchema,
+    conflicts(['CURRENCY_MISMATCH', 'IDEMPOTENCY_CONFLICT']),
   ),
   adminPortalAccounts: operation(
     'adminPortalAccounts',
@@ -150,6 +191,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/portal-accounts',
     tenantRequest,
     accounts.adminPortalAccountsResponseSchema,
+    {},
   ),
   adminPortalAccountCreate: operation(
     'adminPortalAccountCreate',
@@ -157,20 +199,16 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/portal-accounts',
     { ...tenantRequest, body: accounts.adminPortalAccountCreateRequestSchema },
     accounts.adminPortalAccountCreateResponseSchema,
+    conflicts(['EMAIL_EXISTS', 'PORTAL_ACCOUNT_EXISTS']),
   ),
-  resetPortalAccountPassword: operation(
-    'resetPortalAccountPassword',
-    'POST',
-    '/api/admin/portal-accounts/{id}/reset-password',
-    { ...idRequest, params: resetPasswordParamsSchema },
-    resetPasswordResponseSchema,
-  ),
+  resetPortalAccountPassword: apiContract.resetPortalAccountPassword,
   adminRates: operation(
     'adminRates',
     'GET',
     '/api/admin/tenants/{tenantId}/rates',
     { ...tenantRequest, query: rates.adminRatesQuerySchema },
     rates.adminRatesResponseSchema,
+    {},
   ),
   adminRateEdit: operation(
     'adminRateEdit',
@@ -178,6 +216,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/rates/edit-entry',
     { ...tenantRequest, body: rates.adminRateEditRequestSchema },
     rates.adminRateVersionResponseSchema,
+    conflicts(['RATE_VERSION_CONFLICT']),
   ),
   adminRateImportPreview: operation(
     'adminRateImportPreview',
@@ -185,6 +224,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/rates/import/preview',
     { ...tenantRequest, body: rates.adminRateImportPreviewRequestSchema },
     rates.adminRatePreviewResponseSchema,
+    { ...csvErrors, ...conflicts(['RATE_VERSION_CONFLICT']) },
   ),
   adminRateImportCommit: operation(
     'adminRateImportCommit',
@@ -192,13 +232,15 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/rates/import/commit',
     { ...tenantRequest, body: rates.adminRateImportCommitRequestSchema },
     rates.adminRateVersionResponseSchema,
+    rateCommitErrors,
   ),
   adminRateExport: operation(
     'adminRateExport',
-    'GET',
+    'POST',
     '/api/admin/tenants/{tenantId}/rates/export',
-    { ...tenantRequest, query: rates.adminRateExportQuerySchema },
+    { ...tenantRequest, body: rates.adminRateExportRequestSchema },
     rates.adminRateExportResponseSchema,
+    {},
   ),
   adminRateCopyPreview: operation(
     'adminRateCopyPreview',
@@ -206,6 +248,7 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/rates/copy/preview',
     { ...tenantRequest, body: rates.adminRateCopyPreviewRequestSchema },
     rates.adminRatePreviewResponseSchema,
+    conflicts(['CURRENCY_MISMATCH', 'RATE_VERSION_CONFLICT']),
   ),
   adminRateCopyCommit: operation(
     'adminRateCopyCommit',
@@ -213,6 +256,12 @@ export const adminApiContract = {
     '/api/admin/tenants/{tenantId}/rates/copy/commit',
     { ...tenantRequest, body: rates.adminRateImportCommitRequestSchema },
     rates.adminRateVersionResponseSchema,
+    conflicts([
+      'PREVIEW_STALE',
+      'PREVIEW_EXPIRED',
+      'RATE_VERSION_CONFLICT',
+      'CURRENCY_MISMATCH',
+    ]),
   ),
   adminReceivables: operation(
     'adminReceivables',
@@ -220,6 +269,7 @@ export const adminApiContract = {
     '/api/admin/receivables',
     { ...globalRequest, query: receivables.adminReceivablesQuerySchema },
     receivables.adminReceivablesResponseSchema,
+    {},
   ),
   adminConfirmPayment: operation(
     'adminConfirmPayment',
@@ -227,6 +277,7 @@ export const adminApiContract = {
     '/api/admin/receivables/{id}/confirm-payment',
     { ...idRequest, body: receivables.adminConfirmPaymentRequestSchema },
     receivables.adminConfirmPaymentResponseSchema,
+    conflicts(['ALREADY_RECEIVED']),
   ),
   adminAccounts: operation(
     'adminAccounts',
@@ -234,6 +285,7 @@ export const adminApiContract = {
     '/api/admin/admins',
     { ...globalRequest, query: accounts.adminAccountsQuerySchema },
     accounts.adminAccountsResponseSchema,
+    {},
   ),
   adminAccountCreate: operation(
     'adminAccountCreate',
@@ -241,20 +293,16 @@ export const adminApiContract = {
     '/api/admin/admins',
     { ...globalRequest, body: accounts.adminAccountCreateRequestSchema },
     accounts.adminAccountCreateResponseSchema,
+    conflicts(['EMAIL_EXISTS']),
   ),
-  resetAdminPassword: operation(
-    'resetAdminPassword',
-    'POST',
-    '/api/admin/admins/{id}/reset-password',
-    { ...idRequest, params: resetPasswordParamsSchema },
-    resetPasswordResponseSchema,
-  ),
+  resetAdminPassword: apiContract.resetAdminPassword,
   adminAccountDisable: operation(
     'adminAccountDisable',
     'POST',
     '/api/admin/admins/{id}/disable',
     idRequest,
     adminMutationResponseSchema,
+    conflicts(['SELF_DISABLE', 'LAST_ADMIN']),
   ),
 } satisfies Record<string, ApiOperation>;
 export type AdminApiOperationId = keyof typeof adminApiContract;

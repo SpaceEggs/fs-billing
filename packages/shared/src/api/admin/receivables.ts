@@ -9,6 +9,15 @@ import {
   adminTimestampSchema,
 } from './common.js';
 
+function beijingDate(timestamp: number): string {
+  return new Date(timestamp + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+const receivedOnSchema = z.iso
+  .date()
+  .refine((date) => date <= beijingDate(Date.now()), {
+    message: '收款日期不能晚于当前北京时间日期',
+  });
+
 export const adminCurrencyTotalsSchema = z.strictObject({
   CNY: adminNonnegativeAmountSchema,
   USD: adminNonnegativeAmountSchema,
@@ -27,7 +36,8 @@ export const adminReceivableSchema = z
       z.strictObject({ status: z.literal('pending') }),
       z.strictObject({
         status: z.literal('received'),
-        receivedOn: z.iso.date(),
+        receivedOn: receivedOnSchema,
+        note: z.string().max(2000),
         confirmedBy: z.uuid(),
       }),
     ]),
@@ -37,6 +47,12 @@ export const adminReceivableSchema = z
       entry.overdue ===
       (entry.payment.status === 'pending' && entry.ageDays > 30),
     { message: '待收款超过 30 天才标记逾期' },
+  )
+  .refine(
+    (entry) =>
+      entry.payment.status === 'pending' ||
+      entry.payment.receivedOn >= beijingDate(Date.parse(entry.createdAt)),
+    { message: '收款日期不能早于赊账日期', path: ['payment', 'receivedOn'] },
   );
 export const adminReceivablesQuerySchema = adminPageQuerySchema.extend({
   search: z.string().max(200).optional(),
@@ -49,14 +65,14 @@ export const adminReceivablesResponseSchema = z.strictObject({
   pagination: adminPageInfoSchema,
 });
 export const adminConfirmPaymentRequestSchema = z.strictObject({
-  receivedOn: z.iso.date(),
+  receivedOn: receivedOnSchema,
   note: z.string().max(2000).default(''),
 });
 export const adminConfirmPaymentResponseSchema =
   adminMutationResponseSchema.extend({
     settlementId: z.uuid(),
     ledgerEntryId: z.uuid(),
-    receivedOn: z.iso.date(),
+    receivedOn: receivedOnSchema,
   });
 
 export type AdminCurrencyTotals = z.infer<typeof adminCurrencyTotalsSchema>;
