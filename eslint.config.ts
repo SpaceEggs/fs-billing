@@ -31,6 +31,7 @@ export default tseslint.config(
   },
   {
     files: ['.cursor/skills/verify-fs-billing/scripts/*.mjs'],
+    ignores: ['.cursor/skills/verify-fs-billing/scripts/browser-fns.mjs'],
     languageOptions: {
       globals: {
         process: 'readonly',
@@ -38,7 +39,14 @@ export default tseslint.config(
         URL: 'readonly',
         fetch: 'readonly',
         setTimeout: 'readonly',
-        // drive.mjs 仅在 page.evaluate 回调（浏览器内执行）中使用。
+      },
+    },
+  },
+  {
+    // page.evaluate 回调在浏览器内执行，只有这个文件拿浏览器全局变量、不拿 Node 的。
+    files: ['.cursor/skills/verify-fs-billing/scripts/browser-fns.mjs'],
+    languageOptions: {
+      globals: {
         document: 'readonly',
         Event: 'readonly',
         localStorage: 'readonly',

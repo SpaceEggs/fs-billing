@@ -189,6 +189,7 @@ Commit evidence only when a PR needs the proof. Every file is committable (see [
 | `launch.sh`          | `$S/launch.sh`                                                                       | Isolated stack from an empty DB; prints RUN_ID                                                     |
 | `doctor.sh`          | `$S/doctor.sh`                                                                       | Read-only health and ownership check (no login, no writes)                                         |
 | `drive.mjs`          | `$S/drive.mjs <feature\|all> [--headed]`                                             | Playwright journey and evidence for one feature, or all in turn                                    |
+| `browser-fns.mjs`    | imported by `drive.mjs`                                                              | `page.evaluate` callbacks; the only script linted with browser globals                             |
 | `api.sh`             | `$S/api.sh login <email> <jar> [--wrong]` / `$S/api.sh <METHOD> <PATH> [jar] [json]` | Redacted HTTP transcript via the web proxy                                                         |
 | `sql.sh`             | `$S/sql.sh [--value] "<sql>"` / `$S/sql.sh < file.sql`                               | psql as owner in OUR container only                                                                |
 | `with-env.sh`        | `$S/with-env.sh <command...>`                                                        | Repo CLI with the run's env, output redacted                                                       |

@@ -17,6 +17,11 @@ import {
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  dispatchVisibilityChange,
+  documentScrollWidth,
+  storedTheme,
+} from './browser-fns.mjs';
 
 const scripts = dirname(fileURLToPath(import.meta.url));
 const repo = execFileSync(
@@ -649,11 +654,7 @@ const journeys = {
           `DELETE FROM auth.session WHERE user_id = (SELECT id FROM auth."user" WHERE email='lijun@example.com') RETURNING 'revoked' AS result`,
         );
         // Stand-in for the user returning to the tab: React Query refetches on visibilitychange.
-        await page.evaluate(() =>
-          document.dispatchEvent(
-            new Event('visibilitychange', { bubbles: true }),
-          ),
-        );
+        await page.evaluate(dispatchVisibilityChange);
         const dialog = page.getByRole('dialog', {
           name: '登录已过期，请重新登录',
         });
@@ -907,8 +908,7 @@ const journeys = {
     requireUnlocked('abc001@example.com');
     const page = await newPage({ colorScheme: 'light' });
     const theme = () => page.locator('html').getAttribute('data-theme');
-    const stored = () =>
-      page.evaluate(() => localStorage.getItem('fs-billing.theme'));
+    const stored = () => page.evaluate(storedTheme);
     await loginAs(page, '/login', 'abc001@example.com');
     await expectPath(page, '/');
     await step(
@@ -963,9 +963,7 @@ const journeys = {
         await expect(
           mobile.getByRole('button', { name: '打开导航' }),
         ).toBeVisible();
-        const width = await mobile.evaluate(
-          () => document.documentElement.scrollWidth,
-        );
+        const width = await mobile.evaluate(documentScrollWidth);
         expect(width).toBeLessThanOrEqual(375);
         await aria(mobile, '03-mobile-home');
         await shot(mobile, '03-mobile-home');
