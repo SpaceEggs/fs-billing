@@ -1094,17 +1094,14 @@ describe('Worker HTTP 与真实数据库', () => {
       ).rows,
     ).toEqual([{ callee: '+447700900123', billing_number: '447700900123' }]);
     const rejected = randomUUID();
-    expect(
-      (
-        await post(
-          body(tenant.code, rejected, {
-            destination_number: 'billing-bridge',
-            billing_dialed_number: '+447700900123',
-            billing_number: '8613800138000',
-          }),
-        )
-      ).json(),
-    ).toMatchObject({ status: 'unassigned' });
+    const rejectedBody = body(tenant.code, rejected, {
+      destination_number: 'billing-bridge',
+      billing_dialed_number: '+447700900123',
+      billing_number: '8613800138000',
+    });
+    expect((await post(rejectedBody)).json()).toMatchObject({
+      status: 'unassigned',
+    });
     expect(
       (
         await owner.pool.query(
@@ -1124,6 +1121,17 @@ describe('Worker HTTP 与真实数据库', () => {
       unassigned: 1,
       charges: 0,
       jobs: 0,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          'select kind from system_alerts where description = $1',
+          [`${rejected}: 计费号码不一致`],
+        )
+      ).rows,
+    ).toEqual([{ kind: 'cdr_failed' }]);
+    expect((await post(rejectedBody)).json()).toMatchObject({
+      status: 'duplicate',
     });
     expect(
       (

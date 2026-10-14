@@ -131,7 +131,7 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 **计费系统的判断逻辑**：
 
-0. 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber`。从原始拨号归一化，核验 `callee` 和可选投影。格式错误返回 HTTP 400，使用 SIP 484；号码不一致单独记录错误并返回 HTTP 400 `{"error":"授权计费号码不一致"}`，Lua 返回 SIP 503 与 `CALL_REJECTED`，不降级、不桥接。此路径不访问数据库、不写入、不加锁。
+0. 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber`。从原始拨号归一化，核验 `callee` 和可选投影。格式错误返回 HTTP 400，使用 SIP 484；号码不一致单独记录错误并返回 HTTP 400 `{"error":"授权计费号码不一致"}`，Lua 返回 SIP 503（CDR `hangup_cause=NORMAL_TEMPORARY_FAILURE`），不降级、不桥接。此路径不访问数据库、不写入、不加锁。
 1. 租户不存在或已停用 → 拒绝
 2. `billing_number` 匹配不到费率 → 拒绝
 3. 可用金额 = 余额 + 透支额度
