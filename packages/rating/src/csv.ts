@@ -12,6 +12,7 @@ export type CsvResult<C extends Currency> =
   | { readonly ok: false; readonly errors: readonly CsvError[] };
 
 const HEADER = ['prefix', 'country', 'rate'];
+const HEADER_ALIASES = [HEADER.join(','), '前缀,国家,费率'];
 const PREFIX = /^\d+$/;
 const RATE_TEXT = /^-?\d+(?:\.\d+)?$/;
 
@@ -64,6 +65,8 @@ export function parseRateCsv<C extends Currency>(
     const line = index + 1;
     if (raw.trim() === '') return;
     const fail = (reason: string) => errors.push({ line, reason });
+    const isFirst = first;
+    first = false;
 
     const split = splitRow(raw);
     if (typeof split === 'string') return fail(split);
@@ -71,9 +74,13 @@ export function parseRateCsv<C extends Currency>(
     while (cells.length > 3 && cells.at(-1) === '') cells.pop();
 
     const isHeader =
-      first && cells.map((c) => c.toLowerCase()).join(',') === HEADER.join(',');
-    first = false;
+      isFirst &&
+      HEADER_ALIASES.includes(cells.map((c) => c.toLowerCase()).join(','));
     if (isHeader) return;
+    const prefixCell = cells[0] ?? '';
+    if (isFirst && /^\D*\p{L}/u.test(prefixCell)) {
+      return fail('表头无法识别');
+    }
 
     if (cells.length !== 3) return fail(`应为 3 列，实际 ${cells.length} 列`);
     const [prefix, country, rateText] = cells as [string, string, string];

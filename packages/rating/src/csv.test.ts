@@ -139,3 +139,42 @@ test('prefix starting with 00 is rejected with line number', () => {
     errors: [{ line: 3, reason: '前缀不能以 00 开头（国际冠字应去掉）：0044' }],
   });
 });
+
+test('Chinese header preserves the rating dialect and physical error lines', () => {
+  const text = '\uFEFF\n 前缀,国家,费率,,\r\n44,"英国,本土",0.0400,,\r\n';
+  const parsed = parseRateCsv(text, 'CNY');
+  expect(parsed.ok).toBe(true);
+  if (!parsed.ok) return;
+  expect(formatRateCsv(parsed.entries)).toBe(
+    'prefix,country,rate\n44,"英国,本土",0.0400\n',
+  );
+  expect(parseRateCsv(text + '44,重复,0.01\n', 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 4, reason: '前缀 44 与第 3 行重复' }],
+  });
+  expect(parseRateCsv('44,英国,0.04\n前缀,国家,费率', 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 2, reason: '前缀只能是数字：前缀' }],
+  });
+});
+
+test.each([
+  '前缀,国家/地区,费率',
+  '前缀,国家,费率(元/分钟)',
+  '前缀，国家，费率',
+  'prefix，country，rate',
+  'prefix,country,price',
+  '前缀编号,国家,费率',
+])('near-miss header %s reports its physical line', (header) => {
+  expect(parseRateCsv(`\uFEFF\n\n${header}\n44,英国,0.04`, 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 3, reason: '表头无法识别' }],
+  });
+});
+
+test('malformed numeric prefixes remain data errors on the first row', () => {
+  expect(parseRateCsv('44a,英国,0.04', 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 1, reason: '前缀只能是数字：44a' }],
+  });
+});
