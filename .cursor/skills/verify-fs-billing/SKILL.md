@@ -75,18 +75,18 @@ Before it opens a browser, each journey waits until 61 s have passed since the r
 
 Each journey runs headless Chromium (`locale zh-CN`, `Asia/Shanghai`) against the run's web origin. It prints a step table and exits `0` on PASS, `1` on FAIL, or `2` on BLOCKED (precondition missing; the reason is printed). Journeys use only ARIA roles and names taken from `apps/web/src`:
 
-| UI | Handle |
-| --- | --- |
-| Login form | `getByLabel('登录邮箱')`, `getByLabel('密码', { exact: true })`, `getByRole('button', { name: '登录', exact: true })` |
-| Login headings | portal `heading '登录'`, admin `heading '登录管理后台'`; admin page also shows `客户请使用客户门户登录` |
-| Login problems | `getByRole('alert')`: `登录邮箱或密码错误` / `请检查后重新输入`; `登录失败次数过多，已暂时锁定` + `请在 M分SS秒 后重试` (also the disabled submit button's name); `该账号已停用` / `如需恢复使用，请联系客服` |
-| Expired banner | `getByRole('status')`: `登录已过期，请重新登录` · `登录后将返回之前的页面` (on `?reason=expired`) |
-| Expired dialog | `getByRole('dialog', { name: '登录已过期，请重新登录' })` → `button '重新登录'` |
-| Portal home | `heading '首页'`, crumb text `ABC001 · 深圳市某某科技有限公司`, `getByRole('region', { name: '当前余额' })` → `-¥35.20` |
-| Admin home | `heading '概览'`, text `欢迎，王敏。…`, `html[data-product=admin]` |
-| Shell (desktop) | `button '主题'` (◐) → `menuitemradio '浅色' / '深色' / '跟随系统'`; `button '账号菜单'` → `menu` → `menuitem '退出登录'`; `navigation '主导航'` |
-| Shell (mobile < 768px) | `button '打开导航'` → `dialog '导航'`; `button '账号菜单'` → `dialog '账号菜单'` with `radiogroup '主题'` and `button '退出登录'` |
-| 404 | `heading '找不到这个页面'`, `link '返回首页'`; admin, in the shell: `返回首页即回到「概览」` |
+| UI                     | Handle                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login form             | `getByLabel('登录邮箱')`, `getByLabel('密码', { exact: true })`, `getByRole('button', { name: '登录', exact: true })`                                                                                         |
+| Login headings         | portal `heading '登录'`, admin `heading '登录管理后台'`; admin page also shows `客户请使用客户门户登录`                                                                                                       |
+| Login problems         | `getByRole('alert')`: `登录邮箱或密码错误` / `请检查后重新输入`; `登录失败次数过多，已暂时锁定` + `请在 M分SS秒 后重试` (also the disabled submit button's name); `该账号已停用` / `如需恢复使用，请联系客服` |
+| Expired banner         | `getByRole('status')`: `登录已过期，请重新登录` · `登录后将返回之前的页面` (on `?reason=expired`)                                                                                                             |
+| Expired dialog         | `getByRole('dialog', { name: '登录已过期，请重新登录' })` → `button '重新登录'`                                                                                                                               |
+| Portal home            | `heading '首页'`, crumb text `ABC001 · 深圳市某某科技有限公司`, `getByRole('region', { name: '当前余额' })` → `-¥35.20`                                                                                       |
+| Admin home             | `heading '概览'`, text `欢迎，王敏。…`, `html[data-product=admin]`                                                                                                                                            |
+| Shell (desktop)        | `button '主题'` (◐) → `menuitemradio '浅色' / '深色' / '跟随系统'`; `button '账号菜单'` → `menu` → `menuitem '退出登录'`; `navigation '主导航'`                                                               |
+| Shell (mobile < 768px) | `button '打开导航'` → `dialog '导航'`; `button '账号菜单'` → `dialog '账号菜单'` with `radiogroup '主题'` and `button '退出登录'`                                                                             |
+| 404                    | `heading '找不到这个页面'`, `link '返回首页'`; admin, in the shell: `返回首页即回到「概览」`                                                                                                                  |
 
 Theme state is `html[data-theme]` plus `localStorage['fs-billing.theme']`. The zone is `html[data-product]`.
 
@@ -121,15 +121,15 @@ $S/with-env.sh pnpm --filter @fs-billing/api auth:bootstrap --kind portal --prof
 
 Seeded accounts (from `packages/db/src/seed.ts`; all use `SEED_AUTH_PASSWORD`):
 
-| Account | Role in journeys |
-| --- | --- |
-| `abc001@example.com` | ABC001, CNY, balance −35.20: main customer |
-| `glb009@example.com` | GLB009, USD, −15.02: second tenant (B) |
-| `hzx014@example.com` | HZX014: lockout target |
-| `cdt018@example.com` | CDT018: tenant `disabled` |
-| `wangmin@example.com` | admin 王敏 |
-| `lijun@example.com` | admin 李俊: session revocation |
-| `bjh003@example.com` | reserved for launch and doctor |
+| Account               | Role in journeys                           |
+| --------------------- | ------------------------------------------ |
+| `abc001@example.com`  | ABC001, CNY, balance −35.20: main customer |
+| `glb009@example.com`  | GLB009, USD, −15.02: second tenant (B)     |
+| `hzx014@example.com`  | HZX014: lockout target                     |
+| `cdt018@example.com`  | CDT018: tenant `disabled`                  |
+| `wangmin@example.com` | admin 王敏                                 |
+| `lijun@example.com`   | admin 李俊: session revocation             |
+| `bjh003@example.com`  | reserved for launch and doctor             |
 
 ## Evidence
 
@@ -184,17 +184,17 @@ Commit evidence only when a PR needs the proof. Every file is committable (see [
 
 ## Helpers
 
-| Script | Invocation | Purpose |
-| --- | --- | --- |
-| `launch.sh` | `$S/launch.sh` | Isolated stack from an empty DB; prints RUN_ID |
-| `doctor.sh` | `$S/doctor.sh` | Read-only health and ownership check (no login, no writes) |
-| `drive.mjs` | `$S/drive.mjs <feature\|all> [--headed]` | Playwright journey and evidence for one feature, or all in turn |
-| `api.sh` | `$S/api.sh login <email> <jar> [--wrong]` / `$S/api.sh <METHOD> <PATH> [jar] [json]` | Redacted HTTP transcript via the web proxy |
-| `sql.sh` | `$S/sql.sh [--value] "<sql>"` / `$S/sql.sh < file.sql` | psql as owner in OUR container only |
-| `with-env.sh` | `$S/with-env.sh <command...>` | Repo CLI with the run's env, output redacted |
-| `selftest-redact.sh` | `$S/selftest-redact.sh` | Offline self-test of `verify_redact`; exit 1 on any leak |
-| `cleanup.sh` | `$S/cleanup.sh` | Kill our process groups, remove our container, keep evidence; exit 1 and keep state on any failure |
-| `lib.sh` | sourced | Run resolution, redaction, leak scan, ownership checks |
+| Script               | Invocation                                                                           | Purpose                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `launch.sh`          | `$S/launch.sh`                                                                       | Isolated stack from an empty DB; prints RUN_ID                                                     |
+| `doctor.sh`          | `$S/doctor.sh`                                                                       | Read-only health and ownership check (no login, no writes)                                         |
+| `drive.mjs`          | `$S/drive.mjs <feature\|all> [--headed]`                                             | Playwright journey and evidence for one feature, or all in turn                                    |
+| `api.sh`             | `$S/api.sh login <email> <jar> [--wrong]` / `$S/api.sh <METHOD> <PATH> [jar] [json]` | Redacted HTTP transcript via the web proxy                                                         |
+| `sql.sh`             | `$S/sql.sh [--value] "<sql>"` / `$S/sql.sh < file.sql`                               | psql as owner in OUR container only                                                                |
+| `with-env.sh`        | `$S/with-env.sh <command...>`                                                        | Repo CLI with the run's env, output redacted                                                       |
+| `selftest-redact.sh` | `$S/selftest-redact.sh`                                                              | Offline self-test of `verify_redact`; exit 1 on any leak                                           |
+| `cleanup.sh`         | `$S/cleanup.sh`                                                                      | Kill our process groups, remove our container, keep evidence; exit 1 and keep state on any failure |
+| `lib.sh`             | sourced                                                                              | Run resolution, redaction, leak scan, ownership checks                                             |
 
 Typical loop:
 

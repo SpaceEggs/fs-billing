@@ -30,6 +30,22 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    files: ['.cursor/skills/verify-fs-billing/scripts/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        // drive.mjs 仅在 page.evaluate 回调（浏览器内执行）中使用。
+        document: 'readonly',
+        Event: 'readonly',
+        localStorage: 'readonly',
+      },
+    },
+  },
+  {
     files: [
       'packages/rating/**/*.ts',
       'packages/db/**/*.ts',

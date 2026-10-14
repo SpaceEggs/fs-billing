@@ -10,6 +10,7 @@ docs/plan.md
 docs/freeswitch.md
 
 artifacts/verify/
+docs/evidence/verify-fs-billing/
 .audit/
 apps/web/test-results/
 apps/web/playwright-report/
