@@ -1,91 +1,78 @@
-The blast-radius pass is done. I'm waiting on the four reviewers (Opus, the session model standing in for Fable, Sonnet, Haiku) before I put together the findings.
+Three reviewers (Opus, the Opus fallback for Fable, and Haiku) are still running. I'll merge their findings when they finish.
 
-Reviewer C is back. Old Lua that gets a 484 from the new worker fails closed with a 503, so C's finding 8 is only a nit. Still waiting on A, B and D.
+Still waiting on the Haiku reviewer. Everything else has been checked and merged into the draft.
 
-B and D are back. D refused a stray plan-file instruction it picked up from a tool result, which was the right call for a read-only reviewer. Waiting on Reviewer A (Opus).
+I found one blocking problem, five should-fix items and seven minor ones, so the branch isn't ready to merge yet. No repo files were edited. The unit tests on HEAD pass (155/155); I didn't run the DB tests or the migrations, because those need docker. The Fable reviewer couldn't run (no usage credits), so a second Opus reviewer took its place alongside Opus, Sonnet and Haiku.
 
-# Review of `dial-number-format` against `main` (commit 18e95fa)
+## BLOCKING
 
-I didn't edit any repo files; the only file I wrote is the review summary in the plan file. I ran pstack interrogate with four reviewers and a blast-radius pass. The reviewers were A (Opus), B, C (Sonnet) and D (Haiku). B was meant to run on Fable, but the account has no usage credits for that model, so it ran on the session model instead. Blast-radius edge cases were checked by running the real `packages/rating/src/dialed.ts` under node.
-
-**Verdict: nothing is BLOCKING; six findings are SHOULD FIX.** The core spec holds:
-
-- **Bridge:** it uses the original number (`${billing_destination}` is the unmodified `destination_number`).
-- **Billing number:** it is separate, and the 15-digit limit applies only to it.
-- **484:** used for routes that aren't safe to bridge.
-- **One function:** `resolveBillingNumber` serves both `/authorize` and CDR ingest.
-- **Phase-2 rules:** ingest still runs `lockTenants` first, adds no partition creation, keeps retries at the outer layer, and uses decimal.js.
-- **Lua checks:** `'86' .. gsub(...)` correctly keeps only the first return value, and `(?![\s\S])` is a strict end anchor in PCRE.
+**B1. CDRs for calls the dialplan rejects now look like old-format CDRs.** Location: `freeswitch/dialplan/billing.xml:6-12`, `packages/shared/src/worker.ts:71,134`. Found by both Opus reviewers; I confirmed it in the code.
+- **How it happens:** when the dialed number fails `^\+?[0-9]{1,17}$` (for example `138|evil`, an empty number, or 18+ digits), the `<anti-action>` responds 484 before `billing_authorize.lua` runs. So `billing_dialed_number` is never set.
+- **On main:** a fallback to `destination_number` parked these as `号码格式错误` with the call UUID, so repeated pushes were caught as duplicates.
+- **On HEAD:** they go down the validation-failure path as `话单校验失败: …` with no call UUID. Every replay of the retry or archive file adds another pending row and another alert.
+- So the fallback that was removed was not only there for legacy CDRs. The integration test's `bad` case (`freeswitch/test/run-integration.sh:275`) hides this because it accepts either `call_uuid` or `raw_id`.
+- **Fix:**
+  1. In `billing.xml`, set `billing_dialed_number=${destination_number}` before the `lua` action and as the first `<anti-action>`.
+  2. Make the `bad` case require `reason='号码格式错误' AND call_uuid IS NOT NULL AND billing_number IS NULL`.
+  3. Add a DB test that posts a CDR with `billing_dialed_number: '138|evil'`.
 
 ## SHOULD FIX
 
-1. **The migration scans every `cdrs` partition while holding an exclusive lock.** Location: `packages/db/migrations/0003_billing_number.sql:2-6`. Raised by A, B and D; I confirmed it only by reading the code (no test run).
-   - `ADD COLUMN … CHECK (…)` makes Postgres check every existing row, even though they are all NULL. `cdrs` is partitioned by `started_at`.
-   - Step 1 of the rollout runs this while workers are live, so CDR ingest and `chargeCdr` wait behind it.
-   - Migration `0002` already uses `NOT VALID` to avoid exactly this.
-   - **Fix:** add the column with no constraint. Then `ADD CONSTRAINT … CHECK (…) NOT VALID` and `VALIDATE CONSTRAINT` as separate statements, with `SET lock_timeout`. Check that your Postgres version allows `NOT VALID` on a partitioned parent; if not, add it per partition.
+**S1. The Drizzle `check()` SQL is broken.** Location: `packages/db/src/schema.ts:166-170, 212-221`.
+- The quote is never closed. Rendering it through Drizzle gives `... ~ '^[1-9][0-9]{5,14}$` with no closing `'`.
+- No other table in `schema.ts` uses `check()`; this repo keeps constraints in the SQL migrations only.
+- **Fix:** delete the three `check()` blocks and the `check` import. If you'd rather keep them, add the closing quote.
 
-2. **New Lua with an old worker silently mis-rates domestic calls.** Location: `freeswitch/scripts/billing_authorize.lua:100`. Raised by all four reviewers.
-   - New Lua sends the raw `callee=13800138000`. The old worker accepts it and authorizes it against the NANP `1` rate. Its reply has no `billingNumber`, so the mismatch check is skipped and the call goes through.
-   - The deploy order is enforced only by wording in the docs.
-   - **Fix:** in the allow branch, treat a missing `billingNumber` like a mismatch (respond 503). Any worker that understands `dialedNumber` always sends it back (`app.ts:87`), so a wrong deploy order fails closed.
-   - Optionally, also have Lua send `callee = billing_number` and `dialedNumber = destination`, so an old worker rates correctly during a rollback.
+**S2. Migration 0004 fails on a populated DB that is already at 0003, and nothing says so.**
+- On a fresh DB it applies cleanly.
+- At 0003 it aborts if there are NULL `cdrs.billing_number` values (error 23502), 1–5 digit numbers (0003 allowed those), or older `unassigned_cdrs` rows with NULL and a reason like `租户不存在`.
+- Your evidence files show the DB was wiped first (50 cdrs → 0).
+- **Fix:** add one line to `docs/design.md` §4.2 and `docs/worker-api.md` saying dev and integration DBs must be reset before 0004. Optionally start the migration with a `DO $$ … RAISE EXCEPTION 'reset DB' $$` guard.
 
-3. **A CDR with no marker is read as legacy, so CDRs from new Lua can get a fake `billing_number`.** Locations: `billing_authorize.lua:38,51-58` and `packages/rating/src/dialed.ts:35-41`. Raised by A and C; I proved it by running the code.
-   - New Lua returns before it sets `billing_dialed_number` in three cases: the session isn't ready, the number gets a 484, or the script fails to load.
-   - Those CDRs carry the raw `destination_number` and are parsed as already-international. `resolveBillingNumber({callee:'12345678901234'})` returned `12345678901234`, a 14-digit domestic number that Lua rejected because `86` + 14 digits is over 15. The row lands in `cdrs` with a NANP-looking `billing_number`.
-   - The calls are unanswered, so nothing is charged, but the stored value is wrong.
-   - **Fix:** set `billing_dialed_number` (or a `billing_protocol=2` variable) right after line 40, before any validation. Such CDRs then take the new path and are parked. Add a test for a marker-less CDR from new Lua.
+**S3. The new mismatch row in the SIP table is wrong.** Location: `docs/freeswitch.md:52`.
+- When the Worker detects a mismatch it returns HTTP 503 (`app.ts:73-78`).
+- Lua treats a 503 as "no response" and lets the call through for 1800 seconds as unverified (`billing_authorize.lua:97,117`). The CDR is then parked and never billed.
+- SIP 503 only happens when Lua itself finds a mismatch in a 200 response.
+- **Fix:** correct the table row. Letting the call through on a Worker-detected mismatch already happens on main; making it reject the call is a separate follow-up.
 
-4. **The legacy path accepts less than `main` did, and old Lua turns 484 into 503.** Locations: `dialed.ts:9` and `apps/worker/src/app.ts:19,73`. Raised by A, B and C; I checked the old fallback code on `main`.
-   - Old Lua sends landline numbers like `075586001234` unchanged. `main` answered 404 (no rate). The new worker's legacy parse needs a first digit of 1–9, so it answers 400 with `sipCode:484`.
-   - Old Lua's `sip_codes` table has no 484. It falls to the `status == 400` branch, logs a config error, and responds 503 on every landline call during the rollout window.
-   - This contradicts the docs' claim that the new worker accepts old requests unchanged.
-   - **Fix:** when `dialedNumber` is absent, return `sipCode: 400`. Also document that leading-`0` legacy numbers are now a format error rather than "no rate".
+**S4. Legacy wording is still in the docs.**
+- `docs/design.md:128` (§4.2): "新协议以 `dialedNumber` 区分原始拨号和旧版已规范化号码". Delete the sentence.
+- `docs/design.md:163`:
+  - Change "优先使用 `billing_dialed_number`" to "使用".
+  - Change "号码格式无效时该列为 NULL" to "号码格式错误或话单校验失败时为 NULL".
+- `docs/worker-api.md:83`: "`destination_number` 只保留在原文中" is untrue for validation failures, because `invalid-cdr.ts:15` still falls back to it for display. Say so in that line.
+- `docs/worker-api.md:88`: change "旧格式话单" to "缺少 `billing_dialed_number` 的话单".
+- `docs/freeswitch.md` and `freeswitch/README.md` have no leftover rollout text. One caveat: README line 26 ("提前退出或校验失败的话单也保留原始拨号") is only true once B1 is fixed.
 
-5. **Rate prefixes that start with `0`, or domestic prefixes without `86`, will never match after cutover.** Locations: `packages/db/migrations/0000_init.sql:97` and `packages/rating/src/csv.ts:82`. Raised by A.
-   - Billing numbers can no longer start with `0`, and domestic numbers now carry `86`. Any tenant pricing domestic calls under `0755…` or `138…` gets "no rate" (SIP 404) on every domestic call.
-   - **Fix:** before rolling out FreeSWITCH, list every effective `rate_entries.prefix` that matches `^0` or looks domestic without `86`. Tighten the CSV import and the DB CHECK to `^[1-9][0-9]*$` for new versions.
-
-6. **A projection mismatch parks an answered call as a format error and throws away the computed number.** Locations: `dialed.ts:32-45` and `apps/worker/src/ingest.ts:137`. Raised by B and C.
-   - `resolveBillingNumber` returns `undefined` in three cases: a bad number, `callee ≠ dialedNumber`, or a Lua projection that doesn't match.
-   - All three are parked as `号码格式错误` (number format error) with `billing_number = NULL`. A Lua/worker version skew therefore looks exactly like a customer typo, and the correct billing number is lost.
-   - **Fix:** return a tagged result: `{ok, billing} | {error: 'format' | 'mismatch'}`. Park mismatches under their own reason, store the number the worker computed, and alert.
+**S5. The verify-skill docs describe the old authorize request.** Location: `apps/web/.agents/skills/verify/features/worker-authorize.md:9-10,16` and `worker-api.md:8`.
+- They tell you to POST `{tenant, callee, uuid}`, which now returns 400/484.
+- They also say `+` and `00` numbers are rejected and that FreeSWITCH "normalizes the destination". Neither is true now.
+- **Fix:** add `dialedNumber` to the request shape and correct those two lines.
 
 ## MINOR
 
-- **`authorizeRaw` is dead code.** Location: `packages/rating/src/authorize.ts:66-73` (all four reviewers). It has no production caller and is a second parse entry point. Delete it and move its tests onto `resolveBillingNumber`.
-- **The billing-number regex is duplicated.** Location: `packages/shared/src/worker.ts:5`. It repeats `parseDialedNumber`'s regex; use `z.string().refine(s => parseDialedNumber(s) !== undefined)`. Plain `$` is already strict in JS, so the `(?![\s\S])` lookahead is redundant there.
-- **There is no minimum number length.** Location: `dialed.ts:15-22` and `billing_authorize.lua:48`. I ran the code: dialing `0` gives `86`, and `1` gives `861`. Both are authorized at the China rate and the carrier receives `0`. `+1` and `0044` work the same way, per D. **Fix:** require at least N subscriber digits after the country code, in TS and Lua, with tests.
-- **Some doc wording is wrong or ambiguous.**
-  - `docs/design.md:165` says old-protocol `callee` "已是国际号码" (is already an international number). That's false for domestic traffic from old Lua, which arrives as `13800138000` and still rates as NANP `1` during the rollout window. Say so.
-  - `design.md:175`: "清空" (clear) can be read as "delete". Use "回放并确认处理完成" (replay and confirm processed).
-- **The Lua reassignment on line 106 is redundant.** Location: `billing_authorize.lua:106`. After the mismatch check it can only produce `billing_number`, so drop it. Document the 503-on-mismatch in `freeswitch/README.md`.
-- **Seeded CDRs leave `billing_number` NULL.** Location: `packages/db/src/seed.ts:592-597`. They are rated, so set `billingNumber: dialed`.
-- **Two smaller cleanups in `ingest.ts`.** The `...cdr` spread carries the unverified `billingNumber`, which is overwritten only because of property order; build the insert explicitly. Separately, `apps/worker/src/app.db.test.ts` has grown from 947 to 1102 lines, so move the new cases to `app.dialed.db.test.ts`.
-- **Run logs are committed.** `docs/evidence/dial-number-format/new-tests-on-main.txt` is a 446-line log; keep a summary. The untracked `claude-review-1.md` is empty, so don't commit it by accident.
-- **Tests are missing for:**
-  - a marker-less CDR from new Lua
-  - an old-form domestic or leading-`0` CDR
-  - edge numbers such as `0`, `+1` and `0044`
-  - a mixed-rollout matrix of old and new forms against one handler
+- **M1. The 0004 CHECK depends on reason text written in several places** (`ingest.ts:95,137-145`, `0004:17-19`, `cdrs.db.test.ts`).
+  - Every reason the code produces today satisfies the CHECK.
+  - But renaming one of them in only one place makes inserts fail (23514). The Worker then returns 503 and FreeSWITCH retries forever.
+  - **Fix:** export `号码格式错误` and the `话单校验失败: ` prefix as constants and use them in `ingest.ts` and the tests.
+- **M2. The seed data still uses the legacy shape** (`packages/db/src/seed.ts:341-380,579-587`).
+  - `callee` holds already-normalized numbers. Treated as a dialed number, `447700900123` would normalize to `86447700900123`.
+  - It also uses the reason `找不到租户`, which no code produces.
+  - **Fix:** store real dialed forms, derive the billing number with `normalizeDialedNumber`, and use `租户不存在`.
+- **M3. Unused fields:** `destination_number` at `worker.ts:70,89` is parsed but never read. The fixture at `app.db.test.ts:200-215` still sets it up. Remove both.
+- **M4. A deleted test wasn't legacy-only.** The "early return" test covered the domestic overflow `12345678901234`. Add that value to the list at `app.db.test.ts:298`.
+- **M5. 0004 adds its CHECKs without `NOT VALID` + `VALIDATE`**, unlike 0003. That's harmless before production, but worth matching 0003.
+- **M6. The test name `新协议 %s …`** at `app.db.test.ts:969` still says "新协议".
+- **M7. No Lua test covers removing 400 from `sip_codes`** (`billing_authorize.lua:12`). Optionally add the case HTTP 400 with `sipCode:400` → respond 503.
 
-**Dismissed:**
+## Answers to your specific questions
+- **Authorize without `dialedNumber`:** there is a behaviour test (`apps/worker/src/app.test.ts:60,62-63`). It asserts HTTP 400 and `{allowed:false, reason:'号码格式错误', sipCode:484}` without touching the DB, and it passes.
+- **Reason-coupled CHECK:** it matches every reason the code produces today, but it breaks easily (M1). On a DB at 0003 with existing rows it fails (S2).
+- **Things you wanted kept:** all intact.
+  - `resolveBillingNumber` is still the one function for both authorize (`app.ts:71`) and CDRs (`ingest.ts:106`).
+  - Lua passes the dialed number through unchanged.
+  - The 484 bridge check, the 6–15 digit rule and mismatch detection are still there and tested.
+  - Ledger notes now have one format.
+- **Project rules:** no new locks, `lock_tenants` still comes before writes, no partition creation on the write path, and money still goes through decimal.js. Nothing else in the api or web apps reads `callee` or `billing_number`.
 
-- Rewriting `destination_number` back to the billing value (D): this breaks the spec's rule that the bridge uses the original number.
-- "Rollout wording is inconsistent" (D): "作为一组逐台" means "as a set, one machine at a time", which is consistent.
-- Manual claim SQL that omits `billing_number` (D): that file is phase-2 acceptance evidence, not a procedure. Any future claim path must still copy `billing_number`.
-- PII in ledger notes (C): the spec asks for the normalized number in the ledger.
-
-## Data migration concerns for existing CDRs
-
-- **`callee` changes meaning at cutover.** Old rows hold the stripped number (`447700900123`); new rows hold the raw dial (`+447700900123`, `0755…`). Reports and groupings on `callee` will split. Readers must use `COALESCE(billing_number, callee)`, and even that compares different number spaces for mis-rated old rows.
-- **Historical domestic calls were mis-rated.** On `main`, a bare `13800138000` was rated on prefix `1` (NANP), and those charges are already in the ledger. The design says "不重算" (no re-rating), but nothing marks those rows.
-  - B says `raw_cdrs.payload->callflow->caller_profile` might help identify them; that isn't verified.
-  - Old-Lua traffic during the rollout window and old retry files replayed later are mis-rated the same way. **Fix:** keep the window short and drain retry files before cutover.
-- **There's no backfill.** `billing_number` stays NULL on history. A safe optional backfill is `billing_number = callee WHERE callee ~ '^[1-9][0-9]{0,14}$'` for rows received before cutover. It copies the old meaning, including the mis-rating, so tag those rows.
-- **NULL means two things in `unassigned_cdrs.billing_number`.** On old rows it means "callee is already normalized"; on new rows it means "invalid or mismatched, and callee is raw".
-  - Old-form rows with a leading `0` would now fail if reprocessed.
-  - **Fix:** add a form marker column (legacy or v2), or a `dialed_number` column, before any phase-8 claim or re-rate code exists.
-- **Ledger notes change format mid-history.** `通话扣费 <uuid>` becomes `通话扣费 <uuid> <number>` (call charge, then UUID, then number). The idempotency check ignores the note, so this is safe, but anything that parses notes will see two formats.
-- **Rollback.** Per A, new-protocol CDRs that reach an old worker carry `destination_number = 'billing-bridge'`. The old worker would park every answered call as unbilled. The documented order is "FreeSWITCH first, then drain retry files, then worker". Finding 2's fail-closed check helps only on the authorize side, so draining is required, not optional.
+**Verdict:** not ready to merge until B1 is fixed; everything else is small doc, schema and test cleanup.
