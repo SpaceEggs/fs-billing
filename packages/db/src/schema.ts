@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { authUsers } from './auth-schema.js';
 import {
   boolean,
   date,
@@ -34,7 +35,10 @@ export const tenants = pgTable('tenants', {
 
 export const admins = pgTable('admins', {
   id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').notNull(),
+  authUserId: text('auth_user_id')
+    .notNull()
+    .unique()
+    .references(() => authUsers.id, { onDelete: 'restrict' }),
   name: text('name').notNull(),
   status: text('status', { enum: ['active', 'disabled'] })
     .notNull()
@@ -46,7 +50,10 @@ export const admins = pgTable('admins', {
 export const portalAccounts = pgTable('portal_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull(),
-  email: text('email').notNull(),
+  authUserId: text('auth_user_id')
+    .notNull()
+    .unique()
+    .references(() => authUsers.id, { onDelete: 'restrict' }),
   status: text('status', { enum: ['active', 'disabled'] })
     .notNull()
     .default('active'),

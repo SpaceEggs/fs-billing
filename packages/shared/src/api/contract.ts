@@ -99,7 +99,7 @@ export const apiContract = {
       ...rateLimitedErrors,
       200: sessionResponseSchema,
       401: apiErrorSchemas.INVALID_CREDENTIALS,
-      403: identityErrors,
+      403: z.union([apiErrorSchemas.FORBIDDEN, identityErrors]),
       429: credentialRateErrors,
     },
   },
@@ -113,6 +113,7 @@ export const apiContract = {
     responses: {
       ...rateLimitedErrors,
       401: sessionErrors,
+      403: apiErrorSchemas.FORBIDDEN,
       204: noContentResponseSchema,
     },
   },

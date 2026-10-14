@@ -1,6 +1,6 @@
 # 阶段 4 后端设计
 
-分支：`phase-4-api`。本文对应 [plan.md 阶段 4](plan.md) 的后端范围。认证决定已最终确定，本次范围是更新设计及实现 `packages/shared` 契约和行为测试。数据库、API 服务、迁移及 CI 的实现留到后续步骤。
+分支：`phase-4-api`。本文对应 [plan.md 阶段 4](plan.md) 的后端范围。共享契约、数据库迁移、API 服务、行为测试与 CI 均已实施。PostgreSQL 验收和隔离变异证明须由 Bot 执行，不能将实现状态当作验收通过。
 
 ## 1. 现有结构与范围
 
@@ -104,7 +104,7 @@ function readPortalContext(
 
 响应 schema 使用严格对象。API 与 Web 一起部署，不支持分别升级的契约版本。已有浏览器页面在版本切换后需要重新加载，前端部署处理旧 bundle 的更新，不假设严格解析可容忍新字段。
 
-logout 使用 access=session，只验证有效 Better Auth session，不调用资料解析器，不检查账号或租户状态，不返回 403。即使资料停用、缺失或歧义，也撤销当前 session 并清除 cookie。session 端点及其他需解析身份的受保护路由每次核对资料与租户状态，停用返回 403 ACCOUNT_DISABLED。前端清除缓存身份和受保护数据，显示账号停用页面并提供退出按钮，不自动重登；退出调用 logout，成功后进入登录页。401 仍按 §2 重新认证。IDENTITY_UNAVAILABLE 同样显示无法使用身份的提示并允许退出。
+logout 使用 access=session，只验证有效 Better Auth session，不调用资料解析器，不检查账号或租户状态，不因资料状态返回 403。和所有 cookie 写操作一样，不可信 Origin 返回 403 FORBIDDEN，契约仅为该 CSRF 边界声明 403，不能返回 ACCOUNT_DISABLED 或 IDENTITY_UNAVAILABLE。即使资料停用、缺失或歧义，也撤销当前 session 并清除 cookie。session 端点及其他需解析身份的受保护路由每次核对资料与租户状态，停用返回 403 ACCOUNT_DISABLED。前端清除缓存身份和受保护数据，显示账号停用页面并提供退出按钮，不自动重登；退出调用 logout，成功后进入登录页。401 仍按 §2 重新认证。IDENTITY_UNAVAILABLE 同样显示无法使用身份的提示并允许退出。
 
 客户 query、params、body 中不声明 `tenantId`、`tenant_id`、`tenant` 或身份覆盖字段。严格 Zod 对象拒绝额外字段。Header 中的租户编号和客户端角色不能参与派生，测试验证伪造 header 不改变结果。未来客户资源 ID 只定位资源，不能决定 tenant。请求边界解析、响应序列化和 OpenAPI 转换使用同一组 schema。
 
@@ -247,6 +247,8 @@ owner 迁移创建专用角色 `fs_billing_identity NOLOGIN NOSUPERUSER BYPASSRL
 
 身份确定后才调用现有 `withTenant`。客户业务 SQL 同时显式带 `tenant_id = principal.tenantId`。资源详情带 tenant 和资源 ID 两个条件。余额示例从 `tenant_balances` 读取，不将任意 tenant 参数传到函数。RLS 使用同一事务、同一连接的 `set_config(..., true)`，提交或回滚后变量不能泄漏到池中下一次请求。管理员事务不复用客户 handler；客户绝不能走 `withAdmin` 或 `withSystem`。
 
+`portalContext` 的租户只来自已验证 session 的业务资料映射。query 采用严格空对象，`tenantId`、`tenant_id` 等额外字段返回 400 `VALIDATION_ERROR`。身份 header 没有授权语义，伪造的 tenant、用户、资料和 role header 被忽略。Fastify 不解析 GET body，因此 GET body 中的伪造字段也被忽略，返回 200 时必须仍是 A 的身份、租户和余额。严格 body schema 约束可解析 body 的请求，不把 GET 的原始字节当作租户输入。IDOR 测试分别断言这些行为，不能只检查状态码。
+
 RLS 防御的是漏写 SQL 条件，不防御持有应用数据库凭据的主体自行设置 `app.scope`。遵守阶段 2 的信任边界。客户只读限制、分区不能直接访问、账本只增和现有 `lock_tenants` 不变。没有新业务锁。已有最外层 `withAdmin` 的 `40P01`、`40001` 重试保留，嵌套和 handler 不再增加重试。认证库调用、cookie 写入、邮件与其他外部副作用不放进可重跑的业务事务回调。
 
 ## 8. OpenAPI 生成与 100% 越权枚举
@@ -258,6 +260,8 @@ RLS 防御的是漏写 SQL 条件，不防御持有应用数据库凭据的主�
 测试为每个 OpenAPI operation 找一个可执行场景。case 是具体数据与预期行为，不是 allowlist。阶段 4 可分为 `tenant-read`、`self-session`、`self-credential`、`self-session-mutation`；后续新增详情、集合、导出、写操作时扩展类型与场景。一个模板自动生成请求，不代表已经覆盖端点所有行为。
 
 使用真实 Better Auth 登录 cookie，为 A、B 两租户及管理员建立 fixture；至少两位同租户客户验证 profile 与 tenant 不是同一概念。每个场景先有正向证据再进行攻击。
+
+API fixture 通过 `withAdmin` 和 `appendLedgerEntries` 写入两租户的充值流水，由数据库触发器更新缓存余额，不能直接改 `tenant_balances.balance`。固定余额标记仍为 A 的 `111.25` 和 B 的 `999.75`，共享测试库中的缓存余额必须始终等于流水合计。账本与审计日志只增，不能逐行删除 fixture 或关闭保护触发器。测试全局 setup 拥有一次运行的临时 `fs_billing_test` 数据库，运行前重建，运行结束 teardown 删除整个数据库，清理身份、会话、租户、流水和审计记录。ledger 差异测试继续对全库断言。
 
 - tenant-read 正向返回 A 的固定余额和租户资料，再伪造 B 的 tenant query、body、header，结果拒绝或仍只返回 A。对未来详情端点用 B 的真实资源 ID 得到与缺失 ID 同形的 404；对集合和导出断言内容中没有 B 标记，并确认 B 自己能读到标记。
 - self-session 断言返回 A 的实际身份及有效期限，不能只检查 200。伪造用户 ID 不得返回 B 身份。
@@ -326,11 +330,15 @@ RLS 开启时，去掉 WHERE 仍然看不到 B，因此普通生产模式 IDOR �
 
 在密码验证前，以单条原子 `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` 预占一次尝试。若上次失败超过 15 分钟，先重置计数。第 5 次尝试预占后可验证密码，同时设置固定 15 分钟锁期，后续尝试立即拒绝。密码正确则清零并解锁。密码错误保留计数，DB 或认证基础设施失败退还该次预占，不得把依赖失败算成密码错误。退款需保护并发计数，不能覆盖别的请求的计数或锁期。
 
+实施细节：`auth.login_failures` 增加 `window_id uuid NOT NULL`。新行和 15 分钟窗口过期重置均生成新 UUID，同一窗口内的预占保留 UUID。预占返回 UUID，退款只在邮箱与预占的 `window_id` 同时匹配时原子递减。成功、重置或紧急解锁删除旧行后，重建行必有新 UUID，因此旧请求不能递减新窗口或解除新锁。同一窗口内即使有后续预占，基础设施失败仍退还一次计数。该字段落实已经批准的基础设施失败退款规则，不是新的产品决定。
+
 `locked_until > now()` 时拒绝，包括正确密码。锁期间的请求不验密码、不计数、不延长锁期。第 5 次错误密码请求及锁中请求返回 429 `ACCOUNT_LOCKED`，附带 `retryAfterSeconds` 与 `Retry-After`。普通未知邮箱与错误密码返回完全相同的 401 `INVALID_CREDENTIALS`、消息和时间行为。若安装版本不执行 dummy hash，API 补齐同等验证工作。未知邮箱也能得到同样的锁定响应。
 
 改密码对当前密码的猜测使用同一 email counter，按相同的先计数、成功清零、依赖失败退款规则处理。Fastify 在调用 Better Auth server API 前执行按 IP 限流，不依赖 Better Auth HTTP router 的内置限流。采用精确版本 `@fastify/rate-limit@10.3.0`，后续安装时固定锁文件与 integrity。该版本的 [package.json](https://raw.githubusercontent.com/fastify/fastify-rate-limit/v10.3.0/package.json) 与 [兼容表及配置说明](https://raw.githubusercontent.com/fastify/fastify-rate-limit/v10.3.0/README.md) 已核对，10.x 支持 Fastify 5；当前不安装该包。注册插件后才注册路由，使用 onRequest hook、request.ip 和登录与改密码共享的 credential group，初始为每 IP 每分钟 30 次。全局关闭，只对这两条凭据路由启用，logout 不受该组限流影响。trustProxy 默认关闭，部署代理时只信任已配置的代理地址，不接受任意 X-Forwarded-For。第一版单 API 进程采用内存 store，多进程或多实例部署前必须提供共享 store。
 
 自定义 errorResponseBuilder 或统一错误适配器返回契约 429 RATE_LIMITED，包含 requestId、中文 message、正整数 retryAfterSeconds 和同值 Retry-After。剩余毫秒向上取整为秒且至少 1 秒，ban 保持关闭，不能产生插件默认 403 或默认错误 JSON。限流在账户失败预占和密码验证之前，超限不改 email counter。不同 IP 不能绕过 email 锁定。真实 HTTP 测试以同 IP 不同邮箱及登录、改密码交替请求证明共享限流，另一 IP 正常；检查 429 body、Retry-After、窗口恢复、伪造转发 header 无效、counter 未增加，以及限流时 logout 仍可用。
+
+`@fastify/rate-limit@10.3.0` 的每路由配置会建立独立的 LocalStore；相同 `groupId` 只修改 key，不能合并这些 store。注册器只创建一次 `app.rateLimit(...)` hook，把同一 hook 安装到 login 和 changePassword 的 `onRequest`。各路由的自动限流配置关闭，避免重复计数。共享 store 使用插件默认的 `request.ip` key，`trustProxy: false` 保证伪造 `X-Forwarded-For` 不改变 key。
 
 管理员重置密码同时清除目标锁定。另提供使用 owner 凭据运行的紧急解锁 CLI，恢复所有管理员被锁的情况。每次进入锁定记录结构化日志，不在日志记录密码或 cookie。过期且无活动窗口的 counter 行定期或机会式清理，避免未知邮箱行无限增长。
 
@@ -365,3 +373,43 @@ RLS 开启时，去掉 WHERE 仍然看不到 B，因此普通生产模式 IDOR �
 ### 11.6 本次范围与后续核验
 
 步骤 1 更新本设计，步骤 2 只实现共享 Zod schemas、推导类型、操作契约及行为测试，包含两条重置路由。共享包不导入 DB、API server 或 Better Auth。后续步骤取得精确发布包及锁文件，核对实际安装源码、规范化、dummy hash、SQL 字段、会话删除与竞争行为。当前不安装 Better Auth，不实现 DB 或 API，也不将这些后续验收记作通过。没有新的产品决定需要用户选择。
+
+## 12. 步骤 3 实施记录（已实现，数据库验收待运行）
+
+在 `phase-4-api` 编辑，未提交或推送。检查点中的退款问题已按用户指定的 option 1 解决，作为 §11.1 实施细节记录。后端功能、测试、CLI、OpenAPI 和 CI 已实现；数据库与变异证明未在 sandbox 验收。
+
+### 12.1 实际安装源码核验
+
+核验对象为 `apps/api/node_modules` 的锁定发布包，不使用在线标签代替安装源码。
+
+| 对象                                 | 实际源码                                                                            | 结果                                                                                                                                                                                                                            |
+| ------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Better Auth 1.7.7 登录规范化         | `better-auth/dist/api/routes/sign-in.mjs:318`                                       | `email.toLowerCase()`，不 trim。API counter 使用同样规范化。                                                                                                                                                                    |
+| 未知邮箱、缺 credential、空 password | 同文件 `321`、`328`                                                                 | 执行 `ctx.context.password.hash(password)` 后返回同一个 `INVALID_EMAIL_OR_PASSWORD`。已存在凭据使用 `password.verify`。credential 匹配同时要求 `providerId='credential'` 与 `accountId=user.id`。                               |
+| 密码哈希接口                         | `better-auth/dist/context/create-context.mjs:182`                                   | `$context.password.hash` 与 `.verify` 为配置或默认实现。重置及测试 fixture 通过此接口生成哈希。                                                                                                                                 |
+| PostgreSQL schema                    | `@better-auth/kysely-adapter/dist/index.mjs:26-59`                                  | `schemaName` 只支持 postgres，要求非空，实际应用 `db.withSchema(schemaName)`；配置使用 `auth`。                                                                                                                                 |
+| 核心表结构                           | `@better-auth/core/dist/db/get-tables.mjs`、`better-auth/dist/db/get-migration.mjs` | 四张核心表，ID 为 text，PostgreSQL 日期为 timestamptz。user.email、session.token 唯一；session/account 的 user_id、verification.identifier 索引。session/account.updated_at 没有 SQL default。使用 fields 配置映射 snake_case。 |
+| session 缓存                         | `better-auth/dist/api/routes/session.mjs`                                           | cookieCache 启用时可能绕过 DB。工厂显式设 `enabled:false`，启动断言同时拒绝 secondaryStorage。`app.test.ts` 已验证启用 cookieCache 或配置 secondaryStorage 时启动断言失败。                                                     |
+| 密码长度                             | `better-auth/dist/utils/password.mjs`                                               | 安装版本在验证前拒绝超过配置 128 字符的登录密码。共享登录 schema 保留 min(1)，gateway 把该拒绝转换为统一凭据错误并计数，不作为基础设施故障。                                                                                    |
+
+没有新增依赖。pnpm 安装产生的 Drizzle peer 实例不同，API 与 DB 直接分别导入 SQL 运算符会产生 nominal type 不兼容。由 `@fs-billing/db` 导出其 `sql`、`eq`、`asc`，API 使用同一实例，不更改安装版本。
+
+旧资料迁移保留 UUID，创建规范化邮箱的 auth.user，不自动创建旧账号 credential。跨资料规范化邮箱重复时在任何结构变更前失败。种子支持可选已通过 Better Auth 哈希的 credential；`auth:seed` 通过 `$context.password.hash` 初始化开发种子 credential，必须提供 `SEED_AUTH_PASSWORD`，拒绝 production，重复运行不覆盖已有 credential。FreeSWITCH 测试种子已改为关联 auth.user，未改变 Worker 业务。
+
+登录和退出的 403 响应契约补充 `FORBIDDEN`，供不可信 Origin 的写请求使用。这与既定 CSRF 要求一致，不改变身份规则。
+
+### 12.2 退款窗口实施与确定性交错证据
+
+`window_id` 是 §11.1 的实现细节，用户已指定采用 UUID 代次。单条预占 SQL 在插入或过期重置时生成新 UUID，退款只更新同一 UUID 的行，不新增锁或重试。
+
+`apps/api/src/auth.db.test.ts` 为登录和改密码分别覆盖旧请求等待期间删除重建 counter、过期重置窗口、同窗口后续预占，以及第五次预占退款解锁。删除重建案例保持新窗口的五次计数与固定锁期，旧退款不能修改它。测试通过可控 hooks 建立交错，不用定时 sleep 猜竞态。
+
+### 12.3 验证与交付
+
+本地 typecheck、lint、format 和 unit 检查记录见 [API 运行与证据](phase-4-api.md)。OpenAPI 从真实 app 导出 10 个操作，工厂在顶层注册 Swagger，避免子作用域让导出端无法读取文档。源码和安装核心 schema 的比较、五张 auth 表的逐项 CRUD 权限、资料迁移保持账本引用均有 DB 测试。
+
+`idor.db.test.ts` 从同次 live OpenAPI 提取 customer、authenticated、session 操作，逐个运行正向结果与 A 到 B 攻击，额外或缺失 case 均失败。`prove:idor` 在临时 checkout 删除门户余额 WHERE，依次验证基线 app、基线 owner、变异 owner 的特定 B 余额断言失败和变异 app 的 RLS 防线通过。报告只含 OpenAPI、operation 分类、断言结果和源码差异，不上传环境、密码、cookie 或会话 token。
+
+CI 在数据库 setup 后执行 DB suite 与变异证明，并上传隔离证据。API 脚本使用 `node --import tsx`，避免 tsx CLI 的 IPC socket 对 sandbox 的额外要求。生产只接受业务 app 角色与 auth 角色连接，owner lane 只存在于测试支持。
+
+当前 sandbox 拒绝 PostgreSQL socket，无法运行 DB 验收。变异证明子进程也受 sandbox 限制，未将其记录为通过。没有新增依赖，没有新的用户产品决定。前端验收状态不变。

@@ -114,7 +114,7 @@ export async function waitForTenantLock(
 /** 种子管理员王敏的编号。 */
 export async function adminId({ pool }: Connection): Promise<string> {
   const { rows } = await pool.query<{ id: string }>(
-    `SELECT id FROM admins WHERE email = 'wangmin@example.com'`,
+    `SELECT a.id FROM public.admins a JOIN auth."user" u ON u.id = a.auth_user_id WHERE u.email = 'wangmin@example.com'`,
   );
   return rows[0]!.id;
 }
