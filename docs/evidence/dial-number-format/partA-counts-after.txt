@@ -1,4 +1,4 @@
-drizzle.__drizzle_migrations 4
+drizzle.__drizzle_migrations 5
 public.admins 0
 public.balance_alert_deliveries 0
 public.balance_alert_settings 0
