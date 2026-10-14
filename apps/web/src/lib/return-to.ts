@@ -43,7 +43,7 @@ export function takeReturnPath(storage: Storage | null = browserStorage()) {
   } catch {
     // 清除失败不影响本次登录。
   }
-  return stored ?? remembered;
+  return remembered ?? stored;
 }
 
 /**

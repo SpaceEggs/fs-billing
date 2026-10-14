@@ -112,6 +112,18 @@ describe('stored return path', () => {
     expect(takeReturnPath(broken)).toBeNull();
   });
 
+  it('prefers the current path over a stale stored one when saving fails', () => {
+    const stale = {
+      getItem: () => '/?tab=old',
+      setItem: () => {
+        throw new DOMException('full', 'QuotaExceededError');
+      },
+      removeItem: () => {},
+    } as unknown as Storage;
+    rememberReturnPath('/?tab=current', stale);
+    expect(takeReturnPath(stale)).toBe('/?tab=current');
+  });
+
   it('falls back to memory when sessionStorage is unavailable', () => {
     rememberReturnPath('/?tab=ledger', null);
     expect(takeReturnPath(null)).toBe('/?tab=ledger');
