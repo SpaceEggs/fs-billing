@@ -1,0 +1,11 @@
+- dialog "账号菜单":
+  - heading "账号菜单" [level=2]
+  - text: abc001@example.com 深圳市某某科技有限公司 · ABC001 主题
+  - radiogroup "主题":
+    - radio "浅色"
+    - text: 浅色
+    - radio "深色"
+    - text: 深色
+    - radio "跟随系统" [checked]
+    - text: 跟随系统
+  - button "退出登录"

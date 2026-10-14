@@ -1,0 +1,14 @@
+> GET http://127.0.0.1:51139/api/portal/context
+> Origin: http://127.0.0.1:51139
+> Cookie: (jar a)
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: http://127.0.0.1:51139
+Vary: Origin
+cache-control: no-store
+content-type: application/json; charset=utf-8
+content-length: 290
+date: Wed, 14 Oct 2026 08:37:50 GMT
+connection: close
+
+{"identity":{"kind":"customer","profileId":"c089c31d-8a5f-452b-a46e-6eb645a03a49","email":"abc001@example.com","tenant":{"id":"885ec68f-bdf2-4caf-b577-90eb99c01fb3","code":"ABC001","name":"深圳市某某科技有限公司","currency":"CNY"}},"balance":{"currency":"CNY","amount":"-35.20"}}

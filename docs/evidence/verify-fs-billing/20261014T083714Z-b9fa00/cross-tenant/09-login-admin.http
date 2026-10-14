@@ -1,0 +1,19 @@
+> POST http://127.0.0.1:51139/api/auth/login
+> Origin: http://127.0.0.1:51139
+> Cookie: (jar admin)
+> Body: {"email":"wangmin@example.com","password":"[REDACTED]"}
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: http://127.0.0.1:51139
+Vary: Origin
+x-ratelimit-limit: 30
+x-ratelimit-remaining: 4
+x-ratelimit-reset: 33
+cache-control: no-store
+set-cookie: better-auth.session_token=[REDACTED]; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax
+content-type: application/json; charset=utf-8
+content-length: 165
+date: Wed, 14 Oct 2026 08:37:51 GMT
+connection: close
+
+{"identity":{"kind":"admin","profileId":"fb948247-9318-4319-a2d1-f437a684889a","name":"王敏","email":"wangmin@example.com"},"expiresAt":"2026-10-21T08:37:51.491Z"}

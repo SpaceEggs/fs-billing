@@ -1,0 +1,3 @@
+-- SELECT count(*) FROM auth.session WHERE token=<this browser's session token>
+before logout: 1
+after logout: 0

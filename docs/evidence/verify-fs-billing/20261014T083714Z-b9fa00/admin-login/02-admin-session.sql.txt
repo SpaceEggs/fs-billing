@@ -1,0 +1,6 @@
+-- SELECT u.email, a.name AS admin_profile, s.expires_at > now() AS live FROM auth.session s JOIN auth."user" u ON u.id=s.user_id JOIN admins a ON a.auth_user_id=u.id WHERE u.email='wangmin@example.com'
+        email        | admin_profile | live 
+---------------------+---------------+------
+ wangmin@example.com | 王敏          | t
+(1 row)
+

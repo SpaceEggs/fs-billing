@@ -1,0 +1,6 @@
+-- SELECT u.email, a.updated_at, (SELECT count(*) FROM operation_logs WHERE action='reset_password') AS reset_logs FROM auth.account a JOIN auth."user" u ON u.id=a.user_id WHERE u.email='glb009@example.com'
+       email        |         updated_at         | reset_logs 
+--------------------+----------------------------+------------
+ glb009@example.com | 2026-10-14 08:37:20.784+00 |          0
+(1 row)
+

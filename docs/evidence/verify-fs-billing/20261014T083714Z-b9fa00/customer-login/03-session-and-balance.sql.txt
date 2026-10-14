@@ -1,0 +1,6 @@
+-- SELECT u.email, s.expires_at > now() + interval '6 days' AS week_ttl, s.ip_address, (SELECT to_char(b.balance,'FM999999990.00') FROM tenant_balances b JOIN tenants t ON t.id=b.tenant_id WHERE t.code='ABC001') AS db_balance FROM auth.session s JOIN auth."user" u ON u.id=s.user_id WHERE u.email='abc001@example.com' ORDER BY s.created_at DESC LIMIT 1
+       email        | week_ttl | ip_address | db_balance 
+--------------------+----------+------------+------------
+ abc001@example.com | t        | 127.0.0.1  | -35.20
+(1 row)
+
