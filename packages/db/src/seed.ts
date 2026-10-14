@@ -4,7 +4,7 @@ import {
   decimal,
   longestPrefix,
   money,
-  parseDialedNumber,
+  normalizeDialedNumber,
   parseRateCsv,
   priceCall,
   type Currency,
@@ -338,7 +338,7 @@ const CDRS: readonly SeedCdr[] = [
     ringSeconds: 12,
     talkSeconds: 230,
     caller: '075586001234',
-    callee: '447700900123',
+    callee: '+447700900123',
     hangupCause: 'NORMAL_CLEARING',
   },
   {
@@ -348,7 +348,7 @@ const CDRS: readonly SeedCdr[] = [
     ringSeconds: 5,
     talkSeconds: 1,
     caller: '075586001234',
-    callee: '18765550100',
+    callee: '+18765550100',
     hangupCause: 'NORMAL_CLEARING',
   },
   {
@@ -357,7 +357,7 @@ const CDRS: readonly SeedCdr[] = [
     startedAt: '2026-09-28 14:20:00',
     talkSeconds: 30,
     caller: '075586001234',
-    callee: '8613800138000',
+    callee: '13800138000',
     hangupCause: 'NO_ANSWER',
   },
   {
@@ -367,7 +367,7 @@ const CDRS: readonly SeedCdr[] = [
     ringSeconds: 8,
     talkSeconds: 190,
     caller: '02088880000',
-    callee: '8613912345678',
+    callee: '13912345678',
     hangupCause: 'NORMAL_CLEARING',
   },
   {
@@ -377,7 +377,7 @@ const CDRS: readonly SeedCdr[] = [
     ringSeconds: 6,
     talkSeconds: 60,
     caller: '02088880000',
-    callee: '85291234567',
+    callee: '0085291234567',
     hangupCause: 'NORMAL_CLEARING',
   },
 ];
@@ -464,16 +464,19 @@ export async function seedDatabase(db: PoolDb): Promise<void> {
     const registered = await registeredCallUuids(tx);
     await seedCdrs(tx, idOf, registered);
     if (!registered.has(UNASSIGNED_CALL_UUID)) {
+      const callee = '+6591234567';
+      const billingNumber = normalizeDialedNumber(callee);
+      if (!billingNumber) throw new Error('种子未归属话单号码格式错误');
       await tx.insert(unassignedCdrs).values({
         tenantTag: 'ABC01',
         callUuid: UNASSIGNED_CALL_UUID,
-        reason: '找不到租户',
+        reason: '租户不存在',
         startedAt: beijingTime('2026-09-28 15:00:00'),
         answeredAt: beijingTime('2026-09-28 15:00:09'),
         endedAt: beijingTime('2026-09-28 15:02:09'),
         caller: '075586001299',
-        callee: '6591234567',
-        billingNumber: '6591234567',
+        callee,
+        billingNumber,
         durationSeconds: 120,
       });
     }
@@ -576,7 +579,7 @@ async function seedCdrs(
   const entries = sampleRates('CNY');
   for (const c of CDRS.filter((c) => !existing.has(c.callUuid))) {
     const startedAt = beijingTime(c.startedAt);
-    const dialed = parseDialedNumber(c.callee);
+    const dialed = normalizeDialedNumber(c.callee);
     if (!dialed) throw new Error(`种子话单 ${c.callUuid} 号码格式错误`);
     const base = {
       tenantId: idOf(c.code),

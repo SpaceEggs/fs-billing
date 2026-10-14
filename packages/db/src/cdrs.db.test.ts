@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  INVALID_NUMBER_REASON,
+} from '../../shared/src/worker.js';
 import { connections, createTenant, pgError } from '../test/support.js';
 import { withAdmin, type Tx } from './client.js';
 import { ensureCdrPartitions } from './partitions.js';
@@ -16,7 +20,8 @@ function unanswered(tenantId: string, callUuid: string, startedAt: string) {
     startedAt: at,
     endedAt: new Date(at.getTime() + 30_000),
     caller: '075586001234',
-    callee: '8613800138000',
+    callee: '13800138000',
+    billingNumber: '8613800138000',
     hangupCause: 'NO_ANSWER',
   };
 }
@@ -80,7 +85,8 @@ describe('正式话单与未归属话单共用 UUID 登记表', () => {
         startedAt: new Date(startedAt),
         endedAt: new Date(startedAt),
         caller: '075586001299',
-        callee: '6591234567',
+        callee: '+6591234567',
+        billingNumber: '6591234567',
       }),
     );
   const insertCdr = (tenantId: string, callUuid: string) =>
@@ -309,4 +315,76 @@ describe('按月分区', () => {
       expect.arrayContaining(rows[0]!.expected),
     );
   });
+});
+
+describe('计费号码约束', () => {
+  it.each([null, '12345', '012345', '1234567890123456'])(
+    '正式话单拒绝无效计费号码 %j',
+    async (billingNumber) => {
+      const tenant = await createTenant(app, 'CNY');
+      const row = unanswered(
+        tenant.id,
+        randomUUID(),
+        '2026-10-12T12:00:00+08:00',
+      );
+      const error = await pgError(
+        withAdmin(app.db, (tx) =>
+          tx.execute(sql`
+        insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee, billing_number)
+        values (${row.tenantId}, ${row.callUuid}, ${row.startedAt}, ${row.endedAt}, ${row.caller}, ${row.callee}, ${billingNumber})
+      `),
+        ),
+      );
+      expect(error.code).toBe(billingNumber === null ? '23502' : '23514');
+    },
+  );
+
+  it.each([
+    { reason: INVALID_NUMBER_REASON, billingNumber: null, valid: true },
+    {
+      reason: `${CDR_VALIDATION_FAILURE_PREFIX}billing_dialed_number 缺失`,
+      billingNumber: null,
+      valid: true,
+    },
+    {
+      reason: `${CDR_VALIDATION_FAILURE_PREFIX}话单时间与时长不一致`,
+      billingNumber: null,
+      valid: true,
+    },
+    { reason: '租户不存在', billingNumber: '447700900123', valid: true },
+    { reason: '计费号码不一致', billingNumber: '447700900123', valid: true },
+    { reason: '租户不存在', billingNumber: null, valid: false },
+    { reason: '计费号码不一致', billingNumber: null, valid: false },
+    {
+      reason: INVALID_NUMBER_REASON,
+      billingNumber: '447700900123',
+      valid: false,
+    },
+    {
+      reason: `${CDR_VALIDATION_FAILURE_PREFIX}话单时间与时长不一致`,
+      billingNumber: '447700900123',
+      valid: false,
+    },
+    { reason: '租户不存在', billingNumber: '12345', valid: false },
+  ])(
+    '未归属号码与原因对应 $reason / $billingNumber',
+    async ({ reason, billingNumber, valid }) => {
+      const insert = withAdmin(app.db, (tx) =>
+        tx.insert(unassignedCdrs).values({
+          callUuid: randomUUID(),
+          startedAt: new Date('2026-10-12T12:00:00+08:00'),
+          endedAt: new Date('2026-10-12T12:00:00+08:00'),
+          caller: '',
+          callee: '',
+          reason,
+          billingNumber,
+        }),
+      );
+      if (valid) {
+        await insert;
+      } else {
+        expect((await pgError(insert)).code).toBe('23514');
+      }
+    },
+  );
 });

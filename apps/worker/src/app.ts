@@ -62,17 +62,12 @@ export function createWorker(dependencies?: WorkerDependencies) {
           return reply.code(400).send({
             allowed: false,
             reason: '号码格式错误',
-            sipCode:
-              typeof request.body === 'object' &&
-              request.body !== null &&
-              'dialedNumber' in request.body
-                ? 484
-                : 400,
+            sipCode: 484,
           });
         }
         return reply.code(400).send({ error: '授权请求格式错误' });
       }
-      const { tenant, dialedNumber } = parsed.data;
+      const { tenant } = parsed.data;
       const resolved = resolveBillingNumber(parsed.data);
       if ('error' in resolved) {
         if (resolved.error === 'mismatch') {
@@ -85,7 +80,7 @@ export function createWorker(dependencies?: WorkerDependencies) {
         return reply.code(400).send({
           allowed: false,
           reason: '号码格式错误',
-          sipCode: dialedNumber === undefined ? 400 : 484,
+          sipCode: 484,
         });
       }
       const { billingNumber } = resolved;
@@ -102,7 +97,7 @@ export function createWorker(dependencies?: WorkerDependencies) {
             ? {
                 allowed: true,
                 maxSeconds: result.maxSeconds,
-                ...(dialedNumber === undefined ? {} : { billingNumber }),
+                billingNumber,
               }
             : {
                 allowed: false,

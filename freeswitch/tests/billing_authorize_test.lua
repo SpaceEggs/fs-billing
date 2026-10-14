@@ -1,6 +1,6 @@
 local script = arg[1] or 'freeswitch/scripts/billing_authorize.lua'
 
-local function run(destination, response, ready)
+local function run(destination, response, ready, http_status)
     local variables = { destination_number = destination, billing_tenant = 'tenant1' }
     local actions = {}
     local requests = 0
@@ -37,7 +37,7 @@ local function run(destination, response, ready)
                     options.writefunction('invalid response')
                     return true
                 end,
-                getinfo_response_code = function() return response == '5xx' and 503 or 200 end,
+                getinfo_response_code = function() return http_status or (response == '5xx' and 503 or 200) end,
                 close = function() end,
             }
         end,
@@ -65,7 +65,7 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         local variables, actions, requests, hangup = run(destination, response)
         local label = response .. ' ' .. destination
         check(variables.billing_authorized == 'false', label .. ' must not be allowed')
-        check(variables.billing_dialed_number == destination, label .. ' must mark new CDR before rejecting')
+        check(variables.billing_dialed_number == destination, label .. ' must preserve original dialed number before rejecting')
         check(actions.bridge == nil, label .. ' must not bridge')
         check(requests == 0, label .. ' must reject before requesting authorization')
         check(actions.respond == '484', label .. ' must respond 484')
@@ -119,7 +119,7 @@ end
 
 local not_ready, _, not_ready_requests = run('+44712345678', 'timeout', false)
 check(not_ready.billing_dialed_number == '+44712345678' and not_ready_requests == 0,
-    'unready session must mark new CDR before returning')
+    'unready session must preserve original dialed number before returning')
 
 local fractional = run('44712345678', { allowed = true, maxSeconds = 60.5 })
 check(fractional.billing_unverified == 'true', 'fractional allowance must use invalid-response fallback')
@@ -137,6 +137,13 @@ local invalid_number, invalid_actions = run('13800138000',
     { allowed = false, sipCode = 484, reason = 'invalid_number' })
 check(invalid_number.billing_authorized == 'false' and invalid_actions.respond == '484',
     'worker number rejection must respond 484 without fallback')
+
+local bad_request, bad_request_actions, _, bad_request_hangup = run('44712345678',
+    { allowed = false, sipCode = 400, reason = 'bad_request' }, true, 400)
+check(bad_request.billing_authorized == 'false' and bad_request_actions.bridge == nil,
+    'HTTP 400 with unsupported SIP code must not bridge')
+check(bad_request_actions.respond == '503' and bad_request_hangup == 'CALL_REJECTED',
+    'HTTP 400 with unsupported SIP code must respond 503')
 
 local invalid_code = run('44712345678',
     { allowed = false, sipCode = 402.5, reason = 'insufficient_balance' })

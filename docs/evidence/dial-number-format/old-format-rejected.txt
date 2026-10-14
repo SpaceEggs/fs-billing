@@ -1,0 +1,72 @@
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+ ↓ apps/worker/src/app.test.ts > invalid CDR retains the original dialed number for display
+ ✓ apps/worker/src/app.test.ts > old-format CDR is rejected even when its destination is a valid international number 6ms
+ ↓ apps/worker/src/app.test.ts > worker runs without an API or database process
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"+1234567890123456","dialedNumber":"+1234567890123456"},"sipCode":484} 58ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"138|evil","dialedNumber":"138|evil"},"sipCode":484} 4ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"138,evil","dialedNumber":"138,evil"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"123\n","dialedNumber":"123\n"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"13800138000","dialedNumber":13800138000},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"447700900123"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"447700900123","billingNumber":"447700900123"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"0","dialedNumber":"0"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"1","dialedNumber":"1"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"+1","dialedNumber":"+1"},"sipCode":484} 3ms
+ ✓ apps/worker/src/app.test.ts > authorize rejects invalid number input before reading the DB {"numbers":{"callee":"0044","dialedNumber":"0044"},"sipCode":484} 2ms
+ ✓ apps/worker/src/app.test.ts > authorize fails closed on projection mismatch {"callee":"13800138000","dialedNumber":"13800138000"} 2ms
+ ✓ apps/worker/src/app.test.ts > authorize fails closed on projection mismatch {"callee":"8613800138000","dialedNumber":"13800138000","billingNumber":"13055551234"} 2ms
+ ↓ apps/worker/src/app.test.ts > /cdr returns a generic retryable response when the database is unavailable
+ ↓ apps/worker/src/app.test.ts > /authorize returns a generic retryable response when the database is unavailable
+
+ Test Files  1 passed (1)
+      Tests  14 passed | 4 skipped (18)
+   Start at  18:47:10
+   Duration  855ms (import 75%, tests 14%, transform 11%)
+
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 真实格式样本推送两次：两份原文、一条话单、一个任务和一笔扣费；任务重复执行也不重扣
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > variables 缺少号码、callflow 主叫为 075586001234 时保存话单且只扣费一次
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > variables 缺少号码、callflow 主叫为 undefined 时保存话单且只扣费一次
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签 ABC01 进入 pending，并告警且不扣费
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签  进入 pending，并告警且不扣费
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签 UNKNOWN99 进入 pending，并告警且不扣费
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 0044 返回 200，原文与未归属告警保留
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 +44 返回 200，原文与未归属告警保留
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 447x 返回 200，原文与未归属告警保留
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫  返回 200，原文与未归属告警保留
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 138|evil 返回 200，原文与未归属告警保留 75ms
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 12345678901234 返回 200，原文与未归属告警保留
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 损坏或缺字段的正文 { "broken": 不返回 400，先保存原文并告警
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 接通时无费率进入待人工处理，不按零元计费
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 缺分区返回 503 留给重推，保留原文并写 partition_failed，不在写入路径建分区
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 原文分区缺失返回 503 并告警，恢复维护后重推成功
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 入队失败回滚话单和 UUID 登记，原文保留，恢复后重推成功
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 授权读取实时余额、状态与费率：放行或给出拒绝原因，错误号码返回 400
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 同一 UUID 并发推送只入一条话单和一个任务
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 已有未归属 UUID 改标签重推仍重复，HTTP 入库触发器也禁止并发认领
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 缺密钥或不在 IP 白名单的请求在保存正文前拒绝
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 接通时刻选择整表版本，跨月处理仍按九月入账
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 授权有费率，接通时新版移除前缀：pending 与告警，不回退旧费率也不扣零元
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 流水已插入后模拟崩溃：回滚余额，重新执行只扣一次
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 扣费提交但任务未确认：重启队列，过期任务重投不重复扣费
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > pg-boss 维护 SQL 不提前提交调用方事务，后续失败时队列写入回滚
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 启动维护立即建分区，每日北京时间调度可重复运行
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 启动及维护任务失败写 partition_failed，错误向外抛出
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 +447700900123 保留原拨号，授权、话单和流水使用 447700900123
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 00447700900123 保留原拨号，授权、话单和流水使用 447700900123
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 13800138000 保留原拨号，授权、话单和流水使用 8613800138000 60ms
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 075586001234 保留原拨号，授权、话单和流水使用 8675586001234
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 +13055551234 保留原拨号，授权、话单和流水使用 13055551234
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 13055551234 保留原拨号，授权、话单和流水使用 8613055551234
+ ↓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 新话单不带投影时重新计算；投影不一致保存工作端投影供处理
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > CDR without billing_dialed_number is parked as a validation failure and never billed 19ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 33 skipped (36)
+   Start at  18:47:12
+   Duration  2.30s (import 59%, tests 33%, transform 8%)
+

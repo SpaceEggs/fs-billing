@@ -147,7 +147,7 @@ export const cdrs = pgTable(
     endedAt: at('ended_at').notNull(),
     caller: text('caller').notNull(),
     callee: text('callee').notNull(),
-    billingNumber: text('billing_number'),
+    billingNumber: text('billing_number').notNull(),
     durationSeconds: integer('duration_seconds').notNull().default(0),
     billedMinutes: numeric('billed_minutes').notNull().default('0'),
     matchedPrefix: text('matched_prefix'),

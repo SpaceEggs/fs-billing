@@ -10,6 +10,10 @@ import {
   withSystem,
 } from '@fs-billing/db';
 import { rate } from '@fs-billing/rating';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  INVALID_NUMBER_REASON,
+} from '@fs-billing/shared';
 import { z } from 'zod';
 import { fromDrizzle } from 'pg-boss';
 import {
@@ -246,7 +250,7 @@ describe('Worker HTTP 与真实数据库', () => {
           )
         ).rows,
       ).toEqual([
-        { caller: caller ?? '', callee: '447700900123', charge: '0.192' },
+        { caller: caller ?? '', callee: '+447700900123', charge: '0.192' },
       ]);
       expect(
         (
@@ -295,15 +299,20 @@ describe('Worker HTTP 与真实数据库', () => {
     },
   );
 
-  it.each(['+447700900123', '00447700900123', '447x', ''])(
+  it.each(['0044', '+44', '447x', '', '138|evil', '12345678901234'])(
     '错误被叫 %s 返回 200，原文与未归属告警保留',
     async (callee) => {
       const tenant = await fixture();
       const uuid = randomUUID();
-      const payload = body(tenant.code, uuid, { destination_number: callee });
+      const payload = body(tenant.code, uuid, {
+        billing_dialed_number: callee,
+      });
       const response = await post(payload);
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ status: 'unassigned' });
+      expect((await post(payload)).json()).toMatchObject({
+        status: 'duplicate',
+      });
       expect(await state(uuid)).toEqual({
         cdrs: 0,
         unassigned: 1,
@@ -313,23 +322,30 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(
         (
           await owner.pool.query(
-            'select reason, callee from unassigned_cdrs where call_uuid = $1',
+            'select reason, callee, call_uuid, billing_number from unassigned_cdrs where call_uuid = $1',
             [uuid],
           )
         ).rows,
-      ).toEqual([{ reason: '号码格式错误', callee }]);
+      ).toEqual([
+        {
+          reason: INVALID_NUMBER_REASON,
+          callee,
+          call_uuid: uuid,
+          billing_number: null,
+        },
+      ]);
       expect(
         (
           await owner.pool.query('select body from raw_cdrs where body = $1', [
             payload,
           ])
         ).rows,
-      ).toEqual([{ body: payload }]);
+      ).toEqual([{ body: payload }, { body: payload }]);
       expect(
         (
           await owner.pool.query(
             'select kind from system_alerts where description = $1',
-            [`${uuid}: 号码格式错误`],
+            [`${uuid}: ${INVALID_NUMBER_REASON}`],
           )
         ).rows,
       ).toEqual([{ kind: 'cdr_failed' }]);
@@ -519,11 +535,17 @@ describe('Worker HTTP 与真实数据库', () => {
         method: 'POST',
         url: '/authorize',
         headers: { 'x-billing-key': security.secret },
-        payload: { tenant: code, callee, uuid: randomUUID() },
+        payload: {
+          tenant: code,
+          callee,
+          dialedNumber: `+${callee}`,
+          uuid: randomUUID(),
+        },
       });
     expect((await authorize(tenant.code, '447700900123')).json()).toEqual({
       allowed: true,
       maxSeconds: 14400,
+      billingNumber: '447700900123',
     });
     expect((await authorize('ABC01', '447700900123')).json()).toEqual({
       allowed: false,
@@ -540,8 +562,8 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(response.statusCode).toBe(400);
       expect(response.json()).toEqual({
         allowed: false,
-        reason: '号码格式错误',
-        sipCode: 400,
+        reason: INVALID_NUMBER_REASON,
+        sipCode: 484,
       });
     }
     await withSystem(connection.db, async (tx) => {
@@ -600,8 +622,8 @@ describe('Worker HTTP 与真实数据库', () => {
         await tx.execute(
           sql`select set_config('app.cdr_ingest', 'true', true)`,
         );
-        await tx.execute(sql`insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee)
-        values (${tenant.id}, ${uuid}, '2026-10-12T02:00:00Z', '2026-10-12T02:00:00Z', '075586001234', '447700900123')`);
+        await tx.execute(sql`insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee, billing_number)
+        values (${tenant.id}, ${uuid}, '2026-10-12T02:00:00Z', '2026-10-12T02:00:00Z', '075586001234', '447700900123', '447700900123')`);
       }),
     );
     expect(error).toMatchObject({
@@ -712,7 +734,12 @@ describe('Worker HTTP 与真实数据库', () => {
       method: 'POST',
       url: '/authorize',
       headers: { 'x-billing-key': security.secret },
-      payload: { tenant: tenant.code, callee: '447700900123', uuid },
+      payload: {
+        tenant: tenant.code,
+        callee: '447700900123',
+        dialedNumber: '+447700900123',
+        uuid,
+      },
     });
     expect(authorization.json()).toMatchObject({ allowed: true });
     // 新版本在授权之后、接通之前生效；整表为空，不得沿用旧版前缀。
@@ -953,7 +980,7 @@ describe('Worker HTTP 与真实数据库', () => {
     ['+13055551234', '13055551234', '1', '0.03'],
     ['13055551234', '8613055551234', '861305', '0.05'],
   ])(
-    '新协议 %s 保留原拨号，授权、话单和流水使用 %s',
+    '拨号 %s 保留原拨号，授权、话单和流水使用 %s',
     async (dialed, billingNumber, prefix, perMinute) => {
       const tenant = await createTenant(connection, 'CNY');
       await withSystem(connection.db, (tx) =>
@@ -1108,168 +1135,52 @@ describe('Worker HTTP 与真实数据库', () => {
     ).toEqual([{ kind: 'cdr_failed' }]);
   });
 
-  it.each([
-    {
-      dialed: '13800138000',
-      callee: '13800138000',
-      newForm: false,
-      prefix: '1',
-      billingNumber: '13800138000',
-      reason: undefined,
-    },
-    {
-      dialed: '075586001234',
-      callee: '075586001234',
-      newForm: false,
-      prefix: undefined,
-      billingNumber: null,
-      reason: '号码格式错误',
-    },
-    {
-      dialed: '13800138000',
-      callee: '8613800138000',
-      newForm: true,
-      prefix: '86',
-      billingNumber: '8613800138000',
-      reason: undefined,
-    },
-    {
-      dialed: '075586001234',
-      callee: '8675586001234',
-      newForm: true,
-      prefix: '86',
-      billingNumber: '8675586001234',
-      reason: undefined,
-    },
-  ])(
-    'mixed rollout request and CDR $newForm / $dialed use one handler',
-    async ({ dialed, callee, newForm, prefix, billingNumber, reason }) => {
-      const tenant = await createTenant(connection, 'CNY');
-      await withSystem(connection.db, (tx) =>
-        createRateVersion(
-          tx,
-          tenant.id,
-          [
-            { prefix: '1', country: 'NANP', perMinute: rate('CNY', '0.03') },
-            { prefix: '86', country: '中国', perMinute: rate('CNY', '0.02') },
-          ],
-          { effectiveFrom: new Date('2026-09-01T00:00:00Z') },
-        ),
-      );
-      const uuid = randomUUID();
-      const authorization = await worker.inject({
-        method: 'POST',
-        url: '/authorize',
-        headers: { 'x-billing-key': security.secret },
-        payload: {
-          tenant: tenant.code,
-          uuid,
-          callee,
-          ...(newForm ? { dialedNumber: dialed, billingNumber } : {}),
-        },
-      });
-      expect(authorization.statusCode).toBe(reason ? 400 : 200);
-      expect(authorization.json()).toEqual(
-        reason
-          ? { allowed: false, reason, sipCode: 400 }
-          : {
-              allowed: true,
-              maxSeconds: 14400,
-              ...(newForm ? { billingNumber } : {}),
-            },
-      );
-      expect(
-        (
-          await post(
-            body(tenant.code, uuid, {
-              destination_number: dialed,
-              ...(newForm
-                ? {
-                    billing_dialed_number: dialed,
-                    billing_number: billingNumber,
-                  }
-                : {}),
-            }),
-          )
-        ).json(),
-      ).toMatchObject({ status: reason ? 'unassigned' : 'queued' });
-      if (reason) {
-        expect(
-          (
-            await owner.pool.query(
-              'select reason, callee, billing_number from unassigned_cdrs where call_uuid = $1',
-              [uuid],
-            )
-          ).rows,
-        ).toEqual([{ reason, callee: dialed, billing_number: null }]);
-      } else {
-        await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
-        expect(
-          (
-            await owner.pool.query(
-              'select callee, billing_number, matched_prefix, charge::text from cdrs where call_uuid = $1',
-              [uuid],
-            )
-          ).rows,
-        ).toEqual([
-          {
-            callee: dialed,
-            billing_number: billingNumber,
-            matched_prefix: prefix,
-            charge: prefix === '1' ? '0.12' : '0.08',
-          },
-        ]);
-      }
-    },
-  );
-
-  it.each([
-    { dialed: '12345678901234', billingNumber: null, reason: '号码格式错误' },
-    {
-      dialed: '0044',
-      billingNumber: null,
-      reason: '号码格式错误',
-    },
-  ])(
-    'new Lua early return CDR marker $dialed cannot use legacy billing',
-    async ({ dialed, billingNumber, reason }) => {
-      const tenant = await fixture();
-      const uuid = randomUUID();
-      expect(
-        (
-          await post(
-            body(tenant.code, uuid, {
-              destination_number: dialed,
-              billing_dialed_number: dialed,
-              answer_epoch: '0',
-              billsec: '0',
-              hangup_cause: 'INVALID_NUMBER_FORMAT',
-            }),
-          )
-        ).json(),
-      ).toMatchObject({ status: 'unassigned' });
-      expect(
-        (
-          await owner.pool.query(
-            'select reason, callee, billing_number from unassigned_cdrs where call_uuid = $1',
-            [uuid],
-          )
-        ).rows,
-      ).toEqual([{ reason, callee: dialed, billing_number: billingNumber }]);
-      expect(
-        (
-          await owner.pool.query(
-            'select kind from system_alerts where description = $1',
-            [`${uuid}: ${reason}`],
-          )
-        ).rows,
-      ).toEqual([{ kind: 'cdr_failed' }]);
-      expect(await state(uuid)).toEqual({
-        cdrs: 0,
-        unassigned: 1,
-        charges: 0,
-        jobs: 0,
-      });
-    },
-  );
+  it('CDR without billing_dialed_number is parked as a validation failure and never billed', async () => {
+    const tenant = await fixture();
+    const uuid = randomUUID();
+    const response = await post(
+      body(tenant.code, uuid, {
+        billing_dialed_number: undefined,
+        billing_number: undefined,
+        destination_number: '447700900123',
+      }),
+    );
+    expect(response.statusCode).toBe(200);
+    const result = z
+      .object({ status: z.literal('unassigned'), rawId: z.uuid() })
+      .parse(response.json());
+    const { rows } = await owner.pool.query<{
+      reason: string;
+      billing_number: string | null;
+      call_uuid: string | null;
+      callee: string;
+    }>(
+      'select reason, billing_number, call_uuid, callee from unassigned_cdrs where raw_id = $1',
+      [result.rawId],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      billing_number: null,
+      call_uuid: null,
+      callee: '447700900123',
+    });
+    expect(rows[0]?.reason).toContain('billing_dialed_number');
+    expect(rows[0]?.reason.startsWith(CDR_VALIDATION_FAILURE_PREFIX)).toBe(
+      true,
+    );
+    expect(await state(uuid)).toEqual({
+      cdrs: 0,
+      unassigned: 0,
+      charges: 0,
+      jobs: 0,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          'select kind from system_alerts where description like $1',
+          [`${result.rawId}: ${CDR_VALIDATION_FAILURE_PREFIX}%`],
+        )
+      ).rows,
+    ).toEqual([{ kind: 'cdr_failed' }]);
+  });
 });

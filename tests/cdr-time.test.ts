@@ -8,6 +8,7 @@ import { modJsonCdrSchema } from '../packages/shared/src/worker.js';
 
 const second = Date.parse('2026-10-12T02:00:09Z') / 1000;
 const variables = {
+  billing_dialed_number: '+447700900123',
   uuid: '7f1c2a9e-0d3b-4c5e-8a6f-1b2c3d4e5f60',
   start_epoch: second - 9,
   answer_epoch: second,

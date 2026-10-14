@@ -8,7 +8,12 @@ import {
   type Tx,
 } from '@fs-billing/db';
 import { findRate, resolveBillingNumber, priceCall } from '@fs-billing/rating';
-import { modJsonCdrSchema, type ParsedCdr } from '@fs-billing/shared';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  INVALID_NUMBER_REASON,
+  modJsonCdrSchema,
+  type ParsedCdr,
+} from '@fs-billing/shared';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
 import type { ChargeQueue } from './queue.js';
 
@@ -92,24 +97,21 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         callee: identity.destination_number,
         rawId: raw.id,
         rawReceivedAt: raw.receivedAt,
-        reason: `话单校验失败: ${parsed.error.message}`,
+        reason: `${CDR_VALIDATION_FAILURE_PREFIX}${parsed.error.message}`,
       });
       await tx.insert(schema.systemAlerts).values({
         kind: 'cdr_failed',
-        description: `${raw.id}: 话单校验失败: ${parsed.error.message}`,
+        description: `${raw.id}: ${CDR_VALIDATION_FAILURE_PREFIX}${parsed.error.message}`,
         affectedCalls: 1,
       });
     });
     return { status: 'unassigned' as const, rawId: raw.id };
   }
   const cdr = parsed.data;
-  const resolved = resolveBillingNumber(
-    cdr.dialedNumber === undefined
-      ? { callee: cdr.callee, billingNumber: cdr.billingNumber }
-      : { dialedNumber: cdr.dialedNumber, billingNumber: cdr.billingNumber },
-  );
-  const billingNumber =
-    'billingNumber' in resolved ? resolved.billingNumber : null;
+  const resolved = resolveBillingNumber({
+    dialedNumber: cdr.callee,
+    billingNumber: cdr.billingNumber,
+  });
   try {
     const status = await withSystem(db, async (tx) => {
       const [tenant] = await tx
@@ -137,15 +139,17 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         return park(
           tx,
           cdr,
-          resolved.error === 'mismatch' ? '计费号码不一致' : '号码格式错误',
-          billingNumber,
+          resolved.error === 'mismatch'
+            ? '计费号码不一致'
+            : INVALID_NUMBER_REASON,
+          resolved.error === 'mismatch' ? resolved.billingNumber : null,
         );
       if (!tenant)
         return park(
           tx,
           cdr,
           cdr.tenantTag ? '租户不存在' : '缺少租户标签',
-          billingNumber ?? null,
+          resolved.billingNumber,
         );
       const verifiedBillingNumber = resolved.billingNumber;
       const ratingTenant = await loadRatingTenant(tx, tenant.code);
@@ -154,13 +158,13 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         ratingTenant &&
         findRate(ratingTenant.rates, verifiedBillingNumber, cdr.answeredAt);
       if (cdr.answeredAt && !entry)
-        return park(tx, cdr, '接通时无费率', billingNumber);
+        return park(tx, cdr, '接通时无费率', verifiedBillingNumber);
       const priced = entry
         ? priceCall(cdr.billsec, entry.perMinute)
         : undefined;
       await tx.insert(schema.cdrs).values({
         ...cdr,
-        billingNumber,
+        billingNumber: verifiedBillingNumber,
         tenantId: tenant.id,
         durationSeconds: cdr.billsec,
         billedMinutes: priced?.billedMinutes.toFixed() ?? '0',

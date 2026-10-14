@@ -272,7 +272,7 @@ for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 +447700900123 403 4
   identify
   wait_sql "SELECT count(*)>=1 FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';"
   if [[ $label == bad ]]; then
-    wait_sql "SELECT EXISTS (SELECT 1 FROM unassigned_cdrs WHERE call_uuid::text IN ($uuids) OR raw_id IN (SELECT id FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid'));"
+    wait_sql "SELECT EXISTS (SELECT 1 FROM unassigned_cdrs WHERE call_uuid::text IN ($uuids) AND reason='号码格式错误' AND call_uuid IS NOT NULL AND billing_number IS NULL);"
   else
     wait_sql "SELECT count(*)=1 AND bool_and(answered_at IS NULL AND duration_seconds=0 AND charge=0) FROM cdrs WHERE call_uuid::text IN ($uuids);"
     wait_sql "SELECT count(*)>=1 AND bool_and(state='completed') FROM pgboss.job WHERE name='charge-cdr' AND data->>'callUuid' IN ($uuids);"

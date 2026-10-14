@@ -1,9 +1,10 @@
 import { connect } from '@fs-billing/db';
+import { INVALID_NUMBER_REASON, modJsonCdrSchema } from '@fs-billing/shared';
 import { expect, test, vi } from 'vitest';
 import { createWorker } from './app.js';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
 
-test('invalid new CDR retains the original dialed number for display', () => {
+test('invalid CDR retains the original dialed number for display', () => {
   const identity = invalidCdrIdentitySchema.parse({
     variables: {
       destination_number: 'billing-bridge',
@@ -12,6 +13,25 @@ test('invalid new CDR retains the original dialed number for display', () => {
     },
   });
   expect(identity.variables.destination_number).toBe('+447700900123');
+});
+
+test('old-format CDR is rejected even when its destination is a valid international number', () => {
+  const result = modJsonCdrSchema.safeParse({
+    variables: {
+      uuid: 'debf1234-1234-4234-8234-123456789abc',
+      destination_number: '447700900123',
+      start_epoch: 1791770400,
+      answer_epoch: 1791770409,
+      end_epoch: 1791770599,
+      billsec: 190,
+      duration: 199,
+    },
+  });
+  expect(result.success).toBe(false);
+  if (result.success) throw new Error('Old-format CDR was accepted');
+  expect(result.error.issues).toMatchObject([
+    { path: ['variables', 'billing_dialed_number'], code: 'invalid_type' },
+  ]);
 });
 
 test('worker runs without an API or database process', async () => {
@@ -37,11 +57,11 @@ test.each([
     numbers: { callee: '13800138000', dialedNumber: 13800138000 },
     sipCode: 484,
   },
-  { numbers: { callee: '1234567890123456' }, sipCode: 400 },
-  ...['0', '1', '+1', '0044', '075586001234'].map((callee) => ({
-    numbers: { callee },
-    sipCode: 400,
-  })),
+  { numbers: { callee: '447700900123' }, sipCode: 484 },
+  {
+    numbers: { callee: '447700900123', billingNumber: '447700900123' },
+    sipCode: 484,
+  },
   ...['0', '1', '+1', '0044'].map((dialedNumber) => ({
     numbers: { callee: dialedNumber, dialedNumber },
     sipCode: 484,
@@ -70,7 +90,7 @@ test.each([
       expect(response.statusCode).toBe(400);
       expect(response.json()).toEqual({
         allowed: false,
-        reason: '号码格式错误',
+        reason: INVALID_NUMBER_REASON,
         sipCode,
       });
       expect(transaction).not.toHaveBeenCalled();
@@ -83,7 +103,6 @@ test.each([
 );
 
 test.each([
-  { callee: '13800138000', billingNumber: '8613800138000' },
   { callee: '13800138000', dialedNumber: '13800138000' },
   {
     callee: '8613800138000',
@@ -130,6 +149,7 @@ test.each([
     payload: JSON.stringify({
       tenant: 'ABC01',
       callee: '447700900123',
+      dialedNumber: '+447700900123',
       uuid: 'debf1234-1234-4234-8234-123456789abc',
     }),
     expectedError: '授权服务暂不可用',

@@ -11,7 +11,10 @@ import {
   lockTenants,
   withSystem,
 } from '@fs-billing/db';
-import { cdrResponseSchema } from '@fs-billing/shared';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  cdrResponseSchema,
+} from '@fs-billing/shared';
 import { rate } from '@fs-billing/rating';
 import {
   connections,
@@ -529,7 +532,7 @@ it.each([
     [cdrResponseSchema.parse(response.json()).rawId, CHARGE_QUEUE],
   );
   expect(rows).toHaveLength(1);
-  expect(rows[0]?.reason).toContain('话单校验失败');
+  expect(rows[0]?.reason.startsWith(CDR_VALIDATION_FAILURE_PREFIX)).toBe(true);
   expect(rows).toMatchObject([
     {
       status: 'pending',
@@ -615,6 +618,7 @@ it('/authorize 缺失/错误密钥返回 401，白名单外返回 403', async ()
   const payload = {
     tenant: 'ABC001',
     callee: '447700900123',
+    dialedNumber: '+447700900123',
     uuid: randomUUID(),
   };
   for (const key of [undefined, 'bad-key']) {
