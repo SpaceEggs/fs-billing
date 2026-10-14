@@ -425,10 +425,12 @@ const journeys = {
       const ctx = api('06-customer-admin-context', ['GET', '/api/admin/context', 'a']);
       expect([ctx.status, ctx.body.error.code]).toEqual([403, 'FORBIDDEN']);
       const target = scalar(`SELECT p.id FROM portal_accounts p JOIN tenants t ON t.id=p.tenant_id WHERE t.code='GLB009'`);
-      const before = scalar(`SELECT a.updated_at FROM auth.account a JOIN auth."user" u ON u.id=a.user_id WHERE u.email='glb009@example.com'`);
+      const credentialAt = `SELECT a.updated_at FROM auth.account a JOIN auth."user" u ON u.id=a.user_id WHERE u.email='glb009@example.com'`;
+      const before = scalar(credentialAt);
       const reset = api('07-customer-reset-b-password', ['POST', `/api/admin/portal-accounts/${target}/reset-password`, 'a']);
       expect([reset.status, reset.body.error.code]).toEqual([403, 'FORBIDDEN']);
-      const after = scalar(`SELECT a.updated_at FROM auth.account a JOIN auth."user" u ON u.id=a.user_id WHERE u.email='glb009@example.com'`);
+      const after = scalar(credentialAt);
+      write('08-b-credential-before-after.sql.txt', `-- ${credentialAt}\nbefore reset attempt: ${before}\nafter reset attempt: ${after}\n`);
       expect(after).toBe(before);
       expect(scalar(`SELECT count(*) FROM operation_logs WHERE action='reset_password'`)).toBe('0');
       sql('08-no-reset-side-effect', `SELECT u.email, a.updated_at, (SELECT count(*) FROM operation_logs WHERE action='reset_password') AS reset_logs FROM auth.account a JOIN auth."user" u ON u.id=a.user_id WHERE u.email='glb009@example.com'`);
@@ -503,7 +505,9 @@ const journeys = {
       const sheet = mobile.getByRole('dialog', { name: '账号菜单' });
       await sheet.getByRole('button', { name: '退出登录' }).click();
       await expectPath(mobile, '/login');
-      expect(Number(scalar(sessionsOf('abc001@example.com')))).toBe(before - 1);
+      const after = Number(scalar(sessionsOf('abc001@example.com')));
+      write('05-mobile-sessions.sql.txt', `-- ${sessionsOf('abc001@example.com')}\nbefore logout: ${before}\nafter logout: ${after}\n`);
+      expect(after).toBe(before - 1);
       await shot(mobile, '04-mobile-after-logout');
       return `live abc001 sessions ${before} -> ${before - 1}`;
     });

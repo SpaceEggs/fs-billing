@@ -24,19 +24,44 @@ for name in web api; do
   fi
 done
 
+# Print the container's run label. Return 1 only when Docker confirms the container does
+# not exist; any other inspect failure (daemon down, permission denied) returns 2 with
+# Docker's message, so the state is kept.
+container_label() {
+  local out
+  if out=$(docker inspect -f '{{index .Config.Labels "fs-billing-verify"}}' "$1" 2>&1); then
+    printf '%s' "$out"
+  elif [[ $out == *'No such object'* ]]; then
+    return 1
+  else
+    printf '%s' "$out"
+    return 2
+  fi
+}
+
 id=$(cat "$STATE/container.id" 2>/dev/null || true)
 if [[ -z $id ]]; then
   echo 'no container id recorded; nothing removed'
 elif [[ $VERIFY_CONTAINER == "$VERIFY_FORBIDDEN_CONTAINER" ]]; then
   fail "refusing to touch $VERIFY_FORBIDDEN_CONTAINER"
-elif ! label=$(docker inspect -f '{{index .Config.Labels "fs-billing-verify"}}' "$id" 2>/dev/null); then
-  echo "container ${id:0:12} is already gone"
-elif [[ $label != "$RUN_ID" ]]; then
-  fail "container ${id:0:12} is labelled '$label', not $RUN_ID; not removing it"
-elif docker rm -f "$id" >/dev/null && ! docker inspect "$id" >/dev/null 2>&1; then
-  echo "removed container $VERIFY_CONTAINER (${id:0:12})"
 else
-  fail "could not remove container $VERIFY_CONTAINER (${id:0:12})"
+  found=0
+  label=$(container_label "$id") || found=$?
+  if (( found == 1 )); then
+    echo "container ${id:0:12} is already gone"
+  elif (( found == 2 )); then
+    fail "cannot inspect container ${id:0:12}, so it may still exist: $label"
+  elif [[ $label != "$RUN_ID" ]]; then
+    fail "container ${id:0:12} is labelled '$label', not $RUN_ID; not removing it"
+  else
+    gone=0
+    docker rm -f "$id" >/dev/null && { container_label "$id" >/dev/null || gone=$?; }
+    if (( gone == 1 )); then
+      echo "removed container $VERIFY_CONTAINER (${id:0:12})"
+    else
+      fail "could not remove container $VERIFY_CONTAINER (${id:0:12}), or cannot confirm it is gone"
+    fi
+  fi
 fi
 
 mkdir -p "$EVIDENCE/logs" || fail "cannot create $EVIDENCE/logs"

@@ -144,7 +144,9 @@ Evidence goes to `docs/evidence/verify-fs-billing/<RUN_ID>/<feature-id>/`. Clean
 
 No evidence file ends in `.log`, because the repo's `.gitignore` ignores `*.log`. Every file the helpers write is committable as is: `git add docs/evidence/verify-fs-billing/<RUN_ID>` picks up all of it. Check with `git status --ignored --short docs/evidence/verify-fs-billing/<RUN_ID>`, which must list no `!!` entries.
 
-Every file written into evidence passes through redaction. Secret values from `run.env` become `[REDACTED]`, and so do `session_token=` cookie values and the JSON fields `password`, `currentPassword`, `newPassword`, `temporaryPassword`, `token`, and `secret`. The JSON rule covers values the run never knew, such as the temporary password a real reset returns. Never paste `run.env` or a raw cookie into evidence by hand.
+Every file written into evidence passes through redaction. Secret values from `run.env` become `[REDACTED]`, and so do `session_token=` cookie values and the JSON fields `password`, `currentPassword`, `newPassword`, `temporaryPassword`, `token`, and `secret`. The JSON rule covers values the run never knew, such as the temporary password a real reset returns. It matches across lines, so pretty-printed JSON with the key, colon, and value on separate lines is redacted too, and it handles escaped quotes inside the value. Never paste `run.env` or a raw cookie into evidence by hand.
+
+After you change `verify_redact` in `lib.sh`, run `$S/selftest-redact.sh`. It needs no stack. It feeds synthetic single-line, multi-line, and escaped-quote cases through the redaction and exits 1 if any value survives or any output differs from the expected text.
 
 `cleanup.sh` scans the evidence for every `run.env` secret before it deletes the state, and fails, keeping the state, if any file matches. It prints file names only. To scan by hand while the run is live, use `-l` so a hit shows the file and never the secret:
 
@@ -172,7 +174,7 @@ VERIFY_RUN_ID=<id> $S/cleanup.sh        # a specific run
 `cleanup.sh` does the following:
 
 - It sends TERM, then KILL after 5 s, to the API and web process groups recorded in `api.pid` and `web.pid`. It does this only while each PID still carries this run's `VERIFY_RUN_ID`. It never kills by name or port. A group that survives KILL is a failure.
-- It runs `docker rm -f` on the recorded container id, and only if the id carries label `fs-billing-verify=<RUN_ID>`, then confirms the container is gone. A container that is already gone is fine. A failed removal, or an id with another label, is a failure.
+- It runs `docker rm -f` on the recorded container id, and only if the id carries label `fs-billing-verify=<RUN_ID>`, then confirms the container is gone. A container is treated as gone only when `docker inspect` reports `No such object`. Any other inspect error, such as the daemon being down or permission denied, is a failure, because the container may still exist. A failed removal, or an id with another label, is also a failure.
 - It copies redacted logs to `<evidence>/logs/` as `*.log.txt`, then runs the leak scan above.
 - Only if every step succeeded does it delete `/tmp/verify-fs-billing/<RUN_ID>/` (secrets, cookie jars, web build) and print `evidence kept: <dir> (<n> files)`. Otherwise it prints each failure, keeps the state so you can fix the cause and rerun it, and exits 1.
 
@@ -190,6 +192,7 @@ Commit evidence only when a PR needs the proof. Every file is committable (see [
 | `api.sh` | `$S/api.sh login <email> <jar> [--wrong]` / `$S/api.sh <METHOD> <PATH> [jar] [json]` | Redacted HTTP transcript via the web proxy |
 | `sql.sh` | `$S/sql.sh [--value] "<sql>"` / `$S/sql.sh < file.sql` | psql as owner in OUR container only |
 | `with-env.sh` | `$S/with-env.sh <command...>` | Repo CLI with the run's env, output redacted |
+| `selftest-redact.sh` | `$S/selftest-redact.sh` | Offline self-test of `verify_redact`; exit 1 on any leak |
 | `cleanup.sh` | `$S/cleanup.sh` | Kill our process groups, remove our container, keep evidence; exit 1 and keep state on any failure |
 | `lib.sh` | sourced | Run resolution, redaction, leak scan, ownership checks |
 

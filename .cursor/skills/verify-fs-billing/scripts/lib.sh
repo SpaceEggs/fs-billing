@@ -38,7 +38,9 @@ VERIFY_SECRET_KEYS=(BETTER_AUTH_SECRET SEED_AUTH_PASSWORD PG_OWNER_PASSWORD PG_A
 VERIFY_SENSITIVE_JSON='password|currentPassword|newPassword|temporaryPassword|token|secret'
 
 # Replace every secret value from run.env with [REDACTED], plus cookie values and
-# sensitive JSON fields.
+# sensitive JSON fields. sed -z reads the whole input as one record, so a field whose
+# key, colon, and value sit on separate lines (pretty-printed JSON) is still caught.
+# Self-test: scripts/selftest-redact.sh.
 verify_redact() {
   local args=() key value
   for key in "${VERIFY_SECRET_KEYS[@]}"; do
@@ -47,7 +49,7 @@ verify_redact() {
   done
   args+=(-e 's/(session_token=)[^;[:space:]"]+/\1[REDACTED]/g')
   args+=(-e "s/(\"(${VERIFY_SENSITIVE_JSON})\"[[:space:]]*:[[:space:]]*\")([^\"\\\\]|\\\\.)*\"/\\1[REDACTED]\"/g")
-  sed -E "${args[@]}"
+  sed -zE "${args[@]}"
 }
 
 # Evidence files that contain any run.env secret. Prints file names only, never the match.
