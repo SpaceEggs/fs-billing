@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { newPasswordSchema } from '../auth.js';
 import {
   adminMutationResponseSchema,
@@ -7,6 +8,8 @@ import {
   adminStatusSchema,
   adminTimestampSchema,
 } from './common.js';
+
+export const DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS = 72 * 60 * 60 * 1000;
 
 export const adminAccountSchema = z.strictObject({
   id: z.uuid(),

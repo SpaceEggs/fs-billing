@@ -301,7 +301,27 @@ export const adminApiContract = {
     '/api/admin/receivables/{id}/confirm-payment',
     { ...idRequest, body: receivables.adminConfirmPaymentRequestSchema },
     receivables.adminConfirmPaymentResponseSchema,
-    conflicts(['ALREADY_RECEIVED']),
+    conflicts(['ALREADY_RECEIVED', 'RECEIVABLE_VOIDED']),
+  ),
+  adminVoidReceivable: operation(
+    'adminVoidReceivable',
+    'POST',
+    '/api/admin/receivables/{id}/void',
+    { ...idRequest, body: receivables.adminVoidReceivableRequestSchema },
+    receivables.adminVoidReceivableResponseSchema,
+    conflicts([
+      'ALREADY_RECEIVED',
+      'RECEIVABLE_VOIDED',
+      'RECEIVABLE_REVERSAL_MISMATCH',
+    ]),
+  ),
+  adminReversePayment: operation(
+    'adminReversePayment',
+    'POST',
+    '/api/admin/receivables/{id}/reverse-payment',
+    { ...idRequest, body: receivables.adminReversePaymentRequestSchema },
+    receivables.adminReversePaymentResponseSchema,
+    conflicts(['SETTLEMENT_CONFLICT', 'RECEIVABLE_VOIDED']),
   ),
   adminAccounts: operation(
     'adminAccounts',

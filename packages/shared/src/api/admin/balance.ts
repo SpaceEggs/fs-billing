@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { currencySchema } from '../identity.js';
 import { moneyAmountSchema } from '../money.js';
+import { adminReceivableStatusSchema } from './receivables.js';
 import {
   adminMutationResponseSchema,
   adminInputAmountSchemas,
@@ -61,7 +62,7 @@ export const adminLedgerEntrySchema = z
     balanceAfter: moneyAmountSchema,
     note: z.string(),
     noteVisibility: z.enum(['customer', 'admin']),
-    paymentStatus: z.enum(['pending', 'received']).nullable(),
+    paymentStatus: adminReceivableStatusSchema.nullable(),
     actor: z.strictObject({ id: z.uuid(), name: z.string() }).nullable(),
     occurredAt: adminTimestampSchema,
   })

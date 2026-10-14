@@ -12,6 +12,11 @@ import {
 function beijingDate(timestamp: number): string {
   return new Date(timestamp + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
+export const adminReceivableStatusSchema = z.enum([
+  'pending',
+  'received',
+  'voided',
+]);
 const receivedOnSchema = z.iso
   .date()
   .refine((date) => date <= beijingDate(Date.now()), {
@@ -36,9 +41,18 @@ export const adminReceivableSchema = z
       z.strictObject({ status: z.literal('pending') }),
       z.strictObject({
         status: z.literal('received'),
+        settlementId: z.uuid(),
         receivedOn: receivedOnSchema,
         note: z.string().max(2000),
         confirmedBy: z.uuid(),
+      }),
+      z.strictObject({
+        status: z.literal('voided'),
+        voidId: z.uuid(),
+        adjustmentLedgerEntryId: z.uuid(),
+        reason: z.string().trim().min(1).max(2000),
+        voidedBy: z.uuid(),
+        voidedAt: adminTimestampSchema,
       }),
     ]),
   })
@@ -50,14 +64,14 @@ export const adminReceivableSchema = z
   )
   .refine(
     (entry) =>
-      entry.payment.status === 'pending' ||
+      entry.payment.status !== 'received' ||
       entry.payment.receivedOn >= beijingDate(Date.parse(entry.createdAt)),
     { message: '收款日期不能早于赊账日期', path: ['payment', 'receivedOn'] },
   );
 export const adminReceivablesQuerySchema = adminPageQuerySchema.extend({
   search: z.string().max(200).optional(),
   currency: currencySchema.optional(),
-  status: z.enum(['pending', 'received']).default('pending'),
+  status: adminReceivableStatusSchema.default('pending'),
 });
 export const adminReceivablesResponseSchema = z.strictObject({
   items: z.array(adminReceivableSchema),
@@ -86,4 +100,37 @@ export type AdminConfirmPaymentRequest = z.infer<
 >;
 export type AdminConfirmPaymentResponse = z.infer<
   typeof adminConfirmPaymentResponseSchema
+>;
+
+export const adminVoidReceivableRequestSchema = z.strictObject({
+  adjustmentLedgerEntryId: z.uuid(),
+  reason: z.string().trim().min(1).max(2000),
+});
+export const adminVoidReceivableResponseSchema =
+  adminMutationResponseSchema.extend({
+    ledgerEntryId: z.uuid(),
+    voidId: z.uuid(),
+  });
+export const adminReversePaymentRequestSchema = z.strictObject({
+  settlementId: z.uuid(),
+  reason: z.string().trim().min(1).max(2000),
+});
+export const adminReversePaymentResponseSchema =
+  adminMutationResponseSchema.extend({
+    ledgerEntryId: z.uuid(),
+    settlementId: z.uuid(),
+    reversalId: z.uuid(),
+  });
+export type AdminReceivableStatus = z.infer<typeof adminReceivableStatusSchema>;
+export type AdminVoidReceivableRequest = z.infer<
+  typeof adminVoidReceivableRequestSchema
+>;
+export type AdminVoidReceivableResponse = z.infer<
+  typeof adminVoidReceivableResponseSchema
+>;
+export type AdminReversePaymentRequest = z.infer<
+  typeof adminReversePaymentRequestSchema
+>;
+export type AdminReversePaymentResponse = z.infer<
+  typeof adminReversePaymentResponseSchema
 >;

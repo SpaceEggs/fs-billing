@@ -687,6 +687,7 @@ it('received receivables retain settlement notes and cannot be overdue', () => {
     overdue: false,
     payment: {
       status: 'received',
+      settlementId: id,
       receivedOn: '2026-10-14',
       note: '银行转账',
       confirmedBy: id,
@@ -730,6 +731,7 @@ it('received receivables retain settlement notes and cannot predate the credit',
     overdue: false,
     payment: {
       status: 'received',
+      settlementId: id,
       receivedOn: '2026-10-15',
       confirmedBy: id,
       note: '银行转账',

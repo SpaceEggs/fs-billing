@@ -19,6 +19,8 @@ export const adminRateEntrySchema = z.strictObject({
 export const DEFAULT_ADMIN_CSV_MAX_BYTES = 2 * 1024 * 1024;
 export const DEFAULT_ADMIN_RATE_MAX_ROWS = 10000;
 export const DEFAULT_ADMIN_RATE_PREVIEW_TTL_MS = 60 * 60 * 1000;
+export const DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS = 365 * 24 * 60 * 60 * 1000;
+export const DEFAULT_ADMIN_RATE_CANCEL_CLOCK_SKEW_MARGIN_SECONDS = 60;
 
 export function createAdminRateEntriesSchema(
   maxRows = DEFAULT_ADMIN_RATE_MAX_ROWS,
@@ -35,16 +37,26 @@ export function createAdminRateEntriesSchema(
 }
 export const adminRateEntriesSchema = createAdminRateEntriesSchema();
 export const adminRateEntriesResponseSchema = z.array(adminRateEntrySchema);
-export const adminRateScheduleSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('immediate') }),
-  z.strictObject({
-    kind: z.literal('scheduled'),
-    effectiveFrom: adminTimestampSchema.refine(
-      (value) => Date.parse(value) >= Date.now(),
-      { message: '指定生效时间必须大于或等于当前时间' },
-    ),
-  }),
-]);
+export function createAdminRateScheduleSchema(
+  horizonMs = DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
+) {
+  const limit = z.number().int().positive().parse(horizonMs);
+  return z.discriminatedUnion('kind', [
+    z.strictObject({ kind: z.literal('immediate') }),
+    z.strictObject({
+      kind: z.literal('scheduled'),
+      effectiveFrom: adminTimestampSchema.refine(
+        (value) => {
+          const now = Date.now();
+          const effectiveFrom = Date.parse(value);
+          return effectiveFrom >= now && effectiveFrom <= now + limit;
+        },
+        { message: '指定生效时间必须在当前时间至配置的排期上限之间' },
+      ),
+    }),
+  ]);
+}
+export const adminRateScheduleSchema = createAdminRateScheduleSchema();
 export const adminRateVersionSchema = z.strictObject({
   id: z.uuid(),
   effectiveFrom: adminTimestampSchema,
