@@ -1,7 +1,7 @@
- Container fsi-43da223a4524-nginx-1  Stopping
- Container fsi-43da223a4524-nginx-1  Stopped
- Container fsi-43da223a4524-nginx-1  Starting
- Container fsi-43da223a4524-nginx-1  Started
+ Container fsi-ded69d2a3335-nginx-1  Stopping
+ Container fsi-ded69d2a3335-nginx-1  Stopped
+ Container fsi-ded69d2a3335-nginx-1  Starting
+ Container fsi-ded69d2a3335-nginx-1  Started
 用例	结果
 准备	PASS
 归一化 plus	PASS
@@ -17,4 +17,4 @@ ALLOTTED_TIMEOUT	PASS
 授权降级 refused	PASS
 授权降级 stalled	PASS
 话单重试与去重	PASS
-日志 /tmp/fs-integration-20261014T012353-166105
+日志 /tmp/fs-integration-20261014T014249-209320

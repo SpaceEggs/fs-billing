@@ -5,7 +5,7 @@ The FreeSWITCH caller authorizes calls and pushes raw mod_json_cdr text directly
 ## Sub-features
 
 - `worker-authorize` loads real tenant status, balance and rates; returns allow/maxSeconds or reject/reason/sipCode.
-- `worker-authorize-number` returns HTTP 400 and `号码格式错误` for invalid callee syntax.
+- `worker-authorize-number` requires original `dialedNumber` and normalized `callee`, accepts an optional matching `billingNumber`, and returns HTTP 400 and `号码格式错误` for invalid dialed syntax or normalized length.
 - `worker-cdr-raw` commits exact received text before parsing, including malformed and duplicate pushes.
 - `worker-cdr-gate` deduplicates via call_uuids, including concurrent pushes and changed tags on unassigned calls.
 - `worker-cdr-unassigned` parks unknown/missing tenant tags and malformed numbers as pending with cdr_failed alerts and no charge.
@@ -31,7 +31,7 @@ For a direct Worker process, migrate DB and install the queue before starting. B
 
 ## Gotchas
 
-- Bad JSON/invalid shapes are raw-only with alerts and HTTP 200; unassigned rows require a valid UUID and call timeline.
+- Bad JSON remains raw-only with an alert and HTTP 200. Invalid shapes also create unassigned rows with a validation reason and raw reference, without a call UUID or timeline.
 - Raw CDR UUID/tenant columns remain NULL because original rows are inserted before parsing and are append-only. Inspect body/payload or returned rawId.
 - Formal CDRs preserve billing_unverified; unanswered and zero-price calls produce no ledger entry.
 - Job crash recovery, queue supervision and daily partition scheduling are covered by the DB suite. FreeSWITCH examples and disk replay are documented in [Worker authorization](worker-authorize.md) and [CDR ingestion](worker-cdr-ingest.md). Simulated transaction failure and queue restart do not prove an actual FreeSWITCH call.

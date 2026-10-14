@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
+export const INVALID_NUMBER_REASON = '号码格式错误';
+export const CDR_VALIDATION_FAILURE_PREFIX = '话单校验失败: ';
+
 export const dialedNumberSchema = z
   .string()
-  .regex(/^[1-9][0-9]{5,14}(?![\s\S])/, '号码格式错误');
+  .regex(/^[1-9][0-9]{5,14}(?![\s\S])/, INVALID_NUMBER_REASON);
 export const authorizeRequestSchema = z.object({
   tenant: z.string().regex(/^[A-Za-z0-9]+$/),
   callee: z.string(),
@@ -20,7 +23,7 @@ export const authorizeResponseSchema = z.discriminatedUnion('allowed', [
   z.object({
     allowed: z.literal(false),
     reason: z.enum([
-      '号码格式错误',
+      INVALID_NUMBER_REASON,
       '租户不存在',
       '租户已停用',
       '无费率',

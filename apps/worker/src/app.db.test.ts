@@ -10,6 +10,10 @@ import {
   withSystem,
 } from '@fs-billing/db';
 import { rate } from '@fs-billing/rating';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  INVALID_NUMBER_REASON,
+} from '@fs-billing/shared';
 import { z } from 'zod';
 import { fromDrizzle } from 'pg-boss';
 import {
@@ -295,7 +299,7 @@ describe('Worker HTTP 与真实数据库', () => {
     },
   );
 
-  it.each(['0044', '+44', '447x', ''])(
+  it.each(['0044', '+44', '447x', '', '138|evil', '12345678901234'])(
     '错误被叫 %s 返回 200，原文与未归属告警保留',
     async (callee) => {
       const tenant = await fixture();
@@ -306,6 +310,9 @@ describe('Worker HTTP 与真实数据库', () => {
       const response = await post(payload);
       expect(response.statusCode).toBe(200);
       expect(response.json()).toMatchObject({ status: 'unassigned' });
+      expect((await post(payload)).json()).toMatchObject({
+        status: 'duplicate',
+      });
       expect(await state(uuid)).toEqual({
         cdrs: 0,
         unassigned: 1,
@@ -315,23 +322,30 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(
         (
           await owner.pool.query(
-            'select reason, callee from unassigned_cdrs where call_uuid = $1',
+            'select reason, callee, call_uuid, billing_number from unassigned_cdrs where call_uuid = $1',
             [uuid],
           )
         ).rows,
-      ).toEqual([{ reason: '号码格式错误', callee }]);
+      ).toEqual([
+        {
+          reason: INVALID_NUMBER_REASON,
+          callee,
+          call_uuid: uuid,
+          billing_number: null,
+        },
+      ]);
       expect(
         (
           await owner.pool.query('select body from raw_cdrs where body = $1', [
             payload,
           ])
         ).rows,
-      ).toEqual([{ body: payload }]);
+      ).toEqual([{ body: payload }, { body: payload }]);
       expect(
         (
           await owner.pool.query(
             'select kind from system_alerts where description = $1',
-            [`${uuid}: 号码格式错误`],
+            [`${uuid}: ${INVALID_NUMBER_REASON}`],
           )
         ).rows,
       ).toEqual([{ kind: 'cdr_failed' }]);
@@ -548,7 +562,7 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(response.statusCode).toBe(400);
       expect(response.json()).toEqual({
         allowed: false,
-        reason: '号码格式错误',
+        reason: INVALID_NUMBER_REASON,
         sipCode: 484,
       });
     }
@@ -966,7 +980,7 @@ describe('Worker HTTP 与真实数据库', () => {
     ['+13055551234', '13055551234', '1', '0.03'],
     ['13055551234', '8613055551234', '861305', '0.05'],
   ])(
-    '新协议 %s 保留原拨号，授权、话单和流水使用 %s',
+    '拨号 %s 保留原拨号，授权、话单和流水使用 %s',
     async (dialed, billingNumber, prefix, perMinute) => {
       const tenant = await createTenant(connection, 'CNY');
       await withSystem(connection.db, (tx) =>
@@ -1151,7 +1165,9 @@ describe('Worker HTTP 与真实数据库', () => {
       callee: '447700900123',
     });
     expect(rows[0]?.reason).toContain('billing_dialed_number');
-    expect(rows[0]?.reason).toMatch(/^话单校验失败: /);
+    expect(rows[0]?.reason.startsWith(CDR_VALIDATION_FAILURE_PREFIX)).toBe(
+      true,
+    );
     expect(await state(uuid)).toEqual({
       cdrs: 0,
       unassigned: 0,
@@ -1162,7 +1178,7 @@ describe('Worker HTTP 与真实数据库', () => {
       (
         await owner.pool.query(
           'select kind from system_alerts where description like $1',
-          [`${result.rawId}: 话单校验失败:%`],
+          [`${result.rawId}: ${CDR_VALIDATION_FAILURE_PREFIX}%`],
         )
       ).rows,
     ).toEqual([{ kind: 'cdr_failed' }]);

@@ -23,10 +23,12 @@ describe('RLS 租户隔离', () => {
         sql`select cdrs.*, tenants.code from cdrs join tenants on tenants.id = cdrs.tenant_id order by started_at`,
       ),
     );
-    expect(rows.map((r) => [r.code, r.callee, r.charge])).toEqual([
-      ['ABC001', '447700900123', '0.18'],
-      ['ABC001', '18765550100', '0.25'],
-      ['ABC001', '8613800138000', '0'],
+    expect(
+      rows.map((r) => [r.code, r.callee, r.billing_number, r.charge]),
+    ).toEqual([
+      ['ABC001', '+447700900123', '447700900123', '0.18'],
+      ['ABC001', '+18765550100', '18765550100', '0.25'],
+      ['ABC001', '13800138000', '8613800138000', '0'],
     ]);
   });
 

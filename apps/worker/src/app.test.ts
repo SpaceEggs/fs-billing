@@ -1,5 +1,5 @@
 import { connect } from '@fs-billing/db';
-import { modJsonCdrSchema } from '@fs-billing/shared';
+import { INVALID_NUMBER_REASON, modJsonCdrSchema } from '@fs-billing/shared';
 import { expect, test, vi } from 'vitest';
 import { createWorker } from './app.js';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
@@ -90,7 +90,7 @@ test.each([
       expect(response.statusCode).toBe(400);
       expect(response.json()).toEqual({
         allowed: false,
-        reason: '号码格式错误',
+        reason: INVALID_NUMBER_REASON,
         sipCode,
       });
       expect(transaction).not.toHaveBeenCalled();

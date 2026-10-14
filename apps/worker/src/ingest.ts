@@ -8,7 +8,12 @@ import {
   type Tx,
 } from '@fs-billing/db';
 import { findRate, resolveBillingNumber, priceCall } from '@fs-billing/rating';
-import { modJsonCdrSchema, type ParsedCdr } from '@fs-billing/shared';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  INVALID_NUMBER_REASON,
+  modJsonCdrSchema,
+  type ParsedCdr,
+} from '@fs-billing/shared';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
 import type { ChargeQueue } from './queue.js';
 
@@ -92,11 +97,11 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         callee: identity.destination_number,
         rawId: raw.id,
         rawReceivedAt: raw.receivedAt,
-        reason: `话单校验失败: ${parsed.error.message}`,
+        reason: `${CDR_VALIDATION_FAILURE_PREFIX}${parsed.error.message}`,
       });
       await tx.insert(schema.systemAlerts).values({
         kind: 'cdr_failed',
-        description: `${raw.id}: 话单校验失败: ${parsed.error.message}`,
+        description: `${raw.id}: ${CDR_VALIDATION_FAILURE_PREFIX}${parsed.error.message}`,
         affectedCalls: 1,
       });
     });
@@ -134,7 +139,9 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         return park(
           tx,
           cdr,
-          resolved.error === 'mismatch' ? '计费号码不一致' : '号码格式错误',
+          resolved.error === 'mismatch'
+            ? '计费号码不一致'
+            : INVALID_NUMBER_REASON,
           resolved.error === 'mismatch' ? resolved.billingNumber : null,
         );
       if (!tenant)

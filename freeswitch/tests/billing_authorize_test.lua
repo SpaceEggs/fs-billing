@@ -1,6 +1,6 @@
 local script = arg[1] or 'freeswitch/scripts/billing_authorize.lua'
 
-local function run(destination, response, ready)
+local function run(destination, response, ready, http_status)
     local variables = { destination_number = destination, billing_tenant = 'tenant1' }
     local actions = {}
     local requests = 0
@@ -37,7 +37,7 @@ local function run(destination, response, ready)
                     options.writefunction('invalid response')
                     return true
                 end,
-                getinfo_response_code = function() return response == '5xx' and 503 or 200 end,
+                getinfo_response_code = function() return http_status or (response == '5xx' and 503 or 200) end,
                 close = function() end,
             }
         end,
@@ -137,6 +137,13 @@ local invalid_number, invalid_actions = run('13800138000',
     { allowed = false, sipCode = 484, reason = 'invalid_number' })
 check(invalid_number.billing_authorized == 'false' and invalid_actions.respond == '484',
     'worker number rejection must respond 484 without fallback')
+
+local bad_request, bad_request_actions, _, bad_request_hangup = run('44712345678',
+    { allowed = false, sipCode = 400, reason = 'bad_request' }, true, 400)
+check(bad_request.billing_authorized == 'false' and bad_request_actions.bridge == nil,
+    'HTTP 400 with unsupported SIP code must not bridge')
+check(bad_request_actions.respond == '503' and bad_request_hangup == 'CALL_REJECTED',
+    'HTTP 400 with unsupported SIP code must respond 503')
 
 local invalid_code = run('44712345678',
     { allowed = false, sipCode = 402.5, reason = 'insufficient_balance' })

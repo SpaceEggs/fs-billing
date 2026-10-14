@@ -7,6 +7,7 @@ I found one blocking problem, five should-fix items and seven minor ones, so the
 ## BLOCKING
 
 **B1. CDRs for calls the dialplan rejects now look like old-format CDRs.** Location: `freeswitch/dialplan/billing.xml:6-12`, `packages/shared/src/worker.ts:71,134`. Found by both Opus reviewers; I confirmed it in the code.
+
 - **How it happens:** when the dialed number fails `^\+?[0-9]{1,17}$` (for example `138|evil`, an empty number, or 18+ digits), the `<anti-action>` responds 484 before `billing_authorize.lua` runs. So `billing_dialed_number` is never set.
 - **On main:** a fallback to `destination_number` parked these as `号码格式错误` with the call UUID, so repeated pushes were caught as duplicates.
 - **On HEAD:** they go down the validation-failure path as `话单校验失败: …` with no call UUID. Every replay of the retry or archive file adds another pending row and another alert.
@@ -19,23 +20,27 @@ I found one blocking problem, five should-fix items and seven minor ones, so the
 ## SHOULD FIX
 
 **S1. The Drizzle `check()` SQL is broken.** Location: `packages/db/src/schema.ts:166-170, 212-221`.
+
 - The quote is never closed. Rendering it through Drizzle gives `... ~ '^[1-9][0-9]{5,14}$` with no closing `'`.
 - No other table in `schema.ts` uses `check()`; this repo keeps constraints in the SQL migrations only.
 - **Fix:** delete the three `check()` blocks and the `check` import. If you'd rather keep them, add the closing quote.
 
 **S2. Migration 0004 fails on a populated DB that is already at 0003, and nothing says so.**
+
 - On a fresh DB it applies cleanly.
 - At 0003 it aborts if there are NULL `cdrs.billing_number` values (error 23502), 1–5 digit numbers (0003 allowed those), or older `unassigned_cdrs` rows with NULL and a reason like `租户不存在`.
 - Your evidence files show the DB was wiped first (50 cdrs → 0).
 - **Fix:** add one line to `docs/design.md` §4.2 and `docs/worker-api.md` saying dev and integration DBs must be reset before 0004. Optionally start the migration with a `DO $$ … RAISE EXCEPTION 'reset DB' $$` guard.
 
 **S3. The new mismatch row in the SIP table is wrong.** Location: `docs/freeswitch.md:52`.
+
 - When the Worker detects a mismatch it returns HTTP 503 (`app.ts:73-78`).
 - Lua treats a 503 as "no response" and lets the call through for 1800 seconds as unverified (`billing_authorize.lua:97,117`). The CDR is then parked and never billed.
 - SIP 503 only happens when Lua itself finds a mismatch in a 200 response.
 - **Fix:** correct the table row. Letting the call through on a Worker-detected mismatch already happens on main; making it reject the call is a separate follow-up.
 
 **S4. Legacy wording is still in the docs.**
+
 - `docs/design.md:128` (§4.2): "新协议以 `dialedNumber` 区分原始拨号和旧版已规范化号码". Delete the sentence.
 - `docs/design.md:163`:
   - Change "优先使用 `billing_dialed_number`" to "使用".
@@ -45,6 +50,7 @@ I found one blocking problem, five should-fix items and seven minor ones, so the
 - `docs/freeswitch.md` and `freeswitch/README.md` have no leftover rollout text. One caveat: README line 26 ("提前退出或校验失败的话单也保留原始拨号") is only true once B1 is fixed.
 
 **S5. The verify-skill docs describe the old authorize request.** Location: `apps/web/.agents/skills/verify/features/worker-authorize.md:9-10,16` and `worker-api.md:8`.
+
 - They tell you to POST `{tenant, callee, uuid}`, which now returns 400/484.
 - They also say `+` and `00` numbers are rejected and that FreeSWITCH "normalizes the destination". Neither is true now.
 - **Fix:** add `dialedNumber` to the request shape and correct those two lines.
@@ -66,6 +72,7 @@ I found one blocking problem, five should-fix items and seven minor ones, so the
 - **M7. No Lua test covers removing 400 from `sip_codes`** (`billing_authorize.lua:12`). Optionally add the case HTTP 400 with `sipCode:400` → respond 503.
 
 ## Answers to your specific questions
+
 - **Authorize without `dialedNumber`:** there is a behaviour test (`apps/worker/src/app.test.ts:60,62-63`). It asserts HTTP 400 and `{allowed:false, reason:'号码格式错误', sipCode:484}` without touching the DB, and it passes.
 - **Reason-coupled CHECK:** it matches every reason the code produces today, but it breaks easily (M1). On a DB at 0003 with existing rows it fails (S2).
 - **Things you wanted kept:** all intact.

@@ -83,11 +83,13 @@ pnpm --filter @fs-billing/worker start
 
 `start_uepoch`、`answer_uepoch`、`end_uepoch` 接受非负整数或数字字符串；无效值不能回退到秒数。时间先按微秒校验先后顺序，再截断到毫秒。
 
-`caller_id_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。`destination_number` 只保留在原文中。`billing_dialed_number` 用于展示被叫，避免 `execute_extension` 改变 `destination_number` 后丢失客户原始拨号。缺主叫不拒绝话单；原始拨号为空按号码格式错误保存为未归属话单，缺少 `billing_dialed_number` 按话单校验失败保存。
+`caller_id_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。`destination_number` 不参与计费；话单校验失败且缺少 `billing_dialed_number` 时，用它作为展示被叫的回退。`billing_dialed_number` 用于展示被叫，避免 `execute_extension` 改变 `destination_number` 后丢失客户原始拨号。缺主叫不拒绝话单；原始拨号为空按号码格式错误保存为未归属话单，缺少 `billing_dialed_number` 按话单校验失败保存。
 
-CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的旧格式话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并写 `cdr_failed` 告警，不登记通话 UUID、不入队、不收费。投影不一致的话单以 `计费号码不一致` 原因停放，保存 Worker 计算的号码并告警。
+CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并写 `cdr_failed` 告警，不登记通话 UUID、不入队、不收费。投影不一致的话单以 `计费号码不一致` 原因停放，保存 Worker 计算的号码并告警。
 
 迁移 `0004_billing_number_not_null` 要求 `cdrs.billing_number` 非空且为首位非零的 6–15 位数字。`unassigned_cdrs.billing_number` 仅在原因是 `号码格式错误` 或以 `话单校验失败: ` 开头时允许且要求 NULL。格式错误无法生成号码，结构或时间校验失败则无法产生可信的完整话单。其他停放原因必须保存有效号码，包括投影不一致。数据库 CHECK 约束保证该对应关系。
+
+持有不符合这些约束的 pre-0004 话单的开发及集成测试数据库必须在迁移前重置。迁移检测到这些存量行时会抛出 `reset the dev database before 0004: legacy billing_number rows present`，不会自动修复或删除话单。
 
 其他 mod_json_cdr 字段不参与业务解析，原文全部保留。输入形状和输出类型由 `packages/shared/src/worker.ts` 的 Zod schema 派生。
 

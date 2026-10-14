@@ -125,7 +125,9 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 每通外呼在桥接到上游之前，FreeSWITCH 先调用 Workers 的授权接口。
 
-**请求**：租户编码、规范化计费号码 `callee` 与原始拨号 `dialedNumber`、通话 UUID，可选的 `billingNumber` 投影。新协议以 `dialedNumber` 区分原始拨号和旧版已规范化号码。
+**请求**：租户编码、规范化计费号码 `callee` 与原始拨号 `dialedNumber`、通话 UUID，可选的 `billingNumber` 投影。
+
+迁移 `0004_billing_number_not_null` 前，持有不符合新约束的 pre-0004 话单的开发及集成测试数据库必须重置。
 
 **计费系统的判断逻辑**：
 
@@ -160,7 +162,7 @@ billing_tenant=<租户编码>     例：billing_tenant=ABC001
 
 Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBillingNumber`，使用规范化结果匹配费率并保存到数据库。Lua 仅为请求前校验和授权超时放行生成同规则投影，在脚本开始时设置 `billing_dialed_number`，校验后设置 `billing_number`。提前返回的话单也保留原始拨号。Worker 从原始拨号重新计算，拒绝不一致的投影；Lua 要求授权成功响应包含一致的号码，缺失或不一致均返回 SIP 503。这样不会仅凭 Lua 的结果收费，也不会让授权和话单分别维护归一化逻辑。Worker 故障时原始拨号与投影仍随话单落盘，恢复后由同一函数重新核验。
 
-话单的 `callee` 保存原始拨号，`billing_number` 保存费率与账本使用的国际号码。解析优先使用 `billing_dialed_number`，避免 FreeSWITCH 的 `execute_extension` 改变展示号码。有效的未归属话单也保存规范化号码；号码格式无效时该列为 NULL；投影不一致时保存 Worker 计算的号码，以独立原因停放并记录告警。扣费备注为 `通话扣费 <UUID> <billing_number>`。
+话单的 `callee` 保存原始拨号，`billing_number` 保存费率与账本使用的国际号码。解析使用 `billing_dialed_number`，避免 FreeSWITCH 的 `execute_extension` 改变展示号码。有效的未归属话单也保存规范化号码；号码格式错误或话单校验失败时该列为 NULL；投影不一致时保存 Worker 计算的号码，以独立原因停放并记录告警。扣费备注为 `通话扣费 <UUID> <billing_number>`。
 
 只接受包含原始拨号的号码格式。授权缺少 `dialedNumber` 返回 HTTP 400、SIP 484、`号码格式错误`。CDR 缺少 `billing_dialed_number` 按话单校验失败进入未归属待办并告警，不计费。
 

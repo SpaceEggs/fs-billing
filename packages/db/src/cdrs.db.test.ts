@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  INVALID_NUMBER_REASON,
+} from '../../shared/src/worker.js';
 import { connections, createTenant, pgError } from '../test/support.js';
 import { withAdmin, type Tx } from './client.js';
 import { ensureCdrPartitions } from './partitions.js';
@@ -336,14 +340,14 @@ describe('计费号码约束', () => {
   );
 
   it.each([
-    { reason: '号码格式错误', billingNumber: null, valid: true },
+    { reason: INVALID_NUMBER_REASON, billingNumber: null, valid: true },
     {
-      reason: '话单校验失败: billing_dialed_number 缺失',
+      reason: `${CDR_VALIDATION_FAILURE_PREFIX}billing_dialed_number 缺失`,
       billingNumber: null,
       valid: true,
     },
     {
-      reason: '话单校验失败: 话单时间与时长不一致',
+      reason: `${CDR_VALIDATION_FAILURE_PREFIX}话单时间与时长不一致`,
       billingNumber: null,
       valid: true,
     },
@@ -351,9 +355,13 @@ describe('计费号码约束', () => {
     { reason: '计费号码不一致', billingNumber: '447700900123', valid: true },
     { reason: '租户不存在', billingNumber: null, valid: false },
     { reason: '计费号码不一致', billingNumber: null, valid: false },
-    { reason: '号码格式错误', billingNumber: '447700900123', valid: false },
     {
-      reason: '话单校验失败: 话单时间与时长不一致',
+      reason: INVALID_NUMBER_REASON,
+      billingNumber: '447700900123',
+      valid: false,
+    },
+    {
+      reason: `${CDR_VALIDATION_FAILURE_PREFIX}话单时间与时长不一致`,
       billingNumber: '447700900123',
       valid: false,
     },

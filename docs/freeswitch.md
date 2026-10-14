@@ -49,9 +49,11 @@
 |---|---|
 | 租户不存在或已停用 | 403 Forbidden |
 | 号码格式错误 | 484 Address Incomplete |
-| 计费投影不一致 | 503 Service Unavailable |
+| Lua 检测到 HTTP 200 响应的计费投影不一致 | 503 Service Unavailable |
 | 计费号码匹配不到费率 | 404 Not Found |
 | 余额不足（已停机） | 402 Payment Required |
+
+Worker 检测到计费投影不一致时返回 HTTP 503，Lua 按授权服务不可用放行 1800 秒并设置 `billing_unverified=true`；对应话单停放，不计费。
 
 ### 3.2 话单推送（mod_json_cdr）
 
