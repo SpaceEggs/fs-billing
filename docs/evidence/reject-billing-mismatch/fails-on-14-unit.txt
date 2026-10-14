@@ -1,0 +1,36 @@
+
+ RUN  v5.0.4 /workspace/fs-billing
+
+ ❯ apps/worker/src/app.test.ts (18 tests | 2 failed) 111ms
+   × authorize fails closed on projection mismatch {"callee":"13800138000","dialedNumber":"13800138000"} 7ms
+   × authorize fails closed on projection mismatch {"callee":"8613800138000","dialedNumber":"13800138000","billingNumber":"13055551234"} 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/worker/src/app.test.ts > authorize fails closed on projection mismatch {"callee":"13800138000","dialedNumber":"13800138000"}
+ FAIL  apps/worker/src/app.test.ts > authorize fails closed on projection mismatch {"callee":"8613800138000","dialedNumber":"13800138000","billingNumber":"13055551234"}
+AssertionError: expected 503 to be 400 // Object.is equality
+
+- Expected
++ Received
+
+- 400
++ 503
+
+ ❯ apps/worker/src/app.test.ts:131:33
+    129|       },
+    130|     });
+    131|     expect(response.statusCode).toBe(400);
+       |                                 ^
+    132|     expect(response.json()).toEqual({ error: '授权计费号码不一致' });
+    133|     expect(transaction).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 16 passed (18)
+   Start at  19:55:52
+   Duration  850ms (import 72%, tests 15%, transform 12%)
+
+exit=1

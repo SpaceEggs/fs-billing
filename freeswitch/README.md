@@ -27,11 +27,11 @@ vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_pass
 
 桥接格式只接受一个可选的开头 `+` 和 1–17 位 ASCII 数字，拒绝 `|`、`,`、空格等字符。独立的计费号码必须首位为 1–9、长度为 6–15 位。非法路由或计费投影在请求前返回 SIP 484，以 `INVALID_NUMBER_FORMAT` 挂断。15 位 E.164 上限只校验 `billing_number`，不截断或改写上游号码。
 
-授权请求包含租户、A-leg UUID、规范化 `callee` 与原始 `dialedNumber`，以及 `billingNumber` 投影。Worker 的同一个 `resolveBillingNumber` 处理授权与 CDR，重新计算并核验 Lua 投影；授权成功响应中的号码必须存在且与本地投影一致，否则返回 SIP 503 并拒绝通话。Lua 投影用于授权前校验与超时降级，计费以 Worker 核验并持久化的结果为准。余额不保存在交换机。
+授权请求包含租户、A-leg UUID、规范化 `callee` 与原始 `dialedNumber`，以及 `billingNumber` 投影。Worker 的同一个 `resolveBillingNumber` 处理授权与 CDR，重新计算并核验 Lua 投影。不一致时返回 HTTP 400 `{"error":"授权计费号码不一致"}`，Lua 返回 SIP 503（CDR `hangup_cause=NORMAL_TEMPORARY_FAILURE`），不降级、不桥接、不设置 `billing_unverified=true`；授权成功响应中的号码必须存在且与本地投影一致，否则返回 SIP 503 并拒绝通话。Lua 投影用于授权前校验与超时降级，计费以 Worker 核验并持久化的结果为准。余额不保存在交换机。
 
 放行设置 `billing_authorized=true`。未接通时设置 `execute_on_answer=sched_hangup +N ALLOTTED_TIMEOUT`，接通后才开始计时；已接通的通道直接执行 `sched_hangup +N ALLOTTED_TIMEOUT`。本示例占用 `execute_on_answer`，其他接通动作需要合并到同一接通处理流程。拨号计划不要在授权前 `answer`。Lua 执行后用单独的 `billing-authorized` context 重新判断放行标记；XML 条件在执行应用之前求值，不能在同一轮条件里依赖 Lua 刚设置的变量。
 
-业务拒绝用返回的 `sipCode` 执行 `respond` 并挂断，不执行 bridge。合法号码遇到超时、无响应、5xx（包括 `/authorize` 的 503）或无法解析的成功响应放行 1800 秒并设置 `billing_unverified=true`。401、403、无业务拒绝形状的 400 以及本机配置错误返回 503，修正配置后再试。正常授权设该标记为 false。脚本不重试授权，也不记录共享密钥。
+业务拒绝用返回的 `sipCode` 执行 `respond` 并挂断，不执行 bridge。合法号码遇到超时、无响应、5xx（包括 `/authorize` 的 503）或无法解析的成功响应放行 1800 秒并设置 `billing_unverified=true`。401、403、无业务拒绝形状的 400 以及本机配置错误返回 503，修正配置后再试。正常授权设该标记为 false。脚本不重试授权，也不记录共享密钥。号码不一致被拒绝后的 A-leg CDR 以 `计费号码不一致` 原因停放在 `unassigned_cdrs`，保存 Worker 计算的号码与通话 UUID，不写正式话单、不入扣费队列、不记账。每个 UUID 只写一条 `cdr_failed` 告警，不写 `auth_timeout`。
 
 ## 配置话单推送与落盘重推
 

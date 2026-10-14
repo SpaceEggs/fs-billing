@@ -32,6 +32,14 @@ worker_pid=
 postgres_started=false
 carrier_pid=
 observer_name=$project-observer
+authorize_script=$root/freeswitch/scripts/billing_authorize.lua
+authorize_backup=
+restore_authorize() {
+  if [[ -n $authorize_backup ]]; then
+    cp "$authorize_backup" "$authorize_script" || return 1
+    authorize_backup=
+  fi
+}
 current=准备
 printf '用例\t结果\n' > "$FS_LOG_DIR/results.tsv"
 stop_worker() {
@@ -50,6 +58,7 @@ cleanup() {
   result=$?
   trap - EXIT
   set +e
+  restore_authorize || result=1
   if (( result != 0 )); then printf '%s\tFAIL\n' "$current" >> "$FS_LOG_DIR/results.tsv"; fi
   "${compose[@]}" logs --no-color > "$FS_LOG_DIR/containers.log" 2>&1
   stop_worker
@@ -280,6 +289,50 @@ for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 +447700900123 403 4
   wait_sql "SELECT NOT EXISTS (SELECT 1 FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid'));"
   pass
 done
+current='计费号码不一致 HTTP 400 / SIP 503'
+authorize_backup=$FS_LOG_DIR/billing_authorize.original.lua
+cp "$authorize_script" "$authorize_backup"
+sed "s/destination:gsub('^0', '')/destination/" "$authorize_backup" > "$FS_LOG_DIR/billing_authorize.drift.lua"
+if cmp -s "$authorize_backup" "$FS_LOG_DIR/billing_authorize.drift.lua"; then
+  fail '号码漂移注入未改变 Lua 脚本'
+fi
+cp "$FS_LOG_DIR/billing_authorize.drift.lua" "$authorize_script"
+sed 's/response="484"/response="503"/' freeswitch/test/sipp/caller-reject.xml > "$FS_LOG_DIR/mismatch.xml"
+call mismatch 127.0.0.2 07551234567 /logs/mismatch.xml
+sip_assert none 8607551234567 >> "$FS_LOG_DIR/assertions.log"
+identify
+wait_sql "SELECT count(*)>=1 AND bool_and(payload->'variables'->>'billing_dialed_number'='07551234567' AND payload->'variables'->>'billing_number'='8607551234567' AND payload->'variables'->>'hangup_cause'='NORMAL_TEMPORARY_FAILURE' AND (payload->'variables'->>'billing_unverified') IS DISTINCT FROM 'true') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';"
+wait_sql "SELECT count(*)=1 AND bool_and(reason='计费号码不一致' AND billing_number='867551234567' AND call_uuid IS NOT NULL AND answered_at IS NULL AND duration_seconds=0) FROM unassigned_cdrs WHERE call_uuid::text IN ($uuids);"
+wait_sql "SELECT count(*)=1 FROM system_alerts WHERE kind='cdr_failed' AND description IN (SELECT (payload->'variables'->>'uuid') || ': 计费号码不一致' FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid');"
+wait_sql "SELECT NOT EXISTS (SELECT 1 FROM cdrs WHERE call_uuid::text IN ($uuids)) AND NOT EXISTS (SELECT 1 FROM pgboss.job WHERE name='charge-cdr' AND data->>'callUuid' IN ($uuids)) AND NOT EXISTS (SELECT 1 FROM ledger_entries WHERE idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid')) AND NOT EXISTS (SELECT 1 FROM system_alerts WHERE kind='auth_timeout' AND split_part(description, ':', 1) IN ($uuids));"
+python3 - "$FS_LOG_DIR/worker.log" "$(q "$uuids")" <<'PY'
+import json, pathlib, sys
+uuids = set(sys.argv[2].splitlines())
+logs = []
+for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
+    try:
+        entry = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if isinstance(entry, dict):
+        logs.append(entry)
+mismatches = [entry for entry in logs if entry.get('msg') == '授权计费号码不一致' and entry.get('uuid') in uuids]
+assert len(mismatches) == 1, f'Expected one billing mismatch log for {uuids}, got {len(mismatches)}'
+req_id = mismatches[0].get('reqId')
+assert req_id, 'Billing mismatch log has no reqId'
+responses = [entry for entry in logs if entry.get('reqId') == req_id and isinstance(entry.get('res'), dict)]
+assert len(responses) == 1, f'Expected one authorize response for {req_id}, got {len(responses)}'
+assert responses[0]['res'].get('statusCode') == 400, f'Expected authorize HTTP 400 for {req_id}, got {responses[0]["res"]}'
+PY
+q "SELECT payload FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';" > "$FS_LOG_DIR/$case_name.raw.json"
+q "SELECT row_to_json(u) FROM unassigned_cdrs u WHERE call_uuid::text IN ($uuids);" > "$FS_LOG_DIR/$case_name.unassigned.json"
+q "SELECT row_to_json(a) FROM system_alerts a WHERE split_part(description, ':', 1) IN ($uuids);" > "$FS_LOG_DIR/$case_name.alerts.json"
+restore_authorize
+if command -v git >/dev/null 2>&1; then
+  git diff --quiet -- freeswitch/scripts/billing_authorize.lua || fail '号码漂移测试后 Lua 脚本仍有改动'
+fi
+pass
+
 current=ALLOTTED_TIMEOUT
 call allotted 127.0.0.5 +447700900123 /scenarios/caller-timed.xml
 charged

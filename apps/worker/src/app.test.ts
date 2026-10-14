@@ -128,7 +128,7 @@ test.each([
         ...numbers,
       },
     });
-    expect(response.statusCode).toBe(503);
+    expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: '授权计费号码不一致' });
     expect(transaction).not.toHaveBeenCalled();
   } finally {

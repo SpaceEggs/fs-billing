@@ -1,0 +1,9 @@
+{
+  "id": "c6c67211-3a9a-47e0-bbdb-1dfd8f9d21ca",
+  "tenant_id": null,
+  "kind": "cdr_failed",
+  "description": "79e11e80-5945-41fb-9c7b-2b6b1eb768e2: 计费号码不一致",
+  "started_at": "2026-10-14T03:06:06.781417+00:00",
+  "recovered_at": null,
+  "affected_calls": 1
+}
