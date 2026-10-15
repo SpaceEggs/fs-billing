@@ -12,6 +12,7 @@ import {
   type ParsedLocation,
 } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
+import { AdminAccountsPage } from './pages/admin/admin-accounts';
 import { AdminPlaceholderPage } from './pages/admin/placeholder';
 import { TenantCreatePage } from './pages/admin/tenant-create';
 import { TenantDetailPage } from './pages/admin/tenant-detail';
@@ -24,6 +25,7 @@ import { AdminHome, PortalHome } from './pages/home';
 import { LoginPage } from './pages/login';
 import { NotFoundPage } from './pages/not-found';
 import {
+  validateAdminAccountsSearch,
   validateTenantDetailSearch,
   validateTenantListSearch,
 } from './lib/admin-search';
@@ -217,14 +219,8 @@ const adminReceivables = createRoute({
 const adminAccounts = createRoute({
   getParentRoute: () => adminLayout,
   path: 'admins',
-  component: () => (
-    <AdminPlaceholderPage
-      identity={useZoneIdentity()}
-      title="管理员"
-      crumb="管理员"
-      activeNav="管理员"
-    />
-  ),
+  validateSearch: validateAdminAccountsSearch,
+  component: () => <AdminAccountsPage identity={useZoneIdentity()} />,
 });
 
 function PortalLogin(): React.JSX.Element {

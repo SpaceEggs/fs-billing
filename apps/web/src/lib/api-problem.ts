@@ -44,6 +44,7 @@ export const conflictMessages = {
 
 /** 冲突说明页面数据已过时，刷新后可重新操作。 */
 const staleConflicts: ReadonlySet<ConflictCode> = new Set([
+  'PORTAL_ACCOUNT_EXISTS',
   'IDEMPOTENCY_CONFLICT',
   'RATE_VERSION_CONFLICT',
   'PREVIEW_STALE',

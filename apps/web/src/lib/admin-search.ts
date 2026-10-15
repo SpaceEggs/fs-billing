@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { adminTenantsQuerySchema } from '@fs-billing/shared';
+import {
+  adminAccountsQuerySchema,
+  adminTenantsQuerySchema,
+} from '@fs-billing/shared';
 
 const listShape = adminTenantsQuerySchema.shape;
 
@@ -22,6 +25,20 @@ export function validateTenantListSearch(
     ...(search?.trim() ? { search } : {}),
     ...(status ? { status } : {}),
     ...(currency ? { currency } : {}),
+    ...(page !== undefined && page > 1 ? { page } : {}),
+  };
+}
+
+export type AdminAccountsSearch = { search?: string; page?: number };
+
+export function validateAdminAccountsSearch(
+  raw: Record<string, unknown>,
+): AdminAccountsSearch {
+  const shape = adminAccountsQuerySchema.shape;
+  const search = shape.search.safeParse(raw['search']).data;
+  const page = shape.page.safeParse(raw['page']).data;
+  return {
+    ...(search?.trim() ? { search } : {}),
     ...(page !== undefined && page > 1 ? { page } : {}),
   };
 }

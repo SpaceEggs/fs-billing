@@ -1,12 +1,15 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { QueryClient } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { passwordGate, sessionExpiry } from './lib/session';
 import {
+  adminApi,
   adminSession,
   apiError,
+  cachedState,
   customerSession,
+  deferred,
+  page,
   renderApp,
   type ApiHandler,
 } from './test/app';
@@ -66,57 +69,6 @@ const tenants = [
     pendingReceivable: '0',
   }),
 ];
-
-const page = (items: unknown[], total = items.length) => ({
-  items,
-  pagination: { page: 1, pageSize: 25, total },
-});
-
-function deferred<Value>() {
-  let resolve!: (value: Value) => void;
-  const promise = new Promise<Value>((settle) => {
-    resolve = settle;
-  });
-  return { promise, resolve };
-}
-
-/** 查询缓存与 mutation 缓存里的全部状态（含变量与结果），用来确认凭据没有留在缓存里。 */
-function cachedState(queryClient: QueryClient) {
-  return JSON.stringify([
-    queryClient
-      .getQueryCache()
-      .getAll()
-      .map((query) => query.state),
-    queryClient
-      .getMutationCache()
-      .getAll()
-      .map((mutation) => mutation.state),
-  ]);
-}
-
-type Call = { path: string; method: string; body: unknown };
-
-/** 记录请求并按 “METHOD 路径” 前缀应答；会话默认是管理员。 */
-function adminApi(
-  routes: Record<string, ApiHandler>,
-  session: object = adminSession,
-) {
-  const calls: Call[] = [];
-  const handler: ApiHandler = (path, init) => {
-    const method = init.method ?? 'GET';
-    calls.push({
-      path,
-      method,
-      body: typeof init.body === 'string' ? JSON.parse(init.body) : undefined,
-    });
-    if (path === '/api/auth/session') return { status: 200, body: session };
-    const pathname = path.split('?')[0];
-    const route = routes[`${method} ${pathname}`];
-    if (!route) throw new Error(`unexpected ${method} ${path}`);
-    return route(path, init);
-  };
-  return { calls, handler };
-}
 
 describe('password change gate', () => {
   function gateApi() {

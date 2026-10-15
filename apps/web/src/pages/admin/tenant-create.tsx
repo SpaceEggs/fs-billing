@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   currencySchema,
@@ -26,8 +26,9 @@ import {
   apiQuery,
   invalidateTenant,
   useApiMutation,
+  useCredentialMutation,
 } from '../../lib/admin-api';
-import { ApiRequestError, callApi } from '../../lib/api';
+import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import {
   buildSubmission,
@@ -59,12 +60,6 @@ type Created = {
   portalRequest: AdminPortalAccountCreateRequest;
   portal: PortalState;
 };
-type PortalAttempt = {
-  run: number;
-  tenantId: string;
-  body: AdminPortalAccountCreateRequest;
-};
-
 function Section({
   title,
   description,
@@ -475,29 +470,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     invalidate: (queryClient, _input, result) =>
       invalidateTenant(queryClient, result.tenant.id),
   });
-  // 请求带初始密码、响应带临时密码，只经由 ref 和组件状态传递：mutation 的变量只是请求序号，
-  // 结果为空，MutationCache 里不留凭据。序号不是当前请求时，迟到的结果直接丢弃。
-  const portalRuns = useRef(0);
-  const portalAttempt = useRef<PortalAttempt | null>(null);
-  const settlePortal = (attempt: PortalAttempt, portal: PortalState) => {
-    if (portalAttempt.current !== attempt) return;
-    setCreated((current) =>
-      current?.tenant.id === attempt.tenantId
-        ? { ...current, portal }
-        : current,
-    );
-  };
-  const createPortal = useMutation({
-    mutationFn: async (run: number) => {
-      const attempt = portalAttempt.current;
-      if (attempt?.run !== run) return;
-      const response = await callApi('adminPortalAccountCreate', {
-        params: { tenantId: attempt.tenantId },
-        body: attempt.body,
-      });
-      settlePortal(attempt, { status: 'created', response });
-    },
-  });
+  const createPortal = useCredentialMutation('adminPortalAccountCreate');
 
   // 选择新文件、切换费率来源或离开页面都让进行中的读取作废。
   const csvReads = useRef(0);
@@ -505,7 +478,6 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
   useEffect(
     () => () => {
       csvReads.current += 1;
-      portalAttempt.current = null;
     },
     [],
   );
@@ -558,13 +530,20 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     tenantId: string,
     body: AdminPortalAccountCreateRequest,
   ) {
-    const attempt = { run: (portalRuns.current += 1), tenantId, body };
-    portalAttempt.current = attempt;
-    settlePortal(attempt, { status: 'pending' });
+    // 「继续新建」后旧租户的迟到结果不再落到新的对话框上。
+    const settle = (portal: PortalState) =>
+      setCreated((current) =>
+        current?.tenant.id === tenantId ? { ...current, portal } : current,
+      );
+    settle({ status: 'pending' });
     try {
-      await createPortal.mutateAsync(attempt.run);
+      const response = await createPortal.submit({
+        params: { tenantId },
+        body,
+      });
+      if (response) settle({ status: 'created', response });
     } catch (error) {
-      settlePortal(attempt, { status: 'failed', error });
+      settle({ status: 'failed', error });
     }
   }
 
@@ -992,7 +971,6 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               void openPortal(created.tenant.id, created.portalRequest)
             }
             onContinue={() => {
-              portalAttempt.current = null;
               setCreated(null);
               setForm(initialTenantForm(adminEmail));
               createPortal.reset();

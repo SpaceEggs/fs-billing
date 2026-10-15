@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import {
   queryOptions,
   useMutation,
@@ -16,7 +17,7 @@ export function apiKey<Id extends OperationId>(id: Id, input?: ApiInput<Id>) {
   return ['api', id, input ?? {}] as const;
 }
 
-function send<Id extends OperationId>(id: Id, input?: ApiInput<Id>) {
+export function send<Id extends OperationId>(id: Id, input?: ApiInput<Id>) {
   // callApi 的剩余参数按是否有必填字段区分可省略；这里输入已由调用方按 ApiInput 约束。
   return (callApi as (id: Id, input?: ApiInput<Id>) => Promise<ApiSuccess<Id>>)(
     id,
@@ -69,4 +70,53 @@ export function useApiMutation<Id extends OperationId>(
     onSuccess: (result, input) =>
       options.invalidate?.(queryClient, input, result),
   });
+}
+
+type CredentialOperation =
+  | 'adminAccountCreate'
+  | 'adminPortalAccountCreate'
+  | 'resetAdminPassword'
+  | 'resetPortalAccountPassword';
+
+/**
+ * 请求或响应带密码的写操作（创建账号、重置密码）。请求与响应只经由 ref 和 `submit` 的返回值传递：
+ * mutation 的变量只是请求序号、结果为空，MutationCache 里不留凭据。失败仍经 MutationCache 触发登录过期与改密处理。
+ * 再次提交、`reset` 或组件卸载后，迟到的响应返回 null。
+ */
+export function useCredentialMutation<Id extends CredentialOperation>(id: Id) {
+  const runs = useRef(0);
+  type Call = { run: number; input: ApiInput<Id>; result?: ApiSuccess<Id> };
+  const pending = useRef<Call | null>(null);
+  useEffect(
+    () => () => {
+      pending.current = null;
+    },
+    [],
+  );
+  const mutation = useMutation({
+    mutationFn: async (run: number) => {
+      const call = pending.current;
+      if (call?.run !== run) return;
+      call.result = await send(id, call.input);
+    },
+  });
+  async function submit(input: ApiInput<Id>): Promise<ApiSuccess<Id> | null> {
+    const call: Call = { run: (runs.current += 1), input };
+    pending.current = call;
+    try {
+      await mutation.mutateAsync(call.run);
+      return pending.current === call ? (call.result ?? null) : null;
+    } finally {
+      if (pending.current === call) pending.current = null;
+    }
+  }
+  return {
+    submit,
+    isPending: mutation.isPending,
+    error: mutation.error,
+    reset: () => {
+      pending.current = null;
+      mutation.reset();
+    },
+  };
 }
