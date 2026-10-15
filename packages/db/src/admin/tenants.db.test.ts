@@ -7,6 +7,7 @@ import {
   adminTenantDetailResponseSchema,
   adminTenantsQuerySchema,
   adminLedgerQuerySchema,
+  type AdminBalanceOperationRequest,
 } from '@fs-billing/shared';
 import { money } from '@fs-billing/rating';
 import {
@@ -33,8 +34,14 @@ import { rateVersions, operationLogs } from '../schema.js';
 
 const { app, owner } = connections();
 let actor: { id: string; name: string };
+let otherActor: { id: string; name: string };
 beforeAll(async () => {
   actor = { id: await adminId(owner), name: '管理员' };
+  const { rows } = await owner.pool.query<{ id: string; name: string }>(
+    'select id, name from admins where id <> $1 limit 1',
+    [actor.id],
+  );
+  otherActor = rows[0]!;
 });
 const input = (currency: 'CNY' | 'USD' = 'CNY') =>
   adminTenantCreateRequestSchema.parse({
@@ -693,6 +700,110 @@ describe('admin tenant and balance services', () => {
         )
       ).rows,
     ).toEqual([{ n: 1 }]);
+  });
+
+  it.each([
+    { kind: 'topup', note: '充值' },
+    { kind: 'credit_topup', internalNote: '内部赊账' },
+    { kind: 'gift', note: '赠送' },
+    { kind: 'adjustment', reason: '调账' },
+  ] as const)(
+    'binds $kind replay to the original admin id',
+    async (operation) => {
+      const { tenant } = await fixture();
+      const tenantId = tenant.id;
+      const request: AdminBalanceOperationRequest = {
+        ...operation,
+        currency: 'CNY',
+        amount: '10',
+        idempotencyKey: randomUUID(),
+      };
+      const original = await operateBalance({
+        db: app.db,
+        actor,
+        tenantId,
+        request,
+      });
+      expect(original).toMatchObject({
+        balance: '10',
+        entry: { amount: '10' },
+      });
+      expect(
+        await operateBalance({
+          db: app.db,
+          actor: { id: actor.id.toUpperCase(), name: '改名后的管理员' },
+          tenantId,
+          request,
+        }),
+      ).toEqual(original);
+      for (const replay of [request, { ...request, amount: '11' }]) {
+        await expect(
+          operateBalance({
+            db: app.db,
+            actor: otherActor,
+            tenantId,
+            request: replay,
+          }),
+        ).rejects.toMatchObject({
+          code: 'IDEMPOTENCY_CONFLICT',
+          message: '幂等键已由其他管理员使用',
+        });
+      }
+      expect(
+        (
+          await owner.pool.query(
+            `select
+          (select count(*)::int from ledger_entries where tenant_id=$1) as ledger,
+          (select count(*)::int from operation_logs where target=$2) as audit`,
+            [tenantId, original.entry.id],
+          )
+        ).rows,
+      ).toEqual([{ ledger: 1, audit: 1 }]);
+      expect(await getTenant({ db: app.db, tenantId })).toMatchObject({
+        balance: '10',
+      });
+    },
+  );
+
+  it('allows only one admin to win concurrent use of the same balance key', async () => {
+    const { tenant } = await fixture();
+    const tenantId = tenant.id;
+    const request: AdminBalanceOperationRequest = {
+      kind: 'topup',
+      currency: 'CNY',
+      amount: '10',
+      note: '并发充值',
+      idempotencyKey: randomUUID(),
+    };
+    const results = await Promise.allSettled(
+      [actor, otherActor].map((admin) =>
+        operateBalance({ db: app.db, actor: admin, tenantId, request }),
+      ),
+    );
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    const rejected = results.find((result) => result.status === 'rejected');
+    expect(rejected).toMatchObject({
+      status: 'rejected',
+      reason: {
+        code: 'IDEMPOTENCY_CONFLICT',
+        message: '幂等键已由其他管理员使用',
+      },
+    });
+    expect(
+      (
+        await owner.pool.query(
+          `select
+          (select count(*)::int from ledger_entries where tenant_id=$1) as ledger,
+          (select count(*)::int from operation_logs where tenant_id=$1 and action='balance_topup') as audit`,
+          [tenantId],
+        )
+      ).rows,
+    ).toEqual([{ ledger: 1, audit: 1 }]);
+    expect(await getTenant({ db: app.db, tenantId })).toMatchObject({
+      balance: '10',
+    });
   });
 
   it('rejects missing adjustment reason, caps, precision and reserved keys before writing', async () => {

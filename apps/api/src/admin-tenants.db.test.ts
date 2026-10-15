@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   apiErrorSchemas,
+  adminConflictErrorSchema,
   adminTenantCreateResponseSchema,
   adminTenantDetailResponseSchema,
   adminTenantOverviewResponseSchema,
@@ -31,9 +32,11 @@ const connections = apiConnections();
 const { api, auth } = fixtureApi(connections);
 let fixture: Fixture;
 let cookie: string;
+let otherCookie: string;
 beforeAll(async () => {
   fixture = await createFixture(connections);
   cookie = (await login(api, fixture.admin)).cookie;
+  otherCookie = (await login(api, fixture.otherAdmin)).cookie;
 });
 const tenantBody = (currency: 'CNY' | 'USD' = 'CNY') => ({
   code: `api${randomUUID().replaceAll('-', '')}`,
@@ -504,6 +507,67 @@ describe('admin tenant and balance API', () => {
       pagination: { page: 1, pageSize: 2, total: 4 },
     });
   });
+
+  it.each([
+    { kind: 'topup', note: '充值' },
+    { kind: 'credit_topup', internalNote: '内部赊账' },
+    { kind: 'gift', note: '赠送' },
+    { kind: 'adjustment', reason: '调账' },
+  ])(
+    'rejects another admin replaying $kind without writing',
+    async (operation) => {
+      const { tenant } = await create();
+      const url = `/api/admin/tenants/${tenant.id}/balance-operations`;
+      const payload = {
+        ...operation,
+        currency: 'CNY',
+        amount: '10',
+        idempotencyKey: randomUUID(),
+      };
+      const original = await api.inject({
+        method: 'POST',
+        url,
+        headers: requestHeaders(cookie),
+        payload,
+      });
+      expect(original.statusCode, original.body).toBe(200);
+      const stored = adminBalanceOperationResponseSchema.parse(original.json());
+      expect(stored).toMatchObject({ balance: '10', entry: { amount: '10' } });
+      const replay = await api.inject({
+        method: 'POST',
+        url,
+        headers: requestHeaders(cookie),
+        payload,
+      });
+      expect(replay.statusCode, replay.body).toBe(200);
+      expect(replay.json()).toEqual(original.json());
+      for (const request of [payload, { ...payload, amount: '11' }]) {
+        const denied = await api.inject({
+          method: 'POST',
+          url,
+          headers: requestHeaders(otherCookie),
+          payload: request,
+        });
+        expect(denied.statusCode, denied.body).toBe(409);
+        expect(adminConflictErrorSchema.parse(denied.json())).toMatchObject({
+          error: {
+            code: 'IDEMPOTENCY_CONFLICT',
+            message: '幂等键已由其他管理员使用',
+          },
+        });
+      }
+      expect(
+        (
+          await connections.owner.pool.query(
+            `select
+          (select count(*)::int from ledger_entries where tenant_id=$1) as ledger,
+          (select count(*)::int from operation_logs where target=$2) as audit`,
+            [tenant.id, stored.entry.id],
+          )
+        ).rows,
+      ).toEqual([{ ledger: 1, audit: 1 }]);
+    },
+  );
 
   it('rejects adjustment without a reason and invalid precision or caps before writes', async () => {
     const { tenant } = await create();

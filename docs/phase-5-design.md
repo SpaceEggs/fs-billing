@@ -164,7 +164,7 @@ adjustment 将 reason 存入 ledger.note。冲正以相反金额追加一条 adj
 
 所有影响余额的写入只使用 **现有 lock_tenants 每租户事务级 advisory lock**，复用 `lockTenants` 与 `appendLedgerEntry`。不增加 advisory key、进程 mutex 或另一套分布式锁。透支额度、租户状态和费率写入也在对应租户锁保护的事务内执行；锁在任何行写入之前取得。开户先生成 UUID，再取得租户锁后写入。copy commit 的变更锁与审计 tenantId 都指向目标租户。若开户 copy 还需稳定读取来源，使用同一 lock_tenants 按 ID 顺序一次拿齐来源和目标锁，不能另建锁。锁顺序保持 [client.ts](../packages/db/src/client.ts) 与迁移的现有约束。
 
-重试只在最外层事务调用处处理可重试 DB 错误，内部服务和 appendLedgerEntry 不自行 retry。人工余额操作每个确认动作创建一个 key，重试复用。Zod 拒绝以 call: 开头的 key，保留 Worker 的计费命名空间。同租户同 key 同 kind/amount/currency/note/reason 返回原 ledger 与 auditId，不重复审计；载荷不同返回 IDEMPOTENCY_CONFLICT。现有 appendLedgerEntry 只核验 kind 与金额，后续余额 service 必须在持锁情况下补齐备注比较，不能把现有检查当作完整请求幂等性。流水、余额缓存触发器和审计在同事务提交。
+重试只在最外层事务调用处处理可重试 DB 错误，内部服务和 appendLedgerEntry 不自行 retry。人工余额操作每个确认动作创建一个 key，重试复用。Zod 拒绝以 call: 开头的 key，保留 Worker 的计费命名空间。同租户同 key 仅允许原管理员重放，以同事务写入且不可变的 ledger_entries.created_by 核验操作人 ID（不比较姓名），无需迁移或回填。先核验操作人，再比较载荷；其他管理员复用 key，无论载荷是否相同，均返回 IDEMPOTENCY_CONFLICT（409，消息「幂等键已由其他管理员使用」），不返回原操作人或载荷，不新增流水或审计。同一管理员同 kind/amount/currency/note/reason 返回原 ledger 与 auditId，不重复审计；载荷不同返回 IDEMPOTENCY_CONFLICT。应收确认、撤销与作废使用状态和版本校验，不接受幂等键或重放已存结果。现有 appendLedgerEntry 只核验 kind 与金额，后续余额 service 必须在持锁情况下补齐备注比较，不能把现有检查当作完整请求幂等性。流水、余额缓存触发器和审计在同事务提交。
 
 开户、门户账号创建、管理员创建未设计可重放的凭据响应，客户端不能自动 retry。若响应丢失，先查询唯一编码或邮箱确认是否已成功；已成功但生成密码丢失时走现有 reset-password 恢复，重复创建返回对应唯一冲突。confirm-payment 必填 expectedLatestSettlementId（UUID 或 null），取自最近一次查询的 latestSettlementId，重试保持原值。已有未撤销确认时返回 ALREADY_RECEIVED；若确认已被撤销而原 token 已过时，返回 SETTLEMENT_CONFLICT，不重新收款。客户端查询当前状态，只有管理员重新确认意图后才用新 token 提交；不承诺重放首次响应。rate commit 成功后再次提交同一 preview 返回 PREVIEW_STALE，客户端查询目标版本确认结果；不承诺重放首个响应或额外审计。
 
