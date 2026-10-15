@@ -38,6 +38,11 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .optional(),
     API_HOST: z.string().default('127.0.0.1'),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional(),
     ADMIN_AMOUNT_MAX_INTEGER_DIGITS: z.coerce
       .number()
       .int()
@@ -69,6 +74,16 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .default('development'),
   })
   .superRefine((value, ctx) => {
+    if (
+      value.NODE_ENV === 'production' &&
+      value.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX !== undefined
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX'],
+        message:
+          'AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX is test-only and forbidden in production',
+      });
     const minimumAmountDigits = Math.max(
       ...Object.values(DEFAULT_TENANT_OVERDRAFT_LIMIT).map(
         (amount) => amount.replace(/\..*$/, '').length,

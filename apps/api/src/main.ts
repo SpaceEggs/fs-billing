@@ -40,6 +40,14 @@ const app = createApi({
   },
   logger: true,
   trustedOrigins,
+  ...(config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX !== undefined
+    ? {
+        rateLimit: {
+          max: config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX,
+          timeWindow: 60_000,
+        },
+      }
+    : {}),
 });
 const cleanup = setInterval(() => {
   void auth

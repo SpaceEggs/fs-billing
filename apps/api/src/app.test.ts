@@ -201,6 +201,61 @@ test('credential routes share one IP limit before validation and ignore forwarde
   }
 });
 
+test.each([
+  [undefined, 30],
+  ['3', 3],
+  ['35', 35],
+] as const)(
+  'credential limiter honors config override %s with a max of %i per minute',
+  async (override, expectedMax) => {
+    const config = apiEnvironmentSchema.parse({
+      APP_DATABASE_URL: 'postgresql://fs_billing_app@localhost/db',
+      AUTH_DATABASE_URL: 'postgresql://fs_billing_auth@localhost/db',
+      BETTER_AUTH_SECRET: 'a'.repeat(32),
+      BETTER_AUTH_URL: 'http://localhost:3000',
+      NODE_ENV: 'test',
+      AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX: override,
+    });
+    const limited = createApi({
+      businessDb: business.db,
+      auth,
+      ...(config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX !== undefined
+        ? {
+            rateLimit: {
+              max: config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX,
+              timeWindow: 60_000,
+            },
+          }
+        : {}),
+    });
+    try {
+      for (let index = 0; index < expectedMax; index++) {
+        const response = await limited.inject({
+          method: 'POST',
+          url: index % 2 ? '/api/auth/login' : '/api/auth/change-password',
+          payload: {},
+        });
+        expect(response.statusCode).toBe(400);
+      }
+      for (const url of ['/api/auth/login', '/api/auth/change-password']) {
+        const response = await limited.inject({
+          method: 'POST',
+          url,
+          payload: {},
+        });
+        expect(response.statusCode).toBe(429);
+        expect(apiErrorSchema.parse(response.json()).error.code).toBe(
+          'RATE_LIMITED',
+        );
+        expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+        expect(Number(response.headers['retry-after'])).toBeLessThanOrEqual(60);
+      }
+    } finally {
+      await limited.close();
+    }
+  },
+);
+
 test('bodyless writes reject unexpected fields and cross-site origins before session lookup', async () => {
   for (const url of ['/api/auth/logout', '/api/auth/revoke-other-sessions']) {
     const invalid = await app.inject({
