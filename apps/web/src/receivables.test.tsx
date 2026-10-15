@@ -1,0 +1,350 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { formatDate } from './lib/format';
+import { passwordGate, sessionExpiry } from './lib/session';
+import { adminApi, apiError, renderApp, type ApiHandler } from './test/app';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  sessionExpiry.clear();
+  passwordGate.clear();
+});
+
+const ids = {
+  gzt: '00000000-0000-4000-8000-0000000e0001',
+  nyc: '00000000-0000-4000-8000-0000000e0002',
+  tenantGzt: '00000000-0000-4000-8000-0000000a0001',
+  tenantNyc: '00000000-0000-4000-8000-0000000a0002',
+  actor: '00000000-0000-4000-8000-0000000ad002',
+  settlement: '00000000-0000-4000-8000-0000000f0001',
+  newSettlement: '00000000-0000-4000-8000-0000000f0002',
+  audit: '00000000-0000-4000-8000-0000000c0001',
+};
+
+const receivable = (overrides: Record<string, unknown>) => ({
+  ledgerEntryId: ids.gzt,
+  latestSettlementId: null,
+  tenant: {
+    id: ids.tenantGzt,
+    code: 'GZT007',
+    name: '广州通达云科技有限公司',
+    currency: 'CNY',
+  },
+  amount: '2000',
+  internalNote: '季度结算，9月底前付款',
+  createdAt: '2026-08-18T03:02:45.000Z',
+  actor: { id: ids.actor, name: '李俊' },
+  ageDays: 42,
+  overdue: true,
+  payment: { status: 'pending' },
+  ...overrides,
+});
+
+const gzt = receivable({});
+const nyc = receivable({
+  ledgerEntryId: ids.nyc,
+  latestSettlementId: ids.settlement,
+  tenant: {
+    id: ids.tenantNyc,
+    code: 'NYC021',
+    name: 'Hudson Contact Center Inc',
+    currency: 'USD',
+  },
+  amount: '1200',
+  internalNote: 'Wire transfer pending',
+  createdAt: '2026-09-26T00:40:51.000Z',
+  ageDays: 30,
+  overdue: false,
+});
+
+const listing = (
+  items: unknown[],
+  totals = { CNY: '6300', USD: '1700' },
+  total = items.length,
+) => ({ items, totals, pagination: { page: 1, pageSize: 25, total } });
+
+function openReceivables(
+  list: ApiHandler,
+  routes: Record<string, ApiHandler> = {},
+  path = '/admin/receivables',
+) {
+  const api = adminApi({ 'GET /api/admin/receivables': list, ...routes });
+  const app = renderApp(path, api.handler);
+  return { ...api, ...app, user: userEvent.setup() };
+}
+
+const listCalls = (calls: { path: string; method: string }[]) =>
+  calls.filter(
+    (call) =>
+      call.method === 'GET' && call.path.startsWith('/api/admin/receivables'),
+  );
+
+describe('receivables list', () => {
+  it('renders CNY and USD totals separately and highlights only overdue rows', async () => {
+    openReceivables(() => ({ status: 200, body: listing([gzt, nyc]) }));
+    const totals = await screen.findByRole('list', { name: '待收款合计' });
+    expect(
+      within(totals)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['待收款总额 · CNY¥6,300.00', '待收款总额 · USD$1,700.00']);
+
+    const table = screen.getByRole('table');
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows[0]).toHaveTextContent('42 天（超过 30 天）');
+    expect(rows[0]?.className).toContain('bg-warn-soft');
+    // 30 天不高亮：只看 overdue 字段。
+    expect(rows[1]).toHaveTextContent('30 天');
+    expect(rows[1]).not.toHaveTextContent('超过 30 天');
+    expect(rows[1]?.className).not.toContain('bg-warn-soft');
+  });
+
+  it('currency filter queries the server and hides the other currency total', async () => {
+    const { calls, user, location } = openReceivables((path) =>
+      path.includes('currency=USD')
+        ? { status: 200, body: listing([nyc], { CNY: '0', USD: '1700' }) }
+        : { status: 200, body: listing([gzt, nyc]) },
+    );
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'USD' }));
+    await waitFor(() =>
+      expect(location()).toBe('/admin/receivables?currency=USD'),
+    );
+    const totals = screen.getByRole('list', { name: '待收款合计' });
+    await waitFor(() =>
+      expect(within(totals).getAllByRole('listitem')).toHaveLength(1),
+    );
+    expect(totals).toHaveTextContent('待收款总额 · USD$1,700.00');
+    expect(totals).not.toHaveTextContent('CNY');
+    expect(screen.getByRole('button', { name: 'USD' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    const last = listCalls(calls).at(-1)?.path ?? '';
+    const query = new URL(last, 'http://x').searchParams;
+    expect(Object.fromEntries(query)).toEqual({
+      currency: 'USD',
+      status: 'pending',
+      page: '1',
+      pageSize: '25',
+    });
+  });
+
+  it('search resets to the first page and an empty filtered result offers clearing', async () => {
+    const { user, location } = openReceivables(
+      (path) =>
+        path.includes('search=')
+          ? { status: 200, body: listing([], { CNY: '0', USD: '0' }) }
+          : { status: 200, body: listing([gzt], undefined, 30) },
+      {},
+      '/admin/receivables?page=2',
+    );
+    await screen.findByRole('table');
+    await user.type(screen.getByRole('searchbox', { name: '搜索租户' }), 'zzz');
+    await waitFor(() =>
+      expect(location()).toBe('/admin/receivables?search=zzz'),
+    );
+    expect(await screen.findByText('没有符合条件的待收款')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: '清除筛选' }));
+    await waitFor(() => expect(location()).toBe('/admin/receivables'));
+  });
+
+  it('shows the all-received empty state without filters', async () => {
+    openReceivables(() => ({
+      status: 200,
+      body: listing([], { CNY: '0', USD: '0' }),
+    }));
+    expect(await screen.findByText('所有赊账均已收款')).toBeVisible();
+    expect(screen.getByText('新的赊账充值会出现在这里')).toBeVisible();
+  });
+
+  it.each([
+    [500, 'INTERNAL_ERROR'],
+    [503, 'SERVICE_UNAVAILABLE'],
+  ])(
+    'a %i %s shows the generic unavailable error with retry',
+    async (status, code) => {
+      let attempts = 0;
+      openReceivables(() => {
+        attempts += 1;
+        return attempts <= 3
+          ? { status, body: apiError(code) }
+          : { status: 200, body: listing([gzt]) };
+      });
+      const alert = await screen.findByRole('alert', undefined, {
+        timeout: 5000,
+      });
+      expect(alert).toHaveTextContent(
+        '待收款加载失败服务暂时不可用，请稍后重试',
+      );
+      await userEvent.click(
+        within(alert).getByRole('button', { name: '重试' }),
+      );
+      expect(await screen.findByRole('table')).toBeVisible();
+    },
+    10_000,
+  );
+});
+
+describe('confirm payment', () => {
+  const today = formatDate(new Date());
+
+  it('sends the listed settlement token with the chosen date and note, no amount', async () => {
+    const { calls, user } = openReceivables(
+      () => ({ status: 200, body: listing([gzt, nyc]) }),
+      {
+        [`POST /api/admin/receivables/${ids.nyc}/confirm-payment`]: () => ({
+          status: 200,
+          body: {
+            auditId: ids.audit,
+            settlementId: ids.newSettlement,
+            ledgerEntryId: ids.nyc,
+            receivedOn: today,
+          },
+        }),
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(
+      within(table).getByRole('button', { name: '确认收款 NYC021 $1,200.00' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    expect(dialog).toHaveTextContent(
+      '确认后该笔状态变为「已收款」，客户余额不变；记入操作日志。',
+    );
+    expect(within(dialog).getByLabelText(/实际收款日期/)).toHaveValue(today);
+    expect(within(dialog).getByLabelText(/实际收款日期/)).toHaveAttribute(
+      'min',
+      '2026-09-26',
+    );
+    await user.type(within(dialog).getByLabelText(/收款备注/), '电汇到账');
+    await user.click(
+      within(dialog).getByRole('button', { name: '确认收款 $1,200.00' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'NYC021 $1,200.00 已确认收款，状态变为「已收款」',
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const post = calls.find((call) => call.method === 'POST');
+    expect(post?.body).toEqual({
+      expectedLatestSettlementId: ids.settlement,
+      receivedOn: today,
+      note: '电汇到账',
+    });
+    await waitFor(() => expect(listCalls(calls)).toHaveLength(2));
+  });
+
+  it('blocks a date before the credit day without posting', async () => {
+    const { calls, user } = openReceivables(() => ({
+      status: 200,
+      body: listing([gzt]),
+    }));
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /确认收款/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    const date = within(dialog).getByLabelText(/实际收款日期/);
+    await user.clear(date);
+    await user.type(date, '2026-08-17');
+    await user.click(
+      within(dialog).getByRole('button', { name: /确认收款 ¥/ }),
+    );
+    expect(
+      within(dialog).getByText('收款日期不能早于赊账日期 2026-08-18'),
+    ).toBeVisible();
+    expect(date).toHaveAttribute('aria-invalid', 'true');
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0);
+  });
+
+  it.each(['ALREADY_RECEIVED', 'SETTLEMENT_CONFLICT', 'RECEIVABLE_VOIDED'])(
+    '409 %s refreshes the list, removes submit and never retries',
+    async (code) => {
+      const { calls, user } = openReceivables(
+        () => ({ status: 200, body: listing([gzt]) }),
+        {
+          [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => ({
+            status: 409,
+            body: apiError(code),
+          }),
+        },
+      );
+      const table = await screen.findByRole('table');
+      await user.click(within(table).getByRole('button', { name: /确认收款/ }));
+      const dialog = screen.getByRole('dialog', { name: '确认收款' });
+      await user.click(
+        within(dialog).getByRole('button', { name: '确认收款 ¥2,000.00' }),
+      );
+      const alert = await within(dialog).findByRole('alert');
+      expect(alert).toHaveTextContent('未确认收款');
+      expect(alert).toHaveTextContent('列表已刷新');
+      expect(
+        within(dialog).queryByRole('button', { name: /确认收款 ¥/ }),
+      ).toBeNull();
+      await waitFor(() => expect(listCalls(calls)).toHaveLength(2));
+      expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+      await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+    },
+  );
+
+  it('reopening after a settlement conflict submits the refreshed token', async () => {
+    let refreshed = false;
+    const { calls, user } = openReceivables(
+      () => ({
+        status: 200,
+        body: listing([
+          refreshed ? { ...gzt, latestSettlementId: ids.settlement } : gzt,
+        ]),
+      }),
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: (
+          _path,
+          init,
+        ) => {
+          const body = JSON.parse(init.body as string) as {
+            expectedLatestSettlementId: string | null;
+          };
+          if (body.expectedLatestSettlementId === null) {
+            refreshed = true;
+            return { status: 409, body: apiError('SETTLEMENT_CONFLICT') };
+          }
+          return {
+            status: 200,
+            body: {
+              auditId: ids.audit,
+              settlementId: ids.newSettlement,
+              ledgerEntryId: ids.gzt,
+              receivedOn: today,
+            },
+          };
+        },
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /确认收款/ }));
+    let dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: /确认收款 ¥/ }),
+    );
+    await within(dialog).findByRole('alert');
+    await waitFor(() => expect(listCalls(calls)).toHaveLength(2));
+    await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+
+    await user.click(within(table).getByRole('button', { name: /确认收款/ }));
+    dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: /确认收款 ¥/ }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'GZT007 ¥2,000.00 已确认收款',
+    );
+    const posts = calls.filter((call) => call.method === 'POST');
+    expect(
+      posts.map(
+        (call) =>
+          (call.body as { expectedLatestSettlementId: string | null })
+            .expectedLatestSettlementId,
+      ),
+    ).toEqual([null, ids.settlement]);
+  });
+});

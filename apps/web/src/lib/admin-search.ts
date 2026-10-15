@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   adminAccountsQuerySchema,
+  adminReceivablesQuerySchema,
   adminTenantsQuerySchema,
 } from '@fs-billing/shared';
 
@@ -39,6 +40,26 @@ export function validateAdminAccountsSearch(
   const page = shape.page.safeParse(raw['page']).data;
   return {
     ...(search?.trim() ? { search } : {}),
+    ...(page !== undefined && page > 1 ? { page } : {}),
+  };
+}
+
+export type ReceivablesSearch = {
+  search?: string;
+  currency?: z.infer<typeof adminReceivablesQuerySchema.shape.currency>;
+  page?: number;
+};
+
+export function validateReceivablesSearch(
+  raw: Record<string, unknown>,
+): ReceivablesSearch {
+  const shape = adminReceivablesQuerySchema.shape;
+  const search = shape.search.safeParse(raw['search']).data;
+  const currency = shape.currency.safeParse(raw['currency']).data;
+  const page = shape.page.safeParse(raw['page']).data;
+  return {
+    ...(search?.trim() ? { search } : {}),
+    ...(currency ? { currency } : {}),
     ...(page !== undefined && page > 1 ? { page } : {}),
   };
 }

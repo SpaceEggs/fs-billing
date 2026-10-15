@@ -55,12 +55,13 @@ export async function openTenants(page: Page) {
 export async function createTenant(
   page: Page,
   options: {
+    code?: string;
     currency?: 'CNY' | 'USD';
     emails?: string[];
     rates?: { prefix: string; country: string; rate: string }[];
   } = {},
 ) {
-  const code = uniqueCode();
+  const code = options.code ?? uniqueCode();
   const response = await page.request.post('/api/admin/tenants', {
     data: {
       code,

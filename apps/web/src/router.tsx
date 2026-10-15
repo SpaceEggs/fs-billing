@@ -14,6 +14,7 @@ import {
 import type { QueryClient } from '@tanstack/react-query';
 import { AdminAccountsPage } from './pages/admin/admin-accounts';
 import { AdminPlaceholderPage } from './pages/admin/placeholder';
+import { ReceivablesPage } from './pages/admin/receivables';
 import { TenantCreatePage } from './pages/admin/tenant-create';
 import { TenantDetailPage } from './pages/admin/tenant-detail';
 import { TenantEditPage } from './pages/admin/tenant-edit';
@@ -26,6 +27,7 @@ import { LoginPage } from './pages/login';
 import { NotFoundPage } from './pages/not-found';
 import {
   validateAdminAccountsSearch,
+  validateReceivablesSearch,
   validateTenantDetailSearch,
   validateTenantListSearch,
 } from './lib/admin-search';
@@ -206,14 +208,8 @@ const adminTenantRateImport = createRoute({
 const adminReceivables = createRoute({
   getParentRoute: () => adminLayout,
   path: 'receivables',
-  component: () => (
-    <AdminPlaceholderPage
-      identity={useZoneIdentity()}
-      title="待收款"
-      crumb="待收款"
-      activeNav="待收款"
-    />
-  ),
+  validateSearch: validateReceivablesSearch,
+  component: () => <ReceivablesPage identity={useZoneIdentity()} />,
 });
 
 const adminAccounts = createRoute({
