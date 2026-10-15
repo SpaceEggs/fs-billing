@@ -115,7 +115,12 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 
 未分类异常（包括服务内部 schema 校验或不变量失败）返回 500 `INTERNAL_ERROR`；503 `SERVICE_UNAVAILABLE` 仅用于最外层重试耗尽的 40001/40P01、数据库连接故障（SQLSTATE 08 类、57P01/57P02/57P03、53300 或网络连接错误）及服务依赖不可用（包括缺失服务依赖）。按 2026-10-15 错误映射决定，存量租户缺少余额提醒设置属于持久的数据不变量失败，详情严格返回 500 `INTERNAL_ERROR`，消息为 `服务内部错误`；列表保留该租户并返回 `settingsConfigured: false`，不补造设置。两者仅返回通用消息和 requestId，不回显内部错误。
 
-`packages/db` 在 pg 边界将无错误码的连接 EOF（`Connection terminated unexpectedly`）、连接超时（`timeout exceeded when trying to connect`、`Connection terminated due to connection timeout`）与连接失效（`Client has encountered a connection error and is not queryable`）归一化为 `DatabaseUnavailableError`，保留原异常为 `cause`，API 返回 503。任意未分类 `Error` 仍返回 500。只在最外层重试 40001/40P01，不增加重试层。
+`packages/db` 在 pg 边界按以下精确消息或网络错误码将连接故障归一化为 `DatabaseUnavailableError`，保留原异常为 `cause`，API 返回 503。映射以 [`packages/db/src/unavailable.ts`](../packages/db/src/unavailable.ts) 为唯一事实来源。
+
+- 消息：`Connection terminated unexpectedly`、`timeout exceeded when trying to connect`、`Connection terminated due to connection timeout`、`timeout expired`、`Client was closed and is not queryable`、`Client has encountered a connection error and is not queryable`。
+- 网络错误码：`ECONNREFUSED`、`ECONNRESET`、`ETIMEDOUT`、`EPIPE`、`ENETUNREACH`、`EHOSTUNREACH`、`EAI_AGAIN`。
+
+任意未分类 `Error` 仍返回 500。只在最外层重试 40001/40P01，不增加重试层。
 
 | code                                                      | HTTP | 条件                                                                                                        |
 | --------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------- |

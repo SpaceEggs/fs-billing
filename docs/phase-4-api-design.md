@@ -125,7 +125,12 @@ logout 使用 access=session，只验证有效 Better Auth session，不调用�
 | 503  | `SERVICE_UNAVAILABLE`                      | 最外层重试耗尽的 40001/40P01、数据库连接故障（08 类、57P01/57P02/57P03、53300 或网络连接错误）、服务依赖不可用（包括缺失服务依赖）；保留 requestId，不泄露内部详情。                                                                                          |
 | 500  | `INTERNAL_ERROR`                           | 未分类异常（包括服务内部 schema 校验或不变量失败）统一映射到此代码。登录与改密码收到 Better Auth 5xx 时也保留 500，等待用户决定是否调整映射；Better Auth 响应未保留数据库错误原因，不能据此判断故障是否为瞬态。记录内部错误，外部只返回通用消息和 requestId。 |
 
-`packages/db` 在 pg 边界将无错误码的连接 EOF（`Connection terminated unexpectedly`）、连接超时（`timeout exceeded when trying to connect`、`Connection terminated due to connection timeout`）与连接失效（`Client has encountered a connection error and is not queryable`）归一化为 `DatabaseUnavailableError`，保留原异常为 `cause`，API 返回 503。任意未分类 `Error` 仍返回 500。只在最外层重试 40001/40P01，不增加重试层。
+`packages/db` 在 pg 边界按以下精确消息或网络错误码将连接故障归一化为 `DatabaseUnavailableError`，保留原异常为 `cause`，API 返回 503。映射以 [`packages/db/src/unavailable.ts`](../packages/db/src/unavailable.ts) 为唯一事实来源。
+
+- 消息：`Connection terminated unexpectedly`、`timeout exceeded when trying to connect`、`Connection terminated due to connection timeout`、`timeout expired`、`Client was closed and is not queryable`、`Client has encountered a connection error and is not queryable`。
+- 网络错误码：`ECONNREFUSED`、`ECONNRESET`、`ETIMEDOUT`、`EPIPE`、`ENETUNREACH`、`EHOSTUNREACH`、`EAI_AGAIN`。
+
+任意未分类 `Error` 仍返回 500。只在最外层重试 40001/40P01，不增加重试层。
 
 第一批 operation 包含登录、退出、读取 session、改密码、撤销其他会话、`portalContext`、`adminContext` 和 health。管理员重置密码的两条独立后端操作契约一并交付，不提前实现阶段 5 开户或阶段 9 的完整账号管理页面。登录成功只按真实资料决定区域，无公开注册端点。Better Auth 原始管理路由与注册路由不作为通配入口公开。
 
