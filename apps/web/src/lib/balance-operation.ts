@@ -155,6 +155,31 @@ export function newIdempotencyKey() {
   return `web:${crypto.randomUUID()}`;
 }
 
+const unresolvedAttempts = new Map<
+  string,
+  { fingerprint: string; key: string }
+>();
+
+/**
+ * 每个租户保留最近一笔结果未知的提交：关闭对话框后重新填写同一内容，仍按同一幂等键重试。
+ * 只有确定成功或服务端明确拒绝时才由 `resolveBalanceAttempt` 清除。
+ */
+export function balanceAttemptKey(tenantId: string, draft: BalanceDraft) {
+  const fingerprint = draftFingerprint(draft);
+  const unresolved = unresolvedAttempts.get(tenantId);
+  const key =
+    unresolved?.fingerprint === fingerprint
+      ? unresolved.key
+      : newIdempotencyKey();
+  unresolvedAttempts.set(tenantId, { fingerprint, key });
+  return key;
+}
+
+export function resolveBalanceAttempt(tenantId: string, key: string) {
+  if (unresolvedAttempts.get(tenantId)?.key === key)
+    unresolvedAttempts.delete(tenantId);
+}
+
 /**
  * 赠送、赊账充值金额严格超过该币种阈值时需要大额二次确认；恰等于阈值不需要。
  * 阈值为前端配置（decision e），API 没有确认凭据。

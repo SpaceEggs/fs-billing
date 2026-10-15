@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { createTenant, openTenants, test, uniqueCode } from './admin';
-import { expectPath } from './helpers';
+import { expectPath, submitCredentials } from './helpers';
 
 test('tenant list shows seeded tenants with status and per-currency balances', async ({
   page,
@@ -65,7 +65,10 @@ test('onboarding shows the generated portal password once and the new account mu
   await customer.goto('/login');
   await customer.getByLabel('登录邮箱').fill(portalEmail);
   await customer.getByLabel('密码', { exact: true }).fill(temporaryPassword);
-  await customer.getByRole('button', { name: '登录', exact: true }).click();
+  const login = await submitCredentials(customer, '/api/auth/login', () =>
+    customer.getByRole('button', { name: '登录', exact: true }).click(),
+  );
+  expect(login.status()).toBe(200);
   await expectPath(customer, '/change-password');
   await expect(
     customer.getByRole('heading', { name: '请修改初始密码' }),
@@ -77,7 +80,12 @@ test('onboarding shows the generated portal password once and the new account mu
     .fill(temporaryPassword);
   await customer.getByLabel('新密码', { exact: true }).fill(newPassword);
   await customer.getByLabel('确认新密码', { exact: true }).fill(newPassword);
-  await customer.getByRole('button', { name: '修改密码' }).click();
+  const changed = await submitCredentials(
+    customer,
+    '/api/auth/change-password',
+    () => customer.getByRole('button', { name: '修改密码' }).click(),
+  );
+  expect(changed.status()).toBe(200);
   await expectPath(customer, '/');
   await expect(customer.getByRole('heading', { name: '首页' })).toBeVisible();
   await customer.close();

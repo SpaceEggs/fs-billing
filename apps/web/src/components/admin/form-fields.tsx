@@ -158,7 +158,11 @@ export function RecipientsInput({
     setNotice(next.notice);
     setDraft('');
   };
-  const flaggedEmails = emails.filter((email) => flagged?.has(email));
+  const flaggedKeys = new Set(
+    [...(flagged ?? [])].map((email) => email.toLowerCase()),
+  );
+  const isFlagged = (email: string) => flaggedKeys.has(email.toLowerCase());
+  const flaggedEmails = emails.filter(isFlagged);
   return (
     <div
       className={cn(
@@ -182,11 +186,11 @@ export function RecipientsInput({
               key={email}
               className={cn(
                 'flex h-7 items-center gap-1.5 rounded-md border border-transparent bg-muted pr-1.5 pl-2.5 text-[13px]',
-                flagged?.has(email) && 'border-warn-border bg-warn-soft',
+                isFlagged(email) && 'border-warn-border bg-warn-soft',
               )}
             >
               {email}
-              {flagged?.has(email) ? (
+              {isFlagged(email) ? (
                 <span className="text-[11px] text-warn">已停用管理员</span>
               ) : null}
               <button

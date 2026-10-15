@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
 import type {
@@ -8,21 +8,21 @@ import type {
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import {
+  balanceAttemptKey,
   balanceFieldErrors,
   balanceKindOrder,
   balanceKinds,
   balanceRequest,
-  draftFingerprint,
   needsLargeAmountConfirm,
-  newIdempotencyKey,
   projectBalance,
+  resolveBalanceAttempt,
   validateBalanceDraft,
   type BalanceDraft,
   type BalanceErrors,
   type BalanceKind,
 } from '../../lib/balance-operation';
 import { normalizeAmountInput } from '../../lib/amounts';
-import { formatMoney } from '../../lib/format';
+import { formatExactMoney, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { webConfig } from '../../config';
 import { Money } from '../data-format';
@@ -38,12 +38,12 @@ type Step =
   | { name: 'confirm' }
   | { name: 'done'; result: AdminBalanceOperationResponse };
 
-/** 带正负号的金额：入账为“+¥500.00”。 */
+/** 本次操作金额按输入精度带正负号显示：“+¥500.00”“-¥12.3456”。 */
 function signedMoney(
   currency: AdminTenantDetailResponse['currency'],
   amount: string,
 ) {
-  const text = formatMoney({ currency, amount });
+  const text = formatExactMoney({ currency, amount });
   return new Decimal(amount).gt(0) ? `+${text}` : text;
 }
 
@@ -66,30 +66,30 @@ function KindChoice({
   value: BalanceKind;
   onChange: (kind: BalanceKind) => void;
 }) {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <span id="balance-kind-label">操作类型</span>
+      <span id={`${id}-label`}>操作类型</span>
       <div
         role="radiogroup"
-        aria-labelledby="balance-kind-label"
+        aria-labelledby={`${id}-label`}
         className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-0.5 md:rounded-lg md:bg-muted md:p-[3px]"
       >
         {balanceKindOrder.map((kind) => (
-          <button
+          <label
             key={kind}
-            type="button"
-            role="radio"
-            aria-checked={value === kind}
-            onClick={() => onChange(kind)}
-            className={cn(
-              'h-11 rounded-lg border text-[15px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring md:h-8 md:rounded-md md:border-0 md:text-[13px]',
-              value === kind
-                ? 'border-primary bg-brand-soft font-semibold text-primary md:bg-background md:shadow-[0_1px_2px_rgba(0,0,0,.12)]'
-                : 'border-input font-normal text-muted-foreground',
-            )}
+            className="relative flex h-11 cursor-pointer items-center justify-center rounded-lg border border-input text-[15px] font-normal text-muted-foreground has-checked:border-primary has-checked:bg-brand-soft has-checked:font-semibold has-checked:text-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring md:h-8 md:rounded-md md:border-0 md:text-[13px] md:has-checked:bg-background md:has-checked:shadow-[0_1px_2px_rgba(0,0,0,.12)]"
           >
+            <input
+              type="radio"
+              name={id}
+              value={kind}
+              checked={value === kind}
+              onChange={() => onChange(kind)}
+              className="absolute inset-0 cursor-pointer appearance-none outline-none"
+            />
             {balanceKinds[kind].label}
-          </button>
+          </label>
         ))}
       </div>
       {value === 'credit_topup' ? (
@@ -136,8 +136,8 @@ function BalancePreview({
 
 /**
  * 余额操作（设计稿第一批 3a–3e、原型）：填写 → 确认 → 完成。
- * 同一笔内容重试复用幂等键，网络中断后重试不会重复入账。
- * 赠送、赊账充值超过前端配置阈值时，确认页另需勾选大额确认。
+ * 同一笔内容重试复用幂等键（关闭对话框后重开也一样），网络中断后重试不会重复入账；
+ * 提交中不能关闭。赠送、赊账充值超过前端配置阈值时，确认页另需勾选大额确认。
  */
 export function BalanceDialog({
   tenant,
@@ -152,10 +152,14 @@ export function BalanceDialog({
   onViewLedger: () => void;
   thresholds?: typeof webConfig.largeAmountThresholds;
 }) {
+  const operate = useApiMutation('adminBalanceOperation', {
+    invalidate: (queryClient, input) =>
+      invalidateTenant(queryClient, input.params.tenantId),
+  });
   return (
     <ModalDialog
       open={open}
-      onOpenChange={onOpenChange}
+      {...(operate.isPending ? {} : { onOpenChange })}
       title="余额操作"
       className="md:w-[460px]"
     >
@@ -163,6 +167,7 @@ export function BalanceDialog({
         <BalanceFlow
           tenant={tenant}
           thresholds={thresholds}
+          operate={operate}
           onClose={() => onOpenChange(false)}
           onViewLedger={onViewLedger}
         />
@@ -174,11 +179,13 @@ export function BalanceDialog({
 function BalanceFlow({
   tenant,
   thresholds,
+  operate,
   onClose,
   onViewLedger,
 }: {
   tenant: AdminTenantDetailResponse;
   thresholds: typeof webConfig.largeAmountThresholds;
+  operate: ReturnType<typeof useApiMutation<'adminBalanceOperation'>>;
   onClose: () => void;
   onViewLedger: () => void;
 }) {
@@ -189,17 +196,9 @@ function BalanceFlow({
   });
   const [errors, setErrors] = useState<BalanceErrors>({});
   const [step, setStep] = useState<Step>({ name: 'form' });
-  const [attempt, setAttempt] = useState<{
-    fingerprint: string;
-    key: string;
-  } | null>(null);
   const [largeConfirmed, setLargeConfirmed] = useState(false);
   const [submitError, setSubmitError] = useState<unknown>(null);
   const queryClient = useQueryClient();
-  const operate = useApiMutation('adminBalanceOperation', {
-    invalidate: (queryClient, input) =>
-      invalidateTenant(queryClient, input.params.tenantId),
-  });
 
   const rule = balanceKinds[draft.kind];
   const valid = Object.keys(validateBalanceDraft(draft)).length === 0;
@@ -235,20 +234,19 @@ function BalanceFlow({
   }
 
   async function submit() {
-    const fingerprint = draftFingerprint(draft);
-    const key =
-      attempt?.fingerprint === fingerprint ? attempt.key : newIdempotencyKey();
-    setAttempt({ fingerprint, key });
+    const key = balanceAttemptKey(tenant.id, draft);
     setSubmitError(null);
     try {
       const result = await operate.mutateAsync({
         params: { tenantId: tenant.id },
         body: balanceRequest(draft, tenant.currency, key),
       });
-      setAttempt(null);
+      resolveBalanceAttempt(tenant.id, key);
       setStep({ name: 'done', result });
     } catch (error) {
       const problem = apiProblem(error);
+      // 服务端明确拒绝即未入账；网络中断、500/503 结果未知，保留幂等键供重试。
+      if (problem.kind !== 'unavailable') resolveBalanceAttempt(tenant.id, key);
       if (problem.kind === 'validation') {
         setErrors(balanceFieldErrors(problem.issues));
         setStep({ name: 'form' });

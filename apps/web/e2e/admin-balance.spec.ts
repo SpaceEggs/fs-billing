@@ -92,7 +92,7 @@ test('gift and credit require second confirmation only above configured currency
   await expect(confirm).toBeEnabled();
   await dialog.getByRole('button', { name: '返回修改' }).click();
 
-  await dialog.getByRole('radio', { name: '赊账充值', exact: true }).click();
+  await dialog.getByRole('radio', { name: '赊账充值', exact: true }).check();
   await dialog.getByRole('button', { name: '下一步' }).click();
   await expect(dialog).toContainText('大额赊账充值，需要二次确认');
   await dialog.getByRole('checkbox', { name: /我已核对/ }).check();

@@ -29,6 +29,14 @@ export function formatMoney(money: Money) {
   return `${sign}${currencySymbol[money.currency]}${groupThousands(integer)}.${fraction}`;
 }
 
+/** 不舍入的金额（如四位小数调账），至少 2 位小数，负号在币种符号前。 */
+export function formatExactMoney(money: Money) {
+  const value = new Decimal(money.amount);
+  const [integer = '0', fraction = ''] = value.abs().toFixed().split('.');
+  const sign = value.isNegative() && !value.isZero() ? '-' : '';
+  return `${sign}${currencySymbol[money.currency]}${groupThousands(integer)}.${fraction.padEnd(2, '0')}`;
+}
+
 /** 费率固定 4 位小数；带单位时 CNY 为“元/分钟”，USD 为“$…/分钟”。 */
 export function formatRate(
   rate: string,

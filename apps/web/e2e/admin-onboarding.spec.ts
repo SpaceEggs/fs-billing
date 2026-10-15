@@ -20,7 +20,7 @@ test('creates a run-unique tenant, imports rates, credits 500 and opens portal a
   await page.getByLabel(/租户名称/).fill(`验收开户 ${code}`);
   await page.getByLabel(/余额提醒阈值/).fill('200');
   await page.getByLabel(/登录邮箱/).fill(portalEmail);
-  await page.getByText('从 CSV 导入', { exact: true }).click();
+  await page.getByRole('radio', { name: /^从 CSV 导入/ }).check();
   await page.getByLabel('CSV 文件').setInputFiles({
     name: 'rates.csv',
     mimeType: 'text/csv',

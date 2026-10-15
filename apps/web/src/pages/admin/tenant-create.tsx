@@ -115,7 +115,7 @@ function CurrencyChoice({
         {currencySchema.options.map((currency) => (
           <label
             key={currency}
-            className="flex cursor-pointer items-center justify-center rounded-md text-sm font-normal text-muted-foreground has-checked:bg-background has-checked:font-semibold has-checked:text-primary has-checked:shadow-[0_1px_2px_rgba(0,0,0,.12)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+            className="relative flex cursor-pointer items-center justify-center rounded-md text-sm font-normal text-muted-foreground has-checked:bg-background has-checked:font-semibold has-checked:text-primary has-checked:shadow-[0_1px_2px_rgba(0,0,0,.12)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
           >
             <input
               type="radio"
@@ -123,7 +123,7 @@ function CurrencyChoice({
               value={currency}
               checked={value === currency}
               onChange={() => onChange(currency)}
-              className="sr-only"
+              className="absolute inset-0 cursor-pointer appearance-none outline-none"
             />
             {currencyLabel[currency]}
           </label>
@@ -903,7 +903,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               {rateOptions.map((option) => (
                 <label
                   key={option.kind}
-                  className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-input p-3 has-checked:border-[1.5px] has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+                  className="relative flex cursor-pointer items-start gap-2.5 rounded-lg border border-input p-3 has-checked:border-[1.5px] has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
                 >
                   <input
                     type="radio"
@@ -919,7 +919,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                             : { kind: 'copy', source: null },
                       )
                     }
-                    className="peer sr-only"
+                    className="peer absolute inset-0 cursor-pointer appearance-none outline-none"
                   />
                   <span
                     aria-hidden

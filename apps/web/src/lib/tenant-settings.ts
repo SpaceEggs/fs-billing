@@ -1,9 +1,9 @@
 import Decimal from 'decimal.js';
 import type { z } from 'zod';
-import type {
-  AdminTenantDetailResponse,
-  ValidationIssue,
+import {
   adminTenantSettingsRequestSchema,
+  type AdminTenantDetailResponse,
+  type ValidationIssue,
 } from '@fs-billing/shared';
 import {
   amountForInput,
@@ -41,17 +41,21 @@ export function validateSettings(
     '余额提醒阈值',
   );
   if (threshold) errors.lowBalanceThreshold = threshold;
+  // 与服务端同一 schema：先小写去重，再限制 20 个；已保存的历史邮箱可能大小写不同。
+  const emails = adminTenantSettingsRequestSchema.shape.emails.safeParse(
+    form.emails,
+  );
   const badEmail = invalidRecipient(form.emails);
   if (badEmail) errors.emails = `「${badEmail}」不是有效的邮箱地址`;
-  else if (form.emails.length > maxRecipients)
-    errors.emails = `最多 ${maxRecipients} 个通知邮箱`;
-  if (Object.keys(errors).length) return { ok: false, errors };
+  else if (!emails.success) errors.emails = `最多 ${maxRecipients} 个通知邮箱`;
+  if (Object.keys(errors).length || !emails.success)
+    return { ok: false, errors };
   return {
     ok: true,
     value: {
       overdraftLimit: normalizeAmountInput(form.overdraftLimit),
       lowBalanceThreshold: normalizeAmountInput(form.lowBalanceThreshold),
-      emails: form.emails,
+      emails: emails.data,
     },
   };
 }
@@ -76,8 +80,9 @@ export function settingsChanges(
   const thresholdChanged = !new Decimal(tenant.settings.lowBalanceThreshold).eq(
     request.lowBalanceThreshold,
   );
-  const before = new Set(tenant.settings.emails);
-  const after = new Set(request.emails);
+  const lower = (email: string) => email.toLowerCase();
+  const before = new Set(tenant.settings.emails.map(lower));
+  const after = new Set(request.emails.map(lower));
   return {
     overdraftLimit: overdraftChanged
       ? { before: tenant.overdraftLimit, after: request.overdraftLimit }
@@ -96,8 +101,10 @@ export function settingsChanges(
           after: request.lowBalanceThreshold,
         }
       : null,
-    emailsAdded: request.emails.filter((email) => !before.has(email)),
-    emailsRemoved: tenant.settings.emails.filter((email) => !after.has(email)),
+    emailsAdded: request.emails.filter((email) => !before.has(lower(email))),
+    emailsRemoved: tenant.settings.emails.filter(
+      (email) => !after.has(lower(email)),
+    ),
   };
 }
 

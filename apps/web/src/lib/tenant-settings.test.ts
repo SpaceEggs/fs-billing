@@ -71,6 +71,53 @@ describe('tenant settings', () => {
     });
   });
 
+  it('lowercases and dedupes recipients before the 20 cap and summary', () => {
+    const twenty = Array.from(
+      { length: 20 },
+      (_, index) => `ops${index}@abc-tech.cn`,
+    );
+    const result = validateSettings({
+      overdraftLimit: '100',
+      lowBalanceThreshold: '200',
+      emails: [...twenty, 'OPS0@abc-tech.cn'],
+    });
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        overdraftLimit: '100',
+        lowBalanceThreshold: '200',
+        emails: twenty,
+      },
+    });
+    expect(
+      validateSettings({
+        overdraftLimit: '100',
+        lowBalanceThreshold: '200',
+        emails: [...twenty, 'ops20@abc-tech.cn'],
+      }),
+    ).toEqual({ ok: false, errors: { emails: '最多 20 个通知邮箱' } });
+
+    const savedMixedCase = {
+      ...tenant,
+      settings: { ...tenant.settings, emails: ['Billing@ABC-tech.cn'] },
+    };
+    const request = {
+      overdraftLimit: '100',
+      lowBalanceThreshold: '200',
+      emails: ['billing@abc-tech.cn'],
+    };
+    expect(
+      validateSettings({
+        ...request,
+        emails: ['Billing@ABC-tech.cn', 'billing@abc-tech.cn'],
+      }),
+    ).toEqual({ ok: true, value: request });
+    expect(settingsChanges(savedMixedCase, request)).toMatchObject({
+      emailsAdded: [],
+      emailsRemoved: [],
+    });
+  });
+
   it('summarizes changes by value, including available balance and recipients', () => {
     const changes = settingsChanges(tenant, {
       overdraftLimit: '300',
