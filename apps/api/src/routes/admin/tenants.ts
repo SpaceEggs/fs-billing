@@ -1,9 +1,6 @@
 import {
   createTenant,
-  withAdmin,
-  readTenantUsageOverview,
-  NotFoundError,
-  AdminServiceError,
+  getTenantOverview,
   listTenants,
   getTenant,
   editTenant,
@@ -57,18 +54,11 @@ export function tenantHandlers(
     },
     adminTenantDetail: (_context, request) =>
       getTenant({ db, ...adminTenantParamsSchema.parse(request.params) }),
-    adminTenantOverview: async (_context, request) => {
-      const { tenantId } = adminTenantParamsSchema.parse(request.params);
-      try {
-        return await withAdmin(db, (tx) =>
-          readTenantUsageOverview(tx, tenantId),
-        );
-      } catch (error) {
-        if (error instanceof NotFoundError)
-          throw new AdminServiceError('NOT_FOUND', error.message);
-        throw error;
-      }
-    },
+    adminTenantOverview: (_context, request) =>
+      getTenantOverview({
+        db,
+        ...adminTenantParamsSchema.parse(request.params),
+      }),
     adminTenantEdit: (context, request) =>
       editTenant({
         db,

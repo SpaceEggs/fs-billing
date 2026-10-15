@@ -23,6 +23,7 @@ export const tenantUsageOverviewSchema = z
   .superRefine((value, context) => {
     const instant = Date.parse(value.asOf);
     if (!Number.isFinite(instant)) return;
+    // Asia/Shanghai uses UTC+8 without DST, per the overview date-boundary decision.
     const today = new Date(instant + 8 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 10);

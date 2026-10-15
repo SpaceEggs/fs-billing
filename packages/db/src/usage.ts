@@ -14,7 +14,7 @@ export function tenantMonthSpendSql(
     select -sum(l.amount) from ledger_entries l
     where l.tenant_id = ${tenantId} and l.kind = 'call_charge'
       and l.occurred_at >= date_trunc('month', ${asOf} at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai'
-      and l.occurred_at <= ${asOf}
+      and l.occurred_at < (date_trunc('month', ${asOf} at time zone 'Asia/Shanghai') + interval '1 month') at time zone 'Asia/Shanghai'
   ), 0)::text`;
 }
 
@@ -30,7 +30,8 @@ export async function readTenantUsageOverview(
     with instant as (select ${instant} as as_of),
     bounds as (
       select as_of, (as_of at time zone 'Asia/Shanghai')::date as today,
-        date_trunc('month', as_of at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai' as month_start
+        date_trunc('month', as_of at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai' as month_start,
+        (date_trunc('month', as_of at time zone 'Asia/Shanghai') + interval '1 month') at time zone 'Asia/Shanghai' as month_end
       from instant
     ),
     daily_spend as (
@@ -38,7 +39,7 @@ export async function readTenantUsageOverview(
       from ledger_entries l cross join bounds b
       where l.tenant_id = ${tenantId}::uuid and l.kind = 'call_charge'
         and l.occurred_at >= (b.today - 29)::timestamp at time zone 'Asia/Shanghai'
-        and l.occurred_at <= b.as_of
+        and l.occurred_at < (b.today + 1)::timestamp at time zone 'Asia/Shanghai'
       group by 1
     ),
     days as (
@@ -50,14 +51,14 @@ export async function readTenantUsageOverview(
       select coalesce(sum(c.billed_minutes), 0)::text as minutes, count(*)::int as calls
       from cdrs c cross join bounds b
       where c.tenant_id = ${tenantId}::uuid
-        and c.answered_at >= b.month_start and c.answered_at <= b.as_of
-        and c.started_at <= b.as_of
+        and c.answered_at >= b.month_start and c.answered_at < b.month_end
+        and c.started_at < b.month_end
     ),
     unanswered as (
       select count(*)::int as calls
       from cdrs c cross join bounds b
       where c.tenant_id = ${tenantId}::uuid and c.answered_at is null
-        and c.started_at >= b.month_start and c.started_at <= b.as_of
+        and c.started_at >= b.month_start and c.started_at < b.month_end
     )
     select jsonb_build_object(
       'asOf', to_char(b.as_of at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),

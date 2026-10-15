@@ -20,7 +20,7 @@ import {
   receivableVoids,
 } from './schema.js';
 import { readTenantUsageOverview } from './usage.js';
-import { getTenant, listTenants } from './admin/tenants.js';
+import { getTenant, getTenantOverview, listTenants } from './admin/tenants.js';
 import { adminTenantsQuerySchema } from '@fs-billing/shared';
 
 const { app, owner } = connections();
@@ -109,7 +109,7 @@ describe('tenant usage overview snapshot', () => {
     });
   });
 
-  it('uses Beijing month and day edges, includes today, excludes future events and zero-fills exactly 30 days', async () => {
+  it('uses Beijing month and day edges, includes today, excludes events outside the period and zero-fills exactly 30 days', async () => {
     const tenant = await createTenant(app, 'CNY');
     await charge(tenant.id, '2026-09-01T00:00:00+08:00', '-1.0001');
     await charge(tenant.id, '2026-09-30T15:59:59Z', '-2.0002');
@@ -141,20 +141,53 @@ describe('tenant usage overview snapshot', () => {
     );
     const after = await read(tenant.id, '2026-09-30T16:00:00Z');
     expect(after).toMatchObject({
-      monthSpend: '4.0004',
-      monthCallMinutes: '2',
-      answeredCalls: 1,
+      monthSpend: '1003.0004',
+      monthCallMinutes: '101',
+      answeredCalls: 2,
       unansweredCalls: 1,
-      dailyTotal: '6.0006',
+      dailyTotal: '1005.0006',
     });
     expect(Date.parse(after.asOf)).toBe(Date.parse('2026-09-30T16:00:00Z'));
     expect(after.daily[0]).toEqual({ date: '2026-09-02', spend: '0' });
-    expect(after.daily[29]).toEqual({ date: '2026-10-01', spend: '4.0004' });
+    expect(after.daily[29]).toEqual({ date: '2026-10-01', spend: '1003.0004' });
     expect(
       after.daily
         .reduce((sum, day) => sum.plus(day.spend), decimal('0'))
         .toFixed(),
     ).toBe(after.dailyTotal);
+  });
+
+  it('includes clock-ahead events within the month and today, with exclusive period ends', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const now = '2026-09-15T12:00:00+08:00';
+    await charge(tenant.id, '2026-09-15T12:00:01+08:00', '-1');
+    await charge(tenant.id, '2026-09-16T00:00:00+08:00', '-2');
+    await charge(tenant.id, '2026-10-01T00:00:00+08:00', '-999');
+    await call(
+      tenant.id,
+      '2026-09-15T12:00:01+08:00',
+      '2026-09-15T12:00:02+08:00',
+      '2',
+    );
+    await call(tenant.id, '2026-09-15T12:00:01+08:00', null);
+    await call(
+      tenant.id,
+      '2026-10-01T00:00:00+08:00',
+      '2026-10-01T00:00:01+08:00',
+      '99',
+    );
+    await call(tenant.id, '2026-10-01T00:00:00+08:00', null);
+
+    const value = await read(tenant.id, now);
+    expect(Date.parse(value.asOf)).toBe(Date.parse(now));
+    expect(value).toMatchObject({
+      monthSpend: '3',
+      monthCallMinutes: '2',
+      answeredCalls: 1,
+      unansweredCalls: 1,
+      dailyTotal: '1',
+    });
+    expect(value.daily[29]).toEqual({ date: '2026-09-15', spend: '1' });
   });
 
   it('counts billed minutes, unverified and zero-rate answers by answer time, and billing rejections by start time', async () => {
@@ -275,8 +308,9 @@ describe('tenant usage overview snapshot', () => {
         .values({ tenantId: a.id, threshold: '0', emails: [] }),
     );
     const now = new Date();
-    await charge(a.id, now.toISOString(), '-0.5');
-    await charge(b.id, now.toISOString(), '-999');
+    const chargedAt = new Date(now.getTime() - 1000).toISOString();
+    await charge(a.id, chargedAt, '-0.5');
+    await charge(b.id, chargedAt, '-999');
     const value = await app.db.transaction(async (tx) => {
       await tx.execute(sql`set transaction read only`);
       await tx.execute(
@@ -304,6 +338,12 @@ describe('tenant usage overview snapshot', () => {
     expect(
       (await getTenant({ db: app.db, tenantId: a.id })).monthConsumption,
     ).toBe(value.monthSpend);
+    expect(
+      (await getTenantOverview({ db: app.db, tenantId: a.id })).monthSpend,
+    ).toBe(value.monthSpend);
+    await expect(
+      getTenantOverview({ db: app.db, tenantId: randomUUID() }),
+    ).rejects.toMatchObject({ name: 'AdminServiceError', code: 'NOT_FOUND' });
     const list = await listTenants({
       db: app.db,
       query: adminTenantsQuerySchema.parse({ search: a.code }),

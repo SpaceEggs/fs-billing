@@ -307,10 +307,10 @@ AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action�
 2. 分钟为 `cdrs.billed_minutes` 的账单计费分钟，按现有逐分钟向上取整规则，不按实际通话秒数换算。
 3. 已接通通数与分钟按 `answered_at` 归属；未接通通数按 `started_at` 归属。跨月开始、次月接通的电话计入接通月份。
 4. 余额不足等计费拒绝呼叫计入后台未接通通数。后台显示已接通与未接通，未来门户首页只显示已接通。共享服务返回两种通数，本步不实现门户端点。未归属话单尚未有租户，不计入概况。
-5. 最近 30 天包括今天，恰好为今天及之前 29 个自然日，缺失日期补零，最后一柱为今天截至 `asOf` 的部分日。
+5. 最近 30 天包括今天，恰好为今天及之前 29 个自然日，缺失日期补零，最后一柱为当前快照内的今日消费。
 6. 所有租户，包括 USD，均使用 `Asia/Shanghai` 的日期与月份边界。
 
-`readTenantUsageOverview(tx, tenantId, now?)` 在一个 SQL statement 内读取租户、流水、话单与日期序列，以同一快照计算全部指标。默认 `asOf = statement_timestamp()`，测试可注入时间。所有计入事件均不晚于 `asOf`。读取不获取租户锁、行锁或 advisory locks；后台使用 `withAdmin`，未来门户使用登录租户的 `withTenant`，不可见租户返回 NOT_FOUND。列表和详情的 `monthConsumption` 保留现有字段名，与概况 `monthSpend` 共用 SQL 定义。迁移 `0010_cdrs_tenant_started_at.sql` 为 `cdrs (tenant_id, started_at)` 添加索引，现有与新建月分区通过 PostgreSQL 分区索引继承。该普通 `CREATE INDEX` 会阻塞写入，仅适用于上线前的开发、CI 或空库。当前 migrator 在事务内运行；上线后为 `cdrs` 等大分区表新增索引，必须按运维手册在迁移事务外逐分区执行 `CREATE INDEX CONCURRENTLY`，再附加到以 `ON ONLY` 创建的父索引，见[阶段 10 检查项](plan.md#阶段-10部署与上线)。
+`readTenantUsageOverview(tx, tenantId, now?)` 在一个 SQL statement 内读取租户、流水、话单与日期序列，以同一快照计算全部指标。默认 `asOf = statement_timestamp()`，测试可注入时间。`asOf` 表示读取快照的时间，不是事件时间上限。本月指标使用 `< 下月月初`，最近 30 天消费使用 `< 明日零点`，边界均按 `Asia/Shanghai` 计算，因此 FreeSWITCH 时钟略快于数据库时仍能计入当前期间内已入库的事件。读取不获取租户锁、行锁或 advisory locks；后台使用 `withAdmin`，未来门户使用登录租户的 `withTenant`，不可见租户返回 NOT_FOUND。列表和详情的 `monthConsumption` 保留现有字段名，与概况 `monthSpend` 共用 SQL 定义。迁移 `0010_cdrs_tenant_started_at.sql` 为 `cdrs (tenant_id, started_at)` 添加索引，现有与新建月分区通过 PostgreSQL 分区索引继承。该普通 `CREATE INDEX` 会阻塞写入，仅适用于上线前的开发、CI 或空库。当前 migrator 在事务内运行；上线后为 `cdrs` 等大分区表新增索引，必须按运维手册在迁移事务外逐分区执行 `CREATE INDEX CONCURRENTLY`，再附加到以 `ON ONLY` 创建的父索引，见[阶段 10 检查项](plan.md#阶段-10部署与上线)。
 
 流水扣费异步入账，消费可能落后于话单分钟和通数；reconcile 的 5 分钟是扫描最小年龄，不是延迟上限。按接通时间归属的历史扣费和阶段 8 归属回填会改变历史日消费。已关闭月份的话单清理不影响当前月分钟，账本消费不依赖话单保留。种子通话扣费位于 2026 年 9 月，其他月份实时查询可能为零；未来界面验收需要相对当前日期的 fixture。
 

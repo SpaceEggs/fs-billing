@@ -24,7 +24,8 @@ import {
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
-import { tenantMonthSpendSql } from '../usage.js';
+import { readTenantUsageOverview, tenantMonthSpendSql } from '../usage.js';
+import { NotFoundError } from '../errors.js';
 import { createRateVersion } from '../rates.js';
 import { likeContains } from './like.js';
 import {
@@ -123,6 +124,18 @@ export function getTenant({
   tenantId,
 }: Pick<TenantInput, 'db' | 'tenantId'>) {
   return withAdmin(db, (tx) => readTenant(tx, tenantId));
+}
+export async function getTenantOverview({
+  db,
+  tenantId,
+}: Pick<TenantInput, 'db' | 'tenantId'>) {
+  try {
+    return await withAdmin(db, (tx) => readTenantUsageOverview(tx, tenantId));
+  } catch (error) {
+    if (error instanceof NotFoundError)
+      throw new AdminServiceError('NOT_FOUND', error.message);
+    throw error;
+  }
 }
 export function listTenants({
   db,
