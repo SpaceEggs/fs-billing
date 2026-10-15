@@ -521,6 +521,27 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
     releaseLoser = resolve;
   });
   const transaction = connections.app.db.transaction.bind(connections.app.db);
+  let deadlineFailure: Error | undefined;
+  async function withDeadline<T>(
+    operation: Promise<T>,
+    message: string,
+    timeoutMs = 2_000,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        operation,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            deadlineFailure ??= new Error(message);
+            reject(deadlineFailure);
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
   let attempts = 0;
   let snapshots = 0;
   const failures: unknown[] = [];
@@ -530,6 +551,9 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
       const attempt = ++attempts;
       try {
         const result = await transaction(async (tx) => {
+          await tx.execute(
+            sql`select set_config('statement_timeout', '2s', true)`,
+          );
           if (attempt <= 2) {
             await tx.execute(
               sql`select set_config('app.scope', 'admin', true)`,
@@ -539,9 +563,16 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
               sql`select count(*) from public.admins where status = 'active'`,
             );
             if (++snapshots === 2) releaseSnapshots();
-            await snapshotsReady;
+            await withDeadline(
+              snapshotsReady,
+              'Timed out waiting for both admin-disable snapshots',
+            );
             // The stale loser must abort, then retry against the committed winner.
-            if (attempt === 2) await winnerCommitted;
+            if (attempt === 2)
+              await withDeadline(
+                winnerCommitted,
+                'Timed out waiting for the winning admin-disable transaction',
+              );
           }
           return fn(tx);
         }, config);
@@ -569,7 +600,12 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
         status: 'disabled',
       }),
     ]);
-    const results = await pending;
+    const results = await withDeadline(
+      pending,
+      'Timed out waiting for concurrent admin disables to settle',
+      6_000,
+    );
+    if (deadlineFailure) throw deadlineFailure;
     expect(attempts).toBe(3);
     expect(failures).toMatchObject([
       { cause: { code: '40001' } },
@@ -604,12 +640,22 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
   } finally {
     releaseSnapshots();
     releaseLoser();
-    await pending;
     transactions.mockRestore();
-    await connections.owner.pool.query(
-      "UPDATE public.admins SET status='active' WHERE id=ANY($1::uuid[])",
-      [others.rows.map((row) => row.id)],
-    );
+    try {
+      if (pending)
+        await withDeadline(
+          pending,
+          'Timed out cleaning up concurrent admin-disable transactions',
+          3_000,
+        );
+    } finally {
+      const restoreAdmins = {
+        text: "UPDATE public.admins SET status='active' WHERE id=ANY($1::uuid[])",
+        values: [others.rows.map((row) => row.id)],
+        query_timeout: 2_000,
+      };
+      await connections.owner.pool.query(restoreAdmins);
+    }
   }
 });
 
