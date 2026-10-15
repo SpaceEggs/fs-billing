@@ -32,6 +32,7 @@ const app = createApi({
     authPool,
     auth: auth.auth,
   }),
+  adminAmountMaxIntegerDigits: config.ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
   adminRates: {
     horizonMs: config.ADMIN_RATE_SCHEDULE_HORIZON_MS,
     previewTtlMs: config.ADMIN_RATE_PREVIEW_TTL_MS,

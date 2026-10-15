@@ -6,7 +6,11 @@ import {
   adminBalanceOperationResponseSchema,
   adminLedgerResponseSchema,
   adminTenantsResponseSchema,
+  createAdminAmountRequestSchemas,
 } from '@fs-billing/shared';
+import { operateBalance, updateTenantSettings } from '@fs-billing/db';
+import { createApi } from './app.js';
+import { apiEnvironmentSchema } from './config.js';
 import {
   apiConnections,
   createFixture,
@@ -17,7 +21,7 @@ import {
 } from '../test/support.js';
 
 const connections = apiConnections();
-const { api } = fixtureApi(connections);
+const { api, auth } = fixtureApi(connections);
 let fixture: Fixture;
 let cookie: string;
 beforeAll(async () => {
@@ -43,6 +47,125 @@ async function create(currency: 'CNY' | 'USD' = 'CNY') {
 }
 
 describe('admin tenant and balance API', () => {
+  it.each([2, 11])(
+    'uses the configured %i digit cap in routes and services',
+    async (digits) => {
+      const cap =
+        apiEnvironmentSchema.shape.ADMIN_AMOUNT_MAX_INTEGER_DIGITS.parse(
+          String(digits),
+        );
+      const amountRequests = createAdminAmountRequestSchemas(cap);
+      const custom = createApi({
+        businessDb: connections.app.db,
+        auth,
+        trustedOrigins: ['http://localhost:3000'],
+        adminAmountMaxIntegerDigits: cap,
+      });
+      const headers = requestHeaders(cookie);
+      const allowed = '9'.repeat(digits);
+      const excessive = '1' + '0'.repeat(digits);
+      const actor = { id: fixture.admin.profileId, name: 'admin' };
+      try {
+        const rejectedCreate = await custom.inject({
+          method: 'POST',
+          url: '/api/admin/tenants',
+          headers,
+          payload: {
+            ...tenantBody(),
+            settings: { lowBalanceThreshold: excessive },
+          },
+        });
+        expect(rejectedCreate.statusCode, rejectedCreate.body).toBe(400);
+        const created = await custom.inject({
+          method: 'POST',
+          url: '/api/admin/tenants',
+          headers,
+          payload: {
+            ...tenantBody(),
+            settings: { lowBalanceThreshold: allowed },
+          },
+        });
+        expect(created.statusCode, created.body).toBe(200);
+        const { tenant } = adminTenantCreateResponseSchema.parse(
+          created.json(),
+        );
+        const path = `/api/admin/tenants/${tenant.id}`;
+        for (const amount of [excessive, allowed]) {
+          const settings = {
+            overdraftLimit: amount,
+            lowBalanceThreshold: amount,
+            emails: [],
+          };
+          const balance = {
+            kind: 'topup' as const,
+            currency: 'CNY' as const,
+            amount,
+            idempotencyKey: randomUUID(),
+          };
+          for (const [suffix, payload] of [
+            ['/settings', settings],
+            ['/balance-operations', balance],
+          ] as const) {
+            const response = await custom.inject({
+              method: 'POST',
+              url: path + suffix,
+              headers,
+              payload,
+            });
+            expect(response.statusCode, response.body).toBe(
+              amount === allowed ? 200 : 400,
+            );
+          }
+          if (amount === excessive) {
+            await expect(async () =>
+              updateTenantSettings({
+                db: connections.app.db,
+                actor,
+                tenantId: tenant.id,
+                amountRequests,
+                request: settings,
+              }),
+            ).rejects.toThrow();
+            await expect(
+              operateBalance({
+                db: connections.app.db,
+                actor,
+                tenantId: tenant.id,
+                amountRequests,
+                request: { ...balance, note: '' },
+              }),
+            ).rejects.toThrow();
+            expect(
+              (
+                await connections.owner.pool.query(
+                  'SELECT id FROM ledger_entries WHERE tenant_id=$1',
+                  [tenant.id],
+                )
+              ).rows,
+            ).toEqual([]);
+          }
+        }
+        const saved = await custom.inject({ url: path, headers });
+        expect(
+          adminTenantDetailResponseSchema.parse(saved.json()),
+        ).toMatchObject({
+          balance: allowed,
+          settings: { overdraftLimit: allowed, lowBalanceThreshold: allowed },
+        });
+        expect(
+          (
+            await connections.owner.pool.query(
+              'SELECT amount = $2::numeric AS matches FROM ledger_entries WHERE tenant_id=$1',
+              [tenant.id, allowed],
+            )
+          ).rows,
+        ).toEqual([{ matches: true }]);
+      } finally {
+        await custom.close();
+      }
+    },
+  );
+
   it('keeps unconfigured tenants in the list and rejects only detail', async () => {
     const tenantId = fixture.a.tenantId;
     const headers = requestHeaders(cookie);

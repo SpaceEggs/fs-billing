@@ -75,6 +75,62 @@ async function snapshot(tenantId: string) {
 }
 
 describe('admin rates service', () => {
+  it('rejects multiline edits without writes and reimports exported quoted countries', async () => {
+    const context = await fixture();
+    const service = createAdminRatesService();
+    const before = await snapshot(context.tenantId);
+    for (const country of [
+      '英\n国',
+      '英\r国',
+      '英\r\n国',
+      '\n英国',
+      '英国\r',
+    ]) {
+      await expect(
+        service.editRate({
+          ...context,
+          request: {
+            baseVersionId: context.baseVersionId,
+            entry: { prefix: '44', country, rate: '0.0400' },
+            schedule: { kind: 'immediate' },
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    }
+    expect(await snapshot(context.tenantId)).toEqual(before);
+    const edited = await service.editRate({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        entry: { prefix: '44', country: '英国,"手机"', rate: '0.0400' },
+        schedule: { kind: 'immediate' },
+      },
+    });
+    const exported = await service.exportRates({
+      ...context,
+      request: { versionId: edited.version.id },
+    });
+    expect(exported.csv).toContain('44,"英国,""手机""",0.0400');
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: edited.version.id,
+        file: file(exported.csv),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    expect(preview).toMatchObject({
+      ok: true,
+      counts: { added: 0, modified: 0, deleted: 0 },
+    });
+    if (!preview.ok) throw new Error('预期导出的 CSV 可重新导入');
+    const imported = await service.importCommit({
+      ...context,
+      request: { previewId: preview.previewId },
+    });
+    expect(imported.version.entries).toEqual(edited.version.entries);
+  });
+
   it('edits a complete version with exact precision and database immediate time plus audit', async () => {
     const context = await fixture();
     const service = createAdminRatesService();

@@ -83,12 +83,19 @@ export function createAdminAccountService(deps: {
   async function clearLoginFailures(tx: Tx, emailKey: string) {
     await tx.execute(sql`select auth.clear_login_failures(${emailKey})`);
   }
-  async function lockAdminRows(tx: Tx, ids: readonly string[]) {
-    const unique = [...new Set(ids.map((id) => id.toLowerCase()))].sort();
-    for (const id of unique)
-      await tx.execute(
-        sql`select 1 from public.admins where id = ${id}::uuid for update`,
-      );
+  async function account(tx: Tx, kind: 'admin' | 'portal', id: string) {
+    if (kind === 'portal') {
+      const [target] = await tx
+        .select({ tenantId: schema.portalAccounts.tenantId })
+        .from(schema.portalAccounts)
+        .where(eq(schema.portalAccounts.id, id));
+      if (!target) throw new AdminServiceError('NOT_FOUND', '账号不存在');
+      await lockTenants(tx, [target.tenantId]);
+    }
+    const table = kind === 'admin' ? schema.admins : schema.portalAccounts;
+    const [row] = await tx.select().from(table).where(eq(table.id, id));
+    if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
+    return row;
   }
   async function create(
     principal: AdminPrincipal,
@@ -287,79 +294,89 @@ export function createAdminAccountService(deps: {
         status: 'active' | 'disabled';
       },
     ) {
-      const { kind, id, status } = command;
+      const { kind, status } = command;
+      const id = command.id.toLowerCase();
       if (
         kind === 'admin' &&
         status === 'disabled' &&
-        id === principal.profileId
+        id === principal.profileId.toLowerCase()
       )
         throw new AdminServiceError('SELF_DISABLE', '不能停用当前管理员');
-      let auditId: string | null = null;
-      await withAdmin(db, async (tx) => {
-        auditId = null;
-        if (kind === 'admin')
-          await lockAdminRows(tx, [principal.profileId, id]);
-        const who = await actor(tx, principal);
-        const table = kind === 'admin' ? schema.admins : schema.portalAccounts;
-        const [row] = await tx.select().from(table).where(eq(table.id, id));
-        if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
-        if (kind === 'portal' && 'tenantId' in row)
-          await lockTenants(tx, [row.tenantId]);
-        if (row.status === status) return;
-        const writtenAuditId = randomUUID();
-        auditId = writtenAuditId;
-        if (
-          kind === 'admin' &&
-          status === 'disabled' &&
-          row.status === 'active'
-        ) {
-          const [count] = await tx
-            .select({ n: sql<number>`count(*)::int` })
-            .from(schema.admins)
-            .where(eq(schema.admins.status, 'active'));
-          if ((count?.n ?? 0) <= 1)
-            throw new AdminServiceError('LAST_ADMIN', '不能停用最后一名管理员');
-        }
-        await tx.update(table).set({ status }).where(eq(table.id, id));
-        const tenantId = 'tenantId' in row ? row.tenantId : null;
-        await writeAudit(tx, {
-          id: writtenAuditId,
-          actor: who,
-          occurredAt: (await databaseNow(tx)).toISOString(),
-          tenantId,
-          target: { kind: kind === 'admin' ? 'admin' : 'portal_account', id },
-          action:
-            kind === 'admin'
-              ? status === 'active'
-                ? 'admin_enable'
-                : 'admin_disable'
-              : status === 'active'
-                ? 'portal_account_enable'
-                : 'portal_account_disable',
-          content: {
-            summary: status === 'active' ? '启用账号' : '停用账号',
-            changes: [{ field: 'status', before: row.status, after: status }],
-          },
-        });
-        await revokeSessions(tx, row.authUserId);
-      });
-      return { auditId };
+      return withAdmin(
+        db,
+        async (tx) => {
+          const row = await account(tx, kind, id);
+          const who = await actor(tx, principal);
+          if (row.status === status) return { auditId: null };
+          const writtenAuditId = randomUUID();
+          if (kind === 'admin') {
+            const [updated] = await tx
+              .update(schema.admins)
+              .set({ status })
+              .where(
+                and(
+                  eq(schema.admins.id, id),
+                  eq(schema.admins.status, row.status),
+                  sql`exists (select 1 from public.admins where id = ${who.id}::uuid and status = 'active')`,
+                  status === 'disabled'
+                    ? sql`(select count(*) from public.admins where status = 'active') > 1`
+                    : undefined,
+                ),
+              )
+              .returning({ id: schema.admins.id });
+            if (!updated) {
+              await actor(tx, principal);
+              throw new AdminServiceError(
+                'LAST_ADMIN',
+                '不能停用最后一名管理员',
+              );
+            }
+          } else {
+            await tx
+              .update(schema.portalAccounts)
+              .set({ status })
+              .where(eq(schema.portalAccounts.id, id));
+          }
+          const tenantId = 'tenantId' in row ? row.tenantId : null;
+          await writeAudit(tx, {
+            id: writtenAuditId,
+            actor: who,
+            occurredAt: (await databaseNow(tx)).toISOString(),
+            tenantId,
+            target: { kind: kind === 'admin' ? 'admin' : 'portal_account', id },
+            action:
+              kind === 'admin'
+                ? status === 'active'
+                  ? 'admin_enable'
+                  : 'admin_disable'
+                : status === 'active'
+                  ? 'portal_account_enable'
+                  : 'portal_account_disable',
+            content: {
+              summary: status === 'active' ? '启用账号' : '停用账号',
+              changes: [{ field: 'status', before: row.status, after: status }],
+            },
+          });
+          await revokeSessions(tx, row.authUserId);
+          return { auditId: writtenAuditId };
+        },
+        kind === 'admin' ? { isolationLevel: 'serializable' } : undefined,
+      );
     },
     async resetPassword(
       principal: AdminPrincipal,
       kind: 'admin' | 'portal',
       id: string,
     ) {
-      if (kind === 'admin' && id === principal.profileId)
+      id = id.toLowerCase();
+      if (kind === 'admin' && id === principal.profileId.toLowerCase())
         throw new AdminServiceError('FORBIDDEN', '不能重置当前管理员密码');
       const temporaryPassword = randomBytes(24).toString('base64url');
       const hash = await hashPassword(temporaryPassword);
       const auditId = randomUUID();
       await withAdmin(db, async (tx) => {
+        const row = await account(tx, kind, id);
         const who = await actor(tx, principal);
-        const table = kind === 'admin' ? schema.admins : schema.portalAccounts;
-        const [row] = await tx.select().from(table).where(eq(table.id, id));
-        if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
         const address = await email(row.authUserId);
         await setCredential(tx, row.authUserId, hash);
         await clearLoginFailures(tx, normalizeEmail(address));

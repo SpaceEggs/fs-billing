@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { adminAmountRequestSchemas } from './amount-requests.js';
 import {
   apiContract,
   emptyRequestSchema,
@@ -107,6 +108,7 @@ const globalRequest = {
 
 export function createAdminApiContract(
   rateRequests = rates.adminRateRequestSchemas,
+  amountRequests = adminAmountRequestSchemas,
 ) {
   return {
     adminTenants: operation(
@@ -121,7 +123,7 @@ export function createAdminApiContract(
       'adminTenantCreate',
       'POST',
       '/api/admin/tenants',
-      { ...globalRequest, body: tenants.adminTenantCreateRequestSchema },
+      { ...globalRequest, body: amountRequests.tenantCreate },
       tenants.adminTenantCreateResponseSchema,
       {
         ...csvErrors,
@@ -172,7 +174,7 @@ export function createAdminApiContract(
       'adminTenantSettings',
       'POST',
       '/api/admin/tenants/{tenantId}/settings',
-      { ...tenantRequest, body: tenants.adminTenantSettingsRequestSchema },
+      { ...tenantRequest, body: amountRequests.settings },
       adminMutationResponseSchema,
       {},
     ),
@@ -188,7 +190,7 @@ export function createAdminApiContract(
       'adminBalanceOperation',
       'POST',
       '/api/admin/tenants/{tenantId}/balance-operations',
-      { ...tenantRequest, body: balance.adminBalanceOperationRequestSchema },
+      { ...tenantRequest, body: amountRequests.balance },
       balance.adminBalanceOperationResponseSchema,
       conflicts(['CURRENCY_MISMATCH', 'IDEMPOTENCY_CONFLICT']),
     ),

@@ -14,6 +14,7 @@ import {
   resetPasswordParamsSchema,
   adminApiErrorStatus,
   createAdminRateRequestSchemas,
+  createAdminAmountRequestSchemas,
 } from '@fs-billing/shared';
 import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
@@ -50,13 +51,17 @@ export type ApiDependencies = {
     previewTtlMs?: number;
     cancelClockSkewMarginSeconds?: number;
   };
+  adminAmountMaxIntegerDigits?: number;
   accountService?: AdminAccountService;
 };
 export function createApi(deps: ApiDependencies) {
   const rateRequests = createAdminRateRequestSchemas(
     deps.adminRates?.horizonMs,
   );
-  const contract = createLiveApiContract(rateRequests);
+  const amountRequests = createAdminAmountRequestSchemas(
+    deps.adminAmountMaxIntegerDigits,
+  );
+  const contract = createLiveApiContract(rateRequests, amountRequests);
   const app = Fastify({
     logger: deps.logger ?? false,
     trustProxy: false,
@@ -125,8 +130,8 @@ export function createApi(deps: ApiDependencies) {
     sendFailure(request, reply, new ApiFailure('NOT_FOUND')),
   );
   const handlers: RouteHandlers = {
-    ...tenantHandlers(deps.businessDb),
-    ...balanceHandlers(deps.businessDb),
+    ...tenantHandlers(deps.businessDb, amountRequests),
+    ...balanceHandlers(deps.businessDb, amountRequests),
     ...receivableHandlers(deps.businessDb),
     ...rateHandlers(deps.businessDb, { ...deps.adminRates, rateRequests }),
     ...accountHandlers(deps.accountService),

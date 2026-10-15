@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { and, eq, sql, desc } from 'drizzle-orm';
 import { decimal, money } from '@fs-billing/rating';
 import {
-  adminBalanceOperationRequestSchema,
+  adminAmountRequestSchemas,
+  type AdminAmountRequestSchemas,
   adminLedgerQuerySchema,
   type AdminBalanceOperationRequest,
   type AdminBalanceOperationResponse,
@@ -119,13 +120,15 @@ export async function operateBalance({
   actor,
   tenantId,
   request,
+  amountRequests = adminAmountRequestSchemas,
 }: {
   db: Db | Tx;
   actor: AuditPayload['actor'];
   tenantId: string;
   request: AdminBalanceOperationRequest;
+  amountRequests?: AdminAmountRequestSchemas;
 }): Promise<AdminBalanceOperationResponse> {
-  const input = adminBalanceOperationRequestSchema.parse(request);
+  const input = amountRequests.balance.parse(request);
   const note =
     input.kind === 'credit_topup'
       ? input.internalNote

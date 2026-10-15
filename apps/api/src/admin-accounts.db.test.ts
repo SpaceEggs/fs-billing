@@ -8,6 +8,7 @@ import {
 } from '@fs-billing/shared';
 import { randomUUID } from 'node:crypto';
 import { beforeAll, beforeEach, expect, it } from 'vitest';
+import type { PoolClient } from 'pg';
 import {
   apiConnections,
   createFixture,
@@ -35,11 +36,11 @@ beforeAll(() => api.ready());
 beforeEach(async () => {
   fixture = await createFixture(connections);
 });
-const principal = () => {
+const principal = (user = fixture.admin) => {
   const value = principalSchema.parse({
     kind: 'admin',
-    authUserId: fixture.admin.userId,
-    profileId: fixture.admin.profileId,
+    authUserId: user.userId,
+    profileId: user.profileId,
   });
   if (value.kind !== 'admin') throw new Error('Expected admin');
   return value;
@@ -456,4 +457,254 @@ it('admin enable audits without restoring sessions', async () => {
   });
   expect(stale.statusCode).toBe(401);
   await expect(login(api, fixture.otherAdmin)).resolves.toBeDefined();
+});
+
+async function backendPid(client: PoolClient) {
+  const result = await client.query<{ pid: number }>(
+    'SELECT pg_backend_pid() AS pid',
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error('Backend PID missing');
+  return row.pid;
+}
+
+async function waitForBlocked(holderPid: number, count: number) {
+  await expect
+    .poll(
+      async () => {
+        const result = await connections.owner.pool.query<{ n: number }>(
+          'SELECT count(*)::int AS n FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))',
+          [holderPid],
+        );
+        return result.rows[0]?.n;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(count);
+}
+
+it('rejects uppercase own UUIDs for self-disable and self-reset', async () => {
+  for (const [action, code] of [
+    ['disable', 'SELF_DISABLE'],
+    ['reset-password', 'FORBIDDEN'],
+  ]) {
+    const response = await post(
+      `/api/admin/admins/${fixture.admin.profileId.toUpperCase()}/${action}`,
+    );
+    expect(response.statusCode).toBe(action === 'disable' ? 409 : 403);
+    expect(response.json()).toMatchObject({ error: { code } });
+  }
+  const state = await connections.owner.pool.query(
+    'SELECT status FROM public.admins WHERE id=$1',
+    [fixture.admin.profileId],
+  );
+  expect(state.rows).toEqual([{ status: 'active' }]);
+  const audit = await connections.owner.pool.query(
+    "SELECT action FROM public.operation_logs WHERE target=$1 AND action IN ('admin_disable','reset_password')",
+    [fixture.admin.profileId],
+  );
+  expect(audit.rows).toEqual([]);
+});
+
+it('refuses one of two concurrent mutual admin disables and audits only the committed change', async () => {
+  const others = await connections.owner.pool.query<{ id: string }>(
+    "UPDATE public.admins SET status='disabled' WHERE status='active' AND id <> ALL($1::uuid[]) RETURNING id",
+    [[fixture.admin.profileId, fixture.otherAdmin.profileId]],
+  );
+  const holder = await connections.owner.pool.connect();
+  let pending:
+    Promise<PromiseSettledResult<{ auditId: string | null }>[]> | undefined;
+  try {
+    await holder.query('BEGIN');
+    const pid = await backendPid(holder);
+    await holder.query(
+      'UPDATE public.admins SET name=name WHERE id=ANY($1::uuid[])',
+      [[fixture.admin.profileId, fixture.otherAdmin.profileId]],
+    );
+    pending = Promise.allSettled([
+      service.setStatus(principal(), {
+        kind: 'admin',
+        id: fixture.otherAdmin.profileId,
+        status: 'disabled',
+      }),
+      service.setStatus(principal(fixture.otherAdmin), {
+        kind: 'admin',
+        id: fixture.admin.profileId,
+        status: 'disabled',
+      }),
+    ]);
+    await waitForBlocked(pid, 2);
+    await holder.query('ROLLBACK');
+    const results = await pending;
+    expect(
+      results.filter((result) => result.status === 'fulfilled'),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === 'rejected'),
+    ).toMatchObject([{ reason: { code: 'FORBIDDEN' } }]);
+    const statuses = await connections.owner.pool.query(
+      'SELECT status FROM public.admins WHERE id=ANY($1::uuid[]) ORDER BY status',
+      [[fixture.admin.profileId, fixture.otherAdmin.profileId]],
+    );
+    expect(statuses.rows).toEqual([
+      { status: 'active' },
+      { status: 'disabled' },
+    ]);
+    expect(
+      (
+        await connections.owner.pool.query(
+          "SELECT count(*)::int AS active FROM public.admins WHERE status='active'",
+        )
+      ).rows,
+    ).toEqual([{ active: 1 }]);
+    const audits = await connections.owner.pool.query(
+      "SELECT action FROM public.operation_logs WHERE target=ANY($1::text[]) AND action='admin_disable'",
+      [[fixture.admin.profileId, fixture.otherAdmin.profileId]],
+    );
+    expect(audits.rows).toEqual([{ action: 'admin_disable' }]);
+  } finally {
+    await holder.query('ROLLBACK');
+    holder.release();
+    await pending;
+    await connections.owner.pool.query(
+      "UPDATE public.admins SET status='active' WHERE id=ANY($1::uuid[])",
+      [others.rows.map((row) => row.id)],
+    );
+  }
+});
+
+it('concurrent duplicate portal disables reread after the tenant lock and write one audit', async () => {
+  const holder = await connections.owner.pool.connect();
+  let pending: Promise<{ auditId: string | null }[]> | undefined;
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SELECT set_config('app.scope','admin',true)");
+    const pid = await backendPid(holder);
+    await holder.query('SELECT lock_tenants(ARRAY[$1::uuid])', [
+      fixture.a.tenantId,
+    ]);
+    pending = Promise.all(
+      [1, 2].map(() =>
+        service.setStatus(principal(), {
+          kind: 'portal',
+          id: fixture.a.profileId,
+          status: 'disabled',
+        }),
+      ),
+    );
+    await waitForBlocked(pid, 2);
+    await holder.query('COMMIT');
+    const results = await pending;
+    expect(results.filter((result) => result.auditId !== null)).toHaveLength(1);
+    const audits = await connections.owner.pool.query(
+      "SELECT action FROM public.operation_logs WHERE target=$1 AND action='portal_account_disable'",
+      [fixture.a.profileId],
+    );
+    expect(audits.rows).toEqual([{ action: 'portal_account_disable' }]);
+  } finally {
+    await holder.query('ROLLBACK');
+    holder.release();
+    await pending;
+  }
+});
+
+it('portal enable rereads a status changed while waiting for its tenant lock', async () => {
+  const holder = await connections.owner.pool.connect();
+  let pending: ReturnType<typeof service.setStatus> | undefined;
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SELECT set_config('app.scope','admin',true)");
+    const pid = await backendPid(holder);
+    await holder.query('SELECT lock_tenants(ARRAY[$1::uuid])', [
+      fixture.a.tenantId,
+    ]);
+    pending = service.setStatus(principal(), {
+      kind: 'portal',
+      id: fixture.a.profileId,
+      status: 'active',
+    });
+    await waitForBlocked(pid, 1);
+    await holder.query(
+      "UPDATE public.portal_accounts SET status='disabled' WHERE id=$1",
+      [fixture.a.profileId],
+    );
+    await holder.query('COMMIT');
+    expect((await pending).auditId).toEqual(expect.any(String));
+    const state = await connections.owner.pool.query(
+      'SELECT status FROM public.portal_accounts WHERE id=$1',
+      [fixture.a.profileId],
+    );
+    expect(state.rows).toEqual([{ status: 'active' }]);
+  } finally {
+    await holder.query('ROLLBACK');
+    holder.release();
+    await pending;
+  }
+});
+
+it('portal password reset waits for its tenant lock before changing credentials or revoking sessions', async () => {
+  const session = await login(api, fixture.a);
+  const before = await connections.owner.pool.query(
+    'SELECT password FROM auth.account WHERE user_id=$1',
+    [fixture.a.userId],
+  );
+  const holder = await connections.owner.pool.connect();
+  let pending: ReturnType<typeof service.resetPassword> | undefined;
+  try {
+    await holder.query('BEGIN');
+    await holder.query("SELECT set_config('app.scope','admin',true)");
+    const pid = await backendPid(holder);
+    await holder.query('SELECT lock_tenants(ARRAY[$1::uuid])', [
+      fixture.a.tenantId,
+    ]);
+    pending = service.resetPassword(principal(), 'portal', fixture.a.profileId);
+    await waitForBlocked(pid, 1);
+    expect(
+      (
+        await connections.owner.pool.query(
+          'SELECT password FROM auth.account WHERE user_id=$1',
+          [fixture.a.userId],
+        )
+      ).rows,
+    ).toEqual(before.rows);
+    const active = await api.inject({
+      url: '/api/auth/session',
+      headers: requestHeaders(session.cookie),
+    });
+    expect(active.statusCode).toBe(200);
+    expect(
+      (
+        await connections.owner.pool.query(
+          "SELECT id FROM public.operation_logs WHERE target=$1 AND action='reset_password'",
+          [fixture.a.profileId],
+        )
+      ).rows,
+    ).toEqual([]);
+    await holder.query('COMMIT');
+    const reset = await pending;
+    const stale = await api.inject({
+      url: '/api/auth/session',
+      headers: requestHeaders(session.cookie),
+    });
+    expect(stale.statusCode).toBe(401);
+    const signed = await api.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { origin },
+      payload: { email: fixture.a.email, password: reset.temporaryPassword },
+    });
+    expect(signed.statusCode).toBe(200);
+    expect(
+      (
+        await connections.owner.pool.query(
+          "SELECT action FROM public.operation_logs WHERE target=$1 AND action='reset_password'",
+          [fixture.a.profileId],
+        )
+      ).rows,
+    ).toEqual([{ action: 'reset_password' }]);
+  } finally {
+    await holder.query('ROLLBACK');
+    holder.release();
+    await pending;
+  }
 });

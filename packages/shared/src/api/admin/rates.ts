@@ -16,7 +16,12 @@ export const adminRateEntrySchema = z.strictObject({
     .refine((value) => !value.startsWith('00'), {
       message: '前缀不能包含国际冠字 00',
     }),
-  country: z.string().trim().min(1).max(200),
+  country: z
+    .string()
+    .refine((value) => !/[\r\n]/.test(value), {
+      message: '国家/备注不能包含换行',
+    })
+    .pipe(z.string().trim().min(1).max(200)),
   rate: adminRateAmountSchema,
 });
 export const DEFAULT_ADMIN_CSV_MAX_BYTES = 2 * 1024 * 1024;

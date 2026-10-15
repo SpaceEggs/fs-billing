@@ -1,6 +1,7 @@
 import { operateBalance, listTenantLedger, type Db } from '@fs-billing/db';
 import {
-  adminBalanceOperationRequestSchema,
+  adminAmountRequestSchemas,
+  type AdminAmountRequestSchemas,
   adminLedgerQuerySchema,
   adminTenantParamsSchema,
 } from '@fs-billing/shared';
@@ -9,6 +10,7 @@ import { adminActor } from './tenants.js';
 
 export function balanceHandlers(
   db: Db,
+  amountRequests: AdminAmountRequestSchemas = adminAmountRequestSchemas,
 ): Pick<RouteHandlers, 'adminBalanceOperation' | 'adminTenantLedger'> {
   return {
     adminBalanceOperation: (context, request) =>
@@ -16,7 +18,8 @@ export function balanceHandlers(
         db,
         actor: adminActor(context),
         ...adminTenantParamsSchema.parse(request.params),
-        request: adminBalanceOperationRequestSchema.parse(request.body),
+        amountRequests,
+        request: amountRequests.balance.parse(request.body),
       }),
     adminTenantLedger: (_context, request) =>
       listTenantLedger({

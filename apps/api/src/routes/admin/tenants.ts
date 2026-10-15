@@ -10,9 +10,9 @@ import {
 } from '@fs-billing/db';
 import {
   adminTenantParamsSchema,
-  adminTenantCreateRequestSchema,
+  adminAmountRequestSchemas,
+  type AdminAmountRequestSchemas,
   adminTenantEditRequestSchema,
-  adminTenantSettingsRequestSchema,
   adminTenantsQuerySchema,
 } from '@fs-billing/shared';
 import type { RequestContext } from '../../types.js';
@@ -25,6 +25,7 @@ export function adminActor(context: RequestContext) {
 }
 export function tenantHandlers(
   db: Db,
+  amountRequests: AdminAmountRequestSchemas = adminAmountRequestSchemas,
 ): Pick<
   RouteHandlers,
   | 'adminTenants'
@@ -45,7 +46,8 @@ export function tenantHandlers(
         db,
         actor,
         creatorEmail: context.identity.email,
-        request: adminTenantCreateRequestSchema.parse(request.body),
+        amountRequests,
+        request: amountRequests.tenantCreate.parse(request.body),
       });
     },
     adminTenantDetail: (_context, request) =>
@@ -74,7 +76,8 @@ export function tenantHandlers(
         db,
         actor: adminActor(context),
         ...adminTenantParamsSchema.parse(request.params),
-        request: adminTenantSettingsRequestSchema.parse(request.body),
+        amountRequests,
+        request: amountRequests.settings.parse(request.body),
       }),
   };
 }

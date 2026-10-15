@@ -69,8 +69,9 @@ export function withTenant<T>(
 export function withAdmin<T>(
   db: Db | Tx,
   fn: (tx: Tx) => Promise<T>,
+  config?: { isolationLevel: 'serializable' },
 ): Promise<T> {
-  return withOperator(db, 'admin', fn);
+  return withOperator(db, 'admin', fn, config);
 }
 
 /** 以系统身份执行（Worker：入库、扣费、建分区）：可见并可写全部租户。重试规则同 withAdmin。 */
@@ -90,6 +91,7 @@ async function withOperator<T>(
   db: Db | Tx,
   scope: 'admin' | 'system',
   fn: (tx: Tx) => Promise<T>,
+  config?: { isolationLevel: 'serializable' },
 ): Promise<T> {
   const attempts = db instanceof PgTransaction ? 1 : MAX_ATTEMPTS;
   for (let attempt = 1; ; attempt++) {
@@ -97,7 +99,7 @@ async function withOperator<T>(
       return await db.transaction(async (tx) => {
         await tx.execute(sql`select set_config('app.scope', ${scope}, true)`);
         return fn(tx);
-      });
+      }, config);
     } catch (error) {
       if (attempt >= attempts || !RETRYABLE.has(sqlState(error) ?? '')) {
         throw error;

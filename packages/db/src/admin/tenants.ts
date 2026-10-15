@@ -7,9 +7,9 @@ import {
   type Currency,
 } from '@fs-billing/rating';
 import {
-  adminTenantCreateRequestSchema,
+  adminAmountRequestSchemas,
+  type AdminAmountRequestSchemas,
   adminTenantEditRequestSchema,
-  adminTenantSettingsRequestSchema,
   adminTenantCopyConsistencySchema,
   adminTenantsQuerySchema,
   type AdminTenantCreateRequest,
@@ -178,13 +178,15 @@ export async function createTenant({
   actor,
   creatorEmail,
   request,
+  amountRequests = adminAmountRequestSchemas,
 }: {
   db: Db | Tx;
   actor: AuditPayload['actor'];
   creatorEmail: string;
   request: AdminTenantCreateRequest;
+  amountRequests?: AdminAmountRequestSchemas;
 }) {
-  const input = adminTenantCreateRequestSchema.parse(request);
+  const input = amountRequests.tenantCreate.parse(request);
   const id = randomUUID();
   try {
     return await withAdmin(db, async (tx) => {
@@ -251,7 +253,7 @@ export async function createTenant({
           break;
         }
       }
-      const settings = adminTenantSettingsRequestSchema.parse({
+      const settings = amountRequests.settings.parse({
         ...input.settings,
         overdraftLimit:
           input.settings.overdraftLimit ??
@@ -393,8 +395,12 @@ export function updateTenantSettings({
   actor,
   tenantId,
   request,
-}: TenantInput & { request: AdminTenantSettingsRequest }) {
-  const input = adminTenantSettingsRequestSchema.parse(request);
+  amountRequests = adminAmountRequestSchemas,
+}: TenantInput & {
+  request: AdminTenantSettingsRequest;
+  amountRequests?: AdminAmountRequestSchemas;
+}) {
+  const input = amountRequests.settings.parse(request);
   return withAdmin(db, async (tx) => {
     await lockTenants(tx, [tenantId]);
     const before = await readTenant(tx, tenantId);

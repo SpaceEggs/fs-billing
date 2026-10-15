@@ -386,6 +386,114 @@ describe('auth catalog and privilege boundary', () => {
     ).toEqual([]);
   });
 
+  it('rejects invalid temporary credential arguments through fs_billing_app before writes', async () => {
+    const id = await user();
+    const accountId = randomUUID();
+    const issuedAt = new Date(Date.now() - 60_000).toISOString();
+    const email = `${id}@example.invalid`;
+    await app.pool.query('SELECT auth.insert_credential($1,$2,$3,$4)', [
+      accountId,
+      id,
+      'original-hash',
+      issuedAt,
+    ]);
+    await auth.query(
+      'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now())',
+      [email],
+    );
+
+    const invalidInputs = [
+      { targetUserId: null, hash: 'hash', issuedAt },
+      { targetUserId: '', hash: 'hash', issuedAt },
+      { targetUserId: '   ', hash: 'hash', issuedAt },
+      { targetUserId: id, hash: null, issuedAt },
+      { targetUserId: id, hash: '', issuedAt },
+      { targetUserId: id, hash: '   ', issuedAt },
+      { targetUserId: id, hash: 'hash', issuedAt: null },
+      { targetUserId: id, hash: 'hash', issuedAt: 'infinity' },
+      { targetUserId: id, hash: 'hash', issuedAt: '-infinity' },
+      {
+        targetUserId: id,
+        hash: 'hash',
+        issuedAt: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+    ];
+    for (const input of invalidInputs) {
+      expect(
+        await pgError(
+          app.pool.query('SELECT auth.set_credential($1,$2,$3)', [
+            input.targetUserId,
+            input.hash,
+            input.issuedAt,
+          ]),
+        ),
+      ).toMatchObject({ code: '22023' });
+      expect(
+        await pgError(
+          app.pool.query('SELECT auth.insert_credential($1,$2,$3,$4)', [
+            randomUUID(),
+            input.targetUserId,
+            input.hash,
+            input.issuedAt,
+          ]),
+        ),
+      ).toMatchObject({ code: '22023' });
+    }
+    for (const invalidAccountId of [null, '', '   ']) {
+      expect(
+        await pgError(
+          app.pool.query('SELECT auth.insert_credential($1,$2,$3,$4)', [
+            invalidAccountId,
+            id,
+            'hash',
+            issuedAt,
+          ]),
+        ),
+      ).toMatchObject({ code: '22023' });
+    }
+    const credential = await auth.query<{
+      id: string;
+      password: string;
+      temporary_password_issued_at: Date;
+    }>(
+      'SELECT id,password,temporary_password_issued_at FROM auth.account WHERE user_id=$1',
+      [id],
+    );
+    expect(credential.rows).toEqual([
+      {
+        id: accountId,
+        password: 'original-hash',
+        temporary_password_issued_at: new Date(issuedAt),
+      },
+    ]);
+    expect(
+      (
+        await auth.query(
+          'SELECT failed_count FROM auth.login_failures WHERE email_key=$1',
+          [email],
+        )
+      ).rows,
+    ).toEqual([{ failed_count: 1 }]);
+
+    const stagedId = await user();
+    expect(
+      await pgError(
+        app.pool.query('SELECT auth.insert_credential($1,$2,$3,null)', [
+          randomUUID(),
+          stagedId,
+          'hash',
+        ]),
+      ),
+    ).toMatchObject({ code: '22023' });
+    expect(
+      (
+        await auth.query('SELECT id FROM auth.account WHERE user_id=$1', [
+          stagedId,
+        ])
+      ).rows,
+    ).toEqual([]);
+  });
+
   it('pins credential column shapes and app-only execute on auth security definer functions', async () => {
     const columns = await owner.pool.query<{
       column_name: string;

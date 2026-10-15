@@ -103,7 +103,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 9 }]);
+    expect(rows).toEqual([{ applied: 10 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {
