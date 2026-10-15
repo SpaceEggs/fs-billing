@@ -361,7 +361,7 @@ export function editTenant({
         before: before[field],
         after: input[field],
       }));
-    if (changes.length === 0) return { auditId: randomUUID() };
+    if (changes.length === 0) return { auditId: null };
     await tx.update(tenants).set(input).where(eq(tenants.id, tenantId));
     return auditTenant(tx, actor, before.id, 'tenant_edit', changes);
   });
@@ -373,7 +373,7 @@ function setTenantStatus(
   return withAdmin(db, async (tx) => {
     await lockTenants(tx, [tenantId]);
     const before = await readTenantCore(tx, tenantId);
-    if (before.status === status) return { auditId: randomUUID() };
+    if (before.status === status) return { auditId: null };
     await tx.update(tenants).set({ status }).where(eq(tenants.id, tenantId));
     return auditTenant(
       tx,
@@ -424,7 +424,7 @@ export function updateTenantSettings({
         before: before.settings.emails,
         after: input.emails,
       });
-    if (changes.length === 0) return { auditId: randomUUID() };
+    if (changes.length === 0) return { auditId: null };
     await tx
       .update(tenants)
       .set({ overdraftLimit: input.overdraftLimit })

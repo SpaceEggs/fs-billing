@@ -4,6 +4,7 @@ import {
   adminAccountsResponseSchema,
   adminPortalAccountsResponseSchema,
   adminMutationResponseSchema,
+  sessionResponseSchema,
 } from '@fs-billing/shared';
 import { randomUUID } from 'node:crypto';
 import { beforeAll, beforeEach, expect, it } from 'vitest';
@@ -212,32 +213,32 @@ it('temporary credentials reject after expiry and permanent password changes cle
   }
 });
 
-it('profile link failure leaves a nonloginable auth orphan without an audit', async () => {
-  const email = `${randomUUID()}@example.com`;
+it('failed account creation rolls back the auth user and writes no audit', async () => {
+  const missingEmail = `${randomUUID()}@example.com`;
+  const takenEmail = `${randomUUID()}@example.com`;
   await expect(
-    service.createPortal(principal(), randomUUID(), { email }),
+    service.createPortal(principal(), randomUUID(), { email: missingEmail }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-  const user = await connections.owner.pool.query<{ id: string }>(
-    'SELECT id FROM auth."user" WHERE email=$1',
-    [email],
+  await expect(
+    service.createPortal(principal(), fixture.a.tenantId, {
+      email: takenEmail,
+    }),
+  ).rejects.toMatchObject({ code: 'PORTAL_ACCOUNT_EXISTS' });
+  const users = await connections.owner.pool.query(
+    'SELECT email FROM auth."user" WHERE email = ANY($1)',
+    [[missingEmail, takenEmail]],
   );
-  expect(user.rows).toHaveLength(1);
-  const userId = user.rows[0]?.id;
-  const credentials = await connections.owner.pool.query(
-    'SELECT id FROM auth.account WHERE user_id=$1',
-    [userId],
+  expect(users.rows).toEqual([]);
+  const audits = await connections.owner.pool.query(
+    `SELECT id FROM public.operation_logs WHERE details->'content'->>'email' = ANY($1)`,
+    [[missingEmail, takenEmail]],
   );
-  expect(credentials.rows).toEqual([]);
-  const profiles = await connections.owner.pool.query(
-    'SELECT id FROM public.portal_accounts WHERE auth_user_id=$1',
-    [userId],
-  );
-  expect(profiles.rows).toEqual([]);
+  expect(audits.rows).toEqual([]);
   const denied = await api.inject({
     method: 'POST',
     url: '/api/auth/login',
     headers: { origin },
-    payload: { email, password },
+    payload: { email: missingEmail, password },
   });
   expect(denied.statusCode).toBe(401);
 });
@@ -349,9 +350,12 @@ it('blocks business routes until a temporary password is changed', async () => {
     payload: { email, password: body.temporaryPassword },
   });
   expect(signed.statusCode).toBe(200);
+  expect(
+    sessionResponseSchema.parse(signed.json()).passwordChangeRequired,
+  ).toBe(true);
   const cookie = cookieFrom(signed);
   const blocked = await api.inject({
-    url: '/api/admin/tenants',
+    url: '/api/admin/context',
     headers: requestHeaders(cookie),
   });
   expect(blocked.statusCode).toBe(403);
@@ -363,6 +367,9 @@ it('blocks business routes until a temporary password is changed', async () => {
     headers: requestHeaders(cookie),
   });
   expect(session.statusCode).toBe(200);
+  expect(
+    sessionResponseSchema.parse(session.json()).passwordChangeRequired,
+  ).toBe(true);
   const changed = await api.inject({
     method: 'POST',
     url: '/api/auth/change-password',
@@ -373,11 +380,32 @@ it('blocks business routes until a temporary password is changed', async () => {
     },
   });
   expect(changed.statusCode).toBe(200);
+  expect(
+    sessionResponseSchema.parse(changed.json()).passwordChangeRequired,
+  ).toBe(false);
   const allowed = await api.inject({
-    url: '/api/admin/tenants',
+    url: '/api/admin/context',
     headers: requestHeaders(cookieFrom(changed)),
   });
   expect(allowed.statusCode).toBe(200);
+  expect(allowed.json()).toEqual({
+    identity: {
+      kind: 'admin',
+      profileId: body.account.id,
+      name: 'Temporary',
+      email,
+    },
+  });
+});
+
+it('unchanged account status returns no audit id', async () => {
+  const response = await post(
+    `/api/admin/admins/${fixture.admin.profileId}/enable`,
+  );
+  expect(response.statusCode).toBe(200);
+  expect(adminMutationResponseSchema.parse(response.json())).toEqual({
+    auditId: null,
+  });
 });
 
 it('rejects self-disable and records disable audit with session revoke', async () => {

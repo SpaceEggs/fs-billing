@@ -26,6 +26,7 @@ export const customerSession = {
     },
   },
   expiresAt: '2026-10-21T00:00:00.000Z',
+  passwordChangeRequired: false,
 };
 
 export const apiError = (code: string, extra: object = {}) => ({

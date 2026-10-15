@@ -62,8 +62,15 @@ describe('browser identity and context', () => {
     const session = {
       identity: customer,
       expiresAt: '2026-10-14T00:00:00.000Z',
+      passwordChangeRequired: false,
     };
     expect(sessionResponseSchema.parse(session)).toEqual(session);
+    expect(
+      sessionResponseSchema.safeParse({
+        identity: customer,
+        expiresAt: session.expiresAt,
+      }).success,
+    ).toBe(false);
     expect(
       sessionResponseSchema.safeParse({ ...session, token: 'secret' }).success,
     ).toBe(false);
@@ -438,7 +445,11 @@ describe('operation registry', () => {
   });
 
   it('returns the new session after changing a password', () => {
-    const session = { identity: admin, expiresAt: '2026-10-14T00:00:00.000Z' };
+    const session = {
+      identity: admin,
+      expiresAt: '2026-10-14T00:00:00.000Z',
+      passwordChangeRequired: false,
+    };
     expect(apiContract.changePassword.responses[200].parse(session)).toEqual(
       session,
     );

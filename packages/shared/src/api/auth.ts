@@ -17,6 +17,7 @@ export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
 export const sessionResponseSchema = z.strictObject({
   identity: identitySchema,
   expiresAt: z.iso.datetime(),
+  passwordChangeRequired: z.boolean(),
 });
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export const loginResponseSchema = sessionResponseSchema;

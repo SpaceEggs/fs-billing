@@ -431,6 +431,8 @@ describe('auth catalog and privilege boundary', () => {
       'auth.revoke_user_sessions(text)',
       'auth.set_credential(text,text,timestamptz)',
       'auth.insert_credential(text,text,text,timestamptz)',
+      'auth.insert_user(text,text,text)',
+      'auth.clear_login_failures(text)',
     ]) {
       const { rows } = await owner.pool.query<{
         owner: string;
@@ -512,6 +514,35 @@ describe('auth catalog and privilege boundary', () => {
       (await auth.query('SELECT id FROM auth.session WHERE user_id=$1', [id]))
         .rows,
     ).toEqual([]);
+    const created = randomUUID();
+    const email = `${created}@example.invalid`;
+    await app.pool.query('SELECT auth.insert_user($1,$2,$3)', [
+      created,
+      'created',
+      email,
+    ]);
+    expect(
+      await pgError(
+        app.pool.query('SELECT auth.insert_user($1,$2,$3)', [
+          randomUUID(),
+          'again',
+          email,
+        ]),
+      ),
+    ).toMatchObject({ code: '23505', constraint: 'user_email_key' });
+    await auth.query(
+      'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now()),($2,gen_random_uuid(),1,now())',
+      [email, 'keep-me'],
+    );
+    await app.pool.query('SELECT auth.clear_login_failures($1)', [email]);
+    expect(
+      (
+        await auth.query(
+          'SELECT email_key FROM auth.login_failures WHERE email_key = ANY($1) ORDER BY email_key',
+          [[email, 'keep-me']],
+        )
+      ).rows,
+    ).toEqual([{ email_key: 'keep-me' }]);
   });
 });
 

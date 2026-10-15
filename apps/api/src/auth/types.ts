@@ -35,10 +35,6 @@ export interface AuthGateway {
     headers: Headers,
   ): Promise<IssuedSession>;
   revokeOtherSessions(session: AuthSession): Promise<void>;
-  resetPassword(input: {
-    actorAuthUserId: string;
-    targetAuthUserId: string;
-  }): Promise<{ temporaryPassword: string }>;
   discardSession(token: string): Promise<void>;
   cleanupCounters(): Promise<number>;
 }

@@ -20,9 +20,23 @@ import {
   type AdminPortalAccountCreateRequest,
 } from '@fs-billing/shared';
 import type { BillingAuth } from './better-auth.js';
+import { normalizeEmail } from './gateway.js';
 import type { AdminPrincipal } from '../types.js';
 
 const insertedSchema = z.object({ inserted: z.boolean() });
+
+function isUserEmailConflict(error: unknown): boolean {
+  for (let current = error; current instanceof Error; current = current.cause) {
+    if (
+      'code' in current &&
+      current.code === '23505' &&
+      'constraint' in current &&
+      current.constraint === 'user_email_key'
+    )
+      return true;
+  }
+  return false;
+}
 
 export function createAdminAccountService(deps: {
   businessDb: Db;
@@ -66,6 +80,9 @@ export function createAdminAccountService(deps: {
   async function revokeSessions(tx: Tx, userId: string) {
     await tx.execute(sql`select auth.revoke_user_sessions(${userId})`);
   }
+  async function clearLoginFailures(tx: Tx, emailKey: string) {
+    await tx.execute(sql`select auth.clear_login_failures(${emailKey})`);
+  }
   async function lockAdminRows(tx: Tx, ids: readonly string[]) {
     const unique = [...new Set(ids.map((id) => id.toLowerCase()))].sort();
     for (const id of unique)
@@ -91,22 +108,8 @@ export function createAdminAccountService(deps: {
         ? (request.body.initialPassword ??
           randomBytes(24).toString('base64url'))
         : randomBytes(24).toString('base64url');
-    const normalizedEmail = request.body.email.toLowerCase();
+    const normalizedEmail = normalizeEmail(request.body.email);
     const hash = await hashPassword(password);
-    try {
-      await pool.query(
-        'INSERT INTO auth."user"(id,name,email,updated_at) VALUES($1,$2,$3,clock_timestamp())',
-        [
-          userId,
-          request.kind === 'admin' ? request.body.name : normalizedEmail,
-          normalizedEmail,
-        ],
-      );
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === '23505')
-        throw new AdminServiceError('EMAIL_EXISTS', '邮箱已存在');
-      throw error;
-    }
     const row = await withAdmin(db, async (tx) => {
       if (request.kind === 'portal') {
         await lockTenants(tx, [request.tenantId]);
@@ -126,6 +129,17 @@ export function createAdminAccountService(deps: {
           );
       }
       const who = await actor(tx, principal);
+      try {
+        await tx.execute(
+          sql`select auth.insert_user(${userId}, ${
+            request.kind === 'admin' ? request.body.name : normalizedEmail
+          }, ${normalizedEmail})`,
+        );
+      } catch (error) {
+        if (isUserEmailConflict(error))
+          throw new AdminServiceError('EMAIL_EXISTS', '邮箱已存在');
+        throw error;
+      }
       const [created] =
         request.kind === 'admin'
           ? await tx
@@ -274,14 +288,15 @@ export function createAdminAccountService(deps: {
       },
     ) {
       const { kind, id, status } = command;
-      const auditId = randomUUID();
       if (
         kind === 'admin' &&
         status === 'disabled' &&
         id === principal.profileId
       )
         throw new AdminServiceError('SELF_DISABLE', '不能停用当前管理员');
+      let auditId: string | null = null;
       await withAdmin(db, async (tx) => {
+        auditId = null;
         if (kind === 'admin')
           await lockAdminRows(tx, [principal.profileId, id]);
         const who = await actor(tx, principal);
@@ -291,6 +306,8 @@ export function createAdminAccountService(deps: {
         if (kind === 'portal' && 'tenantId' in row)
           await lockTenants(tx, [row.tenantId]);
         if (row.status === status) return;
+        const writtenAuditId = randomUUID();
+        auditId = writtenAuditId;
         if (
           kind === 'admin' &&
           status === 'disabled' &&
@@ -306,7 +323,7 @@ export function createAdminAccountService(deps: {
         await tx.update(table).set({ status }).where(eq(table.id, id));
         const tenantId = 'tenantId' in row ? row.tenantId : null;
         await writeAudit(tx, {
-          id: auditId,
+          id: writtenAuditId,
           actor: who,
           occurredAt: (await databaseNow(tx)).toISOString(),
           tenantId,
@@ -343,7 +360,9 @@ export function createAdminAccountService(deps: {
         const table = kind === 'admin' ? schema.admins : schema.portalAccounts;
         const [row] = await tx.select().from(table).where(eq(table.id, id));
         if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
+        const address = await email(row.authUserId);
         await setCredential(tx, row.authUserId, hash);
+        await clearLoginFailures(tx, normalizeEmail(address));
         await revokeSessions(tx, row.authUserId);
         await writeAudit(tx, {
           id: auditId,

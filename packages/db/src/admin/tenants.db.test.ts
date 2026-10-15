@@ -72,6 +72,55 @@ function balance(
 }
 
 describe('admin tenant and balance services', () => {
+  it('returns no audit id when a tenant mutation changes nothing', async () => {
+    const created = await fixture();
+    const tenantId = created.tenant.id;
+    const detail = await getTenant({ db: app.db, tenantId });
+    expect(
+      await editTenant({
+        db: app.db,
+        actor,
+        tenantId,
+        request: {
+          name: detail.name,
+          contactName: detail.contactName,
+          contactPhone: detail.contactPhone,
+          remark: detail.remark,
+        },
+      }),
+    ).toEqual({ auditId: null });
+    const settings = {
+      overdraftLimit: '50',
+      lowBalanceThreshold: '5',
+      emails: ['b@example.com'],
+    };
+    const saved = await updateTenantSettings({
+      db: app.db,
+      actor,
+      tenantId,
+      request: settings,
+    });
+    expect(saved.auditId).toEqual(expect.any(String));
+    expect(
+      await updateTenantSettings({
+        db: app.db,
+        actor,
+        tenantId,
+        request: settings,
+      }),
+    ).toEqual({ auditId: null });
+    const disabled = await disableTenant({ db: app.db, actor, tenantId });
+    expect(disabled.auditId).toEqual(expect.any(String));
+    expect(await disableTenant({ db: app.db, actor, tenantId })).toEqual({
+      auditId: null,
+    });
+    const enabled = await enableTenant({ db: app.db, actor, tenantId });
+    expect(enabled.auditId).toEqual(expect.any(String));
+    expect(await enableTenant({ db: app.db, actor, tenantId })).toEqual({
+      auditId: null,
+    });
+  });
+
   it('creates an immediately effective empty version and explicit defaults', async () => {
     for (const currency of ['CNY', 'USD'] as const) {
       const result = adminTenantCreateResponseSchema.parse(

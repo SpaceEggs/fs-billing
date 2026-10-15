@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { getAuthTables } from 'better-auth/db';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -19,10 +19,27 @@ import {
   requestHeaders,
   type Fixture,
 } from '../test/support.js';
+import { createAdminAccountService } from './auth/admin-accounts.js';
+import { normalizeEmail } from './auth/gateway.js';
+import { principalSchema } from './types.js';
 
 const connections = apiConnections();
 const { api, auth, logs } = fixtureApi(connections);
+const accounts = createAdminAccountService({
+  businessDb: connections.app.db,
+  authPool: connections.authPool,
+  auth: connections.betterAuth,
+});
 let fixture: Fixture;
+function adminPrincipal() {
+  const value = principalSchema.parse({
+    kind: 'admin',
+    authUserId: fixture.admin.userId,
+    profileId: fixture.admin.profileId,
+  });
+  if (value.kind !== 'admin') throw new Error('Expected admin');
+  return value;
+}
 beforeAll(() => api.ready());
 beforeEach(async () => {
   fixture = await createFixture(connections);
@@ -88,6 +105,7 @@ it('logs real customers and admins in and returns only public identity plus a da
     );
     expect(rows).toHaveLength(1);
     expect(result.body.expiresAt).toBe(rows[0]?.expires_at.toISOString());
+    expect(result.body.passwordChangeRequired).toBe(false);
   }
 });
 
@@ -249,6 +267,7 @@ it('change-password shares login failures, changes the password and issues a new
   expect(changed.statusCode).toBe(200);
   const body = sessionResponseSchema.parse(changed.json());
   expect(body.identity.profileId).toBe(fixture.a.profileId);
+  expect(body.passwordChangeRequired).toBe(false);
   expect(await sessionCount(fixture.a.userId)).toBe(1);
   const { rows } = await connections.owner.pool.query<{ expires_at: Date }>(
     'SELECT expires_at FROM auth.session WHERE user_id=$1',
@@ -796,10 +815,11 @@ it('login race guard deletes a session created by an old credential before a con
   const injected = fixtureApi(connections, {
     hooks: {
       afterLoginCreated: async () => {
-        const result = await auth.resetPassword({
-          actorAuthUserId: fixture.admin.userId,
-          targetAuthUserId: fixture.a.userId,
-        });
+        const result = await accounts.resetPassword(
+          adminPrincipal(),
+          'portal',
+          fixture.a.profileId,
+        );
         temporaryPassword = result.temporaryPassword;
       },
     },
@@ -828,14 +848,6 @@ it('login started after an uncommitted reset UPDATE waits for that reset and rej
   const updated = signal();
   const release = signal();
   const created = signal();
-  const resetter = fixtureApi(connections, {
-    hooks: {
-      afterCredentialUpdated: async () => {
-        updated.resolve();
-        await release.promise;
-      },
-    },
-  });
   const signing = fixtureApi(connections, {
     hooks: {
       afterLoginCreated: () => {
@@ -844,10 +856,37 @@ it('login started after an uncommitted reset UPDATE waits for that reset and rej
       },
     },
   });
-  const reset = resetter.auth.resetPassword({
-    actorAuthUserId: fixture.admin.userId,
-    targetAuthUserId: fixture.a.userId,
-  });
+  const temporaryPassword = randomBytes(24).toString('base64url');
+  const hash = await (
+    await connections.betterAuth.$context
+  ).password.hash(temporaryPassword);
+  const client = await connections.authPool.connect();
+  const reset = (async () => {
+    try {
+      await client.query('BEGIN');
+      const updatedRows = await client.query(
+        `UPDATE auth.account SET password=$1,temporary_password_issued_at=clock_timestamp(),updated_at=clock_timestamp() WHERE user_id=$2 AND provider_id='credential'`,
+        [hash, fixture.a.userId],
+      );
+      if (updatedRows.rowCount !== 1)
+        throw new Error('Expected exactly one credential account');
+      updated.resolve();
+      await release.promise;
+      await client.query('DELETE FROM auth.session WHERE user_id=$1', [
+        fixture.a.userId,
+      ]);
+      await client.query('DELETE FROM auth.login_failures WHERE email_key=$1', [
+        normalizeEmail(fixture.a.email),
+      ]);
+      await client.query('COMMIT');
+      return { temporaryPassword };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  })();
   let responsePromise:
     Promise<Awaited<ReturnType<typeof signing.api.inject>>> | undefined;
   try {
@@ -916,10 +955,7 @@ it('reset clears counters with JavaScript normalization even when SQL collation 
     'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now())',
     [email.toLowerCase()],
   );
-  await auth.resetPassword({
-    actorAuthUserId: fixture.admin.userId,
-    targetAuthUserId: fixture.a.userId,
-  });
+  await accounts.resetPassword(adminPrincipal(), 'portal', fixture.a.profileId);
   expect(await counter(email.toLowerCase())).toBeUndefined();
 });
 
@@ -946,10 +982,11 @@ it('change-password cannot overwrite a concurrent reset after validating the old
   const injected = fixtureApi(connections, {
     hooks: {
       afterPasswordVerified: async () => {
-        const result = await auth.resetPassword({
-          actorAuthUserId: fixture.admin.userId,
-          targetAuthUserId: fixture.a.userId,
-        });
+        const result = await accounts.resetPassword(
+          adminPrincipal(),
+          'portal',
+          fixture.a.profileId,
+        );
         temporaryPassword = result.temporaryPassword;
       },
     },

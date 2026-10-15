@@ -26,8 +26,10 @@
 - Auth and business share one PostgreSQL database (roles differ). Add `fs_billing_auth`-owned functions with EXECUTE only for `fs_billing_app`:
   - `auth.revoke_user_sessions(user_id)`
   - `auth.set_credential(user_id, hash, temp_issued_at)` (hash computed in app before the transaction)
-  - `auth.insert_credential(...)` for activation
-- Business transaction writes status + audit + auth change atomically.
+  - `auth.insert_credential(...)` for the credential row
+  - `auth.insert_user(...)` so creating the auth user joins the same business transaction and rolls back with it
+  - `auth.clear_login_failures(email_key)` so reset deletes the JavaScript-normalized login-failure key inside that transaction
+- Business transaction writes profile + audit + auth change atomically. Failed account creation leaves no auth user.
 - Pin column shapes with tests so Better Auth upgrades cannot silently break them.
 - Outbox remains the fallback only if product later insists on strict role separation without SECURITY DEFINER.
 
@@ -41,4 +43,12 @@
 
 ## Remaining open questions
 
-None for Phase 5 API continuation.
+### Rate preview storage across processes — DEFERRED
+
+Phase 5 runs one API process. `createAdminRatesService` keeps previews in a process-local `Map`. That is accepted for this phase:
+
+- A restart drops every preview. Commit then returns `PREVIEW_STALE`.
+- Another API process cannot see those previews, so a commit there also returns `PREVIEW_STALE`.
+- Expired entries are removed only inside `savePreview`. The map grows until the next preview save.
+
+Do not add multi-node infrastructure for this. When more than one API process is required, prefer an HMAC-signed preview token over a database table. The token is stateless, needs no new store, and can bind actor, tenant, base version, entries, schedule, and expiry. It stays deferred because `previewId` is `z.uuid()`, commit sends only that id, and a token carrying up to 10,000 rate rows can exceed the request body limit. Adopting it is a contract change.

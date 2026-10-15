@@ -65,7 +65,7 @@ export const adminInputAmountSchemas = createAdminInputAmountSchemas();
 
 export const adminStatusSchema = z.enum(['active', 'disabled']);
 export const adminMutationResponseSchema = z.strictObject({
-  auditId: z.uuid(),
+  auditId: z.uuid().nullable(),
 });
 
 export type AdminIdParams = z.infer<typeof adminIdParamsSchema>;

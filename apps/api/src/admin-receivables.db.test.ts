@@ -67,7 +67,8 @@ async function today() {
   );
   return result.rows[0]!.today;
 }
-async function audit(id: string, action: string) {
+async function audit(id: string | null, action: string) {
+  if (id === null) throw new Error('expected an audit id');
   const result = await connections.owner.pool.query<{
     action: string;
     details: { content: object };

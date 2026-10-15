@@ -70,7 +70,8 @@ function csv(content: string) {
     contentBase64: Buffer.from(content).toString('base64'),
   };
 }
-async function audit(auditId: string) {
+async function audit(auditId: string | null) {
+  if (auditId === null) throw new Error('expected an audit id');
   const result = await connections.owner.pool.query<{
     tenant_id: string;
     action: string;

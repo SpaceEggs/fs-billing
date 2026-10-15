@@ -336,7 +336,6 @@ export function createAuthGateway(
         const hash = await context.password.hash(body.newPassword);
         const token = randomBytes(32).toString('base64url');
         const client = await pool.connect();
-        let expiresAt: Date;
         try {
           await client.query('BEGIN');
           const updated = await client.query(
@@ -350,13 +349,12 @@ export function createAuthGateway(
           await client.query('DELETE FROM auth.session WHERE user_id=$1', [
             session.authUserId,
           ]);
-          const created = await client.query<{ expires_at: Date }>(
-            `INSERT INTO auth.session(id,token,user_id,expires_at,created_at,updated_at) VALUES($1,$2,$3,clock_timestamp()+interval '7 days',clock_timestamp(),clock_timestamp()) RETURNING expires_at`,
+          const created = await client.query(
+            `INSERT INTO auth.session(id,token,user_id,expires_at,created_at,updated_at) VALUES($1,$2,$3,clock_timestamp()+interval '7 days',clock_timestamp(),clock_timestamp())`,
             [randomUUID(), token, session.authUserId],
           );
-          const row = created.rows[0];
-          if (!row) throw new Error('Session creation failed');
-          expiresAt = row.expires_at;
+          if (created.rowCount !== 1)
+            throw new Error('Session creation failed');
           await clear(email, client);
           await client.query('COMMIT');
         } catch (error) {
@@ -365,13 +363,8 @@ export function createAuthGateway(
         } finally {
           client.release();
         }
-        await loadSession(token);
-        return {
-          ...session,
-          token,
-          expiresAt,
-          setCookie: [cookie(token, expiresAt)],
-        };
+        const issued = await loadSession(token);
+        return { ...issued, setCookie: [cookie(token, issued.expiresAt)] };
       } catch (error) {
         if (
           !(error instanceof GatewayError) ||
@@ -380,41 +373,6 @@ export function createAuthGateway(
         )
           await refund(email, attempt.window_id);
         throw error;
-      }
-    },
-    async resetPassword({ actorAuthUserId, targetAuthUserId }) {
-      if (actorAuthUserId === targetAuthUserId)
-        throw new GatewayError('FORBIDDEN');
-      const temporaryPassword = randomBytes(24).toString('base64url');
-      const hash = await (await auth.$context).password.hash(temporaryPassword);
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const updated = await client.query(
-          `UPDATE auth.account SET password=$1,temporary_password_issued_at=clock_timestamp(),updated_at=clock_timestamp() WHERE user_id=$2 AND provider_id='credential'`,
-          [hash, targetAuthUserId],
-        );
-        if (updated.rowCount !== 1)
-          throw new Error('Expected exactly one credential account');
-        await hooks.afterCredentialUpdated?.();
-        await hooks.beforeSessionDelete?.();
-        await client.query('DELETE FROM auth.session WHERE user_id=$1', [
-          targetAuthUserId,
-        ]);
-        const user = await client.query<{ email: string }>(
-          'SELECT email FROM auth."user" WHERE id=$1',
-          [targetAuthUserId],
-        );
-        const email = user.rows[0]?.email;
-        if (email === undefined) throw new Error('Auth user missing');
-        await clear(normalizeEmail(email), client);
-        await client.query('COMMIT');
-        return { temporaryPassword };
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
       }
     },
   };
