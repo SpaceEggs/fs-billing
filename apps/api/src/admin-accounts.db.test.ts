@@ -219,8 +219,10 @@ it('failed account creation rolls back the auth user and writes no audit', async
   await expect(
     service.createPortal(principal(), randomUUID(), { email: missingEmail }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  const existingTenantId = fixture.a.tenantId;
+  expect(existingTenantId).toEqual(expect.any(String));
   await expect(
-    service.createPortal(principal(), fixture.a.tenantId, {
+    service.createPortal(principal(), existingTenantId!, {
       email: takenEmail,
     }),
   ).rejects.toMatchObject({ code: 'PORTAL_ACCOUNT_EXISTS' });
