@@ -2,33 +2,43 @@
 
 ## Legacy tenants without balance alert settings — RESOLVED 2026-10-14
 
-**Decision (user):** follow recommendation option 1, deferred — do **not** backfill or synthesize settings.
+**Decision (user):** do **not** backfill or synthesize settings.
 
-- Detail and list projections return service unavailable when a tenant has no `balance_alert_settings` row.
+- **List:** keep the row; set `settingsConfigured: false` (or equivalent). Do not 503 the whole list; do not omit the row. `disabled` / `suspended` / `overdraft` health still computed from core data; only the normal vs low_balance branch treats the tenant as unconfigured.
+- **Detail:** strict fail (503 or dedicated error) when settings are missing — no invented thresholds.
 - Balance, ledger, tenant edit, disable, and enable still use core tenant data.
 - Creating a tenant always writes explicit settings in the creation transaction.
-- Updating settings on an unconfigured legacy tenant stays deferred until a before-state / backfill policy is chosen (product owners pick legacy threshold + recipients then).
-- Option 3 (silently project zero / empty) is rejected: invents saved settings and can misstate health.
+- Updating settings on an unconfigured legacy tenant stays deferred until a before-state / backfill policy is chosen.
 
-## First-login password-change gate — OPEN 2026-10-14
+## First-login password-change gate — RESOLVED 2026-10-14
 
-The design requires forced password changes for initial and reset passwords. The current identity and session DTOs expose no password-change-required flag, and no contract decides which business operations remain available before changing the password.
+**Decision (user, Claude opinion):** Option A with supplements.
 
-- Option 1 (recommended): extend the session contract with an explicit required-change state and allow only session, logout, and password-change operations while it is set. Both admin and portal clients must handle that state.
-- Option 2: keep the existing session response and reject every business operation with a new dedicated contract error until the password changes.
+- Derive required-change from `auth.account.temporary_password_issued_at` (source of truth); do not store a second session flag.
+- Deny by default in the shared request pipeline; allowlist only session, logout, and change-password.
+- Blocked calls return dedicated `PASSWORD_CHANGE_REQUIRED` (403).
+- After successful change: clear `temporary_password_issued_at` and revoke the account's other sessions.
 
-Deferred in this slice: the forced-change gate and its client contract. Temporary credential issuance, configurable 72-hour login expiry, and clearing issuance after a successful password change are implemented independently (in WIP stash pending Codex quota).
+## Cross-connection password-reset / session-revoke delivery — RESOLVED 2026-10-14
 
-## Recoverable password reset and session revocation delivery — OPEN 2026-10-14
+**Decision (user, Claude opinion):** narrowed Option B — SECURITY DEFINER functions, not outbox.
 
-Auth and business data use separate connections. Resetting a credential and then writing an audit cannot satisfy atomic audit delivery. Account disable commits status and audit together and then revokes sessions; status denies access if auth revocation fails. Durable delivery is still needed for eventual cleanup when a disable request fails after its business transaction commits.
+- Auth and business share one PostgreSQL database (roles differ). Add `fs_billing_auth`-owned functions with EXECUTE only for `fs_billing_app`:
+  - `auth.revoke_user_sessions(user_id)`
+  - `auth.set_credential(user_id, hash, temp_issued_at)` (hash computed in app before the transaction)
+  - `auth.insert_credential(...)` for activation
+- Business transaction writes status + audit + auth change atomically.
+- Pin column shapes with tests so Better Auth upgrades cannot silently break them.
+- Outbox remains the fallback only if product later insists on strict role separation without SECURITY DEFINER.
 
-- Option 1 (recommended): add a durable business outbox event in the profile/audit transaction, deliver credential resets and session revocations through an idempotent auth consumer, and prevent enable until outstanding revocation events are delivered. Persist reset delivery state so retries do not duplicate the audit or issue new passwords accidentally.
-- Option 2: introduce a restricted cross-schema database procedure and role allowing each lifecycle change and its audit to commit in one PostgreSQL transaction.
+## Concurrent account activation recovery — RESOLVED 2026-10-14
 
-## Concurrent account activation recovery — OPEN 2026-10-14
+**Decision (user, Claude opinion):** Option A with supplements.
 
-Staged creation safely leaves an auth user with no credential if profile linking or activation fails. Recovery must avoid duplicate profiles, credentials, and audit events. However, `auth.account` currently has only a nonunique user index, so concurrent recovery cannot atomically claim a missing credential without a new lock or uniqueness rule. This phase does not introduce an auth row lock (only existing `lock_tenants`).
+- Migration fails loudly if duplicate `(user_id, provider_id)` rows exist (manual choice which credential survives); then add `UNIQUE(user_id, provider_id)`.
+- Recovery uses `INSERT … ON CONFLICT DO NOTHING` — no new advisory locks.
+- With narrowed-B credential insert in the same business transaction, the separate activate/recovery path mostly disappears; keep the unique constraint as a backstop.
 
-- Option 1 (recommended): audit and repair existing duplicates, add a unique `(user_id, provider_id)` constraint, then implement credential activation recovery with conflict handling against the existing profile and creation audit.
-- Option 2: authorize a stable auth-user row lock for activation recovery, then check and insert the credential in that transaction.
+## Remaining open questions
+
+None for Phase 5 API continuation.
