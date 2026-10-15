@@ -153,7 +153,7 @@ function TabContent({
 }) {
   switch (tab) {
     case 'overview':
-      return <OverviewTab tenantId={tenant.id} currency={tenant.currency} />;
+      return <OverviewTab tenantId={tenant.id} />;
     case 'ledger':
       return <LedgerTab tenantId={tenant.id} />;
     case 'rates':

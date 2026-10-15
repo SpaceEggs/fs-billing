@@ -68,6 +68,11 @@ export function formatDate(value: string | Date) {
   return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
 }
 
+export function formatTime(value: string | Date) {
+  const p = beijingParts(value);
+  return `${pad(p.hour)}:${pad(p.minute)}`;
+}
+
 export function formatMonth(value: string | Date) {
   const p = beijingParts(value);
   return `${p.year}年${p.month}月`;

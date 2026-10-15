@@ -1,21 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
-import { accounts } from './accounts';
-import { expectPath, loginAs } from './helpers';
-
-/** 每次运行用新编码，避免与种子数据或上次运行冲突。 */
-function uniqueCode() {
-  return `E2E${Date.now().toString(36).toUpperCase()}`;
-}
-
-async function openTenants(page: Page) {
-  await loginAs(page, '/admin/login', accounts.admin);
-  await expectPath(page, '/admin');
-  await page
-    .getByRole('navigation', { name: '主导航' })
-    .getByRole('link', { name: '租户' })
-    .click();
-  await expectPath(page, '/admin/tenants');
-}
+import { expect } from '@playwright/test';
+import { createTenant, openTenants, test, uniqueCode } from './admin';
+import { expectPath } from './helpers';
 
 test('tenant list shows seeded tenants with status and per-currency balances', async ({
   page,
@@ -74,7 +59,9 @@ test('onboarding shows the generated portal password once and the new account mu
     '¥0.00',
   );
 
-  const customer = await browser.newPage();
+  const customer = await browser.newPage({
+    storageState: { cookies: [], origins: [] },
+  });
   await customer.goto('/login');
   await customer.getByLabel('登录邮箱').fill(portalEmail);
   await customer.getByLabel('密码', { exact: true }).fill(temporaryPassword);
@@ -108,4 +95,24 @@ test('a duplicate tenant code is reported on the code field', async ({
   await page.getByRole('button', { name: '创建租户' }).click();
   await expect(page.getByText('租户编码已被使用')).toBeVisible();
   await expect(page.getByText('编码 ABC001 已存在，请换一个')).toBeVisible();
+});
+
+test('disable confirmation explains live call behavior', async ({ page }) => {
+  await openTenants(page);
+  const tenant = await createTenant(page);
+  await page.goto(`/admin/tenants/${tenant.id}`);
+  await page.getByRole('button', { name: '停用', exact: true }).click();
+
+  const dialog = page.getByRole('dialog', {
+    name: `停用租户 ${tenant.code}？`,
+  });
+  await expect(dialog).toContainText('停用不能保证立即停止呼叫');
+  await expect(dialog).toContainText('新呼叫仍可能按最多 1800 秒放行');
+  await expect(dialog).toContainText('已接通电话按原上限结束并正常计费');
+  await dialog.getByRole('button', { name: '停用租户' }).click();
+
+  await expect(page.getByText('租户已停用，已记入操作日志')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: '启用', exact: true }),
+  ).toBeVisible();
 });

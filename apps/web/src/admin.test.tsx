@@ -419,6 +419,264 @@ describe('tenant detail', () => {
       ),
     ).toBeVisible();
   }, 10_000);
+
+  const detail = (overrides: Record<string, unknown> = {}) => ({
+    ...summary({ health: 'normal', balance: '300', availableBalance: '400' }),
+    contactName: '',
+    contactPhone: '',
+    remark: '',
+    settings: {
+      overdraftLimit: '100',
+      lowBalanceThreshold: '200',
+      emails: ['ops@example.com'],
+    },
+    createdAt: '2026-09-01T02:00:00.000Z',
+    ...overrides,
+  });
+  const detailPath = `/api/admin/tenants/${tenantIds.abc}`;
+  const balanceResult = (kind: string, amount: string, balance: string) => ({
+    auditId: '00000000-0000-4000-8000-00000000b101',
+    currency: 'CNY',
+    balance,
+    entry: {
+      id: '00000000-0000-4000-8000-00000000c101',
+      kind,
+      amount,
+      balanceAfter: balance,
+      note: '',
+      noteVisibility: kind === 'credit_recharge' ? 'admin' : 'customer',
+      paymentStatus: kind === 'credit_recharge' ? 'pending' : null,
+      actor: null,
+      occurredAt: '2026-10-15T06:00:00.000Z',
+    },
+  });
+
+  async function openBalance(user: ReturnType<typeof userEvent.setup>) {
+    const [button] = await screen.findAllByRole('button', { name: '余额操作' });
+    await user.click(button!);
+    return screen.findByRole('dialog', { name: '余额操作' });
+  }
+
+  it('the overview tab stays on coming soon without requesting statistics while the flag is off', async () => {
+    const { handler, calls } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+    });
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    expect(await screen.findByText('概况数据即将上线')).toBeVisible();
+    expect(calls.some((call) => call.path.endsWith('/overview'))).toBe(false);
+  });
+
+  it('a blank adjustment reason is blocked locally and the retry after a network failure reuses the key', async () => {
+    let fail = true;
+    const { handler, calls } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      [`POST ${detailPath}/balance-operations`]: () => {
+        if (fail) {
+          fail = false;
+          throw new TypeError('network');
+        }
+        return {
+          status: 200,
+          body: balanceResult('adjustment', '-12.3456', '287.6544'),
+        };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    const dialog = await openBalance(user);
+    await user.click(within(dialog).getByRole('radio', { name: '调账' }));
+    await user.type(within(dialog).getByLabelText('金额'), '-12.3456');
+    await user.type(within(dialog).getByLabelText(/备注/), '   ');
+    await user.click(within(dialog).getByRole('button', { name: '下一步' }));
+    expect(within(dialog).getByText('调账必须填写备注')).toBeVisible();
+    expect(within(dialog).getByLabelText(/备注/)).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+
+    await user.type(within(dialog).getByLabelText(/备注/), '重复扣费冲正');
+    await user.click(within(dialog).getByRole('button', { name: '下一步' }));
+    const confirm = within(dialog).getByRole('button', { name: '确认调账' });
+    await user.click(confirm);
+    expect(
+      await within(dialog).findByText(/再次点击「确认调账」会按同一笔重试/),
+    ).toBeVisible();
+    await user.click(confirm);
+    expect(await within(dialog).findByText('操作成功')).toBeVisible();
+
+    const posts = calls.filter((call) => call.method === 'POST');
+    expect(posts).toHaveLength(2);
+    const [first, retry] = posts.map(
+      (post) => post.body as { idempotencyKey: string },
+    );
+    expect(first).toEqual({
+      kind: 'adjustment',
+      currency: 'CNY',
+      amount: '-12.3456',
+      reason: '重复扣费冲正',
+      idempotencyKey: first!.idempotencyKey,
+    });
+    expect(first!.idempotencyKey).toMatch(/^web:/);
+    expect(retry).toEqual(first);
+  });
+
+  it('a gift exactly at the threshold needs no second confirmation; one cent more does', async () => {
+    const { handler, calls } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      [`POST ${detailPath}/balance-operations`]: () => ({
+        status: 200,
+        body: balanceResult('gift', '10000.01', '10300.01'),
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    const dialog = await openBalance(user);
+    await user.click(within(dialog).getByRole('radio', { name: '赠送' }));
+    await user.type(within(dialog).getByLabelText('金额'), '10000');
+    await user.click(within(dialog).getByRole('button', { name: '下一步' }));
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: '确认赠送' }),
+    ).toBeEnabled();
+
+    await user.click(within(dialog).getByRole('button', { name: '返回修改' }));
+    await user.clear(within(dialog).getByLabelText('金额'));
+    await user.type(within(dialog).getByLabelText('金额'), '10000.01');
+    await user.click(within(dialog).getByRole('button', { name: '下一步' }));
+    expect(within(dialog).getByText('大额赠送，需要二次确认')).toBeVisible();
+    const confirm = within(dialog).getByRole('button', { name: '确认赠送' });
+    expect(confirm).toBeDisabled();
+    await user.click(
+      within(dialog).getByRole('checkbox', { name: /我已核对/ }),
+    );
+    await user.click(confirm);
+    expect(await within(dialog).findByRole('status')).toHaveTextContent(
+      '赠送 +¥10,000.01 已入账，当前余额 ¥10,300.01',
+    );
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1);
+  });
+
+  it('a top-up on a disabled tenant explains the status does not change', async () => {
+    const { handler } = adminApi({
+      [`GET ${detailPath}`]: () => ({
+        status: 200,
+        body: detail({ status: 'disabled', health: 'disabled' }),
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    const dialog = await openBalance(user);
+    await user.type(within(dialog).getByLabelText('金额'), '300');
+    await user.click(within(dialog).getByRole('button', { name: '下一步' }));
+    expect(within(dialog).getByRole('note')).toHaveTextContent(
+      '该租户已停用，状态不会改变',
+    );
+    expect(dialog).toHaveTextContent('操作后状态已停用');
+  });
+
+  it('server field issues return to the form on the matching field', async () => {
+    const { handler } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      [`POST ${detailPath}/balance-operations`]: () => ({
+        status: 400,
+        body: apiError('VALIDATION_ERROR', {
+          issues: [{ path: ['amount'], message: '单笔充值不能超过上限' }],
+        }),
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    const dialog = await openBalance(user);
+    await user.type(within(dialog).getByLabelText('金额'), '900000');
+    await user.click(within(dialog).getByRole('button', { name: '下一步' }));
+    await user.click(within(dialog).getByRole('button', { name: '确认充值' }));
+    expect(
+      await within(dialog).findByText('单笔充值不能超过上限'),
+    ).toBeVisible();
+    expect(within(dialog).getByLabelText('金额')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('disabling an already disabled tenant reports no change', async () => {
+    const { handler } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      [`POST ${detailPath}/disable`]: () => ({
+        status: 200,
+        body: { auditId: null },
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    await user.click(await screen.findByRole('button', { name: '停用' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '停用租户 ABC001？',
+    });
+    expect(dialog).toHaveTextContent('停用不能保证立即停止呼叫');
+    await user.click(within(dialog).getByRole('button', { name: '停用租户' }));
+    expect(await screen.findByText('租户已是停用状态，没有变更')).toBeVisible();
+  });
+
+  it('saving the tenant edit unchanged says nothing was logged', async () => {
+    const { handler, calls } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      [`POST ${detailPath}/edit`]: () => ({
+        status: 200,
+        body: { auditId: null },
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}/edit`, handler);
+    await user.click(await screen.findByRole('button', { name: '保存修改' }));
+    expect(
+      await screen.findByText('内容没有变化，未记入操作日志'),
+    ).toBeVisible();
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
+      name: '深圳市某某科技有限公司',
+      contactName: '',
+      contactPhone: '',
+      remark: '',
+    });
+  });
+
+  it('settings warn about empty recipients when loaded and in the save confirmation', async () => {
+    const { handler, calls } = adminApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      'GET /api/admin/admins': () => ({ status: 200, body: page([]) }),
+      [`POST ${detailPath}/settings`]: () => ({
+        status: 200,
+        body: { auditId: '00000000-0000-4000-8000-00000000b102' },
+      }),
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}?tab=settings`, handler);
+    const form = await screen.findByRole('form', { name: '租户设置' });
+    expect(
+      within(form).queryByText('未配置收件人，余额提醒无法送达'),
+    ).not.toBeInTheDocument();
+    await user.click(
+      within(form).getByRole('button', { name: '移除 ops@example.com' }),
+    );
+    expect(
+      within(form).getByText('未配置收件人，余额提醒无法送达'),
+    ).toBeVisible();
+    await user.click(within(form).getByRole('button', { name: '保存修改' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '确认保存以下修改？',
+    });
+    expect(within(dialog).getByRole('note')).toHaveTextContent(
+      '未配置收件人，余额提醒无法送达',
+    );
+    expect(dialog).toHaveTextContent('移除邮箱ops@example.com');
+    await user.click(within(dialog).getByRole('button', { name: '确认保存' }));
+    expect(await screen.findByText('设置已保存，已记入操作日志')).toBeVisible();
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
+      overdraftLimit: '100.00',
+      lowBalanceThreshold: '200.00',
+      emails: [],
+    });
+  });
 });
 
 describe('tenant create', () => {

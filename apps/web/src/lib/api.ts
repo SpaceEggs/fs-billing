@@ -90,18 +90,24 @@ export function apiPath(
  * 按契约调用：请求在发送前用请求 schema 解析（含编码大写、邮箱去重等规范化），
  * 成功响应按状态码 schema 解析，失败响应解析为后台错误联合。
  */
-export async function callApi<Id extends OperationId>(
+export function callApi<Id extends OperationId>(
   operationId: Id,
   ...[input]: Record<never, never> extends ApiInput<Id>
     ? [input?: ApiInput<Id>]
     : [input: ApiInput<Id>]
 ): Promise<ApiSuccess<Id>> {
-  const operation: ApiOperation = webApiContract[operationId];
-  const { params, query, body } = (input ?? {}) as {
-    params?: unknown;
-    query?: unknown;
-    body?: unknown;
-  };
+  // 契约以 operationId 索引成功 schema；运行时 parse 后的值即该类型。
+  return callOperation(webApiContract[operationId], input ?? {}) as Promise<
+    ApiSuccess<Id>
+  >;
+}
+
+/** 按任意契约操作发送请求；返回值已由该操作的成功 schema 解析。 */
+export async function callOperation(
+  operation: ApiOperation,
+  input: { params?: unknown; query?: unknown; body?: unknown },
+): Promise<unknown> {
+  const { params, query, body } = input;
   const headers: Record<string, string> = { accept: 'application/json' };
   const init: RequestInit = {
     method: operation.method,
@@ -126,8 +132,7 @@ export async function callApi<Id extends OperationId>(
   const schema = operation.responses[response.status];
   if (response.ok) {
     if (!schema) throw new ApiRequestError(response.status, null);
-    // 契约以 operationId 索引成功 schema；运行时 parse 后的值即该类型。
-    return schema.parse(payload) as ApiSuccess<Id>;
+    return schema.parse(payload);
   }
   const error = adminApiErrorSchema.safeParse(payload);
   throw new ApiRequestError(response.status, error.success ? error.data : null);
