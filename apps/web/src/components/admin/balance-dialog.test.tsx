@@ -120,6 +120,7 @@ const confirmButton = () =>
   within(dialog()).getByRole('button', { name: '确认调账' });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   clearBalanceAttempts();
 });
@@ -172,6 +173,34 @@ describe('balance dialog', () => {
     expect(await within(dialog()).findByRole('status')).toHaveTextContent(
       '调账 -¥20.00 已入账，当前余额 -¥55.20',
     );
+  });
+
+  it('locks while fingerprinting and does not post an attempt voided by logout', async () => {
+    const user = userEvent.setup();
+    const digest = crypto.subtle.digest.bind(crypto.subtle);
+    let release = () => {};
+    vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce(
+      (...args) =>
+        new Promise((resolve) => {
+          release = () => resolve(digest(...args));
+        }),
+    );
+    const keys = renderDialog(tenantFixture(), () =>
+      Promise.resolve(json(200, success('-20', '-55.2'))),
+    );
+    await fillAdjustment('-20');
+    await user.click(confirmButton());
+    expect(confirmButton()).toBeDisabled();
+    expect(
+      within(dialog()).getByRole('button', { name: '返回修改' }),
+    ).toBeDisabled();
+    await user.keyboard('{Escape}');
+    expect(dialog()).toBeVisible();
+
+    clearBalanceAttempts();
+    release();
+    await vi.waitFor(() => expect(confirmButton()).toBeEnabled());
+    expect(keys).toEqual([]);
   });
 
   it('reuses the idempotency key when an unknown outcome is retried after reopening', async () => {

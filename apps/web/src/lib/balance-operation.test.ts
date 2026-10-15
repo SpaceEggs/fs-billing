@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminBalanceOperationRequestSchema } from '@fs-billing/shared';
 import {
   balanceFieldErrors,
@@ -11,6 +11,7 @@ import {
   resolveBalanceAttempt,
   unresolvedBalanceAttempts,
   validateBalanceDraft,
+  type BalanceDraft,
   type BalanceKind,
 } from './balance-operation';
 import { normalizeAmountInput } from './amounts';
@@ -140,53 +141,67 @@ describe('balance attempts', () => {
   const a = draft('adjustment', '-12.3456', '冲正重复赠送');
   const b = draft('gift', '888.88', '春节回馈');
 
-  afterEach(() => clearBalanceAttempts());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearBalanceAttempts();
+  });
+
+  async function begin(owner: string, tenantId: string, content: BalanceDraft) {
+    const attempt = await beginBalanceAttempt(owner, tenantId, content);
+    if (!attempt) throw new Error('attempt went stale');
+    return attempt;
+  }
+
+  /** 让下一次指纹计算停在摘要处，直到调用返回的 release。 */
+  function holdNextDigest() {
+    const digest = crypto.subtle.digest.bind(crypto.subtle);
+    let release = () => {};
+    vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce(
+      (...args) =>
+        new Promise((resolve) => {
+          release = () => resolve(digest(...args));
+        }),
+    );
+    return () => release();
+  }
 
   it('reuses the key of an unresolved attempt until it resolves', async () => {
-    const first = await beginBalanceAttempt('admin-1', 't1', a);
+    const first = await begin('admin-1', 't1', a);
     expect(first.key).toMatch(/^web:/);
-    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).toBe(first.key);
+    expect((await begin('admin-1', 't1', a)).key).toBe(first.key);
     resolveBalanceAttempt(first);
-    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).not.toBe(
-      first.key,
-    );
+    expect((await begin('admin-1', 't1', a)).key).not.toBe(first.key);
   });
 
   it('keeps an unknown attempt when a different one is rejected', async () => {
-    const unknown = await beginBalanceAttempt('admin-1', 't1', a);
-    const rejected = await beginBalanceAttempt('admin-1', 't1', b);
+    const unknown = await begin('admin-1', 't1', a);
+    const rejected = await begin('admin-1', 't1', b);
     expect(rejected.key).not.toBe(unknown.key);
     resolveBalanceAttempt(rejected);
-    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).toBe(
-      unknown.key,
-    );
+    expect((await begin('admin-1', 't1', a)).key).toBe(unknown.key);
   });
 
   it('logout clears unresolved attempts', async () => {
-    const before = await beginBalanceAttempt('admin-1', 't1', a);
+    const before = await begin('admin-1', 't1', a);
     clearBalanceAttempts();
     expect(unresolvedBalanceAttempts()).toBeNull();
-    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).not.toBe(
-      before.key,
-    );
+    expect((await begin('admin-1', 't1', a)).key).not.toBe(before.key);
   });
 
   it('does not reuse another admin key', async () => {
-    const first = await beginBalanceAttempt('admin-1', 't1', a);
-    const other = await beginBalanceAttempt('admin-2', 't1', a);
+    const first = await begin('admin-1', 't1', a);
+    const other = await begin('admin-2', 't1', a);
     expect(other.key).not.toBe(first.key);
     expect(unresolvedBalanceAttempts()).toEqual({
       owner: 'admin-2',
       entries: [[other.fingerprint, other.key]],
     });
-    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).not.toBe(
-      first.key,
-    );
+    expect((await begin('admin-1', 't1', a)).key).not.toBe(first.key);
   });
 
   it('stores only fingerprint digests and keys, never amount or note', async () => {
-    const first = await beginBalanceAttempt('admin-1', 't1', a);
-    const second = await beginBalanceAttempt('admin-1', 't1', b);
+    const first = await begin('admin-1', 't1', a);
+    const second = await begin('admin-1', 't1', b);
     const store = unresolvedBalanceAttempts();
     expect(store).toEqual({
       owner: 'admin-1',
@@ -200,6 +215,33 @@ describe('balance attempts', () => {
     const serialized = JSON.stringify(store);
     for (const plaintext of ['12.3456', '冲正重复赠送', '888.88', '春节回馈'])
       expect(serialized).not.toContain(plaintext);
+  });
+
+  it('a logout during fingerprinting voids the attempt and keeps the new admin store', async () => {
+    const release = holdNextDigest();
+    const stale = beginBalanceAttempt('admin-1', 't1', a);
+    clearBalanceAttempts();
+    const current = await begin('admin-2', 't1', a);
+    release();
+    expect(await stale).toBeNull();
+    expect(unresolvedBalanceAttempts()).toEqual({
+      owner: 'admin-2',
+      entries: [[current.fingerprint, current.key]],
+    });
+    expect((await begin('admin-2', 't1', a)).key).toBe(current.key);
+  });
+
+  it('an admin switch during fingerprinting voids the earlier admin attempt', async () => {
+    await begin('admin-1', 't1', b);
+    const release = holdNextDigest();
+    const stale = beginBalanceAttempt('admin-1', 't1', a);
+    const current = await begin('admin-2', 't1', a);
+    release();
+    expect(await stale).toBeNull();
+    expect(unresolvedBalanceAttempts()).toEqual({
+      owner: 'admin-2',
+      entries: [[current.fingerprint, current.key]],
+    });
   });
 });
 

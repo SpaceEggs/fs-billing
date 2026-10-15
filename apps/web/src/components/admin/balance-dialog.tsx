@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
 import type {
@@ -17,6 +17,7 @@ import {
   projectBalance,
   resolveBalanceAttempt,
   validateBalanceDraft,
+  type BalanceAttempt,
   type BalanceDraft,
   type BalanceErrors,
   type BalanceKind,
@@ -159,10 +160,12 @@ export function BalanceDialog({
     invalidate: (queryClient, input) =>
       invalidateTenant(queryClient, input.params.tenantId),
   });
+  // 从计算指纹开始到请求结束都算提交中，期间不能关闭或返回修改。
+  const [submitting, setSubmitting] = useState(false);
   return (
     <ModalDialog
       open={open}
-      {...(operate.isPending ? {} : { onOpenChange })}
+      {...(submitting ? {} : { onOpenChange })}
       title="余额操作"
       className="md:w-[460px]"
     >
@@ -172,6 +175,8 @@ export function BalanceDialog({
           tenant={tenant}
           thresholds={thresholds}
           operate={operate}
+          submitting={submitting}
+          onSubmittingChange={setSubmitting}
           onClose={() => onOpenChange(false)}
           onViewLedger={onViewLedger}
         />
@@ -185,6 +190,8 @@ function BalanceFlow({
   tenant,
   thresholds,
   operate,
+  submitting,
+  onSubmittingChange,
   onClose,
   onViewLedger,
 }: {
@@ -192,6 +199,8 @@ function BalanceFlow({
   tenant: AdminTenantDetailResponse;
   thresholds: typeof webConfig.largeAmountThresholds;
   operate: ReturnType<typeof useApiMutation<'adminBalanceOperation'>>;
+  submitting: boolean;
+  onSubmittingChange: (submitting: boolean) => void;
   onClose: () => void;
   onViewLedger: () => void;
 }) {
@@ -205,6 +214,13 @@ function BalanceFlow({
   const [largeConfirmed, setLargeConfirmed] = useState(false);
   const [submitError, setSubmitError] = useState<unknown>(null);
   const queryClient = useQueryClient();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const rule = balanceKinds[draft.kind];
   const valid = Object.keys(validateBalanceDraft(draft)).length === 0;
@@ -240,9 +256,14 @@ function BalanceFlow({
   }
 
   async function submit() {
+    if (submitting) return;
+    onSubmittingChange(true);
     setSubmitError(null);
-    const attempt = await beginBalanceAttempt(owner, tenant.id, draft);
+    let attempt: BalanceAttempt | null = null;
     try {
+      attempt = await beginBalanceAttempt(owner, tenant.id, draft);
+      // 计算指纹期间对话框已关闭或已退出登录：这一笔作废，不提交。
+      if (!attempt || !mounted.current) return;
       const result = await operate.mutateAsync({
         params: { tenantId: tenant.id },
         body: balanceRequest(draft, tenant.currency, attempt.key),
@@ -252,13 +273,16 @@ function BalanceFlow({
     } catch (error) {
       const problem = apiProblem(error);
       // 服务端明确拒绝即未入账；网络中断、500/503 结果未知，保留幂等键供重试。
-      if (problem.kind !== 'unavailable') resolveBalanceAttempt(attempt);
+      if (attempt && problem.kind !== 'unavailable')
+        resolveBalanceAttempt(attempt);
       if (problem.kind === 'validation') {
         setErrors(balanceFieldErrors(problem.issues));
         setStep({ name: 'form' });
         return;
       }
       setSubmitError(error);
+    } finally {
+      onSubmittingChange(false);
     }
   }
 
@@ -429,14 +453,14 @@ function BalanceFlow({
           <Button
             variant="outline"
             className="h-12 md:h-9"
-            disabled={operate.isPending}
+            disabled={submitting}
             onClick={() => setStep({ name: 'form' })}
           >
             返回修改
           </Button>
           <Button
             className="h-12 md:h-9"
-            disabled={operate.isPending || (large && !largeConfirmed)}
+            disabled={submitting || (large && !largeConfirmed)}
             onClick={() => void submit()}
           >
             {confirmLabel}
