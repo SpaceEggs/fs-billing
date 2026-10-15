@@ -1,7 +1,6 @@
 import Decimal from 'decimal.js';
 import { z } from 'zod';
 import {
-  adminInputAmountSchemas,
   adminPortalAccountCreateRequestSchema,
   adminTenantCreateRequestSchema,
   DEFAULT_ADMIN_CSV_MAX_BYTES,
@@ -11,6 +10,7 @@ import {
   type Currency,
   type ValidationIssue,
 } from '@fs-billing/shared';
+import { normalizeAmountInput, settingsAmountError } from './amounts';
 
 export const maxRecipients = 20;
 
@@ -135,22 +135,6 @@ export function invalidRecipient(emails: string[]) {
   return emails.find((email) => !emailSchema.safeParse(email).success) ?? null;
 }
 
-function amountError(
-  value: string,
-  label: string,
-  required: boolean,
-): string | undefined {
-  if (!value.trim()) return required ? `请输入${label}` : undefined;
-  if (value.trim().startsWith('-'))
-    return label === '透支额度'
-      ? '透支额度不能为负数，不允许透支请填 0'
-      : `${label}不能为负数`;
-  const parsed = adminInputAmountSchemas.settings.safeParse(value.trim());
-  return parsed.success
-    ? undefined
-    : `${label}须为数字，最多 10 位整数、2 位小数`;
-}
-
 export type TenantSubmission = {
   tenant: z.input<typeof adminTenantCreateRequestSchema>;
   portal: AdminPortalAccountCreateRequest;
@@ -169,9 +153,12 @@ export function buildSubmission(
   if (!form.name.trim()) errors.name = '请输入租户名称';
   else if (form.name.trim().length > 200)
     errors.name = '租户名称最多 200 个字符';
-  const overdraft = amountError(form.overdraftLimit, '透支额度', true);
+  const overdraft = settingsAmountError(form.overdraftLimit, '透支额度');
   if (overdraft) errors.overdraftLimit = overdraft;
-  const threshold = amountError(form.lowBalanceThreshold, '余额提醒阈值', true);
+  const threshold = settingsAmountError(
+    form.lowBalanceThreshold,
+    '余额提醒阈值',
+  );
   if (threshold) errors.lowBalanceThreshold = threshold;
   const badEmail = invalidRecipient(form.emails);
   if (badEmail) errors.emails = `「${badEmail}」不是有效的邮箱地址`;
@@ -214,8 +201,8 @@ export function buildSubmission(
     contactPhone: form.contactPhone.trim(),
     remark: form.remark.trim(),
     settings: {
-      overdraftLimit: form.overdraftLimit.trim(),
-      lowBalanceThreshold: form.lowBalanceThreshold.trim(),
+      overdraftLimit: normalizeAmountInput(form.overdraftLimit),
+      lowBalanceThreshold: normalizeAmountInput(form.lowBalanceThreshold),
       emails: form.emails,
     },
     initialRates,

@@ -1,9 +1,9 @@
-import { apiProblem } from '../lib/api-problem';
+import { apiProblem, problemNotice } from '../lib/api-problem';
 import { Button } from './ui/button';
 
 /**
  * 数据加载失败（设计稿 1c）：标题说明哪块数据失败。
- * 登录过期与强制改密由全局处理，这里不显示；4xx 重试不会改变结果，不提供重试。
+ * 登录过期与强制改密由全局处理，这里不显示；除 429 外的 4xx 重试不会改变结果，不提供重试。
  */
 export function QueryError({
   title,
@@ -22,6 +22,7 @@ export function QueryError({
     problem.kind === 'password-change-required'
   )
     return null;
+  const notice = problemNotice(problem);
   const body =
     problem.kind === 'unavailable'
       ? '服务暂时不可用，请稍后重试'
@@ -29,7 +30,13 @@ export function QueryError({
         ? '当前账号无权查看此内容，如有疑问请联系其他管理员'
         : problem.kind === 'not-found'
           ? '内容不存在或已被删除'
-          : '请求无法完成，请刷新页面后重试';
+          : problem.kind === 'rate-limited'
+            ? `${notice.title}，${notice.body}`
+            : notice.details?.length
+              ? notice.details.join('；')
+              : '请求无法完成，请刷新页面后重试';
+  const retryable =
+    problem.kind === 'unavailable' || problem.kind === 'rate-limited';
   return (
     <div
       role="alert"
@@ -45,7 +52,7 @@ export function QueryError({
         <span className="text-sm font-semibold">{title}</span>
         <span className="text-[13px] text-muted-foreground">{body}</span>
       </div>
-      {problem.kind === 'unavailable' ? (
+      {retryable ? (
         <Button
           variant="outline"
           size="sm"

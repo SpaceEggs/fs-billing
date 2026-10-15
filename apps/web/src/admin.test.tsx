@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { QueryClient } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { passwordGate, sessionExpiry } from './lib/session';
 import {
@@ -70,6 +71,28 @@ const page = (items: unknown[], total = items.length) => ({
   items,
   pagination: { page: 1, pageSize: 25, total },
 });
+
+function deferred<Value>() {
+  let resolve!: (value: Value) => void;
+  const promise = new Promise<Value>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+/** 查询缓存与 mutation 缓存里的全部状态（含变量与结果），用来确认凭据没有留在缓存里。 */
+function cachedState(queryClient: QueryClient) {
+  return JSON.stringify([
+    queryClient
+      .getQueryCache()
+      .getAll()
+      .map((query) => query.state),
+    queryClient
+      .getMutationCache()
+      .getAll()
+      .map((mutation) => mutation.state),
+  ]);
+}
 
 type Call = { path: string; method: string; body: unknown };
 
@@ -467,7 +490,7 @@ describe('tenant create', () => {
         body: createdTenant,
       }),
     });
-    const { location } = renderApp('/admin/tenants/new', handler);
+    const { location, queryClient } = renderApp('/admin/tenants/new', handler);
     const user = userEvent.setup();
     await fillRequired(user);
     expect(screen.getByText(/将保存为大写 PCL022/)).toBeVisible();
@@ -523,11 +546,90 @@ describe('tenant create', () => {
       },
     ]);
 
+    expect(cachedState(queryClient)).not.toContain('Kp7#vR2mQx9s');
+
     await user.click(within(dialog).getByRole('button', { name: '查看租户' }));
     await waitFor(() =>
       expect(location()).toBe(`/admin/tenants/${tenantIds.created}`),
     );
     expect(screen.queryByText('Kp7#vR2mQx9s')).toBeNull();
+  });
+
+  it('keeps the dialog open until the portal result arrives', async () => {
+    const portal = deferred<{ status: number; body: unknown }>();
+    const { handler } = adminApi({
+      'POST /api/admin/tenants': () => ({ status: 200, body: createResponse }),
+      [`POST /api/admin/tenants/${tenantIds.created}/portal-accounts`]: () =>
+        portal.promise,
+    });
+    renderApp('/admin/tenants/new', handler);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: '创建租户' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '租户 PCL022 已创建',
+    });
+    expect(within(dialog).getByRole('status')).toHaveTextContent(
+      '正在开通门户账号…',
+    );
+    expect(
+      within(dialog).getByRole('button', { name: '继续新建' }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole('button', { name: '查看租户' }),
+    ).toBeDisabled();
+
+    portal.resolve({
+      status: 200,
+      body: {
+        auditId: '00000000-0000-4000-8000-00000000b004',
+        account: portalAccount,
+        passwordSource: 'generated',
+        temporaryPassword: 'Kp7#vR2mQx9s',
+      },
+    });
+    expect(
+      await within(dialog).findByRole('textbox', { name: '临时密码' }),
+    ).toHaveValue('Kp7#vR2mQx9s');
+    expect(
+      within(dialog).getByRole('button', { name: '继续新建' }),
+    ).toBeEnabled();
+    expect(
+      within(dialog).getByRole('button', { name: '查看租户' }),
+    ).toBeEnabled();
+  });
+
+  it('shows the retry time and server field messages when the portal account fails', async () => {
+    let portalAttempts = 0;
+    const { handler } = adminApi({
+      'POST /api/admin/tenants': () => ({ status: 200, body: createResponse }),
+      [`POST /api/admin/tenants/${tenantIds.created}/portal-accounts`]: () => {
+        portalAttempts += 1;
+        return portalAttempts === 1
+          ? {
+              status: 429,
+              body: apiError('RATE_LIMITED', { retryAfterSeconds: 30 }),
+            }
+          : {
+              status: 400,
+              body: apiError('VALIDATION_ERROR', {
+                issues: [{ path: ['password'], message: '密码不能包含邮箱' }],
+              }),
+            };
+      },
+    });
+    renderApp('/admin/tenants/new', handler);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: '创建租户' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '租户 PCL022 已创建',
+    });
+    const limited = await within(dialog).findByRole('alert');
+    expect(limited).toHaveTextContent('操作过于频繁，请在 30 秒后重试');
+    await user.click(within(limited).getByRole('button', { name: '重试开通' }));
+    expect(await within(dialog).findByText('密码不能包含邮箱')).toBeVisible();
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('提交内容有误');
   });
 
   it('keeps the created tenant when the portal account fails and allows a retry', async () => {
@@ -548,7 +650,7 @@ describe('tenant create', () => {
             };
       },
     });
-    renderApp('/admin/tenants/new', handler);
+    const { queryClient } = renderApp('/admin/tenants/new', handler);
     const user = userEvent.setup();
     await fillRequired(user);
     await user.type(screen.getByLabelText(/初始密码/), 'Supplied-2026');
@@ -568,6 +670,7 @@ describe('tenant create', () => {
     expect(
       within(dialog).queryByRole('textbox', { name: '临时密码' }),
     ).toBeNull();
+    expect(cachedState(queryClient)).not.toContain('Supplied-2026');
   });
 
   it('shows every local error at once without calling the API', async () => {
@@ -645,5 +748,159 @@ describe('tenant create', () => {
       '第 12 行：前缀只能包含数字第 37 行：费率不能为负数',
     );
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  /** 读取由测试控制何时完成的 CSV 文件。 */
+  function slowCsv(name: string, content: string) {
+    const file = new File([content], name, { type: 'text/csv' });
+    const read = deferred<ArrayBuffer>();
+    Object.defineProperty(file, 'arrayBuffer', { value: () => read.promise });
+    return {
+      file,
+      finish: async () => read.resolve(await new Blob([content]).arrayBuffer()),
+    };
+  }
+
+  it('uses the last selected CSV even when an earlier read finishes later', async () => {
+    const { calls, handler } = adminApi({
+      'POST /api/admin/tenants': () => ({
+        status: 409,
+        body: apiError('TENANT_CODE_EXISTS'),
+      }),
+    });
+    renderApp('/admin/tenants/new', handler);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('radio', { name: /从 CSV 导入/ }));
+    const first = slowCsv('a.csv', 'prefix,country,rate\n86,中国,0.05\n');
+    const second = slowCsv('b.csv', 'prefix,country,rate\n1,美国,0.01\n');
+    await user.upload(screen.getByLabelText('CSV 文件'), first.file);
+    await user.upload(screen.getByLabelText('CSV 文件'), second.file);
+    expect(screen.getByText('正在读取 b.csv…')).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '正在读取 CSV…' }),
+    ).toBeDisabled();
+
+    await second.finish();
+    expect(await screen.findByText('已选择 b.csv')).toBeVisible();
+    await first.finish();
+    await user.click(screen.getByRole('button', { name: '创建租户' }));
+    await screen.findByText('租户编码已被使用');
+    expect(screen.getByText('已选择 b.csv')).toBeVisible();
+    const create = calls.find((call) => call.method === 'POST');
+    expect(create?.body).toMatchObject({
+      initialRates: {
+        kind: 'csv',
+        file: {
+          filename: 'b.csv',
+          contentBase64: btoa(
+            String.fromCharCode(
+              ...new TextEncoder().encode('prefix,country,rate\n1,美国,0.01\n'),
+            ),
+          ),
+        },
+      },
+    });
+  });
+
+  it('a CSV read that finishes after switching to a blank rate table is discarded', async () => {
+    const { calls, handler } = adminApi({
+      'POST /api/admin/tenants': () => ({
+        status: 409,
+        body: apiError('TENANT_CODE_EXISTS'),
+      }),
+    });
+    renderApp('/admin/tenants/new', handler);
+    const user = userEvent.setup();
+    await fillRequired(user);
+    await user.click(screen.getByRole('radio', { name: /从 CSV 导入/ }));
+    const pending = slowCsv('a.csv', 'prefix,country,rate\n86,中国,0.05\n');
+    await user.upload(screen.getByLabelText('CSV 文件'), pending.file);
+    await user.click(screen.getByRole('radio', { name: /空白费率表/ }));
+    await pending.finish();
+    expect(screen.getByRole('radio', { name: /空白费率表/ })).toBeChecked();
+    expect(screen.queryByLabelText('CSV 文件')).toBeNull();
+    await user.click(screen.getByRole('button', { name: '创建租户' }));
+    await screen.findByText('租户编码已被使用');
+    expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({
+      initialRates: { kind: 'blank' },
+    });
+  });
+
+  it('searches copy sources on the server when there are more than one page', async () => {
+    const { calls, handler } = adminApi({
+      'GET /api/admin/tenants': (path) =>
+        path.includes('search=OLD')
+          ? { status: 200, body: page([tenants[2]]) }
+          : { status: 200, body: page([tenants[0]], 180) },
+      [`GET /api/admin/tenants/${tenantIds.old}/rates`]: () => ({
+        status: 200,
+        body: {
+          currency: 'CNY',
+          current: {
+            id: '00000000-0000-4000-8000-00000000c001',
+            effectiveFrom: '2026-10-01T00:00:00.000Z',
+            entries: [],
+          },
+          scheduled: [],
+        },
+      }),
+    });
+    renderApp('/admin/tenants/new', handler);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('radio', { name: /复制某个租户的费率表/ }),
+    );
+    expect(
+      await screen.findByText(
+        '共 180 个匹配的同币种（CNY）租户，仅列出前 1 个，请输入编码或名称缩小范围',
+      ),
+    ).toBeVisible();
+    await user.type(screen.getByLabelText('搜索来源租户'), 'OLD');
+    const option = await screen.findByRole('option', {
+      name: 'OLD001 存量租户',
+    });
+    await user.selectOptions(screen.getByLabelText('复制自'), option);
+    expect(await screen.findByText('当前生效版本 0 条费率')).toBeVisible();
+    expect(
+      calls.some(
+        (call) =>
+          call.path.startsWith('/api/admin/tenants?') &&
+          new URLSearchParams(call.path.split('?')[1]).get('search') === 'OLD',
+      ),
+    ).toBe(true);
+  });
+
+  it('currency and rate source are native radio groups that follow arrow keys', async () => {
+    const { handler } = adminApi({});
+    renderApp('/admin/tenants/new', handler);
+    const user = userEvent.setup();
+    const cny = await screen.findByRole('radio', { name: 'CNY 人民币' });
+    expect(cny).toBeChecked();
+    await user.click(cny);
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: 'USD 美元' })).toBeChecked();
+    expect(screen.getByLabelText(/透支额度/)).toHaveValue('15.00');
+
+    await user.click(screen.getByRole('radio', { name: /空白费率表/ }));
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('radio', { name: /从 CSV 导入/ })).toBeChecked();
+    expect(screen.getByLabelText('CSV 文件')).toBeVisible();
+  });
+});
+
+describe('query errors', () => {
+  it('a rate-limited list says when to retry', async () => {
+    const { handler } = adminApi({
+      'GET /api/admin/tenants': () => ({
+        status: 429,
+        body: apiError('RATE_LIMITED', { retryAfterSeconds: 45 }),
+      }),
+    });
+    renderApp('/admin/tenants', handler);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('租户列表加载失败');
+    expect(alert).toHaveTextContent('操作过于频繁，请在 45 秒后重试');
+    expect(within(alert).getByRole('button', { name: '重试' })).toBeVisible();
   });
 });

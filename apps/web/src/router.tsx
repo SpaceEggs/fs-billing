@@ -15,6 +15,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { AdminPlaceholderPage } from './pages/admin/placeholder';
 import { TenantCreatePage } from './pages/admin/tenant-create';
 import { TenantDetailPage } from './pages/admin/tenant-detail';
+import { TenantEditPage } from './pages/admin/tenant-edit';
 import { TenantListPage } from './pages/admin/tenant-list';
 import { BlockedPage } from './pages/blocked';
 import { ChangePasswordPage } from './pages/change-password';
@@ -182,14 +183,7 @@ const adminTenantDetail = createRoute({
 const adminTenantEdit = createRoute({
   getParentRoute: () => adminLayout,
   path: 'tenants/$tenantId/edit',
-  component: () => (
-    <AdminPlaceholderPage
-      identity={useZoneIdentity()}
-      title="编辑租户"
-      crumb="租户 / 编辑租户"
-      activeNav="租户"
-    />
-  ),
+  component: () => <TenantEditPage identity={useZoneIdentity()} />,
 });
 
 const adminTenantRateImport = createRoute({

@@ -1,5 +1,5 @@
-import { useEffect, useId, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useId, useRef, useState } from 'react';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   currencySchema,
@@ -7,10 +7,17 @@ import {
   type AdminPortalAccountCreateRequest,
   type AdminPortalAccountCreateResponse,
   type AdminTenantCreateResponse,
+  type AdminTenantSummary,
   type Currency,
   type Identity,
 } from '@fs-billing/shared';
 import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  Field,
+  invalidClass,
+  MoneyInput,
+  RecipientsInput,
+} from '../../components/admin/form-fields';
 import { CopyField } from '../../components/copy-field';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { ModalDialog } from '../../components/ui/dialog';
@@ -23,7 +30,6 @@ import {
 import { ApiRequestError, callApi } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import {
-  addRecipients,
   buildSubmission,
   changeCurrency,
   csvTooLarge,
@@ -41,86 +47,23 @@ const currencyLabel = {
   CNY: 'CNY 人民币',
   USD: 'USD 美元',
 } as const satisfies Record<Currency, string>;
-const currencySymbol = { CNY: '¥', USD: '$' } as const satisfies Record<
-  Currency,
-  string
->;
 
 type CopySource = Extract<RatesChoice, { kind: 'copy' }>['source'];
 type PortalState =
   | { status: 'pending' }
   | { status: 'created'; response: AdminPortalAccountCreateResponse }
-  | { status: 'failed'; message: string };
+  | { status: 'failed'; error: unknown };
 type Created = {
   tenant: AdminTenantCreateResponse['tenant'];
   rates: string;
   portalRequest: AdminPortalAccountCreateRequest;
   portal: PortalState;
 };
-
-function Field({
-  label,
-  required = false,
-  hint,
-  error,
-  className,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  hint?: React.ReactNode;
-  error: string | undefined;
-  className?: string;
-  children: (props: {
-    id: string;
-    'aria-invalid': true | undefined;
-    'aria-describedby': string | undefined;
-    'aria-required': true | undefined;
-  }) => React.ReactNode;
-}) {
-  const id = useId();
-  const messageId = `${id}-message`;
-  const hintId = `${id}-hint`;
-  const describedBy =
-    [error ? messageId : null, hint ? hintId : null]
-      .filter(Boolean)
-      .join(' ') || undefined;
-  return (
-    <div className={cn('flex flex-col gap-1.5 text-sm font-medium', className)}>
-      <label htmlFor={id}>
-        {label}
-        {required ? (
-          <span aria-hidden className="text-err">
-            {' '}
-            *
-          </span>
-        ) : null}
-      </label>
-      {children({
-        id,
-        'aria-invalid': error ? true : undefined,
-        'aria-describedby': describedBy,
-        'aria-required': required || undefined,
-      })}
-      {error ? (
-        <span id={messageId} className="text-xs font-normal text-err">
-          {error}
-        </span>
-      ) : null}
-      {hint ? (
-        <span
-          id={hintId}
-          className="text-xs leading-normal font-normal text-muted-foreground"
-        >
-          {hint}
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-const invalidClass = (error: string | undefined) =>
-  error ? 'border-err focus-visible:ring-err/30' : undefined;
+type PortalAttempt = {
+  run: number;
+  tenantId: string;
+  body: AdminPortalAccountCreateRequest;
+};
 
 function Section({
   title,
@@ -147,50 +90,6 @@ function Section({
   );
 }
 
-function MoneyInput({
-  currency,
-  value,
-  onChange,
-  placeholder,
-  error,
-  ...aria
-}: {
-  currency: Currency;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  error: string | undefined;
-  id: string;
-  'aria-invalid': true | undefined;
-  'aria-describedby': string | undefined;
-  'aria-required': true | undefined;
-}) {
-  return (
-    <div
-      className={cn(
-        'flex h-11 items-center overflow-hidden rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 md:h-10',
-        error && 'border-err',
-      )}
-    >
-      <span
-        aria-hidden
-        className="flex h-full items-center border-r border-input px-3 text-muted-foreground"
-      >
-        {currencySymbol[currency]}
-      </span>
-      <input
-        {...aria}
-        inputMode="decimal"
-        autoComplete="off"
-        placeholder={placeholder}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-full min-w-0 flex-1 bg-transparent px-3 text-right text-base tabular-nums outline-none placeholder:text-muted-foreground md:text-sm"
-      />
-    </div>
-  );
-}
-
 function CurrencyChoice({
   value,
   onChange,
@@ -198,9 +97,10 @@ function CurrencyChoice({
   value: Currency;
   onChange: (currency: Currency) => void;
 }) {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <span id="currency-label">
+      <span id={`${id}-label`}>
         币种
         <span aria-hidden className="text-err">
           {' '}
@@ -209,121 +109,29 @@ function CurrencyChoice({
       </span>
       <div
         role="radiogroup"
-        aria-labelledby="currency-label"
+        aria-labelledby={`${id}-label`}
         className="grid h-11 grid-cols-2 gap-0.5 rounded-lg bg-muted p-[3px] md:h-10"
       >
         {currencySchema.options.map((currency) => (
-          <button
+          <label
             key={currency}
-            type="button"
-            role="radio"
-            aria-checked={value === currency}
-            onClick={() => onChange(currency)}
-            className={cn(
-              'rounded-md text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-              value === currency
-                ? 'bg-background font-semibold text-primary shadow-[0_1px_2px_rgba(0,0,0,.12)]'
-                : 'font-normal text-muted-foreground',
-            )}
+            className="flex cursor-pointer items-center justify-center rounded-md text-sm font-normal text-muted-foreground has-checked:bg-background has-checked:font-semibold has-checked:text-primary has-checked:shadow-[0_1px_2px_rgba(0,0,0,.12)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
           >
+            <input
+              type="radio"
+              name={id}
+              value={currency}
+              checked={value === currency}
+              onChange={() => onChange(currency)}
+              className="sr-only"
+            />
             {currencyLabel[currency]}
-          </button>
+          </label>
         ))}
       </div>
       <span className="text-xs font-normal text-muted-foreground">
         创建后不可修改
       </span>
-    </div>
-  );
-}
-
-/** 通知邮箱：回车、逗号或失焦时加入列表；小写去重后显示；为空时提示提醒无法送达。 */
-function RecipientsInput({
-  emails,
-  error,
-  onChange,
-}: {
-  emails: string[];
-  error: string | undefined;
-  onChange: (emails: string[]) => void;
-}) {
-  const id = useId();
-  const [draft, setDraft] = useState('');
-  const [notice, setNotice] = useState<string | null>(null);
-  const commit = () => {
-    if (!draft.trim()) return;
-    const next = addRecipients(emails, draft);
-    onChange(next.emails);
-    setNotice(next.notice);
-    setDraft('');
-  };
-  return (
-    <div className="flex flex-col gap-1.5 text-sm font-medium md:col-span-2">
-      <label htmlFor={id}>通知邮箱</label>
-      <span className="-mt-1 text-xs font-normal text-muted-foreground">
-        可添加多个，余额不足和停机通知会发送到这些邮箱
-      </span>
-      <div
-        className={cn(
-          'flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 font-normal focus-within:ring-[3px] focus-within:ring-ring/50',
-          error && 'border-err',
-        )}
-      >
-        <ul aria-label="已添加的通知邮箱" className="contents">
-          {emails.map((email) => (
-            <li
-              key={email}
-              className="flex h-7 items-center gap-1.5 rounded-md bg-muted pr-1.5 pl-2.5 text-[13px]"
-            >
-              {email}
-              <button
-                type="button"
-                aria-label={`移除 ${email}`}
-                onClick={() =>
-                  onChange(emails.filter((item) => item !== email))
-                }
-                className="text-[11px] text-muted-foreground"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-        <input
-          id={id}
-          type="email"
-          autoComplete="off"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={`${id}-messages`}
-          placeholder="输入邮箱后按回车添加"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ',') {
-              event.preventDefault();
-              commit();
-            } else if (event.key === 'Backspace' && !draft && emails.length)
-              onChange(emails.slice(0, -1));
-          }}
-          className="h-8 min-w-[180px] flex-1 bg-transparent px-1.5 text-base outline-none placeholder:text-[13px] placeholder:text-muted-foreground md:text-sm"
-        />
-      </div>
-      <div id={`${id}-messages`} className="flex flex-col gap-1">
-        {error ? (
-          <span className="text-xs font-normal text-err">{error}</span>
-        ) : null}
-        {notice ? (
-          <span className="text-xs font-normal text-muted-foreground">
-            {notice}
-          </span>
-        ) : null}
-        {emails.length === 0 ? (
-          <span role="status" className="text-xs font-normal text-warn">
-            未配置收件人，余额提醒无法送达
-          </span>
-        ) : null}
-      </div>
     </div>
   );
 }
@@ -344,12 +152,12 @@ const rateOptions = [
 
 function CsvPicker({
   file,
-  onFile,
-  onError,
+  reading,
+  onSelect,
 }: {
   file: { filename: string } | null;
-  onFile: (file: { filename: string; contentBase64: string } | null) => void;
-  onError: (message: string | null) => void;
+  reading: string | null;
+  onSelect: (file: File | null) => void;
 }) {
   const id = useId();
   return (
@@ -359,30 +167,24 @@ function CsvPicker({
         id={id}
         type="file"
         accept=".csv,text/csv"
-        onChange={(event) => {
-          const selected = event.target.files?.[0];
-          if (!selected) return onFile(null);
-          if (csvTooLarge(selected.size)) {
-            onFile(null);
-            onError('文件超过 2 MB 上限');
-            return;
-          }
-          onError(null);
-          void fileToBase64(selected).then((contentBase64) =>
-            onFile({ filename: selected.name, contentBase64 }),
-          );
-        }}
+        onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
         className="text-[13px] font-normal file:mr-3 file:h-9 file:rounded-lg file:border file:border-input file:bg-transparent file:px-3 file:text-sm file:text-foreground"
       />
-      <span className="text-xs font-normal text-muted-foreground">
-        {file
-          ? `已选择 ${file.filename}`
-          : '整表导入；首行可为表头 prefix,country,rate 或 前缀,国家,费率；支持 UTF-8 与 GBK'}
+      <span
+        role={reading ? 'status' : undefined}
+        className="text-xs font-normal text-muted-foreground"
+      >
+        {reading
+          ? `正在读取 ${reading}…`
+          : file
+            ? `已选择 ${file.filename}`
+            : '整表导入；首行可为表头 prefix,country,rate 或 前缀,国家,费率；支持 UTF-8 与 GBK'}
       </span>
     </div>
   );
 }
 
+/** 一次最多列出 100 个同币种租户，更多时按编码或名称在服务端搜索。 */
 function CopySourcePicker({
   currency,
   source,
@@ -393,15 +195,19 @@ function CopySourcePicker({
   onChange: (source: CopySource) => void;
 }) {
   const id = useId();
-  const [tenantId, setTenantId] = useState(source?.tenantId ?? '');
-  const tenants = useQuery(
-    apiQuery('adminTenants', { query: { currency, pageSize: 100 } }),
-  );
-  const rates = useQuery({
-    ...apiQuery('adminRates', { params: { tenantId } }),
-    enabled: tenantId !== '',
+  const [search, setSearch] = useState('');
+  const [picked, setPicked] = useState<AdminTenantSummary | null>(null);
+  const term = search.trim();
+  const tenants = useQuery({
+    ...apiQuery('adminTenants', {
+      query: { currency, pageSize: 100, ...(term ? { search: term } : {}) },
+    }),
+    placeholderData: keepPreviousData,
   });
-  const picked = tenants.data?.items.find((item) => item.id === tenantId);
+  const rates = useQuery({
+    ...apiQuery('adminRates', { params: { tenantId: picked?.id ?? '' } }),
+    enabled: picked !== null,
+  });
   const current = rates.data?.current;
   useEffect(() => {
     if (!picked || !current) return;
@@ -412,15 +218,32 @@ function CopySourcePicker({
       label: `已复制 ${picked.code} 的 ${current.entries.length} 条费率`,
     });
   }, [picked, current, source, onChange]);
+  const items = tenants.data?.items ?? [];
+  const options =
+    picked && !items.some((item) => item.id === picked.id)
+      ? [picked, ...items]
+      : items;
+  const total = tenants.data?.pagination.total ?? 0;
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium md:col-span-2">
+      <label htmlFor={`${id}-search`}>搜索来源租户</label>
+      <Input
+        id={`${id}-search`}
+        type="search"
+        autoComplete="off"
+        placeholder="输入编码或名称"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
       <label htmlFor={id}>复制自</label>
       <select
         id={id}
-        value={tenantId}
+        value={picked?.id ?? ''}
         disabled={!tenants.data}
         onChange={(event) => {
-          setTenantId(event.target.value);
+          setPicked(
+            options.find((item) => item.id === event.target.value) ?? null,
+          );
           onChange(null);
         }}
         className="h-11 rounded-lg border border-input bg-background px-3 text-base font-normal outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-10 md:text-sm"
@@ -429,10 +252,12 @@ function CopySourcePicker({
           {tenants.isError
             ? '租户列表加载失败'
             : tenants.data
-              ? '选择租户'
+              ? items.length
+                ? '选择租户'
+                : '没有匹配的同币种租户'
               : '加载中…'}
         </option>
-        {tenants.data?.items.map((tenant) => (
+        {options.map((tenant) => (
           <option key={tenant.id} value={tenant.id}>
             {tenant.code} {tenant.name}
           </option>
@@ -443,7 +268,9 @@ function CopySourcePicker({
           ? '该租户的费率表加载失败，请重新选择'
           : current && picked
             ? `当前生效版本 ${current.entries.length} 条费率`
-            : `仅显示同币种（${currency}）的租户`}
+            : total > items.length
+              ? `共 ${total} 个匹配的同币种（${currency}）租户，仅列出前 ${items.length} 个，请输入编码或名称缩小范围`
+              : `仅显示同币种（${currency}）的租户`}
       </span>
     </div>
   );
@@ -469,13 +296,35 @@ function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
   );
 }
 
+function PortalFailure({ error }: { error: unknown }) {
+  if (error instanceof ApiRequestError && error.status === 0)
+    return (
+      <span className="text-[13px]">
+        网络中断，无法确认是否已开通。请先在租户详情「门户账号」标签页查看，不要重复开通。
+      </span>
+    );
+  const notice = problemNotice(apiProblem(error));
+  return (
+    <>
+      <span className="text-[13px]">
+        {notice.body ? `${notice.title}，${notice.body}` : notice.title}
+      </span>
+      {notice.details?.length ? (
+        <ul className="m-0 flex list-disc flex-col gap-0.5 pl-5 text-[13px]">
+          {notice.details.map((detail) => (
+            <li key={detail}>{detail}</li>
+          ))}
+        </ul>
+      ) : null}
+    </>
+  );
+}
+
 function PortalResult({
   created,
-  retrying,
   onRetry,
 }: {
   created: Created;
-  retrying: boolean;
   onRetry: () => void;
 }) {
   const { portal, portalRequest } = created;
@@ -494,7 +343,7 @@ function PortalResult({
         <span className="text-sm font-semibold">
           门户账号 {portalRequest.email} 未开通
         </span>
-        <span className="text-[13px]">{portal.message}</span>
+        <PortalFailure error={portal.error} />
         <span className="text-xs text-foreground">
           租户已创建。可以重试，或稍后在租户详情「门户账号」标签页开通。
         </span>
@@ -502,7 +351,6 @@ function PortalResult({
           variant="outline"
           size="sm"
           className="self-start"
-          disabled={retrying}
           onClick={onRetry}
         >
           重试开通
@@ -538,18 +386,18 @@ function PortalResult({
 
 function CreatedDialog({
   created,
-  retrying,
   onRetryPortal,
   onContinue,
   onView,
 }: {
   created: Created;
-  retrying: boolean;
   onRetryPortal: () => void;
   onContinue: () => void;
   onView: () => void;
 }) {
   const { tenant } = created;
+  // 开通结果返回前离开会丢失只显示一次的临时密码，也可能把结果挂到下一个租户上。
+  const portalPending = created.portal.status === 'pending';
   return (
     <ModalDialog
       open
@@ -583,16 +431,21 @@ function CreatedDialog({
           对接上设置此通道变量，否则话单会进入「未归属话单」。
         </span>
       </div>
-      <PortalResult
-        created={created}
-        retrying={retrying}
-        onRetry={onRetryPortal}
-      />
+      <PortalResult created={created} onRetry={onRetryPortal} />
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
-        <Button variant="outline" className="h-12 md:h-9" onClick={onContinue}>
+        <Button
+          variant="outline"
+          className="h-12 md:h-9"
+          disabled={portalPending}
+          onClick={onContinue}
+        >
           继续新建
         </Button>
-        <Button className="h-12 md:h-9" onClick={onView}>
+        <Button
+          className="h-12 md:h-9"
+          disabled={portalPending}
+          onClick={onView}
+        >
           查看租户
         </Button>
       </div>
@@ -622,22 +475,46 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     invalidate: (queryClient, _input, result) =>
       invalidateTenant(queryClient, result.tenant.id),
   });
-  // 临时密码只留在组件状态里：结果不进入查询缓存，卸载后即清除。
+  // 请求带初始密码、响应带临时密码，只经由 ref 和组件状态传递：mutation 的变量只是请求序号，
+  // 结果为空，MutationCache 里不留凭据。序号不是当前请求时，迟到的结果直接丢弃。
+  const portalRuns = useRef(0);
+  const portalAttempt = useRef<PortalAttempt | null>(null);
+  const settlePortal = (attempt: PortalAttempt, portal: PortalState) => {
+    if (portalAttempt.current !== attempt) return;
+    setCreated((current) =>
+      current?.tenant.id === attempt.tenantId
+        ? { ...current, portal }
+        : current,
+    );
+  };
   const createPortal = useMutation({
-    gcTime: 0,
-    mutationFn: (input: {
-      tenantId: string;
-      body: AdminPortalAccountCreateRequest;
-    }) =>
-      callApi('adminPortalAccountCreate', {
-        params: { tenantId: input.tenantId },
-        body: input.body,
-      }),
+    mutationFn: async (run: number) => {
+      const attempt = portalAttempt.current;
+      if (attempt?.run !== run) return;
+      const response = await callApi('adminPortalAccountCreate', {
+        params: { tenantId: attempt.tenantId },
+        body: attempt.body,
+      });
+      settlePortal(attempt, { status: 'created', response });
+    },
   });
+
+  // 选择新文件、切换费率来源或离开页面都让进行中的读取作废。
+  const csvReads = useRef(0);
+  const [readingCsv, setReadingCsv] = useState<string | null>(null);
+  useEffect(
+    () => () => {
+      csvReads.current += 1;
+      portalAttempt.current = null;
+    },
+    [],
+  );
 
   const update = (patch: Partial<TenantForm>) =>
     setForm((current) => ({ ...current, ...patch }));
   const setRates = (rates: RatesChoice) => {
+    csvReads.current += 1;
+    setReadingCsv(null);
     setCsvRows(null);
     setErrors((current) => {
       const next = { ...current };
@@ -646,29 +523,48 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     });
     update({ rates });
   };
+  const rateError = (message: string) =>
+    setErrors((current) => ({ ...current, rates: message }));
+
+  function pickCsv(selected: File | null) {
+    setRates({ kind: 'csv', file: null });
+    if (!selected) return;
+    if (csvTooLarge(selected.size)) {
+      rateError('文件超过 2 MB 上限');
+      return;
+    }
+    const read = (csvReads.current += 1);
+    setReadingCsv(selected.name);
+    fileToBase64(selected).then(
+      (contentBase64) => {
+        if (read !== csvReads.current) return;
+        setReadingCsv(null);
+        update({
+          rates: {
+            kind: 'csv',
+            file: { filename: selected.name, contentBase64 },
+          },
+        });
+      },
+      () => {
+        if (read !== csvReads.current) return;
+        setReadingCsv(null);
+        rateError('文件读取失败，请重新选择');
+      },
+    );
+  }
 
   async function openPortal(
     tenantId: string,
     body: AdminPortalAccountCreateRequest,
   ) {
-    setCreated(
-      (current) => current && { ...current, portal: { status: 'pending' } },
-    );
+    const attempt = { run: (portalRuns.current += 1), tenantId, body };
+    portalAttempt.current = attempt;
+    settlePortal(attempt, { status: 'pending' });
     try {
-      const response = await createPortal.mutateAsync({ tenantId, body });
-      setCreated(
-        (current) =>
-          current && { ...current, portal: { status: 'created', response } },
-      );
+      await createPortal.mutateAsync(attempt.run);
     } catch (error) {
-      const message =
-        error instanceof ApiRequestError && error.status === 0
-          ? '网络中断，无法确认是否已开通。请先在租户详情「门户账号」标签页查看，不要重复开通。'
-          : problemNotice(apiProblem(error)).title;
-      setCreated(
-        (current) =>
-          current && { ...current, portal: { status: 'failed', message } },
-      );
+      settlePortal(attempt, { status: 'failed', error });
     }
   }
 
@@ -743,6 +639,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
   }
 
   async function submit() {
+    if (readingCsv) return;
     const built = buildSubmission(form);
     if (!built.ok) {
       const count = Object.keys(built.errors).length;
@@ -768,8 +665,9 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     await openPortal(response.tenant.id, built.value.portal);
   }
 
+  const rateGroup = useId();
   const codeHint = normalizedCode(form.code);
-  const pending = createTenant.isPending;
+  const pending = createTenant.isPending || readingCsv !== null;
 
   return (
     <AppShell
@@ -1002,15 +900,17 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               aria-label="初始费率表"
               className="grid gap-2.5 md:col-span-2 md:grid-cols-3"
             >
-              {rateOptions.map((option) => {
-                const selected = form.rates.kind === option.kind;
-                return (
-                  <button
-                    key={option.kind}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() =>
+              {rateOptions.map((option) => (
+                <label
+                  key={option.kind}
+                  className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-input p-3 has-checked:border-[1.5px] has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+                >
+                  <input
+                    type="radio"
+                    name={rateGroup}
+                    value={option.kind}
+                    checked={form.rates.kind === option.kind}
+                    onChange={() =>
                       setRates(
                         option.kind === 'blank'
                           ? { kind: 'blank' }
@@ -1019,43 +919,26 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                             : { kind: 'copy', source: null },
                       )
                     }
-                    className={cn(
-                      'flex items-start gap-2.5 rounded-lg border p-3 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-                      selected
-                        ? 'border-[1.5px] border-primary bg-brand-soft'
-                        : 'border-input',
-                    )}
-                  >
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'mt-0.5 size-4 shrink-0 rounded-full',
-                        selected
-                          ? 'border-[5px] border-primary'
-                          : 'border-[1.5px] border-input',
-                      )}
-                    />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-sm font-medium">
-                        {option.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {option.sub}
-                      </span>
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden
+                    className="mt-0.5 size-4 shrink-0 rounded-full border-[1.5px] border-input peer-checked:border-[5px] peer-checked:border-primary"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {option.sub}
                     </span>
-                  </button>
-                );
-              })}
+                  </span>
+                </label>
+              ))}
             </div>
             {form.rates.kind === 'csv' ? (
               <CsvPicker
                 file={form.rates.file}
-                onFile={(file) => setRates({ kind: 'csv', file })}
-                onError={(message) =>
-                  setErrors((current) =>
-                    message ? { ...current, rates: message } : current,
-                  )
-                }
+                reading={readingCsv}
+                onSelect={pickCsv}
               />
             ) : null}
             {form.rates.kind === 'copy' ? (
@@ -1094,18 +977,22 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               disabled={pending}
               className="h-12 flex-1 text-base md:h-9 md:flex-none md:text-sm"
             >
-              {pending ? '创建中…' : '创建租户'}
+              {createTenant.isPending
+                ? '创建中…'
+                : readingCsv
+                  ? '正在读取 CSV…'
+                  : '创建租户'}
             </Button>
           </div>
         </form>
         {created ? (
           <CreatedDialog
             created={created}
-            retrying={createPortal.isPending}
             onRetryPortal={() =>
               void openPortal(created.tenant.id, created.portalRequest)
             }
             onContinue={() => {
+              portalAttempt.current = null;
               setCreated(null);
               setForm(initialTenantForm(adminEmail));
               createPortal.reset();

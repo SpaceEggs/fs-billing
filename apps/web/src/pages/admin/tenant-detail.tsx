@@ -1,5 +1,11 @@
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams, useSearch } from '@tanstack/react-router';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearch,
+} from '@tanstack/react-router';
 import type {
   AdminTenantDetailResponse,
   AdminTenantSummary,
@@ -7,12 +13,23 @@ import type {
   Identity,
 } from '@fs-billing/shared';
 import { AppShell, PageBody } from '../../components/app-shell';
+import { BalanceDialog } from '../../components/admin/balance-dialog';
+import {
+  TenantStatusDialog,
+  type StatusChangeResult,
+} from '../../components/admin/tenant-status-dialog';
 import { TenantStatus } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
 import { QueryError } from '../../components/query-error';
+import { Button, buttonVariants } from '../../components/ui/button';
 import { apiQuery } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
-import { tenantTabs } from '../../lib/admin-search';
+import { tenantTabs, type TenantTab } from '../../lib/admin-search';
+import { LedgerTab } from './tenant-tabs/ledger-tab';
+import { OverviewTab } from './tenant-tabs/overview-tab';
+import { PortalTab } from './tenant-tabs/portal-tab';
+import { RatesTab } from './tenant-tabs/rates-tab';
+import { SettingsTab } from './tenant-tabs/settings-tab';
 import { formatDate } from '../../lib/format';
 import { cn } from '../../lib/utils';
 
@@ -127,17 +144,63 @@ function DetailError({
   );
 }
 
-/** 租户详情外壳：标题、余额卡片与标签页；各标签页内容随后续交付。 */
+function TabContent({
+  tab,
+  tenant,
+}: {
+  tab: TenantTab;
+  tenant: AdminTenantDetailResponse;
+}) {
+  switch (tab) {
+    case 'overview':
+      return <OverviewTab tenantId={tenant.id} currency={tenant.currency} />;
+    case 'ledger':
+      return <LedgerTab tenantId={tenant.id} />;
+    case 'rates':
+      return <RatesTab tenantId={tenant.id} />;
+    case 'settings':
+      return <SettingsTab tenant={tenant} />;
+    case 'portal':
+      return (
+        <PortalTab
+          tenantId={tenant.id}
+          tenantDisabled={tenant.status === 'disabled'}
+        />
+      );
+  }
+}
+
+const statusNotices = {
+  disable: {
+    changed: '租户已停用，已记入操作日志',
+    same: '租户已是停用状态，没有变更',
+  },
+  enable: {
+    changed: '租户已启用，已记入操作日志',
+    same: '租户已是启用状态，没有变更',
+  },
+} as const;
+
+/** 租户详情（设计稿第一批 2a/2b、第三批）：标题与操作、余额卡片、标签页。 */
 export function TenantDetailPage({ identity }: { identity: Identity }) {
   const { tenantId } = useParams({ from: '/admin/tenants/$tenantId' });
   const { tab = 'overview' } = useSearch({ from: '/admin/tenants/$tenantId' });
+  const navigate = useNavigate();
   const listed = useListedTenant(tenantId);
   const detail = useQuery(
     apiQuery('adminTenantDetail', { params: { tenantId } }),
   );
+  const [balanceOpen, setBalanceOpen] = useState(false);
+  const [statusAction, setStatusAction] = useState<'disable' | 'enable' | null>(
+    null,
+  );
+  const [statusResult, setStatusResult] = useState<StatusChangeResult | null>(
+    null,
+  );
   const tenant = detail.data;
   const code = tenant?.code ?? listed?.code;
   const title = tenant?.name ?? listed?.name ?? '租户详情';
+  const disabled = tenant?.status === 'disabled';
   return (
     <AppShell
       identity={identity}
@@ -145,14 +208,50 @@ export function TenantDetailPage({ identity }: { identity: Identity }) {
       crumb={<Crumb code={code} />}
       activeNav="租户"
     >
-      <PageBody title={title}>
+      <PageBody
+        title={title}
+        {...(tenant
+          ? {
+              meta: (
+                <TenantStatus
+                  health={tenant.health}
+                  settingsConfigured={tenant.settingsConfigured}
+                />
+              ),
+              actions: (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStatusResult(null);
+                      setStatusAction(disabled ? 'enable' : 'disable');
+                    }}
+                  >
+                    {disabled ? '启用' : '停用'}
+                  </Button>
+                  <Link
+                    to="/admin/tenants/$tenantId/edit"
+                    params={{ tenantId }}
+                    className={buttonVariants({ variant: 'outline' })}
+                  >
+                    编辑
+                  </Link>
+                  <Button
+                    className="hidden md:inline-flex"
+                    onClick={() => setBalanceOpen(true)}
+                  >
+                    余额操作
+                  </Button>
+                </div>
+              ),
+            }
+          : {})}
+      >
         {tenant ? (
           <>
             <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-lg font-semibold md:hidden">
-                  {tenant.name}
-                </span>
+              <div className="flex flex-wrap items-center gap-2.5 md:hidden">
+                <span className="text-lg font-semibold">{tenant.name}</span>
                 <TenantStatus
                   health={tenant.health}
                   settingsConfigured={tenant.settingsConfigured}
@@ -164,7 +263,53 @@ export function TenantDetailPage({ identity }: { identity: Identity }) {
                 <span>创建于 {formatDate(tenant.createdAt)}</span>
               </div>
             </div>
+            {statusResult ? (
+              <div
+                role="status"
+                className={cn(
+                  'rounded-lg border px-3.5 py-2.5 text-[13px]',
+                  statusResult.changed
+                    ? 'border-ok-border bg-ok-soft text-ok'
+                    : 'border-border bg-muted text-muted-foreground',
+                )}
+              >
+                {
+                  statusNotices[statusResult.action][
+                    statusResult.changed ? 'changed' : 'same'
+                  ]
+                }
+              </div>
+            ) : null}
             <BalanceCards tenant={tenant} />
+            <Button
+              size="lg"
+              className="md:hidden"
+              onClick={() => setBalanceOpen(true)}
+            >
+              余额操作
+            </Button>
+            <BalanceDialog
+              tenant={tenant}
+              open={balanceOpen}
+              onOpenChange={setBalanceOpen}
+              onViewLedger={() => {
+                setBalanceOpen(false);
+                void navigate({
+                  to: '/admin/tenants/$tenantId',
+                  params: { tenantId },
+                  search: { tab: 'ledger' },
+                });
+              }}
+            />
+            <TenantStatusDialog
+              tenant={tenant}
+              action={statusAction}
+              onClose={() => setStatusAction(null)}
+              onDone={(result) => {
+                setStatusAction(null);
+                setStatusResult(result);
+              }}
+            />
             <nav
               aria-label="租户详情"
               className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 text-sm md:mx-0 md:px-0"
@@ -187,9 +332,7 @@ export function TenantDetailPage({ identity }: { identity: Identity }) {
                 </Link>
               ))}
             </nav>
-            <p className="m-0 text-sm text-muted-foreground">
-              该标签页即将开放。
-            </p>
+            <TabContent tab={tab} tenant={tenant} />
           </>
         ) : detail.isError ? (
           <DetailError

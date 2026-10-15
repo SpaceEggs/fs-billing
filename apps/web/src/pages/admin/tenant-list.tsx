@@ -14,6 +14,7 @@ import {
   TenantStatus,
 } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
+import { Pagination } from '../../components/pagination';
 import { QueryError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
@@ -378,45 +379,6 @@ function TenantCards({ items }: { items: AdminTenantSummary[] }) {
   );
 }
 
-function Pagination({
-  page,
-  rowCount,
-  onPage,
-}: {
-  page: number;
-  rowCount: number;
-  onPage: (page: number) => void;
-}) {
-  const pages = Math.max(1, Math.ceil(rowCount / tenantPageSize));
-  if (pages <= 1) return null;
-  return (
-    <nav
-      aria-label="分页"
-      className="flex items-center justify-end gap-3 text-[13px] text-muted-foreground"
-    >
-      <span>
-        第 {page} / {pages} 页
-      </span>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={page <= 1}
-        onClick={() => onPage(page - 1)}
-      >
-        上一页
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={page >= pages}
-        onClick={() => onPage(page + 1)}
-      >
-        下一页
-      </Button>
-    </nav>
-  );
-}
-
 /** 租户列表（第一批 1a/1b/1c）：筛选写入地址，排序由服务端按状态、币种、余额。 */
 export function TenantListPage({ identity }: { identity: Identity }) {
   const { search, update } = useTenantSearch();
@@ -453,6 +415,7 @@ export function TenantListPage({ identity }: { identity: Identity }) {
             <TenantCards items={data.items} />
             <Pagination
               page={page}
+              pageSize={tenantPageSize}
               rowCount={data.pagination.total}
               onPage={(next) =>
                 update(

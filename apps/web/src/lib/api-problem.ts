@@ -119,6 +119,8 @@ export function apiProblem(error: unknown): ApiProblem {
 export type ProblemNotice = {
   title: string;
   body?: string;
+  /** 服务端逐字段的校验信息，页面没有对应输入框时逐条列出。 */
+  details?: string[];
   /** 冲突来自过时数据时提供“刷新”。 */
   refresh: boolean;
 };
@@ -127,7 +129,11 @@ export type ProblemNotice = {
 export function problemNotice(problem: ApiProblem): ProblemNotice {
   switch (problem.kind) {
     case 'validation':
-      return { title: '提交内容有误，请检查标红的字段', refresh: false };
+      return {
+        title: '提交内容有误，请检查标红的字段',
+        details: [...new Set(problem.issues.map((issue) => issue.message))],
+        refresh: false,
+      };
     case 'csv-invalid':
       return {
         title: `CSV 有 ${problem.rows.length} 行错误，请修正后重新上传`,

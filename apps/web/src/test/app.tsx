@@ -6,7 +6,10 @@ import { createQueryClient } from '../query-client';
 import { createAppRouter } from '../router';
 
 type Reply = { status: number; body?: unknown };
-export type ApiHandler = (path: string, init: RequestInit) => Reply;
+export type ApiHandler = (
+  path: string,
+  init: RequestInit,
+) => Reply | Promise<Reply>;
 
 export const ids = {
   profile: '00000000-0000-4000-8000-000000000001',
@@ -46,16 +49,14 @@ export const apiError = (code: string, extra: object = {}) => ({
 
 /** 用内存路由渲染完整应用，fetch 由测试按路径应答。 */
 export function renderApp(path: string, handler: ApiHandler) {
-  const fetchMock = vi.fn((input: string, init: RequestInit = {}) => {
-    const reply = handler(input, init);
-    return Promise.resolve(
-      new Response(
-        reply.body === undefined ? null : JSON.stringify(reply.body),
-        {
-          status: reply.status,
-          headers: { 'content-type': 'application/json' },
-        },
-      ),
+  const fetchMock = vi.fn(async (input: string, init: RequestInit = {}) => {
+    const reply = await handler(input, init);
+    return new Response(
+      reply.body === undefined ? null : JSON.stringify(reply.body),
+      {
+        status: reply.status,
+        headers: { 'content-type': 'application/json' },
+      },
     );
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -69,5 +70,5 @@ export function renderApp(path: string, handler: ApiHandler) {
   );
   const location = () =>
     `${router.state.location.pathname}${router.state.location.searchStr}`;
-  return { router, fetchMock, location };
+  return { router, fetchMock, location, queryClient };
 }
