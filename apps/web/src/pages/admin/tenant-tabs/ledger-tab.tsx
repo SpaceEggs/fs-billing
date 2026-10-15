@@ -25,6 +25,9 @@ const paymentTags = {
   StatusKey
 >;
 
+/** 人工余额操作按输入精度显示（调账可到 4 位小数）；通话扣费仍按 2 位舍入。 */
+const exactAmount = (entry: AdminLedgerEntry) => entry.kind !== 'call_charge';
+
 function PaymentStatus({ entry }: { entry: AdminLedgerEntry }) {
   return entry.paymentStatus ? (
     <StatusTag status={paymentTags[entry.paymentStatus]} />
@@ -82,6 +85,7 @@ function LedgerTable({
                 <Money
                   value={{ currency, amount: entry.amount }}
                   tone="signed"
+                  exact={exactAmount(entry)}
                 />
               </td>
               <td className="px-3 py-2.5 text-right whitespace-nowrap">
@@ -131,6 +135,7 @@ function LedgerCards({
             <Money
               value={{ currency, amount: entry.amount }}
               tone="signed"
+              exact={exactAmount(entry)}
               className="text-[15px] font-semibold"
             />
           </div>

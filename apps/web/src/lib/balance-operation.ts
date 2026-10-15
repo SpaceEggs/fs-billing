@@ -142,42 +142,76 @@ export function balanceRequest(
   }
 }
 
-/** 同一笔草稿（类型、金额、备注都不变）重试时复用幂等键；内容一变即换新键。 */
-export function draftFingerprint(draft: BalanceDraft) {
-  return JSON.stringify([
+/**
+ * 同一租户的同一笔草稿（类型、金额、备注都不变）得到同一指纹；内容一变即不同。
+ * 指纹是 SHA-256 摘要，内存里不留金额和备注原文。
+ */
+export async function draftFingerprint(tenantId: string, draft: BalanceDraft) {
+  const canonical = JSON.stringify([
+    tenantId,
     draft.kind,
     normalizeAmountInput(draft.amount),
     draft.note.trim(),
   ]);
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(canonical),
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('');
 }
 
 export function newIdempotencyKey() {
   return `web:${crypto.randomUUID()}`;
 }
 
-const unresolvedAttempts = new Map<
-  string,
-  { fingerprint: string; key: string }
->();
+export type BalanceAttempt = {
+  owner: string;
+  fingerprint: string;
+  key: string;
+};
 
 /**
- * 每个租户保留最近一笔结果未知的提交：关闭对话框后重新填写同一内容，仍按同一幂等键重试。
- * 只有确定成功或服务端明确拒绝时才由 `resolveBalanceAttempt` 清除。
+ * 结果未知的提交（网络中断、500/503）按指纹各自保留幂等键，多笔可以并存：
+ * 重新填写同一内容仍按原键重试，服务端据此去重。确定成功或明确拒绝后只清除对应那一笔，
+ * 所以表里只有未决的提交，不需要淘汰。
+ * 只属于当前登录的管理员：换人时整表作废，退出、重新登录、会话过期时由 clearBalanceAttempts 清空。
  */
-export function balanceAttemptKey(tenantId: string, draft: BalanceDraft) {
-  const fingerprint = draftFingerprint(draft);
-  const unresolved = unresolvedAttempts.get(tenantId);
-  const key =
-    unresolved?.fingerprint === fingerprint
-      ? unresolved.key
-      : newIdempotencyKey();
-  unresolvedAttempts.set(tenantId, { fingerprint, key });
-  return key;
+let attempts: { owner: string; unresolved: Map<string, string> } | null = null;
+
+export async function beginBalanceAttempt(
+  owner: string,
+  tenantId: string,
+  draft: BalanceDraft,
+): Promise<BalanceAttempt> {
+  const fingerprint = await draftFingerprint(tenantId, draft);
+  if (attempts?.owner !== owner) attempts = { owner, unresolved: new Map() };
+  let key = attempts.unresolved.get(fingerprint);
+  if (!key) {
+    key = newIdempotencyKey();
+    attempts.unresolved.set(fingerprint, key);
+  }
+  return { owner, fingerprint, key };
 }
 
-export function resolveBalanceAttempt(tenantId: string, key: string) {
-  if (unresolvedAttempts.get(tenantId)?.key === key)
-    unresolvedAttempts.delete(tenantId);
+export function resolveBalanceAttempt(attempt: BalanceAttempt) {
+  if (
+    attempts?.owner === attempt.owner &&
+    attempts.unresolved.get(attempt.fingerprint) === attempt.key
+  )
+    attempts.unresolved.delete(attempt.fingerprint);
+}
+
+export function clearBalanceAttempts() {
+  attempts = null;
+}
+
+/** 当前保留的未决提交（仅指纹与幂等键），供测试检查存储内容。 */
+export function unresolvedBalanceAttempts() {
+  return attempts
+    ? { owner: attempts.owner, entries: [...attempts.unresolved] }
+    : null;
 }
 
 /**

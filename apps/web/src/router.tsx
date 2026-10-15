@@ -27,6 +27,7 @@ import {
   validateTenantDetailSearch,
   validateTenantListSearch,
 } from './lib/admin-search';
+import { clearBalanceAttempts } from './lib/balance-operation';
 import { rememberReturnPath } from './lib/return-to';
 import {
   loadSession,
@@ -79,6 +80,7 @@ async function requireZone(
   const state = await loadSession();
   queryClient.setQueryData(sessionQueryKey, state);
   if (state.status === 'signed-out') {
+    clearBalanceAttempts();
     rememberReturnPath(location.href);
     throw redirect({
       to: zones[zone].login,

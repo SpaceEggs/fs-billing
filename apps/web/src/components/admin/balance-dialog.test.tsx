@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
+import { clearBalanceAttempts } from '../../lib/balance-operation';
 import { BalanceDialog } from './balance-dialog';
 
 let tenantSeq = 0;
@@ -84,6 +85,7 @@ function renderDialog(
           打开余额操作
         </button>
         <BalanceDialog
+          owner="profile-admin-1"
           tenant={tenant}
           open={open}
           onOpenChange={setOpen}
@@ -119,6 +121,7 @@ const confirmButton = () =>
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  clearBalanceAttempts();
 });
 
 describe('balance dialog', () => {

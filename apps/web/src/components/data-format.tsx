@@ -1,6 +1,8 @@
+import Decimal from 'decimal.js';
 import type { Currency, Money as MoneyValue } from '@fs-billing/shared';
 import {
   formatDateTime,
+  formatExactMoney,
   formatMoney,
   formatRate,
   isNegativeMoney,
@@ -11,13 +13,19 @@ import { cn } from '../lib/utils';
 export function Money({
   value,
   tone = 'negative',
+  exact = false,
   className,
 }: {
   value: MoneyValue;
   tone?: 'negative' | 'signed' | 'plain';
+  /** 不舍入到 2 位，如四位小数调账。 */
+  exact?: boolean;
   className?: string;
 }) {
-  const negative = isNegativeMoney(value);
+  const exactAmount = new Decimal(value.amount);
+  const negative = exact
+    ? exactAmount.isNegative() && !exactAmount.isZero()
+    : isNegativeMoney(value);
   return (
     <span
       className={cn(
@@ -27,7 +35,7 @@ export function Money({
         className,
       )}
     >
-      {formatMoney(value)}
+      {exact ? formatExactMoney(value) : formatMoney(value)}
     </span>
   );
 }

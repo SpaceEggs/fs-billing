@@ -8,7 +8,7 @@ import type {
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import {
-  balanceAttemptKey,
+  beginBalanceAttempt,
   balanceFieldErrors,
   balanceKindOrder,
   balanceKinds,
@@ -140,12 +140,15 @@ function BalancePreview({
  * 提交中不能关闭。赠送、赊账充值超过前端配置阈值时，确认页另需勾选大额确认。
  */
 export function BalanceDialog({
+  owner,
   tenant,
   open,
   onOpenChange,
   onViewLedger,
   thresholds = webConfig.largeAmountThresholds,
 }: {
+  /** 当前管理员的 profileId；未决幂等键只在同一管理员内复用。 */
+  owner: string;
   tenant: AdminTenantDetailResponse;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -165,6 +168,7 @@ export function BalanceDialog({
     >
       {open ? (
         <BalanceFlow
+          owner={owner}
           tenant={tenant}
           thresholds={thresholds}
           operate={operate}
@@ -177,12 +181,14 @@ export function BalanceDialog({
 }
 
 function BalanceFlow({
+  owner,
   tenant,
   thresholds,
   operate,
   onClose,
   onViewLedger,
 }: {
+  owner: string;
   tenant: AdminTenantDetailResponse;
   thresholds: typeof webConfig.largeAmountThresholds;
   operate: ReturnType<typeof useApiMutation<'adminBalanceOperation'>>;
@@ -234,19 +240,19 @@ function BalanceFlow({
   }
 
   async function submit() {
-    const key = balanceAttemptKey(tenant.id, draft);
     setSubmitError(null);
+    const attempt = await beginBalanceAttempt(owner, tenant.id, draft);
     try {
       const result = await operate.mutateAsync({
         params: { tenantId: tenant.id },
-        body: balanceRequest(draft, tenant.currency, key),
+        body: balanceRequest(draft, tenant.currency, attempt.key),
       });
-      resolveBalanceAttempt(tenant.id, key);
+      resolveBalanceAttempt(attempt);
       setStep({ name: 'done', result });
     } catch (error) {
       const problem = apiProblem(error);
       // 服务端明确拒绝即未入账；网络中断、500/503 结果未知，保留幂等键供重试。
-      if (problem.kind !== 'unavailable') resolveBalanceAttempt(tenant.id, key);
+      if (problem.kind !== 'unavailable') resolveBalanceAttempt(attempt);
       if (problem.kind === 'validation') {
         setErrors(balanceFieldErrors(problem.issues));
         setStep({ name: 'form' });

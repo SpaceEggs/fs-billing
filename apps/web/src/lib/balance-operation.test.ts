@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { adminBalanceOperationRequestSchema } from '@fs-billing/shared';
 import {
   balanceFieldErrors,
   balanceRequest,
+  beginBalanceAttempt,
+  clearBalanceAttempts,
   draftFingerprint,
   needsLargeAmountConfirm,
   projectBalance,
+  resolveBalanceAttempt,
+  unresolvedBalanceAttempts,
   validateBalanceDraft,
   type BalanceKind,
 } from './balance-operation';
@@ -103,16 +107,18 @@ describe('balance requests', () => {
     }
   });
 
-  it('fingerprints only the submitted content', () => {
-    expect(draftFingerprint(draft('gift', '1,000', ' a '))).toBe(
-      draftFingerprint(draft('gift', '1000', 'a')),
+  it('fingerprints only the submitted content', async () => {
+    const fingerprint = draftFingerprint;
+    const base = await fingerprint('t1', draft('gift', '1000', 'a'));
+    expect(base).toMatch(/^[0-9a-f]{64}$/);
+    expect(await fingerprint('t1', draft('gift', '1,000', ' a '))).toBe(base);
+    expect(await fingerprint('t1', draft('gift', '1000.01', 'a'))).not.toBe(
+      base,
     );
-    expect(draftFingerprint(draft('gift', '1000', 'a'))).not.toBe(
-      draftFingerprint(draft('gift', '1000.01', 'a')),
-    );
-    expect(draftFingerprint(draft('gift', '1000', 'a'))).not.toBe(
-      draftFingerprint(draft('credit_topup', '1000', 'a')),
-    );
+    expect(
+      await fingerprint('t1', draft('credit_topup', '1000', 'a')),
+    ).not.toBe(base);
+    expect(await fingerprint('t2', draft('gift', '1000', 'a'))).not.toBe(base);
   });
 
   it('maps server field issues to the dialog fields', () => {
@@ -127,6 +133,73 @@ describe('balance requests', () => {
       note: '原因过长',
       form: '币种不符',
     });
+  });
+});
+
+describe('balance attempts', () => {
+  const a = draft('adjustment', '-12.3456', '冲正重复赠送');
+  const b = draft('gift', '888.88', '春节回馈');
+
+  afterEach(() => clearBalanceAttempts());
+
+  it('reuses the key of an unresolved attempt until it resolves', async () => {
+    const first = await beginBalanceAttempt('admin-1', 't1', a);
+    expect(first.key).toMatch(/^web:/);
+    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).toBe(first.key);
+    resolveBalanceAttempt(first);
+    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).not.toBe(
+      first.key,
+    );
+  });
+
+  it('keeps an unknown attempt when a different one is rejected', async () => {
+    const unknown = await beginBalanceAttempt('admin-1', 't1', a);
+    const rejected = await beginBalanceAttempt('admin-1', 't1', b);
+    expect(rejected.key).not.toBe(unknown.key);
+    resolveBalanceAttempt(rejected);
+    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).toBe(
+      unknown.key,
+    );
+  });
+
+  it('logout clears unresolved attempts', async () => {
+    const before = await beginBalanceAttempt('admin-1', 't1', a);
+    clearBalanceAttempts();
+    expect(unresolvedBalanceAttempts()).toBeNull();
+    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).not.toBe(
+      before.key,
+    );
+  });
+
+  it('does not reuse another admin key', async () => {
+    const first = await beginBalanceAttempt('admin-1', 't1', a);
+    const other = await beginBalanceAttempt('admin-2', 't1', a);
+    expect(other.key).not.toBe(first.key);
+    expect(unresolvedBalanceAttempts()).toEqual({
+      owner: 'admin-2',
+      entries: [[other.fingerprint, other.key]],
+    });
+    expect((await beginBalanceAttempt('admin-1', 't1', a)).key).not.toBe(
+      first.key,
+    );
+  });
+
+  it('stores only fingerprint digests and keys, never amount or note', async () => {
+    const first = await beginBalanceAttempt('admin-1', 't1', a);
+    const second = await beginBalanceAttempt('admin-1', 't1', b);
+    const store = unresolvedBalanceAttempts();
+    expect(store).toEqual({
+      owner: 'admin-1',
+      entries: [
+        [first.fingerprint, first.key],
+        [second.fingerprint, second.key],
+      ],
+    });
+    for (const [fingerprint] of store?.entries ?? [])
+      expect(fingerprint).toMatch(/^[0-9a-f]{64}$/);
+    const serialized = JSON.stringify(store);
+    for (const plaintext of ['12.3456', '冲正重复赠送', '888.88', '春节回馈'])
+      expect(serialized).not.toContain(plaintext);
   });
 });
 

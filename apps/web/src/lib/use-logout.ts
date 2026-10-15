@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { ApiRequestError, callApi } from './api';
+import { clearBalanceAttempts } from './balance-operation';
 import { passwordGate, sessionExpiry } from './session';
 import { zones, type Zone } from './zone';
 
@@ -25,6 +26,7 @@ export function useLogout(zone: Zone) {
     },
     onSuccess: async () => {
       queryClient.clear();
+      clearBalanceAttempts();
       sessionExpiry.clear();
       passwordGate.clear();
       await router.navigate({ to: zones[zone].login, search: {} });

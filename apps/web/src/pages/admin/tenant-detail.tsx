@@ -289,6 +289,7 @@ export function TenantDetailPage({ identity }: { identity: Identity }) {
               余额操作
             </Button>
             <BalanceDialog
+              owner={identity.profileId}
               tenant={tenant}
               open={balanceOpen}
               onOpenChange={setBalanceOpen}
