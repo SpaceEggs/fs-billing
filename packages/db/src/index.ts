@@ -8,3 +8,5 @@ export * from './admin/errors.js';
 export * as schema from './schema.js';
 export * as authSchema from './auth-schema.js';
 export { sql, eq, asc } from 'drizzle-orm';
+export * from './admin/tenants.js';
+export * from './admin/balance.js';

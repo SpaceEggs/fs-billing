@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { apiContract } from '@fs-billing/shared';
+import { liveApiContract } from './routes/contract.js';
 import { z } from 'zod';
 
 const documentSchema = z.object({
@@ -33,7 +33,7 @@ export async function generateOpenApi(app: FastifyInstance) {
         ...operationSchema.parse(value),
       })),
   );
-  const expected = Object.values(apiContract);
+  const expected = Object.values(liveApiContract);
   if (
     !operations.length ||
     operations.length !== expected.length ||

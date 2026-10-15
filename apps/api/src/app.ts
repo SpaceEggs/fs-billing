@@ -12,8 +12,9 @@ import {
   changePasswordRequestSchema,
   loginRequestSchema,
   resetPasswordParamsSchema,
+  adminApiErrorStatus,
 } from '@fs-billing/shared';
-import { withTenant, type Db } from '@fs-billing/db';
+import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
 import { ApiFailure, sendFailure } from './errors.js';
 import { resolvePrincipal } from './identity.js';
@@ -29,6 +30,8 @@ import {
   sessionResponse,
 } from './routes/auth.js';
 import { readPortalBalance } from './routes/portal.js';
+import { tenantHandlers } from './routes/admin/tenants.js';
+import { balanceHandlers } from './routes/admin/balance.js';
 import { resetProfilePassword } from './routes/admin.js';
 
 export type ApiDependencies = {
@@ -60,6 +63,27 @@ export function createApi(deps: ApiDependencies) {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler((error, request, reply) => {
+    if (
+      error instanceof Error &&
+      'statusCode' in error &&
+      error.statusCode === 413 &&
+      request.routeOptions.url === '/api/admin/tenants'
+    )
+      error = new AdminServiceError('CSV_LIMIT_EXCEEDED', 'CSV 文件超限');
+    if (error instanceof AdminServiceError) {
+      reply.header('Cache-Control', 'no-store');
+      return reply.code(adminApiErrorStatus[error.code]).send({
+        error: {
+          code: error.code,
+          message: error.message,
+          requestId: request.id,
+          ...(error.code === 'CSV_INVALID' ? { rows: error.rows } : {}),
+          ...(error.code === 'VALIDATION_ERROR'
+            ? { issues: [{ path: [], message: error.message }] }
+            : {}),
+        },
+      });
+    }
     if (error instanceof ApiFailure) return sendFailure(request, reply, error);
     if (error instanceof GatewayError) {
       sendCookies(reply, error.setCookie);
@@ -85,6 +109,8 @@ export function createApi(deps: ApiDependencies) {
     sendFailure(request, reply, new ApiFailure('NOT_FOUND')),
   );
   const handlers: RouteHandlers = {
+    ...tenantHandlers(deps.businessDb),
+    ...balanceHandlers(deps.businessDb),
     health: () => Promise.resolve({ status: 'ok', service: 'api' }),
     login: async (_context, request, reply) => {
       const session = await deps.auth.login(

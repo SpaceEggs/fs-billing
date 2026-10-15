@@ -1,0 +1,230 @@
+import { randomUUID } from 'node:crypto';
+import { and, eq, sql, desc } from 'drizzle-orm';
+import { decimal, money } from '@fs-billing/rating';
+import {
+  adminBalanceOperationRequestSchema,
+  adminLedgerQuerySchema,
+  type AdminBalanceOperationRequest,
+  type AdminBalanceOperationResponse,
+  type AdminLedgerEntry,
+  type AdminLedgerQuery,
+  type AdminLedgerResponse,
+  type AuditPayload,
+} from '@fs-billing/shared';
+import { withAdmin, lockTenants, type Db, type Tx } from '../client.js';
+import { appendLedgerEntry } from '../ledger.js';
+import {
+  admins,
+  ledgerEntries,
+  operationLogs,
+  receivables,
+  tenantBalances,
+} from '../schema.js';
+import { readTenantCore } from './tenants.js';
+import { writeAudit } from './audit.js';
+import { AdminServiceError } from './errors.js';
+
+const kinds = {
+  topup: 'recharge',
+  credit_topup: 'credit_recharge',
+  gift: 'gift',
+  adjustment: 'adjustment',
+} as const;
+const actions = {
+  topup: 'balance_topup',
+  credit_topup: 'balance_credit_topup',
+  gift: 'balance_gift',
+  adjustment: 'balance_adjustment',
+} as const;
+const balanceAfter = sql<string>`(select sum(prior.amount)::text from ledger_entries prior where prior.tenant_id = ${ledgerEntries.tenantId} and (prior.occurred_at,prior.id) <= (${ledgerEntries.occurredAt},${ledgerEntries.id}))`;
+function ledgerRows(tx: Tx) {
+  return tx
+    .select({
+      id: ledgerEntries.id,
+      kind: ledgerEntries.kind,
+      amount: ledgerEntries.amount,
+      balanceAfter,
+      note: ledgerEntries.note,
+      paymentStatus: receivables.status,
+      actorId: admins.id,
+      actorName: admins.name,
+      occurredAt: ledgerEntries.occurredAt,
+    })
+    .from(ledgerEntries)
+    .leftJoin(receivables, eq(receivables.ledgerEntryId, ledgerEntries.id))
+    .leftJoin(admins, eq(admins.id, ledgerEntries.createdBy));
+}
+function project(
+  row: Awaited<ReturnType<typeof ledgerRows>>[number],
+): AdminLedgerEntry {
+  return {
+    id: row.id,
+    kind: row.kind,
+    amount: row.amount,
+    balanceAfter: row.balanceAfter,
+    note: row.note,
+    noteVisibility: row.kind === 'credit_recharge' ? 'admin' : 'customer',
+    paymentStatus: row.paymentStatus,
+    actor:
+      row.actorId !== null && row.actorName !== null
+        ? { id: row.actorId, name: row.actorName }
+        : null,
+    occurredAt: row.occurredAt.toISOString(),
+  };
+}
+export function listTenantLedger({
+  db,
+  tenantId,
+  query,
+}: {
+  db: Db | Tx;
+  tenantId: string;
+  query: AdminLedgerQuery;
+}): Promise<AdminLedgerResponse> {
+  const input = adminLedgerQuerySchema.parse(query);
+  return withAdmin(db, async (tx) => {
+    const tenant = await readTenantCore(tx, tenantId);
+    const filter = and(
+      eq(ledgerEntries.tenantId, tenant.id),
+      input.kind ? eq(ledgerEntries.kind, input.kind) : undefined,
+      input.from
+        ? sql`${ledgerEntries.occurredAt} >= ${input.from}::timestamptz`
+        : undefined,
+      input.to
+        ? sql`${ledgerEntries.occurredAt} <= ${input.to}::timestamptz`
+        : undefined,
+    );
+    const [count] = await tx
+      .select({ total: sql<number>`count(*)::int` })
+      .from(ledgerEntries)
+      .where(filter);
+    const rows = await ledgerRows(tx)
+      .where(filter)
+      .orderBy(desc(ledgerEntries.occurredAt), desc(ledgerEntries.id))
+      .limit(input.pageSize)
+      .offset((input.page - 1) * input.pageSize);
+    return {
+      currency: tenant.currency,
+      items: rows.map(project),
+      pagination: {
+        page: input.page,
+        pageSize: input.pageSize,
+        total: count?.total ?? 0,
+      },
+    };
+  });
+}
+export async function operateBalance({
+  db,
+  actor,
+  tenantId,
+  request,
+}: {
+  db: Db | Tx;
+  actor: AuditPayload['actor'];
+  tenantId: string;
+  request: AdminBalanceOperationRequest;
+}): Promise<AdminBalanceOperationResponse> {
+  const input = adminBalanceOperationRequestSchema.parse(request);
+  const note =
+    input.kind === 'credit_topup'
+      ? input.internalNote
+      : input.kind === 'adjustment'
+        ? input.reason
+        : input.note;
+  return withAdmin(db, async (tx) => {
+    await lockTenants(tx, [tenantId]);
+    const tenant = await readTenantCore(tx, tenantId);
+    const [existing] = await tx
+      .select()
+      .from(ledgerEntries)
+      .where(
+        and(
+          eq(ledgerEntries.tenantId, tenant.id),
+          eq(ledgerEntries.idempotencyKey, input.idempotencyKey),
+        ),
+      );
+    let auditId: string;
+    let entryId: string;
+    if (existing) {
+      if (
+        input.currency !== tenant.currency ||
+        existing.kind !== kinds[input.kind] ||
+        !decimal(existing.amount).eq(input.amount) ||
+        existing.note !== note
+      )
+        throw new AdminServiceError('IDEMPOTENCY_CONFLICT', '幂等键载荷不符');
+      const [audit] = await tx
+        .select({ id: operationLogs.id })
+        .from(operationLogs)
+        .where(
+          and(
+            eq(operationLogs.tenantId, tenant.id),
+            eq(operationLogs.target, existing.id),
+            eq(operationLogs.action, actions[input.kind]),
+          ),
+        );
+      if (!audit)
+        throw new AdminServiceError(
+          'IDEMPOTENCY_CONFLICT',
+          '已有流水缺少人工操作审计',
+        );
+      auditId = audit.id;
+      entryId = existing.id;
+    } else {
+      if (input.currency !== tenant.currency)
+        throw new AdminServiceError('CURRENCY_MISMATCH', '租户币种不符');
+      const entry = await appendLedgerEntry(
+        tx,
+        { id: tenant.id, currency: tenant.currency },
+        {
+          kind: kinds[input.kind],
+          amount: money(tenant.currency, input.amount),
+          note,
+          adminId: actor.id,
+          idempotencyKey: input.idempotencyKey,
+        },
+      );
+      entryId = entry.id;
+      auditId = randomUUID();
+      const envelope = {
+        id: auditId,
+        actor,
+        occurredAt: entry.createdAt.toISOString(),
+        tenantId: tenant.id,
+        target: { kind: 'ledger_entry' as const, id: entry.id },
+      };
+      const content = {
+        summary: '人工余额操作',
+        changes: [],
+        ledgerEntryId: entry.id,
+        amount: decimal(input.amount).toFixed(),
+        currency: tenant.currency,
+      };
+      if (input.kind === 'adjustment')
+        await writeAudit(tx, {
+          ...envelope,
+          action: 'balance_adjustment',
+          content: { ...content, reason: input.reason },
+        });
+      else
+        await writeAudit(tx, {
+          ...envelope,
+          action: actions[input.kind],
+          content,
+        });
+    }
+    const [row] = await ledgerRows(tx).where(eq(ledgerEntries.id, entryId));
+    const [current] = await tx
+      .select({ balance: tenantBalances.balance })
+      .from(tenantBalances)
+      .where(eq(tenantBalances.tenantId, tenant.id));
+    if (!row || !current) throw new Error('余额流水写入失败');
+    return {
+      auditId,
+      currency: tenant.currency,
+      entry: project(row),
+      balance: current.balance,
+    };
+  });
+}

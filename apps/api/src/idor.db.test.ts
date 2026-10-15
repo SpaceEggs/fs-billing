@@ -381,7 +381,9 @@ for (const lane of lanes) {
       for (const operation of operations.filter(
         (operation) => operation['x-access'] !== 'public',
       )) {
-        const url = operation.path.replace('{id}', fixture.b.profileId);
+        const url = operation.path
+          .replace('{id}', fixture.b.profileId)
+          .replace('{tenantId}', fixture.b.tenantId ?? '');
         const method = z
           .enum(['GET', 'POST'])
           .parse(operation.method.toUpperCase());
@@ -391,7 +393,35 @@ for (const lane of lanes) {
                 currentPassword: password,
                 newPassword: 'Unauthenticated-password-58',
               }
-            : undefined;
+            : operation.operationId === 'adminTenantCreate'
+              ? {
+                  code: 'IDORPROBE',
+                  name: 'probe',
+                  currency: 'CNY',
+                  settings: { lowBalanceThreshold: '10' },
+                  initialRates: { kind: 'blank' },
+                }
+              : operation.operationId === 'adminTenantEdit'
+                ? {
+                    name: 'probe',
+                    contactName: '',
+                    contactPhone: '',
+                    remark: '',
+                  }
+                : operation.operationId === 'adminTenantSettings'
+                  ? {
+                      overdraftLimit: '100',
+                      lowBalanceThreshold: '10',
+                      emails: [],
+                    }
+                  : operation.operationId === 'adminBalanceOperation'
+                    ? {
+                        kind: 'topup',
+                        currency: 'CNY',
+                        amount: '1',
+                        idempotencyKey: 'idor-probe',
+                      }
+                    : undefined;
         const missing = await api.inject({
           method,
           url,
@@ -406,6 +436,7 @@ for (const lane of lanes) {
             method,
             url,
             headers: forgedHeaders(current.cookie, fixture),
+            ...(payload ? { payload } : {}),
           });
           expect(attack.statusCode, operation.operationId).toBe(403);
           expect(apiErrorSchema.parse(attack.json()).error.code).toBe(

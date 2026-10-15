@@ -1,10 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import {
-  apiContract,
-  type ApiOperationId,
-  type RouteAccess,
-} from '@fs-billing/shared';
-import type { Db } from '@fs-billing/db';
+import { type RouteAccess } from '@fs-billing/shared';
+import { liveApiContract, type LiveApiOperationId } from './contract.js';
+import { AdminServiceError, type Db } from '@fs-billing/db';
+import { z } from 'zod';
+import { DEFAULT_ADMIN_CSV_MAX_BYTES } from '@fs-billing/shared';
 import type { AuthGateway } from '../auth/gateway.js';
 import { resolvePrincipal } from '../identity.js';
 import { ApiFailure } from '../errors.js';
@@ -15,7 +14,7 @@ export type RouteHandler = (
   request: FastifyRequest,
   reply: FastifyReply,
 ) => Promise<unknown>;
-export type RouteHandlers = { [Id in ApiOperationId]: RouteHandler };
+export type RouteHandlers = { [Id in LiveApiOperationId]: RouteHandler };
 export function requestHeaders(request: FastifyRequest): Headers {
   const headers = new Headers();
   for (const [key, value] of Object.entries(request.headers)) {
@@ -50,7 +49,7 @@ export function registerRoutes(
 ) {
   const router = app;
   const credentialRateLimit = app.rateLimit(deps.rateLimit);
-  for (const operation of Object.values(apiContract)) {
+  for (const operation of Object.values(liveApiContract)) {
     const credential =
       operation.operationId === 'login' ||
       operation.operationId === 'changePassword';
@@ -69,6 +68,9 @@ export function registerRoutes(
         response: operation.responses,
       },
       config: { rateLimit: false },
+      ...(operation.operationId === 'adminTenantCreate'
+        ? { bodyLimit: 3 * 1024 * 1024 }
+        : {}),
       ...(credential ? { onRequest: credentialRateLimit } : {}),
       preValidation: (request, _reply, done) => {
         if (operation.method === 'POST') {
@@ -80,6 +82,26 @@ export function registerRoutes(
               (fetchSite === 'cross-site' || fetchSite === 'same-site'))
           )
             return done(new ApiFailure('FORBIDDEN'));
+        }
+        if (operation.operationId === 'adminTenantCreate') {
+          const csv = z
+            .object({
+              initialRates: z.object({
+                kind: z.literal('csv'),
+                file: z.object({ contentBase64: z.string() }),
+              }),
+            })
+            .safeParse(request.body);
+          if (
+            csv.success &&
+            Buffer.byteLength(
+              csv.data.initialRates.file.contentBase64,
+              'base64',
+            ) > DEFAULT_ADMIN_CSV_MAX_BYTES
+          )
+            return done(
+              new AdminServiceError('CSV_LIMIT_EXCEEDED', 'CSV 文件超限'),
+            );
         }
         const body = operation.request.body.safeParse(request.body);
         if (!body.success)

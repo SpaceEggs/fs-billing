@@ -2,7 +2,8 @@ import pg from 'pg';
 import { parseAccountInput, parseAccountOutput } from 'better-auth/db';
 import { afterAll, expect, test } from 'vitest';
 import { connect } from '@fs-billing/db';
-import { apiContract, apiErrorSchema } from '@fs-billing/shared';
+import { apiErrorSchema } from '@fs-billing/shared';
+import { liveApiContract } from './routes/contract.js';
 import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 import { createApi } from './app.js';
 import {
@@ -38,7 +39,7 @@ test('API exposes an independent health endpoint', async () => {
 test('live OpenAPI contains every contract operation with its access and isolation metadata', async () => {
   const { operations } = await generateOpenApi(app);
   expect(operations.map((operation) => operation.operationId).sort()).toEqual(
-    Object.keys(apiContract).sort(),
+    Object.keys(liveApiContract).sort(),
   );
 });
 
@@ -273,4 +274,92 @@ test('framework not-found and request parsing failures use contract envelopes', 
     );
     expect(response.headers['cache-control']).toBe('no-store');
   }
+});
+
+test('new tenant and balance routes require a session before business reads', async () => {
+  const tenantId = 'd5f4c9b1-5c5e-4454-8a5b-8f8f73f6d944';
+  const path = `/api/admin/tenants/${tenantId}`;
+  for (const [method, url, payload] of [
+    ['GET', '/api/admin/tenants', undefined],
+    ['GET', path, undefined],
+    ['GET', path + '/ledger', undefined],
+    [
+      'POST',
+      '/api/admin/tenants',
+      {
+        code: 'SESSIONPROBE',
+        name: 'probe',
+        currency: 'CNY',
+        settings: { lowBalanceThreshold: '10' },
+        initialRates: { kind: 'blank' },
+      },
+    ],
+    [
+      'POST',
+      path + '/edit',
+      { name: 'probe', contactName: '', contactPhone: '', remark: '' },
+    ],
+    ['POST', path + '/disable', undefined],
+    ['POST', path + '/enable', undefined],
+    [
+      'POST',
+      path + '/settings',
+      { overdraftLimit: '100', lowBalanceThreshold: '10', emails: [] },
+    ],
+    [
+      'POST',
+      path + '/balance-operations',
+      {
+        kind: 'adjustment',
+        amount: '-1.0001',
+        reason: '冲正',
+        currency: 'CNY',
+        idempotencyKey: 'manual:session-probe',
+      },
+    ],
+  ] as const) {
+    const response = await app.inject({
+      method,
+      url,
+      ...(payload ? { payload } : {}),
+    });
+    expect(response.statusCode, response.body).toBe(401);
+    expect(apiErrorSchema.parse(response.json()).error.code).toBe(
+      'UNAUTHENTICATED',
+    );
+    expect(response.headers['cache-control']).toBe('no-store');
+  }
+});
+
+test('tenant CSV upload boundary honors two decoded MiB and maps excess size to the CSV contract', async () => {
+  const body = {
+    code: 'CSVPROBE',
+    name: 'probe',
+    currency: 'CNY',
+    settings: { lowBalanceThreshold: '10' },
+  };
+  const request = (size: number) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/admin/tenants',
+      payload: {
+        ...body,
+        initialRates: {
+          kind: 'csv',
+          file: {
+            filename: 'rates.csv',
+            contentBase64: Buffer.alloc(size, 10).toString('base64'),
+          },
+        },
+      },
+    });
+  expect((await request(2 * 1024 * 1024)).statusCode).toBe(401);
+  const over = await request(2 * 1024 * 1024 + 1);
+  expect(over.statusCode, over.body).toBe(413);
+  expect(over.json()).toMatchObject({ error: { code: 'CSV_LIMIT_EXCEEDED' } });
+  const transport = await request(3 * 1024 * 1024);
+  expect(transport.statusCode, transport.body).toBe(413);
+  expect(transport.json()).toMatchObject({
+    error: { code: 'CSV_LIMIT_EXCEEDED' },
+  });
 });
