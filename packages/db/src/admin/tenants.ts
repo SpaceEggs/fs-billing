@@ -24,6 +24,8 @@ import {
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
+import { readTenantUsageOverview, tenantMonthSpendSql } from '../usage.js';
+import { NotFoundError } from '../errors.js';
 import { createRateVersion } from '../rates.js';
 import { likeContains } from './like.js';
 import {
@@ -52,7 +54,7 @@ const health = sql<AdminTenantDetailResponse['health']>`case
  when coalesce(${tenantBalances.balance},0) < 0 then 'overdraft'
  when ${balanceAlertSettings.tenantId} is not null and coalesce(${tenantBalances.balance},0) < ${balanceAlertSettings.threshold} then 'low_balance'
  else 'normal' end`;
-const monthConsumption = sql<string>`coalesce((select -sum(amount) from ledger_entries l where l.tenant_id = ${tenants.id} and l.kind = 'call_charge' and l.occurred_at >= date_trunc('month', now() at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai' and l.occurred_at < (date_trunc('month', now() at time zone 'Asia/Shanghai') + interval '1 month') at time zone 'Asia/Shanghai'),0)::text`;
+const monthConsumption = tenantMonthSpendSql(tenants.id);
 const pendingReceivable = sql<string>`coalesce((select sum(amount) from receivables r where r.tenant_id = ${tenants.id} and r.status = 'pending'),0)::text`;
 function tenantRows(tx: Tx) {
   return tx
@@ -122,6 +124,18 @@ export function getTenant({
   tenantId,
 }: Pick<TenantInput, 'db' | 'tenantId'>) {
   return withAdmin(db, (tx) => readTenant(tx, tenantId));
+}
+export async function getTenantOverview({
+  db,
+  tenantId,
+}: Pick<TenantInput, 'db' | 'tenantId'>) {
+  try {
+    return await withAdmin(db, (tx) => readTenantUsageOverview(tx, tenantId));
+  } catch (error) {
+    if (error instanceof NotFoundError)
+      throw new AdminServiceError('NOT_FOUND', error.message);
+    throw error;
+  }
 }
 export function listTenants({
   db,

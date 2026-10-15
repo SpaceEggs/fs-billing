@@ -105,7 +105,7 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 | POST   | `/api/admin/admins/{id}/disable`                 | emptyRequestSchema                        | adminMutationResponseSchema                |
 | POST   | `/api/admin/admins/{id}/enable`                  | emptyRequestSchema                        | adminMutationResponseSchema                |
 
-租户详情包含余额卡片与 settings 快照，overview 为本月消费、分钟数和最近 30 个北京时间自然日消费。monthCallMinutes 是非负 decimal string 表示的分钟数，使用独立分钟字符串校验，不带金额语义。ledger 按 occurredAt DESC、id DESC 稳定分页，支持 kind/from/to；page 默认为 1，pageSize 默认为 25，最大 100。待收款 totals 按筛选后的完整结果集统计，不仅当前页。status=pending 合计未收金额，received 合计已收金额，voided 合计所筛选的已作废原 credit 金额，仅用于历史展示，不计入 pending。币种过滤时另一键为 "0"，只为固定 wire 结构；Web 不显示未选币种的合计，避免误读为该币种没有应收。rates 的 current 为完整当前版本，scheduled 为未来版本，search 仅筛选展示条目，不改变版本基准。
+租户详情包含余额卡片与 settings 快照，overview 使用中立模块 `packages/shared/src/api/usage.ts` 的 `tenantUsageOverviewSchema`，后台响应为其别名。字段为 `asOf`、`currency`、`monthSpend`、`monthCallMinutes`、`answeredCalls`、`unansweredCalls`、`daily[30] {date, spend}`、`dailyTotal`。消费与分钟保留非负 decimal strings，通数为非负整数。`daily` 恰好为截至 `asOf` 北京日期当天的连续 30 天，升序补零，今日为部分日；今日消费取最后一项，合计由服务端计算。后台本月总通数为两种通数之和，未来门户首页只显示已接通通数。分钟为账单计费分钟，不是原始通话秒数除以 60。门户首页以后复用中立 schema 与服务，本步不注册门户首页端点。ledger 按 occurredAt DESC、id DESC 稳定分页，支持 kind/from/to；page 默认为 1，pageSize 默认为 25，最大 100。待收款 totals 按筛选后的完整结果集统计，不仅当前页。status=pending 合计未收金额，received 合计已收金额，voided 合计所筛选的已作废原 credit 金额，仅用于历史展示，不计入 pending。币种过滤时另一键为 "0"，只为固定 wire 结构；Web 不显示未选币种的合计，避免误读为该币种没有应收。rates 的 current 为完整当前版本，scheduled 为未来版本，search 仅筛选展示条目，不改变版本基准。
 
 状态计算优先检查手动 disabled；active 下先 balance+overdraftLimit <= 0 为 suspended，其次 balance < 0 为 overdraft，其次 balance < threshold 为 low_balance，其余 normal。列表筛选 search 编码/名称、health 状态和 currency。排序优先 suspended、overdraft、low_balance、normal、disabled；同状态先币种分组，再同币种 balance ASC，最后 code/id。不同币种之间不比较金额。
 
@@ -298,6 +298,21 @@ AuditPayload 映射 operation_logs 的 adminId、createdAt、tenantId、action�
 | n          | 预览 TTL 可配置，默认 60 分钟                  | 本步已有默认常量；后续存储与 commit 检查 expiry、base version 和 schedule。                                                                                                                                                                                                                                                                                  |
 | o          | 取消排期余量可配置，默认 60 秒                 | 本步导出默认常量；后续 service 在 DB 时间下拒绝临近生效取消，并监测 NTP；trigger guard 保留，不增加锁。                                                                                                                                                                                                                                                      |
 | 收件人补充 | 停用管理员邮箱保留并标记                       | 后续设置页面加载和保存后标记“属于已停用管理员，请确认收件人”，查询管理员资料用于展示；不自动移除或改为兜底，不改变保存的 emails。                                                                                                                                                                                                                            |
+
+## 已决定（概况与门户首页，2026-10-15 01:56 PT）
+
+用户已确定以下六项业务口径。
+
+1. 消费仅统计 `ledger_entries.kind = 'call_charge'`，金额为扣费金额取正。不含充值、赊账、赠送、调账、应收作废及撤销确认事件。消费按流水 `occurred_at` 对应的接通时间归属。
+2. 分钟为 `cdrs.billed_minutes` 的账单计费分钟，按现有逐分钟向上取整规则，不按实际通话秒数换算。
+3. 已接通通数与分钟按 `answered_at` 归属；未接通通数按 `started_at` 归属。跨月开始、次月接通的电话计入接通月份。
+4. 余额不足等计费拒绝呼叫计入后台未接通通数。后台显示已接通与未接通，未来门户首页只显示已接通。共享服务返回两种通数，本步不实现门户端点。未归属话单尚未有租户，不计入概况。
+5. 最近 30 天包括今天，恰好为今天及之前 29 个自然日，缺失日期补零，最后一柱为当前快照内的今日消费。
+6. 所有租户，包括 USD，均使用 `Asia/Shanghai` 的日期与月份边界。
+
+`readTenantUsageOverview(tx, tenantId, now?)` 在一个 SQL statement 内读取租户、流水、话单与日期序列，以同一快照计算全部指标。默认 `asOf = statement_timestamp()`，测试可注入时间。`asOf` 表示读取快照的时间，不是事件时间上限。本月指标使用 `< 下月月初`，最近 30 天消费使用 `< 明日零点`，边界均按 `Asia/Shanghai` 计算，因此 FreeSWITCH 时钟略快于数据库时仍能计入当前期间内已入库的事件。读取不获取租户锁、行锁或 advisory locks；后台使用 `withAdmin`，未来门户使用登录租户的 `withTenant`，不可见租户返回 NOT_FOUND。列表和详情的 `monthConsumption` 保留现有字段名，与概况 `monthSpend` 共用 SQL 定义。迁移 `0010_cdrs_tenant_started_at.sql` 为 `cdrs (tenant_id, started_at)` 添加索引，现有与新建月分区通过 PostgreSQL 分区索引继承。该普通 `CREATE INDEX` 会阻塞写入，仅适用于上线前的开发、CI 或空库。当前 migrator 在事务内运行；上线后为 `cdrs` 等大分区表新增索引，必须按运维手册在迁移事务外逐分区执行 `CREATE INDEX CONCURRENTLY`，再附加到以 `ON ONLY` 创建的父索引，见[阶段 10 检查项](plan.md#阶段-10部署与上线)。
+
+流水扣费异步入账，消费可能落后于话单分钟和通数；reconcile 的 5 分钟是扫描最小年龄，不是延迟上限。按接通时间归属的历史扣费和阶段 8 归属回填会改变历史日消费。已关闭月份的话单清理不影响当前月分钟，账本消费不依赖话单保留。种子通话扣费位于 2026 年 9 月，其他月份实时查询可能为零；未来界面验收需要相对当前日期的 fixture。
 
 ## 待用户确认
 

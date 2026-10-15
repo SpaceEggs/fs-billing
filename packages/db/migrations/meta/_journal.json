@@ -71,6 +71,13 @@
       "when": 1792627200000,
       "tag": "0009_auth_credential_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792713600000,
+      "tag": "0010_cdrs_tenant_started_at",
+      "breakpoints": true
     }
   ]
 }

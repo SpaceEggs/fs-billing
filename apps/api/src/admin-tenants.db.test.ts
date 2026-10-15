@@ -5,6 +5,7 @@ import {
   apiErrorSchemas,
   adminTenantCreateResponseSchema,
   adminTenantDetailResponseSchema,
+  adminTenantOverviewResponseSchema,
   adminBalanceOperationResponseSchema,
   adminLedgerResponseSchema,
   adminTenantsResponseSchema,
@@ -53,6 +54,66 @@ async function create(currency: 'CNY' | 'USD' = 'CNY') {
 }
 
 describe('admin tenant and balance API', () => {
+  it('serves the admin overview and rejects unknown, malformed and unauthenticated tenant reads', async () => {
+    const { tenant } = await create('USD');
+    const response = await api.inject({
+      method: 'GET',
+      url: `/api/admin/tenants/${tenant.id}/overview`,
+      headers: requestHeaders(cookie),
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const value = adminTenantOverviewResponseSchema.parse(response.json());
+    expect(value).toMatchObject({
+      currency: 'USD',
+      monthSpend: '0',
+      monthCallMinutes: '0',
+      answeredCalls: 0,
+      unansweredCalls: 0,
+      dailyTotal: '0',
+    });
+    expect(value.daily).toHaveLength(30);
+    expect(value.daily.every((day) => day.spend === '0')).toBe(true);
+    expect(response.headers['cache-control']).toContain('no-store');
+    for (const [id, status] of [
+      [randomUUID(), 404],
+      ['invalid', 400],
+    ] as const) {
+      const rejected = await api.inject({
+        method: 'GET',
+        url: `/api/admin/tenants/${id}/overview`,
+        headers: requestHeaders(cookie),
+      });
+      expect(rejected.statusCode, rejected.body).toBe(status);
+      if (status === 404) {
+        expect(rejected.json()).toMatchObject({
+          error: { code: 'NOT_FOUND', message: '租户不存在' },
+        });
+        expect(rejected.headers['cache-control']).toContain('no-store');
+      }
+    }
+    const anonymous = await api.inject(
+      `/api/admin/tenants/${tenant.id}/overview`,
+    );
+    expect(anonymous.statusCode, anonymous.body).toBe(401);
+  });
+
+  it('prevents customer IDOR against both tenant overviews despite forged admin and tenant headers', async () => {
+    const customer = (await login(api, fixture.a)).cookie;
+    for (const tenantId of [fixture.a.tenantId, fixture.b.tenantId]) {
+      const response = await api.inject({
+        method: 'GET',
+        url: `/api/admin/tenants/${tenantId}/overview`,
+        headers: {
+          ...requestHeaders(customer),
+          'x-role': 'admin',
+          'x-tenant-id': tenantId ?? '',
+        },
+      });
+      expect(response.statusCode, response.body).toBe(403);
+      expect(response.json()).toMatchObject({ error: { code: 'FORBIDDEN' } });
+    }
+  });
+
   it.each(['40001', '40P01'])(
     'returns 503 after outermost %s retries are exhausted',
     async (code) => {
