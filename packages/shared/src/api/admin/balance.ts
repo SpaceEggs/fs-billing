@@ -3,7 +3,7 @@ import { currencySchema } from '../identity.js';
 import { moneyAmountSchema } from '../money.js';
 import { adminReceivableStatusSchema } from './receivables.js';
 import {
-  adminMutationResponseSchema,
+  adminAuditedMutationResponseSchema,
   adminInputAmountSchemas,
   adminPageInfoSchema,
   adminPageQuerySchema,
@@ -91,7 +91,7 @@ export const adminLedgerResponseSchema = z.strictObject({
   pagination: adminPageInfoSchema,
 });
 export const adminBalanceOperationResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     currency: currencySchema,
     entry: adminLedgerEntrySchema,
     balance: moneyAmountSchema,

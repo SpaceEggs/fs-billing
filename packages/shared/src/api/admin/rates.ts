@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { currencySchema } from '../identity.js';
-import { adminMutationResponseSchema, adminTimestampSchema } from './common.js';
+import {
+  adminAuditedMutationResponseSchema,
+  adminTimestampSchema,
+} from './common.js';
 
 export const adminRateAmountSchema = z
   .string()
@@ -71,7 +74,7 @@ export const adminRatesResponseSchema = z.strictObject({
 });
 
 export const adminRateVersionResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     version: adminRateVersionSchema,
   });
 export function createAdminCsvFileSchema(
@@ -103,7 +106,7 @@ export const adminRateCancelFutureVersionRequestSchema = z.strictObject({
   versionId: z.uuid(),
 });
 export const adminRateCancelFutureVersionResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     cancelledVersionId: z.uuid(),
   });
 export const adminCsvRowErrorSchema = z.strictObject({
@@ -157,14 +160,13 @@ export const adminRateImportCommitRequestSchema = z.strictObject({
 export const adminRateExportRequestSchema = z.strictObject({
   versionId: z.uuid(),
 });
-export const adminRateExportResponseSchema = adminMutationResponseSchema.extend(
-  {
+export const adminRateExportResponseSchema =
+  adminAuditedMutationResponseSchema.extend({
     filename: z.string().min(1),
     encoding: z.literal('UTF-8'),
     contentType: z.literal('text/csv'),
     csv: z.string(),
-  },
-);
+  });
 
 export function createAdminRateRequestSchemas(
   horizonMs = DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,

@@ -117,6 +117,9 @@ it('void and reverse payment expose admin POSTs with required reasons and event 
       op.responses[200].safeParse({ ...response, auditId: undefined }).success,
     ).toBe(false);
     expect(
+      op.responses[200].safeParse({ ...response, auditId: null }).success,
+    ).toBe(false);
+    expect(
       op.responses[409].parse({
         error: { code: conflict, message: '冲突', requestId: id },
       }).error.code,

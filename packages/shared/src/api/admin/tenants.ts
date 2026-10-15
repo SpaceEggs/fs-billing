@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { moneyAmountSchema } from '../money.js';
 import { currencySchema, tenantIdentitySchema } from '../identity.js';
 import {
-  adminMutationResponseSchema,
+  adminAuditedMutationResponseSchema,
   adminInputAmountSchemas,
   adminNonnegativeAmountSchema,
   adminPageInfoSchema,
@@ -102,7 +102,7 @@ export const adminTenantDetailResponseSchema = adminTenantSummarySchema.extend({
   createdAt: adminTimestampSchema,
 });
 export const adminTenantCreateResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     tenant: adminTenantDetailResponseSchema,
     initialRateVersionId: z.uuid(),
     effectiveFrom: adminTimestampSchema,
