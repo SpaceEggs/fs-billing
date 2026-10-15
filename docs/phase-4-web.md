@@ -31,7 +31,7 @@ pnpm --filter @fs-billing/web dev
 
 `test:e2e` 与 `screenshots` 需要已迁移并写入种子的数据库，以及环境变量 `DATABASE_URL`、`APP_DATABASE_URL`、`AUTH_DATABASE_URL` 和 `SEED_AUTH_PASSWORD`。Playwright 会读取根目录 `.env`，已有环境变量优先。global setup 运行幂等的 `auth:seed`，并清除种子账号的锁定计数。`auth:seed` 不覆盖已有密码，因此 `SEED_AUTH_PASSWORD` 必须与首次初始化时一致。`BETTER_AUTH_SECRET` 未设置时每次运行随机生成。首次运行前执行 `pnpm --filter @fs-billing/web exec playwright install chromium`。
 
-测试共享数据库、锁定计数和每 IP 每分钟 30 次的登录限流，所以 Playwright 只用一个 worker。一次 e2e 约登录 20 次，连续运行 e2e 和截图可能接近限流；遇到 `RATE_LIMITED` 时等待一分钟再运行。
+测试共享数据库和账户锁定计数，所以 Playwright 只用一个 worker。`apiEnvironment()` 显式设置 `NODE_ENV=test`、`FSB_ALLOW_TEST_OVERRIDES=1` 和 `AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX=10000`，提高共用回环 IP 的凭据请求上限，时间窗口仍为一分钟。未设置覆盖值时 API 默认上限为每 IP 每分钟 30 次。覆盖值只允许在两个开关同时满足时使用，否则 API 启动失败。复用已有 API 时不会重新应用这些环境变量。e2e 沿用 HTTP cookie 和 API 日志行为；Better Auth 的 Origin 和 CSRF 校验显式保持开启，详见 [API 设计](phase-4-api-design.md)。
 
 CI 新增 `web-e2e` job：安装 Chromium，启动 PostgreSQL，迁移和写入种子，然后运行 `pnpm test:e2e`。失败时上传 Playwright 报告。原 `check` job 通过 `pnpm check` 运行 Web 的 typecheck、测试和构建。`freeswitch.yml` 未改动。
 

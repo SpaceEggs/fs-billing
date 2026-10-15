@@ -12,7 +12,7 @@ import {
   createAuthGateway,
   normalizeEmail,
 } from './auth/gateway.js';
-import { apiEnvironmentSchema } from './config.js';
+import { apiEnvironmentSchema, apiRateLimitOptions } from './config.js';
 import { generateOpenApi } from './openapi.js';
 
 const business = connect('postgresql://fs_billing_app@127.0.0.1/fs_billing');
@@ -214,19 +214,13 @@ test.each([
       BETTER_AUTH_SECRET: 'a'.repeat(32),
       BETTER_AUTH_URL: 'http://localhost:3000',
       NODE_ENV: 'test',
+      FSB_ALLOW_TEST_OVERRIDES: '1',
       AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX: override,
     });
     const limited = createApi({
       businessDb: business.db,
       auth,
-      ...(config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX !== undefined
-        ? {
-            rateLimit: {
-              max: config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX,
-              timeWindow: 60_000,
-            },
-          }
-        : {}),
+      ...apiRateLimitOptions(config),
     });
     try {
       for (let index = 0; index < expectedMax; index++) {
@@ -305,6 +299,12 @@ test('temporary password issuance is optional server metadata and never client i
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
   });
+});
+
+test('Better Auth keeps origin and CSRF checks enabled in test mode', async () => {
+  const context = await auth.auth.$context;
+  expect(context.skipOriginCheck).toBe(false);
+  expect(context.skipCSRFCheck).toBe(false);
 });
 
 test('startup rejects session caching and secondary storage on effective Better Auth options', async () => {
