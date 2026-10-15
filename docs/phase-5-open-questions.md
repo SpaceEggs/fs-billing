@@ -5,7 +5,7 @@
 **Decision (user):** do **not** backfill or synthesize settings.
 
 - **List:** keep the row; set `settingsConfigured: false` (or equivalent). Do not 503 the whole list; do not omit the row. `disabled` / `suspended` / `overdraft` health still computed from core data; only the normal vs low_balance branch treats the tenant as unconfigured.
-- **Detail:** strict fail (503 or dedicated error) when settings are missing — no invented thresholds.
+- **Detail:** strict fail with 500 `INTERNAL_ERROR` when settings are missing, per the 2026-10-15 error-mapping decision. Return the generic message `服务内部错误` without internal details. Do not invent thresholds.
 - Balance, ledger, tenant edit, disable, and enable still use core tenant data.
 - Creating a tenant always writes explicit settings in the creation transaction.
 - Updating settings on an unconfigured legacy tenant stays deferred until a before-state / backfill policy is chosen.

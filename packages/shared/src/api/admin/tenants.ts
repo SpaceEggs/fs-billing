@@ -12,6 +12,11 @@ import {
 } from './common.js';
 import { adminRateEntriesSchema, adminCsvFileSchema } from './rates.js';
 
+export const DEFAULT_TENANT_OVERDRAFT_LIMIT = {
+  CNY: '100',
+  USD: '15',
+} as const satisfies Record<z.infer<typeof currencySchema>, string>;
+
 export const adminTenantHealthSchema = z.enum([
   'suspended',
   'overdraft',

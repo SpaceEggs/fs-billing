@@ -627,8 +627,8 @@ it('refunds a failed infrastructure attempt even when the fifth reservation woul
     headers: { origin },
     payload: { email: fixture.a.email, password },
   });
-  expect(response.statusCode).toBe(503);
-  expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
+  expect(response.statusCode).toBe(500);
+  expect(errorCode(response)).toBe('INTERNAL_ERROR');
   expect(response.headers['set-cookie']).toBeUndefined();
   expect((await counter(fixture.a.email))?.failed_count).toBe(4);
   expect((await counter(fixture.a.email))?.locked_until).toBeNull();
@@ -689,8 +689,8 @@ it('reset rollback preserves password, sessions, and failures when session revoc
       url: `/api/admin/portal-accounts/${fixture.a.profileId}/reset-password`,
       headers: requestHeaders(current.cookie),
     });
-    expect(response.statusCode).toBe(503);
-    expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
+    expect(response.statusCode).toBe(500);
+    expect(errorCode(response)).toBe('INTERNAL_ERROR');
     expect(await counter(fixture.a.email)).toEqual(before);
     expect((await getSession(target.cookie)).statusCode).toBe(200);
     expect(
@@ -787,8 +787,8 @@ it('unique credential constraint blocks a second account and reset rolls back wh
     url: `/api/admin/portal-accounts/${fixture.a.profileId}/reset-password`,
     headers: requestHeaders(current.cookie),
   });
-  expect(response.statusCode).toBe(503);
-  expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
+  expect(response.statusCode).toBe(500);
+  expect(errorCode(response)).toBe('INTERNAL_ERROR');
   expect((await getSession(target.cookie)).statusCode).toBe(200);
   expect(
     (
@@ -1032,7 +1032,7 @@ it('change-password infrastructure rollback refunds its shared counter without c
       newPassword: 'Never-committed-password',
     },
   });
-  expect(response.statusCode).toBe(503);
+  expect(response.statusCode).toBe(500);
   expect((await counter(fixture.a.email))?.failed_count).toBe(1);
   expect(await sessionCount(fixture.a.userId)).toBe(1);
   expect((await getSession(current.cookie)).statusCode).toBe(200);
@@ -1132,8 +1132,8 @@ it.each(['login', 'change-password'] as const)(
               },
             },
       );
-      expect(response.statusCode).toBe(503);
-      expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
+      expect(response.statusCode).toBe(500);
+      expect(errorCode(response)).toBe('INTERNAL_ERROR');
       expect(response.headers['set-cookie']).toBeUndefined();
       const after = await counter(fixture.a.email);
       if (sameWindow) {

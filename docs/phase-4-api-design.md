@@ -112,18 +112,18 @@ logout 使用 access=session，只验证有效 Better Auth session，不调用�
 
 错误统一为 `{ error: { code, message, requestId, ...该代码专属字段 } }`，message 用中文，前端以 code 分支。
 
-| HTTP | 代码                                       | 附加字段与行为                                                              |
-| ---- | ------------------------------------------ | --------------------------------------------------------------------------- |
-| 400  | `VALIDATION_ERROR`                         | `issues: [{ path: (string                                                   | number)[], message }]`，不回显密码值。 |
-| 401  | `UNAUTHENTICATED`、`SESSION_EXPIRED`       | `action: 'reauthenticate'`，`Cache-Control: no-store`。                     |
-| 401  | `INVALID_CREDENTIALS`                      | 统一“账号或密码错误”，不区分邮箱不存在和密码错误。                          |
-| 403  | `FORBIDDEN`                                | 有效会话但身份不符，权限判断先于管理业务数据访问。                          |
-| 403  | `ACCOUNT_DISABLED`、`IDENTITY_UNAVAILABLE` | 资料停用，或 0 个、2 个资料匹配。失败关闭，不任选一张表。                   |
-| 404  | `NOT_FOUND`                                | 自己不存在与别人的资源使用同一外部响应，不暴露存在性。                      |
-| 429  | `ACCOUNT_LOCKED`                           | 返回 `retryAfterSeconds`、`Retry-After`，语义为连续失败规则。               |
-| 429  | `RATE_LIMITED`                             | 请求限流，独立于账户锁定，返回正整数 `retryAfterSeconds` 与 `Retry-After`。 |
-| 503  | `SERVICE_UNAVAILABLE`                      | 认证或数据库不可用，保留 requestId，不泄露驱动错误。                        |
-| 500  | `INTERNAL_ERROR`                           | 记录内部错误，外部只返回通用消息。                                          |
+| HTTP | 代码                                       | 附加字段与行为                                                                                                                                                       |
+| ---- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 400  | `VALIDATION_ERROR`                         | `issues: [{ path: (string                                                                                                                                            | number)[], message }]`，不回显密码值。 |
+| 401  | `UNAUTHENTICATED`、`SESSION_EXPIRED`       | `action: 'reauthenticate'`，`Cache-Control: no-store`。                                                                                                              |
+| 401  | `INVALID_CREDENTIALS`                      | 统一“账号或密码错误”，不区分邮箱不存在和密码错误。                                                                                                                   |
+| 403  | `FORBIDDEN`                                | 有效会话但身份不符，权限判断先于管理业务数据访问。                                                                                                                   |
+| 403  | `ACCOUNT_DISABLED`、`IDENTITY_UNAVAILABLE` | 资料停用，或 0 个、2 个资料匹配。失败关闭，不任选一张表。                                                                                                            |
+| 404  | `NOT_FOUND`                                | 自己不存在与别人的资源使用同一外部响应，不暴露存在性。                                                                                                               |
+| 429  | `ACCOUNT_LOCKED`                           | 返回 `retryAfterSeconds`、`Retry-After`，语义为连续失败规则。                                                                                                        |
+| 429  | `RATE_LIMITED`                             | 请求限流，独立于账户锁定，返回正整数 `retryAfterSeconds` 与 `Retry-After`。                                                                                          |
+| 503  | `SERVICE_UNAVAILABLE`                      | 仅限瞬态故障：最外层重试耗尽的 40001/40P01、数据库连接故障（08 类、57P01/57P02/57P03、53300 或网络连接错误）、服务依赖的瞬态不可用；保留 requestId，不泄露内部详情。 |
+| 500  | `INTERNAL_ERROR`                           | 未分类异常（包括服务内部 schema 校验或不变量失败）统一映射到此代码；记录内部错误，外部只返回通用消息和 requestId。                                                   |
 
 第一批 operation 包含登录、退出、读取 session、改密码、撤销其他会话、`portalContext`、`adminContext` 和 health。管理员重置密码的两条独立后端操作契约一并交付，不提前实现阶段 5 开户或阶段 9 的完整账号管理页面。登录成功只按真实资料决定区域，无公开注册端点。Better Auth 原始管理路由与注册路由不作为通配入口公开。
 

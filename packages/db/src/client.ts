@@ -93,6 +93,12 @@ async function withOperator<T>(
   fn: (tx: Tx) => Promise<T>,
   config?: { isolationLevel: 'serializable' },
 ): Promise<T> {
+  // All mutations of admins.status must request SERIALIZABLE through the outermost wrapper.
+  // Drizzle ignores isolation config on savepoints, so nested requests must fail.
+  if (db instanceof PgTransaction && config?.isolationLevel)
+    throw new Error(
+      'Transaction isolation must be requested at the outermost layer',
+    );
   const attempts = db instanceof PgTransaction ? 1 : MAX_ATTEMPTS;
   for (let attempt = 1; ; attempt++) {
     try {

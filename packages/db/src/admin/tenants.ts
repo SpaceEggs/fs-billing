@@ -7,6 +7,7 @@ import {
   type Currency,
 } from '@fs-billing/rating';
 import {
+  DEFAULT_TENANT_OVERDRAFT_LIMIT,
   adminAmountRequestSchemas,
   type AdminAmountRequestSchemas,
   adminTenantEditRequestSchema,
@@ -94,8 +95,7 @@ function summary(row: Awaited<ReturnType<typeof tenantRows>>[number]) {
 function detail(
   row: Awaited<ReturnType<typeof tenantRows>>[number],
 ): AdminTenantDetailResponse {
-  if (!row.settingsId)
-    throw new AdminServiceError('SERVICE_UNAVAILABLE', '租户缺少余额提醒设置');
+  if (!row.settingsId) throw new Error('租户缺少余额提醒设置');
   return {
     ...summary(row),
     contactName: row.contactName,
@@ -257,7 +257,7 @@ export async function createTenant({
         ...input.settings,
         overdraftLimit:
           input.settings.overdraftLimit ??
-          (input.currency === 'CNY' ? '100' : '15'),
+          DEFAULT_TENANT_OVERDRAFT_LIMIT[input.currency],
         emails: input.settings.emails ?? [creatorEmail],
       });
       await tx.insert(tenants).values({

@@ -2,7 +2,8 @@ import pg from 'pg';
 import { parseAccountInput, parseAccountOutput } from 'better-auth/db';
 import { afterAll, expect, test } from 'vitest';
 import { connect } from '@fs-billing/db';
-import { apiErrorSchema } from '@fs-billing/shared';
+import { apiErrorSchema, apiErrorSchemas } from '@fs-billing/shared';
+import { z } from 'zod';
 import { liveApiContract } from './routes/contract.js';
 import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 import { createApi } from './app.js';
@@ -35,6 +36,65 @@ test('API exposes an independent health endpoint', async () => {
   expect(response.statusCode).toBe(200);
   expect(response.json()).toEqual({ status: 'ok', service: 'api' });
 });
+
+test.each([
+  [
+    'unclassified error',
+    new Error('private implementation detail'),
+    500,
+    'INTERNAL_ERROR',
+  ],
+  ['service schema failure', new z.ZodError([]), 500, 'INTERNAL_ERROR'],
+  [
+    'constraint failure',
+    Object.assign(new Error('private constraint'), { code: '23505' }),
+    500,
+    'INTERNAL_ERROR',
+  ],
+  ...[
+    '40001',
+    '40P01',
+    '08006',
+    '57P01',
+    '57P02',
+    '57P03',
+    '53300',
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ETIMEDOUT',
+  ].map(
+    (code) =>
+      [
+        code,
+        new Error('private query', {
+          cause: Object.assign(new Error('private driver detail'), { code }),
+        }),
+        503,
+        'SERVICE_UNAVAILABLE',
+      ] as const,
+  ),
+] as const)(
+  'global error handler classifies %s without exposing details',
+  async (_label, error, status, code) => {
+    const isolated = createApi({ businessDb: business.db, auth });
+    isolated.get('/test-failure', () => {
+      throw error;
+    });
+    try {
+      const response = await isolated.inject('/test-failure');
+      expect(response.statusCode).toBe(status);
+      expect(apiErrorSchemas[code].parse(response.json())).toMatchObject({
+        error: {
+          code,
+          message: status === 500 ? '服务内部错误' : '服务暂不可用',
+        },
+      });
+      expect(response.headers['cache-control']).toBe('no-store');
+    } finally {
+      await isolated.close();
+    }
+  },
+);
 
 test('live OpenAPI contains every contract operation with its access and isolation metadata', async () => {
   const { operations } = await generateOpenApi(app);
@@ -251,6 +311,31 @@ test('runtime environment enforces the auth and business roles and production HT
   expect(
     apiEnvironmentSchema.safeParse({ ...env, NODE_ENV: 'production' }).success,
   ).toBe(false);
+});
+
+test('startup rejects an amount cap below the largest default tenant overdraft', () => {
+  const env = {
+    APP_DATABASE_URL: 'postgresql://fs_billing_app@localhost/db',
+    AUTH_DATABASE_URL: 'postgresql://fs_billing_auth@localhost/db',
+    BETTER_AUTH_SECRET: 'a'.repeat(32),
+    BETTER_AUTH_URL: 'http://localhost:3000',
+  };
+  const invalid = apiEnvironmentSchema.safeParse({
+    ...env,
+    ADMIN_AMOUNT_MAX_INTEGER_DIGITS: '2',
+  });
+  expect(invalid.success).toBe(false);
+  if (invalid.success) throw new Error('Expected startup config rejection');
+  expect(invalid.error.issues).toEqual([
+    expect.objectContaining({
+      path: ['ADMIN_AMOUNT_MAX_INTEGER_DIGITS'],
+      code: 'custom',
+    }),
+  ]);
+  expect(
+    apiEnvironmentSchema.parse({ ...env, ADMIN_AMOUNT_MAX_INTEGER_DIGITS: '3' })
+      .ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
+  ).toBe(3);
 });
 
 test('framework not-found and request parsing failures use contract envelopes', async () => {

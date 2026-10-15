@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
+  apiErrorSchemas,
   adminTenantCreateResponseSchema,
   adminTenantDetailResponseSchema,
   adminBalanceOperationResponseSchema,
@@ -8,7 +10,11 @@ import {
   adminTenantsResponseSchema,
   createAdminAmountRequestSchemas,
 } from '@fs-billing/shared';
-import { operateBalance, updateTenantSettings } from '@fs-billing/db';
+import {
+  operateBalance,
+  updateTenantSettings,
+  withAdmin,
+} from '@fs-billing/db';
 import { createApi } from './app.js';
 import { apiEnvironmentSchema } from './config.js';
 import {
@@ -47,7 +53,40 @@ async function create(currency: 'CNY' | 'USD' = 'CNY') {
 }
 
 describe('admin tenant and balance API', () => {
-  it.each([2, 11])(
+  it.each(['40001', '40P01'])(
+    'returns 503 after outermost %s retries are exhausted',
+    async (code) => {
+      const custom = createApi({ businessDb: connections.app.db, auth });
+      let attempts = 0;
+      custom.get('/test-exhausted-retries', () =>
+        withAdmin(connections.app.db, async (tx) => {
+          attempts += 1;
+          await tx.execute(
+            sql.raw(
+              `do $$ begin raise exception 'private database failure' using errcode = '${code}'; end $$`,
+            ),
+          );
+        }),
+      );
+      try {
+        const response = await custom.inject('/test-exhausted-retries');
+        expect(attempts).toBe(3);
+        expect(response.statusCode, response.body).toBe(503);
+        expect(
+          apiErrorSchemas.SERVICE_UNAVAILABLE.parse(response.json()),
+        ).toMatchObject({
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: '服务暂不可用',
+          },
+        });
+      } finally {
+        await custom.close();
+      }
+    },
+  );
+
+  it.each([3, 11])(
     'uses the configured %i digit cap in routes and services',
     async (digits) => {
       const cap =
@@ -173,9 +212,14 @@ describe('admin tenant and balance API', () => {
       url: `/api/admin/tenants/${tenantId}`,
       headers,
     });
-    expect(detail.statusCode, detail.body).toBe(503);
-    expect(detail.json()).toMatchObject({
-      error: { code: 'SERVICE_UNAVAILABLE' },
+    expect(detail.statusCode, detail.body).toBe(500);
+    const failure = apiErrorSchemas.INTERNAL_ERROR.parse(detail.json());
+    expect(detail.json()).toEqual({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: '服务内部错误',
+        requestId: failure.error.requestId,
+      },
     });
     const list = await api.inject({
       url: `/api/admin/tenants?search=A${fixture.prefix.replaceAll('-', '')}`,

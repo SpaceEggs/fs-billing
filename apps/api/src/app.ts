@@ -18,7 +18,7 @@ import {
 } from '@fs-billing/shared';
 import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
-import { ApiFailure, sendFailure } from './errors.js';
+import { ApiFailure, isTransientServiceError, sendFailure } from './errors.js';
 import { resolvePrincipal } from './identity.js';
 import {
   registerRoutes,
@@ -124,7 +124,15 @@ export function createApi(deps: ApiDependencies) {
     )
       return sendFailure(request, reply, new ApiFailure('VALIDATION_ERROR'));
     app.log.error({ err: error, requestId: request.id }, 'API request failed');
-    return sendFailure(request, reply, new ApiFailure('SERVICE_UNAVAILABLE'));
+    return sendFailure(
+      request,
+      reply,
+      new ApiFailure(
+        isTransientServiceError(error)
+          ? 'SERVICE_UNAVAILABLE'
+          : 'INTERNAL_ERROR',
+      ),
+    );
   });
   app.setNotFoundHandler((request, reply) =>
     sendFailure(request, reply, new ApiFailure('NOT_FOUND')),
@@ -195,7 +203,7 @@ export function createApi(deps: ApiDependencies) {
     },
     resetPortalAccountPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
+      if (!deps.accountService) throw new ApiFailure('INTERNAL_ERROR');
       return deps.accountService.resetPassword(
         context.principal,
         'portal',
@@ -204,7 +212,7 @@ export function createApi(deps: ApiDependencies) {
     },
     resetAdminPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
+      if (!deps.accountService) throw new ApiFailure('INTERNAL_ERROR');
       return deps.accountService.resetPassword(
         context.principal,
         'admin',

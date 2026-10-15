@@ -310,6 +310,7 @@ export function createAdminAccountService(deps: {
           if (row.status === status) return { auditId: null };
           const writtenAuditId = randomUUID();
           if (kind === 'admin') {
+            // All mutations of admins.status must run SERIALIZABLE via the outermost wrapper to prevent write skew.
             const [updated] = await tx
               .update(schema.admins)
               .set({ status })

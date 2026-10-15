@@ -29,7 +29,7 @@ export function accountHandlers(
 > {
   function accounts(context: RequestContext) {
     principal(context);
-    if (!service) throw new ApiFailure('SERVICE_UNAVAILABLE');
+    if (!service) throw new ApiFailure('INTERNAL_ERROR');
     return service;
   }
   return {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { databaseEnvironmentSchema } from '@fs-billing/db';
 import {
+  DEFAULT_TENANT_OVERDRAFT_LIMIT,
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
   DEFAULT_ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
   DEFAULT_ADMIN_RATE_PREVIEW_TTL_MS,
@@ -68,6 +69,17 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .default('development'),
   })
   .superRefine((value, ctx) => {
+    const minimumAmountDigits = Math.max(
+      ...Object.values(DEFAULT_TENANT_OVERDRAFT_LIMIT).map(
+        (amount) => amount.replace(/\..*$/, '').length,
+      ),
+    );
+    if (value.ADMIN_AMOUNT_MAX_INTEGER_DIGITS < minimumAmountDigits)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ADMIN_AMOUNT_MAX_INTEGER_DIGITS'],
+        message: `金额整数位上限不能小于租户默认透支额度的整数位数 ${minimumAmountDigits}`,
+      });
     if (
       value.NODE_ENV === 'production' &&
       new URL(value.BETTER_AUTH_URL).protocol !== 'https:'

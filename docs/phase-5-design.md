@@ -113,6 +113,8 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 
 错误仍为 `{error: {code, message, requestId, ...}}`。已有 `VALIDATION_ERROR` 400 带 issues，401 的 UNAUTHENTICATED/SESSION_EXPIRED，403 的 FORBIDDEN/ACCOUNT_DISABLED/IDENTITY_UNAVAILABLE，404 NOT_FOUND，429 RATE_LIMITED，500 INTERNAL_ERROR，503 SERVICE_UNAVAILABLE 均复用。
 
+未分类异常（包括服务内部 schema 校验或不变量失败）返回 500 `INTERNAL_ERROR`；503 `SERVICE_UNAVAILABLE` 仅用于最外层重试耗尽的 40001/40P01、数据库连接故障（SQLSTATE 08 类、57P01/57P02/57P03、53300 或网络连接错误）及服务依赖的瞬态不可用。缺失服务依赖属于持久的配置错误，返回 500 `INTERNAL_ERROR`。按 2026-10-15 错误映射决定，存量租户缺少余额提醒设置属于持久的数据不变量失败，详情严格返回 500 `INTERNAL_ERROR`，消息为 `服务内部错误`；列表保留该租户并返回 `settingsConfigured: false`，不补造设置。两者仅返回通用消息和 requestId，不回显内部错误。
+
 | code                                                      | HTTP | 条件                                                                                                        |
 | --------------------------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------- |
 | TENANT_CODE_EXISTS / EMAIL_EXISTS / PORTAL_ACCOUNT_EXISTS | 409  | 唯一冲突或第一版门户账号已存在                                                                              |
@@ -133,7 +135,7 @@ writeAudit(tx: Tx, event: AuditPayload): Promise<void>
 
 ### 开户与身份
 
-新租户默认 active、余额 0；overdraftLimit 未传按 CNY 100、USD 15。lowBalanceThreshold 由请求明确给出。[design.md §8.1](design.md#81-余额提醒按租户设置)规定通知邮箱默认只填管理人员邮箱。开户省略 emails 时服务从已认证管理员资料取得邮箱并写入设置，不能由 Zod 静态默认值猜测；显式 [] 表示无收件人。settings 更新必须提交 emails，省略不会清空。数据库已有 tenants、tenant_balances、balance_alert_settings、rate_versions、rate_entries。费率表逻辑上属于租户，现 schema 没有单独的 rate_tables 实体。
+新租户默认 active、余额 0；overdraftLimit 未传按 CNY 100、USD 15。默认值由共享常量 `DEFAULT_TENANT_OVERDRAFT_LIMIT` 定义；启动配置必须让 `ADMIN_AMOUNT_MAX_INTEGER_DIGITS` 容纳最大默认值的整数位数，当前至少 3 位，否则启动失败。lowBalanceThreshold 由请求明确给出。[design.md §8.1](design.md#81-余额提醒按租户设置)规定通知邮箱默认只填管理人员邮箱。开户省略 emails 时服务从已认证管理员资料取得邮箱并写入设置，不能由 Zod 静态默认值猜测；显式 [] 表示无收件人。settings 更新必须提交 emails，省略不会清空。数据库已有 tenants、tenant_balances、balance_alert_settings、rate_versions、rate_entries。费率表逻辑上属于租户，现 schema 没有单独的 rate_tables 实体。
 
 开户在事务内创建首个完整版本，**不传 effectiveFrom**，让 DB now() 填写，保证 effectiveFrom <= 授权查询时的 now。blank 也创建空版本，空表授权拒绝是预期；填充 entries、CSV 或同币种 copy 后立刻授权能匹配。entries 模式给非 CSV 调用者使用；Web 的 CSV 方式提交原始文件，服务端必须独立解码、调用 parseRateCsv，不能信任浏览器解析结果。CSV 错误或币种不符时租户事务整体失败。copy 由服务在事务中读取 sourceVersionId，核验其 tenant_id 等于 sourceTenantId，并核验来源与新租户币种一致；copy 联合要求两个 ID 成对存在。服务读取数据库来源元数据后再调用 adminTenantCopyConsistencySchema，refine 核验版本 ID、租户归属和币种；请求中的 UUID 本身不能证明归属。本步已实现该 refinement 与拒绝错配的测试，后续服务必须接入。
 
@@ -162,6 +164,8 @@ adjustment 将 reason 存入 ledger.note。冲正以相反金额追加一条 adj
 ledger 的 balanceAfter 定义为该租户按 occurredAt ASC、id ASC 排序后，从初始 0 到当前条目 inclusive 的 amount 累加。DB 没有 balance_after 列，服务查询计算且分页前覆盖全部先前流水。此值是确定的历史顺序累计，不保证等于管理员提交当刻看到的缓存余额，特别是同一时间戳多笔流水的 UUID 顺序。
 
 管理员同权、禁止自停用、至少一个 active 已确定。管理员状态变更使用 SERIALIZABLE 事务中的原子条件 UPDATE，停用只在 active 管理员数大于 1 且执行者仍 active 时写入。不使用显式行锁，不新增 advisory locks 或锁表；仅在最外层重试序列化失败，避免并发快照计数导致两个管理员互相停用后清零。停用撤销目标会话。管理员启用、门户账号停用/启用已纳入阶段 5 契约。启用只恢复目标账号状态，不恢复旧会话；门户停用撤销目标全部会话且不影响呼叫，门户启用不自动启用 disabled 租户。资料状态、凭据与审计经 SECURITY DEFINER 函数在同一业务事务提交；失败整笔回滚，不提前放行账号。
+
+管理员 status 使用 SERIALIZABLE（SSI、非阻塞谓词跟踪，冲突仅在最外层重试）符合不新增锁规则（用户批准于 2026-10-15）；所有 admins.status 修改必须经最外层 SERIALIZABLE wrapper，已有事务内请求隔离级别直接抛错。
 
 ### 费率与 CSV
 

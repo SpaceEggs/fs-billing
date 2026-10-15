@@ -857,10 +857,8 @@ describe('admin tenant and balance services', () => {
       "INSERT INTO tenants(id,code,name,currency,overdraft_limit) VALUES($1,$2,'存量','CNY',0)",
       [id, code],
     );
-    await expect(getTenant({ db: app.db, tenantId: id })).rejects.toMatchObject(
-      {
-        code: 'SERVICE_UNAVAILABLE',
-      },
+    await expect(getTenant({ db: app.db, tenantId: id })).rejects.toThrow(
+      '租户缺少余额提醒设置',
     );
     const listed = await listTenants({
       db: app.db,
