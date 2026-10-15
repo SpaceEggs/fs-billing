@@ -1,3 +1,4 @@
+import { DatabaseUnavailableError } from '@fs-billing/db';
 import {
   apiErrorSchema,
   apiErrorStatus,
@@ -30,6 +31,7 @@ export function isTransientServiceError(error: unknown): boolean {
     current = current.cause
   ) {
     seen.add(current);
+    if (current instanceof DatabaseUnavailableError) return true;
     if (
       'code' in current &&
       typeof current.code === 'string' &&

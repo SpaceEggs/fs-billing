@@ -1,4 +1,3 @@
-import pg from 'pg';
 import { APP_ROLE, AUTH_ROLE, connect } from '@fs-billing/db';
 import { createApi } from './app.js';
 import { apiEnvironmentSchema } from './config.js';
@@ -8,7 +7,7 @@ import { createAdminAccountService } from './auth/admin-accounts.js';
 
 const config = apiEnvironmentSchema.parse(process.env);
 const business = connect(config.APP_DATABASE_URL);
-const authPool = new pg.Pool({ connectionString: config.AUTH_DATABASE_URL });
+const { pool: authPool } = connect(config.AUTH_DATABASE_URL);
 const trustedOrigins = config.BETTER_AUTH_TRUSTED_ORIGINS ?? [
   new URL(config.BETTER_AUTH_URL).origin,
 ];

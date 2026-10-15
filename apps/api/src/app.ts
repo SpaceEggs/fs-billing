@@ -203,7 +203,7 @@ export function createApi(deps: ApiDependencies) {
     },
     resetPortalAccountPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      if (!deps.accountService) throw new ApiFailure('INTERNAL_ERROR');
+      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
       return deps.accountService.resetPassword(
         context.principal,
         'portal',
@@ -212,7 +212,7 @@ export function createApi(deps: ApiDependencies) {
     },
     resetAdminPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      if (!deps.accountService) throw new ApiFailure('INTERNAL_ERROR');
+      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
       return deps.accountService.resetPassword(
         context.principal,
         'admin',

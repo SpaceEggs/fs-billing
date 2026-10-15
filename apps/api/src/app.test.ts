@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { parseAccountInput, parseAccountOutput } from 'better-auth/db';
 import { afterAll, expect, test } from 'vitest';
-import { connect } from '@fs-billing/db';
+import { connect, DatabaseUnavailableError } from '@fs-billing/db';
 import { apiErrorSchema, apiErrorSchemas } from '@fs-billing/shared';
 import { z } from 'zod';
 import { liveApiContract } from './routes/contract.js';
@@ -38,6 +38,14 @@ test('API exposes an independent health endpoint', async () => {
 });
 
 test.each([
+  [
+    'typed database transport failure',
+    new DatabaseUnavailableError(
+      new Error('Connection terminated unexpectedly'),
+    ),
+    503,
+    'SERVICE_UNAVAILABLE',
+  ],
   [
     'unclassified error',
     new Error('private implementation detail'),

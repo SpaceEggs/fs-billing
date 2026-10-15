@@ -305,8 +305,8 @@ export function createAdminAccountService(deps: {
       return withAdmin(
         db,
         async (tx) => {
-          const row = await account(tx, kind, id);
           const who = await actor(tx, principal);
+          const row = await account(tx, kind, id);
           if (row.status === status) return { auditId: null };
           const writtenAuditId = randomUUID();
           if (kind === 'admin') {
@@ -327,6 +327,7 @@ export function createAdminAccountService(deps: {
               .returning({ id: schema.admins.id });
             if (!updated) {
               await actor(tx, principal);
+              // Enable cannot reach LAST_ADMIN because actor rejection or a 40001 aborts it first.
               throw new AdminServiceError(
                 'LAST_ADMIN',
                 '不能停用最后一名管理员',
@@ -376,8 +377,8 @@ export function createAdminAccountService(deps: {
       const hash = await hashPassword(temporaryPassword);
       const auditId = randomUUID();
       await withAdmin(db, async (tx) => {
-        const row = await account(tx, kind, id);
         const who = await actor(tx, principal);
+        const row = await account(tx, kind, id);
         const address = await email(row.authUserId);
         await setCredential(tx, row.authUserId, hash);
         await clearLoginFailures(tx, normalizeEmail(address));

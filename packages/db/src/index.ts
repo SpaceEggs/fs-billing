@@ -12,3 +12,4 @@ export { sql, eq, asc } from 'drizzle-orm';
 export * from './admin/tenants.js';
 export * from './admin/balance.js';
 export * from './admin/rates.js';
+export { DatabaseUnavailableError } from './unavailable.js';
