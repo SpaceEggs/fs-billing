@@ -7,6 +7,7 @@ import {
   adminSession,
   apiError,
   cachedState,
+  deferred,
   page,
   renderApp,
   type ApiHandler,
@@ -26,6 +27,8 @@ const ids = {
   tenant: '00000000-0000-4000-8000-0000000a0001',
   portal: '00000000-0000-4000-8000-0000000b0001',
   audit: '00000000-0000-4000-8000-0000000c0001',
+  otherTenant: '00000000-0000-4000-8000-0000000a0002',
+  otherPortal: '00000000-0000-4000-8000-0000000b0002',
 };
 
 const admin = (
@@ -513,5 +516,194 @@ describe('portal account tab', () => {
     expect(
       screen.getByRole('dialog', { name: '启用门户账号？' }),
     ).toHaveTextContent('启用门户账号不会启用租户');
+  });
+});
+
+describe('portal dialogs across cached tenants', () => {
+  type Reply = { status: number; body: unknown };
+  const other = {
+    ...tenant('active'),
+    id: ids.otherTenant,
+    code: 'XYZ002',
+    name: '另一家租户',
+  };
+
+  /** 两个租户的详情与门户账号都已缓存后回到租户 A 的门户账号页。 */
+  async function openBoth(
+    accounts: Record<string, unknown[]>,
+    routes: Record<string, ApiHandler>,
+  ) {
+    const opened = await openPortal({
+      [`GET /api/admin/tenants/${ids.tenant}/portal-accounts`]: () => ({
+        status: 200,
+        body: { items: accounts[ids.tenant] },
+      }),
+      [`GET /api/admin/tenants/${ids.otherTenant}`]: () => ({
+        status: 200,
+        body: other,
+      }),
+      [`GET /api/admin/tenants/${ids.otherTenant}/portal-accounts`]: () => ({
+        status: 200,
+        body: { items: accounts[ids.otherTenant] },
+      }),
+      ...routes,
+    });
+    const visit = async (tenantId: string, heading: string) => {
+      await opened.router.navigate({
+        to: '/admin/tenants/$tenantId',
+        params: { tenantId },
+        search: { tab: 'portal' },
+      });
+      await screen.findByRole('heading', { name: heading });
+      return screen.findByRole('region', { name: '客户门户账号' });
+    };
+    await visit(ids.otherTenant, '另一家租户');
+    const section = await visit(ids.tenant, '深圳市某某科技有限公司');
+    return { ...opened, section, visit };
+  }
+
+  it('a delayed create response for tenant A never shows under tenant B', async () => {
+    const response = deferred<Reply>();
+    const { user, visit } = await openBoth(
+      { [ids.tenant]: [], [ids.otherTenant]: [] },
+      {
+        [`POST /api/admin/tenants/${ids.tenant}/portal-accounts`]: () =>
+          response.promise,
+      },
+    );
+    await user.click(
+      await screen.findByRole('button', { name: '开通门户账号' }),
+    );
+    const form = screen.getByRole('form', { name: '开通门户账号' });
+    await user.type(
+      within(form).getByLabelText(/登录邮箱/),
+      'billing@abc-tech.cn',
+    );
+    await user.click(within(form).getByRole('button', { name: '开通' }));
+    expect(
+      within(form).getByRole('button', { name: '正在开通…' }),
+    ).toBeDisabled();
+
+    await visit(ids.otherTenant, '另一家租户');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    response.resolve({
+      status: 200,
+      body: {
+        auditId: ids.audit,
+        account: portalAccount('active'),
+        passwordSource: 'generated',
+        temporaryPassword: 'Pq8z-Lm31-Xc7v',
+      },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: '开通门户账号' }),
+      ).toBeVisible(),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByDisplayValue('Pq8z-Lm31-Xc7v')).toBeNull();
+  });
+
+  it('a delayed reset response for tenant A never shows under tenant B', async () => {
+    const response = deferred<Reply>();
+    const { user, section, visit } = await openBoth(
+      {
+        [ids.tenant]: [portalAccount('active')],
+        [ids.otherTenant]: [
+          {
+            ...portalAccount('active'),
+            id: ids.otherPortal,
+            email: 'ops@xyz.cn',
+          },
+        ],
+      },
+      {
+        [`POST /api/admin/portal-accounts/${ids.portal}/reset-password`]: () =>
+          response.promise,
+      },
+    );
+    await user.click(
+      await within(section).findByRole('button', { name: '重置密码' }),
+    );
+    const confirm = screen.getByRole('dialog', { name: '重置门户账号密码？' });
+    await user.click(within(confirm).getByRole('button', { name: '重置密码' }));
+    expect(
+      within(confirm).getByRole('button', { name: '正在重置…' }),
+    ).toBeDisabled();
+
+    await visit(ids.otherTenant, '另一家租户');
+    expect(await screen.findByText('ops@xyz.cn')).toBeVisible();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    response.resolve({
+      status: 200,
+      body: { temporaryPassword: 'Hn4t-Wz83-Lc6p' },
+    });
+    await new Promise((settle) => setTimeout(settle, 20));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByDisplayValue('Hn4t-Wz83-Lc6p')).toBeNull();
+  });
+});
+
+describe('account dialogs return focus to the opener', () => {
+  it('after cancelling and after acknowledging a temporary password', async () => {
+    const { user, table } = await openAdmins({
+      [`POST /api/admin/admins/${ids.lijun}/reset-password`]: () => ({
+        status: 200,
+        body: { temporaryPassword: 'Hn4t-Wz83-Lc6p' },
+      }),
+    });
+    const opener = within(row(table, '李俊')).getByRole('button', {
+      name: '重置 李俊 的密码',
+    });
+    await user.click(opener);
+    await user.click(
+      within(
+        screen.getByRole('dialog', { name: '重置 李俊 的密码？' }),
+      ).getByRole('button', { name: '取消' }),
+    );
+    await waitFor(() => expect(opener).toHaveFocus());
+
+    await user.click(opener);
+    await user.click(
+      within(
+        screen.getByRole('dialog', { name: '重置 李俊 的密码？' }),
+      ).getByRole('button', { name: '重置密码' }),
+    );
+    const result = await screen.findByRole('dialog', {
+      name: '已为 李俊 生成临时密码',
+    });
+    await user.click(
+      within(result).getByRole('button', { name: '我已复制，关闭' }),
+    );
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it('escape from the create dialog returns to the create button', async () => {
+    const { user } = await openAdmins();
+    const opener = screen.getByRole('button', { name: '＋ 新增管理员' });
+    await user.click(opener);
+    expect(screen.getByRole('form', { name: '新增管理员' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it('a dialog opened from the mobile action sheet returns to the sheet opener', async () => {
+    const { user } = await openAdmins();
+    const opener = screen.getByRole('button', { name: '李俊 的操作' });
+    await user.click(opener);
+    await user.click(
+      within(screen.getByRole('dialog', { name: '李俊 的操作' })).getByRole(
+        'button',
+        { name: '重置密码' },
+      ),
+    );
+    await user.click(
+      within(
+        screen.getByRole('dialog', { name: '重置 李俊 的密码？' }),
+      ).getByRole('button', { name: '取消' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 });

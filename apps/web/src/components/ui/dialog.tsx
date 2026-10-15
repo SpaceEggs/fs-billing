@@ -1,8 +1,20 @@
+import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { cn } from '../../lib/utils';
 
+/** 每个打开的对话框对应的打开者，供从对话框里接着打开的对话框（下一步、操作菜单）沿用。 */
+const openers = new WeakMap<Element, HTMLElement>();
+
+function currentOpener(): HTMLElement | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active === document.body) return null;
+  const host = active.closest('[role="dialog"]');
+  return host ? (openers.get(host) ?? null) : active;
+}
+
 /**
- * 电脑居中、手机底部弹出的对话框。Radix 负责焦点进入、焦点圈定与关闭后归还。
+ * 电脑居中、手机底部弹出的对话框。Radix 负责焦点进入与焦点圈定；
+ * 没有 Dialog.Trigger，关闭（含卸载）后由这里把焦点还给打开时聚焦的元素。
  * `onOpenChange` 省略时不可通过 Esc 或点击遮罩关闭（例如只显示一次的密码）。
  */
 export function ModalDialog({
@@ -21,11 +33,30 @@ export function ModalDialog({
   className?: string;
 }) {
   const dismissible = onOpenChange !== undefined;
+  // 每次打开时（首次挂载即打开，或 open 由 false 变 true）在渲染中记下打开者，此时焦点尚未移入对话框。
+  const [opener, setOpener] = useState(() => (open ? currentOpener() : null));
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setOpener(currentOpener());
+  }
   return (
     <Dialog.Root open={open} {...(onOpenChange ? { onOpenChange } : {})}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-scrim" />
         <Dialog.Content
+          ref={(node) => {
+            if (node && opener) openers.set(node, opener);
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            // 换成下一步对话框时焦点留在新对话框里。
+            if (
+              opener?.isConnected &&
+              !document.querySelector('[role="dialog"]')
+            )
+              opener.focus();
+          }}
           {...(description ? {} : { 'aria-describedby': undefined })}
           onEscapeKeyDown={
             dismissible ? undefined : (event) => event.preventDefault()

@@ -387,10 +387,15 @@ export function PortalTab({
         <CreatePortalDialog tenantId={tenantId} onClose={close} />
       ) : null}
       {account && action === 'reset' ? (
-        <ResetPasswordDialog target={toTarget(account)} onClose={close} />
+        <ResetPasswordDialog
+          key={account.id}
+          target={toTarget(account)}
+          onClose={close}
+        />
       ) : null}
       {account && (action === 'disable' || action === 'enable') ? (
         <AccountStatusDialog
+          key={account.id}
           target={toTarget(account)}
           action={action}
           extraNote={

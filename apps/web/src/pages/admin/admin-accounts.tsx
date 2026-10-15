@@ -652,6 +652,7 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
       ) : null}
       {action?.kind === 'reset' ? (
         <ResetPasswordDialog
+          key={action.account.id}
           target={toTarget(action.account)}
           self={action.account.id === selfId}
           onClose={close}
@@ -659,6 +660,7 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
       ) : null}
       {action?.kind === 'status' ? (
         <AccountStatusDialog
+          key={action.account.id}
           target={toTarget(action.account)}
           action={action.action}
           onClose={close}

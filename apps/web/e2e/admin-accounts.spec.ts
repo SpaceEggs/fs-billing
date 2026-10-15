@@ -70,6 +70,9 @@ test('shows temporary password once', async ({ page, browser }) => {
   await expect(result).toBeVisible();
   await result.getByRole('button', { name: '我已复制，关闭' }).click();
   await expect(result).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: '＋ 新增管理员' }),
+  ).toBeFocused();
 
   const row = await openAdmins(page, email);
   await expect(row).toContainText('端到端管理员');
@@ -102,8 +105,13 @@ test('resets, disables and enables another admin', async ({
   await createAdmin(page, name, email);
   const row = await openAdmins(page, email);
 
-  await row.getByRole('button', { name: `重置 ${name} 的密码` }).click();
+  const resetButton = row.getByRole('button', { name: `重置 ${name} 的密码` });
+  await resetButton.click();
   const confirm = page.getByRole('dialog', { name: `重置 ${name} 的密码？` });
+  await confirm.getByRole('button', { name: '取消' }).click();
+  await expect(confirm).toBeHidden();
+  await expect(resetButton).toBeFocused();
+  await resetButton.click();
   await confirm.getByRole('button', { name: '重置密码' }).click();
   const result = page.getByRole('dialog', {
     name: `已为 ${name} 生成临时密码`,
@@ -113,6 +121,7 @@ test('resets, disables and enables another admin', async ({
     .inputValue();
   await result.getByRole('button', { name: '我已复制，关闭' }).click();
   await expect(result).toBeHidden();
+  await expect(resetButton).toBeFocused();
   await expectTemporaryLogin(browser, '/admin/login', email, temporary);
 
   await row.getByRole('button', { name: `停用 ${name}` }).click();
