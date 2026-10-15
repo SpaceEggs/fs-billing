@@ -6,7 +6,7 @@ const ci = Boolean(process.env['CI']);
 export default defineConfig({
   testDir: 'e2e',
   globalSetup: './e2e/global-setup.ts',
-  // 测试共享真实数据库、账户锁定计数与每 IP 登录限流，必须串行。
+  // 测试共享真实数据库与账户锁定计数，必须串行。
   workers: 1,
   fullyParallel: false,
   forbidOnly: ci,

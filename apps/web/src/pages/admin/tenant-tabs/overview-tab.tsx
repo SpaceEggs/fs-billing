@@ -1,11 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
-import type { Currency } from '@fs-billing/shared';
-import { webConfig } from '../../../config';
+import type { Currency, TenantUsageOverview } from '@fs-billing/shared';
 import { QueryError } from '../../../components/query-error';
+import { apiQuery } from '../../../lib/admin-api';
 import { formatDate, formatMoney, formatTime } from '../../../lib/format';
-import { tenantOverviewQuery } from '../../../lib/tenant-overview';
-import type { TenantUsageOverview } from '../../../lib/usage-overview-mirror';
 import { cn } from '../../../lib/utils';
 
 const countFormat = new Intl.NumberFormat('en-US');
@@ -143,58 +141,11 @@ function DailyChart({
   );
 }
 
-function ComingSoon() {
-  return (
-    <div className="flex flex-col gap-5">
-      <div
-        role="status"
-        className="flex flex-col gap-0.5 rounded-lg border border-brand-border bg-brand-soft px-3.5 py-2.5 text-[13px] leading-normal"
-      >
-        <span className="font-semibold text-primary">概况数据即将上线</span>
-        <span>
-          本月消费、通话统计和最近 30
-          天每日消费将在统计接口上线后显示。当前余额见上方卡片，入账明细见「余额流水」。
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-        <StatCard label="本月消费" value="—" sub="数据即将上线" />
-        <StatCard label="本月通话" value="—" sub="数据即将上线" />
-        <StatCard
-          label="今日消费"
-          value="—"
-          sub="数据即将上线"
-          className="hidden md:flex"
-        />
-      </div>
-      <section
-        aria-label="最近 30 天每日消费"
-        className="flex flex-col gap-1 rounded-xl border border-border px-6 py-5"
-      >
-        <span className="text-base font-semibold">最近 30 天每日消费</span>
-        <span className="py-16 text-center text-[13px] text-muted-foreground">
-          数据即将上线
-        </span>
-      </section>
-    </div>
+/** 概况（设计稿第三批 1a/3a）。 */
+export function OverviewTab({ tenantId }: { tenantId: string }) {
+  const overview = useQuery(
+    apiQuery('adminTenantOverview', { params: { tenantId } }),
   );
-}
-
-/**
- * 概况（设计稿第三批 1a/3a）。统计接口（PR #24）上线前由 `VITE_TENANT_OVERVIEW`
- * 关闭，显示“数据即将上线”且不发请求。
- */
-export function OverviewTab({
-  tenantId,
-  enabled = webConfig.tenantOverviewEnabled,
-}: {
-  tenantId: string;
-  enabled?: boolean;
-}) {
-  return enabled ? <Overview tenantId={tenantId} /> : <ComingSoon />;
-}
-
-function Overview({ tenantId }: { tenantId: string }) {
-  const overview = useQuery(tenantOverviewQuery(tenantId));
   if (overview.isError)
     return (
       <QueryError

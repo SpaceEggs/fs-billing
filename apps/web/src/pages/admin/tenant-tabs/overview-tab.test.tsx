@@ -28,10 +28,7 @@ const overview = {
   dailyTotal: '239.14',
 };
 
-function renderTab(
-  enabled: boolean,
-  reply: () => { status: number; body: unknown },
-) {
+function renderTab(reply: () => { status: number; body: unknown }) {
   const fetchMock = vi.fn(() => {
     const { status, body } = reply();
     return Promise.resolve(
@@ -47,7 +44,7 @@ function renderTab(
   });
   render(
     <QueryClientProvider client={client}>
-      <OverviewTab tenantId={tenantId} enabled={enabled} />
+      <OverviewTab tenantId={tenantId} />
     </QueryClientProvider>,
   );
   return fetchMock;
@@ -63,17 +60,8 @@ afterEach(() => {
 });
 
 describe('tenant overview tab', () => {
-  it('with the flag off shows the coming-soon state and makes no request', () => {
-    const fetchMock = renderTab(false, () => ({ status: 200, body: overview }));
-    expect(screen.getByRole('status')).toHaveTextContent('概况数据即将上线');
-    expect(screen.getByRole('region', { name: '本月消费' })).toHaveTextContent(
-      '—',
-    );
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('with the flag on renders month, call and today cards from the overview', async () => {
-    const fetchMock = renderTab(true, () => ({ status: 200, body: overview }));
+  it('renders month, call and today cards from the overview', async () => {
+    const fetchMock = renderTab(() => ({ status: 200, body: overview }));
     expect(screen.getByLabelText('概况加载中')).toBeInTheDocument();
 
     const month = await screen.findByRole('region', { name: '本月消费' });
@@ -90,11 +78,10 @@ describe('tenant overview tab', () => {
     expect(today).toHaveTextContent('¥88.64');
     expect(today).toHaveTextContent('截至 14:03');
     expect(today).toHaveClass('hidden', 'md:flex');
-    expect(screen.queryByText('概况数据即将上线')).not.toBeInTheDocument();
   });
 
   it('draws all 30 days with zero days flat, highlights today and shows the server total', async () => {
-    renderTab(true, () => ({ status: 200, body: overview }));
+    renderTab(() => ({ status: 200, body: overview }));
     const chart = await screen.findByRole('region', {
       name: '最近 30 天每日消费',
     });
@@ -121,7 +108,7 @@ describe('tenant overview tab', () => {
   });
 
   it('a month with no spend still lists 30 zero days and says so', async () => {
-    renderTab(true, () => ({
+    renderTab(() => ({
       status: 200,
       body: {
         ...overview,
@@ -143,7 +130,7 @@ describe('tenant overview tab', () => {
 
   it('a 503 shows the unavailable message with a retry that refetches', async () => {
     let status = 503;
-    const fetchMock = renderTab(true, () =>
+    const fetchMock = renderTab(() =>
       status === 503
         ? {
             status,
@@ -170,7 +157,7 @@ describe('tenant overview tab', () => {
   });
 
   it('a response in the old overview shape is an error, not a half-filled page', async () => {
-    renderTab(true, () => ({
+    renderTab(() => ({
       status: 200,
       body: {
         currency: 'CNY',

@@ -6,14 +6,13 @@ import {
 } from '@playwright/test';
 import { accounts, password } from './accounts';
 import { webOrigin } from './env';
-import { expectPath, retryRateLimited } from './helpers';
+import { expectPath } from './helpers';
 
 type StorageState = Awaited<ReturnType<APIRequestContext['storageState']>>;
 
 /**
- * 后台用例共用管理员会话：每个 worker 经接口登录一次，各用例以该会话启动。
- * 登录与改密码共享每 IP 每分钟 30 次的凭据限流，逐个用例登录会挤占 auth.spec 的额度；
- * 管理员登录页本身由 auth.spec 覆盖。额度已用完时按 Retry-After 等待重试。
+ * 后台用例共用管理员会话：每个 worker 经接口登录一次，各用例以该会话启动，
+ * 不必各自走登录页。管理员登录页本身由 auth.spec 覆盖。
  */
 export const test = base.extend<object, { adminSession: StorageState }>({
   adminSession: [
@@ -21,20 +20,15 @@ export const test = base.extend<object, { adminSession: StorageState }>({
       const request = await playwright.request.newContext({
         baseURL: webOrigin,
       });
-      const response = await retryRateLimited(
-        () =>
-          request.post('/api/auth/login', {
-            data: { email: accounts.admin, password: password() },
-          }),
-        () => {},
-      );
+      const response = await request.post('/api/auth/login', {
+        data: { email: accounts.admin, password: password() },
+      });
       expect(response.status()).toBe(200);
       const state = await request.storageState();
       await request.dispose();
       await use(state);
     },
-    // 最多等待 3 次 60 秒限流窗口。
-    { scope: 'worker', timeout: 4 * 61_000 },
+    { scope: 'worker' },
   ],
   storageState: ({ adminSession }, use) => use(adminSession),
 });

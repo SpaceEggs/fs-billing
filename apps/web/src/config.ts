@@ -12,8 +12,6 @@ const webEnvSchema = z.object({
   VITE_LARGE_AMOUNT_THRESHOLD_CNY:
     adminNonnegativeAmountSchema.default('10000'),
   VITE_LARGE_AMOUNT_THRESHOLD_USD: adminNonnegativeAmountSchema.default('1500'),
-  /** 租户概况统计接口上线后改为 on。 */
-  VITE_TENANT_OVERVIEW: z.enum(['on', 'off']).default('off'),
 });
 
 export function createWebConfig(env: Record<string, unknown>) {
@@ -24,7 +22,6 @@ export function createWebConfig(env: Record<string, unknown>) {
       CNY: parsed.VITE_LARGE_AMOUNT_THRESHOLD_CNY,
       USD: parsed.VITE_LARGE_AMOUNT_THRESHOLD_USD,
     } satisfies Record<Currency, string>,
-    tenantOverviewEnabled: parsed.VITE_TENANT_OVERVIEW === 'on',
   };
 }
 export type WebConfig = ReturnType<typeof createWebConfig>;

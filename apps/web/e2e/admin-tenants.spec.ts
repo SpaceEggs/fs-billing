@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { createTenant, openTenants, test, uniqueCode } from './admin';
-import { expectPath, submitCredentials } from './helpers';
+import { recordCalls } from './db';
+import { expectPath } from './helpers';
 
 test('tenant list shows seeded tenants with status and per-currency balances', async ({
   page,
@@ -65,10 +66,7 @@ test('onboarding shows the generated portal password once and the new account mu
   await customer.goto('/login');
   await customer.getByLabel('登录邮箱').fill(portalEmail);
   await customer.getByLabel('密码', { exact: true }).fill(temporaryPassword);
-  const login = await submitCredentials(customer, '/api/auth/login', () =>
-    customer.getByRole('button', { name: '登录', exact: true }).click(),
-  );
-  expect(login.status()).toBe(200);
+  await customer.getByRole('button', { name: '登录', exact: true }).click();
   await expectPath(customer, '/change-password');
   await expect(
     customer.getByRole('heading', { name: '请修改初始密码' }),
@@ -80,12 +78,7 @@ test('onboarding shows the generated portal password once and the new account mu
     .fill(temporaryPassword);
   await customer.getByLabel('新密码', { exact: true }).fill(newPassword);
   await customer.getByLabel('确认新密码', { exact: true }).fill(newPassword);
-  const changed = await submitCredentials(
-    customer,
-    '/api/auth/change-password',
-    () => customer.getByRole('button', { name: '修改密码' }).click(),
-  );
-  expect(changed.status()).toBe(200);
+  await customer.getByRole('button', { name: '修改密码' }).click();
   await expectPath(customer, '/');
   await expect(customer.getByRole('heading', { name: '首页' })).toBeVisible();
   await customer.close();
@@ -103,6 +96,35 @@ test('a duplicate tenant code is reported on the code field', async ({
   await page.getByRole('button', { name: '创建租户' }).click();
   await expect(page.getByText('租户编码已被使用')).toBeVisible();
   await expect(page.getByText('编码 ABC001 已存在，请换一个')).toBeVisible();
+});
+
+test('overview tab shows this month, call counts and the 30-day chart from the API', async ({
+  page,
+}) => {
+  await openTenants(page);
+  const tenant = await createTenant(page);
+  await recordCalls(tenant.id, { charge: '12.34', minutes: '3' });
+  await page.goto(`/admin/tenants/${tenant.id}`);
+
+  await expect(page.getByRole('link', { name: '概况' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('region', { name: '本月消费' })).toContainText(
+    '¥12.34',
+  );
+  const calls = page.getByRole('region', { name: '本月通话' });
+  await expect(calls).toContainText('3分钟');
+  await expect(calls).toContainText('2 通 · 含未接通 1');
+  await expect(page.getByRole('region', { name: '今日消费' })).toContainText(
+    '¥12.34',
+  );
+  const chart = page.getByRole('region', { name: '最近 30 天每日消费' });
+  await expect(chart.getByLabel('合计 ¥12.34')).toBeVisible();
+  const bars = chart.getByRole('listitem');
+  await expect(bars).toHaveCount(30);
+  await expect(bars.last()).toHaveAttribute('aria-current', 'date');
+  await expect(bars.last()).toHaveAccessibleName(/（今日） ¥12\.34$/);
 });
 
 test('disable confirmation explains live call behavior', async ({ page }) => {

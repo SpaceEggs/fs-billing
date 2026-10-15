@@ -457,18 +457,48 @@ describe('tenant detail', () => {
     return screen.findByRole('dialog', { name: '余额操作' });
   }
 
-  it('the overview tab stays on coming soon without requesting statistics while the flag is off', async () => {
-    const { handler, calls } = adminApi({
+  /** 详情页默认停在概况，每次渲染都会请求统计。 */
+  function detailApi(routes: Record<string, ApiHandler>) {
+    return adminApi({
+      [`GET ${detailPath}/overview`]: () => ({
+        status: 200,
+        body: {
+          asOf: '2026-10-15T06:03:27.120Z',
+          currency: 'CNY',
+          monthSpend: '2486.3',
+          monthCallMinutes: '49726',
+          answeredCalls: 12804,
+          unansweredCalls: 713,
+          daily: Array.from({ length: 30 }, (_, index) => ({
+            date: new Date(Date.UTC(2026, 8, 16 + index))
+              .toISOString()
+              .slice(0, 10),
+            spend: '0',
+          })),
+          dailyTotal: '0',
+        },
+      }),
+      ...routes,
+    });
+  }
+
+  it('the detail page opens on the overview tab with the tenant statistics', async () => {
+    const { handler } = detailApi({
       [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
     });
     renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
-    expect(await screen.findByText('概况数据即将上线')).toBeVisible();
-    expect(calls.some((call) => call.path.endsWith('/overview'))).toBe(false);
+    expect(
+      await screen.findByRole('region', { name: '本月消费' }),
+    ).toHaveTextContent('¥2,486.30');
+    expect(screen.getByRole('link', { name: '概况' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('a blank adjustment reason is blocked locally and the retry after a network failure reuses the key', async () => {
     let fail = true;
-    const { handler, calls } = adminApi({
+    const { handler, calls } = detailApi({
       [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
       [`POST ${detailPath}/balance-operations`]: () => {
         if (fail) {
@@ -521,7 +551,7 @@ describe('tenant detail', () => {
   });
 
   it('a gift exactly at the threshold needs no second confirmation; one cent more does', async () => {
-    const { handler, calls } = adminApi({
+    const { handler, calls } = detailApi({
       [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
       [`POST ${detailPath}/balance-operations`]: () => ({
         status: 200,
@@ -557,7 +587,7 @@ describe('tenant detail', () => {
   });
 
   it('a top-up on a disabled tenant explains the status does not change', async () => {
-    const { handler } = adminApi({
+    const { handler } = detailApi({
       [`GET ${detailPath}`]: () => ({
         status: 200,
         body: detail({ status: 'disabled', health: 'disabled' }),
@@ -575,7 +605,7 @@ describe('tenant detail', () => {
   });
 
   it('server field issues return to the form on the matching field', async () => {
-    const { handler } = adminApi({
+    const { handler } = detailApi({
       [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
       [`POST ${detailPath}/balance-operations`]: () => ({
         status: 400,
@@ -600,7 +630,7 @@ describe('tenant detail', () => {
   });
 
   it('disabling an already disabled tenant reports no change', async () => {
-    const { handler } = adminApi({
+    const { handler } = detailApi({
       [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
       [`POST ${detailPath}/disable`]: () => ({
         status: 200,
