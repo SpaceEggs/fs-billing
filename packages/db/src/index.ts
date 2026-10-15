@@ -14,3 +14,4 @@ export * from './admin/balance.js';
 export * from './admin/rates.js';
 export { DatabaseUnavailableError } from './unavailable.js';
 export * from './usage.js';
+export * from './errors.js';

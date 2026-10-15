@@ -311,8 +311,9 @@ describe('tenant usage overview snapshot', () => {
     expect(list.items[0]?.monthConsumption).toBe(value.monthSpend);
     await expect(
       withTenant(app.db, b.id, (tx) => readTenantUsageOverview(tx, a.id)),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    ).rejects.toMatchObject({ name: 'NotFoundError', code: 'NOT_FOUND' });
     await expect(read(randomUUID(), now.toISOString())).rejects.toMatchObject({
+      name: 'NotFoundError',
       code: 'NOT_FOUND',
     });
   });

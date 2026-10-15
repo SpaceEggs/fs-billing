@@ -4,7 +4,7 @@ import {
   type TenantUsageOverview,
 } from '@fs-billing/shared';
 import type { Tx } from './client.js';
-import { AdminServiceError } from './admin/errors.js';
+import { NotFoundError } from './errors.js';
 
 export function tenantMonthSpendSql(
   tenantId: SQLWrapper,
@@ -73,6 +73,6 @@ export async function readTenantUsageOverview(
     where t.id = ${tenantId}::uuid
   `);
   const row = rows[0];
-  if (!row) throw new AdminServiceError('NOT_FOUND', '租户不存在');
+  if (!row) throw new NotFoundError('租户不存在');
   return tenantUsageOverviewSchema.parse(row.overview);
 }

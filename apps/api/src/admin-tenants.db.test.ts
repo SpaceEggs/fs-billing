@@ -84,6 +84,12 @@ describe('admin tenant and balance API', () => {
         headers: requestHeaders(cookie),
       });
       expect(rejected.statusCode, rejected.body).toBe(status);
+      if (status === 404) {
+        expect(rejected.json()).toMatchObject({
+          error: { code: 'NOT_FOUND', message: '租户不存在' },
+        });
+        expect(rejected.headers['cache-control']).toContain('no-store');
+      }
     }
     const anonymous = await api.inject(
       `/api/admin/tenants/${tenant.id}/overview`,
