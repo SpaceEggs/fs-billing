@@ -303,6 +303,7 @@ describe('home load errors', () => {
               email: 'wangmin@example.com',
             },
             expiresAt: customerSession.expiresAt,
+            passwordChangeRequired: false,
           },
         };
       if (path === '/api/admin/context') {

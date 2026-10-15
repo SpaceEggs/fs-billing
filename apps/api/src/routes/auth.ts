@@ -22,5 +22,6 @@ export function sessionResponse(
   return {
     identity: context.identity,
     expiresAt: session.expiresAt.toISOString(),
+    passwordChangeRequired: session.passwordChangeRequired,
   };
 }

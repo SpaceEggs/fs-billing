@@ -1,7 +1,15 @@
 export * from './client.js';
+export * from './clock.js';
 export * from './ledger.js';
 export * from './partitions.js';
 export * from './rates.js';
+export * from './admin/receivables.js';
+export * from './admin/audit.js';
+export * from './admin/errors.js';
 export * as schema from './schema.js';
 export * as authSchema from './auth-schema.js';
 export { sql, eq, asc } from 'drizzle-orm';
+export * from './admin/tenants.js';
+export * from './admin/balance.js';
+export * from './admin/rates.js';
+export { DatabaseUnavailableError } from './unavailable.js';

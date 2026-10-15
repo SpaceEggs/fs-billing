@@ -50,6 +50,15 @@ export function createBetterAuth(input: {
       },
     },
     account: {
+      additionalFields: {
+        temporaryPasswordIssuedAt: {
+          type: 'date' as const,
+          fieldName: 'temporary_password_issued_at',
+          required: false,
+          input: false,
+          returned: false,
+        },
+      },
       fields: {
         accountId: 'account_id',
         providerId: 'provider_id',

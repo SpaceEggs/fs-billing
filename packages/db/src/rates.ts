@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import {
   money,
   rate,
@@ -68,7 +68,7 @@ export async function loadRatingTenant(
     })
     .from(tenants)
     .innerJoin(tenantBalances, eq(tenantBalances.tenantId, tenants.id))
-    .where(eq(tenants.code, code));
+    .where(eq(sql`upper(${tenants.code})`, code.toUpperCase()));
   if (!row) return undefined;
 
   const rows = await tx

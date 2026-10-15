@@ -13,6 +13,44 @@ const raise = (code: string) =>
   );
 
 describe('withAdmin / withSystem 重试', () => {
+  it('rejects nested isolation requests before running the callback', async () => {
+    let calls = 0;
+    for (const outerIsolation of [
+      undefined,
+      { isolationLevel: 'serializable' },
+    ] as const) {
+      await expect(
+        app.db.transaction(
+          (tx) =>
+            withAdmin(
+              tx,
+              () => {
+                calls += 1;
+                return Promise.resolve();
+              },
+              { isolationLevel: 'serializable' },
+            ),
+          outerIsolation,
+        ),
+      ).rejects.toThrow(
+        'Transaction isolation must be requested at the outermost layer',
+      );
+    }
+    expect(calls).toBe(0);
+  });
+
+  it('applies SERIALIZABLE to an outermost admin transaction', async () => {
+    const result = await withAdmin(
+      app.db,
+      (tx) =>
+        tx.execute<{ isolation: string }>(
+          sql`select current_setting('transaction_isolation') as isolation`,
+        ),
+      { isolationLevel: 'serializable' },
+    );
+    expect(result.rows).toEqual([{ isolation: 'serializable' }]);
+  });
+
   it('40P01 与 40001 回滚后重跑整个事务', async () => {
     for (const [run, code] of [
       [withAdmin, '40P01'],

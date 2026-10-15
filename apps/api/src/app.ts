@@ -12,10 +12,13 @@ import {
   changePasswordRequestSchema,
   loginRequestSchema,
   resetPasswordParamsSchema,
+  adminApiErrorStatus,
+  createAdminRateRequestSchemas,
+  createAdminAmountRequestSchemas,
 } from '@fs-billing/shared';
-import { withTenant, type Db } from '@fs-billing/db';
+import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
-import { ApiFailure, sendFailure } from './errors.js';
+import { ApiFailure, isTransientServiceError, sendFailure } from './errors.js';
 import { resolvePrincipal } from './identity.js';
 import {
   registerRoutes,
@@ -29,7 +32,13 @@ import {
   sessionResponse,
 } from './routes/auth.js';
 import { readPortalBalance } from './routes/portal.js';
-import { resetProfilePassword } from './routes/admin.js';
+import { tenantHandlers } from './routes/admin/tenants.js';
+import { balanceHandlers } from './routes/admin/balance.js';
+import { receivableHandlers } from './routes/admin/receivables.js';
+import { rateHandlers } from './routes/admin/rates.js';
+import { createLiveApiContract } from './routes/contract.js';
+import { accountHandlers } from './routes/admin/accounts.js';
+import type { AdminAccountService } from './auth/admin-accounts.js';
 
 export type ApiDependencies = {
   businessDb: Db;
@@ -37,8 +46,22 @@ export type ApiDependencies = {
   logger?: boolean;
   trustedOrigins?: readonly string[];
   rateLimit?: { max: number; timeWindow: number };
+  adminRates?: {
+    horizonMs?: number;
+    previewTtlMs?: number;
+    cancelClockSkewMarginSeconds?: number;
+  };
+  adminAmountMaxIntegerDigits?: number;
+  accountService?: AdminAccountService;
 };
 export function createApi(deps: ApiDependencies) {
+  const rateRequests = createAdminRateRequestSchemas(
+    deps.adminRates?.horizonMs,
+  );
+  const amountRequests = createAdminAmountRequestSchemas(
+    deps.adminAmountMaxIntegerDigits,
+  );
+  const contract = createLiveApiContract(rateRequests, amountRequests);
   const app = Fastify({
     logger: deps.logger ?? false,
     trustProxy: false,
@@ -60,6 +83,28 @@ export function createApi(deps: ApiDependencies) {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler((error, request, reply) => {
+    if (
+      error instanceof Error &&
+      'statusCode' in error &&
+      error.statusCode === 413 &&
+      (request.routeOptions.url === '/api/admin/tenants' ||
+        request.routeOptions.url?.endsWith('/rates/import/preview'))
+    )
+      error = new AdminServiceError('CSV_LIMIT_EXCEEDED', 'CSV 文件超限');
+    if (error instanceof AdminServiceError) {
+      reply.header('Cache-Control', 'no-store');
+      return reply.code(adminApiErrorStatus[error.code]).send({
+        error: {
+          code: error.code,
+          message: error.message,
+          requestId: request.id,
+          ...(error.code === 'CSV_INVALID' ? { rows: error.rows } : {}),
+          ...(error.code === 'VALIDATION_ERROR'
+            ? { issues: [{ path: [], message: error.message }] }
+            : {}),
+        },
+      });
+    }
     if (error instanceof ApiFailure) return sendFailure(request, reply, error);
     if (error instanceof GatewayError) {
       sendCookies(reply, error.setCookie);
@@ -79,12 +124,25 @@ export function createApi(deps: ApiDependencies) {
     )
       return sendFailure(request, reply, new ApiFailure('VALIDATION_ERROR'));
     app.log.error({ err: error, requestId: request.id }, 'API request failed');
-    return sendFailure(request, reply, new ApiFailure('SERVICE_UNAVAILABLE'));
+    return sendFailure(
+      request,
+      reply,
+      new ApiFailure(
+        isTransientServiceError(error)
+          ? 'SERVICE_UNAVAILABLE'
+          : 'INTERNAL_ERROR',
+      ),
+    );
   });
   app.setNotFoundHandler((request, reply) =>
     sendFailure(request, reply, new ApiFailure('NOT_FOUND')),
   );
   const handlers: RouteHandlers = {
+    ...tenantHandlers(deps.businessDb, amountRequests),
+    ...balanceHandlers(deps.businessDb, amountRequests),
+    ...receivableHandlers(deps.businessDb),
+    ...rateHandlers(deps.businessDb, { ...deps.adminRates, rateRequests }),
+    ...accountHandlers(deps.accountService),
     health: () => Promise.resolve({ status: 'ok', service: 'api' }),
     login: async (_context, request, reply) => {
       const session = await deps.auth.login(
@@ -145,39 +203,17 @@ export function createApi(deps: ApiDependencies) {
     },
     resetPortalAccountPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      return resetProfilePassword(
-        {
-          ...deps,
-          auditFailure: (error) =>
-            app.log.error(
-              {
-                err: error,
-                event: 'password_reset_audit_failed',
-                requestId: request.id,
-              },
-              'Password reset committed but audit failed',
-            ),
-        },
+      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
+      return deps.accountService.resetPassword(
         context.principal,
-        'customer',
+        'portal',
         resetPasswordParamsSchema.parse(request.params).id,
       );
     },
     resetAdminPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      return resetProfilePassword(
-        {
-          ...deps,
-          auditFailure: (error) =>
-            app.log.error(
-              {
-                err: error,
-                event: 'password_reset_audit_failed',
-                requestId: request.id,
-              },
-              'Password reset committed but audit failed',
-            ),
-        },
+      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
+      return deps.accountService.resetPassword(
         context.principal,
         'admin',
         resetPasswordParamsSchema.parse(request.params).id,
@@ -206,6 +242,7 @@ export function createApi(deps: ApiDependencies) {
         rateLimit: deps.rateLimit ?? { max: 30, timeWindow: 60_000 },
       },
       handlers,
+      contract,
     );
     done();
   });

@@ -3,7 +3,7 @@ import { currencySchema } from '../identity.js';
 import { moneyAmountSchema } from '../money.js';
 import { adminReceivableStatusSchema } from './receivables.js';
 import {
-  adminMutationResponseSchema,
+  adminAuditedMutationResponseSchema,
   adminInputAmountSchemas,
   adminPageInfoSchema,
   adminPageQuerySchema,
@@ -21,32 +21,38 @@ const balanceFields = {
       message: 'call: 是通话扣费保留命名空间',
     }),
 };
-export const adminBalanceOperationRequestSchema = z.discriminatedUnion('kind', [
-  z.strictObject({
-    ...balanceFields,
-    kind: z.literal('topup'),
-    amount: adminInputAmountSchemas.positive,
-    note: z.string().max(2000).default(''),
-  }),
-  z.strictObject({
-    ...balanceFields,
-    kind: z.literal('credit_topup'),
-    amount: adminInputAmountSchemas.positive,
-    internalNote: z.string().max(2000).default(''),
-  }),
-  z.strictObject({
-    ...balanceFields,
-    kind: z.literal('gift'),
-    amount: adminInputAmountSchemas.positive,
-    note: z.string().max(2000).default(''),
-  }),
-  z.strictObject({
-    ...balanceFields,
-    kind: z.literal('adjustment'),
-    amount: adminInputAmountSchemas.adjustment,
-    reason: z.string().trim().min(1).max(2000),
-  }),
-]);
+export function createAdminBalanceOperationRequestSchema(
+  amounts = adminInputAmountSchemas,
+) {
+  return z.discriminatedUnion('kind', [
+    z.strictObject({
+      ...balanceFields,
+      kind: z.literal('topup'),
+      amount: amounts.positive,
+      note: z.string().max(2000).default(''),
+    }),
+    z.strictObject({
+      ...balanceFields,
+      kind: z.literal('credit_topup'),
+      amount: amounts.positive,
+      internalNote: z.string().max(2000).default(''),
+    }),
+    z.strictObject({
+      ...balanceFields,
+      kind: z.literal('gift'),
+      amount: amounts.positive,
+      note: z.string().max(2000).default(''),
+    }),
+    z.strictObject({
+      ...balanceFields,
+      kind: z.literal('adjustment'),
+      amount: amounts.adjustment,
+      reason: z.string().trim().min(1).max(2000),
+    }),
+  ]);
+}
+export const adminBalanceOperationRequestSchema =
+  createAdminBalanceOperationRequestSchema();
 export const adminLedgerKindSchema = z.enum([
   'recharge',
   'credit_recharge',
@@ -91,7 +97,7 @@ export const adminLedgerResponseSchema = z.strictObject({
   pagination: adminPageInfoSchema,
 });
 export const adminBalanceOperationResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     currency: currencySchema,
     entry: adminLedgerEntrySchema,
     balance: moneyAmountSchema,

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { currencySchema, tenantIdentitySchema } from '../identity.js';
 import {
-  adminMutationResponseSchema,
+  adminAuditedMutationResponseSchema,
   adminNonnegativeAmountSchema,
   adminPageInfoSchema,
   adminPageQuerySchema,
@@ -91,7 +91,7 @@ export const adminConfirmPaymentRequestSchema = z.strictObject({
   note: z.string().max(2000).default(''),
 });
 export const adminConfirmPaymentResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     settlementId: z.uuid(),
     ledgerEntryId: z.uuid(),
     receivedOn: receivedOnSchema,
@@ -115,7 +115,7 @@ export const adminVoidReceivableRequestSchema = z.strictObject({
   reason: z.string().trim().min(1).max(2000),
 });
 export const adminVoidReceivableResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     ledgerEntryId: z.uuid(),
     voidId: z.uuid(),
   });
@@ -124,7 +124,7 @@ export const adminReversePaymentRequestSchema = z.strictObject({
   reason: z.string().trim().min(1).max(2000),
 });
 export const adminReversePaymentResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     ledgerEntryId: z.uuid(),
     settlementId: z.uuid(),
     reversalId: z.uuid(),

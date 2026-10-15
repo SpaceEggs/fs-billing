@@ -67,7 +67,7 @@ export function createWorker(dependencies?: WorkerDependencies) {
         }
         return reply.code(400).send({ error: '授权请求格式错误' });
       }
-      const { tenant } = parsed.data;
+      const tenant = parsed.data.tenant.toUpperCase();
       const resolved = resolveBillingNumber(parsed.data);
       if ('error' in resolved) {
         if (resolved.error === 'mismatch') {

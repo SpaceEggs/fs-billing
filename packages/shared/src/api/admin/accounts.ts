@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { newPasswordSchema } from '../auth.js';
 import {
-  adminMutationResponseSchema,
+  adminAuditedMutationResponseSchema,
   adminPageInfoSchema,
   adminPageQuerySchema,
   adminStatusSchema,
@@ -32,7 +32,7 @@ export const adminAccountCreateRequestSchema = z.strictObject({
   email: z.email(),
 });
 export const adminAccountCreateResponseSchema =
-  adminMutationResponseSchema.extend({
+  adminAuditedMutationResponseSchema.extend({
     account: adminAccountSchema,
     temporaryPassword: newPasswordSchema,
   });
@@ -47,12 +47,12 @@ export const adminPortalAccountCreateRequestSchema = z.strictObject({
 export const adminPortalAccountCreateResponseSchema = z.discriminatedUnion(
   'passwordSource',
   [
-    adminMutationResponseSchema.extend({
+    adminAuditedMutationResponseSchema.extend({
       account: adminPortalAccountSchema,
       passwordSource: z.literal('generated'),
       temporaryPassword: newPasswordSchema,
     }),
-    adminMutationResponseSchema.extend({
+    adminAuditedMutationResponseSchema.extend({
       account: adminPortalAccountSchema,
       passwordSource: z.literal('supplied'),
     }),

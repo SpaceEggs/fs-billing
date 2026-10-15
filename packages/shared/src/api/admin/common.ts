@@ -65,6 +65,9 @@ export const adminInputAmountSchemas = createAdminInputAmountSchemas();
 
 export const adminStatusSchema = z.enum(['active', 'disabled']);
 export const adminMutationResponseSchema = z.strictObject({
+  auditId: z.uuid().nullable(),
+});
+export const adminAuditedMutationResponseSchema = z.strictObject({
   auditId: z.uuid(),
 });
 
@@ -80,3 +83,6 @@ export type AdminNonzeroAmount = z.infer<typeof adminNonzeroAmountSchema>;
 export type AdminPositiveAmount = z.infer<typeof adminPositiveAmountSchema>;
 export type AdminStatus = z.infer<typeof adminStatusSchema>;
 export type AdminMutationResponse = z.infer<typeof adminMutationResponseSchema>;
+export type AdminAuditedMutationResponse = z.infer<
+  typeof adminAuditedMutationResponseSchema
+>;

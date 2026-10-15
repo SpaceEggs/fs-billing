@@ -37,6 +37,56 @@ async function identity(id: string) {
 }
 
 describe('auth catalog and privilege boundary', () => {
+  it('supports staged users without credentials and persists temporary issuance until permanent password change', async () => {
+    const id = await user();
+    expect(
+      (await auth.query('select id from auth.account where user_id=$1', [id]))
+        .rows,
+    ).toEqual([]);
+    const tenant = await createTenant(app, 'CNY');
+    await owner.pool.query(
+      'insert into portal_accounts(auth_user_id,tenant_id) values($1,$2)',
+      [id, tenant.id],
+    );
+    const duplicate = await user();
+    expect(
+      await pgError(
+        owner.pool.query(
+          'insert into portal_accounts(auth_user_id,tenant_id) values($1,$2)',
+          [duplicate, tenant.id],
+        ),
+      ),
+    ).toMatchObject({
+      code: '23505',
+      constraint: 'portal_accounts_tenant_id_key',
+    });
+    const credentialId = randomUUID();
+    await auth.query(
+      "insert into auth.account(id,account_id,provider_id,user_id,password,temporary_password_issued_at,updated_at) values($1,$2,'credential',$2,'hash',now(),now())",
+      [credentialId, id],
+    );
+    const { rows: temporaryCredentials } = await auth.query<{
+      temporary_password_issued_at: Date | null;
+    }>('select temporary_password_issued_at from auth.account where id=$1', [
+      credentialId,
+    ]);
+    expect(
+      temporaryCredentials[0]?.temporary_password_issued_at,
+    ).toBeInstanceOf(Date);
+    await auth.query(
+      'update auth.account set password=$2,temporary_password_issued_at=null,updated_at=now() where id=$1',
+      [credentialId, 'permanent-hash'],
+    );
+    expect(
+      (
+        await auth.query(
+          'select temporary_password_issued_at from auth.account where id=$1',
+          [credentialId],
+        )
+      ).rows,
+    ).toEqual([{ temporary_password_issued_at: null }]);
+  });
+
   it('auth tables have no RLS and are not owned by runtime roles', async () => {
     const { rows } = await owner.pool.query<{
       relname: string;
@@ -334,6 +384,273 @@ describe('auth catalog and privilege boundary', () => {
       WHERE table_schema='public' AND table_name IN ('admins','portal_accounts') AND column_name='email'`)
       ).rows,
     ).toEqual([]);
+  });
+
+  it('rejects invalid temporary credential arguments through fs_billing_app before writes', async () => {
+    const id = await user();
+    const accountId = randomUUID();
+    const issuedAt = new Date(Date.now() - 60_000).toISOString();
+    const email = `${id}@example.invalid`;
+    await app.pool.query('SELECT auth.insert_credential($1,$2,$3,$4)', [
+      accountId,
+      id,
+      'original-hash',
+      issuedAt,
+    ]);
+    await auth.query(
+      'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now())',
+      [email],
+    );
+
+    const invalidInputs = [
+      { targetUserId: null, hash: 'hash', issuedAt },
+      { targetUserId: '', hash: 'hash', issuedAt },
+      { targetUserId: '   ', hash: 'hash', issuedAt },
+      { targetUserId: id, hash: null, issuedAt },
+      { targetUserId: id, hash: '', issuedAt },
+      { targetUserId: id, hash: '   ', issuedAt },
+      { targetUserId: id, hash: 'hash', issuedAt: null },
+      { targetUserId: id, hash: 'hash', issuedAt: 'infinity' },
+      { targetUserId: id, hash: 'hash', issuedAt: '-infinity' },
+      {
+        targetUserId: id,
+        hash: 'hash',
+        issuedAt: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+    ];
+    for (const input of invalidInputs) {
+      expect(
+        await pgError(
+          app.pool.query('SELECT auth.set_credential($1,$2,$3)', [
+            input.targetUserId,
+            input.hash,
+            input.issuedAt,
+          ]),
+        ),
+      ).toMatchObject({ code: '22023' });
+      expect(
+        await pgError(
+          app.pool.query('SELECT auth.insert_credential($1,$2,$3,$4)', [
+            randomUUID(),
+            input.targetUserId,
+            input.hash,
+            input.issuedAt,
+          ]),
+        ),
+      ).toMatchObject({ code: '22023' });
+    }
+    for (const invalidAccountId of [null, '', '   ']) {
+      expect(
+        await pgError(
+          app.pool.query('SELECT auth.insert_credential($1,$2,$3,$4)', [
+            invalidAccountId,
+            id,
+            'hash',
+            issuedAt,
+          ]),
+        ),
+      ).toMatchObject({ code: '22023' });
+    }
+    const credential = await auth.query<{
+      id: string;
+      password: string;
+      temporary_password_issued_at: Date;
+    }>(
+      'SELECT id,password,temporary_password_issued_at FROM auth.account WHERE user_id=$1',
+      [id],
+    );
+    expect(credential.rows).toEqual([
+      {
+        id: accountId,
+        password: 'original-hash',
+        temporary_password_issued_at: new Date(issuedAt),
+      },
+    ]);
+    expect(
+      (
+        await auth.query(
+          'SELECT failed_count FROM auth.login_failures WHERE email_key=$1',
+          [email],
+        )
+      ).rows,
+    ).toEqual([{ failed_count: 1 }]);
+
+    const stagedId = await user();
+    expect(
+      await pgError(
+        app.pool.query('SELECT auth.insert_credential($1,$2,$3,null)', [
+          randomUUID(),
+          stagedId,
+          'hash',
+        ]),
+      ),
+    ).toMatchObject({ code: '22023' });
+    expect(
+      (
+        await auth.query('SELECT id FROM auth.account WHERE user_id=$1', [
+          stagedId,
+        ])
+      ).rows,
+    ).toEqual([]);
+  });
+
+  it('pins credential column shapes and app-only execute on auth security definer functions', async () => {
+    const columns = await owner.pool.query<{
+      column_name: string;
+      data_type: string;
+    }>(
+      `SELECT column_name, data_type FROM information_schema.columns
+       WHERE table_schema='auth' AND table_name='account'
+         AND column_name = ANY($1)
+       ORDER BY column_name`,
+      [
+        [
+          'id',
+          'account_id',
+          'provider_id',
+          'user_id',
+          'password',
+          'temporary_password_issued_at',
+          'updated_at',
+        ],
+      ],
+    );
+    expect(columns.rows).toEqual([
+      { column_name: 'account_id', data_type: 'text' },
+      { column_name: 'id', data_type: 'text' },
+      { column_name: 'password', data_type: 'text' },
+      { column_name: 'provider_id', data_type: 'text' },
+      {
+        column_name: 'temporary_password_issued_at',
+        data_type: 'timestamp with time zone',
+      },
+      { column_name: 'updated_at', data_type: 'timestamp with time zone' },
+      { column_name: 'user_id', data_type: 'text' },
+    ]);
+    expect(
+      (
+        await owner.pool.query(
+          `SELECT conname FROM pg_constraint
+           WHERE conname='account_user_id_provider_id_key' AND contype='u'`,
+        )
+      ).rows,
+    ).toEqual([{ conname: 'account_user_id_provider_id_key' }]);
+    for (const signature of [
+      'auth.revoke_user_sessions(text)',
+      'auth.set_credential(text,text,timestamptz)',
+      'auth.insert_credential(text,text,text,timestamptz)',
+      'auth.insert_user(text,text,text)',
+      'auth.clear_login_failures(text)',
+    ]) {
+      const { rows } = await owner.pool.query<{
+        owner: string;
+        prosecdef: boolean;
+        lanname: string;
+        proconfig: string[] | null;
+        app: boolean;
+        auth: boolean;
+        public: boolean;
+      }>(
+        `SELECT pg_get_userbyid(p.proowner) AS owner, p.prosecdef, l.lanname, p.proconfig,
+          has_function_privilege('fs_billing_app', p.oid, 'EXECUTE') AS app,
+          has_function_privilege('fs_billing_auth', p.oid, 'EXECUTE') AS auth,
+          EXISTS (
+            SELECT FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+            WHERE acl.grantee=0 AND acl.privilege_type='EXECUTE'
+          ) AS public
+         FROM pg_proc p JOIN pg_language l ON l.oid=p.prolang
+         WHERE p.oid=$1::regprocedure`,
+        [signature],
+      );
+      expect(rows).toEqual([
+        {
+          owner: 'fs_billing_auth',
+          prosecdef: true,
+          lanname: signature.startsWith('auth.revoke') ? 'sql' : 'plpgsql',
+          proconfig: ['search_path=pg_catalog, pg_temp'],
+          app: true,
+          auth: true,
+          public: false,
+        },
+      ]);
+    }
+    const id = await user();
+    expect(
+      (
+        await app.pool.query(
+          'SELECT auth.insert_credential($1,$2,$3,clock_timestamp()) AS inserted',
+          [randomUUID(), id, 'hash'],
+        )
+      ).rows,
+    ).toEqual([{ inserted: true }]);
+    expect(
+      (
+        await app.pool.query(
+          'SELECT auth.insert_credential($1,$2,$3,clock_timestamp()) AS inserted',
+          [randomUUID(), id, 'other'],
+        )
+      ).rows,
+    ).toEqual([{ inserted: false }]);
+    expect(
+      await pgError(
+        auth.query(
+          "INSERT INTO auth.account(id,account_id,provider_id,user_id,password,updated_at) VALUES($1,$2,'credential',$2,'dup',now())",
+          [randomUUID(), id],
+        ),
+      ),
+    ).toMatchObject({
+      code: '23505',
+      constraint: 'account_user_id_provider_id_key',
+    });
+    await app.pool.query(
+      'SELECT auth.set_credential($1,$2,clock_timestamp())',
+      [id, 'rotated'],
+    );
+    expect(
+      (
+        await auth.query('SELECT password FROM auth.account WHERE user_id=$1', [
+          id,
+        ])
+      ).rows,
+    ).toEqual([{ password: 'rotated' }]);
+    await auth.query(
+      "INSERT INTO auth.session(id,user_id,token,expires_at,updated_at) VALUES ($1,$2,$3,now()+interval '1 hour',now())",
+      [randomUUID(), id, randomUUID()],
+    );
+    await app.pool.query('SELECT auth.revoke_user_sessions($1)', [id]);
+    expect(
+      (await auth.query('SELECT id FROM auth.session WHERE user_id=$1', [id]))
+        .rows,
+    ).toEqual([]);
+    const created = randomUUID();
+    const email = `${created}@example.invalid`;
+    await app.pool.query('SELECT auth.insert_user($1,$2,$3)', [
+      created,
+      'created',
+      email,
+    ]);
+    expect(
+      await pgError(
+        app.pool.query('SELECT auth.insert_user($1,$2,$3)', [
+          randomUUID(),
+          'again',
+          email,
+        ]),
+      ),
+    ).toMatchObject({ code: '23505', constraint: 'user_email_key' });
+    await auth.query(
+      'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now()),($2,gen_random_uuid(),1,now())',
+      [email, 'keep-me'],
+    );
+    await app.pool.query('SELECT auth.clear_login_failures($1)', [email]);
+    expect(
+      (
+        await auth.query(
+          'SELECT email_key FROM auth.login_failures WHERE email_key = ANY($1) ORDER BY email_key',
+          [[email, 'keep-me']],
+        )
+      ).rows,
+    ).toEqual([{ email_key: 'keep-me' }]);
   });
 });
 

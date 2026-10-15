@@ -92,7 +92,7 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
       await tx.insert(schema.unassignedCdrs).values({
         // 无效推送以原文定位，UUID 留在原文中，不能占用通话去重闸门。
         callUuid: null,
-        tenantTag: identity.billing_tenant,
+        tenantTag: identity.billing_tenant.toUpperCase(),
         caller: identity.caller_id_number,
         callee: identity.destination_number,
         rawId: raw.id,
@@ -107,7 +107,10 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
     });
     return { status: 'unassigned' as const, rawId: raw.id };
   }
-  const cdr = parsed.data;
+  const cdr = {
+    ...parsed.data,
+    tenantTag: parsed.data.tenantTag.toUpperCase(),
+  };
   const resolved = resolveBillingNumber({
     dialedNumber: cdr.callee,
     billingNumber: cdr.billingNumber,
@@ -117,7 +120,7 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
       const [tenant] = await tx
         .select()
         .from(schema.tenants)
-        .where(eq(schema.tenants.code, cdr.tenantTag));
+        .where(eq(sql`upper(${schema.tenants.code})`, cdr.tenantTag));
       await lockTenants(tx, tenant ? [tenant.id] : []);
       await tx.execute(sql`select set_config('app.cdr_ingest', 'true', true)`);
       // 入库触发器允许阶段 8 认领未归属登记；HTTP 重推不能走认领流程。

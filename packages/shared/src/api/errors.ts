@@ -20,13 +20,19 @@ function defineError<
   const Code extends string,
   const Status extends number,
   Fields extends z.ZodRawShape,
->(code: Code, status: Status, fields: Fields) {
+>(code: Code, status: Status, fields: Fields, description?: string) {
   const detail = z.strictObject({
     ...errorFields,
     ...fields,
     code: z.literal(code),
   });
-  return { code, status, detail, response: z.strictObject({ error: detail }) };
+  const response = z.strictObject({ error: detail });
+  return {
+    code,
+    status,
+    detail,
+    response: description ? response.describe(description) : response,
+  };
 }
 
 const errorDefinitions = [
@@ -36,14 +42,25 @@ const errorDefinitions = [
   defineError('FORBIDDEN', 403, {}),
   defineError('ACCOUNT_DISABLED', 403, {}),
   defineError('IDENTITY_UNAVAILABLE', 403, {}),
+  defineError('PASSWORD_CHANGE_REQUIRED', 403, {}),
   defineError('ACCOUNT_LOCKED', 429, retryFields),
   defineError('VALIDATION_ERROR', 400, {
     issues: z.array(validationIssueSchema).min(1),
   }),
   defineError('NOT_FOUND', 404, {}),
   defineError('RATE_LIMITED', 429, retryFields),
-  defineError('SERVICE_UNAVAILABLE', 503, {}),
-  defineError('INTERNAL_ERROR', 500, {}),
+  defineError(
+    'SERVICE_UNAVAILABLE',
+    503,
+    {},
+    'Transient database failure after outermost retries, connection failure, or unavailable service dependency. Generic message only.',
+  ),
+  defineError(
+    'INTERNAL_ERROR',
+    500,
+    {},
+    'Unclassified internal failure. Generic message only; internal details are not returned.',
+  ),
 ] as const;
 
 export const apiErrorSchema = z.strictObject({

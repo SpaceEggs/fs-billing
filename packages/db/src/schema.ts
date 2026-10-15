@@ -49,7 +49,7 @@ export const admins = pgTable('admins', {
 
 export const portalAccounts = pgTable('portal_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
+  tenantId: uuid('tenant_id').notNull().unique(),
   authUserId: text('auth_user_id')
     .notNull()
     .unique()
@@ -112,6 +112,34 @@ export const receivableSettlements = pgTable('receivable_settlements', {
   createdAt: at('created_at').notNull().defaultNow(),
 });
 
+export const receivableSettlementReversals = pgTable(
+  'receivable_settlement_reversals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull(),
+    settlementId: uuid('settlement_id').notNull(),
+    reason: text('reason').notNull(),
+    reversedBy: uuid('reversed_by').notNull(),
+    createdAt: at('created_at').notNull().defaultNow(),
+  },
+);
+
+export const receivableVoids = pgTable('receivable_voids', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  ledgerEntryId: uuid('ledger_entry_id').notNull(),
+  entryKind: text('entry_kind', { enum: ['credit_recharge'] })
+    .notNull()
+    .default('credit_recharge'),
+  adjustmentLedgerEntryId: uuid('adjustment_ledger_entry_id').notNull(),
+  adjustmentKind: text('adjustment_kind', { enum: ['adjustment'] })
+    .notNull()
+    .default('adjustment'),
+  reason: text('reason').notNull(),
+  voidedBy: uuid('voided_by').notNull(),
+  createdAt: at('created_at').notNull().defaultNow(),
+});
+
 export const tenantBalances = pgTable('tenant_balances', {
   tenantId: uuid('tenant_id').primaryKey(),
   balance: numeric('balance').notNull(),
@@ -125,9 +153,17 @@ export const receivables = pgView('receivables', {
   note: text('note').notNull(),
   createdBy: uuid('created_by'),
   createdAt: at('created_at').notNull(),
-  status: text('status', { enum: ['pending', 'received'] }).notNull(),
+  status: text('status', { enum: ['pending', 'received', 'voided'] }).notNull(),
   receivedOn: date('received_on'),
   confirmedBy: uuid('confirmed_by'),
+  settlementId: uuid('settlement_id'),
+  settlementNote: text('settlement_note'),
+  latestSettlementId: uuid('latest_settlement_id'),
+  voidId: uuid('void_id'),
+  adjustmentLedgerEntryId: uuid('adjustment_ledger_entry_id'),
+  voidReason: text('void_reason'),
+  voidedBy: uuid('voided_by'),
+  voidedAt: at('voided_at'),
 }).existing();
 
 export const balanceDiscrepancies = pgView('balance_discrepancies', {

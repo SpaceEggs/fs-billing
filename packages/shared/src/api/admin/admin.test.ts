@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   adminApiContract,
+  adminMutationResponseSchema,
+  adminAuditedMutationResponseSchema,
   adminTenantSettingsRequestSchema,
   adminTenantSettingsResponseSchema,
   adminRateVersionResponseSchema,
@@ -26,6 +28,8 @@ import {
   adminRateEntriesSchema,
   adminTenantCreateRequestSchema,
   adminTenantEditRequestSchema,
+  adminTenantSummarySchema,
+  adminTenantDetailResponseSchema,
   adminTenantsQuerySchema,
   auditPayloadSchema,
   auditContentSchema,
@@ -240,6 +244,32 @@ it('tenant edits cannot change currency or code; creation uses an immediate firs
     pageSize: 25,
     sort: 'status_currency_balance',
   });
+});
+it('list summaries expose settingsConfigured and detail still requires settings', () => {
+  const summary = {
+    id,
+    code: 'ABC001',
+    name: '客户',
+    currency: 'CNY',
+    status: 'active',
+    health: 'normal',
+    settingsConfigured: false,
+    balance: '0',
+    overdraftLimit: '100',
+    availableBalance: '100',
+    monthConsumption: '0',
+    pendingReceivable: '0',
+  };
+  expect(adminTenantSummarySchema.parse(summary)).toEqual(summary);
+  expect(adminTenantDetailResponseSchema.safeParse(summary).success).toBe(
+    false,
+  );
+  expect(
+    adminTenantSummarySchema.safeParse({
+      ...summary,
+      settingsConfigured: undefined,
+    }).success,
+  ).toBe(false);
 });
 it('planned operations all require admin sessions and leave the live contract unchanged', () => {
   expect(
@@ -535,6 +565,171 @@ it('export requires POST and returns an audit ID', () => {
       auditId: undefined,
     }).success,
   ).toBe(false);
+  expect(
+    adminApiContract.adminRateExport.responses[200].safeParse({
+      ...response,
+      auditId: null,
+    }).success,
+  ).toBe(false);
+});
+
+it('no-op mutations may return a null audit id and real writes require one', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-10-14T10:00:00Z'));
+  expect(adminMutationResponseSchema.parse({ auditId: null })).toEqual({
+    auditId: null,
+  });
+  expect(adminMutationResponseSchema.parse({ auditId: id })).toEqual({
+    auditId: id,
+  });
+  expect(adminMutationResponseSchema.safeParse({}).success).toBe(false);
+  expect(adminAuditedMutationResponseSchema.parse({ auditId: id })).toEqual({
+    auditId: id,
+  });
+  expect(
+    adminAuditedMutationResponseSchema.safeParse({ auditId: null }).success,
+  ).toBe(false);
+  expect(adminAuditedMutationResponseSchema.safeParse({}).success).toBe(false);
+  for (const key of [
+    'adminTenantEdit',
+    'adminTenantDisable',
+    'adminTenantEnable',
+    'adminTenantSettings',
+    'adminPortalAccountDisable',
+    'adminPortalAccountEnable',
+    'adminAccountEnable',
+    'adminAccountDisable',
+  ] as const) {
+    expect(adminApiContract[key].responses[200]).toBe(
+      adminMutationResponseSchema,
+    );
+  }
+  const stamp = '2026-10-14T10:00:00Z';
+  const account = {
+    id,
+    name: '管理员',
+    email: 'admin@example.com',
+    status: 'active',
+    lastLoginAt: null,
+    createdAt: stamp,
+  };
+  const portalAccount = {
+    id,
+    email: 'user@example.com',
+    status: 'active',
+    lastLoginAt: null,
+    createdAt: stamp,
+  };
+  const tenant = {
+    id,
+    code: 'ABC001',
+    name: '客户',
+    currency: 'CNY',
+    status: 'active',
+    health: 'normal',
+    settingsConfigured: true,
+    balance: '0',
+    overdraftLimit: '100',
+    availableBalance: '100',
+    monthConsumption: '0',
+    pendingReceivable: '0',
+    contactName: '',
+    contactPhone: '',
+    remark: '',
+    settings: {
+      overdraftLimit: '100',
+      lowBalanceThreshold: '0',
+      emails: ['admin@example.com'],
+    },
+    createdAt: stamp,
+  };
+  const version = { id, effectiveFrom: stamp, entries: [] };
+  const entry = {
+    id,
+    kind: 'recharge',
+    amount: '10',
+    balanceAfter: '10',
+    note: '',
+    noteVisibility: 'customer',
+    paymentStatus: null,
+    actor: null,
+    occurredAt: stamp,
+  };
+  const writes: [keyof typeof adminApiContract, Record<string, unknown>][] = [
+    [
+      'adminTenantCreate',
+      {
+        auditId: id,
+        tenant,
+        initialRateVersionId: id,
+        effectiveFrom: stamp,
+      },
+    ],
+    [
+      'adminAccountCreate',
+      { auditId: id, account, temporaryPassword: 'Temp1234!' },
+    ],
+    [
+      'adminPortalAccountCreate',
+      {
+        auditId: id,
+        account: portalAccount,
+        passwordSource: 'generated',
+        temporaryPassword: 'Temp1234!',
+      },
+    ],
+    [
+      'adminPortalAccountCreate',
+      { auditId: id, account: portalAccount, passwordSource: 'supplied' },
+    ],
+    [
+      'adminBalanceOperation',
+      { auditId: id, currency: 'CNY', entry, balance: '10' },
+    ],
+    ['adminRateCancelFutureVersion', { auditId: id, cancelledVersionId: id }],
+    ['adminRateEdit', { auditId: id, version }],
+    ['adminRateImportCommit', { auditId: id, version }],
+    ['adminRateCopyCommit', { auditId: id, version }],
+    [
+      'adminRateExport',
+      {
+        auditId: id,
+        filename: 'rates.csv',
+        encoding: 'UTF-8',
+        contentType: 'text/csv',
+        csv: 'prefix,country,rate\n',
+      },
+    ],
+    [
+      'adminConfirmPayment',
+      {
+        auditId: id,
+        settlementId: id,
+        ledgerEntryId: id,
+        receivedOn: '2026-10-14',
+      },
+    ],
+    ['adminVoidReceivable', { auditId: id, ledgerEntryId: id, voidId: id }],
+    [
+      'adminReversePayment',
+      {
+        auditId: id,
+        ledgerEntryId: id,
+        settlementId: id,
+        reversalId: id,
+      },
+    ],
+  ];
+  for (const [key, response] of writes) {
+    const schema = adminApiContract[key].responses[200];
+    expect(schema.parse(response)).toEqual(response);
+    expect(schema.safeParse({ ...response, auditId: null }).success).toBe(
+      false,
+    );
+    expect(schema.safeParse({ ...response, auditId: undefined }).success).toBe(
+      false,
+    );
+  }
 });
 
 it('reset operations reuse the live definitions and error maps are per operation', () => {

@@ -4,6 +4,7 @@ import { PgTransaction } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { z } from 'zod';
 import * as schema from './schema.js';
+import { normalizePgOperation } from './unavailable.js';
 
 export const APP_ROLE = 'fs_billing_app';
 export const AUTH_ROLE = 'fs_billing_auth';
@@ -44,6 +45,28 @@ export function connect(
   options: Pick<pg.PoolConfig, 'max' | 'connectionTimeoutMillis'> = {},
 ): Connection {
   const pool = new pg.Pool({ connectionString: url, ...options });
+  pool.connect = normalizePgOperation(pool.connect.bind(pool));
+  pool.query = normalizePgOperation(pool.query.bind(pool));
+  pool.on('connect', (client) => {
+    // pg also rejects the active query; its accompanying error event must not crash a checked-out transaction.
+    client.on('error', () => undefined);
+    const ownsQuery = Object.hasOwn(client, 'query');
+    /* eslint-disable @typescript-eslint/unbound-method -- The proxy forwards the original receiver through Reflect.apply. */
+    client.query = normalizePgOperation(
+      new Proxy(client.query, {
+        apply(target, receiver: unknown, args: unknown[]) {
+          // Resolve at call time so instrumentation added after checkout remains in the query path.
+          const result: unknown = Reflect.apply(
+            ownsQuery ? target : pg.Client.prototype.query,
+            receiver,
+            args,
+          );
+          return result;
+        },
+      }),
+    );
+    /* eslint-enable @typescript-eslint/unbound-method */
+  });
   return { pool, db: drizzle(pool, { schema }) };
 }
 
@@ -69,8 +92,9 @@ export function withTenant<T>(
 export function withAdmin<T>(
   db: Db | Tx,
   fn: (tx: Tx) => Promise<T>,
+  config?: { isolationLevel: 'serializable' },
 ): Promise<T> {
-  return withOperator(db, 'admin', fn);
+  return withOperator(db, 'admin', fn, config);
 }
 
 /** 以系统身份执行（Worker：入库、扣费、建分区）：可见并可写全部租户。重试规则同 withAdmin。 */
@@ -90,14 +114,21 @@ async function withOperator<T>(
   db: Db | Tx,
   scope: 'admin' | 'system',
   fn: (tx: Tx) => Promise<T>,
+  config?: { isolationLevel: 'serializable' },
 ): Promise<T> {
+  // All mutations of admins.status must request SERIALIZABLE through the outermost wrapper.
+  // Drizzle ignores isolation config on savepoints, so nested requests must fail.
+  if (db instanceof PgTransaction && config?.isolationLevel)
+    throw new Error(
+      'Transaction isolation must be requested at the outermost layer',
+    );
   const attempts = db instanceof PgTransaction ? 1 : MAX_ATTEMPTS;
   for (let attempt = 1; ; attempt++) {
     try {
       return await db.transaction(async (tx) => {
         await tx.execute(sql`select set_config('app.scope', ${scope}, true)`);
         return fn(tx);
-      });
+      }, config);
     } catch (error) {
       if (attempt >= attempts || !RETRYABLE.has(sqlState(error) ?? '')) {
         throw error;

@@ -1,3 +1,4 @@
+import { DatabaseUnavailableError } from '@fs-billing/db';
 import {
   apiErrorSchema,
   apiErrorStatus,
@@ -6,6 +7,41 @@ import {
 } from '@fs-billing/shared';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
+const transientCodes = new Set([
+  '40001',
+  '40P01',
+  '57P01',
+  '57P02',
+  '57P03',
+  '53300',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EPIPE',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'EAI_AGAIN',
+]);
+
+export function isTransientServiceError(error: unknown): boolean {
+  const seen = new Set<Error>();
+  for (
+    let current = error;
+    current instanceof Error && !seen.has(current);
+    current = current.cause
+  ) {
+    seen.add(current);
+    if (current instanceof DatabaseUnavailableError) return true;
+    if (
+      'code' in current &&
+      typeof current.code === 'string' &&
+      (/^08[0-9A-Z]{3}$/.test(current.code) || transientCodes.has(current.code))
+    )
+      return true;
+  }
+  return false;
+}
+
 const messages: Record<ApiErrorCode, string> = {
   UNAUTHENTICATED: '请先登录',
   SESSION_EXPIRED: '登录已过期',
@@ -13,6 +49,7 @@ const messages: Record<ApiErrorCode, string> = {
   FORBIDDEN: '没有访问权限',
   ACCOUNT_DISABLED: '账号已停用',
   IDENTITY_UNAVAILABLE: '身份暂不可用',
+  PASSWORD_CHANGE_REQUIRED: '请先修改初始或重置密码',
   ACCOUNT_LOCKED: '账号暂时锁定',
   VALIDATION_ERROR: '请求格式错误',
   NOT_FOUND: '资源不存在',
