@@ -36,6 +36,7 @@ const errorDefinitions = [
   defineError('FORBIDDEN', 403, {}),
   defineError('ACCOUNT_DISABLED', 403, {}),
   defineError('IDENTITY_UNAVAILABLE', 403, {}),
+  defineError('PASSWORD_CHANGE_REQUIRED', 403, {}),
   defineError('ACCOUNT_LOCKED', 429, retryFields),
   defineError('VALIDATION_ERROR', 400, {
     issues: z.array(validationIssueSchema).min(1),

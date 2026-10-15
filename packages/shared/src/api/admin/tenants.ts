@@ -79,6 +79,7 @@ export const adminTenantCreateRequestSchema =
 export const adminTenantSummarySchema = tenantIdentitySchema.extend({
   status: adminStatusSchema,
   health: adminTenantHealthSchema,
+  settingsConfigured: z.boolean(),
   balance: moneyAmountSchema,
   overdraftLimit: adminNonnegativeAmountSchema,
   availableBalance: moneyAmountSchema,

@@ -1,15 +1,14 @@
-import { apiContract, adminApiContract } from '@fs-billing/shared';
+import {
+  apiContract,
+  createAdminApiContract,
+  adminRateRequestSchemas,
+} from '@fs-billing/shared';
 
-export const liveApiContract = {
-  ...apiContract,
-  adminTenants: adminApiContract.adminTenants,
-  adminTenantCreate: adminApiContract.adminTenantCreate,
-  adminTenantDetail: adminApiContract.adminTenantDetail,
-  adminTenantEdit: adminApiContract.adminTenantEdit,
-  adminTenantDisable: adminApiContract.adminTenantDisable,
-  adminTenantEnable: adminApiContract.adminTenantEnable,
-  adminTenantSettings: adminApiContract.adminTenantSettings,
-  adminTenantLedger: adminApiContract.adminTenantLedger,
-  adminBalanceOperation: adminApiContract.adminBalanceOperation,
-};
+export function createLiveApiContract(rateRequests = adminRateRequestSchemas) {
+  const { adminTenantOverview: deferredOverview, ...admin } =
+    createAdminApiContract(rateRequests);
+  void deferredOverview;
+  return { ...apiContract, ...admin };
+}
+export const liveApiContract = createLiveApiContract();
 export type LiveApiOperationId = keyof typeof liveApiContract;

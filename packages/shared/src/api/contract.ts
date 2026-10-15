@@ -52,6 +52,7 @@ const rateLimitedErrors = {
 const identityErrors = z.union([
   apiErrorSchemas.ACCOUNT_DISABLED,
   apiErrorSchemas.IDENTITY_UNAVAILABLE,
+  apiErrorSchemas.PASSWORD_CHANGE_REQUIRED,
 ]);
 const sessionErrors = z.union([
   apiErrorSchemas.UNAUTHENTICATED,

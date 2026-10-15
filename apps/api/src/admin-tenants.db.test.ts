@@ -43,19 +43,28 @@ async function create(currency: 'CNY' | 'USD' = 'CNY') {
 }
 
 describe('admin tenant and balance API', () => {
-  it('rejects legacy detail and list projections without inventing alert settings', async () => {
+  it('keeps unconfigured tenants in the list and rejects only detail', async () => {
     const tenantId = fixture.a.tenantId;
     const headers = requestHeaders(cookie);
-    for (const url of [
-      `/api/admin/tenants/${tenantId}`,
-      `/api/admin/tenants?search=A${fixture.prefix.replaceAll('-', '')}`,
-    ]) {
-      const response = await api.inject({ url, headers });
-      expect(response.statusCode, response.body).toBe(503);
-      expect(response.json()).toMatchObject({
-        error: { code: 'SERVICE_UNAVAILABLE' },
-      });
-    }
+    const detail = await api.inject({
+      url: `/api/admin/tenants/${tenantId}`,
+      headers,
+    });
+    expect(detail.statusCode, detail.body).toBe(503);
+    expect(detail.json()).toMatchObject({
+      error: { code: 'SERVICE_UNAVAILABLE' },
+    });
+    const list = await api.inject({
+      url: `/api/admin/tenants?search=A${fixture.prefix.replaceAll('-', '')}`,
+      headers,
+    });
+    expect(list.statusCode, list.body).toBe(200);
+    const listed = adminTenantsResponseSchema.parse(list.json());
+    expect(listed.items.find((item) => item.id === tenantId)).toMatchObject({
+      id: tenantId,
+      settingsConfigured: false,
+      health: 'normal',
+    });
     expect(
       (
         await connections.owner.pool.query(

@@ -1,0 +1,362 @@
+import { randomBytes, randomUUID } from 'node:crypto';
+import type { Pool } from 'pg';
+import { and, asc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import {
+  schema,
+  withAdmin,
+  lockTenants,
+  writeAudit,
+  databaseNow,
+  AdminServiceError,
+  type Db,
+  type Tx,
+} from '@fs-billing/db';
+import {
+  adminAccountSchema,
+  adminPortalAccountSchema,
+  type AdminAccountsQuery,
+  type AdminAccountCreateRequest,
+  type AdminPortalAccountCreateRequest,
+} from '@fs-billing/shared';
+import type { BillingAuth } from './better-auth.js';
+import type { AdminPrincipal } from '../types.js';
+
+const insertedSchema = z.object({ inserted: z.boolean() });
+
+export function createAdminAccountService(deps: {
+  businessDb: Db;
+  authPool: Pool;
+  auth: BillingAuth;
+}) {
+  const { businessDb: db, authPool: pool, auth } = deps;
+  async function email(userId: string) {
+    const result = await pool.query<{ email: string }>(
+      'SELECT email FROM auth."user" WHERE id=$1',
+      [userId],
+    );
+    const value = result.rows[0]?.email;
+    if (!value) throw new Error('Linked auth user missing');
+    return value;
+  }
+  async function actor(tx: Tx, principal: AdminPrincipal) {
+    const [row] = await tx
+      .select()
+      .from(schema.admins)
+      .where(eq(schema.admins.id, principal.profileId));
+    if (!row || row.status !== 'active')
+      throw new AdminServiceError('FORBIDDEN', '管理员已停用');
+    return { id: row.id, name: row.name };
+  }
+  async function hashPassword(password: string) {
+    return (await auth.$context).password.hash(password);
+  }
+  async function insertCredential(tx: Tx, userId: string, hash: string) {
+    const result = await tx.execute(
+      sql`select auth.insert_credential(${randomUUID()}, ${userId}, ${hash}, clock_timestamp()) as inserted`,
+    );
+    if (!insertedSchema.parse(result.rows[0]).inserted)
+      throw new Error('credential already exists');
+  }
+  async function setCredential(tx: Tx, userId: string, hash: string) {
+    await tx.execute(
+      sql`select auth.set_credential(${userId}, ${hash}, clock_timestamp())`,
+    );
+  }
+  async function revokeSessions(tx: Tx, userId: string) {
+    await tx.execute(sql`select auth.revoke_user_sessions(${userId})`);
+  }
+  async function lockAdminRows(tx: Tx, ids: readonly string[]) {
+    const unique = [...new Set(ids.map((id) => id.toLowerCase()))].sort();
+    for (const id of unique)
+      await tx.execute(
+        sql`select 1 from public.admins where id = ${id}::uuid for update`,
+      );
+  }
+  async function create(
+    principal: AdminPrincipal,
+    request:
+      | { kind: 'admin'; body: AdminAccountCreateRequest }
+      | {
+          kind: 'portal';
+          tenantId: string;
+          body: AdminPortalAccountCreateRequest;
+        },
+  ) {
+    const userId = randomUUID();
+    const profileId = randomUUID();
+    const auditId = randomUUID();
+    const password =
+      request.kind === 'portal'
+        ? (request.body.initialPassword ??
+          randomBytes(24).toString('base64url'))
+        : randomBytes(24).toString('base64url');
+    const normalizedEmail = request.body.email.toLowerCase();
+    const hash = await hashPassword(password);
+    try {
+      await pool.query(
+        'INSERT INTO auth."user"(id,name,email,updated_at) VALUES($1,$2,$3,clock_timestamp())',
+        [
+          userId,
+          request.kind === 'admin' ? request.body.name : normalizedEmail,
+          normalizedEmail,
+        ],
+      );
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === '23505')
+        throw new AdminServiceError('EMAIL_EXISTS', '邮箱已存在');
+      throw error;
+    }
+    const row = await withAdmin(db, async (tx) => {
+      if (request.kind === 'portal') {
+        await lockTenants(tx, [request.tenantId]);
+        const [tenant] = await tx
+          .select({ id: schema.tenants.id })
+          .from(schema.tenants)
+          .where(eq(schema.tenants.id, request.tenantId));
+        if (!tenant) throw new AdminServiceError('NOT_FOUND', '租户不存在');
+        const [existing] = await tx
+          .select({ id: schema.portalAccounts.id })
+          .from(schema.portalAccounts)
+          .where(eq(schema.portalAccounts.tenantId, request.tenantId));
+        if (existing)
+          throw new AdminServiceError(
+            'PORTAL_ACCOUNT_EXISTS',
+            '租户已有门户账号',
+          );
+      }
+      const who = await actor(tx, principal);
+      const [created] =
+        request.kind === 'admin'
+          ? await tx
+              .insert(schema.admins)
+              .values({
+                id: profileId,
+                authUserId: userId,
+                name: request.body.name,
+              })
+              .returning()
+          : await tx
+              .insert(schema.portalAccounts)
+              .values({
+                id: profileId,
+                authUserId: userId,
+                tenantId: request.tenantId,
+              })
+              .returning();
+      if (!created) throw new Error('Account profile creation failed');
+      await insertCredential(tx, userId, hash);
+      await writeAudit(tx, {
+        id: auditId,
+        actor: who,
+        occurredAt: (await databaseNow(tx)).toISOString(),
+        tenantId: request.kind === 'portal' ? request.tenantId : null,
+        target: {
+          kind: request.kind === 'admin' ? 'admin' : 'portal_account',
+          id: profileId,
+        },
+        action:
+          request.kind === 'admin' ? 'admin_create' : 'portal_account_create',
+        content: { summary: '创建账号', changes: [], email: normalizedEmail },
+      });
+      return created;
+    });
+    const common = {
+      id: row.id,
+      status: row.status,
+      lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      email: normalizedEmail,
+    };
+    if (request.kind === 'admin')
+      return {
+        auditId,
+        account: adminAccountSchema.parse({
+          ...common,
+          name: request.body.name,
+        }),
+        temporaryPassword: password,
+      };
+    const account = adminPortalAccountSchema.parse(common);
+    return request.body.initialPassword === undefined
+      ? {
+          auditId,
+          account,
+          passwordSource: 'generated' as const,
+          temporaryPassword: password,
+        }
+      : { auditId, account, passwordSource: 'supplied' as const };
+  }
+  return {
+    createAdmin: (principal: AdminPrincipal, body: AdminAccountCreateRequest) =>
+      create(principal, { kind: 'admin', body }),
+    createPortal: (
+      principal: AdminPrincipal,
+      tenantId: string,
+      body: AdminPortalAccountCreateRequest,
+    ) => create(principal, { kind: 'portal', tenantId, body }),
+    async listAdmins(query: AdminAccountsQuery) {
+      const rows = await withAdmin(db, (tx) =>
+        tx
+          .select()
+          .from(schema.admins)
+          .where(
+            and(
+              query.status ? eq(schema.admins.status, query.status) : undefined,
+            ),
+          )
+          .orderBy(asc(schema.admins.createdAt), asc(schema.admins.id)),
+      );
+      const items = await Promise.all(
+        rows.map(async (row) =>
+          adminAccountSchema.parse({
+            id: row.id,
+            name: row.name,
+            status: row.status,
+            email: await email(row.authUserId),
+            lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
+            createdAt: row.createdAt.toISOString(),
+          }),
+        ),
+      );
+      const search = query.search?.toLowerCase();
+      const matching = search
+        ? items.filter(
+            (row) =>
+              row.name.toLowerCase().includes(search) ||
+              row.email.toLowerCase().includes(search),
+          )
+        : items;
+      return {
+        items: matching.slice(
+          (query.page - 1) * query.pageSize,
+          query.page * query.pageSize,
+        ),
+        pagination: {
+          page: query.page,
+          pageSize: query.pageSize,
+          total: matching.length,
+        },
+      };
+    },
+    async listPortal(tenantId: string) {
+      const rows = await withAdmin(db, async (tx) => {
+        const [tenant] = await tx
+          .select({ id: schema.tenants.id })
+          .from(schema.tenants)
+          .where(eq(schema.tenants.id, tenantId));
+        if (!tenant) throw new AdminServiceError('NOT_FOUND', '租户不存在');
+        return tx
+          .select()
+          .from(schema.portalAccounts)
+          .where(eq(schema.portalAccounts.tenantId, tenantId));
+      });
+      return {
+        items: await Promise.all(
+          rows.map(async (row) =>
+            adminPortalAccountSchema.parse({
+              id: row.id,
+              status: row.status,
+              email: await email(row.authUserId),
+              lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
+              createdAt: row.createdAt.toISOString(),
+            }),
+          ),
+        ),
+      };
+    },
+    async setStatus(
+      principal: AdminPrincipal,
+      command: {
+        kind: 'admin' | 'portal';
+        id: string;
+        status: 'active' | 'disabled';
+      },
+    ) {
+      const { kind, id, status } = command;
+      const auditId = randomUUID();
+      if (
+        kind === 'admin' &&
+        status === 'disabled' &&
+        id === principal.profileId
+      )
+        throw new AdminServiceError('SELF_DISABLE', '不能停用当前管理员');
+      await withAdmin(db, async (tx) => {
+        if (kind === 'admin')
+          await lockAdminRows(tx, [principal.profileId, id]);
+        const who = await actor(tx, principal);
+        const table = kind === 'admin' ? schema.admins : schema.portalAccounts;
+        const [row] = await tx.select().from(table).where(eq(table.id, id));
+        if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
+        if (kind === 'portal' && 'tenantId' in row)
+          await lockTenants(tx, [row.tenantId]);
+        if (row.status === status) return;
+        if (
+          kind === 'admin' &&
+          status === 'disabled' &&
+          row.status === 'active'
+        ) {
+          const [count] = await tx
+            .select({ n: sql<number>`count(*)::int` })
+            .from(schema.admins)
+            .where(eq(schema.admins.status, 'active'));
+          if ((count?.n ?? 0) <= 1)
+            throw new AdminServiceError('LAST_ADMIN', '不能停用最后一名管理员');
+        }
+        await tx.update(table).set({ status }).where(eq(table.id, id));
+        const tenantId = 'tenantId' in row ? row.tenantId : null;
+        await writeAudit(tx, {
+          id: auditId,
+          actor: who,
+          occurredAt: (await databaseNow(tx)).toISOString(),
+          tenantId,
+          target: { kind: kind === 'admin' ? 'admin' : 'portal_account', id },
+          action:
+            kind === 'admin'
+              ? status === 'active'
+                ? 'admin_enable'
+                : 'admin_disable'
+              : status === 'active'
+                ? 'portal_account_enable'
+                : 'portal_account_disable',
+          content: {
+            summary: status === 'active' ? '启用账号' : '停用账号',
+            changes: [{ field: 'status', before: row.status, after: status }],
+          },
+        });
+        await revokeSessions(tx, row.authUserId);
+      });
+      return { auditId };
+    },
+    async resetPassword(
+      principal: AdminPrincipal,
+      kind: 'admin' | 'portal',
+      id: string,
+    ) {
+      if (kind === 'admin' && id === principal.profileId)
+        throw new AdminServiceError('FORBIDDEN', '不能重置当前管理员密码');
+      const temporaryPassword = randomBytes(24).toString('base64url');
+      const hash = await hashPassword(temporaryPassword);
+      const auditId = randomUUID();
+      await withAdmin(db, async (tx) => {
+        const who = await actor(tx, principal);
+        const table = kind === 'admin' ? schema.admins : schema.portalAccounts;
+        const [row] = await tx.select().from(table).where(eq(table.id, id));
+        if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
+        await setCredential(tx, row.authUserId, hash);
+        await revokeSessions(tx, row.authUserId);
+        await writeAudit(tx, {
+          id: auditId,
+          actor: who,
+          occurredAt: (await databaseNow(tx)).toISOString(),
+          tenantId: 'tenantId' in row ? row.tenantId : null,
+          target: { kind: kind === 'admin' ? 'admin' : 'portal_account', id },
+          action: 'reset_password',
+          content: { summary: '重置密码', changes: [] },
+        });
+      });
+      return { temporaryPassword };
+    },
+  };
+}
+export type AdminAccountService = ReturnType<typeof createAdminAccountService>;

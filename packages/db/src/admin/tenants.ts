@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, ilike, or, sql, getTableColumns } from 'drizzle-orm';
+import { and, eq, or, sql, getTableColumns } from 'drizzle-orm';
 import {
   decimal,
   rate,
@@ -22,7 +22,9 @@ import {
   type AuditChange,
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
+import { databaseNow } from '../clock.js';
 import { createRateVersion } from '../rates.js';
+import { likeContains } from './like.js';
 import {
   tenants,
   tenantBalances,
@@ -47,7 +49,7 @@ const health = sql<AdminTenantDetailResponse['health']>`case
  when ${tenants.status} = 'disabled' then 'disabled'
  when coalesce(${tenantBalances.balance},0) + ${tenants.overdraftLimit} <= 0 then 'suspended'
  when coalesce(${tenantBalances.balance},0) < 0 then 'overdraft'
- when coalesce(${tenantBalances.balance},0) < coalesce(${balanceAlertSettings.threshold},0) then 'low_balance'
+ when ${balanceAlertSettings.tenantId} is not null and coalesce(${tenantBalances.balance},0) < ${balanceAlertSettings.threshold} then 'low_balance'
  else 'normal' end`;
 const monthConsumption = sql<string>`coalesce((select -sum(amount) from ledger_entries l where l.tenant_id = ${tenants.id} and l.kind = 'call_charge' and l.occurred_at >= date_trunc('month', now() at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai' and l.occurred_at < (date_trunc('month', now() at time zone 'Asia/Shanghai') + interval '1 month') at time zone 'Asia/Shanghai'),0)::text`;
 const pendingReceivable = sql<string>`coalesce((select sum(amount) from receivables r where r.tenant_id = ${tenants.id} and r.status = 'pending'),0)::text`;
@@ -74,8 +76,6 @@ function tenantRows(tx: Tx) {
     );
 }
 function summary(row: Awaited<ReturnType<typeof tenantRows>>[number]) {
-  if (!row.settingsId)
-    throw new Error('租户缺少余额提醒设置，待明确存量数据迁移规则');
   return {
     id: row.id,
     code: row.code,
@@ -83,6 +83,7 @@ function summary(row: Awaited<ReturnType<typeof tenantRows>>[number]) {
     currency: row.currency,
     status: row.status,
     health: row.health,
+    settingsConfigured: Boolean(row.settingsId),
     balance: row.balance,
     overdraftLimit: row.overdraftLimit,
     availableBalance: row.availableBalance,
@@ -93,6 +94,8 @@ function summary(row: Awaited<ReturnType<typeof tenantRows>>[number]) {
 function detail(
   row: Awaited<ReturnType<typeof tenantRows>>[number],
 ): AdminTenantDetailResponse {
+  if (!row.settingsId)
+    throw new AdminServiceError('SERVICE_UNAVAILABLE', '租户缺少余额提醒设置');
   return {
     ...summary(row),
     contactName: row.contactName,
@@ -132,8 +135,8 @@ export function listTenants({
     const filter = and(
       input.search
         ? or(
-            ilike(tenants.code, `%${input.search}%`),
-            ilike(tenants.name, `%${input.search}%`),
+            sql`${tenants.code} ilike ${likeContains(input.search)} escape '\\'`,
+            sql`${tenants.name} ilike ${likeContains(input.search)} escape '\\'`,
           )
         : undefined,
       input.currency ? eq(tenants.currency, input.currency) : undefined,
@@ -308,7 +311,8 @@ export async function createTenant({
         current.code === '23505' &&
         'constraint' in current &&
         typeof current.constraint === 'string' &&
-        current.constraint.includes('tenants')
+        (current.constraint === 'tenants_code_case_insensitive' ||
+          current.constraint === 'tenants_code_key')
       )
         throw new AdminServiceError('TENANT_CODE_EXISTS', '租户编码已存在');
     }
@@ -328,14 +332,10 @@ async function auditTenant(
   changes: AuditChange[],
 ) {
   const auditId = randomUUID();
-  const [instant] = await tx
-    .select({ at: sql`clock_timestamp()`.mapWith(tenants.createdAt) })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId));
   await writeAudit(tx, {
     id: auditId,
     actor,
-    occurredAt: instant!.at.toISOString(),
+    occurredAt: (await databaseNow(tx)).toISOString(),
     tenantId,
     target: { kind: 'tenant', id: tenantId },
     action,
@@ -353,21 +353,17 @@ export function editTenant({
   return withAdmin(db, async (tx) => {
     await lockTenants(tx, [tenantId]);
     const before = await readTenantCore(tx, tenantId);
-    await tx.update(tenants).set(input).where(eq(tenants.id, tenantId));
     const fields = ['name', 'contactName', 'contactPhone', 'remark'] as const;
-    return auditTenant(
-      tx,
-      actor,
-      before.id,
-      'tenant_edit',
-      fields
-        .filter((field) => before[field] !== input[field])
-        .map((field) => ({
-          field,
-          before: before[field],
-          after: input[field],
-        })),
-    );
+    const changes = fields
+      .filter((field) => before[field] !== input[field])
+      .map((field) => ({
+        field,
+        before: before[field],
+        after: input[field],
+      }));
+    if (changes.length === 0) return { auditId: randomUUID() };
+    await tx.update(tenants).set(input).where(eq(tenants.id, tenantId));
+    return auditTenant(tx, actor, before.id, 'tenant_edit', changes);
   });
 }
 function setTenantStatus(
@@ -377,6 +373,7 @@ function setTenantStatus(
   return withAdmin(db, async (tx) => {
     await lockTenants(tx, [tenantId]);
     const before = await readTenantCore(tx, tenantId);
+    if (before.status === status) return { auditId: randomUUID() };
     await tx.update(tenants).set({ status }).where(eq(tenants.id, tenantId));
     return auditTenant(
       tx,
@@ -401,6 +398,33 @@ export function updateTenantSettings({
   return withAdmin(db, async (tx) => {
     await lockTenants(tx, [tenantId]);
     const before = await readTenant(tx, tenantId);
+    const afterOverdraft = decimal(input.overdraftLimit).toFixed();
+    const afterThreshold = decimal(input.lowBalanceThreshold).toFixed();
+    const changes: AuditChange[] = [];
+    if (!decimal(before.overdraftLimit).eq(afterOverdraft))
+      changes.push({
+        field: 'overdraftLimit',
+        before: decimal(before.overdraftLimit).toFixed(),
+        after: afterOverdraft,
+      });
+    if (!decimal(before.settings.lowBalanceThreshold).eq(afterThreshold))
+      changes.push({
+        field: 'lowBalanceThreshold',
+        before: decimal(before.settings.lowBalanceThreshold).toFixed(),
+        after: afterThreshold,
+      });
+    if (
+      before.settings.emails.length !== input.emails.length ||
+      before.settings.emails.some(
+        (email, index) => email !== input.emails[index],
+      )
+    )
+      changes.push({
+        field: 'emails',
+        before: before.settings.emails,
+        after: input.emails,
+      });
+    if (changes.length === 0) return { auditId: randomUUID() };
     await tx
       .update(tenants)
       .set({ overdraftLimit: input.overdraftLimit })
@@ -416,19 +440,7 @@ export function updateTenantSettings({
         target: balanceAlertSettings.tenantId,
         set: { threshold: input.lowBalanceThreshold, emails: input.emails },
       });
-    return auditTenant(tx, actor, before.id, 'tenant_settings_update', [
-      {
-        field: 'overdraftLimit',
-        before: before.overdraftLimit,
-        after: decimal(input.overdraftLimit).toFixed(),
-      },
-      {
-        field: 'lowBalanceThreshold',
-        before: before.settings.lowBalanceThreshold,
-        after: decimal(input.lowBalanceThreshold).toFixed(),
-      },
-      { field: 'emails', before: before.settings.emails, after: input.emails },
-    ]);
+    return auditTenant(tx, actor, before.id, 'tenant_settings_update', changes);
   });
 }
 

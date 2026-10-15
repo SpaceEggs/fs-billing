@@ -13,6 +13,7 @@ import {
   loginRequestSchema,
   resetPasswordParamsSchema,
   adminApiErrorStatus,
+  createAdminRateRequestSchemas,
 } from '@fs-billing/shared';
 import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
@@ -32,7 +33,11 @@ import {
 import { readPortalBalance } from './routes/portal.js';
 import { tenantHandlers } from './routes/admin/tenants.js';
 import { balanceHandlers } from './routes/admin/balance.js';
-import { resetProfilePassword } from './routes/admin.js';
+import { receivableHandlers } from './routes/admin/receivables.js';
+import { rateHandlers } from './routes/admin/rates.js';
+import { createLiveApiContract } from './routes/contract.js';
+import { accountHandlers } from './routes/admin/accounts.js';
+import type { AdminAccountService } from './auth/admin-accounts.js';
 
 export type ApiDependencies = {
   businessDb: Db;
@@ -40,8 +45,18 @@ export type ApiDependencies = {
   logger?: boolean;
   trustedOrigins?: readonly string[];
   rateLimit?: { max: number; timeWindow: number };
+  adminRates?: {
+    horizonMs?: number;
+    previewTtlMs?: number;
+    cancelClockSkewMarginSeconds?: number;
+  };
+  accountService?: AdminAccountService;
 };
 export function createApi(deps: ApiDependencies) {
+  const rateRequests = createAdminRateRequestSchemas(
+    deps.adminRates?.horizonMs,
+  );
+  const contract = createLiveApiContract(rateRequests);
   const app = Fastify({
     logger: deps.logger ?? false,
     trustProxy: false,
@@ -67,7 +82,8 @@ export function createApi(deps: ApiDependencies) {
       error instanceof Error &&
       'statusCode' in error &&
       error.statusCode === 413 &&
-      request.routeOptions.url === '/api/admin/tenants'
+      (request.routeOptions.url === '/api/admin/tenants' ||
+        request.routeOptions.url?.endsWith('/rates/import/preview'))
     )
       error = new AdminServiceError('CSV_LIMIT_EXCEEDED', 'CSV 文件超限');
     if (error instanceof AdminServiceError) {
@@ -111,6 +127,9 @@ export function createApi(deps: ApiDependencies) {
   const handlers: RouteHandlers = {
     ...tenantHandlers(deps.businessDb),
     ...balanceHandlers(deps.businessDb),
+    ...receivableHandlers(deps.businessDb),
+    ...rateHandlers(deps.businessDb, { ...deps.adminRates, rateRequests }),
+    ...accountHandlers(deps.accountService),
     health: () => Promise.resolve({ status: 'ok', service: 'api' }),
     login: async (_context, request, reply) => {
       const session = await deps.auth.login(
@@ -171,39 +190,17 @@ export function createApi(deps: ApiDependencies) {
     },
     resetPortalAccountPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      return resetProfilePassword(
-        {
-          ...deps,
-          auditFailure: (error) =>
-            app.log.error(
-              {
-                err: error,
-                event: 'password_reset_audit_failed',
-                requestId: request.id,
-              },
-              'Password reset committed but audit failed',
-            ),
-        },
+      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
+      return deps.accountService.resetPassword(
         context.principal,
-        'customer',
+        'portal',
         resetPasswordParamsSchema.parse(request.params).id,
       );
     },
     resetAdminPassword: async (context, request) => {
       if (context.kind !== 'admin') throw new ApiFailure('INTERNAL_ERROR');
-      return resetProfilePassword(
-        {
-          ...deps,
-          auditFailure: (error) =>
-            app.log.error(
-              {
-                err: error,
-                event: 'password_reset_audit_failed',
-                requestId: request.id,
-              },
-              'Password reset committed but audit failed',
-            ),
-        },
+      if (!deps.accountService) throw new ApiFailure('SERVICE_UNAVAILABLE');
+      return deps.accountService.resetPassword(
         context.principal,
         'admin',
         resetPasswordParamsSchema.parse(request.params).id,
@@ -232,6 +229,7 @@ export function createApi(deps: ApiDependencies) {
         rateLimit: deps.rateLimit ?? { max: 30, timeWindow: 60_000 },
       },
       handlers,
+      contract,
     );
     done();
   });

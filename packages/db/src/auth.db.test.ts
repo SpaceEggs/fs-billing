@@ -385,6 +385,134 @@ describe('auth catalog and privilege boundary', () => {
       ).rows,
     ).toEqual([]);
   });
+
+  it('pins credential column shapes and app-only execute on auth security definer functions', async () => {
+    const columns = await owner.pool.query<{
+      column_name: string;
+      data_type: string;
+    }>(
+      `SELECT column_name, data_type FROM information_schema.columns
+       WHERE table_schema='auth' AND table_name='account'
+         AND column_name = ANY($1)
+       ORDER BY column_name`,
+      [
+        [
+          'id',
+          'account_id',
+          'provider_id',
+          'user_id',
+          'password',
+          'temporary_password_issued_at',
+          'updated_at',
+        ],
+      ],
+    );
+    expect(columns.rows).toEqual([
+      { column_name: 'account_id', data_type: 'text' },
+      { column_name: 'id', data_type: 'text' },
+      { column_name: 'password', data_type: 'text' },
+      { column_name: 'provider_id', data_type: 'text' },
+      {
+        column_name: 'temporary_password_issued_at',
+        data_type: 'timestamp with time zone',
+      },
+      { column_name: 'updated_at', data_type: 'timestamp with time zone' },
+      { column_name: 'user_id', data_type: 'text' },
+    ]);
+    expect(
+      (
+        await owner.pool.query(
+          `SELECT conname FROM pg_constraint
+           WHERE conname='account_user_id_provider_id_key' AND contype='u'`,
+        )
+      ).rows,
+    ).toEqual([{ conname: 'account_user_id_provider_id_key' }]);
+    for (const signature of [
+      'auth.revoke_user_sessions(text)',
+      'auth.set_credential(text,text,timestamptz)',
+      'auth.insert_credential(text,text,text,timestamptz)',
+    ]) {
+      const { rows } = await owner.pool.query<{
+        owner: string;
+        prosecdef: boolean;
+        lanname: string;
+        proconfig: string[] | null;
+        app: boolean;
+        auth: boolean;
+        public: boolean;
+      }>(
+        `SELECT pg_get_userbyid(p.proowner) AS owner, p.prosecdef, l.lanname, p.proconfig,
+          has_function_privilege('fs_billing_app', p.oid, 'EXECUTE') AS app,
+          has_function_privilege('fs_billing_auth', p.oid, 'EXECUTE') AS auth,
+          EXISTS (
+            SELECT FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+            WHERE acl.grantee=0 AND acl.privilege_type='EXECUTE'
+          ) AS public
+         FROM pg_proc p JOIN pg_language l ON l.oid=p.prolang
+         WHERE p.oid=$1::regprocedure`,
+        [signature],
+      );
+      expect(rows).toEqual([
+        {
+          owner: 'fs_billing_auth',
+          prosecdef: true,
+          lanname: signature.startsWith('auth.revoke') ? 'sql' : 'plpgsql',
+          proconfig: ['search_path=pg_catalog, pg_temp'],
+          app: true,
+          auth: true,
+          public: false,
+        },
+      ]);
+    }
+    const id = await user();
+    expect(
+      (
+        await app.pool.query(
+          'SELECT auth.insert_credential($1,$2,$3,clock_timestamp()) AS inserted',
+          [randomUUID(), id, 'hash'],
+        )
+      ).rows,
+    ).toEqual([{ inserted: true }]);
+    expect(
+      (
+        await app.pool.query(
+          'SELECT auth.insert_credential($1,$2,$3,clock_timestamp()) AS inserted',
+          [randomUUID(), id, 'other'],
+        )
+      ).rows,
+    ).toEqual([{ inserted: false }]);
+    expect(
+      await pgError(
+        auth.query(
+          "INSERT INTO auth.account(id,account_id,provider_id,user_id,password,updated_at) VALUES($1,$2,'credential',$2,'dup',now())",
+          [randomUUID(), id],
+        ),
+      ),
+    ).toMatchObject({
+      code: '23505',
+      constraint: 'account_user_id_provider_id_key',
+    });
+    await app.pool.query(
+      'SELECT auth.set_credential($1,$2,clock_timestamp())',
+      [id, 'rotated'],
+    );
+    expect(
+      (
+        await auth.query('SELECT password FROM auth.account WHERE user_id=$1', [
+          id,
+        ])
+      ).rows,
+    ).toEqual([{ password: 'rotated' }]);
+    await auth.query(
+      "INSERT INTO auth.session(id,user_id,token,expires_at,updated_at) VALUES ($1,$2,$3,now()+interval '1 hour',now())",
+      [randomUUID(), id, randomUUID()],
+    );
+    await app.pool.query('SELECT auth.revoke_user_sessions($1)', [id]);
+    expect(
+      (await auth.query('SELECT id FROM auth.session WHERE user_id=$1', [id]))
+        .rows,
+    ).toEqual([]);
+  });
 });
 
 describe('identity cardinality before status', () => {

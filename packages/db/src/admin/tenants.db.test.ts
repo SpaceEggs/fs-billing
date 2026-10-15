@@ -80,6 +80,7 @@ describe('admin tenant and balance services', () => {
       expect(result.tenant).toMatchObject({
         currency,
         status: 'active',
+        settingsConfigured: true,
         balance: '0',
         settings: {
           overdraftLimit: currency === 'CNY' ? '100' : '15',
@@ -798,5 +799,39 @@ describe('admin tenant and balance services', () => {
         .where(eq(operationLogs.tenantId, tenantId)),
     );
     expect(audits).toHaveLength(2);
+  });
+
+  it('lists unconfigured tenants without inventing settings and treats search wildcards as literals', async () => {
+    const code = `LEGACY${randomUUID().replaceAll('-', '')}`;
+    const id = randomUUID();
+    await owner.pool.query(
+      "INSERT INTO tenants(id,code,name,currency,overdraft_limit) VALUES($1,$2,'存量','CNY',0)",
+      [id, code],
+    );
+    await expect(getTenant({ db: app.db, tenantId: id })).rejects.toMatchObject(
+      {
+        code: 'SERVICE_UNAVAILABLE',
+      },
+    );
+    const listed = await listTenants({
+      db: app.db,
+      query: adminTenantsQuerySchema.parse({ search: code }),
+    });
+    expect(listed.items).toEqual([
+      expect.objectContaining({
+        id,
+        code,
+        status: 'active',
+        settingsConfigured: false,
+        balance: '0',
+        overdraftLimit: '0',
+        health: 'suspended',
+      }),
+    ]);
+    const wildcard = await listTenants({
+      db: app.db,
+      query: adminTenantsQuerySchema.parse({ search: `${code.slice(0, 6)}%` }),
+    });
+    expect(wildcard.items.map((item) => item.id)).not.toContain(id);
   });
 });

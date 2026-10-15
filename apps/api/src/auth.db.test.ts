@@ -617,70 +617,179 @@ it('refunds a failed infrastructure attempt even when the fifth reservation woul
   await login(api, fixture.a);
 });
 
+const revokeUserSessions = `CREATE OR REPLACE FUNCTION auth.revoke_user_sessions(target_user_id text)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $$
+  DELETE FROM auth.session WHERE user_id = target_user_id;
+$$`;
+
+async function restoreRevokeUserSessions() {
+  await connections.owner.pool.query(revokeUserSessions);
+  await connections.owner.pool.query(
+    'ALTER FUNCTION auth.revoke_user_sessions(text) OWNER TO fs_billing_auth',
+  );
+  await connections.owner.pool.query(
+    'REVOKE ALL ON FUNCTION auth.revoke_user_sessions(text) FROM PUBLIC',
+  );
+  await connections.owner.pool.query(
+    'GRANT EXECUTE ON FUNCTION auth.revoke_user_sessions(text) TO fs_billing_app',
+  );
+}
+
 it('reset rollback preserves password, sessions, and failures when session revocation fails after credential update', async () => {
   const target = await login(api, fixture.a);
   const current = await login(api, fixture.admin);
   await failLogin(fixture.a.email);
   const before = await counter(fixture.a.email);
-  const injected = fixtureApi(connections, {
-    hooks: {
-      beforeSessionDelete: () =>
-        Promise.reject(new Error('Injected session deletion failure')),
-    },
-  });
-  const response = await injected.api.inject({
-    method: 'POST',
-    url: `/api/admin/portal-accounts/${fixture.a.profileId}/reset-password`,
-    headers: requestHeaders(current.cookie),
-  });
-  expect(response.statusCode).toBe(503);
-  expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
-  expect(await counter(fixture.a.email)).toEqual(before);
-  expect((await getSession(target.cookie)).statusCode).toBe(200);
-  await login(api, fixture.a);
-  const { rows } = await connections.owner.pool.query<{ count: string }>(
-    'SELECT count(*) FROM public.operation_logs WHERE admin_id=$1',
-    [fixture.admin.profileId],
-  );
-  expect(Number(rows[0]?.count)).toBe(0);
-});
-
-it.each([0, 2])(
-  'reset requires exactly one credential account and rolls back when there are %i',
-  async (credentialCount) => {
-    const target = await login(api, fixture.a);
-    const current = await login(api, fixture.admin);
-    const { rows } = await connections.owner.pool.query<{ password: string }>(
-      `SELECT password FROM auth.account WHERE user_id=$1`,
+  const hashBefore = (
+    await connections.owner.pool.query<{ password: string }>(
+      `SELECT password FROM auth.account WHERE user_id=$1 AND provider_id='credential'`,
       [fixture.a.userId],
-    );
-    const oldHash = rows[0]?.password;
-    if (credentialCount === 0)
-      await connections.owner.pool.query(
-        'DELETE FROM auth.account WHERE user_id=$1',
-        [fixture.a.userId],
-      );
-    else
-      await connections.owner.pool.query(
-        `INSERT INTO auth.account(id,account_id,provider_id,user_id,password,updated_at) SELECT id||'-duplicate',account_id,provider_id,user_id,password,updated_at FROM auth.account WHERE user_id=$1`,
-        [fixture.a.userId],
-      );
-    await failLogin(fixture.b.email);
+    )
+  ).rows[0]?.password;
+  // The admin reset calls auth.revoke_user_sessions inside the business
+  // transaction. A failure there must roll the credential change back.
+  await connections.owner.pool.query(
+    `CREATE OR REPLACE FUNCTION auth.revoke_user_sessions(target_user_id text)
+     RETURNS void
+     LANGUAGE plpgsql
+     SECURITY DEFINER
+     SET search_path = pg_catalog, pg_temp
+     AS $fn$
+     BEGIN
+       RAISE EXCEPTION 'injected session revocation failure';
+     END
+     $fn$`,
+  );
+  try {
     const response = await api.inject({
       method: 'POST',
       url: `/api/admin/portal-accounts/${fixture.a.profileId}/reset-password`,
       headers: requestHeaders(current.cookie),
     });
     expect(response.statusCode).toBe(503);
+    expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
+    expect(await counter(fixture.a.email)).toEqual(before);
     expect((await getSession(target.cookie)).statusCode).toBe(200);
-    const unchanged = await connections.owner.pool.query<{ password: string }>(
-      'SELECT password FROM auth.account WHERE user_id=$1',
-      [fixture.a.userId],
+    expect(
+      (
+        await connections.owner.pool.query<{ password: string }>(
+          `SELECT password FROM auth.account WHERE user_id=$1 AND provider_id='credential'`,
+          [fixture.a.userId],
+        )
+      ).rows,
+    ).toEqual([{ password: hashBefore }]);
+    await login(api, fixture.a);
+    const { rows } = await connections.owner.pool.query<{ count: string }>(
+      'SELECT count(*) FROM public.operation_logs WHERE admin_id=$1',
+      [fixture.admin.profileId],
     );
-    expect(unchanged.rows).toHaveLength(credentialCount);
-    for (const row of unchanged.rows) expect(row.password).toBe(oldHash);
-  },
-);
+    expect(Number(rows[0]?.count)).toBe(0);
+  } finally {
+    await restoreRevokeUserSessions();
+  }
+  const restored = await connections.owner.pool.query<{
+    owner: string;
+    prosecdef: boolean;
+    lanname: string;
+    proconfig: string[] | null;
+    def: string;
+    app: boolean;
+    public: boolean;
+  }>(
+    `SELECT pg_get_userbyid(p.proowner) AS owner, p.prosecdef, l.lanname, p.proconfig,
+            pg_get_functiondef(p.oid) AS def,
+            has_function_privilege('fs_billing_app', p.oid, 'EXECUTE') AS app,
+            EXISTS (
+              SELECT FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+              WHERE acl.grantee=0 AND acl.privilege_type='EXECUTE'
+            ) AS public
+     FROM pg_proc p JOIN pg_language l ON l.oid=p.prolang
+     WHERE p.oid='auth.revoke_user_sessions(text)'::regprocedure`,
+  );
+  expect(restored.rows).toEqual([
+    expect.objectContaining({
+      owner: 'fs_billing_auth',
+      prosecdef: true,
+      lanname: 'sql',
+      proconfig: ['search_path=pg_catalog, pg_temp'],
+      app: true,
+      public: false,
+    }),
+  ]);
+  expect(restored.rows[0]?.def).toContain(
+    'DELETE FROM auth.session WHERE user_id = target_user_id',
+  );
+  expect(restored.rows[0]?.def).not.toContain('injected session revocation');
+});
+
+it('unique credential constraint blocks a second account and reset rolls back when none remain', async () => {
+  const target = await login(api, fixture.a);
+  const current = await login(api, fixture.admin);
+  const { rows } = await connections.owner.pool.query<{ password: string }>(
+    `SELECT password FROM auth.account WHERE user_id=$1 AND provider_id='credential'`,
+    [fixture.a.userId],
+  );
+  expect(rows).toHaveLength(1);
+  const oldHash = rows[0]?.password;
+  await expect(
+    connections.owner.pool.query(
+      `INSERT INTO auth.account(id,account_id,provider_id,user_id,password,updated_at) SELECT id||'-duplicate',account_id,provider_id,user_id,password,updated_at FROM auth.account WHERE user_id=$1`,
+      [fixture.a.userId],
+    ),
+  ).rejects.toMatchObject({
+    code: '23505',
+    constraint: 'account_user_id_provider_id_key',
+  });
+  const activated = await connections.app.pool.query<{ inserted: boolean }>(
+    `SELECT auth.insert_credential($1,$2,'not-applied',clock_timestamp()) AS inserted`,
+    [`${fixture.a.userId}-second`, fixture.a.userId],
+  );
+  expect(activated.rows).toEqual([{ inserted: false }]);
+  expect(
+    (
+      await connections.owner.pool.query<{ password: string }>(
+        `SELECT password FROM auth.account WHERE user_id=$1 AND provider_id='credential'`,
+        [fixture.a.userId],
+      )
+    ).rows,
+  ).toEqual([{ password: oldHash }]);
+  expect((await getSession(target.cookie)).statusCode).toBe(200);
+
+  await connections.owner.pool.query(
+    'DELETE FROM auth.account WHERE user_id=$1',
+    [fixture.a.userId],
+  );
+  const response = await api.inject({
+    method: 'POST',
+    url: `/api/admin/portal-accounts/${fixture.a.profileId}/reset-password`,
+    headers: requestHeaders(current.cookie),
+  });
+  expect(response.statusCode).toBe(503);
+  expect(errorCode(response)).toBe('SERVICE_UNAVAILABLE');
+  expect((await getSession(target.cookie)).statusCode).toBe(200);
+  expect(
+    (
+      await connections.owner.pool.query(
+        'SELECT id FROM auth.account WHERE user_id=$1',
+        [fixture.a.userId],
+      )
+    ).rows,
+  ).toEqual([]);
+  expect(
+    Number(
+      (
+        await connections.owner.pool.query<{ count: string }>(
+          'SELECT count(*) FROM public.operation_logs WHERE admin_id=$1',
+          [fixture.admin.profileId],
+        )
+      ).rows[0]?.count,
+    ),
+  ).toBe(0);
+});
 
 it('login race guard deletes a session created by an old credential before a concurrent reset and emits no cookie', async () => {
   let temporaryPassword = '';

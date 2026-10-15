@@ -63,6 +63,38 @@ describe('迁移', () => {
     ).toHaveLength(1);
   });
 
+  it('migration precheck lists every duplicate auth credential before adding uniqueness', async () => {
+    const migration = await readFile(
+      new URL('../migrations/0007_auth_credentials.sql', import.meta.url),
+      'utf8',
+    );
+    const precheck = migration.split('--> statement-breakpoint')[0]!;
+    const client = await owner.pool.connect();
+    const userId = randomUUID();
+    const ids = [randomUUID(), randomUUID()];
+    try {
+      await client.query('begin');
+      await client.query(
+        'INSERT INTO auth."user"(id,name,email) VALUES($1,$2,$3)',
+        [userId, 'dup', `${userId}@example.invalid`],
+      );
+      await client.query(
+        'ALTER TABLE auth.account DROP CONSTRAINT account_user_id_provider_id_key',
+      );
+      await client.query(
+        "INSERT INTO auth.account(id,account_id,provider_id,user_id,password,updated_at) VALUES($1,$2,'credential',$2,'a',now()),($3,$2,'credential',$2,'b',now())",
+        [ids[0], userId, ids[1]],
+      );
+      const error = await pgError(client.query(precheck));
+      expect(error.message).toContain('choose which credential survives');
+      expect(error.message).toContain(userId);
+      for (const id of ids) expect(error.message).toContain(id);
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
+  });
+
   it('在已迁移的库上再执行一次不报错，也不重复记录', async () => {
     await migrateDatabase({
       DATABASE_URL: inject('ownerUrl'),
@@ -71,7 +103,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 7 }]);
+    expect(rows).toEqual([{ applied: 8 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {

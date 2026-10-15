@@ -13,6 +13,7 @@ const messages: Record<ApiErrorCode, string> = {
   FORBIDDEN: '没有访问权限',
   ACCOUNT_DISABLED: '账号已停用',
   IDENTITY_UNAVAILABLE: '身份暂不可用',
+  PASSWORD_CHANGE_REQUIRED: '请先修改初始或重置密码',
   ACCOUNT_LOCKED: '账号暂时锁定',
   VALIDATION_ERROR: '请求格式错误',
   NOT_FOUND: '资源不存在',

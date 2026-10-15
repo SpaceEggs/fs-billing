@@ -299,6 +299,7 @@ describe('API error envelope', () => {
       ['FORBIDDEN', 403, {}],
       ['ACCOUNT_DISABLED', 403, {}],
       ['IDENTITY_UNAVAILABLE', 403, {}],
+      ['PASSWORD_CHANGE_REQUIRED', 403, {}],
       ['ACCOUNT_LOCKED', 429, { retryAfterSeconds: 900 }],
       [
         'VALIDATION_ERROR',

@@ -309,6 +309,49 @@ const caseKinds = new Map([
   ['revokeOtherSessions', 'self-session-mutation'],
   ['changePassword', 'self-credential'],
 ]);
+const adminProbeBodies: Partial<Record<string, object>> = {
+  adminRateEdit: {
+    baseVersionId: '11111111-1111-4111-8111-111111111111',
+    entry: { prefix: '1', country: '美国', rate: '0.01' },
+    schedule: { kind: 'immediate' },
+  },
+  adminRateCancelFutureVersion: {
+    versionId: '11111111-1111-4111-8111-111111111111',
+  },
+  adminRateImportPreview: {
+    baseVersionId: '11111111-1111-4111-8111-111111111111',
+    file: {
+      filename: 'rates.csv',
+      contentBase64: Buffer.from('前缀,国家,费率\n1,美国,0.01').toString(
+        'base64',
+      ),
+    },
+    schedule: { kind: 'immediate' },
+  },
+  adminRateImportCommit: { previewId: '11111111-1111-4111-8111-111111111111' },
+  adminRateCopyPreview: {
+    sourceVersionId: '11111111-1111-4111-8111-111111111111',
+    targetTenantId: '22222222-2222-4222-8222-222222222222',
+    targetBaseVersionId: '11111111-1111-4111-8111-111111111111',
+    schedule: { kind: 'immediate' },
+  },
+  adminRateCopyCommit: { previewId: '11111111-1111-4111-8111-111111111111' },
+  adminRateExport: { versionId: '11111111-1111-4111-8111-111111111111' },
+  adminConfirmPayment: {
+    expectedLatestSettlementId: null,
+    receivedOn: '2020-01-01',
+  },
+  adminReversePayment: {
+    settlementId: '11111111-1111-4111-8111-111111111111',
+    reason: 'probe',
+  },
+  adminVoidReceivable: {
+    adjustmentLedgerEntryId: '11111111-1111-4111-8111-111111111111',
+    reason: 'probe',
+  },
+  adminAccountCreate: { name: 'probe', email: 'probe@example.com' },
+  adminPortalAccountCreate: { email: 'probe@example.com' },
+};
 const registry = new Map(Object.entries(cases));
 function coverageDifference(ids: readonly string[]) {
   return {
@@ -421,7 +464,7 @@ for (const lane of lanes) {
                         amount: '1',
                         idempotencyKey: 'idor-probe',
                       }
-                    : undefined;
+                    : adminProbeBodies[operation.operationId];
         const missing = await api.inject({
           method,
           url,

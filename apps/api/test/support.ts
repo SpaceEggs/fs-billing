@@ -8,6 +8,7 @@ import { sessionResponseSchema } from '@fs-billing/shared';
 import { createApi } from '../src/app.js';
 import { createBetterAuth } from '../src/auth/better-auth.js';
 import { createAuthGateway } from '../src/auth/gateway.js';
+import { createAdminAccountService } from '../src/auth/admin-accounts.js';
 import type { AuthHooks } from '../src/auth/types.js';
 
 export const origin = 'http://localhost:3000';
@@ -171,6 +172,11 @@ export function fixtureApi(
   const api = createApi({
     businessDb: options.ownerLane ? connections.owner.db : connections.app.db,
     auth,
+    accountService: createAdminAccountService({
+      businessDb: options.ownerLane ? connections.owner.db : connections.app.db,
+      authPool: connections.authPool,
+      auth: auth.auth,
+    }),
     trustedOrigins: [origin],
     rateLimit: options.rateLimit ?? { max: 1000, timeWindow: 60_000 },
   });

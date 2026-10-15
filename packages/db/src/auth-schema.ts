@@ -5,6 +5,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -58,7 +59,13 @@ export const authAccounts = auth.table(
     createdAt: at('created_at').notNull().defaultNow(),
     updatedAt: at('updated_at').notNull(),
   },
-  (table) => [index('account_user_id_idx').on(table.userId)],
+  (table) => [
+    index('account_user_id_idx').on(table.userId),
+    unique('account_user_id_provider_id_key').on(
+      table.userId,
+      table.providerId,
+    ),
+  ],
 );
 
 export const authVerifications = auth.table(

@@ -20,6 +20,7 @@ export interface AuthSession {
   email: string;
   token: string;
   expiresAt: Date;
+  passwordChangeRequired: boolean;
 }
 export interface IssuedSession extends AuthSession {
   setCookie: string[];

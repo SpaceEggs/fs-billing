@@ -6,6 +6,7 @@ import {
 } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
+import { DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS } from '@fs-billing/shared';
 import type {
   AuthGateway,
   AuthHooks,
@@ -39,6 +40,7 @@ export interface GatewayOptions {
   trustedOrigins: string[];
   logger: AuthLogger;
   hooks?: AuthHooks;
+  temporaryPasswordTtlMs?: number;
 }
 
 export function createAuthGateway(
@@ -46,6 +48,13 @@ export function createAuthGateway(
 ): AuthGateway & { auth: ReturnType<typeof createBetterAuth> } {
   const { pool, logger, hooks = {} } = options;
   const auth = createBetterAuth(options);
+  const temporaryPasswordTtlMs = z
+    .number()
+    .int()
+    .positive()
+    .parse(
+      options.temporaryPasswordTtlMs ?? DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS,
+    );
   const cookieName = `${options.secureCookies ? '__Secure-' : ''}better-auth.session_token`;
   const sign = (token: string) =>
     createHmac('sha256', options.secret).update(token).digest('base64');
@@ -150,8 +159,15 @@ export function createAuthGateway(
       token: string;
       expires_at: Date;
       expired: boolean;
+      password_change_required: boolean;
     }>(
-      `SELECT s.user_id,u.email,s.token,s.expires_at,s.expires_at <= clock_timestamp() AS expired FROM auth.session s JOIN auth."user" u ON u.id=s.user_id WHERE s.token=$1`,
+      `SELECT s.user_id,u.email,s.token,s.expires_at,s.expires_at <= clock_timestamp() AS expired,
+        exists (
+          select 1 from auth.account a
+          where a.user_id = s.user_id and a.provider_id = 'credential'
+            and a.temporary_password_issued_at is not null
+        ) as password_change_required
+       FROM auth.session s JOIN auth."user" u ON u.id=s.user_id WHERE s.token=$1`,
       [token],
     );
     const row = result.rows[0];
@@ -162,6 +178,7 @@ export function createAuthGateway(
       email: row.email,
       token: row.token,
       expiresAt: row.expires_at,
+      passwordChangeRequired: row.password_change_required,
     };
   }
   async function guardedSession(
@@ -175,8 +192,8 @@ export function createAuthGateway(
       await client.query('BEGIN');
       // FOR SHARE waits for an in-flight reset's credential UPDATE to commit.
       const current = await client.query<{ version: string }>(
-        `SELECT updated_at::text AS version FROM auth.account WHERE user_id=$1 AND provider_id='credential' FOR SHARE`,
-        [userId],
+        `SELECT updated_at::text AS version FROM auth.account WHERE user_id=$1 AND provider_id='credential' AND (temporary_password_issued_at IS NULL OR clock_timestamp() < temporary_password_issued_at + ($2::double precision * interval '1 millisecond')) FOR SHARE`,
+        [userId, temporaryPasswordTtlMs],
       );
       if (
         version === undefined ||
@@ -323,7 +340,7 @@ export function createAuthGateway(
         try {
           await client.query('BEGIN');
           const updated = await client.query(
-            `UPDATE auth.account SET password=$1,updated_at=clock_timestamp() WHERE user_id=$2 AND provider_id='credential' AND updated_at=$3::timestamptz AND updated_at <= $4::timestamptz RETURNING updated_at`,
+            `UPDATE auth.account SET password=$1,temporary_password_issued_at=NULL,updated_at=clock_timestamp() WHERE user_id=$2 AND provider_id='credential' AND updated_at=$3::timestamptz AND updated_at <= $4::timestamptz RETURNING updated_at`,
             [hash, session.authUserId, credential.version, t0],
           );
           if (updated.rowCount !== 1)
@@ -374,7 +391,7 @@ export function createAuthGateway(
       try {
         await client.query('BEGIN');
         const updated = await client.query(
-          `UPDATE auth.account SET password=$1,updated_at=clock_timestamp() WHERE user_id=$2 AND provider_id='credential'`,
+          `UPDATE auth.account SET password=$1,temporary_password_issued_at=clock_timestamp(),updated_at=clock_timestamp() WHERE user_id=$2 AND provider_id='credential'`,
           [hash, targetAuthUserId],
         );
         if (updated.rowCount !== 1)

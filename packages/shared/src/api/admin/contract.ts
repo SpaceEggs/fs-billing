@@ -33,6 +33,7 @@ const responses = {
     apiErrorSchemas.FORBIDDEN,
     apiErrorSchemas.ACCOUNT_DISABLED,
     apiErrorSchemas.IDENTITY_UNAVAILABLE,
+    apiErrorSchemas.PASSWORD_CHANGE_REQUIRED,
   ]),
   404: apiErrorSchemas.NOT_FOUND,
   429: apiErrorSchemas.RATE_LIMITED,

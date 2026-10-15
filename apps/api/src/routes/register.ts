@@ -24,10 +24,16 @@ export function requestHeaders(request: FastifyRequest): Headers {
   }
   return headers;
 }
+const passwordChangeAllowlist = new Set([
+  'session',
+  'logout',
+  'changePassword',
+]);
 async function authorize(
   access: RouteAccess,
   headers: Headers,
   deps: { businessDb: Db; auth: AuthGateway },
+  operationId: string,
 ): Promise<RequestContext> {
   if (access === 'public') return { kind: 'public' };
   const session = await deps.auth.session(headers);
@@ -35,6 +41,11 @@ async function authorize(
   const resolved = await resolvePrincipal(deps.businessDb, session);
   if ((access === 'admin' || access === 'customer') && access !== resolved.kind)
     throw new ApiFailure('FORBIDDEN');
+  if (
+    session.passwordChangeRequired &&
+    !passwordChangeAllowlist.has(operationId)
+  )
+    throw new ApiFailure('PASSWORD_CHANGE_REQUIRED');
   return { ...resolved, session };
 }
 export function registerRoutes(
@@ -46,10 +57,11 @@ export function registerRoutes(
     rateLimit: { max: number; timeWindow: number };
   },
   handlers: RouteHandlers,
+  contract = liveApiContract,
 ) {
   const router = app;
   const credentialRateLimit = app.rateLimit(deps.rateLimit);
-  for (const operation of Object.values(liveApiContract)) {
+  for (const operation of Object.values(contract)) {
     const credential =
       operation.operationId === 'login' ||
       operation.operationId === 'changePassword';
@@ -68,7 +80,9 @@ export function registerRoutes(
         response: operation.responses,
       },
       config: { rateLimit: false },
-      ...(operation.operationId === 'adminTenantCreate'
+      ...(['adminTenantCreate', 'adminRateImportPreview'].includes(
+        operation.operationId,
+      )
         ? { bodyLimit: 3 * 1024 * 1024 }
         : {}),
       ...(credential ? { onRequest: credentialRateLimit } : {}),
@@ -83,21 +97,28 @@ export function registerRoutes(
           )
             return done(new ApiFailure('FORBIDDEN'));
         }
-        if (operation.operationId === 'adminTenantCreate') {
+        if (
+          operation.operationId === 'adminTenantCreate' ||
+          operation.operationId === 'adminRateImportPreview'
+        ) {
+          const csvBody =
+            operation.operationId === 'adminTenantCreate'
+              ? z
+                  .object({
+                    initialRates: z.object({
+                      kind: z.literal('csv'),
+                      file: z.unknown(),
+                    }),
+                  })
+                  .safeParse(request.body).data?.initialRates
+              : request.body;
           const csv = z
-            .object({
-              initialRates: z.object({
-                kind: z.literal('csv'),
-                file: z.object({ contentBase64: z.string() }),
-              }),
-            })
-            .safeParse(request.body);
+            .object({ file: z.object({ contentBase64: z.string() }) })
+            .safeParse(csvBody);
           if (
             csv.success &&
-            Buffer.byteLength(
-              csv.data.initialRates.file.contentBase64,
-              'base64',
-            ) > DEFAULT_ADMIN_CSV_MAX_BYTES
+            Buffer.byteLength(csv.data.file.contentBase64, 'base64') >
+              DEFAULT_ADMIN_CSV_MAX_BYTES
           )
             return done(
               new AdminServiceError('CSV_LIMIT_EXCEEDED', 'CSV 文件超限'),
@@ -125,7 +146,12 @@ export function registerRoutes(
         const context =
           operation.operationId === 'logout'
             ? { kind: 'public' as const }
-            : await authorize(operation.access, requestHeaders(request), deps);
+            : await authorize(
+                operation.access,
+                requestHeaders(request),
+                deps,
+                operation.operationId,
+              );
         return handlers[operation.operationId](context, request, reply);
       },
     });

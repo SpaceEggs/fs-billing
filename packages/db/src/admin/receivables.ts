@@ -1,9 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, eq, ne, sql, desc, or, getViewSelectedFields } from 'drizzle-orm';
 import {
   adminConfirmPaymentRequestSchema,
   adminReversePaymentRequestSchema,
   adminVoidReceivableRequestSchema,
+  adminReceivableSchema,
+  adminReceivablesQuerySchema,
+  type AdminReceivablesQuery,
+  type AdminReceivablesResponse,
   type AdminConfirmPaymentRequest,
   type AdminConfirmPaymentResponse,
   type AdminReversePaymentRequest,
@@ -14,6 +18,7 @@ import {
 } from '@fs-billing/shared';
 import { decimal } from '@fs-billing/rating';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
+import { likeContains } from './like.js';
 import { canonicalTenantId } from '../ledger.js';
 import {
   ledgerEntries,
@@ -22,9 +27,100 @@ import {
   receivableSettlementReversals,
   receivableVoids,
   tenants,
+  admins,
 } from '../schema.js';
 import { writeAudit } from './audit.js';
 import { AdminServiceError } from './errors.js';
+
+export function listReceivables({
+  db,
+  query,
+}: {
+  db: Db | Tx;
+  query: AdminReceivablesQuery;
+}): Promise<AdminReceivablesResponse> {
+  const input = adminReceivablesQuerySchema.parse(query);
+  return withAdmin(db, async (tx) => {
+    const filter = and(
+      eq(receivables.status, input.status),
+      input.currency ? eq(tenants.currency, input.currency) : undefined,
+      input.search
+        ? or(
+            sql`${tenants.code} ilike ${likeContains(input.search)} escape '\\'`,
+            sql`${tenants.name} ilike ${likeContains(input.search)} escape '\\'`,
+          )
+        : undefined,
+    );
+    const [aggregate] = await tx
+      .select({
+        total: sql<number>`count(*)::int`,
+        CNY: sql<string>`coalesce(sum(${receivables.amount}) filter (where ${tenants.currency} = 'CNY'), 0)::text`,
+        USD: sql<string>`coalesce(sum(${receivables.amount}) filter (where ${tenants.currency} = 'USD'), 0)::text`,
+      })
+      .from(receivables)
+      .innerJoin(tenants, eq(tenants.id, receivables.tenantId))
+      .where(filter);
+    const rows = await tx
+      .select({
+        ...getViewSelectedFields(receivables),
+        tenant: {
+          id: tenants.id,
+          code: tenants.code,
+          name: tenants.name,
+          currency: tenants.currency,
+        },
+        actor: { id: admins.id, name: admins.name },
+        ageDays: sql<number>`greatest(0, (clock_timestamp() at time zone 'Asia/Shanghai')::date - (${receivables.createdAt} at time zone 'Asia/Shanghai')::date)::int`,
+      })
+      .from(receivables)
+      .innerJoin(tenants, eq(tenants.id, receivables.tenantId))
+      .innerJoin(admins, eq(admins.id, receivables.createdBy))
+      .where(filter)
+      .orderBy(desc(receivables.createdAt), desc(receivables.ledgerEntryId))
+      .limit(input.pageSize)
+      .offset((input.page - 1) * input.pageSize);
+    return {
+      items: rows.map((row) =>
+        adminReceivableSchema.parse({
+          ledgerEntryId: row.ledgerEntryId,
+          latestSettlementId: row.latestSettlementId,
+          tenant: row.tenant,
+          amount: row.amount,
+          internalNote: row.note,
+          createdAt: row.createdAt.toISOString(),
+          actor: row.actor,
+          ageDays: row.ageDays,
+          overdue: row.status === 'pending' && row.ageDays > 30,
+          payment:
+            row.status === 'received'
+              ? {
+                  status: 'received',
+                  settlementId: row.settlementId,
+                  receivedOn: row.receivedOn,
+                  note: row.settlementNote,
+                  confirmedBy: row.confirmedBy,
+                }
+              : row.status === 'voided'
+                ? {
+                    status: 'voided',
+                    voidId: row.voidId,
+                    adjustmentLedgerEntryId: row.adjustmentLedgerEntryId,
+                    reason: row.voidReason,
+                    voidedBy: row.voidedBy,
+                    voidedAt: row.voidedAt?.toISOString(),
+                  }
+                : { status: 'pending' },
+        }),
+      ),
+      totals: { CNY: aggregate?.CNY ?? '0', USD: aggregate?.USD ?? '0' },
+      pagination: {
+        page: input.page,
+        pageSize: input.pageSize,
+        total: aggregate?.total ?? 0,
+      },
+    };
+  });
+}
 
 type ReceivableInput<Request> = {
   db: Db | Tx;

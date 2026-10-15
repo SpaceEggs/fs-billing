@@ -26,6 +26,8 @@ import {
   adminRateEntriesSchema,
   adminTenantCreateRequestSchema,
   adminTenantEditRequestSchema,
+  adminTenantSummarySchema,
+  adminTenantDetailResponseSchema,
   adminTenantsQuerySchema,
   auditPayloadSchema,
   auditContentSchema,
@@ -240,6 +242,32 @@ it('tenant edits cannot change currency or code; creation uses an immediate firs
     pageSize: 25,
     sort: 'status_currency_balance',
   });
+});
+it('list summaries expose settingsConfigured and detail still requires settings', () => {
+  const summary = {
+    id,
+    code: 'ABC001',
+    name: '客户',
+    currency: 'CNY',
+    status: 'active',
+    health: 'normal',
+    settingsConfigured: false,
+    balance: '0',
+    overdraftLimit: '100',
+    availableBalance: '100',
+    monthConsumption: '0',
+    pendingReceivable: '0',
+  };
+  expect(adminTenantSummarySchema.parse(summary)).toEqual(summary);
+  expect(adminTenantDetailResponseSchema.safeParse(summary).success).toBe(
+    false,
+  );
+  expect(
+    adminTenantSummarySchema.safeParse({
+      ...summary,
+      settingsConfigured: undefined,
+    }).success,
+  ).toBe(false);
 });
 it('planned operations all require admin sessions and leave the live contract unchanged', () => {
   expect(
