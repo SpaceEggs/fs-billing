@@ -129,7 +129,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
   }, [waitOver]);
 
   const login = useMutation({
-    mutationFn: (request: LoginRequest) => callApi('login', request),
+    mutationFn: (request: LoginRequest) => callApi('login', { body: request }),
     onMutate: () => setProblem(null),
     onError: (error) => setProblem(loginProblem(error, Date.now())),
     onSuccess: (session) => {

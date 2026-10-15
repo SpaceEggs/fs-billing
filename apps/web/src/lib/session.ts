@@ -32,28 +32,46 @@ export function blockedCode(error: unknown) {
     : null;
 }
 
-/** 页面内的请求收到 reauthenticate 后，弹出“登录已过期”对话框。 */
-let expired = false;
-const listeners = new Set<() => void>();
+export function requiresPasswordChange(error: unknown) {
+  return (
+    error instanceof ApiRequestError &&
+    error.code === 'PASSWORD_CHANGE_REQUIRED'
+  );
+}
 
-export const sessionExpiry = {
-  mark() {
-    if (expired) return;
-    expired = true;
+function createFlag() {
+  let value = false;
+  const listeners = new Set<() => void>();
+  const set = (next: boolean) => {
+    if (value === next) return;
+    value = next;
     listeners.forEach((listener) => listener());
-  },
-  clear() {
-    if (!expired) return;
-    expired = false;
-    listeners.forEach((listener) => listener());
-  },
-  subscribe: (listener: () => void) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  },
-  get: () => expired,
-};
+  };
+  return {
+    mark: () => set(true),
+    clear: () => set(false),
+    set,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    get: () => value,
+  };
+}
+
+/** 页面内的请求收到 reauthenticate 后，弹出“登录已过期”对话框。 */
+export const sessionExpiry = createFlag();
+
+/**
+ * 会话带 passwordChangeRequired，或任一请求返回 403 PASSWORD_CHANGE_REQUIRED 时置位；
+ * 根组件据此跳转到所在区域的改密页，改密成功后清除。
+ */
+export const passwordGate = createFlag();
 
 export function useSessionExpired() {
   return useSyncExternalStore(sessionExpiry.subscribe, sessionExpiry.get);
+}
+
+export function usePasswordChangeRequired() {
+  return useSyncExternalStore(passwordGate.subscribe, passwordGate.get);
 }

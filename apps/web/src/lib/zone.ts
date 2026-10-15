@@ -4,11 +4,26 @@ import type { Identity } from '@fs-billing/shared';
 export type Zone = 'portal' | 'admin';
 
 export const zones = {
-  portal: { home: '/', login: '/login', kind: 'customer' },
-  admin: { home: '/admin', login: '/admin/login', kind: 'admin' },
+  portal: {
+    home: '/',
+    login: '/login',
+    changePassword: '/change-password',
+    kind: 'customer',
+  },
+  admin: {
+    home: '/admin',
+    login: '/admin/login',
+    changePassword: '/admin/change-password',
+    kind: 'admin',
+  },
 } as const satisfies Record<
   Zone,
-  { home: string; login: string; kind: Identity['kind'] }
+  {
+    home: string;
+    login: string;
+    changePassword: string;
+    kind: Identity['kind'];
+  }
 >;
 
 export function zoneOfPath(pathname: string): Zone {

@@ -22,6 +22,7 @@ export const statusTags = {
   answered: { label: '已接通', tone: 'plain', dot: false },
   unanswered: { label: '未接通', tone: 'muted', dot: false },
   unverified: { label: '未经验证', tone: 'unv', dot: false },
+  settingsMissing: { label: '未配置提醒设置', tone: 'unv', dot: false },
 } as const satisfies Record<
   string,
   { label: string; tone: keyof typeof tones; dot: boolean }
@@ -34,7 +35,7 @@ export function StatusTag({
   className,
 }: {
   status: StatusKey;
-  className?: string;
+  className?: string | undefined;
 }) {
   const tag = statusTags[status];
   return (

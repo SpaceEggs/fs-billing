@@ -1,0 +1,265 @@
+import { useId, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useRouter } from '@tanstack/react-router';
+import type { ChangePasswordRequest } from '@fs-billing/shared';
+import { BrandRow } from '../components/brand';
+import { SessionExpiredDialog } from '../components/session-expired-dialog';
+import { Alert } from '../components/ui/alert';
+import { Button } from '../components/ui/button';
+import { ApiRequestError, callApi } from '../lib/api';
+import { formatDuration } from '../lib/format';
+import { resolveReturnPath, takeReturnPath } from '../lib/return-to';
+import {
+  passwordGate,
+  sessionQueryKey,
+  type SessionState,
+} from '../lib/session';
+import { logoutFailedMessage, useLogout } from '../lib/use-logout';
+import { cn } from '../lib/utils';
+import { zones, type Zone } from '../lib/zone';
+
+type Field = 'current' | 'next' | 'confirm';
+type Problem =
+  | { kind: 'fields'; errors: Partial<Record<Field, string>> }
+  | { kind: 'wait'; seconds: number }
+  | { kind: 'unavailable' };
+
+/** 本地先检查长度与两次输入一致，再由服务端核对当前密码。 */
+export function checkNewPassword(values: Record<Field, string>) {
+  const errors: Partial<Record<Field, string>> = {};
+  if (!values.current) errors.current = '请输入当前密码';
+  if (values.next.length < 8) errors.next = '新密码至少 8 位';
+  else if (values.next.length > 128) errors.next = '新密码最多 128 位';
+  if (!errors.next && values.confirm !== values.next)
+    errors.confirm = '两次输入的新密码不一致';
+  return errors;
+}
+
+function serverProblem(error: unknown): Problem | null {
+  if (!(error instanceof ApiRequestError) || !error.body)
+    return { kind: 'unavailable' };
+  const detail = error.body.error;
+  switch (detail.code) {
+    case 'INVALID_CREDENTIALS':
+      return { kind: 'fields', errors: { current: '当前密码不正确' } };
+    case 'VALIDATION_ERROR':
+      return { kind: 'fields', errors: { next: '新密码至少 8 位' } };
+    case 'ACCOUNT_LOCKED':
+    case 'RATE_LIMITED':
+      return { kind: 'wait', seconds: detail.retryAfterSeconds };
+    case 'UNAUTHENTICATED':
+    case 'SESSION_EXPIRED':
+      // 登录过期对话框接管。
+      return null;
+    default:
+      return { kind: 'unavailable' };
+  }
+}
+
+function PasswordInput({
+  id,
+  label,
+  hint,
+  error,
+  value,
+  autoComplete,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint?: string | undefined;
+  error: string | undefined;
+  value: string;
+  autoComplete: string;
+  onChange: (value: string) => void;
+}) {
+  const [shown, setShown] = useState(false);
+  const message = error ?? hint;
+  return (
+    <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
+      <label htmlFor={id}>{label}</label>
+      <div
+        className={cn(
+          'flex h-11 items-center rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 sm:h-10 sm:pr-1',
+          error &&
+            'border-neg shadow-[0_0_0_3px_var(--alert-neg-bg)] focus-within:ring-0',
+        )}
+      >
+        <input
+          id={id}
+          type={shown ? 'text' : 'password'}
+          autoComplete={autoComplete}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={message ? `${id}-message` : undefined}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-full min-w-0 flex-1 bg-transparent pl-3 text-base text-foreground outline-none sm:text-sm"
+        />
+        <button
+          type="button"
+          aria-label={shown ? `隐藏${label}` : `显示${label}`}
+          aria-pressed={shown}
+          onClick={() => setShown((value) => !value)}
+          className="flex h-11 w-14 shrink-0 items-center justify-center text-[13px] text-muted-foreground sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
+        >
+          {shown ? '隐藏' : '显示'}
+        </button>
+      </div>
+      {message ? (
+        <span
+          id={`${id}-message`}
+          className={cn(
+            'text-xs font-normal',
+            error ? 'text-neg' : 'text-muted-foreground',
+          )}
+        >
+          {message}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * 修改密码。`forced` 时为首次登录或重置后的强制改密：
+ * 只能改密或退出，其他业务请求都会被服务端以 PASSWORD_CHANGE_REQUIRED 拒绝。
+ */
+export function ChangePasswordPage({
+  zone,
+  forced,
+}: {
+  zone: Zone;
+  forced: boolean;
+}) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const logout = useLogout(zone);
+  const ids = { current: useId(), next: useId(), confirm: useId() };
+  const [values, setValues] = useState<Record<Field, string>>({
+    current: '',
+    next: '',
+    confirm: '',
+  });
+  const [problem, setProblem] = useState<Problem | null>(null);
+
+  const change = useMutation({
+    mutationFn: (request: ChangePasswordRequest) =>
+      callApi('changePassword', { body: request }),
+    onMutate: () => setProblem(null),
+    onError: (error) => setProblem(serverProblem(error)),
+    onSuccess: (session) => {
+      passwordGate.clear();
+      const state: SessionState = { status: 'active', session };
+      queryClient.setQueryData(sessionQueryKey, state);
+      router.history.replace(
+        resolveReturnPath(takeReturnPath(), session.identity, router),
+      );
+    },
+  });
+
+  const errors = problem?.kind === 'fields' ? problem.errors : {};
+  const set = (field: Field) => (value: string) =>
+    setValues((current) => ({ ...current, [field]: value }));
+
+  return (
+    <div
+      className={cn(
+        'flex min-h-dvh flex-col bg-background text-foreground sm:bg-page',
+        zone === 'admin' && 'sm:border-t-4 sm:border-primary',
+      )}
+    >
+      <main className="flex flex-1 flex-col justify-center gap-6 px-6 py-10 sm:items-center sm:px-0">
+        <BrandRow zone={zone} />
+        <form
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            const local = checkNewPassword(values);
+            if (Object.keys(local).length) {
+              setProblem({ kind: 'fields', errors: local });
+              return;
+            }
+            change.mutate({
+              currentPassword: values.current,
+              newPassword: values.next,
+            });
+          }}
+          className="flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]"
+        >
+          <div className="flex flex-col gap-1.5">
+            <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
+              {forced ? '请修改初始密码' : '修改密码'}
+            </h1>
+            <span className="text-[13px] leading-normal text-muted-foreground">
+              {forced
+                ? '首次登录或密码被重置后，需要设置新密码才能继续使用。修改后，其他设备上的登录将失效'
+                : '修改后，其他设备上的登录将失效'}
+            </span>
+          </div>
+          {problem?.kind === 'wait' ? (
+            <Alert tone="warn" title="尝试次数过多，已暂时锁定">
+              {`请在 ${formatDuration(problem.seconds)} 后重试`}
+            </Alert>
+          ) : null}
+          {problem?.kind === 'unavailable' ? (
+            <Alert tone="neg" title="暂时无法修改密码">
+              服务暂时不可用，请稍后重试
+            </Alert>
+          ) : null}
+          <div className="flex flex-col gap-3.5">
+            <PasswordInput
+              id={ids.current}
+              label="当前密码"
+              hint={forced ? '管理员提供的临时密码' : undefined}
+              error={errors.current}
+              value={values.current}
+              autoComplete="current-password"
+              onChange={set('current')}
+            />
+            <PasswordInput
+              id={ids.next}
+              label="新密码"
+              hint="至少 8 位"
+              error={errors.next}
+              value={values.next}
+              autoComplete="new-password"
+              onChange={set('next')}
+            />
+            <PasswordInput
+              id={ids.confirm}
+              label="确认新密码"
+              error={errors.confirm}
+              value={values.confirm}
+              autoComplete="new-password"
+              onChange={set('confirm')}
+            />
+          </div>
+          <Button type="submit" size="field" disabled={change.isPending}>
+            修改密码
+          </Button>
+          <div className="flex items-center justify-center gap-4 text-sm">
+            {forced ? null : (
+              <Link to={zones[zone].home} className="text-muted-foreground">
+                返回
+              </Link>
+            )}
+            <button
+              type="button"
+              className="text-neg"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate()}
+            >
+              退出登录
+            </button>
+          </div>
+          {logout.isError ? (
+            <p role="alert" className="m-0 text-center text-sm text-neg">
+              {logoutFailedMessage}
+            </p>
+          ) : null}
+        </form>
+      </main>
+      <SessionExpiredDialog zone={zone} />
+    </div>
+  );
+}

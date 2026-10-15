@@ -9,11 +9,17 @@ import { SessionExpiredDialog } from './session-expired-dialog';
 import { ThemeMenu } from './theme-controls';
 import { Sheet } from './ui/sheet';
 
-/** 阶段 4 只有首页；其他导航项随各自阶段的页面加入。 */
+/** 后台导航按设计稿顺序；未归属话单、账单、系统告警、操作日志随各自阶段加入。 */
 const navigation = {
   portal: [{ label: '首页', to: zones.portal.home }],
-  admin: [{ label: '概览', to: zones.admin.home }],
+  admin: [
+    { label: '概览', to: zones.admin.home },
+    { label: '租户', to: '/admin/tenants' },
+    { label: '待收款', to: '/admin/receivables' },
+    { label: '管理员', to: '/admin/admins' },
+  ],
 } as const satisfies Record<Zone, readonly { label: string; to: string }[]>;
+export type NavLabel = (typeof navigation)[Zone][number]['label'];
 
 function NavItems({
   zone,
@@ -22,7 +28,7 @@ function NavItems({
   onNavigate,
 }: {
   zone: Zone;
-  active: string | null;
+  active: NavLabel | null;
   mobile?: boolean;
   onNavigate?: () => void;
 }) {
@@ -70,8 +76,8 @@ export function AppShell({
 }: {
   identity: Identity;
   title: string;
-  crumb: string;
-  activeNav: string | null;
+  crumb: React.ReactNode;
+  activeNav: NavLabel | null;
   children: React.ReactNode;
 }) {
   const zone = zoneOfIdentity(identity);
@@ -115,9 +121,12 @@ export function AppShell({
             />
           </Sheet>
           {zone === 'admin' ? (
-            <span className="text-[10px] font-medium text-primary">
-              {productLabel.admin}
-            </span>
+            <div className="flex min-w-0 flex-col items-center">
+              <span className="truncate text-base font-semibold">{title}</span>
+              <span className="text-[10px] font-medium text-primary">
+                {productLabel.admin}
+              </span>
+            </div>
           ) : (
             <span className="text-base font-semibold">{title}</span>
           )}
@@ -130,16 +139,35 @@ export function AppShell({
   );
 }
 
+/** 电脑版页面标题行：标题、旁注（如“共 10 个”）与右侧操作；手机版标题在顶栏。 */
 export function PageBody({
   title,
+  meta,
+  actions,
   children,
 }: {
   title: string;
+  meta?: React.ReactNode;
+  actions?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-5 p-4 md:p-7">
-      <h1 className="m-0 hidden text-2xl font-semibold md:block">{title}</h1>
+      {meta || actions ? (
+        <div className="flex items-center justify-between gap-3">
+          <div className="hidden items-baseline gap-2.5 md:flex">
+            <h1 className="m-0 text-2xl font-semibold tracking-[-0.01em]">
+              {title}
+            </h1>
+            {meta ? (
+              <span className="text-[13px] text-muted-foreground">{meta}</span>
+            ) : null}
+          </div>
+          {actions}
+        </div>
+      ) : (
+        <h1 className="m-0 hidden text-2xl font-semibold md:block">{title}</h1>
+      )}
       {children}
     </div>
   );

@@ -29,6 +29,17 @@ export const customerSession = {
   passwordChangeRequired: false,
 };
 
+export const adminSession = {
+  identity: {
+    kind: 'admin',
+    profileId: '00000000-0000-4000-8000-000000000009',
+    name: '王敏',
+    email: 'WangMin@example.com',
+  },
+  expiresAt: '2026-10-21T00:00:00.000Z',
+  passwordChangeRequired: false,
+};
+
 export const apiError = (code: string, extra: object = {}) => ({
   error: { code, message: '请求失败', requestId: 'req-test', ...extra },
 });

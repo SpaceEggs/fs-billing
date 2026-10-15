@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { ApiRequestError, callApi } from './api';
-import { sessionExpiry } from './session';
+import { passwordGate, sessionExpiry } from './session';
 import { zones, type Zone } from './zone';
 
 export const logoutFailedMessage = '退出失败，请检查网络后重试';
@@ -26,6 +26,7 @@ export function useLogout(zone: Zone) {
     onSuccess: async () => {
       queryClient.clear();
       sessionExpiry.clear();
+      passwordGate.clear();
       await router.navigate({ to: zones[zone].login, search: {} });
     },
   });
