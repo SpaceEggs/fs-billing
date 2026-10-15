@@ -58,7 +58,20 @@ const cases = {
   portalContext: async ({ api, fixture, operation }: CaseContext) => {
     const a = await login(api, fixture.a);
     const b = await login(api, fixture.b);
-    for (const user of [fixture.a, fixture.a2, fixture.b]) {
+    for (const { user, expectedBalance } of [
+      {
+        user: fixture.a,
+        expectedBalance: { amount: '111.25', currency: 'CNY' },
+      },
+      {
+        user: fixture.a2,
+        expectedBalance: { amount: '222.5', currency: 'CNY' },
+      },
+      {
+        user: fixture.b,
+        expectedBalance: { amount: '999.75', currency: 'USD' },
+      },
+    ]) {
       const current =
         user === fixture.a
           ? a
@@ -94,7 +107,7 @@ const cases = {
           expect(
             result.rows,
             'TENANT_FILTER_LEAK: portalContext read another tenant balance',
-          ).toEqual([[user === fixture.b ? '999.75' : '111.25']]);
+          ).toEqual([[expectedBalance.amount]]);
           return response;
         } finally {
           balanceQueries.mockRestore();
@@ -107,8 +120,8 @@ const cases = {
       expect(
         body.balance.amount,
         'TENANT_FILTER_LEAK: portalContext returned another tenant balance',
-      ).toBe(user === fixture.b ? '999.75' : '111.25');
-      expect(body.balance.currency).toBe(user === fixture.b ? 'USD' : 'CNY');
+      ).toBe(expectedBalance.amount);
+      expect(body.balance.currency).toBe(expectedBalance.currency);
     }
     const forged = await api.inject({
       method: 'GET',
@@ -333,6 +346,32 @@ it('covers exactly the nonempty live OpenAPI customer operation set and rejects 
 for (const lane of lanes) {
   const { api } = fixtureApi(connections, { ownerLane: lane === 'owner' });
   describe(`[${lane}] live OpenAPI customer isolation`, () => {
+    it('logs in one portal account for each of three distinct fixture tenants', async () => {
+      const customers = [fixture.a, fixture.a2, fixture.b];
+      const tenantIds = customers.map((user) => user.tenantId);
+      expect(new Set(tenantIds).size).toBe(3);
+      const accounts = await connections.owner.pool.query<{
+        tenant_id: string;
+        count: number;
+      }>(
+        `SELECT tenant_id, count(*)::integer AS count FROM public.portal_accounts WHERE tenant_id = ANY($1::uuid[]) GROUP BY tenant_id ORDER BY tenant_id`,
+        [tenantIds],
+      );
+      expect(accounts.rows).toEqual(
+        [...tenantIds]
+          .sort()
+          .map((tenantId) => ({ tenant_id: tenantId, count: 1 })),
+      );
+      for (const user of customers) {
+        const current = await login(api, user);
+        expect(current.body.identity).toMatchObject({
+          kind: 'customer',
+          profileId: user.profileId,
+          tenant: { id: user.tenantId },
+        });
+      }
+    });
+
     it('rejects unauthenticated protected operations and customer access to all live admin operations', async () => {
       const current = await login(api, fixture.a);
       const before = await connections.owner.pool.query<{ password: string }>(
@@ -419,6 +458,7 @@ for (const lane of lanes) {
         expect(rows).toEqual(
           expect.arrayContaining([
             { tenantId: fixture.a.tenantId, amount: '111.25' },
+            { tenantId: fixture.a2.tenantId, amount: '222.5' },
             { tenantId: fixture.b.tenantId, amount: '999.75' },
           ]),
         );

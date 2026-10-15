@@ -1,13 +1,68 @@
 import { is } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { getTableConfig, PgTable } from 'drizzle-orm/pg-core';
 import { describe, expect, inject, it } from 'vitest';
-import { connections } from '../test/support.js';
+import { connections, createTenant, pgError } from '../test/support.js';
+import { withAdmin } from './client.js';
 import { migrateDatabase } from './migrate.js';
 import * as schema from './schema.js';
 
 const { app, owner } = connections();
 
 describe('迁移', () => {
+  it('tenant codes have case-insensitive uniqueness', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    expect(
+      await pgError(
+        withAdmin(app.db, (tx) =>
+          tx.insert(schema.tenants).values({
+            code: tenant.code.toLowerCase(),
+            name: 'duplicate',
+            currency: 'CNY',
+            overdraftLimit: '0',
+          }),
+        ),
+      ),
+    ).toMatchObject({
+      code: '23505',
+      constraint: 'tenants_code_case_insensitive',
+    });
+  });
+
+  it('migration precheck loudly lists every colliding code and ID before any schema changes', async () => {
+    const migration = await readFile(
+      new URL('../migrations/0006_admin_receivables.sql', import.meta.url),
+      'utf8',
+    );
+    const precheck = migration.split('--> statement-breakpoint')[0]!;
+    const client = await owner.pool.connect();
+    const base = `COLLISION${randomUUID().replaceAll('-', '')}`;
+    const ids = [randomUUID(), randomUUID()];
+    try {
+      await client.query('begin');
+      await client.query('drop index tenants_code_case_insensitive');
+      await client.query(
+        "insert into tenants(id,code,name,currency,overdraft_limit) values($1,$2,'A','CNY',0),($3,$4,'B','CNY',0)",
+        [ids[0], base, ids[1], base.toLowerCase()],
+      );
+      const error = await pgError(client.query(precheck));
+      expect(error.message).toContain('manually rename');
+      for (const value of [base, base.toLowerCase(), ...ids])
+        expect(error.message).toContain(value);
+    } finally {
+      await client.query('rollback');
+      client.release();
+    }
+    expect(
+      (
+        await owner.pool.query(
+          "select indexname from pg_indexes where indexname='tenants_code_case_insensitive'",
+        )
+      ).rows,
+    ).toHaveLength(1);
+  });
+
   it('在已迁移的库上再执行一次不报错，也不重复记录', async () => {
     await migrateDatabase({
       DATABASE_URL: inject('ownerUrl'),
@@ -16,7 +71,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 6 }]);
+    expect(rows).toEqual([{ applied: 7 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {
@@ -85,6 +140,6 @@ describe('迁移', () => {
         config.columns.map((c) => c.name).sort(),
       );
     }
-    expect(tables).toHaveLength(17);
+    expect(tables).toHaveLength(19);
   });
 });

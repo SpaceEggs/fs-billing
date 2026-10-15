@@ -37,6 +37,56 @@ async function identity(id: string) {
 }
 
 describe('auth catalog and privilege boundary', () => {
+  it('supports staged users without credentials and persists temporary issuance until permanent password change', async () => {
+    const id = await user();
+    expect(
+      (await auth.query('select id from auth.account where user_id=$1', [id]))
+        .rows,
+    ).toEqual([]);
+    const tenant = await createTenant(app, 'CNY');
+    await owner.pool.query(
+      'insert into portal_accounts(auth_user_id,tenant_id) values($1,$2)',
+      [id, tenant.id],
+    );
+    const duplicate = await user();
+    expect(
+      await pgError(
+        owner.pool.query(
+          'insert into portal_accounts(auth_user_id,tenant_id) values($1,$2)',
+          [duplicate, tenant.id],
+        ),
+      ),
+    ).toMatchObject({
+      code: '23505',
+      constraint: 'portal_accounts_tenant_id_key',
+    });
+    const credentialId = randomUUID();
+    await auth.query(
+      "insert into auth.account(id,account_id,provider_id,user_id,password,temporary_password_issued_at,updated_at) values($1,$2,'credential',$2,'hash',now(),now())",
+      [credentialId, id],
+    );
+    const { rows: temporaryCredentials } = await auth.query<{
+      temporary_password_issued_at: Date | null;
+    }>('select temporary_password_issued_at from auth.account where id=$1', [
+      credentialId,
+    ]);
+    expect(
+      temporaryCredentials[0]?.temporary_password_issued_at,
+    ).toBeInstanceOf(Date);
+    await auth.query(
+      'update auth.account set password=$2,temporary_password_issued_at=null,updated_at=now() where id=$1',
+      [credentialId, 'permanent-hash'],
+    );
+    expect(
+      (
+        await auth.query(
+          'select temporary_password_issued_at from auth.account where id=$1',
+          [credentialId],
+        )
+      ).rows,
+    ).toEqual([{ temporary_password_issued_at: null }]);
+  });
+
   it('auth tables have no RLS and are not owned by runtime roles', async () => {
     const { rows } = await owner.pool.query<{
       relname: string;

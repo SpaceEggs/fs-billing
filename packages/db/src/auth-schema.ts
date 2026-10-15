@@ -54,6 +54,7 @@ export const authAccounts = auth.table(
     refreshTokenExpiresAt: at('refresh_token_expires_at'),
     scope: text('scope'),
     password: text('password'),
+    temporaryPasswordIssuedAt: at('temporary_password_issued_at'),
     createdAt: at('created_at').notNull().defaultNow(),
     updatedAt: at('updated_at').notNull(),
   },

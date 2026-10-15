@@ -8,6 +8,7 @@ import {
   ensureCdrPartitions,
   lockTenants,
   withSystem,
+  schema,
 } from '@fs-billing/db';
 import { rate } from '@fs-billing/rating';
 import {
@@ -90,8 +91,23 @@ const post = (payload: string, instance = worker) =>
     },
     payload,
   });
-async function fixture() {
-  const tenant = await createTenant(connection, 'CNY');
+async function fixture(storedCase = 'uppercase') {
+  const tenant =
+    storedCase === 'lowercase'
+      ? (
+          await withSystem(connection.db, (tx) =>
+            tx
+              .insert(schema.tenants)
+              .values({
+                code: `lower${randomUUID().replaceAll('-', '')}`,
+                name: '历史小写编码',
+                currency: 'CNY',
+                overdraftLimit: '100',
+              })
+              .returning(),
+          )
+        )[0]!
+      : await createTenant(connection, 'CNY');
   await withSystem(connection.db, (tx) =>
     createRateVersion(
       tx,
@@ -134,6 +150,90 @@ afterAll(async () => {
 });
 
 describe('Worker HTTP 与真实数据库', () => {
+  it.each(['uppercase', 'lowercase'])(
+    'normalizes authorization and lowercase billing_tenant for %s stored codes',
+    async (storedCase) => {
+      const tenant = await fixture(storedCase);
+      const uuid = randomUUID();
+      const authorization = await worker.inject({
+        method: 'POST',
+        url: '/authorize',
+        headers: { 'x-billing-key': security.secret },
+        payload: {
+          uuid,
+          tenant: tenant.code.toLowerCase(),
+          callee: '447700900000',
+          dialedNumber: '+447700900000',
+        },
+      });
+      expect(authorization.statusCode).toBe(200);
+      expect(authorization.json()).toMatchObject({
+        allowed: true,
+        billingNumber: '447700900000',
+      });
+      const payload = body(tenant.code.toLowerCase(), uuid);
+      expect((await post(payload)).json()).toMatchObject({ status: 'queued' });
+      expect(
+        (
+          await owner.pool.query(
+            'select tenant_id, charge::text from cdrs where call_uuid=$1',
+            [uuid],
+          )
+        ).rows,
+      ).toEqual([{ tenant_id: tenant.id, charge: '0.192' }]);
+      expect(
+        (
+          await owner.pool.query('select body from raw_cdrs where body=$1', [
+            payload,
+          ])
+        ).rows,
+      ).toEqual([{ body: payload }]);
+      await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });
+      expect(
+        (
+          await owner.pool.query(
+            'select amount::text from ledger_entries where idempotency_key=$1',
+            [`call:${uuid}`],
+          )
+        ).rows,
+      ).toEqual([{ amount: '-0.192' }]);
+      const jobs = await boss.fetch<unknown>(CHARGE_QUEUE, { batchSize: 100 });
+      for (const job of jobs) await boss.complete(CHARGE_QUEUE, job.id);
+    },
+  );
+
+  it('normalizes parked unknown and invalid lowercase billing_tenant while preserving raw payloads', async () => {
+    const unknown = `unknown${randomUUID().replaceAll('-', '').slice(0, 8)}`;
+    const uuid = randomUUID();
+    expect((await post(body(unknown, uuid))).json()).toMatchObject({
+      status: 'unassigned',
+    });
+    expect(
+      (
+        await owner.pool.query(
+          'select tenant_tag from unassigned_cdrs where call_uuid=$1',
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([{ tenant_tag: unknown.toUpperCase() }]);
+    const invalidBody = JSON.stringify({
+      variables: { billing_tenant: 'invalidlower' },
+    });
+    const invalid = (await post(invalidBody)).json<{
+      rawId: string;
+      status: string;
+    }>();
+    expect(invalid.status).toBe('unassigned');
+    expect(
+      (
+        await owner.pool.query(
+          'select tenant_tag from unassigned_cdrs where raw_id=$1',
+          [invalid.rawId],
+        )
+      ).rows,
+    ).toEqual([{ tenant_tag: 'INVALIDLOWER' }]);
+  });
+
   it('真实格式样本推送两次：两份原文、一条话单、一个任务和一笔扣费；任务重复执行也不重扣', async () => {
     const tenant = await fixture();
     const uuid = randomUUID();

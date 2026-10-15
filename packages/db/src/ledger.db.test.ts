@@ -299,7 +299,7 @@ describe('流水按发生时间归属月份', () => {
 });
 
 describe('待收款 → 已收款', () => {
-  it('结算是独立记录：原流水不变，状态由 receivables 视图给出，只能结算一次', async () => {
+  it('结算是独立记录：原流水不变，已有未撤销确认时拒绝再次确认', async () => {
     const tenant = await createTenant(app, 'CNY');
     const admin = await adminId(owner);
     const credit = await withAdmin(app.db, (tx) =>
@@ -323,10 +323,11 @@ describe('待收款 → 已收款', () => {
           ).rows,
       );
     const settle = (entryId: string) =>
-      withAdmin(app.db, (tx) =>
-        tx.execute(sql`insert into receivable_settlements (tenant_id, ledger_entry_id, received_on, confirmed_by)
-                       values (${tenant.id}, ${entryId}, '2026-10-05', ${admin})`),
-      );
+      withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [tenant.id]);
+        return tx.execute(sql`insert into receivable_settlements (tenant_id, ledger_entry_id, received_on, confirmed_by)
+                       values (${tenant.id}, ${entryId}, '2026-10-05', ${admin})`);
+      });
 
     expect(await status()).toEqual([
       { status: 'pending', amount: '500', received_on: null },
@@ -336,8 +337,8 @@ describe('待收款 → 已收款', () => {
       { status: 'received', amount: '500', received_on: '2026-10-05' },
     ]);
     expect(await pgError(settle(credit.id))).toMatchObject({
-      code: '23505',
-      constraint: 'receivable_settlements_ledger_entry_id_key',
+      code: '23514',
+      constraint: 'receivable_settlements_pending',
     });
 
     const { rows } = await owner.pool.query(
@@ -360,10 +361,11 @@ describe('待收款 → 已收款', () => {
       }),
     );
     const error = await pgError(
-      withAdmin(app.db, (tx) =>
-        tx.execute(sql`insert into receivable_settlements (tenant_id, ledger_entry_id, received_on, confirmed_by)
-                       values (${tenant.id}, ${recharge.id}, '2026-10-05', ${admin})`),
-      ),
+      withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [tenant.id]);
+        return tx.execute(sql`insert into receivable_settlements (tenant_id, ledger_entry_id, received_on, confirmed_by)
+                       values (${tenant.id}, ${recharge.id}, '2026-10-05', ${admin})`);
+      }),
     );
     expect(error.code).toBe('23503');
   });

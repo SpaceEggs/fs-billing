@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@fs-billing/shared": "workspace:*",
     "@fs-billing/rating": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.23.1",

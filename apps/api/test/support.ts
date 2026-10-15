@@ -52,14 +52,22 @@ export async function createFixture(
   prefix = randomUUID(),
 ): Promise<Fixture> {
   const tenantA = `ffffffff-${prefix.slice(9)}`;
+  const tenantA2 = `eeeeeeee-${prefix.slice(9)}`;
   const tenantB = `00000000-${prefix.slice(9)}`;
   const codePrefix = prefix.replaceAll('-', '');
   const hash = await (
     await connections.betterAuth.$context
   ).password.hash(password);
   await connections.owner.pool.query(
-    `INSERT INTO public.tenants(id,code,name,currency,overdraft_limit) VALUES ($1,$2,'Tenant A','CNY',100),($3,$4,'Tenant B','USD',100)`,
-    [tenantA, `A${codePrefix}`, tenantB, `B${codePrefix}`],
+    `INSERT INTO public.tenants(id,code,name,currency,overdraft_limit) VALUES ($1,$2,'Tenant A','CNY',100),($3,$4,'Tenant A2','CNY',100),($5,$6,'Tenant B','USD',100)`,
+    [
+      tenantA,
+      `A${codePrefix}`,
+      tenantA2,
+      `A2${codePrefix}`,
+      tenantB,
+      `B${codePrefix}`,
+    ],
   );
   async function user(
     label: string,
@@ -91,7 +99,7 @@ export async function createFixture(
   }
   const fixture = {
     a: await user('a', 'customer', tenantA),
-    a2: await user('a2', 'customer', tenantA),
+    a2: await user('a2', 'customer', tenantA2),
     b: await user('b', 'customer', tenantB),
     admin: await user('admin', 'admin', null),
     otherAdmin: await user('other-admin', 'admin', null),
@@ -108,6 +116,16 @@ export async function createFixture(
           adminId: fixture.admin.profileId,
           note: 'API isolation fixture',
           idempotencyKey: `fixture:${prefix}:a`,
+        },
+      },
+      {
+        tenant: { id: tenantA2, currency: 'CNY' },
+        entry: {
+          kind: 'recharge',
+          amount: money('CNY', '222.50'),
+          adminId: fixture.admin.profileId,
+          note: 'API isolation fixture',
+          idempotencyKey: `fixture:${prefix}:a2`,
         },
       },
       {

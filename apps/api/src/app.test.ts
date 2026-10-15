@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { parseAccountInput, parseAccountOutput } from 'better-auth/db';
 import { afterAll, expect, test } from 'vitest';
 import { connect } from '@fs-billing/db';
 import { apiContract, apiErrorSchema } from '@fs-billing/shared';
@@ -155,6 +156,31 @@ test('Better Auth internal sign-up and reset HTTP routes are not exposed', async
       (await app.inject({ method: 'POST', url, payload: {} })).statusCode,
     ).toBe(404);
   }
+});
+
+test('temporary password issuance is optional server metadata and never client input or output', () => {
+  const options = auth.auth.options;
+  expect(parseAccountInput(options, {})).toEqual({});
+  const account = {
+    id: 'credential-account',
+    accountId: 'auth-user',
+    providerId: 'credential',
+    userId: 'auth-user',
+    createdAt: new Date('2026-10-14T00:00:00Z'),
+    updatedAt: new Date('2026-10-14T00:00:00Z'),
+    temporaryPasswordIssuedAt: new Date('2026-10-14T00:00:00Z'),
+  };
+  expect(() => parseAccountInput(options, account)).toThrow(
+    'temporaryPasswordIssuedAt is not allowed to be set',
+  );
+  expect(parseAccountOutput(options, account)).toEqual({
+    id: account.id,
+    accountId: account.accountId,
+    providerId: account.providerId,
+    userId: account.userId,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  });
 });
 
 test('startup rejects session caching and secondary storage on effective Better Auth options', async () => {
