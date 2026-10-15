@@ -24,20 +24,41 @@ export function revokeSessions(email: string) {
   );
 }
 
+const shanghaiOffsetMs = 8 * 60 * 60 * 1000;
+const dayMs = 24 * 60 * 60 * 1000;
+
+/** 某一时刻的北京时间日期（YYYY-MM-DD）。Asia/Shanghai 固定 UTC+8、没有夏令时。 */
+export function shanghaiDate(instant: Date | string) {
+  return new Date(new Date(instant).getTime() + shanghaiOffsetMs)
+    .toISOString()
+    .slice(0, 10);
+}
+
 /**
- * 以 Worker 入账的形状给租户记一通已接通（扣 `charge`、计 `minutes` 分钟）和一通未接通的电话，
- * 时间取数据库当前时刻，落在概况的本月与今日内。
+ * 以 Worker 入账的形状给租户记一通已接通（扣 `charge`、计 `minutes` 分钟）和一通未接通的电话。
+ * 时刻只取一次数据库时间：两通电话从 3 秒前开始，若会跨过北京时间零点则改从当日零点开始，
+ * 全部时刻落在同一北京日（因而同一月）内。返回该日期，供断言与概况的 asOf 对照。
  */
 export function recordCalls(
   tenantId: string,
   { charge, minutes }: { charge: string; minutes: string },
 ) {
   return withOwner(async (client) => {
+    const { rows } = await client.query<{ now: Date }>('SELECT now() AS now');
+    const now = rows[0]!.now.getTime();
+    const dayStart =
+      Math.floor((now + shanghaiOffsetMs) / dayMs) * dayMs - shanghaiOffsetMs;
+    const startedMs = Math.max(now - 3000, dayStart);
+    const started = new Date(startedMs);
+    const answered = new Date(startedMs + 1000);
+    const ended = new Date(startedMs + 3000);
+
     // 建分区不能和持租户锁的写入同一事务（ensure_month_partition 拒绝，lock_tenants 也拒绝已持强表锁的事务）。
+    // 分区按将要写入的 started_at 建，不取事务时间。
     await client.query('BEGIN');
     try {
       await client.query("SELECT set_config('app.scope', 'system', true)");
-      await client.query('SELECT cdr_ensure_partitions(now(), 0)');
+      await client.query('SELECT cdr_ensure_partitions($1, 0)', [started]);
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
@@ -47,28 +68,38 @@ export function recordCalls(
     try {
       await client.query("SELECT set_config('app.scope', 'system', true)");
       await client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenantId]);
-      const answered = randomUUID();
+      const answeredCall = randomUUID();
       await client.query(
         `INSERT INTO cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
            billing_number, duration_seconds, billed_minutes, matched_prefix, country, rate, charge,
            hangup_cause)
-         VALUES ($1, $2, now() - interval '3 seconds', now() - interval '2 seconds', now(),
+         VALUES ($1, $2, $6, $7, $8,
            '1000', '8613800138000', '8613800138000', 2, $3, '86', '中国', '0.1', $4,
            'NORMAL_CLEARING'),
-           ($1, $5, now() - interval '3 seconds', NULL, now(),
+           ($1, $5, $6, NULL, $8,
            '1000', '8613800138000', '8613800138000', 0, 0, NULL, NULL, NULL, 0, 'CALL_REJECTED')`,
-        [tenantId, answered, minutes, charge, randomUUID()],
+        [
+          tenantId,
+          answeredCall,
+          minutes,
+          charge,
+          randomUUID(),
+          started,
+          answered,
+          ended,
+        ],
       );
       await client.query(
         `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key, occurred_at)
-         VALUES ($1, 'call_charge', -$2::numeric, $3, now() - interval '2 seconds')`,
-        [tenantId, charge, `call:${answered}`],
+         VALUES ($1, 'call_charge', -$2::numeric, $3, $4)`,
+        [tenantId, charge, `call:${answeredCall}`, answered],
       );
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     }
+    return { day: shanghaiDate(started) };
   });
 }
 

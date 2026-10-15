@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { createTenant, openTenants, test, uniqueCode } from './admin';
-import { recordCalls } from './db';
+import { recordCalls, shanghaiDate } from './db';
 import { expectPath } from './helpers';
 
 test('tenant list shows seeded tenants with status and per-currency balances', async ({
@@ -103,28 +103,51 @@ test('overview tab shows this month, call counts and the 30-day chart from the A
 }) => {
   await openTenants(page);
   const tenant = await createTenant(page);
-  await recordCalls(tenant.id, { charge: '12.34', minutes: '3' });
+  const fixture = await recordCalls(tenant.id, {
+    charge: '12.34',
+    minutes: '3',
+  });
+  const overview = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname ===
+        `/api/admin/tenants/${tenant.id}/overview` && response.ok(),
+  );
   await page.goto(`/admin/tenants/${tenant.id}`);
+  // 写入与查询之间可能跨过北京时间零点或月初：按概况自己的 asOf 判断话单落在哪个桶。
+  const { asOf } = (await (await overview).json()) as { asOf: string };
+  const today = shanghaiDate(asOf);
+  const sameDay = fixture.day === today;
+  const sameMonth = fixture.day.slice(0, 7) === today.slice(0, 7);
 
   await expect(page.getByRole('link', { name: '概况' })).toHaveAttribute(
     'aria-current',
     'page',
   );
   await expect(page.getByRole('region', { name: '本月消费' })).toContainText(
-    '¥12.34',
+    sameMonth ? '¥12.34' : '¥0.00',
   );
   const calls = page.getByRole('region', { name: '本月通话' });
-  await expect(calls).toContainText('3分钟');
-  await expect(calls).toContainText('2 通 · 含未接通 1');
+  await expect(calls).toContainText(sameMonth ? '3分钟' : '0分钟');
+  await expect(calls).toContainText(
+    sameMonth ? '2 通 · 含未接通 1' : '0 通 · 含未接通 0',
+  );
   await expect(page.getByRole('region', { name: '今日消费' })).toContainText(
-    '¥12.34',
+    sameDay ? '¥12.34' : '¥0.00',
   );
   const chart = page.getByRole('region', { name: '最近 30 天每日消费' });
   await expect(chart.getByLabel('合计 ¥12.34')).toBeVisible();
   const bars = chart.getByRole('listitem');
   await expect(bars).toHaveCount(30);
   await expect(bars.last()).toHaveAttribute('aria-current', 'date');
-  await expect(bars.last()).toHaveAccessibleName(/（今日） ¥12\.34$/);
+  await expect(bars.last()).toHaveAccessibleName(
+    new RegExp(`^${today}（今日） `),
+  );
+  await expect(
+    chart.getByRole('listitem', {
+      name: `${fixture.day}${sameDay ? '（今日）' : ''} ¥12.34`,
+      exact: true,
+    }),
+  ).toHaveCount(1);
 });
 
 test('disable confirmation explains live call behavior', async ({ page }) => {
