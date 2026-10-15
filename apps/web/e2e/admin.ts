@@ -49,7 +49,7 @@ export async function openTenants(page: Page) {
 }
 
 /**
- * 通过后台接口准备一个本次运行专用的租户（空白费率表），返回其 id 与编码。
+ * 通过后台接口准备一个本次运行专用的租户（默认空白费率表），返回其 id 与编码。
  * 请求复用页面的管理员会话 cookie。
  */
 export async function createTenant(
@@ -57,6 +57,7 @@ export async function createTenant(
   options: {
     currency?: 'CNY' | 'USD';
     emails?: string[];
+    rates?: { prefix: string; country: string; rate: string }[];
   } = {},
 ) {
   const code = uniqueCode();
@@ -69,7 +70,9 @@ export async function createTenant(
         lowBalanceThreshold: '200',
         ...(options.emails ? { emails: options.emails } : {}),
       },
-      initialRates: { kind: 'blank' },
+      initialRates: options.rates
+        ? { kind: 'entries', entries: options.rates }
+        : { kind: 'blank' },
     },
   });
   expect(response.status()).toBe(200);

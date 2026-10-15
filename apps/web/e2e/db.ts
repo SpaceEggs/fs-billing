@@ -110,3 +110,19 @@ export function clearLoginFailures(email: string) {
     ]),
   );
 }
+
+/** 租户的操作日志，按发生顺序。 */
+export function operationLogs(tenantId: string) {
+  return withOwner(async (client) => {
+    const { rows } = await client.query<{
+      action: string;
+      target: string;
+      content: Record<string, unknown>;
+    }>(
+      `SELECT action, target, details->'content' AS content FROM operation_logs
+       WHERE tenant_id = $1 ORDER BY created_at, id`,
+      [tenantId],
+    );
+    return rows;
+  });
+}

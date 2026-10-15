@@ -40,7 +40,7 @@ test('creates a run-unique tenant, imports rates, credits 500 and opens portal a
   const detailPath = new URL(page.url()).pathname;
 
   await page.goto(`${detailPath}?tab=rates`);
-  await expect(page.getByText('共 3 条')).toBeVisible();
+  await expect(page.getByText(/· 3 条 · 最长前缀优先匹配/)).toBeVisible();
   await expect(page.getByRole('row').filter({ hasText: '英国' })).toContainText(
     '0.0200',
   );

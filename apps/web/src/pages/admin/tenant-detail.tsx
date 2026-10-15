@@ -157,7 +157,7 @@ function TabContent({
     case 'ledger':
       return <LedgerTab tenantId={tenant.id} />;
     case 'rates':
-      return <RatesTab tenantId={tenant.id} />;
+      return <RatesTab tenant={tenant} />;
     case 'settings':
       return <SettingsTab tenant={tenant} />;
     case 'portal':
@@ -181,9 +181,25 @@ const statusNotices = {
   },
 } as const;
 
-/** 租户详情（设计稿第一批 2a/2b、第三批）：标题与操作、余额卡片、标签页。 */
+/**
+ * 换租户（如浏览器后退到已缓存的另一租户）时整页重新挂载：卸载对话框，
+ * 丢弃上一租户未返回的结果（临时密码、余额变动、状态变更），不显示到当前租户下。
+ */
 export function TenantDetailPage({ identity }: { identity: Identity }) {
   const { tenantId } = useParams({ from: '/admin/tenants/$tenantId' });
+  return (
+    <TenantDetail key={tenantId} identity={identity} tenantId={tenantId} />
+  );
+}
+
+/** 租户详情（设计稿第一批 2a/2b、第三批）：标题与操作、余额卡片、标签页。 */
+function TenantDetail({
+  identity,
+  tenantId,
+}: {
+  identity: Identity;
+  tenantId: string;
+}) {
   const { tab = 'overview' } = useSearch({ from: '/admin/tenants/$tenantId' });
   const navigate = useNavigate();
   const listed = useListedTenant(tenantId);

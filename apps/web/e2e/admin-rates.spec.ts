@@ -1,0 +1,279 @@
+import { readFile } from 'node:fs/promises';
+import { expect, type Page } from '@playwright/test';
+import { createTenant, test } from './admin';
+import { operationLogs } from './db';
+
+const rates = [
+  { prefix: '86', country: '中国', rate: '0.0500' },
+  { prefix: '447', country: '英国手机', rate: '0.0450' },
+];
+
+const dayMs = 24 * 60 * 60 * 1000;
+
+/** 若干天后的北京时间 HH:mm，返回选择器输入值、提交的 ISO 与页面显示。 */
+function beijingSlot(daysAhead: number, time: string) {
+  const date = new Date(Date.now() + 8 * 60 * 60 * 1000 + daysAhead * dayMs)
+    .toISOString()
+    .slice(0, 10);
+  return {
+    minute: `${date}T${time}`,
+    iso: `${date}T${time}:00+08:00`,
+    shown: `${date} ${time}:00`,
+  };
+}
+
+async function readRates(page: Page, tenantId: string) {
+  const response = await page.request.get(
+    `/api/admin/tenants/${tenantId}/rates`,
+  );
+  expect(response.status()).toBe(200);
+  return (await response.json()) as {
+    current: { id: string; entries: typeof rates };
+    scheduled: { id: string; effectiveFrom: string; entries: typeof rates }[];
+  };
+}
+
+/** 通过接口排定一个单条修改，返回新版本 id。 */
+async function scheduleEdit(
+  page: Page,
+  tenantId: string,
+  entry: (typeof rates)[number],
+  effectiveFrom: string,
+) {
+  const { current } = await readRates(page, tenantId);
+  const response = await page.request.post(
+    `/api/admin/tenants/${tenantId}/rates/edit-entry`,
+    {
+      data: {
+        baseVersionId: current.id,
+        entry,
+        schedule: { kind: 'scheduled', effectiveFrom },
+      },
+    },
+  );
+  expect(response.status()).toBe(200);
+  return ((await response.json()) as { version: { id: string } }).version.id;
+}
+
+function openRates(page: Page, tenantId: string) {
+  return page.goto(`/admin/tenants/${tenantId}?tab=rates`);
+}
+
+async function editRate(page: Page, name: string, rate: string) {
+  await page.getByRole('button', { name: `编辑 ${name}` }).click();
+  const form = page.getByRole('dialog', { name: '编辑费率' });
+  await form.getByLabel(/费率（/).fill(rate);
+  await form.getByRole('button', { name: '下一步：确认' }).click();
+  return page.getByRole('dialog', { name: '确认修改费率' });
+}
+
+test('cancels selected scheduled version', async ({ page }) => {
+  const tenant = await createTenant(page, { rates });
+  const slot = beijingSlot(2, '09:00');
+  const versionId = await scheduleEdit(
+    page,
+    tenant.id,
+    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    slot.iso,
+  );
+  await openRates(page, tenant.id);
+
+  const card = page.getByRole('region', { name: '排定的新版本' });
+  await expect(card).toContainText(
+    `${slot.shown} 起生效 · 新增 0 · 修改 1 · 删除 0`,
+  );
+  await card.getByRole('button', { name: '查看变动' }).click();
+  await expect(card.getByRole('row')).toHaveCount(2);
+  await expect(card.getByRole('row').nth(1)).toHaveText(
+    /修改447英国手机0\.0450\s*→\s*0\.0480\+6\.7%/,
+  );
+
+  await card.getByRole('button', { name: '取消排定' }).click();
+  const dialog = page.getByRole('dialog', { name: '取消排定的新版本？' });
+  await expect(dialog).toContainText(
+    `原定 ${slot.shown} 起生效的新版本将被删除`,
+  );
+  const request = page.waitForRequest((candidate) =>
+    candidate.url().endsWith('/rates/cancel-future-version'),
+  );
+  await dialog.getByRole('button', { name: '取消排定' }).click();
+  expect((await request).postDataJSON()).toEqual({ versionId });
+  await expect(
+    page.getByText('已取消排定的新版本，已记入操作日志'),
+  ).toBeVisible();
+  await expect(card).toHaveCount(0);
+
+  expect((await readRates(page, tenant.id)).scheduled).toEqual([]);
+  const cancelled = (await operationLogs(tenant.id)).at(-1);
+  expect(cancelled?.action).toBe('rate_schedule_cancel');
+  expect(cancelled?.content).toMatchObject({ cancelledVersionId: versionId });
+});
+
+test('cancel inside the clock skew margin is refused with refresh', async ({
+  page,
+}) => {
+  const tenant = await createTenant(page, { rates });
+  await scheduleEdit(
+    page,
+    tenant.id,
+    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    new Date(Date.now() + 50_000).toISOString(),
+  );
+  await openRates(page, tenant.id);
+  await page
+    .getByRole('region', { name: '排定的新版本' })
+    .getByRole('button', { name: '取消排定' })
+    .click();
+  const dialog = page.getByRole('dialog', { name: '取消排定的新版本？' });
+  await dialog.getByRole('button', { name: '取消排定' }).click();
+  await expect(dialog.getByRole('alert')).toContainText(
+    '该版本已生效或即将生效，不能取消',
+  );
+  await dialog.getByRole('button', { name: '刷新' }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
+test('minute picker submits Beijing schedule', async ({ page }) => {
+  const tenant = await createTenant(page, { rates });
+  await openRates(page, tenant.id);
+  const confirm = await editRate(page, '447 英国手机', '0.048');
+  await expect(confirm).toContainText('涨 +6.7%');
+  await confirm.getByRole('radio', { name: '指定时间生效' }).check();
+  const picker = confirm.getByLabel('指定生效时间（北京时间）');
+
+  await picker.fill(beijingSlot(-1, '10:30').minute);
+  await confirm.getByRole('button', { name: '确认修改' }).click();
+  await expect(confirm.getByText('生效时间必须晚于当前时间')).toBeVisible();
+
+  const slot = beijingSlot(1, '10:30');
+  await picker.fill(slot.minute);
+  const request = page.waitForRequest((candidate) =>
+    candidate.url().endsWith('/rates/edit-entry'),
+  );
+  await confirm.getByRole('button', { name: '确认修改' }).click();
+  expect((await request).postDataJSON()).toMatchObject({
+    entry: { prefix: '447', country: '英国手机', rate: '0.048' },
+    schedule: { kind: 'scheduled', effectiveFrom: slot.iso },
+  });
+  await expect(
+    page.getByText(
+      `已排定：447 英国手机 将于 ${slot.shown} 起改为 0.0480 元/分钟，已记入操作日志`,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: '排定的新版本' }),
+  ).toContainText(`${slot.shown} 起生效`);
+  const { scheduled } = await readRates(page, tenant.id);
+  expect(scheduled.map((version) => Date.parse(version.effectiveFrom))).toEqual(
+    [Date.parse(slot.iso)],
+  );
+});
+
+test('cancel edit reschedule audits each step', async ({ page }) => {
+  const tenant = await createTenant(page, { rates });
+  const slot = beijingSlot(3, '09:00');
+  const firstId = await scheduleEdit(
+    page,
+    tenant.id,
+    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    slot.iso,
+  );
+  await openRates(page, tenant.id);
+
+  let confirm = await editRate(page, '86 中国', '0.0550');
+  await confirm.getByRole('button', { name: '确认修改' }).click();
+  await expect(confirm.getByRole('alert')).toContainText(
+    '费率表已被修改，请刷新后重试',
+  );
+  await expect(confirm).toContainText('请先取消排定，修改后再重新排期');
+  await confirm.getByRole('button', { name: '刷新' }).click();
+  await expect(confirm).toHaveCount(0);
+
+  const card = page.getByRole('region', { name: '排定的新版本' });
+  await card.getByRole('button', { name: '取消排定' }).click();
+  await page
+    .getByRole('dialog', { name: '取消排定的新版本？' })
+    .getByRole('button', { name: '取消排定' })
+    .click();
+  await expect(card).toHaveCount(0);
+
+  confirm = await editRate(page, '86 中国', '0.0550');
+  await confirm.getByRole('button', { name: '确认修改' }).click();
+  await expect(
+    page.getByText(
+      '86 中国 费率已改为 0.0550 元/分钟（+10.0%），已记入操作日志',
+    ),
+  ).toBeVisible();
+
+  confirm = await editRate(page, '447 英国手机', '0.0480');
+  await confirm.getByRole('radio', { name: '指定时间生效' }).check();
+  await confirm.getByLabel('指定生效时间（北京时间）').fill(slot.minute);
+  await confirm.getByRole('button', { name: '确认修改' }).click();
+  await expect(card).toContainText(
+    `${slot.shown} 起生效 · 新增 0 · 修改 1 · 删除 0`,
+  );
+
+  const after = await readRates(page, tenant.id);
+  expect(after.current.entries).toContainEqual({
+    prefix: '86',
+    country: '中国',
+    rate: '0.055',
+  });
+  expect(after.scheduled).toHaveLength(1);
+  expect(after.scheduled[0]!.entries).toEqual(
+    expect.arrayContaining([
+      { prefix: '86', country: '中国', rate: '0.055' },
+      { prefix: '447', country: '英国手机', rate: '0.048' },
+    ]),
+  );
+  const logs = await operationLogs(tenant.id);
+  expect(logs.map((log) => log.action)).toEqual([
+    'tenant_create',
+    'rate_entry_edit',
+    'rate_schedule_cancel',
+    'rate_entry_edit',
+    'rate_entry_edit',
+  ]);
+  expect(logs[2]!.content).toMatchObject({ cancelledVersionId: firstId });
+  expect(logs[4]!.content).toMatchObject({
+    rateVersionId: after.scheduled[0]!.id,
+  });
+});
+
+test('exports the current version as CSV', async ({ page }) => {
+  const tenant = await createTenant(page, { rates });
+  await openRates(page, tenant.id);
+  const { current } = await readRates(page, tenant.id);
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: '导出 CSV' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(`${tenant.code}-${current.id}.csv`);
+  const lines = (await readFile(await file.path(), 'utf8')).split('\n');
+  expect(lines[0]).toBe('prefix,country,rate');
+  expect(lines).toEqual(
+    expect.arrayContaining(['86,中国,0.0500', '447,英国手机,0.0450']),
+  );
+  const exported = (await operationLogs(tenant.id)).at(-1);
+  expect(exported?.action).toBe('rate_export');
+  expect(exported?.content).toMatchObject({ rateVersionId: current.id });
+});
+
+test('mobile only views and searches rates', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const tenant = await createTenant(page, { rates });
+  await scheduleEdit(
+    page,
+    tenant.id,
+    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    beijingSlot(2, '09:00').iso,
+  );
+  await openRates(page, tenant.id);
+  const card = page.getByRole('region', { name: '排定的新版本' });
+  await expect(card).toContainText('修改 1');
+  await expect(card.getByRole('button', { name: '取消排定' })).toBeHidden();
+  await expect(page.getByRole('button', { name: '导出 CSV' })).toBeHidden();
+  await expect(page.getByRole('button', { name: /^编辑 / })).toHaveCount(0);
+  await page.getByRole('searchbox', { name: '搜索前缀或国家' }).fill('英国');
+  await expect(page.getByRole('row')).toHaveCount(2);
+  await expect(page.getByRole('row').nth(1)).toContainText('447英国手机0.0450');
+});
