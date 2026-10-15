@@ -9,9 +9,7 @@ export function createLiveApiContract(
   rateRequests = adminRateRequestSchemas,
   amountRequests = adminAmountRequestSchemas,
 ) {
-  const { adminTenantOverview: deferredOverview, ...admin } =
-    createAdminApiContract(rateRequests, amountRequests);
-  void deferredOverview;
+  const admin = createAdminApiContract(rateRequests, amountRequests);
   return { ...apiContract, ...admin };
 }
 export const liveApiContract = createLiveApiContract();

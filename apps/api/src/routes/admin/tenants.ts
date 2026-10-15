@@ -1,5 +1,7 @@
 import {
   createTenant,
+  withAdmin,
+  readTenantUsageOverview,
   listTenants,
   getTenant,
   editTenant,
@@ -31,6 +33,7 @@ export function tenantHandlers(
   | 'adminTenants'
   | 'adminTenantCreate'
   | 'adminTenantDetail'
+  | 'adminTenantOverview'
   | 'adminTenantEdit'
   | 'adminTenantDisable'
   | 'adminTenantEnable'
@@ -52,6 +55,10 @@ export function tenantHandlers(
     },
     adminTenantDetail: (_context, request) =>
       getTenant({ db, ...adminTenantParamsSchema.parse(request.params) }),
+    adminTenantOverview: (_context, request) => {
+      const { tenantId } = adminTenantParamsSchema.parse(request.params);
+      return withAdmin(db, (tx) => readTenantUsageOverview(tx, tenantId));
+    },
     adminTenantEdit: (context, request) =>
       editTenant({
         db,

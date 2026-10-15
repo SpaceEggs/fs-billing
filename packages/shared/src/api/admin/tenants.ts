@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { tenantUsageOverviewSchema } from '../usage.js';
 import { moneyAmountSchema } from '../money.js';
 import { currencySchema, tenantIdentitySchema } from '../identity.js';
 import {
@@ -122,19 +123,7 @@ export const adminTenantCreateResponseSchema =
     initialRateVersionId: z.uuid(),
     effectiveFrom: adminTimestampSchema,
   });
-export const adminTenantOverviewResponseSchema = z.strictObject({
-  currency: currencySchema,
-  monthConsumption: adminNonnegativeAmountSchema,
-  monthCallMinutes: z.string().regex(/^\d+(?:\.\d+)?$/),
-  dailyConsumption: z
-    .array(
-      z.strictObject({
-        date: z.iso.date(),
-        amount: adminNonnegativeAmountSchema,
-      }),
-    )
-    .max(30),
-});
+export const adminTenantOverviewResponseSchema = tenantUsageOverviewSchema;
 
 export type AdminTenantHealth = z.infer<typeof adminTenantHealthSchema>;
 export type AdminTenantSettingsRequest = z.infer<

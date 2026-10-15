@@ -770,9 +770,16 @@ it('reset operations reuse the live definitions and error maps are per operation
 it('minutes accept fractional duration independently of money and payments reject future dates', () => {
   const overview = {
     currency: 'CNY',
-    monthConsumption: '0',
+    asOf: '2026-09-30T15:59:59Z',
+    monthSpend: '0',
     monthCallMinutes: '000.123456',
-    dailyConsumption: [],
+    answeredCalls: 0,
+    unansweredCalls: 0,
+    dailyTotal: '0',
+    daily: Array.from({ length: 30 }, (_, index) => ({
+      date: `2026-09-${String(index + 1).padStart(2, '0')}`,
+      spend: '0',
+    })),
   };
   expect(adminTenantOverviewResponseSchema.parse(overview)).toEqual(overview);
   expect(
