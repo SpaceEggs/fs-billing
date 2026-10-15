@@ -8,6 +8,7 @@ import {
   DEFAULT_ADMIN_RATE_CANCEL_CLOCK_SKEW_MARGIN_SECONDS,
   DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS,
 } from '@fs-billing/shared';
+import type { ApiDependencies } from './app.js';
 
 const authUrl = z
   .url()
@@ -38,6 +39,13 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .optional(),
     API_HOST: z.string().default('127.0.0.1'),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
+    FSB_ALLOW_TEST_OVERRIDES: z.string().optional(),
     ADMIN_AMOUNT_MAX_INTEGER_DIGITS: z.coerce
       .number()
       .int()
@@ -69,6 +77,16 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .default('development'),
   })
   .superRefine((value, ctx) => {
+    if (
+      value.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX !== undefined &&
+      (value.NODE_ENV !== 'test' || value.FSB_ALLOW_TEST_OVERRIDES !== '1')
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX'],
+        message:
+          'AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX requires explicit NODE_ENV=test and FSB_ALLOW_TEST_OVERRIDES=1',
+      });
     const minimumAmountDigits = Math.max(
       ...Object.values(DEFAULT_TENANT_OVERDRAFT_LIMIT).map(
         (amount) => amount.replace(/\..*$/, '').length,
@@ -90,3 +108,16 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
         message: '生产认证 URL 必须使用 HTTPS',
       });
   });
+
+export function apiRateLimitOptions(
+  config: z.infer<typeof apiEnvironmentSchema>,
+): Pick<ApiDependencies, 'rateLimit'> {
+  return config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX !== undefined
+    ? {
+        rateLimit: {
+          max: config.AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX,
+          timeWindow: 60_000,
+        },
+      }
+    : {};
+}

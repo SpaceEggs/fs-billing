@@ -41,7 +41,10 @@ export function createBetterAuth(input: {
     },
     session: { cookieCache: { enabled: false } },
     rateLimit: { enabled: false },
-    advanced: { useSecureCookies: input.secureCookies },
+    advanced: {
+      useSecureCookies: input.secureCookies,
+      disableOriginCheck: false,
+    },
     user: {
       fields: {
         emailVerified: 'email_verified',

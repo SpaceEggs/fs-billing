@@ -12,7 +12,7 @@ import {
   createAuthGateway,
   normalizeEmail,
 } from './auth/gateway.js';
-import { apiEnvironmentSchema } from './config.js';
+import { apiEnvironmentSchema, apiRateLimitOptions } from './config.js';
 import { generateOpenApi } from './openapi.js';
 
 const business = connect('postgresql://fs_billing_app@127.0.0.1/fs_billing');
@@ -201,6 +201,55 @@ test('credential routes share one IP limit before validation and ignore forwarde
   }
 });
 
+test.each([
+  [undefined, 30],
+  ['3', 3],
+  ['35', 35],
+] as const)(
+  'credential limiter honors config override %s with a max of %i per minute',
+  async (override, expectedMax) => {
+    const config = apiEnvironmentSchema.parse({
+      APP_DATABASE_URL: 'postgresql://fs_billing_app@localhost/db',
+      AUTH_DATABASE_URL: 'postgresql://fs_billing_auth@localhost/db',
+      BETTER_AUTH_SECRET: 'a'.repeat(32),
+      BETTER_AUTH_URL: 'http://localhost:3000',
+      NODE_ENV: 'test',
+      FSB_ALLOW_TEST_OVERRIDES: '1',
+      AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX: override,
+    });
+    const limited = createApi({
+      businessDb: business.db,
+      auth,
+      ...apiRateLimitOptions(config),
+    });
+    try {
+      for (let index = 0; index < expectedMax; index++) {
+        const response = await limited.inject({
+          method: 'POST',
+          url: index % 2 ? '/api/auth/login' : '/api/auth/change-password',
+          payload: {},
+        });
+        expect(response.statusCode).toBe(400);
+      }
+      for (const url of ['/api/auth/login', '/api/auth/change-password']) {
+        const response = await limited.inject({
+          method: 'POST',
+          url,
+          payload: {},
+        });
+        expect(response.statusCode).toBe(429);
+        expect(apiErrorSchema.parse(response.json()).error.code).toBe(
+          'RATE_LIMITED',
+        );
+        expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+        expect(Number(response.headers['retry-after'])).toBeLessThanOrEqual(60);
+      }
+    } finally {
+      await limited.close();
+    }
+  },
+);
+
 test('bodyless writes reject unexpected fields and cross-site origins before session lookup', async () => {
   for (const url of ['/api/auth/logout', '/api/auth/revoke-other-sessions']) {
     const invalid = await app.inject({
@@ -250,6 +299,12 @@ test('temporary password issuance is optional server metadata and never client i
     createdAt: account.createdAt,
     updatedAt: account.updatedAt,
   });
+});
+
+test('Better Auth keeps origin and CSRF checks enabled in test mode', async () => {
+  const context = await auth.auth.$context;
+  expect(context.skipOriginCheck).toBe(false);
+  expect(context.skipCSRFCheck).toBe(false);
 });
 
 test('startup rejects session caching and secondary storage on effective Better Auth options', async () => {

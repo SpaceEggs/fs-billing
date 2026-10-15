@@ -345,6 +345,10 @@ RLS 开启时，去掉 WHERE 仍然看不到 B，因此普通生产模式 IDOR �
 
 自定义 errorResponseBuilder 或统一错误适配器返回契约 429 RATE_LIMITED，包含 requestId、中文 message、正整数 retryAfterSeconds 和同值 Retry-After。剩余毫秒向上取整为秒且至少 1 秒，ban 保持关闭，不能产生插件默认 403 或默认错误 JSON。限流在账户失败预占和密码验证之前，超限不改 email counter。不同 IP 不能绕过 email 锁定。真实 HTTP 测试以同 IP 不同邮箱及登录、改密码交替请求证明共享限流，另一 IP 正常；检查 429 body、Retry-After、窗口恢复、伪造转发 header 无效、counter 未增加，以及限流时 logout 仍可用。
 
+测试专用环境变量 `AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX` 可覆盖该组每 IP 每分钟的请求上限；未设置时仍为 30 次。只有显式设置 `NODE_ENV=test` 且 `FSB_ALLOW_TEST_OVERRIDES=1` 时才接受覆盖值。其他情况均在连接数据库或监听端口前启动失败，错误消息列出这两个必需条件，包括 `NODE_ENV` 未设置、`development`、`production` 或缺少 opt-in 的情况。覆盖值必须仅包含十进制数字，且转换后为正的 JavaScript 安全整数；拒绝空白、十六进制、指数、符号和小数。Playwright 的 `apps/web/e2e/env.ts` 显式设置两个开关及上限 10000，供本地与 CI 中共用回环 IP 的 e2e 请求使用，时间窗口仍为 60 秒。
+
+`main.ts` 与限流行为测试共用 `apiRateLimitOptions()`，将已校验的覆盖值映射到真实 API 配置。e2e 继续使用现有的 HTTP test 模式，因此不会验证生产专用的 HTTPS URL 要求和 Secure cookie；API 日志始终开启。Better Auth 在 test 模式默认跳过 Origin 校验，并连带跳过 CSRF 校验，因此显式设置 `advanced.disableOriginCheck=false` 保留校验。Better Auth 自带限流和 session cookie cache 仍显式关闭。test 模式也跳过库的密钥检查及警告，API 环境 schema 仍要求至少 32 个字符；e2e 缺省生成随机密钥。
+
 `@fastify/rate-limit@10.3.0` 的每路由配置会建立独立的 LocalStore；相同 `groupId` 只修改 key，不能合并这些 store。注册器只创建一次 `app.rateLimit(...)` hook，把同一 hook 安装到 login 和 changePassword 的 `onRequest`。各路由的自动限流配置关闭，避免重复计数。共享 store 使用插件默认的 `request.ip` key，`trustProxy: false` 保证伪造 `X-Forwarded-For` 不改变 key。
 
 管理员重置密码同时清除目标锁定。另提供使用 owner 凭据运行的紧急解锁 CLI，恢复所有管理员被锁的情况。每次进入锁定记录结构化日志，不在日志记录密码或 cookie。过期且无活动窗口的 counter 行定期或机会式清理，避免未知邮箱行无限增长。

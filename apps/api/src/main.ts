@@ -1,6 +1,6 @@
 import { APP_ROLE, AUTH_ROLE, connect } from '@fs-billing/db';
 import { createApi } from './app.js';
-import { apiEnvironmentSchema } from './config.js';
+import { apiEnvironmentSchema, apiRateLimitOptions } from './config.js';
 import { createAuthGateway } from './auth/gateway.js';
 import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 import { createAdminAccountService } from './auth/admin-accounts.js';
@@ -40,6 +40,7 @@ const app = createApi({
   },
   logger: true,
   trustedOrigins,
+  ...apiRateLimitOptions(config),
 });
 const cleanup = setInterval(() => {
   void auth

@@ -25,6 +25,9 @@ export function apiEnvironment() {
   return {
     ...process.env,
     NODE_ENV: 'test',
+    FSB_ALLOW_TEST_OVERRIDES: '1',
+    // Test-only allowance for e2e credential requests sharing loopback.
+    AUTH_RATE_LIMIT_TEST_OVERRIDE_MAX: '10000',
     API_HOST: '127.0.0.1',
     API_PORT: '3000',
     BETTER_AUTH_SECRET:
