@@ -150,6 +150,11 @@ export async function operateBalance({
     let auditId: string;
     let entryId: string;
     if (existing) {
+      if (existing.createdBy !== actor.id.toLowerCase())
+        throw new AdminServiceError(
+          'IDEMPOTENCY_CONFLICT',
+          '幂等键已由其他管理员使用',
+        );
       if (
         input.currency !== tenant.currency ||
         existing.kind !== kinds[input.kind] ||
