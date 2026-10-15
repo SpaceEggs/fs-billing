@@ -7,7 +7,8 @@ import {
   sessionResponseSchema,
 } from '@fs-billing/shared';
 import { randomUUID } from 'node:crypto';
-import { beforeAll, beforeEach, expect, it } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import { sql } from '@fs-billing/db';
 import type { PoolClient } from 'pg';
 import {
   apiConnections,
@@ -511,16 +512,51 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
     "UPDATE public.admins SET status='disabled' WHERE status='active' AND id <> ALL($1::uuid[]) RETURNING id",
     [[fixture.admin.profileId, fixture.otherAdmin.profileId]],
   );
-  const holder = await connections.owner.pool.connect();
+  let releaseSnapshots = () => {};
+  const snapshotsReady = new Promise<void>((resolve) => {
+    releaseSnapshots = resolve;
+  });
+  let releaseLoser = () => {};
+  const winnerCommitted = new Promise<void>((resolve) => {
+    releaseLoser = resolve;
+  });
+  const transaction = connections.app.db.transaction.bind(connections.app.db);
+  let attempts = 0;
+  let snapshots = 0;
+  const failures: unknown[] = [];
+  const transactions = vi
+    .spyOn(connections.app.db, 'transaction')
+    .mockImplementation(async (fn, config) => {
+      const attempt = ++attempts;
+      try {
+        const result = await transaction(async (tx) => {
+          if (attempt <= 2) {
+            await tx.execute(
+              sql`select set_config('app.scope', 'admin', true)`,
+            );
+            // Both SSI snapshots read both admins before the winner writes.
+            await tx.execute(
+              sql`select count(*) from public.admins where status = 'active'`,
+            );
+            if (++snapshots === 2) releaseSnapshots();
+            await snapshotsReady;
+            // The stale loser must abort, then retry against the committed winner.
+            if (attempt === 2) await winnerCommitted;
+          }
+          return fn(tx);
+        }, config);
+        return result;
+      } catch (error) {
+        failures.push(error);
+        releaseSnapshots();
+        throw error;
+      } finally {
+        if (attempt === 1) releaseLoser();
+      }
+    });
   let pending:
     Promise<PromiseSettledResult<{ auditId: string | null }>[]> | undefined;
   try {
-    await holder.query('BEGIN');
-    const pid = await backendPid(holder);
-    await holder.query(
-      'UPDATE public.admins SET name=name WHERE id=ANY($1::uuid[])',
-      [[fixture.admin.profileId, fixture.otherAdmin.profileId]],
-    );
     pending = Promise.allSettled([
       service.setStatus(principal(), {
         kind: 'admin',
@@ -533,9 +569,12 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
         status: 'disabled',
       }),
     ]);
-    await waitForBlocked(pid, 2);
-    await holder.query('ROLLBACK');
     const results = await pending;
+    expect(attempts).toBe(3);
+    expect(failures).toMatchObject([
+      { cause: { code: '40001' } },
+      { code: 'FORBIDDEN' },
+    ]);
     expect(
       results.filter((result) => result.status === 'fulfilled'),
     ).toHaveLength(1);
@@ -563,9 +602,10 @@ it('refuses one of two concurrent mutual admin disables and audits only the comm
     );
     expect(audits.rows).toEqual([{ action: 'admin_disable' }]);
   } finally {
-    await holder.query('ROLLBACK');
-    holder.release();
+    releaseSnapshots();
+    releaseLoser();
     await pending;
+    transactions.mockRestore();
     await connections.owner.pool.query(
       "UPDATE public.admins SET status='active' WHERE id=ANY($1::uuid[])",
       [others.rows.map((row) => row.id)],

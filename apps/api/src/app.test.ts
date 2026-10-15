@@ -1,7 +1,7 @@
 import pg from 'pg';
 import { parseAccountInput, parseAccountOutput } from 'better-auth/db';
-import { afterAll, expect, test } from 'vitest';
-import { connect, DatabaseUnavailableError } from '@fs-billing/db';
+import { afterAll, expect, test, vi } from 'vitest';
+import { connect, DatabaseUnavailableError, withAdmin } from '@fs-billing/db';
 import { apiErrorSchema, apiErrorSchemas } from '@fs-billing/shared';
 import { z } from 'zod';
 import { liveApiContract } from './routes/contract.js';
@@ -36,6 +36,49 @@ test('API exposes an independent health endpoint', async () => {
   expect(response.statusCode).toBe(200);
   expect(response.json()).toEqual({ status: 'ok', service: 'api' });
 });
+
+test.each([
+  { code: '40001', isolation: 'default', attempts: 3 },
+  { code: '40P01', isolation: 'default', attempts: 3 },
+  { code: '40001', isolation: 'serializable', attempts: 8 },
+  { code: '40P01', isolation: 'serializable', attempts: 8 },
+])(
+  'maps exhausted $isolation $code retries to 503',
+  async ({ code, isolation, attempts }) => {
+    const failure = new Error('private query', {
+      cause: Object.assign(new Error('private driver detail'), { code }),
+    });
+    const transaction = vi
+      .spyOn(business.db, 'transaction')
+      .mockRejectedValue(failure);
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const isolated = createApi({ businessDb: business.db, auth });
+    isolated.get('/test-exhaustion', () =>
+      withAdmin(
+        business.db,
+        () => Promise.resolve(),
+        isolation === 'serializable'
+          ? { isolationLevel: 'serializable' }
+          : undefined,
+      ),
+    );
+    try {
+      const response = await isolated.inject('/test-exhaustion');
+      expect(transaction).toHaveBeenCalledTimes(attempts);
+      expect(response.statusCode).toBe(503);
+      expect(
+        apiErrorSchemas.SERVICE_UNAVAILABLE.parse(response.json()),
+      ).toMatchObject({
+        error: { code: 'SERVICE_UNAVAILABLE', message: '服务暂不可用' },
+      });
+      expect(response.body).not.toContain('private');
+    } finally {
+      await isolated.close();
+      transaction.mockRestore();
+      random.mockRestore();
+    }
+  },
+);
 
 test.each([
   [

@@ -174,6 +174,8 @@ ledger 的 balanceAfter 定义为该租户按 occurredAt ASC、id ASC 排序后�
 
 管理员 status 使用 SERIALIZABLE（SSI、非阻塞谓词跟踪，冲突仅在最外层重试）符合不新增锁规则（用户批准于 2026-10-15）；所有 admins.status 修改必须经最外层 SERIALIZABLE wrapper，已有事务内请求隔离级别直接抛错。
 
+最外层 SERIALIZABLE 事务最多执行 8 次（含首次），默认 READ COMMITTED 仍最多执行 3 次。两者遇到 40001/40P01 均先回滚，再以 full jitter 退避后重跑整个事务；第 n 次失败后的等待时间均匀分布于 `[0, min(10 × 2^(n−1), 200))` 毫秒，不在最后一次失败后等待。保存点不重试，耗尽后保留原错误，由 API 映射为 503 `SERVICE_UNAVAILABLE`。
+
 ### 费率与 CSV
 
 取消排期请求携带 versionId，防止旧页面取消另一版本。在目标现有 lock_tenants 下读版本、核验 tenant_id 与请求 versionId、核验 `effective_from > DB now() + margin`（默认 60 秒，等于边界也拒绝）；不符返回 RATE_VERSION_CONFLICT，找不到目标返回 NOT_FOUND。将 cancelledVersionId 与完整 entries 写入 rate_schedule_cancel 审计后，在同一业务事务删除未来版本。DB 既有 guard 使用 clock_timestamp() 再次检查实际时间，禁止事务执行期间已生效版本的删除；handler 通过 trigger 错误消息“已生效的费率版本不可删除”识别该竞态，或在回滚后重读目标版本与 DB 时间确认已生效，再映射 RATE_VERSION_CONFLICT。不能只按 SQLSTATE `42501`（insufficient_privilege）映射，因为“费率版本不可修改”也使用该 SQLSTATE。竞态导致事务回滚。已生效版本、历史话单、当前表不变，不增加锁。

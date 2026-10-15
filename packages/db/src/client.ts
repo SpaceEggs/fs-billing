@@ -4,6 +4,7 @@ import { PgTransaction } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { z } from 'zod';
 import * as schema from './schema.js';
+import { retryTransaction } from './retry.js';
 import { normalizePgOperation } from './unavailable.js';
 
 export const APP_ROLE = 'fs_billing_app';
@@ -107,8 +108,8 @@ export function withSystem<T>(
 
 // 死锁（40P01）与序列化失败（40001）回滚整个事务，重跑 fn 是安全的。
 // 嵌套时出错的只是保存点，外层事务里先前的语句和锁还在，重跑保存点不等于重跑事务，所以只在最外层重试。
-const RETRYABLE = new Set(['40P01', '40001']);
 const MAX_ATTEMPTS = 3;
+const SERIALIZABLE_MAX_ATTEMPTS = 8;
 
 async function withOperator<T>(
   db: Db | Tx,
@@ -122,29 +123,20 @@ async function withOperator<T>(
     throw new Error(
       'Transaction isolation must be requested at the outermost layer',
     );
-  const attempts = db instanceof PgTransaction ? 1 : MAX_ATTEMPTS;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await db.transaction(async (tx) => {
+  const attempts =
+    db instanceof PgTransaction
+      ? 1
+      : config?.isolationLevel === 'serializable'
+        ? SERIALIZABLE_MAX_ATTEMPTS
+        : MAX_ATTEMPTS;
+  return retryTransaction({
+    attempts,
+    operation: () =>
+      db.transaction(async (tx) => {
         await tx.execute(sql`select set_config('app.scope', ${scope}, true)`);
         return fn(tx);
-      }, config);
-    } catch (error) {
-      if (attempt >= attempts || !RETRYABLE.has(sqlState(error) ?? '')) {
-        throw error;
-      }
-    }
-  }
-}
-
-/** drizzle 把驱动错误包在 cause 里。 */
-function sqlState(error: unknown): string | undefined {
-  for (let current = error; current instanceof Error; current = current.cause) {
-    if ('code' in current && typeof current.code === 'string') {
-      return current.code;
-    }
-  }
-  return undefined;
+      }, config),
+  });
 }
 
 /**
