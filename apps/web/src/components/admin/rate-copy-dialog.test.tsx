@@ -101,10 +101,11 @@ const conflict = (code: string) => ({
 
 type Reply = { status: number; body?: unknown } | 'network';
 
-/** `world` 给出各租户当前的费率表，测试中途可改；POST 由 `post` 应答。 */
+/** `world` 给出各租户当前的费率表，测试中途可改；POST 由 `post` 应答；`ratesFailure` 返回非空时该次读取费率表失败。 */
 function stubApi(
   world: Record<string, RatesReply>,
   post: (path: string, body: unknown) => Reply,
+  ratesFailure: (tenantId: string) => Reply | null = () => null,
 ) {
   const posts: { path: string; body: unknown }[] = [];
   const gets: string[] = [];
@@ -124,6 +125,13 @@ function stubApi(
           );
         }
         const tenantId = url.pathname.split('/')[4]!;
+        const failure = ratesFailure(tenantId);
+        if (failure === 'network')
+          return Promise.reject(new TypeError('offline'));
+        if (failure)
+          return Promise.resolve(
+            Response.json(failure.body ?? null, { status: failure.status }),
+          );
         return Promise.resolve(Response.json(rates(world[tenantId]!)));
       }
       const body: unknown = JSON.parse(init.body as string);
@@ -438,5 +446,126 @@ describe('rate copy dialog', () => {
     );
     expect(targetReads()).toBeGreaterThan(before);
     expect(commits).toBe(2);
+  });
+  it.each(['immediate', 'scheduled'] as const)(
+    'pull %s: closing after success focuses the rates section once the opener is gone or disabled',
+    async (kind) => {
+      const minute = beijingMinute(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      const world: Record<string, RatesReply> = {
+        [self.id]: { id: selfV1, entries: [] },
+        [other.id]: { id: otherV1, entries },
+      };
+      stubApi(world, (path) => {
+        if (isPreview(path)) return { status: 200, body: okPreview };
+        world[self.id] =
+          kind === 'immediate'
+            ? { id: selfV2, entries }
+            : { id: selfV1, entries: [], scheduled: true };
+        return { status: 200, body: committed };
+      });
+      renderTab();
+      const user = userEvent.setup();
+      const opener = await screen.findByRole('button', {
+        name: '复制其他租户的费率表',
+      });
+      await user.click(opener);
+      const dialog = screen.getByRole('dialog', {
+        name: '复制其他租户的费率表',
+      });
+      await pickOther(user, dialog);
+      if (kind === 'scheduled') {
+        await user.click(
+          within(dialog).getByRole('radio', { name: '指定时间生效' }),
+        );
+        fireEvent.change(
+          within(dialog).getByLabelText('指定生效时间（北京时间）'),
+          { target: { value: minute } },
+        );
+      }
+      await user.click(
+        within(dialog).getByRole('button', { name: '下一步：预览变动' }),
+      );
+      await user.click(
+        await within(dialog).findByRole('button', { name: '确认覆盖 ABC001' }),
+      );
+      await within(dialog).findByText(/已复制到 ABC001/);
+      if (kind === 'immediate')
+        await waitFor(() => expect(opener).not.toBeInTheDocument());
+      else await waitFor(() => expect(opener).toBeDisabled());
+
+      await user.click(within(dialog).getByRole('button', { name: '完成' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByRole('region', { name: '费率表' })).toHaveFocus();
+    },
+  );
+
+  it('a failed snapshot is retried in place, keeping the tenant and schedule', async () => {
+    let otherReads = 0;
+    const { posts, gets } = stubApi(
+      {
+        [self.id]: { id: selfV1, entries },
+        [other.id]: { id: otherV1, entries: entries.slice(0, 1) },
+      },
+      () => ({ status: 200, body: okPreview }),
+      (tenantId) => {
+        if (tenantId !== other.id) return null;
+        otherReads += 1;
+        return otherReads === 1
+          ? {
+              status: 429,
+              body: {
+                error: {
+                  code: 'RATE_LIMITED',
+                  message: 'slow down',
+                  requestId: 'req-test',
+                  retryAfterSeconds: 5,
+                },
+              },
+            }
+          : null;
+      },
+    );
+    renderTab();
+    const { user, dialog } = await openPush();
+    const minute = beijingMinute(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    await user.click(
+      within(dialog).getByRole('radio', { name: '指定时间生效' }),
+    );
+    fireEvent.change(
+      within(dialog).getByLabelText('指定生效时间（北京时间）'),
+      { target: { value: minute } },
+    );
+    await user.click(
+      await within(dialog).findByRole('radio', { name: /BJH003/ }),
+    );
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '请在 5 秒后重试',
+    );
+
+    await user.click(
+      within(dialog).getByRole('button', { name: '重新读取费率表' }),
+    );
+    await within(dialog).findByText(/已选：.*· 1 条/);
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
+    expect(
+      gets.filter((path) =>
+        path.startsWith(`/api/admin/tenants/${other.id}/rates`),
+      ),
+    ).toHaveLength(2);
+    expect(within(dialog).getByRole('radio', { name: /BJH003/ })).toBeChecked();
+    expect(
+      within(dialog).getByLabelText('指定生效时间（北京时间）'),
+    ).toHaveValue(minute);
+
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：预览变动' }),
+    );
+    await within(dialog).findByRole('button', { name: '确认覆盖 BJH003' });
+    expect(posts[0]!.body).toEqual({
+      sourceVersionId: selfV1,
+      targetTenantId: other.id,
+      targetBaseVersionId: otherV1,
+      schedule: { kind: 'scheduled', effectiveFrom: `${minute}:00+08:00` },
+    });
   });
 });

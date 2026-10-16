@@ -383,6 +383,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           direction={copying.direction}
           self={copying.self}
           onClose={() => setCopying(null)}
+          fallbackFocus={sectionRef}
         />
       ) : null}
       {cancelling ? (

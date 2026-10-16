@@ -93,10 +93,12 @@ export function RateCopyDialog({
   direction,
   self: initialSelf,
   onClose,
+  fallbackFocus,
 }: {
   direction: RateCopyDirection;
   self: CopySide;
   onClose: () => void;
+  fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const queryClient = useQueryClient();
   const previewCopy = useApiMutation('adminRateCopyPreview');
@@ -305,6 +307,7 @@ export function RateCopyDialog({
       }}
       title={title}
       className="md:w-[720px]"
+      fallbackFocus={fallbackFocus}
     >
       <DialogHeading
         headingRef={headingRef}
@@ -330,6 +333,9 @@ export function RateCopyDialog({
           choice={choice}
           scheduleError={scheduleError}
           onPick={(tenant) => void pick(tenant)}
+          onRetryPick={() => {
+            if (picked?.status === 'error') void pick(picked.tenant);
+          }}
           onChoice={(value) => {
             setChoice(value);
             setScheduleError(undefined);
@@ -385,6 +391,7 @@ function ChooseTenant({
   choice,
   scheduleError,
   onPick,
+  onRetryPick,
   onChoice,
   onCancel,
   onNext,
@@ -400,6 +407,7 @@ function ChooseTenant({
   choice: ScheduleChoice;
   scheduleError: string | undefined;
   onPick: (tenant: CopyTenant) => void;
+  onRetryPick: () => void;
   onChoice: (choice: ScheduleChoice) => void;
   onCancel: () => void;
   onNext: () => void;
@@ -455,7 +463,17 @@ function ChooseTenant({
         </span>
       ) : null}
       {picked?.status === 'error' ? (
-        <ProblemAlert error={picked.error} />
+        <div className="flex flex-col items-start gap-2">
+          <ProblemAlert error={picked.error} />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={onRetryPick}
+          >
+            重新读取费率表
+          </Button>
+        </div>
       ) : null}
       {pickError ? (
         <span role="alert" className="text-xs text-err">
