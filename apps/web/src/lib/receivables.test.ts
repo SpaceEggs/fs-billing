@@ -140,7 +140,8 @@ describe('sequencedRequests', () => {
     const mark = requests.mark();
     early.resolve({ items: ['old'] });
     const data = await before;
-    expect(data).toEqual({ items: ['old'], request: 1 });
+    expect(data.items).toEqual(['old']);
+    expect(data.request.number).toBe(1);
     expect(
       requests.refresh(mark, { data, error: null, isFetching: false }),
     ).toBe('refreshing');
@@ -151,6 +152,19 @@ describe('sequencedRequests', () => {
     expect(
       requests.refresh(mark, { data: after, error: null, isFetching: false }),
     ).toBe('fresh');
+  });
+
+  it('ignores a response from another sequencer, whatever its number', async () => {
+    const earlier = sequencedRequests();
+    let cached = await earlier.wrap(() => Promise.resolve({ items: [] }))();
+    for (let i = 0; i < 3; i += 1)
+      cached = await earlier.wrap(() => Promise.resolve({ items: [] }))();
+    const requests = sequencedRequests();
+    void requests.wrap(() => new Promise<{ items: string[] }>(() => {}))();
+    const mark = requests.mark();
+    expect(
+      requests.refresh(mark, { data: cached, error: null, isFetching: true }),
+    ).toBe('refreshing');
   });
 
   it('reports failure only for a request issued after the mark, once nothing is in flight', async () => {

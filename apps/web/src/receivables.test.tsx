@@ -637,6 +637,52 @@ describe('confirm payment', () => {
     expect(postedTokens(calls)).toEqual([null, null]);
   });
 
+  it('data cached by an earlier visit does not count as refreshed after returning to the page', async () => {
+    const refetch = deferred<Reply>();
+    let listed = 0;
+    const { calls, queryClient, router, user } = openReceivables(
+      () => {
+        listed += 1;
+        return listed <= 2
+          ? { status: 200, body: listing([gzt]) }
+          : refetch.promise;
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => {
+          throw new TypeError('network down');
+        },
+      },
+    );
+    await screen.findByRole('table');
+    // 缓存里的响应序号领先于下次进入页面时的序号。
+    await queryClient.refetchQueries({
+      queryKey: ['api', 'adminReceivables'],
+    });
+    await waitFor(() => expect(listCalls(calls)).toHaveLength(2));
+    await router.navigate({ to: '/admin/change-password' });
+    await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
+    await router.navigate({ to: '/admin/receivables' });
+    const table = await screen.findByRole('table');
+    await waitFor(() => expect(listCalls(calls)).toHaveLength(3));
+
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    const submit = within(dialog).getByRole('button', {
+      name: '确认收款 ¥2,000.00',
+    });
+    await user.click(submit);
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '网络中断',
+    );
+    expect(dialog).toHaveTextContent('正在刷新列表…');
+    expect(dialog).not.toHaveTextContent('列表已刷新');
+    expect(submit).toBeDisabled();
+
+    refetch.resolve({ status: 200, body: listing([gzt]) });
+    expect(await within(dialog).findByText('列表已刷新。')).toBeVisible();
+    expect(submit).toBeEnabled();
+  });
+
   it('data cached in the same millisecond as the failure does not count as refreshed', async () => {
     // 固定时钟：列表首次返回、确认失败、发起刷新都在同一毫秒。
     vi.spyOn(Date, 'now').mockReturnValue(Date.now());
