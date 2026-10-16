@@ -19,7 +19,7 @@ import {
 import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
 import { ApiFailure, isTransientServiceError, sendFailure } from './errors.js';
-import { resolvePrincipal } from './identity.js';
+import { recordLogin, resolvePrincipal } from './identity.js';
 import {
   registerRoutes,
   requestHeaders,
@@ -151,6 +151,7 @@ export function createApi(deps: ApiDependencies) {
       );
       try {
         const resolved = await resolvePrincipal(deps.businessDb, session);
+        await recordLogin(deps.businessDb, resolved.principal);
         sendCookies(reply, session.setCookie);
         return sessionResponse({ ...resolved, session }, session);
       } catch (error) {

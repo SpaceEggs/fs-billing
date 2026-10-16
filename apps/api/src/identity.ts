@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import { identitySchema } from '@fs-billing/shared';
-import { sql, type Db } from '@fs-billing/db';
+import { sql, withAdmin, type Db } from '@fs-billing/db';
 import type { AuthSession } from './auth/gateway.js';
 import { ApiFailure } from './errors.js';
-import { principalSchema, type ResolvedIdentity } from './types.js';
+import {
+  principalSchema,
+  type Principal,
+  type ResolvedIdentity,
+} from './types.js';
 
 const rowSchema = z.object({
   kind: z.enum(['none', 'ambiguous', 'admin', 'customer']),
@@ -63,4 +67,20 @@ export async function resolvePrincipal(
   if (principal.kind === 'customer' && identity.kind === 'customer')
     return { kind: 'customer', principal, identity };
   throw new ApiFailure('IDENTITY_UNAVAILABLE');
+}
+
+export async function recordLogin(db: Db, principal: Principal): Promise<void> {
+  await withAdmin(db, async (tx) => {
+    const result = await tx.execute(
+      principal.kind === 'admin'
+        ? sql`update admins set last_login_at = statement_timestamp()
+              where id = ${principal.profileId} and auth_user_id = ${principal.authUserId}
+              returning id`
+        : sql`update portal_accounts set last_login_at = statement_timestamp()
+              where id = ${principal.profileId} and auth_user_id = ${principal.authUserId}
+                and tenant_id = ${principal.tenantId}
+              returning id`,
+    );
+    if (result.rows.length !== 1) throw new ApiFailure('IDENTITY_UNAVAILABLE');
+  });
 }
