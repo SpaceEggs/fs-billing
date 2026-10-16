@@ -200,7 +200,10 @@ function TenantDetail({
   identity: Identity;
   tenantId: string;
 }) {
-  const { tab = 'overview' } = useSearch({ from: '/admin/tenants/$tenantId' });
+  // 余额流水的筛选随标签页切换保留在地址里。
+  const { tab = 'overview', ...ledger } = useSearch({
+    from: '/admin/tenants/$tenantId',
+  });
   const navigate = useNavigate();
   const listed = useListedTenant(tenantId);
   const detail = useQuery(
@@ -336,7 +339,7 @@ function TenantDetail({
                   key={key}
                   to="/admin/tenants/$tenantId"
                   params={{ tenantId }}
-                  search={key === 'overview' ? {} : { tab: key }}
+                  search={key === 'overview' ? ledger : { ...ledger, tab: key }}
                   aria-current={key === tab ? 'page' : undefined}
                   className={cn(
                     '-mb-px border-b-2 px-3 py-2.5 whitespace-nowrap',

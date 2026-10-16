@@ -48,6 +48,7 @@ export function RateEditDialog({
   hasScheduled,
   onClose,
   onDone,
+  fallbackFocus,
 }: {
   tenant: { id: string; code: string; currency: Currency };
   baseVersionId: string;
@@ -56,6 +57,8 @@ export function RateEditDialog({
   hasScheduled: boolean;
   onClose: () => void;
   onDone: (result: RateEditResult) => void;
+  /** 排定成功后打开者（编辑按钮）随即禁用，焦点回到这里。 */
+  fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const queryClient = useQueryClient();
   const edit = useApiMutation('adminRateEdit', {
@@ -127,6 +130,7 @@ export function RateEditDialog({
         ? {}
         : { onOpenChange: (open: boolean) => open || onClose() })}
       title={step === 'form' ? '编辑费率' : '确认修改费率'}
+      fallbackFocus={fallbackFocus}
       className="md:w-[500px]"
     >
       {step === 'form' ? (

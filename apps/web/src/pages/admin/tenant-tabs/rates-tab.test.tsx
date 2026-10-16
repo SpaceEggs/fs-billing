@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
+import { beijingMinute } from '../../../lib/rates';
 import { RatesTab } from './rates-tab';
 
 const tenant: AdminTenantDetailResponse = {
@@ -114,5 +115,66 @@ describe('rates tab edit dialog', () => {
     await user.click(within(alert).getByRole('button', { name: '刷新' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(await screen.findByText('0.0600')).toBeInTheDocument();
+  });
+
+  it('scheduling an edit disables its opener, so focus returns to the rate table', async () => {
+    let current: Record<string, unknown> = rates(versionA, '0.045');
+    const effectiveFrom = new Date(Date.now() + 86_400_000);
+    effectiveFrom.setUTCSeconds(0, 0);
+    const scheduledVersion = {
+      id: versionB,
+      effectiveFrom: effectiveFrom.toISOString(),
+      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_path: string, init: RequestInit) => {
+        if (init.method === 'POST') {
+          current = { ...current, scheduled: [scheduledVersion] };
+          return Promise.resolve(
+            json(200, {
+              auditId: '00000000-0000-4000-8000-00000000b201',
+              version: scheduledVersion,
+            }),
+          );
+        }
+        return Promise.resolve(json(200, current));
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <RatesTab tenant={tenant} />
+      </QueryClientProvider>,
+    );
+
+    const user = userEvent.setup();
+    const opener = await screen.findByRole('button', { name: '编辑 86 中国' });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: '编辑费率' });
+    const rate = within(dialog).getByLabelText(/费率/);
+    await user.clear(rate);
+    await user.type(rate, '0.05');
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：确认' }),
+    );
+    const confirm = screen.getByRole('dialog', { name: '确认修改费率' });
+    await user.click(
+      within(confirm).getByRole('radio', { name: '指定时间生效' }),
+    );
+    await user.type(
+      within(confirm).getByLabelText('指定生效时间（北京时间）'),
+      beijingMinute(effectiveFrom.getTime()),
+    );
+    await user.click(within(confirm).getByRole('button', { name: '确认修改' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByText(/^已排定：86 中国/)).toBeVisible();
+    expect(screen.getByRole('button', { name: '编辑 86 中国' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: '费率表' })).toHaveFocus();
   });
 });

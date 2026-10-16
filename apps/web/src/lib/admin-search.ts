@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   adminAccountsQuerySchema,
+  adminLedgerKindSchema,
+  adminPageQuerySchema,
   adminReceivablesQuerySchema,
   adminTenantsQuerySchema,
 } from '@fs-billing/shared';
@@ -77,9 +79,31 @@ export const tenantTabs = [
 ] as const;
 export type TenantTab = (typeof tenantTabs)[number]['key'];
 
-export function validateTenantDetailSearch(raw: Record<string, unknown>): {
-  tab?: TenantTab;
-} {
+/** 余额流水筛选：北京时间日期（YYYY-MM-DD，含两端）、类型与页码，切换标签页时保留。 */
+export type LedgerSearch = {
+  from?: string | undefined;
+  to?: string | undefined;
+  kind?: z.infer<typeof adminLedgerKindSchema> | undefined;
+  page?: number | undefined;
+};
+
+export type TenantDetailSearch = LedgerSearch & {
+  tab?: TenantTab | undefined;
+};
+
+/**
+ * 路由保留校验结果中缺少的原始参数，所以非法值显式置为 undefined 丢弃。
+ */
+export function validateTenantDetailSearch(
+  raw: Record<string, unknown>,
+): TenantDetailSearch {
   const tab = tenantTabs.find(({ key }) => key === raw['tab'])?.key;
-  return tab && tab !== 'overview' ? { tab } : {};
+  const page = adminPageQuerySchema.shape.page.safeParse(raw['page']).data;
+  return {
+    tab: tab === 'overview' ? undefined : tab,
+    from: z.iso.date().safeParse(raw['from']).data,
+    to: z.iso.date().safeParse(raw['to']).data,
+    kind: adminLedgerKindSchema.safeParse(raw['kind']).data,
+    page: page !== undefined && page > 1 ? page : undefined,
+  };
 }

@@ -76,13 +76,17 @@ export function TenantStatusDialog({
   return (
     <ModalDialog
       open={action !== null}
-      onOpenChange={(open) => {
-        if (!open) {
-          disable.reset();
-          enable.reset();
-          onClose();
-        }
-      }}
+      {...(mutation.isPending
+        ? {}
+        : {
+            onOpenChange: (open: boolean) => {
+              if (!open) {
+                disable.reset();
+                enable.reset();
+                onClose();
+              }
+            },
+          })}
       title={text.title(tenant.code)}
       description={text.note}
     >

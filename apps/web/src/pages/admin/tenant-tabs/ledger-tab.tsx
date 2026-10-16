@@ -1,9 +1,9 @@
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   adminLedgerKindSchema,
   type AdminLedgerEntry,
-  type AdminLedgerKind,
   type Currency,
 } from '@fs-billing/shared';
 import { DateTime, Money } from '../../../components/data-format';
@@ -12,17 +12,21 @@ import { QueryError } from '../../../components/query-error';
 import { Select } from '../../../components/ui/select';
 import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
+import type { LedgerSearch } from '../../../lib/admin-search';
 import { ledgerKindLabels } from '../../../lib/balance-operation';
 import { formatDateTime } from '../../../lib/format';
 import { cn } from '../../../lib/utils';
 
 const ledgerPageSize = 25;
 
-/** 北京时间日期（YYYY-MM-DD）转成接口的闭区间 from/to，空的一端不限。 */
+/**
+ * 北京时间日期（YYYY-MM-DD）转成接口的闭区间 from/to，空的一端不限。
+ * occurred_at 精确到微秒，结束端取当天最后一微秒，避免漏掉 23:59:59.999 之后的流水。
+ */
 export function beijingDayRange(range: { from: string; to: string }) {
   return {
-    ...(range.from ? { from: `${range.from}T00:00:00.000+08:00` } : {}),
-    ...(range.to ? { to: `${range.to}T23:59:59.999+08:00` } : {}),
+    ...(range.from ? { from: `${range.from}T00:00:00.000000+08:00` } : {}),
+    ...(range.to ? { to: `${range.to}T23:59:59.999999+08:00` } : {}),
   };
 }
 
@@ -172,9 +176,19 @@ function LedgerCards({
 export function LedgerTab({ tenantId }: { tenantId: string }) {
   const kindId = useId();
   const rangeErrorId = useId();
-  const [kind, setKind] = useState<AdminLedgerKind | undefined>();
-  const [range, setRange] = useState({ from: '', to: '' });
-  const [page, setPage] = useState(1);
+  const search = useSearch({ from: '/admin/tenants/$tenantId' });
+  const navigate = useNavigate({ from: '/admin/tenants/$tenantId' });
+  const { kind, page = 1 } = search;
+  const range = { from: search.from ?? '', to: search.to ?? '' };
+  /** 值为 undefined 表示从地址中清除。 */
+  const update = (patch: LedgerSearch) =>
+    void navigate({
+      search: (current) => ({ ...current, ...patch }),
+      replace: true,
+    });
+  /** 改筛选回到第一页。 */
+  const setFilter = (patch: Omit<LedgerSearch, 'page'>) =>
+    update({ ...patch, page: undefined });
   const rangeInvalid =
     range.from !== '' && range.to !== '' && range.from > range.to;
   const ledger = useQuery({
@@ -191,10 +205,6 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
   });
   const data = ledger.data;
   const filtered = kind !== undefined || range.from !== '' || range.to !== '';
-  const updateRange = (patch: Partial<typeof range>) => {
-    setRange((current) => ({ ...current, ...patch }));
-    setPage(1);
-  };
   const dateClass =
     'h-full min-w-0 flex-1 bg-transparent text-base tabular-nums outline-none md:w-[124px] md:flex-none md:text-sm';
   return (
@@ -214,7 +224,9 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
             aria-label="开始日期"
             value={range.from}
             max={range.to || undefined}
-            onChange={(event) => updateRange({ from: event.target.value })}
+            onChange={(event) =>
+              setFilter({ from: event.target.value || undefined })
+            }
             className={dateClass}
           />
           <span aria-hidden className="text-muted-foreground">
@@ -225,7 +237,9 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
             aria-label="结束日期"
             value={range.to}
             min={range.from || undefined}
-            onChange={(event) => updateRange({ to: event.target.value })}
+            onChange={(event) =>
+              setFilter({ to: event.target.value || undefined })
+            }
             className={dateClass}
           />
         </div>
@@ -235,10 +249,11 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         <Select
           id={kindId}
           value={kind ?? ''}
-          onChange={(event) => {
-            setKind(adminLedgerKindSchema.safeParse(event.target.value).data);
-            setPage(1);
-          }}
+          onChange={(event) =>
+            setFilter({
+              kind: adminLedgerKindSchema.safeParse(event.target.value).data,
+            })
+          }
         >
           <option value="">全部类型</option>
           {adminLedgerKindSchema.options.map((option) => (
@@ -291,7 +306,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
             page={page}
             pageSize={ledgerPageSize}
             rowCount={data.pagination.total}
-            onPage={setPage}
+            onPage={(next) => update({ page: next > 1 ? next : undefined })}
           />
         </>
       )}

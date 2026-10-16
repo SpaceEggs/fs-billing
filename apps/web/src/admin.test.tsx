@@ -600,6 +600,41 @@ describe('tenant detail', () => {
     expect(await screen.findByText('租户已是停用状态，没有变更')).toBeVisible();
   });
 
+  it('a pending disable cannot be dismissed until the server answers', async () => {
+    const reply = deferred<{ status: number; body: unknown }>();
+    const { handler } = detailApi({
+      [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),
+      [`POST ${detailPath}/disable`]: () => reply.promise,
+    });
+    const user = userEvent.setup();
+    renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
+    await user.click(await screen.findByRole('button', { name: '停用' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '停用租户 ABC001？',
+    });
+    expect(
+      within(dialog).getByRole('button', { name: '关闭对话框' }),
+    ).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: '停用租户' }));
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole('button', { name: '停用租户' }),
+      ).toBeDisabled(),
+    );
+    expect(
+      within(dialog).queryByRole('button', { name: '关闭对话框' }),
+    ).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(dialog).toBeInTheDocument();
+
+    reply.resolve({
+      status: 200,
+      body: { auditId: '00000000-0000-4000-8000-00000000b103' },
+    });
+    expect(await screen.findByText('租户已停用，已记入操作日志')).toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('saving the tenant edit unchanged says nothing was logged', async () => {
     const { handler, calls } = adminApi({
       [`GET ${detailPath}`]: () => ({ status: 200, body: detail() }),

@@ -381,6 +381,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           baseVersionId={editing.baseVersionId}
           entry={editing.entry}
           hasScheduled={hasScheduled}
+          fallbackFocus={sectionRef}
           onClose={() => setEditing(null)}
           onDone={(result) => {
             setEditing(null);
