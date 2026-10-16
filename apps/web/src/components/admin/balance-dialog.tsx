@@ -146,6 +146,7 @@ export function BalanceDialog({
   open,
   onOpenChange,
   onViewLedger,
+  initialDraft,
   thresholds = webConfig.largeAmountThresholds,
 }: {
   /** 当前管理员的 profileId；未决幂等键只在同一管理员内复用。 */
@@ -154,6 +155,8 @@ export function BalanceDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onViewLedger: () => void;
+  /** 打开时预填的内容，例如作废应收所需的冲正调账。 */
+  initialDraft?: BalanceDraft;
   thresholds?: typeof webConfig.largeAmountThresholds;
 }) {
   const operate = useApiMutation('adminBalanceOperation', {
@@ -173,6 +176,7 @@ export function BalanceDialog({
         <BalanceFlow
           owner={owner}
           tenant={tenant}
+          initialDraft={initialDraft}
           thresholds={thresholds}
           operate={operate}
           submitting={submitting}
@@ -188,6 +192,7 @@ export function BalanceDialog({
 function BalanceFlow({
   owner,
   tenant,
+  initialDraft = { kind: 'topup', amount: '', note: '' },
   thresholds,
   operate,
   submitting,
@@ -197,6 +202,7 @@ function BalanceFlow({
 }: {
   owner: string;
   tenant: AdminTenantDetailResponse;
+  initialDraft: BalanceDraft | undefined;
   thresholds: typeof webConfig.largeAmountThresholds;
   operate: ReturnType<typeof useApiMutation<'adminBalanceOperation'>>;
   submitting: boolean;
@@ -204,11 +210,7 @@ function BalanceFlow({
   onClose: () => void;
   onViewLedger: () => void;
 }) {
-  const [draft, setDraft] = useState<BalanceDraft>({
-    kind: 'topup',
-    amount: '',
-    note: '',
-  });
+  const [draft, setDraft] = useState(initialDraft);
   const [errors, setErrors] = useState<BalanceErrors>({});
   const [step, setStep] = useState<Step>({ name: 'form' });
   const [largeConfirmed, setLargeConfirmed] = useState(false);

@@ -45,6 +45,8 @@ export function validateAdminAccountsSearch(
 }
 
 export type ReceivablesSearch = {
+  /** 默认 pending，不写入地址。 */
+  status?: 'received' | 'voided';
   search?: string;
   currency?: z.infer<typeof adminReceivablesQuerySchema.shape.currency>;
   page?: number;
@@ -57,7 +59,9 @@ export function validateReceivablesSearch(
   const search = shape.search.safeParse(raw['search']).data;
   const currency = shape.currency.safeParse(raw['currency']).data;
   const page = shape.page.safeParse(raw['page']).data;
+  const status = shape.status.safeParse(raw['status']).data;
   return {
+    ...(status === 'received' || status === 'voided' ? { status } : {}),
     ...(search?.trim() ? { search } : {}),
     ...(currency ? { currency } : {}),
     ...(page !== undefined && page > 1 ? { page } : {}),

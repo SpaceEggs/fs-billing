@@ -16,31 +16,12 @@ import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Field, invalidClass } from './form-fields';
-import { ProblemAlert } from './problem-alert';
+import { ActionOutcome } from './receivable-action';
 
 export const receivableMoney = (receivable: AdminReceivable) => ({
   currency: receivable.tenant.currency,
   amount: receivable.amount,
 });
-
-function RefreshLine({
-  refresh,
-  onRetry,
-}: {
-  refresh: ListRefresh;
-  onRetry: () => void;
-}) {
-  if (refresh === 'fresh') return <span>列表已刷新。</span>;
-  if (refresh === 'refreshing') return <span>正在刷新列表…</span>;
-  return (
-    <span className="flex items-center justify-between gap-2">
-      <span>列表刷新失败，页面显示的可能不是最新状态。</span>
-      <Button variant="outline" size="sm" onClick={onRetry}>
-        重试刷新
-      </Button>
-    </span>
-  );
-}
 
 /**
  * 确认收款（设计稿第二批 6c/6d）：只能整笔全额确认（决定 4），不填金额。
@@ -209,40 +190,31 @@ export function ConfirmPaymentDialog({
         <p className="m-0 text-[13px] leading-relaxed text-muted-foreground">
           确认后该笔状态变为「已收款」，客户余额不变；记入操作日志。
         </p>
-        {stale ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] text-warn"
-          >
-            <span className="font-semibold">未确认收款</span>
-            <span>{stale.message}</span>
-            <RefreshLine refresh={refresh} onRetry={onRetryRefresh} />
-          </div>
-        ) : superseded && !confirm.isPending ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] text-warn"
-          >
-            <span className="font-semibold">该笔状态已变化，不能在此确认</span>
-            <span>
-              {current === undefined
-                ? '刷新后的列表中已没有这笔待收款，可能已由其他管理员处理。请关闭后核对。'
-                : '刷新后的列表显示该笔的收款记录已变化（例如确认后又被撤销）。请关闭后从列表重新打开再确认。'}
-            </span>
-          </div>
-        ) : failure ? (
-          <>
-            <ProblemAlert
-              error={failure.error}
-              networkMessage="无法确认是否已收款。请在列表刷新后核对该笔状态再操作。"
-            />
-            {failure.kind.kind === 'unknown' ? (
-              <p className="m-0 text-[13px] text-muted-foreground">
-                <RefreshLine refresh={refresh} onRetry={onRetryRefresh} />
-              </p>
-            ) : null}
-          </>
-        ) : null}
+        <ActionOutcome
+          stale={stale && { title: '未确认收款', message: stale.message }}
+          superseded={
+            superseded
+              ? {
+                  title: '该笔状态已变化，不能在此确认',
+                  message:
+                    current === undefined
+                      ? '刷新后的列表中已没有这笔待收款，可能已由其他管理员处理。请关闭后核对。'
+                      : '刷新后的列表显示该笔的收款记录已变化（例如确认后又被撤销）。请关闭后从列表重新打开再确认。',
+                }
+              : null
+          }
+          failure={
+            failure && {
+              error: failure.error,
+              unknown: failure.kind.kind === 'unknown',
+              networkMessage:
+                '无法确认是否已收款。请在列表刷新后核对该笔状态再操作。',
+            }
+          }
+          refresh={refresh}
+          onRetryRefresh={onRetryRefresh}
+          pending={confirm.isPending}
+        />
         <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
           <Button
             variant="outline"

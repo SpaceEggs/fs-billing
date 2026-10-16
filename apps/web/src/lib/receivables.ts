@@ -1,10 +1,15 @@
 import {
   currencySchema,
   type AdminCurrencyTotals,
+  type AdminLedgerEntry,
   type AdminReceivable,
+  type AdminReceivableStatus,
   type Currency,
   type Money,
 } from '@fs-billing/shared';
+import Decimal from 'decimal.js';
+import { queryOptions } from '@tanstack/react-query';
+import { apiKey, send } from './admin-api';
 import { ApiRequestError } from './api';
 import { apiProblem, fieldIssues } from './api-problem';
 import { formatDate } from './format';
@@ -49,53 +54,116 @@ export function validateConfirmPayment(
 }
 
 /**
- * 确认收款的 409：页面数据已过时。列表随即刷新，由管理员核对后重新确认，不自动重试。
+ * 收款操作（确认、撤销确认、作废）的 409：页面数据已过时。列表随即刷新，由管理员核对后重新操作，不自动重试。
  * 刷新是否完成由对话框另行说明，这里的文案不预先声称“已刷新”。
  */
-const staleMessages = {
+const confirmStale = {
   ALREADY_RECEIVED: '该笔已确认收款，可能已由其他管理员处理。',
   SETTLEMENT_CONFLICT:
     '该笔的收款状态已变化（例如确认后又被撤销），请核对后重新确认。',
   RECEIVABLE_VOIDED: '该笔应收已作废，不能再确认收款。',
-} as const;
+};
+const reverseStale = {
+  SETTLEMENT_CONFLICT:
+    '该笔的收款确认已变化（可能已被撤销或重新确认），请核对后再操作。',
+  RECEIVABLE_VOIDED: '该笔应收已作废，不能撤销确认。',
+};
+const voidStale = {
+  ALREADY_RECEIVED: '该笔已确认收款，须先撤销确认才能作废。',
+  RECEIVABLE_VOIDED: '该笔应收已作废，可能已由其他管理员处理。',
+  RECEIVABLE_REVERSAL_MISMATCH:
+    '所选调账不能用于冲正：金额须恰为赊账金额的相反数、晚于赊账，且未被其他作废使用或被之后的反向调账抵消。',
+};
 
-export type ConfirmPaymentFailure =
-  /** 状态已变：刷新列表，本对话框不能再提交（令牌已过时）。 */
+export type ReceivableActionFailure<Field extends string> =
+  /** 状态已变：刷新列表，本对话框不能再提交（打开时的快照已过时）。 */
   | { kind: 'stale'; message: string }
   /** 服务端逐字段校验失败。 */
-  | { kind: 'fields'; errors: ConfirmPaymentErrors }
-  /** 网络中断：结果未知，刷新列表；可用原令牌手动再试（设计文档 L169）。 */
+  | { kind: 'fields'; errors: Partial<Record<Field, string>> }
+  /** 网络中断：结果未知，刷新列表；可用原快照手动再试（设计文档 L169）。 */
   | { kind: 'unknown' }
   /** 其余失败（限流、服务不可用等）按通用说明显示。 */
   | { kind: 'general' };
 
-export function confirmPaymentFailure(error: unknown): ConfirmPaymentFailure {
+function actionFailure<Field extends string>(
+  error: unknown,
+  stale: Partial<Record<string, string>>,
+  fields: readonly Field[],
+): ReceivableActionFailure<Field> {
   if (error instanceof ApiRequestError && error.status === 0)
     return { kind: 'unknown' };
   const problem = apiProblem(error);
-  if (problem.kind === 'conflict') {
-    switch (problem.code) {
-      case 'ALREADY_RECEIVED':
-      case 'SETTLEMENT_CONFLICT':
-      case 'RECEIVABLE_VOIDED':
-        return { kind: 'stale', message: staleMessages[problem.code] };
-      default:
-        return { kind: 'stale', message: problem.message };
-    }
-  }
+  if (problem.kind === 'conflict')
+    return { kind: 'stale', message: stale[problem.code] ?? problem.message };
   if (problem.kind === 'not-found')
     return { kind: 'stale', message: '该笔应收不存在或已被删除。' };
   if (problem.kind === 'validation') {
-    const fields = fieldIssues(problem);
-    const errors: ConfirmPaymentErrors = {};
-    const receivedOn = fields.get('receivedOn');
-    const note = fields.get('note');
-    if (receivedOn) errors.receivedOn = receivedOn;
-    if (note) errors.note = note;
+    const issues = fieldIssues(problem);
+    const errors: Partial<Record<Field, string>> = {};
+    for (const field of fields) {
+      const message = issues.get(field);
+      if (message) errors[field] = message;
+    }
     if (Object.keys(errors).length) return { kind: 'fields', errors };
   }
   return { kind: 'general' };
 }
+
+export type ConfirmPaymentFailure = ReceivableActionFailure<
+  keyof ConfirmPaymentDraft
+>;
+export const confirmPaymentFailure = (error: unknown): ConfirmPaymentFailure =>
+  actionFailure(error, confirmStale, ['receivedOn', 'note']);
+export const reversePaymentFailure = (error: unknown) =>
+  actionFailure(error, reverseStale, ['reason']);
+export const voidReceivableFailure = (error: unknown) =>
+  actionFailure(error, voidStale, ['reason']);
+
+/** 撤销确认与作废的原因：必填、去空白后非空、最多 2000 字（契约同规则）。 */
+export function validateReason(reason: string): string | undefined {
+  if (!reason.trim()) return '请填写原因';
+  if (reason.length > 2000) return '原因最多 2000 字';
+  return undefined;
+}
+
+/**
+ * 作废可选的冲正调账（G2）：同一租户、金额恰为赊账金额相反数（decimal.js 比较，-500.0000 等于 -500.00）、
+ * 时间严格晚于赊账。`ledger.tenantId` 是这批流水所属租户，不是该应收的租户时没有候选。
+ * 是否真能用于冲正（未被其他作废使用、之后没有反向调账抵消）仍由服务端判定。
+ */
+export function reversalCandidates(
+  receivable: AdminReceivable,
+  ledger: { tenantId: string; items: readonly AdminLedgerEntry[] },
+): AdminLedgerEntry[] {
+  if (ledger.tenantId !== receivable.tenant.id) return [];
+  const target = new Decimal(receivable.amount).negated();
+  const after = Date.parse(receivable.createdAt);
+  return ledger.items.filter(
+    (entry) =>
+      entry.kind === 'adjustment' &&
+      new Decimal(entry.amount).eq(target) &&
+      Date.parse(entry.occurredAt) > after,
+  );
+}
+
+/** 待收款页的三种视图（G1）：标题、合计标签与空状态文案。 */
+export const receivableViews = {
+  pending: {
+    label: '待收款',
+    empty: { title: '所有赊账均已收款', hint: '新的赊账充值会出现在这里' },
+  },
+  received: {
+    label: '已收款',
+    empty: { title: '还没有已收款的赊账', hint: '确认收款后会出现在这里' },
+  },
+  voided: {
+    label: '已作废',
+    empty: { title: '没有已作废的赊账', hint: '作废的赊账会出现在这里' },
+  },
+} as const satisfies Record<
+  AdminReceivableStatus,
+  { label: string; empty: { title: string; hint: string } }
+>;
 
 /**
  * 确认失败（409 或网络中断）后列表是否已与服务端核对。不比较时间戳：每次列表请求（含自动重试）
@@ -149,3 +217,58 @@ export function sequencedRequests() {
     },
   };
 }
+
+/** 作废对话框最多翻这么多条调账流水（每页 100），超过时说明未全部列出。 */
+export const adjustmentScanLimit = 1000;
+
+/** 该应收所属租户自赊账时起的调账流水（新到旧），用于挑选冲正候选。 */
+export function adjustmentsSince(receivable: AdminReceivable) {
+  const tenantId = receivable.tenant.id;
+  const pageSize = 100;
+  const query = {
+    kind: 'adjustment' as const,
+    from: receivable.createdAt,
+    pageSize,
+  };
+  return queryOptions({
+    queryKey: [
+      ...apiKey('adminTenantLedger', { params: { tenantId }, query }),
+      'all',
+    ],
+    queryFn: async () => {
+      const items: AdminLedgerEntry[] = [];
+      for (let page = 1; ; page += 1) {
+        const result = await send('adminTenantLedger', {
+          params: { tenantId },
+          query: { ...query, page },
+        });
+        items.push(...result.items);
+        const done =
+          result.items.length === 0 || items.length >= result.pagination.total;
+        if (done || items.length >= adjustmentScanLimit)
+          return { tenantId, items, truncated: !done };
+      }
+    },
+  });
+}
+
+/** 确认人、作废人的姓名（G10）：管理员很少，全部取回一次后缓存；账号变更会使其失效。 */
+export const adminNames = queryOptions({
+  queryKey: [...apiKey('adminAccounts'), 'names'],
+  staleTime: 5 * 60_000,
+  queryFn: async () => {
+    const names = new Map<string, string>();
+    for (let page = 1; page <= 10; page += 1) {
+      const result = await send('adminAccounts', {
+        query: { page, pageSize: 100 },
+      });
+      for (const account of result.items) names.set(account.id, account.name);
+      if (page * result.pagination.pageSize >= result.pagination.total) break;
+    }
+    return names;
+  },
+});
+
+/** 未找到（或尚未取回）的管理员显示「—」。 */
+export const adminName = (names: Map<string, string> | undefined, id: string) =>
+  names?.get(id) ?? '—';
