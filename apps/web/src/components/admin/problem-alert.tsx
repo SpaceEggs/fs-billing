@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 
 /**
  * 写操作失败的说明。登录过期与强制改密由全局处理，这里不显示；
- * 网络中断时结果未知，用 `networkMessage` 提示先核实再重试；数据过时的冲突提供“刷新”。
+ * 网络中断时结果未知，用 `networkMessage` 提示先核实再重试；结果未知与数据过时的冲突都提供“刷新”。
  */
 export function ProblemAlert({
   error,
@@ -23,10 +23,11 @@ export function ProblemAlert({
         className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
       >
         <CalloutIcon tone="err" />
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-1 flex-col gap-0.5">
           <span className="font-semibold">网络中断</span>
           <span>{networkMessage ?? '请检查网络后重试'}</span>
         </div>
+        <RefreshButton onRefresh={onRefresh} />
       </div>
     );
   const problem = apiProblem(error);
@@ -46,11 +47,15 @@ export function ProblemAlert({
         <span className="font-semibold">{notice.title}</span>
         {notice.body ? <span>{notice.body}</span> : null}
       </div>
-      {notice.refresh && onRefresh ? (
-        <Button variant="outline" size="sm" onClick={onRefresh}>
-          刷新
-        </Button>
-      ) : null}
+      {notice.refresh ? <RefreshButton onRefresh={onRefresh} /> : null}
     </div>
   );
+}
+
+function RefreshButton({ onRefresh }: { onRefresh: (() => void) | undefined }) {
+  return onRefresh ? (
+    <Button variant="outline" size="sm" onClick={onRefresh}>
+      刷新
+    </Button>
+  ) : null;
 }

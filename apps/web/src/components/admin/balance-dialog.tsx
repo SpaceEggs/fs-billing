@@ -6,6 +6,7 @@ import type {
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
+import { ApiRequestError } from '../../lib/api';
 import { apiProblem } from '../../lib/api-problem';
 import {
   beginBalanceAttempt,
@@ -282,9 +283,10 @@ function BalanceFlow({
       setStep({ name: 'done', result });
     } catch (error) {
       const problem = apiProblem(error);
-      // 服务端明确拒绝即未入账；网络中断、500/503 结果未知，保留幂等键供重试。
-      if (attempt && problem.kind !== 'unavailable')
-        resolveBalanceAttempt(attempt);
+      // 服务端明确拒绝即未入账；网络中断、500/503 结果未知，保留幂等键供重试，并刷新余额与流水核对。
+      if (problem.kind === 'unavailable')
+        void invalidateTenant(queryClient, tenant.id);
+      else if (attempt) resolveBalanceAttempt(attempt);
       if (problem.kind === 'validation') {
         setErrors(balanceFieldErrors(problem.issues));
         setStep({ name: 'form' });
@@ -462,7 +464,12 @@ function BalanceFlow({
             networkMessage={`无法确认是否已入账。再次点击「${confirmLabel}」会按同一笔重试，不会重复入账；如需修改内容，请先在余额流水中核实。`}
             onRefresh={() => {
               void invalidateTenant(queryClient, tenant.id);
-              onClose();
+              // 结果未知时留在确认步骤：核对后可按同一笔重试。
+              if (!(
+                submitError instanceof ApiRequestError &&
+                submitError.outcomeUnknown
+              ))
+                onClose();
             }}
           />
         ) : null}

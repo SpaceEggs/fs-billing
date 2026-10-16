@@ -311,4 +311,73 @@ describe('rates tab scheduled activation', () => {
     await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
     expect(fetchMock.mock.calls.length).toBe(after);
   });
+
+  it('keeps retrying the activation refetch after a failed attempt until it succeeds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => void vi.useRealTimers());
+    const start = Date.parse('2026-10-16T10:00:00.000Z');
+    vi.setSystemTime(start);
+    const effectiveFrom = start + 60_000;
+    const scheduledVersion = {
+      id: versionB,
+      effectiveFrom: new Date(effectiveFrom).toISOString(),
+      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+    };
+    let failing = false;
+    const fetchMock = vi.fn(() => {
+      if (failing)
+        return Promise.resolve(
+          json(503, {
+            error: {
+              code: 'SERVICE_UNAVAILABLE',
+              message: '服务暂不可用',
+              requestId: 'req-test',
+            },
+          }),
+        );
+      return Promise.resolve(
+        json(
+          200,
+          Date.now() < effectiveFrom
+            ? { ...rates(versionA, '0.045'), scheduled: [scheduledVersion] }
+            : { currency: 'CNY', current: scheduledVersion, scheduled: [] },
+        ),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <RatesTab tenant={tenant} />
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByRole('region', { name: '排定的新版本' }),
+    ).toBeVisible();
+
+    // 到点那次刷新失败：仍显示旧版本，但按 10 秒节奏继续重试，不需要切换焦点或手动刷新。
+    failing = true;
+    const before = fetchMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(60_000 + 1_000));
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBe(before + 1));
+    expect(screen.getByRole('button', { name: '导入 CSV' })).toBeDisabled();
+    await act(() => vi.advanceTimersByTimeAsync(9_000));
+    expect(fetchMock.mock.calls.length).toBe(before + 1);
+
+    failing = false;
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('region', { name: '排定的新版本' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText('0.0500')).toBeVisible();
+    expect(screen.getByRole('button', { name: '导入 CSV' })).toBeEnabled();
+
+    const after = fetchMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
+    expect(fetchMock.mock.calls.length).toBe(after);
+  });
 });

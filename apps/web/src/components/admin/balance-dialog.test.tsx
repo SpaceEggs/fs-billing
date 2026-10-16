@@ -1,9 +1,14 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
+import { apiQuery } from '../../lib/admin-api';
 import { clearBalanceAttempts } from '../../lib/balance-operation';
 import { BalanceDialog } from './balance-dialog';
 
@@ -61,24 +66,41 @@ const json = (status: number, body: unknown) =>
     headers: { 'content-type': 'application/json' },
   });
 
+/** 租户详情页上与余额相关的查询（GET 路径），用来核对是否刷新。 */
+const reads: string[] = [];
+
 function renderDialog(
   tenant: AdminTenantDetailResponse,
   reply: (init: RequestInit) => Promise<Response>,
 ) {
   const keys: string[] = [];
+  reads.length = 0;
   vi.stubGlobal(
     'fetch',
-    vi.fn((_path: string, init: RequestInit) => {
+    vi.fn((path: string, init: RequestInit) => {
       if (init.method === 'POST')
         keys.push(
           (JSON.parse(init.body as string) as { idempotencyKey: string })
             .idempotencyKey,
         );
+      else {
+        reads.push(path);
+        return Promise.resolve(json(503, unavailable));
+      }
       return reply(init);
     }),
   );
   function Harness() {
     const [open, setOpen] = useState(true);
+    useQuery(
+      apiQuery('adminTenantDetail', { params: { tenantId: tenant.id } }),
+    );
+    useQuery(
+      apiQuery('adminTenantLedger', {
+        params: { tenantId: tenant.id },
+        query: { page: 1 },
+      }),
+    );
     return (
       <>
         <button type="button" onClick={() => setOpen(true)}>
@@ -105,6 +127,14 @@ function renderDialog(
   );
   return keys;
 }
+
+const unavailable = {
+  error: {
+    code: 'SERVICE_UNAVAILABLE',
+    message: '服务暂不可用',
+    requestId: 'req-test',
+  },
+};
 
 const dialog = () => screen.getByRole('dialog', { name: '余额操作' });
 
@@ -237,7 +267,8 @@ describe('balance dialog', () => {
   it('a 200 whose body is lost keeps the key for the same amount at another scale', async () => {
     const user = userEvent.setup();
     let attempt = 0;
-    const keys = renderDialog(tenantFixture(), () => {
+    const tenant = tenantFixture();
+    const keys = renderDialog(tenant, () => {
       attempt += 1;
       return Promise.resolve(
         attempt === 1
@@ -252,10 +283,22 @@ describe('balance dialog', () => {
       );
     });
     await fillAdjustment('-20');
+    await vi.waitFor(() => expect(reads).toHaveLength(2));
+    reads.length = 0;
     await user.click(confirmButton());
-    expect(await within(dialog()).findByRole('alert')).toHaveTextContent(
-      '网络中断',
+    const alert = await within(dialog()).findByRole('alert');
+    expect(alert).toHaveTextContent('网络中断');
+    // 结果未知：自动刷新租户详情与流水核对，提示里也能再刷新，对话框留在确认步骤。
+    await vi.waitFor(() =>
+      expect(reads.map((path) => path.split('?')[0]).sort()).toEqual([
+        `/api/admin/tenants/${tenant.id}`,
+        `/api/admin/tenants/${tenant.id}/ledger`,
+      ]),
     );
+    reads.length = 0;
+    await user.click(within(alert).getByRole('button', { name: '刷新' }));
+    await vi.waitFor(() => expect(reads).toHaveLength(2));
+    expect(confirmButton()).toBeEnabled();
 
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: '打开余额操作' }));

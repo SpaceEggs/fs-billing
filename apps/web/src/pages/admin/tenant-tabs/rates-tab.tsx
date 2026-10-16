@@ -72,7 +72,8 @@ const maxTimeoutMs = 2 ** 31 - 1;
 
 /**
  * 页面一直停留时，排定版本到点生效不会触发任何请求；在最早的生效时刻刷新该租户的费率查询，
- * 当前版本、排定卡片和导入/编辑的禁用状态随之更新。`fetchedAt` 变化（每次刷新）后重新安排。
+ * 当前版本、排定卡片和导入/编辑的禁用状态随之更新。每次刷新完成（含失败）后重新安排，
+ * 仍有到点的排定版本时每 `activationRetryMs` 再取一次。
  */
 function useRefetchAtActivation(
   tenantId: string,
@@ -86,18 +87,27 @@ function useRefetchAtActivation(
     : null;
   useEffect(() => {
     if (next === null) return;
+    let active = true;
     const wait = next + activationMarginMs - Date.now();
     const timer = setTimeout(
       () => {
         if (Date.now() < next + activationMarginMs) setWake((n) => n + 1);
         else
-          void queryClient.invalidateQueries({
-            queryKey: apiKey('adminRates', { params: { tenantId } }),
-          });
+          // 刷新失败时 `fetchedAt` 不变，完成后无论成败都重新安排，否则停在旧版本上。
+          void queryClient
+            .invalidateQueries({
+              queryKey: apiKey('adminRates', { params: { tenantId } }),
+            })
+            .finally(() => {
+              if (active) setWake((n) => n + 1);
+            });
       },
       wait > 0 ? Math.min(wait, maxTimeoutMs) : activationRetryMs,
     );
-    return () => clearTimeout(timer);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [next, fetchedAt, wake, queryClient, tenantId]);
 }
 
