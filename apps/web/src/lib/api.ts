@@ -37,13 +37,25 @@ export class ApiRequestError extends Error {
   constructor(
     readonly status: number,
     readonly body: AdminApiError | null,
+    options?: ErrorOptions,
   ) {
-    super(body?.error.message ?? `API request failed with status ${status}`);
+    super(
+      body?.error.message ?? `API request failed with status ${status}`,
+      options,
+    );
     this.name = 'ApiRequestError';
   }
 
   get code() {
     return this.body?.error.code ?? null;
+  }
+
+  /**
+   * 不知道服务端是否已执行：请求没有得到响应（status 0），
+   * 或成功状态的响应体读不出、不符合契约（连接在读响应体时中断）。写操作须先刷新核实再提交。
+   */
+  get outcomeUnknown() {
+    return this.status === 0 || (this.status >= 200 && this.status < 300);
   }
 }
 
@@ -125,15 +137,23 @@ export async function callOperation(
   } catch {
     throw new ApiRequestError(0, null);
   }
-  const payload: unknown =
-    response.status === 204
-      ? undefined
-      : await response.json().catch(() => undefined);
   const schema = operation.responses[response.status];
   if (response.ok) {
     if (!schema) throw new ApiRequestError(response.status, null);
-    return schema.parse(payload);
+    let payload: unknown;
+    try {
+      payload = response.status === 204 ? undefined : await response.json();
+    } catch (cause) {
+      throw new ApiRequestError(response.status, null, { cause });
+    }
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success)
+      throw new ApiRequestError(response.status, null, {
+        cause: parsed.error,
+      });
+    return parsed.data;
   }
+  const payload: unknown = await response.json().catch(() => undefined);
   const error = adminApiErrorSchema.safeParse(payload);
   throw new ApiRequestError(response.status, error.success ? error.data : null);
 }

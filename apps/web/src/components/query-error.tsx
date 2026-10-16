@@ -65,3 +65,28 @@ export function QueryError({
     </div>
   );
 }
+
+/** 已有数据时刷新失败：数据照常显示，提示可能不是最新并提供重试；首次加载失败用 QueryError。 */
+export function RefreshError({
+  title,
+  query,
+}: {
+  title: string;
+  query: {
+    isError: boolean;
+    data: unknown;
+    error: unknown;
+    isFetching: boolean;
+    refetch: () => unknown;
+  };
+}) {
+  if (!query.isError || query.data === undefined) return null;
+  return (
+    <QueryError
+      title={title}
+      error={query.error}
+      retrying={query.isFetching}
+      onRetry={() => void query.refetch()}
+    />
+  );
+}

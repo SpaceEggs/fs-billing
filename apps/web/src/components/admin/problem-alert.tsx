@@ -16,7 +16,7 @@ export function ProblemAlert({
   networkMessage?: string;
   onRefresh?: () => void;
 }) {
-  if (error instanceof ApiRequestError && error.status === 0)
+  if (error instanceof ApiRequestError && error.outcomeUnknown)
     return (
       <div
         role="alert"

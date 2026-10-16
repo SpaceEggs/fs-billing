@@ -125,6 +125,27 @@ describe('password change gate', () => {
     expect(await screen.findByRole('heading', { name: '租户' })).toBeVisible();
   });
 
+  it('keeps neither the temporary nor the new password in the query client after failure or success', async () => {
+    const { handler } = gateApi();
+    const { location, queryClient } = renderApp(
+      '/admin/change-password',
+      handler,
+    );
+    await fill('wrong-temp', 'New-Pass-2026');
+    expect(await screen.findByText('当前密码不正确')).toBeVisible();
+    expect(cachedState(queryClient)).not.toContain('wrong-temp');
+    expect(cachedState(queryClient)).not.toContain('New-Pass-2026');
+
+    await userEvent.clear(screen.getByLabelText('当前密码'));
+    await userEvent.type(screen.getByLabelText('当前密码'), 'Temp-Pass-2026');
+    await userEvent.click(screen.getByRole('button', { name: '修改密码' }));
+    await waitFor(() => expect(location()).toBe('/admin'));
+    const state = cachedState(queryClient);
+    expect(state).not.toContain('Temp-Pass-2026');
+    expect(state).not.toContain('New-Pass-2026');
+    expect(state).not.toContain('wrong-temp');
+  });
+
   it('checks length and confirmation locally before calling the server', async () => {
     const { calls, handler } = gateApi();
     renderApp('/admin/change-password', handler);

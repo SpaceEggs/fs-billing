@@ -8,7 +8,7 @@ import {
 } from '@fs-billing/shared';
 import { DateTime, Money } from '../../../components/data-format';
 import { Pagination } from '../../../components/pagination';
-import { QueryError } from '../../../components/query-error';
+import { QueryError, RefreshError } from '../../../components/query-error';
 import { Select } from '../../../components/ui/select';
 import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
@@ -272,6 +272,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           </span>
         ) : null}
       </div>
+      <RefreshError title="余额流水刷新失败，列表可能不是最新" query={ledger} />
       {ledger.isError && !data ? (
         <QueryError
           title="余额流水加载失败"

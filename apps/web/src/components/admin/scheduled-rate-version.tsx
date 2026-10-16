@@ -14,17 +14,22 @@ import { RateChangesTable } from './rate-changes-table';
 
 /**
  * 排定的新版本（设计稿第二批 7b、CSV 导入原型）。变动由前端比较该版本与前一版本的整表得出，
- * `previous` 须是未经搜索过滤的完整表。变动直接列出（稿 7b、7c）。手机只看，不显示取消。
+ * `previous` 须是未经搜索过滤的完整表。变动直接列出（稿 7b、7c）。可导出该版本的 CSV（G11）。
+ * 手机只看，不显示导出和取消。
  */
 export function ScheduledRateVersion({
   version,
   previous,
   currency,
+  exporting,
+  onExport,
   onCancel,
 }: {
   version: AdminRateVersion;
   previous: AdminRateVersion;
   currency: Currency;
+  exporting: boolean;
+  onExport: () => void;
   onCancel: () => void;
 }) {
   const changes = diffRateTables(previous.entries, version.entries);
@@ -46,6 +51,15 @@ export function ScheduledRateVersion({
           {counts.deleted}
         </span>
         <span className="flex-1" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="hidden bg-background md:inline-flex"
+          disabled={exporting}
+          onClick={onExport}
+        >
+          导出 CSV
+        </Button>
         <Button
           variant="outline"
           size="sm"

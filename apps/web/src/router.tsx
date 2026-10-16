@@ -34,8 +34,10 @@ import { clearBalanceAttempts } from './lib/balance-operation';
 import { rememberReturnPath } from './lib/return-to';
 import {
   loadSession,
+  identityBlock,
   passwordGate,
   sessionQueryKey,
+  useIdentityBlock,
   usePasswordChangeRequired,
   type SessionState,
 } from './lib/session';
@@ -91,6 +93,7 @@ async function requireZone(
     });
   }
   if (state.status === 'active') {
+    identityBlock.clear();
     const own = zoneOfIdentity(state.session.identity);
     if (own !== zone) throw redirect({ to: zones[own].home });
     passwordGate.set(state.session.passwordChangeRequired);
@@ -215,7 +218,7 @@ function AdminLogin(): React.JSX.Element {
   return <LoginPage zone="admin" expired={reason === 'expired'} />;
 }
 
-/** 资料停用或身份不可用时，区域内所有页面都显示停用页。 */
+/** 资料停用或身份不可用（进入区域时或页面内请求得知）时，区域内所有页面都显示停用页。 */
 function ZoneGuard({
   zone,
   session,
@@ -223,11 +226,9 @@ function ZoneGuard({
   zone: Zone;
   session: ZoneSession;
 }): React.JSX.Element {
-  return session.status === 'blocked' ? (
-    <BlockedPage zone={zone} code={session.code} />
-  ) : (
-    <Outlet />
-  );
+  const blocked =
+    useIdentityBlock() ?? (session.status === 'blocked' ? session.code : null);
+  return blocked ? <BlockedPage zone={zone} code={blocked} /> : <Outlet />;
 }
 
 function PortalZone(): React.JSX.Element {

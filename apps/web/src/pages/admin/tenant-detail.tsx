@@ -24,7 +24,7 @@ import {
 } from '../../components/admin/tenant-status-dialog';
 import { TenantStatus } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
-import { QueryError } from '../../components/query-error';
+import { QueryError, RefreshError } from '../../components/query-error';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { ModalDialog } from '../../components/ui/dialog';
 import { apiQuery } from '../../lib/admin-api';
@@ -363,6 +363,10 @@ function TenantDetail({
       >
         {tenant ? (
           <>
+            <RefreshError
+              title="租户详情刷新失败，余额与状态可能不是最新"
+              query={detail}
+            />
             <MobileSummary tenant={tenant} />
             <div className="hidden flex-wrap gap-3.5 text-[13px] text-muted-foreground md:flex">
               <span className="font-mono text-foreground">{tenant.code}</span>

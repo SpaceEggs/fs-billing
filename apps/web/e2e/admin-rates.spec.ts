@@ -277,6 +277,36 @@ test('exports the current version as CSV', async ({ page }) => {
   expect(exported?.content).toMatchObject({ rateVersionId: current.id });
 });
 
+test('exports a scheduled version as CSV from its card (G11)', async ({
+  page,
+}) => {
+  const tenant = await createTenant(page, { rates });
+  await scheduleEdit(
+    page,
+    tenant.id,
+    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    beijingSlot(2, '09:00').iso,
+  );
+  await openRates(page, tenant.id);
+  const { scheduled } = await readRates(page, tenant.id);
+  const version = scheduled[0]!;
+  const download = page.waitForEvent('download');
+  await page
+    .getByRole('region', { name: '排定的新版本' })
+    .getByRole('button', { name: '导出 CSV' })
+    .click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(`${tenant.code}-${version.id}.csv`);
+  const lines = (await readFile(await file.path(), 'utf8')).split('\n');
+  expect(lines[0]).toBe('prefix,country,rate');
+  expect(lines).toEqual(
+    expect.arrayContaining(['86,中国,0.0500', '447,英国手机,0.0480']),
+  );
+  const exported = (await operationLogs(tenant.id)).at(-1);
+  expect(exported?.action).toBe('rate_export');
+  expect(exported?.content).toMatchObject({ rateVersionId: version.id });
+});
+
 test('shows every CSV error line', async ({ page }) => {
   const tenant = await createTenant(page, { rates });
   const before = await readRates(page, tenant.id);

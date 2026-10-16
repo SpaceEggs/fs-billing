@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
 import { beijingMinute } from '../../../lib/rates';
 import { RatesTab } from './rates-tab';
@@ -176,5 +176,139 @@ describe('rates tab edit dialog', () => {
     expect(await screen.findByText(/^已排定：86 中国/)).toBeVisible();
     expect(screen.getByRole('button', { name: '编辑 86 中国' })).toBeDisabled();
     expect(screen.getByRole('region', { name: '费率表' })).toHaveFocus();
+  });
+});
+
+describe('rates tab export', () => {
+  it('a scheduled version exports its own CSV (G11)', async () => {
+    const scheduledVersion = {
+      id: versionB,
+      effectiveFrom: '2099-01-01T00:00:00.000Z',
+      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+    };
+    const exports: unknown[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((path: string, init: RequestInit) => {
+        if (init.method === 'POST' && path.endsWith('/rates/export')) {
+          const body = JSON.parse(init.body as string) as { versionId: string };
+          exports.push(body);
+          const rate = body.versionId === versionB ? '0.0500' : '0.0450';
+          return Promise.resolve(
+            json(200, {
+              auditId: '00000000-0000-4000-8000-00000000b301',
+              filename: `ABC001-${body.versionId === versionB ? 'scheduled' : 'current'}.csv`,
+              encoding: 'UTF-8',
+              contentType: 'text/csv',
+              csv: `prefix,country,rate\n86,中国,${rate}\n`,
+            }),
+          );
+        }
+        return Promise.resolve(
+          json(200, {
+            ...rates(versionA, '0.045'),
+            scheduled: [scheduledVersion],
+          }),
+        );
+      }),
+    );
+    const blobs: Blob[] = [];
+    vi.stubGlobal('URL', {
+      createObjectURL: (blob: Blob) => {
+        blobs.push(blob);
+        return 'blob:rates';
+      },
+      revokeObjectURL: () => {},
+    });
+    onTestFinished(() => void vi.restoreAllMocks());
+    const downloads: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloads.push(this.download);
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <RatesTab tenant={tenant} />
+      </QueryClientProvider>,
+    );
+
+    const scheduled = await screen.findByRole('region', {
+      name: '排定的新版本',
+    });
+    await userEvent.click(
+      within(scheduled).getByRole('button', { name: '导出 CSV' }),
+    );
+    await waitFor(() => expect(downloads).toEqual(['ABC001-scheduled.csv']));
+    expect(exports).toEqual([{ versionId: versionB }]);
+    expect(await blobs[0]!.text()).toBe(
+      'prefix,country,rate\n86,中国,0.0500\n',
+    );
+  });
+});
+
+describe('rates tab scheduled activation', () => {
+  it('refetches when a scheduled version takes effect while the page stays open', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => void vi.useRealTimers());
+    const start = Date.parse('2026-10-16T10:00:00.000Z');
+    vi.setSystemTime(start);
+    const effectiveFrom = start + 5 * 60_000;
+    const scheduledVersion = {
+      id: versionB,
+      effectiveFrom: new Date(effectiveFrom).toISOString(),
+      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+    };
+    // 服务端按当前时间决定哪个版本生效。
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        json(
+          200,
+          Date.now() < effectiveFrom
+            ? { ...rates(versionA, '0.045'), scheduled: [scheduledVersion] }
+            : {
+                currency: 'CNY',
+                current: scheduledVersion,
+                scheduled: [],
+              },
+        ),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <RatesTab tenant={tenant} />
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByRole('region', { name: '排定的新版本' }),
+    ).toBeVisible();
+    expect(screen.getAllByText('0.0450').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: '导入 CSV' })).toBeDisabled();
+
+    const before = fetchMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(5 * 60_000 - 5_000));
+    expect(fetchMock.mock.calls.length).toBe(before);
+
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('region', { name: '排定的新版本' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryAllByText('0.0450')).toEqual([]);
+    expect(screen.getByText('0.0500')).toBeVisible();
+    expect(screen.getByRole('button', { name: '导入 CSV' })).toBeEnabled();
+
+    // 生效后没有排定版本，不再安排刷新。
+    const after = fetchMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
+    expect(fetchMock.mock.calls.length).toBe(after);
   });
 });

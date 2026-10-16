@@ -1,5 +1,9 @@
-import { useDeferredValue, useId, useRef, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useDeferredValue, useEffect, useId, useRef, useState } from 'react';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import type {
   AdminRateEntry,
   AdminRateVersion,
@@ -27,9 +31,9 @@ import {
 } from '../../../components/admin/rate-copy-dialog';
 import { DateTime, Rate } from '../../../components/data-format';
 import { Pagination, pageSlice } from '../../../components/pagination';
-import { QueryError } from '../../../components/query-error';
+import { QueryError, RefreshError } from '../../../components/query-error';
 import { Button } from '../../../components/ui/button';
-import { apiQuery, useApiMutation } from '../../../lib/admin-api';
+import { apiKey, apiQuery, useApiMutation } from '../../../lib/admin-api';
 import { downloadText } from '../../../lib/download';
 import { formatDateTime, formatRate } from '../../../lib/format';
 import { rateChangePercent, scheduledRowHints } from '../../../lib/rates';
@@ -57,6 +61,44 @@ function editNotice(
     changed: true,
     text: `${name} 费率已改为 ${rate}${percent ? `（${percent.text}）` : ''}，已记入操作日志`,
   };
+}
+
+/** 生效时刻之后再取，留出与服务端时钟的偏差。 */
+const activationMarginMs = 1000;
+/** 到点后服务端仍列为排定（时钟偏差）时，隔这么久再取一次，直到它成为当前版本。 */
+const activationRetryMs = 10_000;
+/** setTimeout 的上限约 24.8 天，更远的生效时间分段等待。 */
+const maxTimeoutMs = 2 ** 31 - 1;
+
+/**
+ * 页面一直停留时，排定版本到点生效不会触发任何请求；在最早的生效时刻刷新该租户的费率查询，
+ * 当前版本、排定卡片和导入/编辑的禁用状态随之更新。`fetchedAt` 变化（每次刷新）后重新安排。
+ */
+function useRefetchAtActivation(
+  tenantId: string,
+  scheduled: readonly AdminRateVersion[] | undefined,
+  fetchedAt: number,
+) {
+  const queryClient = useQueryClient();
+  const [wake, setWake] = useState(0);
+  const next = scheduled?.length
+    ? Math.min(...scheduled.map((version) => Date.parse(version.effectiveFrom)))
+    : null;
+  useEffect(() => {
+    if (next === null) return;
+    const wait = next + activationMarginMs - Date.now();
+    const timer = setTimeout(
+      () => {
+        if (Date.now() < next + activationMarginMs) setWake((n) => n + 1);
+        else
+          void queryClient.invalidateQueries({
+            queryKey: apiKey('adminRates', { params: { tenantId } }),
+          });
+      },
+      wait > 0 ? Math.min(wait, maxTimeoutMs) : activationRetryMs,
+    );
+    return () => clearTimeout(timer);
+  }, [next, fetchedAt, wake, queryClient, tenantId]);
 }
 
 /** 只供脚本聚焦、不进 Tab 顺序（写在函数外：money lint 把 RatesTab 里的负数当作费率运算）。 */
@@ -97,6 +139,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const full = useQuery(
     apiQuery('adminRates', { params: { tenantId }, query: {} }),
   );
+  useRefetchAtActivation(tenantId, full.data?.scheduled, full.dataUpdatedAt);
   const exportCsv = useApiMutation('adminRateExport');
   const data = rates.data;
   if (rates.isError && !data)
@@ -167,12 +210,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     });
   }
 
-  async function download() {
+  async function download(versionId: string) {
     setNotice(null);
     try {
       const result = await exportCsv.mutateAsync({
         params: { tenantId },
-        body: { versionId: currentId },
+        body: { versionId },
       });
       downloadText(result.filename, result.csv, 'text/csv;charset=utf-8');
     } catch {
@@ -187,12 +230,19 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       aria-label="费率表"
       className="flex flex-col gap-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >
+      {/* 无搜索时两个查询同一缓存，只提示一次。 */}
+      <RefreshError
+        title="费率表刷新失败，显示的可能不是最新"
+        query={rates.isError ? rates : full}
+      />
       {versions.slice(1).map((version, index) => (
         <ScheduledRateVersion
           key={version.id}
           version={version}
           previous={versions[index]!}
           currency={data.currency}
+          exporting={exportCsv.isPending}
+          onExport={() => void download(version.id)}
           onCancel={() => {
             setNotice(null);
             setCancelling(version);
@@ -262,7 +312,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           variant="outline"
           className="hidden md:inline-flex"
           disabled={exportCsv.isPending}
-          onClick={() => void download()}
+          onClick={() => void download(currentId)}
         >
           导出 CSV
         </Button>

@@ -104,6 +104,44 @@ describe('mobile tenant detail header', () => {
   });
 });
 
+describe('mobile page headings', () => {
+  /** jsdom 不加载 Tailwind：只模拟手机宽度下生效的显示规则（md: 不生效，hidden 与 sr-only 生效）。 */
+  function mobileStyles() {
+    const style = document.createElement('style');
+    style.textContent = `.hidden { display: none; }
+      .max-md\\:sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }`;
+    document.head.append(style);
+    return () => style.remove();
+  }
+
+  it.each([
+    [
+      'tenant detail (title row with actions)',
+      `/admin/tenants/${tenantId}`,
+      '深圳市某某科技有限公司',
+    ],
+    ['tenant list (title row with meta)', '/admin/tenants', '租户'],
+    ['tenant create (plain title)', '/admin/tenants/new', '新建租户'],
+  ])('%s keeps a page h1 for screen readers', async (_name, path, title) => {
+    const unstyle = mobileStyles();
+    try {
+      const api = adminApi({
+        [`GET ${detailPath}`]: () => ({ status: 200, body: detail }),
+        [`GET ${detailPath}/overview`]: () => ({ status: 200, body: overview }),
+        'GET /api/admin/tenants': () => ({ status: 200, body: page([tenant]) }),
+      });
+      renderApp(path, api.handler);
+      expect(
+        await screen.findByRole('heading', { level: 1, name: title }),
+      ).toBeInTheDocument();
+      // 电脑版操作按钮在手机上仍不可见、不可聚焦。
+      expect(screen.queryByRole('link', { name: '编辑' })).toBeNull();
+    } finally {
+      unstyle();
+    }
+  });
+});
+
 describe('mobile list top bar and filter sheet', () => {
   it('tenant list puts ＋ in the top bar and filters status and currency from the sheet', async () => {
     const { calls, handler } = adminApi({

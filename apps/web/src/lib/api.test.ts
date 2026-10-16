@@ -117,4 +117,43 @@ describe('callApi', () => {
     expect(url).toBe(`/api/admin/tenants/${tenantId}/enable`);
     expect(init?.body).toBeUndefined();
   });
+
+  it('a success whose body cannot be read is an unknown outcome, not a schema error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start: (controller) =>
+                controller.error(new TypeError('network error')),
+            }),
+            { status: 200 },
+          ),
+        ),
+      ),
+    );
+    const error = await callApi('adminTenantEnable', {
+      params: { tenantId },
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiRequestError);
+    expect(error).toMatchObject({ status: 200, outcomeUnknown: true });
+  });
+
+  it('a success that does not match the contract is an unknown outcome', async () => {
+    stubFetch(200, { unexpected: true });
+    await expect(
+      callApi('adminTenantEnable', { params: { tenantId } }),
+    ).rejects.toMatchObject({ status: 200, outcomeUnknown: true });
+  });
+
+  it('an error response is not a lost response', async () => {
+    stubFetch(503, {
+      error: { code: 'SERVICE_UNAVAILABLE', message: '不可用', requestId: 'r' },
+    });
+    await expect(callApi('adminTenants')).rejects.toMatchObject({
+      status: 503,
+      outcomeUnknown: false,
+    });
+  });
 });

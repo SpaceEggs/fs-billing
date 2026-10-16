@@ -337,12 +337,16 @@ async function openMobileRates(page: Page, seed: Seed) {
   await expect(page.getByText('请在电脑上操作')).toBeVisible();
 }
 
+/** 稿中确实没有对应画框：写明原因，index.json 记为 no matching frame，不算失败。 */
+type AbsentFrame = { absent: string };
+type FrameRef = DesignFrame | AbsentFrame;
+
 type Shot = {
   name: string;
-  /** 电脑浅色与深色对照的画框；null 表示稿中找不到对应画框。 */
-  desktop: DesignFrame | null;
+  /** 电脑浅色与深色对照的画框。声明了画框就必须截到，截不到即失败。 */
+  desktop: FrameRef;
   /** 手机对照的画框；省略时退回电脑浅色画框。 */
-  mobile?: DesignFrame | null;
+  mobile?: FrameRef;
   viewport: { width: number; height: number };
   /** 截整页（对话框只截视口）。 */
   fullPage: boolean;
@@ -780,13 +784,15 @@ test('matches seeded admin pages in light dark and mobile', async ({
       appPage.setDefaultTimeout(20_000);
       for (const shot of shots) {
         if (!(shot.variants ?? variants).includes(variant)) continue;
-        const mobileFrame =
-          shot.mobile === undefined ? shot.desktop : shot.mobile;
-        const designFrame = variant === 'mobile' ? mobileFrame : shot.desktop;
+        const mobileFrame = shot.mobile ?? shot.desktop;
+        const frameRef = variant === 'mobile' ? mobileFrame : shot.desktop;
+        const designFrame = 'absent' in frameRef ? null : frameRef;
         const designTheme = variant === 'dark' ? 'dark' : 'light';
         const notes = [shot.note];
-        if (variant === 'mobile' && shot.mobile === undefined && shot.desktop)
+        if (variant === 'mobile' && shot.mobile === undefined && designFrame)
           notes.push('稿中没有手机画框，对照电脑浅色画框。');
+        if ('absent' in frameRef)
+          notes.push(`no matching frame: ${frameRef.absent}`);
         const entry: IndexEntry = {
           page: shot.name,
           variant,
@@ -818,12 +824,7 @@ test('matches seeded admin pages in light dark and mobile', async ({
         } finally {
           await forced?.context.close();
         }
-        if (!designFrame) {
-          entry.note = [entry.note, 'no matching frame']
-            .filter(Boolean)
-            .join(' ');
-          continue;
-        }
+        if (!designFrame) continue;
         const design = join(outDir, `design-${name}.png`);
         try {
           await captureDesignFrame(
@@ -835,12 +836,9 @@ test('matches seeded admin pages in light dark and mobile', async ({
             15_000,
           );
           entry.files.design = design;
-        } catch {
-          entry.designFrame = null;
-          entry.designTheme = null;
-          entry.note = [entry.note, 'no matching frame']
-            .filter(Boolean)
-            .join(' ');
+        } catch (error) {
+          const message = `design ${designFrame.section} / ${designFrame.label}: ${String(error).replace(ansiColor, '')}`;
+          entry.error = entry.error ? `${entry.error}; ${message}` : message;
         }
         if (entry.files.design && entry.files.app) {
           const compare = join(outDir, `compare-${name}.png`);

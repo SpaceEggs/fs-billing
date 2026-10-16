@@ -1,12 +1,12 @@
 import { useId, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
-import type { ChangePasswordRequest } from '@fs-billing/shared';
 import { BrandRow } from '../components/brand';
 import { SessionExpiredDialog } from '../components/session-expired-dialog';
 import { Alert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
-import { ApiRequestError, callApi } from '../lib/api';
+import { useCredentialMutation } from '../lib/admin-api';
+import { ApiRequestError } from '../lib/api';
 import { formatDuration } from '../lib/format';
 import { resolveReturnPath, takeReturnPath } from '../lib/return-to';
 import {
@@ -142,20 +142,27 @@ export function ChangePasswordPage({
   });
   const [problem, setProblem] = useState<Problem | null>(null);
 
-  const change = useMutation({
-    mutationFn: (request: ChangePasswordRequest) =>
-      callApi('changePassword', { body: request }),
-    onMutate: () => setProblem(null),
-    onError: (error) => setProblem(serverProblem(error)),
-    onSuccess: (session) => {
-      passwordGate.clear();
-      const state: SessionState = { status: 'active', session };
-      queryClient.setQueryData(sessionQueryKey, state);
-      router.history.replace(
-        resolveReturnPath(takeReturnPath(), session.identity, router),
-      );
-    },
-  });
+  // 当前密码（可能是临时密码）与新密码不进 MutationCache。
+  const change = useCredentialMutation('changePassword');
+  async function submit(currentPassword: string, newPassword: string) {
+    setProblem(null);
+    let session;
+    try {
+      session = await change.submit({
+        body: { currentPassword, newPassword },
+      });
+    } catch (error) {
+      setProblem(serverProblem(error));
+      return;
+    }
+    if (!session) return;
+    passwordGate.clear();
+    const state: SessionState = { status: 'active', session };
+    queryClient.setQueryData(sessionQueryKey, state);
+    router.history.replace(
+      resolveReturnPath(takeReturnPath(), session.identity, router),
+    );
+  }
 
   const errors = problem?.kind === 'fields' ? problem.errors : {};
   const set = (field: Field) => (value: string) =>
@@ -179,10 +186,7 @@ export function ChangePasswordPage({
               setProblem({ kind: 'fields', errors: local });
               return;
             }
-            change.mutate({
-              currentPassword: values.current,
-              newPassword: values.next,
-            });
+            void submit(values.current, values.next);
           }}
           className="flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]"
         >

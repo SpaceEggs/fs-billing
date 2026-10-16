@@ -122,6 +122,27 @@ describe('balance requests', () => {
     expect(await fingerprint('t2', draft('gift', '1000', 'a'))).not.toBe(base);
   });
 
+  it('fingerprints equivalent amount scales alike without rounding', async () => {
+    const base = await draftFingerprint('t1', draft('topup', '500', 'a'));
+    for (const amount of ['500.0', '500.00', '0500.00', '+500', '500.'])
+      expect(await draftFingerprint('t1', draft('topup', amount, 'a'))).toBe(
+        base,
+      );
+    expect(
+      await draftFingerprint('t1', draft('topup', '500.01', 'a')),
+    ).not.toBe(base);
+    const adjustment = await draftFingerprint(
+      't1',
+      draft('adjustment', '-0.1235', 'r'),
+    );
+    expect(
+      await draftFingerprint('t1', draft('adjustment', '-0.12350', 'r')),
+    ).toBe(adjustment);
+    expect(
+      await draftFingerprint('t1', draft('adjustment', '-0.1234', 'r')),
+    ).not.toBe(adjustment);
+  });
+
   it('maps server field issues to the dialog fields', () => {
     expect(
       balanceFieldErrors([
@@ -171,6 +192,16 @@ describe('balance attempts', () => {
     expect((await begin('admin-1', 't1', a)).key).toBe(first.key);
     resolveBalanceAttempt(first);
     expect((await begin('admin-1', 't1', a)).key).not.toBe(first.key);
+  });
+
+  it('retries an unknown recharge with the same key after re-entering 500.00', async () => {
+    const first = await begin('admin-1', 't1', draft('topup', '500', '到账'));
+    const retry = await begin(
+      'admin-1',
+      't1',
+      draft('topup', '500.00', '到账'),
+    );
+    expect(retry.key).toBe(first.key);
   });
 
   it('keeps an unknown attempt when a different one is rejected', async () => {

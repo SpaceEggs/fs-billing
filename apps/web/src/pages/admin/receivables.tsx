@@ -29,7 +29,7 @@ import {
 import { Segmented } from '../../components/ui/segmented';
 import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
-import { QueryError } from '../../components/query-error';
+import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { Button } from '../../components/ui/button';
 import { apiKey, apiQuery, invalidateTenant, send } from '../../lib/admin-api';
@@ -803,14 +803,10 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
               {formatMoney(receivableMoney(pendingRefresh))}。
             </p>
           ) : null}
-          {receivables.isError && data ? (
-            <QueryError
-              title={`${view.label}刷新失败，列表可能不是最新`}
-              error={receivables.error}
-              retrying={receivables.isFetching}
-              onRetry={() => void receivables.refetch()}
-            />
-          ) : null}
+          <RefreshError
+            title={`${view.label}刷新失败，列表可能不是最新`}
+            query={receivables}
+          />
           {receivables.isError && !data ? (
             <QueryError
               title={`${view.label}加载失败`}

@@ -187,7 +187,7 @@ export function rateEditFailure(error: unknown): {
  * 或已被他人取消、替换。都需要刷新后再看。
  */
 export function cancelFailureMessage(error: unknown) {
-  if (error instanceof ApiRequestError && error.status === 0) return null;
+  if (error instanceof ApiRequestError && error.outcomeUnknown) return null;
   const problem = apiProblem(error);
   if (problem.kind === 'conflict' && problem.code === 'RATE_VERSION_CONFLICT')
     return '该版本已生效或即将生效，不能取消；也可能费率表已被修改。请刷新后查看。';

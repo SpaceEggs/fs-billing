@@ -169,7 +169,7 @@ export function AppShell({
 
 /**
  * 电脑版页面标题行：标题、旁注（如“共 10 个”，与标题基线对齐）或状态标签（与标题垂直居中）
- * 与右侧操作；手机版标题与操作在顶栏，不显示这一行。
+ * 与右侧操作；手机版标题与操作在顶栏，这一行只保留给读屏的 h1（按标题导航）。
  */
 export function PageBody({
   title,
@@ -187,20 +187,24 @@ export function PageBody({
   return (
     <div className="flex flex-col gap-5 p-4 md:p-7">
       {meta || badge || actions ? (
-        <div className="hidden items-center justify-between gap-3 md:flex">
+        <div className="items-center justify-between gap-3 max-md:sr-only md:flex">
           <div className="flex items-baseline gap-2.5">
             <h1 className="m-0 text-2xl font-semibold tracking-[-0.01em]">
               {title}
             </h1>
             {meta ? (
-              <span className="text-[13px] text-muted-foreground">{meta}</span>
+              <span className="hidden text-[13px] text-muted-foreground md:inline">
+                {meta}
+              </span>
             ) : null}
-            {badge ? <span className="flex self-center">{badge}</span> : null}
+            {badge ? (
+              <span className="hidden self-center md:flex">{badge}</span>
+            ) : null}
           </div>
-          {actions}
+          {actions ? <div className="hidden md:contents">{actions}</div> : null}
         </div>
       ) : (
-        <h1 className="m-0 hidden text-2xl font-semibold md:block">{title}</h1>
+        <h1 className="m-0 text-2xl font-semibold max-md:sr-only">{title}</h1>
       )}
       {children}
     </div>

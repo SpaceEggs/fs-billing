@@ -110,6 +110,15 @@ describe('confirmPaymentFailure', () => {
     expect(confirmPaymentFailure(new ApiRequestError(0, null))).toEqual({
       kind: 'unknown',
     });
+    // 200 但响应体读不出：已执行与否未知，与网络中断同样处理。
+    for (const failure of [
+      confirmPaymentFailure,
+      reversePaymentFailure,
+      voidReceivableFailure,
+    ])
+      expect(failure(new ApiRequestError(200, null))).toEqual({
+        kind: 'unknown',
+      });
     expect(confirmPaymentFailure(conflict('SERVICE_UNAVAILABLE', 503))).toEqual(
       { kind: 'general' },
     );

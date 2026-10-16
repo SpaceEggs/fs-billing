@@ -76,10 +76,11 @@ type CredentialOperation =
   | 'adminAccountCreate'
   | 'adminPortalAccountCreate'
   | 'resetAdminPassword'
-  | 'resetPortalAccountPassword';
+  | 'resetPortalAccountPassword'
+  | 'changePassword';
 
 /**
- * 请求或响应带密码的写操作（创建账号、重置密码）。请求与响应只经由 ref 和 `submit` 的返回值传递：
+ * 请求或响应带密码的写操作（创建账号、重置密码、修改密码）。请求与响应只经由 ref 和 `submit` 的返回值传递：
  * mutation 的变量只是请求序号、结果为空，MutationCache 里不留凭据。失败仍经 MutationCache 触发登录过期与改密处理。
  * 再次提交、`reset` 或组件卸载后，迟到的响应返回 null。
  */

@@ -274,7 +274,7 @@ function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
 }
 
 function PortalFailure({ error }: { error: unknown }) {
-  if (error instanceof ApiRequestError && error.status === 0)
+  if (error instanceof ApiRequestError && error.outcomeUnknown)
     return (
       <span className="text-[13px]">
         网络中断，无法确认是否已开通。请先在租户详情「门户账号」标签页查看，不要重复开通。
@@ -542,7 +542,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
   }
 
   function createFailed(error: unknown, code: string) {
-    if (error instanceof ApiRequestError && error.status === 0) {
+    if (error instanceof ApiRequestError && error.outcomeUnknown) {
       showErrors(
         {},
         `网络中断，无法确认租户是否已创建。请先在租户列表搜索编码 ${code.toUpperCase()} 确认，不要直接重复提交。`,

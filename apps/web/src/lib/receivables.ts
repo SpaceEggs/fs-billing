@@ -90,7 +90,7 @@ function actionFailure<Field extends string>(
   stale: Partial<Record<string, string>>,
   fields: readonly Field[],
 ): ReceivableActionFailure<Field> {
-  if (error instanceof ApiRequestError && error.status === 0)
+  if (error instanceof ApiRequestError && error.outcomeUnknown)
     return { kind: 'unknown' };
   const problem = apiProblem(error);
   if (problem.kind === 'conflict')

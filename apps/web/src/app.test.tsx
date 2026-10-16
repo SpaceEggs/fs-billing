@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sessionExpiry } from './lib/session';
-import { apiError, customerSession, renderApp } from './test/app';
+import { adminSession, apiError, customerSession, renderApp } from './test/app';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -288,6 +288,26 @@ describe('home load errors', () => {
     ).toHaveTextContent('-¥35.20');
     expect(screen.queryByRole('alert')).toBeNull();
   }, 10_000);
+
+  it('the admin overview links to the pages available now', async () => {
+    renderApp('/admin', (path) => {
+      if (path === '/api/auth/session')
+        return { status: 200, body: adminSession };
+      if (path === '/api/admin/context')
+        return { status: 200, body: { identity: adminSession.identity } };
+      throw new Error(`unexpected ${path}`);
+    });
+    const main = await screen.findByRole('main');
+    await waitFor(() =>
+      expect(main).toHaveTextContent(
+        '欢迎，王敏。可在租户、待收款和管理员中开展工作；概览指标与需要关注的事项将在后续版本开放。',
+      ),
+    );
+    expect(within(main).getByRole('link', { name: '待收款' })).toHaveAttribute(
+      'href',
+      '/admin/receivables',
+    );
+  });
 
   it('a network failure leaves the admin overview with a retry, not a blank page', async () => {
     let contextCalls = 0;

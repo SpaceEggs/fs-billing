@@ -144,13 +144,14 @@ export function balanceRequest(
 
 /**
  * 同一租户的同一笔草稿（类型、金额、备注都不变）得到同一指纹；内容一变即不同。
+ * 金额按数值规范化（500、500.0、500.00 同一指纹），不舍入。草稿须已通过校验。
  * 指纹是 SHA-256 摘要，内存里不留金额和备注原文。
  */
 export async function draftFingerprint(tenantId: string, draft: BalanceDraft) {
   const canonical = JSON.stringify([
     tenantId,
     draft.kind,
-    normalizeAmountInput(draft.amount),
+    new Decimal(normalizeAmountInput(draft.amount)).toFixed(),
     draft.note.trim(),
   ]);
   const digest = await crypto.subtle.digest(

@@ -24,7 +24,9 @@ export async function loadSession(): Promise<SessionState> {
   }
 }
 
-export function blockedCode(error: unknown) {
+export type BlockedCode = Extract<SessionState, { status: 'blocked' }>['code'];
+
+export function blockedCode(error: unknown): BlockedCode | null {
   if (!(error instanceof ApiRequestError)) return null;
   return error.code === 'ACCOUNT_DISABLED' ||
     error.code === 'IDENTITY_UNAVAILABLE'
@@ -67,6 +69,33 @@ export const sessionExpiry = createFlag();
  * 根组件据此跳转到所在区域的改密页，改密成功后清除。
  */
 export const passwordGate = createFlag();
+
+/**
+ * 页面内任一请求返回 ACCOUNT_DISABLED / IDENTITY_UNAVAILABLE 时记下原因；区域布局据此改显示停用页，
+ * 不再显示缓存的页面和操作。退出登录或下一次确认会话有效时清除。
+ */
+export const identityBlock = (() => {
+  let value: BlockedCode | null = null;
+  const listeners = new Set<() => void>();
+  const set = (next: BlockedCode | null) => {
+    if (value === next) return;
+    value = next;
+    listeners.forEach((listener) => listener());
+  };
+  return {
+    mark: (code: BlockedCode) => set(code),
+    clear: () => set(null),
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    get: () => value,
+  };
+})();
+
+export function useIdentityBlock() {
+  return useSyncExternalStore(identityBlock.subscribe, identityBlock.get);
+}
 
 export function useSessionExpired() {
   return useSyncExternalStore(sessionExpiry.subscribe, sessionExpiry.get);

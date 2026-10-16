@@ -234,6 +234,38 @@ describe('balance dialog', () => {
     expect(keys[2]).not.toBe(keys[0]);
   });
 
+  it('a 200 whose body is lost keeps the key for the same amount at another scale', async () => {
+    const user = userEvent.setup();
+    let attempt = 0;
+    const keys = renderDialog(tenantFixture(), () => {
+      attempt += 1;
+      return Promise.resolve(
+        attempt === 1
+          ? new Response(
+              new ReadableStream({
+                start: (controller) =>
+                  controller.error(new TypeError('network error')),
+              }),
+              { status: 200 },
+            )
+          : json(200, success('-20', '-55.2')),
+      );
+    });
+    await fillAdjustment('-20');
+    await user.click(confirmButton());
+    expect(await within(dialog()).findByRole('alert')).toHaveTextContent(
+      '网络中断',
+    );
+
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: '打开余额操作' }));
+    await fillAdjustment('-20.0000');
+    await user.click(confirmButton());
+    await within(dialog()).findByRole('status');
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
+  });
+
   it('a definitive rejection does not keep the key for the same content', async () => {
     const user = userEvent.setup();
     const keys = renderDialog(tenantFixture(), () =>

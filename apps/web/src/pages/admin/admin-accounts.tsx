@@ -30,7 +30,7 @@ import {
 } from '../../components/app-shell';
 import { DateTime } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
-import { QueryError } from '../../components/query-error';
+import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { Button } from '../../components/ui/button';
 import { ModalDialog } from '../../components/ui/dialog';
@@ -610,6 +610,10 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
           className="md:w-[280px]"
         />
         {change ? <StatusChangeNotice change={change} /> : null}
+        <RefreshError
+          title="管理员列表刷新失败，列表可能不是最新"
+          query={list}
+        />
         {list.isError && !data ? (
           <QueryError
             title="管理员列表加载失败"

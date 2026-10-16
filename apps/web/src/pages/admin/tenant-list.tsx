@@ -26,7 +26,7 @@ import {
 } from '../../components/filter-sheet';
 import { Pagination } from '../../components/pagination';
 import { SearchBox } from '../../components/search-box';
-import { QueryError } from '../../components/query-error';
+import { QueryError, RefreshError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { Segmented } from '../../components/ui/segmented';
@@ -411,6 +411,10 @@ export function TenantListPage({ identity }: { identity: Identity }) {
       >
         <Filters
           total={tenants.isPlaceholderData ? undefined : data?.pagination.total}
+        />
+        <RefreshError
+          title="租户列表刷新失败，列表可能不是最新"
+          query={tenants}
         />
         {tenants.isError && !data ? (
           <QueryError
