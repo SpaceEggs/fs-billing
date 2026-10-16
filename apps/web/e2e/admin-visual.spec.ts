@@ -285,7 +285,10 @@ async function settle(page: Page) {
 
 async function openTab(page: Page, tenant: Tenant, tab: string) {
   await page.goto(`/admin/tenants/${tenant.id}${tab ? `?tab=${tab}` : ''}`);
-  await expect(page.getByRole('region', { name: '当前余额' })).toBeVisible();
+  // 余额卡片只在电脑版显示；标签页导航两种宽度都有。
+  await expect(
+    page.getByRole('navigation', { name: '租户详情' }),
+  ).toBeVisible();
   await settle(page);
 }
 

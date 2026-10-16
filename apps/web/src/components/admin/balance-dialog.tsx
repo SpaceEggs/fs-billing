@@ -499,7 +499,12 @@ function BalanceFlow({
     >
       <div className="flex flex-col gap-1">
         <h2 className="m-0 text-[17px] font-semibold">余额操作</h2>
-        <span className="text-[13px] text-muted-foreground">{tenantLabel}</span>
+        <span className="hidden text-[13px] text-muted-foreground md:inline">
+          {tenantLabel}
+        </span>
+        <span className="text-xs text-muted-foreground md:hidden">
+          {tenant.code} · {tenant.currency}
+        </span>
       </div>
       <KindChoice value={draft.kind} onChange={(kind) => update({ kind })} />
       <Field label="金额" error={errors.amount} hint={rule.hint}>

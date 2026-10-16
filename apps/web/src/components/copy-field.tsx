@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 
 function useCopy(value: string) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -23,7 +22,10 @@ function CopyFailed() {
   );
 }
 
-/** 只读输入框等宽显示一段需要复制的文字（如 billing_tenant），复制后按钮显示“已复制 ✓”。 */
+/**
+ * 只读等宽显示一段需要复制的文字（如 billing_tenant），长值换行完整显示；复制后显示“已复制 ✓”。
+ * 手机上（稿 4e）复制是框内右侧的文字按钮，电脑上是框外的描边按钮。
+ */
 export function CopyField({
   value,
   label,
@@ -36,17 +38,18 @@ export function CopyField({
   const { state, copy } = useCopy(value);
   return (
     <div className={cn('flex flex-col gap-1', className)}>
-      <div className="flex items-center gap-2">
-        <Input
+      <div className="flex min-h-11 items-center gap-1 rounded-lg border border-border bg-card py-1 pr-1 pl-3 has-[textarea:focus-visible]:ring-[3px] has-[textarea:focus-visible]:ring-ring/50 md:min-h-0 md:gap-2 md:border-0 md:bg-transparent md:p-0 md:has-[textarea:focus-visible]:ring-0">
+        <textarea
           readOnly
+          rows={1}
           value={value}
           aria-label={label}
           onFocus={(event) => event.currentTarget.select()}
-          className="flex-1 bg-card font-mono sm:text-sm md:h-10"
+          className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent py-1.5 font-mono text-sm break-all outline-none md:min-h-10 md:rounded-lg md:border md:border-input md:bg-card md:px-3 md:py-2 md:focus-visible:ring-[3px] md:focus-visible:ring-ring/50"
         />
         <Button
-          variant="outline"
-          className="h-11 md:h-10"
+          variant="ghost"
+          className="h-9 shrink-0 px-2.5 text-[13px] font-normal text-primary md:h-10 md:border md:border-input md:px-4 md:text-sm md:font-medium md:text-foreground"
           aria-label={`复制 ${label}`}
           onClick={copy}
         >

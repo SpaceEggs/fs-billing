@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-  adminAccountsQuerySchema,
   adminLedgerKindSchema,
   adminPageQuerySchema,
   adminReceivablesQuerySchema,
@@ -9,64 +8,69 @@ import {
 
 const listShape = adminTenantsQuerySchema.shape;
 
-/** 租户列表地址参数：非法值单独丢弃，不让一个错参数清空其余筛选。 */
+/** 列表页码：缺省或第 1 页不写入地址。 */
+function pageOf(raw: unknown) {
+  const page = adminPageQuerySchema.shape.page.safeParse(raw).data;
+  return page !== undefined && page > 1 ? page : undefined;
+}
+
+function searchOf(raw: unknown) {
+  const search = listShape.search.safeParse(raw).data;
+  return search?.trim() ? search : undefined;
+}
+
+/**
+ * 地址参数校验：非法值单独丢弃，不让一个错参数清空其余筛选。
+ * 路由会保留校验结果中缺少的原始参数，所以每个键都显式返回，非法时为 undefined。
+ */
 export type TenantListSearch = {
-  search?: string;
-  status?: z.infer<typeof listShape.status>;
-  currency?: z.infer<typeof listShape.currency>;
-  page?: number;
+  search?: string | undefined;
+  status?: z.infer<typeof listShape.status> | undefined;
+  currency?: z.infer<typeof listShape.currency> | undefined;
+  page?: number | undefined;
 };
 
 export function validateTenantListSearch(
   raw: Record<string, unknown>,
 ): TenantListSearch {
-  const search = listShape.search.safeParse(raw['search']).data;
-  const status = listShape.status.safeParse(raw['status']).data;
-  const currency = listShape.currency.safeParse(raw['currency']).data;
-  const page = listShape.page.safeParse(raw['page']).data;
   return {
-    ...(search?.trim() ? { search } : {}),
-    ...(status ? { status } : {}),
-    ...(currency ? { currency } : {}),
-    ...(page !== undefined && page > 1 ? { page } : {}),
+    search: searchOf(raw['search']),
+    status: listShape.status.safeParse(raw['status']).data,
+    currency: listShape.currency.safeParse(raw['currency']).data,
+    page: pageOf(raw['page']),
   };
 }
 
-export type AdminAccountsSearch = { search?: string; page?: number };
+export type AdminAccountsSearch = {
+  search?: string | undefined;
+  page?: number | undefined;
+};
 
 export function validateAdminAccountsSearch(
   raw: Record<string, unknown>,
 ): AdminAccountsSearch {
-  const shape = adminAccountsQuerySchema.shape;
-  const search = shape.search.safeParse(raw['search']).data;
-  const page = shape.page.safeParse(raw['page']).data;
-  return {
-    ...(search?.trim() ? { search } : {}),
-    ...(page !== undefined && page > 1 ? { page } : {}),
-  };
+  return { search: searchOf(raw['search']), page: pageOf(raw['page']) };
 }
 
 export type ReceivablesSearch = {
   /** 默认 pending，不写入地址。 */
-  status?: 'received' | 'voided';
-  search?: string;
-  currency?: z.infer<typeof adminReceivablesQuerySchema.shape.currency>;
-  page?: number;
+  status?: 'received' | 'voided' | undefined;
+  search?: string | undefined;
+  currency?:
+    z.infer<typeof adminReceivablesQuerySchema.shape.currency> | undefined;
+  page?: number | undefined;
 };
 
 export function validateReceivablesSearch(
   raw: Record<string, unknown>,
 ): ReceivablesSearch {
   const shape = adminReceivablesQuerySchema.shape;
-  const search = shape.search.safeParse(raw['search']).data;
-  const currency = shape.currency.safeParse(raw['currency']).data;
-  const page = shape.page.safeParse(raw['page']).data;
   const status = shape.status.safeParse(raw['status']).data;
   return {
-    ...(status === 'received' || status === 'voided' ? { status } : {}),
-    ...(search?.trim() ? { search } : {}),
-    ...(currency ? { currency } : {}),
-    ...(page !== undefined && page > 1 ? { page } : {}),
+    status: status === 'received' || status === 'voided' ? status : undefined,
+    search: searchOf(raw['search']),
+    currency: shape.currency.safeParse(raw['currency']).data,
+    page: pageOf(raw['page']),
   };
 }
 
@@ -91,19 +95,15 @@ export type TenantDetailSearch = LedgerSearch & {
   tab?: TenantTab | undefined;
 };
 
-/**
- * 路由保留校验结果中缺少的原始参数，所以非法值显式置为 undefined 丢弃。
- */
 export function validateTenantDetailSearch(
   raw: Record<string, unknown>,
 ): TenantDetailSearch {
   const tab = tenantTabs.find(({ key }) => key === raw['tab'])?.key;
-  const page = adminPageQuerySchema.shape.page.safeParse(raw['page']).data;
   return {
     tab: tab === 'overview' ? undefined : tab,
     from: z.iso.date().safeParse(raw['from']).data,
     to: z.iso.date().safeParse(raw['to']).data,
     kind: adminLedgerKindSchema.safeParse(raw['kind']).data,
-    page: page !== undefined && page > 1 ? page : undefined,
+    page: pageOf(raw['page']),
   };
 }

@@ -63,21 +63,35 @@ function NavItems({
   );
 }
 
+/** 手机顶栏 40px 方形按钮（☰、‹、✕、⋯、＋）。 */
+export const mobileBarButtonClass =
+  'flex size-10 shrink-0 items-center justify-center rounded-lg border border-input text-base outline-none focus-visible:ring-[3px] focus-visible:ring-ring';
+export const mobileBarPrimaryClass =
+  'flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-xl text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring';
+
 /**
  * 登录后的外壳：电脑版左侧导航 + 顶栏（◐ 主题、头像菜单），
  * 手机版顶栏（☰ 抽屉、标题、头像底部面板）。
+ * `mobileNav` 替换 ☰（如 ‹ 返回、✕ 关闭），`mobileActions` 放在头像左侧（如 ＋、⋯）。
  */
 export function AppShell({
   identity,
   title,
   crumb,
   activeNav,
+  mobileNav,
+  mobileActions,
+  monoTitle = false,
   children,
 }: {
   identity: Identity;
   title: string;
   crumb: React.ReactNode;
   activeNav: NavLabel | null;
+  mobileNav?: React.ReactNode;
+  mobileActions?: React.ReactNode;
+  /** 标题是编码时用等宽字体（稿 3a）。 */
+  monoTitle?: boolean;
   children: React.ReactNode;
 }) {
   const zone = zoneOfIdentity(identity);
@@ -96,33 +110,44 @@ export function AppShell({
             <AccountMenu identity={identity} />
           </div>
         </header>
-        <header className="flex h-[52px] items-center justify-between border-b border-border px-4 md:hidden">
-          <Sheet
-            side="left"
-            title="导航"
-            open={drawerOpen}
-            onOpenChange={setDrawerOpen}
-            trigger={
-              <button
-                type="button"
-                aria-label="打开导航"
-                className="flex size-10 items-center justify-center rounded-lg border border-input text-base"
+        <header className="grid h-[52px] grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 md:hidden">
+          <div className="flex justify-start">
+            {mobileNav ?? (
+              <Sheet
+                side="left"
+                title="导航"
+                open={drawerOpen}
+                onOpenChange={setDrawerOpen}
+                trigger={
+                  <button
+                    type="button"
+                    aria-label="打开导航"
+                    className={mobileBarButtonClass}
+                  >
+                    ☰
+                  </button>
+                }
               >
-                ☰
-              </button>
-            }
-          >
-            <SidebarBrand zone={zone} />
-            <NavItems
-              zone={zone}
-              active={activeNav}
-              mobile
-              onNavigate={() => setDrawerOpen(false)}
-            />
-          </Sheet>
+                <SidebarBrand zone={zone} />
+                <NavItems
+                  zone={zone}
+                  active={activeNav}
+                  mobile
+                  onNavigate={() => setDrawerOpen(false)}
+                />
+              </Sheet>
+            )}
+          </div>
           {zone === 'admin' ? (
             <div className="flex min-w-0 flex-col items-center">
-              <span className="truncate text-base font-semibold">{title}</span>
+              <span
+                className={cn(
+                  'max-w-full truncate text-base font-semibold',
+                  monoTitle && 'font-mono',
+                )}
+              >
+                {title}
+              </span>
               <span className="text-[10px] font-medium text-primary">
                 {productLabel.admin}
               </span>
@@ -130,7 +155,10 @@ export function AppShell({
           ) : (
             <span className="text-base font-semibold">{title}</span>
           )}
-          <MobileAccountMenu identity={identity} />
+          <div className="flex items-center justify-end gap-1.5">
+            {mobileActions}
+            <MobileAccountMenu identity={identity} />
+          </div>
         </header>
         <main className="flex flex-1 flex-col">{children}</main>
       </div>
@@ -141,7 +169,7 @@ export function AppShell({
 
 /**
  * 电脑版页面标题行：标题、旁注（如“共 10 个”，与标题基线对齐）或状态标签（与标题垂直居中）
- * 与右侧操作；手机版标题在顶栏。
+ * 与右侧操作；手机版标题与操作在顶栏，不显示这一行。
  */
 export function PageBody({
   title,
@@ -159,8 +187,8 @@ export function PageBody({
   return (
     <div className="flex flex-col gap-5 p-4 md:p-7">
       {meta || badge || actions ? (
-        <div className="flex items-center justify-between gap-3">
-          <div className="hidden items-baseline gap-2.5 md:flex">
+        <div className="hidden items-center justify-between gap-3 md:flex">
+          <div className="flex items-baseline gap-2.5">
             <h1 className="m-0 text-2xl font-semibold tracking-[-0.01em]">
               {title}
             </h1>

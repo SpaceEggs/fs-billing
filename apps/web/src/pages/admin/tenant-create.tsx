@@ -11,9 +11,14 @@ import {
   type Currency,
   type Identity,
 } from '@fs-billing/shared';
-import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  AppShell,
+  mobileBarButtonClass,
+  PageBody,
+} from '../../components/app-shell';
 import {
   Field,
+  FormSection,
   invalidClass,
   MoneyInput,
   RecipientsInput,
@@ -61,31 +66,6 @@ type Created = {
   portalRequest: AdminPortalAccountCreateRequest;
   portal: PortalState;
 };
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      aria-label={title}
-      className="grid gap-3.5 border-t border-border py-6 md:grid-cols-[240px_1fr] md:gap-8"
-    >
-      <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-[15px] font-semibold">{title}</h2>
-        <span className="text-[13px] leading-relaxed text-muted-foreground">
-          {description}
-        </span>
-      </div>
-      <div className="grid gap-x-5 gap-y-4 md:grid-cols-2">{children}</div>
-    </section>
-  );
-}
-
 function CurrencyChoice({
   value,
   onChange,
@@ -663,6 +643,15 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
         </>
       }
       activeNav="租户"
+      mobileNav={
+        <Link
+          to="/admin/tenants"
+          aria-label="取消新建，返回租户列表"
+          className={mobileBarButtonClass}
+        >
+          ✕
+        </Link>
+      }
     >
       <PageBody title="新建租户">
         <form
@@ -674,7 +663,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
           }}
           className="flex max-w-[1020px] flex-col"
         >
-          <span className="-mt-3 pb-5 text-[13px] text-muted-foreground">
+          <span className="-mt-3 hidden pb-5 text-[13px] text-muted-foreground md:block">
             带 <span className="text-err">*</span> 为必填
           </span>
           {summary ? (
@@ -690,7 +679,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
             </div>
           ) : null}
 
-          <Section title="基本信息" description="编码和币种创建后不可修改">
+          <FormSection title="基本信息" description="编码和币种创建后不可修改">
             <Field
               label="租户编码"
               required
@@ -737,62 +726,65 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 setForm((current) => changeCurrency(current, currency))
               }
             />
-          </Section>
+          </FormSection>
 
-          <Section
+          <FormSection
             title="额度与提醒"
             description="余额 + 透支额度用完后停机；余额低于阈值时发邮件提醒"
           >
-            <Field
-              label="透支额度"
-              required
-              error={errors.overdraftLimit}
-              hint={
-                form.overdraftEdited ? undefined : (
-                  <span className="text-primary">
-                    默认 CNY 100 / USD 15，切换币种时自动更新
-                  </span>
-                )
-              }
-            >
-              {(props) => (
-                <MoneyInput
-                  {...props}
-                  currency={form.currency}
-                  error={errors.overdraftLimit}
-                  value={form.overdraftLimit}
-                  onChange={(overdraftLimit) =>
-                    update({ overdraftLimit, overdraftEdited: true })
-                  }
-                />
-              )}
-            </Field>
-            <Field
-              label="余额提醒阈值"
-              required
-              error={errors.lowBalanceThreshold}
-            >
-              {(props) => (
-                <MoneyInput
-                  {...props}
-                  currency={form.currency}
-                  error={errors.lowBalanceThreshold}
-                  placeholder="例如 200.00"
-                  value={form.lowBalanceThreshold}
-                  onChange={(lowBalanceThreshold) =>
-                    update({ lowBalanceThreshold })
-                  }
-                />
-              )}
-            </Field>
+            <div className="grid grid-cols-2 gap-2.5 md:contents">
+              <Field
+                label="透支额度"
+                required
+                error={errors.overdraftLimit}
+                hint={
+                  form.overdraftEdited ? undefined : (
+                    <span className="hidden text-primary md:inline">
+                      默认 CNY 100 / USD 15，切换币种时自动更新
+                    </span>
+                  )
+                }
+              >
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    currency={form.currency}
+                    error={errors.overdraftLimit}
+                    value={form.overdraftLimit}
+                    onChange={(overdraftLimit) =>
+                      update({ overdraftLimit, overdraftEdited: true })
+                    }
+                  />
+                )}
+              </Field>
+              <Field
+                label="余额提醒阈值"
+                shortLabel="提醒阈值"
+                required
+                error={errors.lowBalanceThreshold}
+              >
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    currency={form.currency}
+                    error={errors.lowBalanceThreshold}
+                    placeholder="例如 200.00"
+                    value={form.lowBalanceThreshold}
+                    onChange={(lowBalanceThreshold) =>
+                      update({ lowBalanceThreshold })
+                    }
+                  />
+                )}
+              </Field>
+            </div>
             <RecipientsInput
               emails={form.emails}
               error={errors.emails}
               onChange={(emails) => update({ emails })}
             />
-          </Section>
+          </FormSection>
 
-          <Section title="联系信息" description="可选，仅内部可见">
+          <FormSection title="联系信息" description="可选，仅内部可见">
             <Field label="联系人" error={errors.contactName}>
               {(props) => (
                 <Input
@@ -832,9 +824,9 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 />
               )}
             </Field>
-          </Section>
+          </FormSection>
 
-          <Section
+          <FormSection
             title="门户账号"
             description="客户登录客户门户使用；初始密码只在创建成功后显示一次"
           >
@@ -875,9 +867,12 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 />
               )}
             </Field>
-          </Section>
+          </FormSection>
 
-          <Section title="费率表" description="没有费率的前缀，呼叫会被拒绝">
+          <FormSection
+            title="费率表"
+            description="没有费率的前缀，呼叫会被拒绝"
+          >
             <div
               role="radiogroup"
               aria-label="初始费率表"
@@ -910,7 +905,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                   />
                   <span className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="hidden text-xs text-muted-foreground md:block">
                       {option.sub}
                     </span>
                   </span>
@@ -943,14 +938,14 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               </span>
             ) : null}
             {csvRows ? <CsvErrors rows={csvRows} /> : null}
-          </Section>
+          </FormSection>
 
           <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background pt-4 pb-6">
             <Link
               to="/admin/tenants"
               className={cn(
                 buttonVariants({ variant: 'outline' }),
-                'h-12 flex-1 md:h-9 md:flex-none',
+                'hidden md:inline-flex',
               )}
             >
               取消

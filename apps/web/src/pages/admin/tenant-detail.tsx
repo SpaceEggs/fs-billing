@@ -12,7 +12,11 @@ import type {
   AdminTenantsResponse,
   Identity,
 } from '@fs-billing/shared';
-import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  AppShell,
+  mobileBarButtonClass,
+  PageBody,
+} from '../../components/app-shell';
 import { BalanceDialog } from '../../components/admin/balance-dialog';
 import {
   TenantStatusDialog,
@@ -22,6 +26,7 @@ import { TenantStatus } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
 import { QueryError } from '../../components/query-error';
 import { Button, buttonVariants } from '../../components/ui/button';
+import { ModalDialog } from '../../components/ui/dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import { tenantTabs, type TenantTab } from '../../lib/admin-search';
@@ -56,13 +61,97 @@ function Crumb({ code }: { code: string | undefined }) {
   );
 }
 
+/** 手机版标题（稿 3a）：名称、状态、币种与可用额度一行，右侧余额；透支额度与待收款只在电脑版卡片里。 */
+function MobileSummary({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const money = (amount: string) => ({ currency: tenant.currency, amount });
+  return (
+    <section
+      aria-label="余额概要"
+      className="flex items-center justify-between gap-3 tabular-nums md:hidden"
+    >
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="text-base font-semibold">{tenant.name}</span>
+        <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <TenantStatus
+            health={tenant.health}
+            settingsConfigured={tenant.settingsConfigured}
+            className="h-5 px-[7px] text-[11px]"
+          />
+          <span>
+            {tenant.currency} · 可用{' '}
+            <Money value={money(tenant.availableBalance)} tone="plain" />
+          </span>
+        </span>
+      </div>
+      <span className="flex shrink-0 flex-col items-end">
+        <span className="sr-only">当前余额</span>
+        <Money
+          value={money(tenant.balance)}
+          className="text-[22px] font-semibold"
+        />
+      </span>
+    </section>
+  );
+}
+
+/** 手机版 ⋯：底部面板列出停用/启用与编辑；从面板打开的对话框关闭后焦点回到 ⋯。 */
+function MobileActions({
+  tenant,
+  onStatus,
+}: {
+  tenant: AdminTenantDetailResponse;
+  onStatus: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const disabled = tenant.status === 'disabled';
+  const title = `${tenant.code} 的操作`;
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="租户操作"
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+        className={mobileBarButtonClass}
+      >
+        ⋯
+      </button>
+      <ModalDialog open={open} onOpenChange={setOpen} title={title}>
+        <span className="pb-1 text-[15px] font-semibold">{title}</span>
+        <div className="flex flex-col">
+          <Button
+            variant="ghost"
+            className={cn(
+              'h-12 justify-start border-b border-border px-0 text-base font-normal',
+              disabled ? 'text-primary' : 'text-neg',
+            )}
+            onClick={() => {
+              setOpen(false);
+              onStatus();
+            }}
+          >
+            {disabled ? '启用' : '停用'}
+          </Button>
+          <Link
+            to="/admin/tenants/$tenantId/edit"
+            params={{ tenantId: tenant.id }}
+            className="flex h-12 items-center text-base"
+          >
+            编辑
+          </Link>
+        </div>
+      </ModalDialog>
+    </>
+  );
+}
+
 function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   return (
-    <div className="grid grid-cols-2 rounded-xl border border-border tabular-nums md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <div className="hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-[1.4fr_1fr_1fr_1fr]">
       <section
         aria-label="当前余额"
-        className="col-span-2 flex flex-col gap-1.5 border-b border-border px-6 py-5 md:col-span-1 md:border-r md:border-b-0"
+        className="flex flex-col gap-1.5 border-r border-border px-6 py-5"
       >
         <span className="text-[13px] text-muted-foreground">当前余额</span>
         <Money
@@ -85,7 +174,7 @@ function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
           />
         </span>
       </section>
-      <section className="flex flex-col gap-1.5 px-6 py-5 md:border-r md:border-border">
+      <section className="flex flex-col gap-1.5 border-r border-border px-6 py-5">
         <span className="text-[13px] text-muted-foreground">可用额度</span>
         <Money
           value={money(tenant.availableBalance)}
@@ -93,7 +182,7 @@ function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
         />
         <span className="text-xs text-muted-foreground">余额 + 透支额度</span>
       </section>
-      <section className="col-span-2 flex flex-col gap-1.5 border-t border-border px-6 py-5 md:col-span-1 md:border-t-0">
+      <section className="flex flex-col gap-1.5 px-6 py-5">
         <span className="text-[13px] text-muted-foreground">待收款</span>
         <Money
           value={money(tenant.pendingReceivable)}
@@ -220,12 +309,29 @@ function TenantDetail({
   const code = tenant?.code ?? listed?.code;
   const title = tenant?.name ?? listed?.name ?? '租户详情';
   const disabled = tenant?.status === 'disabled';
+  const openStatus = () => {
+    setStatusResult(null);
+    setStatusAction(disabled ? 'enable' : 'disable');
+  };
   return (
     <AppShell
       identity={identity}
       title={code ?? '租户详情'}
+      monoTitle={code !== undefined}
       crumb={<Crumb code={code} />}
       activeNav="租户"
+      mobileNav={
+        <Link
+          to="/admin/tenants"
+          aria-label="返回租户列表"
+          className={mobileBarButtonClass}
+        >
+          ‹
+        </Link>
+      }
+      mobileActions={
+        tenant ? <MobileActions tenant={tenant} onStatus={openStatus} /> : null
+      }
     >
       <PageBody
         title={title}
@@ -239,13 +345,7 @@ function TenantDetail({
               ),
               actions: (
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setStatusResult(null);
-                      setStatusAction(disabled ? 'enable' : 'disable');
-                    }}
-                  >
+                  <Button variant="outline" onClick={openStatus}>
                     {disabled ? '启用' : '停用'}
                   </Button>
                   <Link
@@ -255,12 +355,7 @@ function TenantDetail({
                   >
                     编辑
                   </Link>
-                  <Button
-                    className="hidden md:inline-flex"
-                    onClick={() => setBalanceOpen(true)}
-                  >
-                    余额操作
-                  </Button>
+                  <Button onClick={() => setBalanceOpen(true)}>余额操作</Button>
                 </div>
               ),
             }
@@ -268,19 +363,11 @@ function TenantDetail({
       >
         {tenant ? (
           <>
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2.5 md:hidden">
-                <span className="text-lg font-semibold">{tenant.name}</span>
-                <TenantStatus
-                  health={tenant.health}
-                  settingsConfigured={tenant.settingsConfigured}
-                />
-              </div>
-              <div className="flex flex-wrap gap-3.5 text-[13px] text-muted-foreground">
-                <span className="font-mono text-foreground">{tenant.code}</span>
-                <span>{tenant.currency}</span>
-                <span>创建于 {formatDate(tenant.createdAt)}</span>
-              </div>
+            <MobileSummary tenant={tenant} />
+            <div className="hidden flex-wrap gap-3.5 text-[13px] text-muted-foreground md:flex">
+              <span className="font-mono text-foreground">{tenant.code}</span>
+              <span>{tenant.currency}</span>
+              <span>创建于 {formatDate(tenant.createdAt)}</span>
             </div>
             {statusResult ? (
               <div
@@ -300,13 +387,6 @@ function TenantDetail({
               </div>
             ) : null}
             <BalanceCards tenant={tenant} />
-            <Button
-              size="lg"
-              className="md:hidden"
-              onClick={() => setBalanceOpen(true)}
-            >
-              余额操作
-            </Button>
             <BalanceDialog
               owner={identity.profileId}
               tenant={tenant}
@@ -353,6 +433,18 @@ function TenantDetail({
               ))}
             </nav>
             <TabContent tab={tab} tenant={tenant} />
+            {tab === 'settings' ? null : (
+              // 设置标签页底部是自己的保存按钮，不再叠一个余额操作。
+              <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-border bg-background px-4 pt-3 pb-4 md:hidden">
+                <Button
+                  size="lg"
+                  className="w-full"
+                  onClick={() => setBalanceOpen(true)}
+                >
+                  余额操作
+                </Button>
+              </div>
+            )}
           </>
         ) : detail.isError ? (
           <DetailError

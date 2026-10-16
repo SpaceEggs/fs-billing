@@ -7,9 +7,17 @@ import {
   type AdminTenantEditRequest,
   type Identity,
 } from '@fs-billing/shared';
-import { Field, invalidClass } from '../../components/admin/form-fields';
+import {
+  Field,
+  FormSection,
+  invalidClass,
+} from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
-import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  AppShell,
+  mobileBarButtonClass,
+  PageBody,
+} from '../../components/app-shell';
 import { QueryError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -121,7 +129,7 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
       }}
       className="flex max-w-[1020px] flex-col"
     >
-      <span className="-mt-3 pb-5 text-[13px] text-muted-foreground">
+      <span className="-mt-3 hidden pb-5 text-[13px] text-muted-foreground md:block">
         带 <span className="text-err">*</span> 为必填
       </span>
       {unchanged ? (
@@ -140,78 +148,60 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
           />
         </div>
       ) : null}
-      <section
-        aria-label="基本信息"
-        className="grid gap-3.5 border-t border-border py-6 md:grid-cols-[240px_1fr] md:gap-8"
-      >
-        <div className="flex flex-col gap-1">
-          <h2 className="m-0 text-[15px] font-semibold">基本信息</h2>
-          <span className="text-[13px] leading-relaxed text-muted-foreground">
-            编码和币种创建后不可修改
+      <FormSection title="基本信息" description="编码和币种创建后不可修改">
+        <div className="flex flex-col gap-1.5 text-sm font-medium">
+          <span>
+            租户编码
+            <RequiredMark />
+            <LockedHint className="ml-2" />
+          </span>
+          <span className="flex h-11 items-center rounded-lg border border-input bg-muted px-3 font-mono font-normal md:h-10">
+            {tenant.code}
+          </span>
+          <span className="text-xs leading-normal font-normal text-muted-foreground">
+            字母和数字，须与 FreeSWITCH 中的{' '}
+            <span className="font-mono text-foreground">billing_tenant</span>{' '}
+            一致
           </span>
         </div>
-        <div className="grid gap-x-5 gap-y-4 md:grid-cols-2">
-          <div className="flex flex-col gap-1.5 text-sm font-medium">
-            <span>
-              租户编码
-              <RequiredMark />
-              <LockedHint className="ml-2" />
-            </span>
-            <span className="flex h-11 items-center rounded-lg border border-input bg-muted px-3 font-mono font-normal md:h-10">
-              {tenant.code}
-            </span>
-            <span className="text-xs leading-normal font-normal text-muted-foreground">
-              字母和数字，须与 FreeSWITCH 中的{' '}
-              <span className="font-mono text-foreground">billing_tenant</span>{' '}
-              一致
-            </span>
-          </div>
-          {text('name', '租户名称', true)}
-          <div className="flex flex-col gap-1.5 text-sm font-medium">
-            <span>
-              币种
-              <RequiredMark />
-            </span>
-            <span className="flex h-11 items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 font-normal md:h-10">
-              {tenant.currency}
-              <LockedHint />
-            </span>
-          </div>
-        </div>
-      </section>
-      <section
-        aria-label="联系信息"
-        className="grid gap-3.5 border-t border-border py-6 md:grid-cols-[240px_1fr] md:gap-8"
-      >
-        <div className="flex flex-col gap-1">
-          <h2 className="m-0 text-[15px] font-semibold">联系信息</h2>
-          <span className="text-[13px] leading-relaxed text-muted-foreground">
-            可选，仅内部可见
+        {text('name', '租户名称', true)}
+        <div className="flex flex-col gap-1.5 text-sm font-medium">
+          <span>
+            币种
+            <RequiredMark />
+          </span>
+          <span className="flex h-11 items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 font-normal md:h-10">
+            {tenant.currency}
+            <LockedHint />
           </span>
         </div>
-        <div className="grid gap-x-5 gap-y-4 md:grid-cols-2">
-          {text('contactName', '联系人')}
-          {text('contactPhone', '电话')}
-          <Field label="备注" error={errors.remark} className="md:col-span-2">
-            {(props) => (
-              <textarea
-                {...props}
-                rows={3}
-                maxLength={limits.remark}
-                placeholder="选填"
-                value={form.remark}
-                onChange={(event) => update({ remark: event.target.value })}
-                className="resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-              />
-            )}
-          </Field>
-        </div>
-      </section>
+      </FormSection>
+      <FormSection title="联系信息" description="可选，仅内部可见">
+        {text('contactName', '联系人')}
+        {text('contactPhone', '电话')}
+        <Field label="备注" error={errors.remark} className="md:col-span-2">
+          {(props) => (
+            <textarea
+              {...props}
+              rows={3}
+              maxLength={limits.remark}
+              placeholder="选填"
+              value={form.remark}
+              onChange={(event) => update({ remark: event.target.value })}
+              className="resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+            />
+          )}
+        </Field>
+      </FormSection>
       <p className="m-0 border-t border-border py-4 text-[13px] text-muted-foreground">
         透支额度、余额提醒和通知邮箱请在租户详情的「设置」标签页修改；门户账号和费率表请在「门户账号」「费率」标签页中管理。
       </p>
       <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-border bg-background pt-4 pb-6 md:flex-row md:justify-end">
-        <Button variant="outline" className="h-12 md:h-9" onClick={back}>
+        <Button
+          variant="outline"
+          className="hidden md:inline-flex"
+          onClick={back}
+        >
           取消
         </Button>
         <Button type="submit" className="h-12 md:h-9" disabled={edit.isPending}>
@@ -274,6 +264,16 @@ export function TenantEditPage({ identity }: { identity: Identity }) {
         </>
       }
       activeNav="租户"
+      mobileNav={
+        <Link
+          to="/admin/tenants/$tenantId"
+          params={{ tenantId }}
+          aria-label="取消编辑，返回租户详情"
+          className={mobileBarButtonClass}
+        >
+          ✕
+        </Link>
+      }
     >
       <PageBody title="编辑租户">
         {tenant ? (

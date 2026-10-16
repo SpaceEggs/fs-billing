@@ -23,7 +23,11 @@ import {
 } from '../../components/admin/account-dialogs';
 import { Field, invalidClass } from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
-import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  AppShell,
+  mobileBarPrimaryClass,
+  PageBody,
+} from '../../components/app-shell';
 import { DateTime } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError } from '../../components/query-error';
@@ -563,22 +567,29 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
       title="管理员"
       crumb="管理员"
       activeNav="管理员"
+      mobileActions={
+        <button
+          type="button"
+          aria-label="新增管理员"
+          onClick={() => open({ kind: 'create' })}
+          className={mobileBarPrimaryClass}
+        >
+          ＋
+        </button>
+      }
     >
       <PageBody
         title="管理员"
         meta={meta}
         actions={
-          <Button
-            className="w-full md:w-auto"
-            onClick={() => open({ kind: 'create' })}
-          >
+          <Button onClick={() => open({ kind: 'create' })}>
             ＋ 新增管理员
           </Button>
         }
       >
         <div
           role="note"
-          className="rounded-lg border border-brand-border bg-brand-soft px-3 py-2.5 text-[13px]"
+          className="text-xs leading-normal text-muted-foreground md:rounded-lg md:border md:border-brand-border md:bg-brand-soft md:px-3 md:py-2.5 md:text-[13px] md:text-foreground"
         >
           <span className="hidden md:inline">
             当前版本所有管理员权限相同，均可管理租户、费率、余额和其他管理员。不能停用自己，且至少保留一位启用的管理员。

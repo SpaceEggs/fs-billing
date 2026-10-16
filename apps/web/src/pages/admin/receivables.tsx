@@ -21,6 +21,12 @@ import { ReversePaymentDialog } from '../../components/admin/reverse-payment-dia
 import { VoidReceivableDialog } from '../../components/admin/void-receivable-dialog';
 import { ModalDialog } from '../../components/ui/dialog';
 import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  FilterGroup,
+  FilterSheet,
+  resultLabel,
+} from '../../components/filter-sheet';
+import { Segmented } from '../../components/ui/segmented';
 import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError } from '../../components/query-error';
@@ -70,46 +76,6 @@ type Names = { data: Map<string, string> | undefined; isPending: boolean };
 const statusOf = (search: ReceivablesSearch): AdminReceivableStatus =>
   search.status ?? 'pending';
 
-function Segmented<Value extends string | undefined>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: readonly { value: Value; label: string }[];
-  value: Value;
-  onChange: (value: Value) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label={label}
-      className="flex h-11 gap-0.5 self-start rounded-lg bg-muted p-[3px] text-[13px] md:h-9"
-    >
-      {options.map((option) => {
-        const selected = value === option.value;
-        return (
-          <button
-            key={option.value ?? 'all'}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              'rounded-md px-3 outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-              selected
-                ? 'bg-background font-medium shadow-[0_1px_2px_rgba(0,0,0,.1)]'
-                : 'text-muted-foreground',
-            )}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 const statusOptions = adminReceivableStatusSchema.options.map((status) => ({
   value: status,
   label: receivableViews[status].label,
@@ -122,8 +88,11 @@ const currencyOptions = [
   })),
 ];
 
-/** 状态分段（G1）驱动接口的 status 参数；默认待收款不写入地址，切换回到第一页。 */
-function Filters() {
+/**
+ * 状态分段（G1）驱动接口的 status 参数；默认待收款不写入地址，切换回到第一页。
+ * 手机版状态分段仍直接可见（切换的是视图），币种收进「筛选」面板。
+ */
+function Filters({ total }: { total: number | undefined }) {
   const { search, setFilter } = useReceivablesSearch();
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
@@ -134,20 +103,41 @@ function Filters() {
         onChange={(status) =>
           setFilter({ status: status === 'pending' ? undefined : status })
         }
+        className="w-full md:w-auto"
       />
-      <SearchBox
-        label="搜索租户"
-        value={search.search ?? ''}
-        onChange={(value) =>
-          setFilter({ search: value === '' ? undefined : value })
-        }
-        className="md:w-[260px]"
-      />
+      <div className="flex gap-2 md:contents">
+        <SearchBox
+          label="搜索租户"
+          value={search.search ?? ''}
+          onChange={(value) =>
+            setFilter({ search: value === '' ? undefined : value })
+          }
+          className="min-w-0 flex-1 md:w-[260px] md:flex-none"
+        />
+        <FilterSheet
+          activeCount={search.currency ? 1 : 0}
+          resultLabel={resultLabel(total, '笔')}
+          onClear={() => setFilter({ currency: undefined })}
+        >
+          <FilterGroup label="币种">
+            {() => (
+              <Segmented
+                label="币种"
+                options={currencyOptions}
+                value={search.currency}
+                onChange={(currency) => setFilter({ currency })}
+                className="w-full self-stretch text-[15px]"
+              />
+            )}
+          </FilterGroup>
+        </FilterSheet>
+      </div>
       <Segmented
         label="币种"
         options={currencyOptions}
         value={search.currency}
         onChange={(currency) => setFilter({ currency })}
+        className="hidden md:flex"
       />
     </div>
   );
@@ -796,7 +786,11 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
             currency={search.currency}
           />
         ) : null}
-        <Filters />
+        <Filters
+          total={
+            receivables.isPlaceholderData ? undefined : data?.pagination.total
+          }
+        />
         <section
           ref={listRef}
           tabIndex={-1}

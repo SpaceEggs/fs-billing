@@ -111,11 +111,15 @@ export function ConfirmPaymentDialog({
     >
       <div className="flex flex-col gap-1">
         <h2 className="m-0 text-[17px] font-semibold">确认收款</h2>
-        <span className="text-[13px] text-muted-foreground">
+        <span className="hidden text-[13px] text-muted-foreground md:inline">
           {tenant.code} {tenant.name}（{tenant.currency}）
         </span>
+        {/* 手机底部面板（稿 6d）把摘要压成一行，不显示下面的摘要卡片。 */}
+        <span className="text-xs text-muted-foreground tabular-nums md:hidden">
+          {tenant.code} · {amount} · 已欠 {receivable.ageDays} 天
+        </span>
       </div>
-      <dl className="m-0 grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1.5 rounded-[10px] bg-muted px-4 py-3.5 text-[13px] tabular-nums">
+      <dl className="m-0 hidden grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1.5 rounded-[10px] bg-muted px-4 py-3.5 text-[13px] tabular-nums md:grid">
         <dt className="text-muted-foreground">赊账金额</dt>
         <dd className="m-0 text-right text-lg font-semibold">{amount}</dd>
         <dt className="text-muted-foreground">赊账时间</dt>

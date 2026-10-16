@@ -7,18 +7,29 @@ import {
   type AdminTenantSummary,
   type Identity,
 } from '@fs-billing/shared';
-import { AppShell, PageBody } from '../../components/app-shell';
+import {
+  AppShell,
+  mobileBarPrimaryClass,
+  PageBody,
+} from '../../components/app-shell';
 import {
   healthOptions,
   healthStatus,
   TenantStatus,
 } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
+import {
+  ChoiceGrid,
+  FilterGroup,
+  FilterSheet,
+  resultLabel,
+} from '../../components/filter-sheet';
 import { Pagination } from '../../components/pagination';
 import { SearchBox } from '../../components/search-box';
 import { QueryError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
+import { Segmented } from '../../components/ui/segmented';
 import { Select } from '../../components/ui/select';
 import { apiQuery } from '../../lib/admin-api';
 import type { TenantListSearch } from '../../lib/admin-search';
@@ -49,7 +60,20 @@ function useTenantSearch() {
   return { search, update };
 }
 
-function Filters() {
+const statusChoices = [
+  { value: undefined, label: '全部状态' },
+  ...healthOptions,
+] as const;
+const currencyChoices = [
+  { value: undefined, label: '全部币种' },
+  ...currencySchema.options.map((currency) => ({
+    value: currency,
+    label: currency,
+  })),
+] as const;
+
+/** 电脑版筛选排成一行；手机版只留搜索框，状态与币种收进「筛选」面板（稿 1b）。 */
+function Filters({ total }: { total: number | undefined }) {
   const { search, update } = useTenantSearch();
   const statusId = useId();
   /** 改筛选回到第一页；值为 undefined 表示清除该筛选。 */
@@ -57,16 +81,43 @@ function Filters() {
     [Key in keyof TenantListSearch]?: TenantListSearch[Key] | undefined;
   }) => update(withoutPage({ ...search, ...patch }));
   return (
-    <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+    <div className="flex gap-2 md:items-center md:gap-3">
       <SearchBox
         label="搜索编码或名称"
         value={search.search ?? ''}
         onChange={(value) =>
           setFilter({ search: value === '' ? undefined : value })
         }
-        className="md:w-[280px]"
+        className="min-w-0 flex-1 md:w-[280px] md:flex-none"
       />
-      <div className="flex items-center gap-2 md:contents">
+      <FilterSheet
+        activeCount={[search.status, search.currency].filter(Boolean).length}
+        resultLabel={resultLabel(total, '个')}
+        onClear={() => setFilter({ status: undefined, currency: undefined })}
+      >
+        <FilterGroup label="状态">
+          {(labelId) => (
+            <ChoiceGrid
+              labelledBy={labelId}
+              options={statusChoices}
+              value={search.status}
+              onChange={(status) => setFilter({ status })}
+            />
+          )}
+        </FilterGroup>
+        <FilterGroup label="币种">
+          {() => (
+            <Segmented
+              label="币种"
+              options={currencyChoices}
+              value={search.currency}
+              onChange={(currency) => setFilter({ currency })}
+              className="w-full self-stretch text-[15px]"
+            />
+          )}
+        </FilterGroup>
+      </FilterSheet>
+      <div className="hidden md:contents">
         <label htmlFor={statusId} className="sr-only">
           状态
         </label>
@@ -79,40 +130,20 @@ function Filters() {
             )?.value;
             setFilter({ status });
           }}
-          className="flex-1 md:w-[150px] md:flex-none"
+          className="w-[150px]"
         >
-          <option value="">全部状态</option>
-          {healthOptions.map((option) => (
-            <option key={option.value} value={option.value}>
+          {statusChoices.map((option) => (
+            <option key={option.value ?? ''} value={option.value ?? ''}>
               {option.label}
             </option>
           ))}
         </Select>
-        <div
-          role="group"
-          aria-label="币种"
-          className="flex h-11 gap-0.5 rounded-lg bg-muted p-[3px] text-[13px] md:h-9"
-        >
-          {([undefined, ...currencySchema.options] as const).map((currency) => {
-            const selected = search.currency === currency;
-            return (
-              <button
-                key={currency ?? 'all'}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setFilter({ currency })}
-                className={cn(
-                  'rounded-md px-3 outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-                  selected
-                    ? 'bg-background font-medium shadow-[0_1px_2px_rgba(0,0,0,.1)]'
-                    : 'text-muted-foreground',
-                )}
-              >
-                {currency ?? '全部币种'}
-              </button>
-            );
-          })}
-        </div>
+        <Segmented
+          label="币种"
+          options={currencyChoices}
+          value={search.currency}
+          onChange={(currency) => setFilter({ currency })}
+        />
       </div>
       <span className="hidden flex-1 text-right text-xs text-muted-foreground md:block">
         排序：状态 → 同币种内余额从低到高
@@ -358,13 +389,29 @@ export function TenantListPage({ identity }: { identity: Identity }) {
   });
   const data = tenants.data;
   return (
-    <AppShell identity={identity} title="租户" crumb="租户" activeNav="租户">
+    <AppShell
+      identity={identity}
+      title="租户"
+      crumb="租户"
+      activeNav="租户"
+      mobileActions={
+        <Link
+          to="/admin/tenants/new"
+          aria-label="新建租户"
+          className={mobileBarPrimaryClass}
+        >
+          ＋
+        </Link>
+      }
+    >
       <PageBody
         title="租户"
         meta={data ? `共 ${data.pagination.total} 个` : undefined}
-        actions={<NewTenantLink className="w-full md:w-auto" />}
+        actions={<NewTenantLink />}
       >
-        <Filters />
+        <Filters
+          total={tenants.isPlaceholderData ? undefined : data?.pagination.total}
+        />
         {tenants.isError && !data ? (
           <QueryError
             title="租户列表加载失败"
