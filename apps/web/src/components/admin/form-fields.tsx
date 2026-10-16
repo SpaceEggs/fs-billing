@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import type { Currency } from '@fs-billing/shared';
 import { addRecipients } from '../../lib/tenant-create';
 import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 
 export const currencySymbol = { CNY: '¥', USD: '$' } as const satisfies Record<
   Currency,
@@ -134,18 +135,21 @@ export function MoneyInput({
 /**
  * 通知邮箱：回车、逗号或失焦时加入列表；小写去重后显示；为空时提示提醒无法送达。
  * `flagged` 中的邮箱属于已停用管理员，保留但标出，请管理员确认。
+ * `stacked`（设置页稿 1h）时邮箱列在上方，下面是单独的输入框和「添加」按钮；默认两者在同一个框里。
  */
 export function RecipientsInput({
   emails,
   error,
   onChange,
   flagged,
+  stacked = false,
   className,
 }: {
   emails: string[];
   error: string | undefined;
   onChange: (emails: string[]) => void;
   flagged?: ReadonlySet<string>;
+  stacked?: boolean;
   className?: string;
 }) {
   const id = useId();
@@ -163,6 +167,52 @@ export function RecipientsInput({
   );
   const isFlagged = (email: string) => flaggedKeys.has(email.toLowerCase());
   const flaggedEmails = emails.filter(isFlagged);
+  const chipItems = emails.map((email) => (
+    <li
+      key={email}
+      className={cn(
+        'flex h-7 items-center gap-1.5 rounded-md border border-transparent bg-muted pr-1.5 pl-2.5 text-[13px]',
+        isFlagged(email) && 'border-warn-border bg-warn-soft',
+      )}
+    >
+      {email}
+      {isFlagged(email) ? (
+        <span className="text-[11px] text-warn">已停用管理员</span>
+      ) : null}
+      <button
+        type="button"
+        aria-label={`移除 ${email}`}
+        onClick={() => onChange(emails.filter((item) => item !== email))}
+        className="text-[11px] text-muted-foreground"
+      >
+        ✕
+      </button>
+    </li>
+  ));
+  const input = (layout: string) => (
+    <input
+      id={id}
+      type="email"
+      autoComplete="off"
+      aria-invalid={error ? true : undefined}
+      aria-describedby={`${id}-messages`}
+      placeholder="输入邮箱后按回车添加"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ',') {
+          event.preventDefault();
+          commit();
+        } else if (event.key === 'Backspace' && !draft && emails.length)
+          onChange(emails.slice(0, -1));
+      }}
+      className={cn(
+        'bg-transparent text-base outline-none placeholder:text-[13px] placeholder:text-muted-foreground md:text-sm',
+        layout,
+      )}
+    />
+  );
   return (
     <div
       className={cn(
@@ -174,58 +224,46 @@ export function RecipientsInput({
       <span className="-mt-1 text-xs font-normal text-muted-foreground">
         可添加多个，余额不足和停机通知会发送到这些邮箱
       </span>
-      <div
-        className={cn(
-          'flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 font-normal focus-within:ring-[3px] focus-within:ring-ring/50',
-          error && 'border-err',
-        )}
-      >
-        <ul aria-label="已添加的通知邮箱" className="contents">
-          {emails.map((email) => (
-            <li
-              key={email}
-              className={cn(
-                'flex h-7 items-center gap-1.5 rounded-md border border-transparent bg-muted pr-1.5 pl-2.5 text-[13px]',
-                isFlagged(email) && 'border-warn-border bg-warn-soft',
-              )}
+      {stacked ? (
+        <>
+          {emails.length ? (
+            <ul
+              aria-label="已添加的通知邮箱"
+              className="m-0 flex list-none flex-wrap gap-2 p-0 font-normal"
             >
-              {email}
-              {isFlagged(email) ? (
-                <span className="text-[11px] text-warn">已停用管理员</span>
-              ) : null}
-              <button
-                type="button"
-                aria-label={`移除 ${email}`}
-                onClick={() =>
-                  onChange(emails.filter((item) => item !== email))
-                }
-                className="text-[11px] text-muted-foreground"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-        <input
-          id={id}
-          type="email"
-          autoComplete="off"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={`${id}-messages`}
-          placeholder="输入邮箱后按回车添加"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={commit}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ',') {
-              event.preventDefault();
-              commit();
-            } else if (event.key === 'Backspace' && !draft && emails.length)
-              onChange(emails.slice(0, -1));
-          }}
-          className="h-8 min-w-[180px] flex-1 bg-transparent px-1.5 text-base outline-none placeholder:text-[13px] placeholder:text-muted-foreground md:text-sm"
-        />
-      </div>
+              {chipItems}
+            </ul>
+          ) : null}
+          <div className="flex gap-2 font-normal">
+            {input(
+              cn(
+                'h-11 flex-1 rounded-lg border px-3 focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9',
+                error ? 'border-err' : 'border-input',
+              ),
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 md:h-9"
+              onClick={commit}
+            >
+              添加
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div
+          className={cn(
+            'flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-input px-2 py-1.5 font-normal focus-within:ring-[3px] focus-within:ring-ring/50',
+            error && 'border-err',
+          )}
+        >
+          <ul aria-label="已添加的通知邮箱" className="contents">
+            {chipItems}
+          </ul>
+          {input('h-8 min-w-[180px] flex-1 px-1.5')}
+        </div>
+      )}
       <div id={`${id}-messages`} className="flex flex-col gap-1">
         {error ? (
           <span className="text-xs font-normal text-err">{error}</span>

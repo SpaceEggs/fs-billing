@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { send, useCredentialMutation } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
-import { CopyField } from '../copy-field';
+import { SecretField } from '../copy-field';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { ProblemAlert } from './problem-alert';
@@ -66,7 +66,7 @@ export function TemporaryPassword({
 }) {
   return (
     <>
-      <CopyField value={value} label="临时密码" />
+      <SecretField value={value} label="临时密码" />
       <div className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
         <span className="font-semibold">关闭后无法再次查看</span>
         <span>

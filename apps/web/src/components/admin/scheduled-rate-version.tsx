@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminRateVersion, Currency } from '@fs-billing/shared';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
@@ -15,7 +14,7 @@ import { RateChangesTable } from './rate-changes-table';
 
 /**
  * 排定的新版本（设计稿第二批 7b、CSV 导入原型）。变动由前端比较该版本与前一版本的整表得出，
- * `previous` 须是未经搜索过滤的完整表。手机只看，不显示取消。
+ * `previous` 须是未经搜索过滤的完整表。变动直接列出（稿 7b、7c）。手机只看，不显示取消。
  */
 export function ScheduledRateVersion({
   version,
@@ -28,10 +27,8 @@ export function ScheduledRateVersion({
   currency: Currency;
   onCancel: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const changes = diffRateTables(previous.entries, version.entries);
   const counts = countChanges(changes);
-  const detailId = `scheduled-${version.id}`;
   return (
     <section
       aria-label="排定的新版本"
@@ -49,17 +46,6 @@ export function ScheduledRateVersion({
           {counts.deleted}
         </span>
         <span className="flex-1" />
-        {changes.length ? (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            aria-controls={detailId}
-            onClick={() => setExpanded(!expanded)}
-            className="text-[13px] font-medium text-primary underline-offset-[3px] outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
-          >
-            {expanded ? '收起变动' : '查看变动'}
-          </button>
-        ) : null}
         <Button
           variant="outline"
           size="sm"
@@ -69,11 +55,8 @@ export function ScheduledRateVersion({
           取消排定
         </Button>
       </div>
-      {expanded ? (
-        <div
-          id={detailId}
-          className="max-h-[320px] overflow-auto rounded-lg border border-border bg-card"
-        >
+      {changes.length ? (
+        <div className="max-h-[320px] overflow-auto rounded-lg border border-border bg-card">
           <RateChangesTable changes={changes} currency={currency} />
         </div>
       ) : null}
@@ -118,9 +101,9 @@ export function CancelScheduledDialog({
   return (
     <ModalDialog
       open
-      onOpenChange={(open) => {
-        if (!open && !cancel.isPending) onClose();
-      }}
+      {...(cancel.isPending
+        ? {}
+        : { onOpenChange: (open: boolean) => open || onClose() })}
       title={title}
     >
       <div className="flex flex-col gap-1.5">

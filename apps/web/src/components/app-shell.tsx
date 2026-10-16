@@ -139,21 +139,26 @@ export function AppShell({
   );
 }
 
-/** 电脑版页面标题行：标题、旁注（如“共 10 个”）与右侧操作；手机版标题在顶栏。 */
+/**
+ * 电脑版页面标题行：标题、旁注（如“共 10 个”，与标题基线对齐）或状态标签（与标题垂直居中）
+ * 与右侧操作；手机版标题在顶栏。
+ */
 export function PageBody({
   title,
   meta,
+  badge,
   actions,
   children,
 }: {
   title: string;
   meta?: React.ReactNode;
+  badge?: React.ReactNode;
   actions?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-5 p-4 md:p-7">
-      {meta || actions ? (
+      {meta || badge || actions ? (
         <div className="flex items-center justify-between gap-3">
           <div className="hidden items-baseline gap-2.5 md:flex">
             <h1 className="m-0 text-2xl font-semibold tracking-[-0.01em]">
@@ -162,6 +167,7 @@ export function PageBody({
             {meta ? (
               <span className="text-[13px] text-muted-foreground">{meta}</span>
             ) : null}
+            {badge ? <span className="flex self-center">{badge}</span> : null}
           </div>
           {actions}
         </div>

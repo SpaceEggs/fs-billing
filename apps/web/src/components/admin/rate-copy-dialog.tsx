@@ -15,6 +15,7 @@ import { apiProblem, fieldIssues } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
 import { resolveSchedule, type ScheduleChoice } from '../../lib/rates';
 import { cn } from '../../lib/utils';
+import { CalloutIcon } from '../ui/alert';
 import { Button, buttonVariants } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { ProblemAlert } from './problem-alert';
@@ -302,9 +303,7 @@ export function RateCopyDialog({
   return (
     <ModalDialog
       open
-      onOpenChange={(open) => {
-        if (!open && !busy) onClose();
-      }}
+      {...(busy ? {} : { onOpenChange: (open: boolean) => open || onClose() })}
       title={title}
       className="md:w-[720px]"
       fallbackFocus={fallbackFocus}
@@ -370,6 +369,7 @@ export function RateCopyDialog({
 function copyLabels(code: string): PreviewLabels {
   return {
     summary: `${code} 的费率表将`,
+    columns: { before: `${code} 当前`, after: '复制后' },
     overwrite: code,
     confirm: `确认覆盖 ${code}`,
     busy: '正在复制…',
@@ -430,16 +430,19 @@ function ChooseTenant({
           {notice}
         </div>
       ) : null}
-      <div className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3.5 py-3 text-[13px] text-warn">
-        <span className="font-semibold">
-          {push
-            ? '将覆盖目标租户的整张费率表'
-            : `将覆盖 ${self.tenant.code} 的整张费率表`}
-        </span>
-        <span>
-          {push ? '目标租户' : '本租户'}
-          现有费率会被替换，来源中没有的前缀将被删除。
-        </span>
+      <div className="flex items-start gap-2.5 rounded-lg border border-warn-border bg-warn-soft px-3.5 py-3 text-[13px]">
+        <CalloutIcon tone="warn" />
+        <div className="flex flex-col gap-0.5">
+          <span className="font-semibold text-warn">
+            {push
+              ? '将覆盖目标租户的整张费率表'
+              : `将覆盖 ${self.tenant.code} 的整张费率表`}
+          </span>
+          <span>
+            {push ? '目标租户' : '本租户'}
+            现有费率会被替换，来源中没有的前缀将被删除。
+          </span>
+        </div>
       </div>
       <TenantPicker
         label={push ? '目标租户' : '来源租户'}
@@ -449,19 +452,6 @@ function ChooseTenant({
         disabled={busy}
         onPick={onPick}
       />
-      {pickedTenant ? (
-        <span className="text-[13px]">
-          已选：
-          <span className="font-semibold">
-            {pickedTenant.code} {pickedTenant.name}
-          </span>
-          {picked?.status === 'ready'
-            ? ` · ${picked.side.entryCount} 条`
-            : picked?.status === 'loading'
-              ? ' · 正在读取费率表…'
-              : null}
-        </span>
-      ) : null}
       {picked?.status === 'error' ? (
         <div className="flex flex-col items-start gap-2">
           <ProblemAlert error={picked.error} />
@@ -492,23 +482,40 @@ function ChooseTenant({
           {targetScheduledMessage}
         </span>
       ) : null}
-      <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
-        <Button
-          variant="outline"
-          className="h-12 md:h-9"
-          disabled={busy}
-          onClick={onCancel}
-        >
-          取消
-        </Button>
-        <Button
-          className="h-12 md:h-9"
-          disabled={busy || blocked || picked?.status === 'loading'}
-          aria-describedby={blocked ? `${id}-blocked` : undefined}
-          onClick={onNext}
-        >
-          {busy ? '正在预览…' : '下一步：预览变动'}
-        </Button>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        {pickedTenant ? (
+          <span className="text-[13px] text-muted-foreground md:flex-1">
+            已选：
+            <span className="text-foreground">
+              {pickedTenant.code} {pickedTenant.name}
+            </span>
+            {picked?.status === 'ready'
+              ? ` · ${picked.side.entryCount} 条`
+              : picked?.status === 'loading'
+                ? ' · 正在读取费率表…'
+                : null}
+          </span>
+        ) : (
+          <span className="hidden md:block md:flex-1" />
+        )}
+        <div className="flex flex-col-reverse gap-2 md:flex-row">
+          <Button
+            variant="outline"
+            className="h-12 md:h-9"
+            disabled={busy}
+            onClick={onCancel}
+          >
+            取消
+          </Button>
+          <Button
+            className="h-12 md:h-9"
+            disabled={busy || blocked || picked?.status === 'loading'}
+            aria-describedby={blocked ? `${id}-blocked` : undefined}
+            onClick={onNext}
+          >
+            {busy ? '正在预览…' : '下一步：预览变动'}
+          </Button>
+        </div>
       </div>
     </>
   );

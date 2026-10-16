@@ -19,6 +19,7 @@ import {
   useApiMutation,
 } from '../../lib/admin-api';
 import { apiProblem, fieldIssues } from '../../lib/api-problem';
+import { cn } from '../../lib/utils';
 
 type EditField = keyof AdminTenantEditRequest;
 
@@ -120,6 +121,9 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
       }}
       className="flex max-w-[1020px] flex-col"
     >
+      <span className="-mt-3 pb-5 text-[13px] text-muted-foreground">
+        带 <span className="text-err">*</span> 为必填
+      </span>
       {unchanged ? (
         <div
           role="status"
@@ -148,18 +152,31 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
         </div>
         <div className="grid gap-x-5 gap-y-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5 text-sm font-medium">
-            租户编码
+            <span>
+              租户编码
+              <RequiredMark />
+              <LockedHint className="ml-2" />
+            </span>
             <span className="flex h-11 items-center rounded-lg border border-input bg-muted px-3 font-mono font-normal md:h-10">
               {tenant.code}
             </span>
-          </div>
-          <div className="flex flex-col gap-1.5 text-sm font-medium">
-            币种
-            <span className="flex h-11 items-center rounded-lg border border-input bg-muted px-3 font-normal md:h-10">
-              {tenant.currency}
+            <span className="text-xs leading-normal font-normal text-muted-foreground">
+              字母和数字，须与 FreeSWITCH 中的{' '}
+              <span className="font-mono text-foreground">billing_tenant</span>{' '}
+              一致
             </span>
           </div>
           {text('name', '租户名称', true)}
+          <div className="flex flex-col gap-1.5 text-sm font-medium">
+            <span>
+              币种
+              <RequiredMark />
+            </span>
+            <span className="flex h-11 items-center justify-between gap-2 rounded-lg border border-input bg-muted px-3 font-normal md:h-10">
+              {tenant.currency}
+              <LockedHint />
+            </span>
+          </div>
         </div>
       </section>
       <section
@@ -169,7 +186,7 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
         <div className="flex flex-col gap-1">
           <h2 className="m-0 text-[15px] font-semibold">联系信息</h2>
           <span className="text-[13px] leading-relaxed text-muted-foreground">
-            仅管理后台可见
+            可选，仅内部可见
           </span>
         </div>
         <div className="grid gap-x-5 gap-y-4 md:grid-cols-2">
@@ -202,6 +219,26 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function RequiredMark() {
+  return (
+    <span aria-hidden className="text-err">
+      {' '}
+      *
+    </span>
+  );
+}
+
+/** 只读字段的「🔒 创建后不可修改」（稿 5a）。 */
+function LockedHint({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn('text-xs font-normal text-muted-foreground', className)}
+    >
+      <span aria-hidden>🔒 </span>创建后不可修改
+    </span>
   );
 }
 

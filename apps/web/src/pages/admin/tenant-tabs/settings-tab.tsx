@@ -264,6 +264,7 @@ function SettingsEditor({
             </Field>
           </div>
           <RecipientsInput
+            stacked
             emails={form.emails}
             error={errors.emails}
             onChange={(emails) => update({ emails })}
@@ -305,9 +306,9 @@ function SettingsEditor({
       </form>
       <ModalDialog
         open={pending !== null}
-        onOpenChange={(open) => {
-          if (!open && !save.isPending) setPending(null);
-        }}
+        {...(save.isPending
+          ? {}
+          : { onOpenChange: (open: boolean) => open || setPending(null) })}
         title="确认保存以下修改？"
         description={`${tenant.code} ${tenant.name}`}
       >

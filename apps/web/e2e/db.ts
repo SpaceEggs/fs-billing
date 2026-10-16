@@ -103,6 +103,42 @@ export function recordCalls(
   });
 }
 
+/**
+ * 给租户记一笔 `daysAgo` 天前的赊账（待收款）。应用角色不能指定 created_at，所以由 owner 写入；
+ * 操作人为管理员 `adminEmail`。返回流水 ID。
+ */
+export function recordPastCredit(
+  tenantId: string,
+  {
+    amount,
+    note,
+    daysAgo,
+    adminEmail,
+  }: { amount: string; note: string; daysAgo: number; adminEmail: string },
+) {
+  return withOwner(async (client) => {
+    await client.query('BEGIN');
+    try {
+      await client.query("SELECT set_config('app.scope', 'system', true)");
+      await client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenantId]);
+      const { rows } = await client.query<{ id: string }>(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, note, created_by, idempotency_key,
+           occurred_at, created_at)
+         SELECT $1, 'credit_recharge', $2::numeric, $3, admins.id, $4,
+           now() - make_interval(days => $5), now() - make_interval(days => $5)
+         FROM admins JOIN auth.user u ON u.id = admins.auth_user_id WHERE u.email = lower($6)
+         RETURNING id`,
+        [tenantId, amount, note, randomUUID(), daysAgo, adminEmail],
+      );
+      await client.query('COMMIT');
+      return rows[0]!.id;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  });
+}
+
 export function clearLoginFailures(email: string) {
   return withOwner((client) =>
     client.query('DELETE FROM auth.login_failures WHERE email_key = $1', [

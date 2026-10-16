@@ -137,6 +137,28 @@ afterEach(() => {
 });
 
 describe('rate import dialog', () => {
+  it('keeps 下一步 disabled until a file is chosen and describes both schedule options', async () => {
+    stubApi(() => ({ status: 200, body: okPreview }));
+    renderTab();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '导入 CSV' }));
+    const dialog = screen.getByRole('dialog', { name: '导入费率表' });
+    const next = within(dialog).getByRole('button', { name: '下一步：预览' });
+    expect(next).toBeDisabled();
+    expect(
+      within(dialog).getByRole('radio', { name: '立即生效' }),
+    ).toHaveAccessibleDescription('确认导入后马上用于新呼叫');
+    expect(
+      within(dialog).getByRole('radio', { name: '指定时间生效' }),
+    ).toHaveAccessibleDescription('到点前继续使用当前费率');
+
+    await user.upload(
+      within(dialog).getByLabelText('选择 CSV 文件'),
+      csv('prefix,country,rate\n86,中国,0.05\n'),
+    );
+    expect(next).toBeEnabled();
+  });
+
   it('lists every error line with its raw text and offers no way to continue', async () => {
     const { posts } = stubApi(() => ({
       status: 200,
@@ -205,11 +227,10 @@ describe('rate import dialog', () => {
       within(dialog).getByRole('button', { name: '下一步：预览' }),
     );
 
-    expect(
-      await within(dialog).findByText(
-        '将新增 1 条、修改 1 条、删除 1 条，其余 1 条不变',
-      ),
-    ).toBeInTheDocument();
+    expect(await within(dialog).findByText('校验通过')).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(
+      '校验通过将新增 1 条、修改 1 条、删除 1 条，其余 1 条不变',
+    );
     expect(dialog).toHaveTextContent('费率_修订版.csv · GBK · 3 条');
     expect(dialog).toHaveTextContent(
       '删除后，拨打这些前缀的呼叫将被拒绝：1876 牙买加',
@@ -476,22 +497,64 @@ describe('rate import dialog', () => {
     );
   });
 
+  it('lists scheduled changes inline, marks the affected rows and disables single edits (G4)', async () => {
+    stubApi(
+      () => ({ status: 500 }),
+      () =>
+        rates(versionA, [
+          {
+            id: versionB,
+            // 北京时间 2026-11-01 08:00。
+            effectiveFrom: '2026-11-01T00:00:00.000Z',
+            entries: [
+              { prefix: '86', country: '中国', rate: '0.048' },
+              { prefix: '44', country: '英国', rate: '0.05' },
+            ],
+          },
+        ]),
+    );
+    renderTab();
+    const card = await screen.findByRole('region', { name: '排定的新版本' });
+    expect(
+      within(card)
+        .getAllByRole('row')
+        .map((row) => row.textContent),
+    ).toEqual([
+      '变动前缀国家/备注当前费率（元/分钟）新费率（元/分钟）涨跌',
+      '修改86中国0.0450→0.0480+6.7%',
+      '删除1876牙买加0.3000—',
+    ]);
+
+    const table = screen.getByRole('region', { name: '费率表' });
+    const rowText = (prefix: string) =>
+      within(table)
+        .getAllByRole('row')
+        .find((row) => row.textContent?.startsWith(prefix))?.textContent;
+    expect(rowText('86')).toBe('86中国0.045011-01 起 0.0480编辑');
+    expect(rowText('1876')).toBe('1876牙买加0.300011-01 起删除编辑');
+    expect(rowText('44')).toBe('44英国0.0500编辑');
+    for (const name of ['编辑 86 中国', '编辑 44 英国']) {
+      const edit = screen.getByRole('button', { name });
+      expect(edit).toBeDisabled();
+      expect(edit).toHaveAccessibleDescription(
+        '已有排定的新版本，请先取消排定',
+      );
+    }
+  });
+
   it('rejects a file over 2 MiB before reading or uploading it', async () => {
     const { posts } = stubApi(() => ({ status: 200, body: okPreview }));
     renderTab();
     const big = new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'big.csv', {
       type: 'text/csv',
     });
-    const { user, dialog } = await openAndUpload(big);
+    const { dialog } = await openAndUpload(big);
     expect(within(dialog).getByRole('alert')).toHaveTextContent(
       '文件超过 2 MB 上限',
     );
-    await user.click(
+    expect(
       within(dialog).getByRole('button', { name: '下一步：预览' }),
-    );
-    expect(within(dialog).getByRole('alert')).toHaveTextContent(
-      '请选择 CSV 文件',
-    );
+    ).toBeDisabled();
     expect(posts).toEqual([]);
   });
 

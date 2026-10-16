@@ -53,7 +53,7 @@ test('disabled tenant confirmation explains unchanged status', async ({
   const note = dialog.getByRole('note');
   await expect(note).toContainText('该租户已停用，状态不会改变');
   await expect(note).toContainText('不会自动启用');
-  await expect(dialog).toContainText('操作后状态已停用');
+  await expect(dialog).toContainText('，状态保持「已停用」');
   await dialog.getByRole('button', { name: '确认充值' }).click();
   await expect(dialog.getByRole('status')).toContainText(
     '充值 +¥300.00 已入账，当前余额 ¥300.00',

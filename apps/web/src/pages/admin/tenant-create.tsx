@@ -18,10 +18,11 @@ import {
   MoneyInput,
   RecipientsInput,
 } from '../../components/admin/form-fields';
-import { CopyField } from '../../components/copy-field';
+import { CopyField, SecretField } from '../../components/copy-field';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { ModalDialog } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
 import {
   apiQuery,
   invalidateTenant,
@@ -232,7 +233,7 @@ function CopySourcePicker({
         onChange={(event) => setSearch(event.target.value)}
       />
       <label htmlFor={id}>复制自</label>
-      <select
+      <Select
         id={id}
         value={picked?.id ?? ''}
         disabled={!tenants.data}
@@ -242,7 +243,7 @@ function CopySourcePicker({
           );
           onChange(null);
         }}
-        className="h-11 rounded-lg border border-input bg-background px-3 text-base font-normal outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-10 md:text-sm"
+        className="font-normal md:h-10"
       >
         <option value="">
           {tenants.isError
@@ -258,7 +259,7 @@ function CopySourcePicker({
             {tenant.code} {tenant.name}
           </option>
         ))}
-      </select>
+      </Select>
       <span className="text-xs font-normal text-muted-foreground">
         {rates.isError
           ? '该租户的费率表加载失败，请重新选择'
@@ -361,7 +362,7 @@ function PortalResult({
       </span>
       {response.passwordSource === 'generated' ? (
         <>
-          <CopyField value={response.temporaryPassword} label="临时密码" />
+          <SecretField value={response.temporaryPassword} label="临时密码" />
           <div className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
             <span className="font-semibold">
               只显示一次，关闭后无法再次查看
@@ -747,9 +748,11 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               required
               error={errors.overdraftLimit}
               hint={
-                form.overdraftEdited
-                  ? undefined
-                  : `默认 CNY 100 / USD 15，切换币种时自动更新`
+                form.overdraftEdited ? undefined : (
+                  <span className="text-primary">
+                    默认 CNY 100 / USD 15，切换币种时自动更新
+                  </span>
+                )
               }
             >
               {(props) => (

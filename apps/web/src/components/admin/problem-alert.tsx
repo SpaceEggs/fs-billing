@@ -1,5 +1,6 @@
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
+import { CalloutIcon } from '../ui/alert';
 import { Button } from '../ui/button';
 
 /**
@@ -19,10 +20,13 @@ export function ProblemAlert({
     return (
       <div
         role="alert"
-        className="rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
+        className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
       >
-        <span className="font-semibold">网络中断</span>
-        <span className="block">{networkMessage ?? '请检查网络后重试'}</span>
+        <CalloutIcon tone="err" />
+        <div className="flex flex-col gap-0.5">
+          <span className="font-semibold">网络中断</span>
+          <span>{networkMessage ?? '请检查网络后重试'}</span>
+        </div>
       </div>
     );
   const problem = apiProblem(error);
@@ -35,8 +39,9 @@ export function ProblemAlert({
   return (
     <div
       role="alert"
-      className="flex items-start gap-3 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
+      className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
     >
+      <CalloutIcon tone="err" />
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-semibold">{notice.title}</span>
         {notice.body ? <span>{notice.body}</span> : null}

@@ -4,6 +4,7 @@ import type {
 } from '@fs-billing/shared';
 import { formatDateTime } from '../../lib/format';
 import { cn } from '../../lib/utils';
+import { CalloutIcon } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ProblemAlert } from './problem-alert';
 import { RateChangesTable } from './rate-changes-table';
@@ -57,35 +58,48 @@ export function StepList({
         const current = index === position;
         const done = index < position || complete;
         const error = index === failedAt;
+        const last = index === steps.length - 1;
         return (
           <li
             key={step}
             aria-current={current ? 'step' : undefined}
             className={cn(
-              'flex items-center gap-1.5',
-              index > position && 'text-muted-foreground',
-              current && 'font-semibold',
+              'flex items-center gap-2',
+              !last && 'flex-1',
+              error
+                ? 'font-semibold text-err'
+                : current && !done
+                  ? 'font-semibold'
+                  : 'text-muted-foreground',
             )}
           >
-            <span
-              aria-hidden
-              className={cn(
-                'inline-flex size-5 items-center justify-center rounded-full border text-[11px]',
-                error
-                  ? 'border-err bg-err text-white'
-                  : done
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : current
-                      ? 'border-primary text-primary'
-                      : 'border-input',
-              )}
-            >
-              {error ? '!' : done ? '✓' : index + 1}
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span
+                aria-hidden
+                className={cn(
+                  'inline-flex size-5 items-center justify-center rounded-full text-[11px]',
+                  error
+                    ? 'bg-err text-white'
+                    : done
+                      ? 'bg-brand-soft text-primary'
+                      : current
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border border-input',
+                )}
+              >
+                {error ? '!' : done ? '✓' : index + 1}
+              </span>
+              {step}
             </span>
-            {step}
-            {index < steps.length - 1 ? (
-              <span aria-hidden className="mx-1 h-px w-6 bg-input" />
-            ) : null}
+            {last ? null : (
+              <span
+                aria-hidden
+                className={cn(
+                  'h-px min-w-4 flex-1',
+                  index < position || complete ? 'bg-primary' : 'bg-border',
+                )}
+              />
+            )}
           </li>
         );
       })}
@@ -94,8 +108,12 @@ export function StepList({
 }
 
 export type PreviewLabels = {
+  /** 计数句前打勾的结论，如导入的「校验通过」；省略时主语加粗代替。 */
+  verified?: string;
   /** 计数句的主语，如「将」或「BJH003 的费率表将」。 */
   summary: string;
+  /** 变动表的「当前 / 新」两列标题，省略时为「当前费率 / 新费率」。 */
+  columns?: { before: string; after: string };
   /** 复制时为目标租户编码：删除提示前先醒目提示整表覆盖。 */
   overwrite?: string;
   confirm: string;
@@ -142,26 +160,49 @@ export function PreviewChanges({
     : null;
   return (
     <>
-      <div className="flex flex-col gap-1 rounded-lg border border-ok-border bg-ok-soft px-3.5 py-3 text-[13px]">
-        <span className="font-semibold text-ok">校验通过</span>
-        <span className="tabular-nums">
-          {labels.summary}新增 {counts.added} 条、修改 {counts.modified}{' '}
-          条、删除 {counts.deleted} 条，其余 {unchanged} 条不变
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm tabular-nums">
+        {labels.verified ? (
+          <>
+            <CalloutIcon tone="ok" />
+            <span className="font-semibold">{labels.verified}</span>
+          </>
+        ) : null}
+        <span className="text-muted-foreground">
+          {labels.verified ? (
+            labels.summary
+          ) : (
+            <span className="mr-2 font-semibold text-foreground">
+              {labels.summary}
+            </span>
+          )}
+          新增 <Count className="text-ok">{counts.added}</Count> 条、修改{' '}
+          <Count className="text-primary">{counts.modified}</Count> 条、删除{' '}
+          <Count className="text-err">{counts.deleted}</Count> 条，其余{' '}
+          {unchanged} 条不变
         </span>
       </div>
-      {labels.overwrite ? (
-        <div className="rounded-lg border border-err-border bg-err-soft px-3.5 py-2.5 text-[13px] text-err">
-          <span className="font-semibold">
-            将覆盖 {labels.overwrite} 的整张费率表
+      {labels.overwrite || deletedList ? (
+        <div className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3.5 py-2.5 text-[13px] text-err">
+          <CalloutIcon tone="err" />
+          <span>
+            {labels.overwrite ? (
+              <>
+                <span className="font-semibold">
+                  将覆盖 {labels.overwrite} 的整张费率表
+                </span>
+                {deletedList
+                  ? `；删除后，拨打 ${deletedList} 的呼叫将被拒绝`
+                  : null}
+              </>
+            ) : (
+              <>
+                <span className="font-semibold">
+                  删除后，拨打这些前缀的呼叫将被拒绝
+                </span>
+                ：{deletedList}
+              </>
+            )}
           </span>
-          {deletedList ? `；删除后，拨打 ${deletedList} 的呼叫将被拒绝` : null}
-        </div>
-      ) : deletedList ? (
-        <div className="rounded-lg border border-err-border bg-err-soft px-3.5 py-2.5 text-[13px] text-err">
-          <span className="font-semibold">
-            删除后，拨打这些前缀的呼叫将被拒绝
-          </span>
-          ：{deletedList}
         </div>
       ) : null}
       {changes.length ? (
@@ -170,6 +211,7 @@ export function PreviewChanges({
             changes={changes}
             currency={preview.currency}
             showHeader
+            {...(labels.columns ? { columns: labels.columns } : {})}
           />
         </div>
       ) : (
@@ -177,14 +219,14 @@ export function PreviewChanges({
           与当前费率表相同，没有变动。
         </span>
       )}
-      <span className="text-[13px]">
-        生效时间：
-        <span className="font-semibold tabular-nums">
+      <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3.5 py-2.5 text-[13px] tabular-nums">
+        <span className="text-muted-foreground">生效时间</span>
+        <span className="font-semibold">
           {schedule.kind === 'scheduled'
             ? `${formatDateTime(schedule.effectiveFrom)} 起（北京时间）`
             : '立即生效'}
         </span>
-      </span>
+      </div>
       {error ? (
         <ProblemAlert error={error} networkMessage={labels.networkMessage} />
       ) : null}
@@ -193,7 +235,7 @@ export function PreviewChanges({
           {labels.uncertainNote}
         </span>
       ) : null}
-      <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
+      <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-between">
         <Button
           variant="outline"
           className="h-12 md:h-9"
@@ -202,20 +244,32 @@ export function PreviewChanges({
         >
           上一步
         </Button>
-        <Button
-          variant="outline"
-          className="h-12 md:h-9"
-          disabled={busy}
-          onClick={onCancel}
-        >
-          取消
-        </Button>
-        <Button className="h-12 md:h-9" disabled={busy} onClick={onConfirm}>
-          {busy ? labels.busy : labels.confirm}
-        </Button>
+        <div className="flex flex-col-reverse gap-2 md:flex-row">
+          <Button
+            variant="outline"
+            className="h-12 md:h-9"
+            disabled={busy}
+            onClick={onCancel}
+          >
+            取消
+          </Button>
+          <Button className="h-12 md:h-9" disabled={busy} onClick={onConfirm}>
+            {busy ? labels.busy : labels.confirm}
+          </Button>
+        </div>
       </div>
     </>
   );
+}
+
+function Count({
+  className,
+  children,
+}: {
+  className: string;
+  children: number;
+}) {
+  return <span className={cn('font-semibold', className)}>{children}</span>;
 }
 
 /** 写入后的整表条数与不变的条数（条数，不是金额）。 */

@@ -24,10 +24,12 @@ export function RateChangesTable({
   changes,
   currency,
   showHeader = false,
+  columns = { before: '当前费率', after: '新费率' },
 }: {
   changes: readonly AdminRateChange[];
   currency: Currency;
   showHeader?: boolean;
+  columns?: { before: string; after: string };
 }) {
   const unit = rateUnit[currency];
   return (
@@ -44,9 +46,11 @@ export function RateChangesTable({
           <th className="px-2 py-2 text-left font-medium">前缀</th>
           <th className="px-2 py-2 text-left font-medium">国家/备注</th>
           <th className="px-2 py-2 text-right font-medium">
-            当前费率（{unit}）
+            {columns.before}（{unit}）
           </th>
-          <th className="px-2 py-2 text-right font-medium">新费率（{unit}）</th>
+          <th className="px-2 py-2 text-right font-medium">
+            {columns.after}（{unit}）
+          </th>
           <th className="py-2 pr-3.5 pl-2 text-right font-medium">涨跌</th>
         </tr>
       </thead>

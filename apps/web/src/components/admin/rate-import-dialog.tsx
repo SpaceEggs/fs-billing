@@ -22,6 +22,7 @@ import {
 } from '../../lib/rate-csv';
 import { resolveSchedule, type ScheduleChoice } from '../../lib/rates';
 import { cn } from '../../lib/utils';
+import { CalloutIcon } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { ProblemAlert } from './problem-alert';
@@ -83,7 +84,13 @@ export type RateImportState =
 
 const steps = ['上传', '预览与校验', '确认导入'] as const;
 
+const scheduleDescriptions = {
+  immediate: '确认导入后马上用于新呼叫',
+  scheduled: '到点前继续使用当前费率',
+};
+
 const importLabels: PreviewLabels = {
+  verified: '校验通过',
   summary: '将',
   confirm: '确认导入',
   busy: '正在导入…',
@@ -174,10 +181,7 @@ export function RateImportDialog({
   }
 
   async function runPreview() {
-    if (!file) {
-      setFileError('请选择 CSV 文件');
-      return;
-    }
+    if (!file) return;
     const resolved = resolveSchedule(
       choice,
       Date.now(),
@@ -320,9 +324,7 @@ export function RateImportDialog({
   return (
     <ModalDialog
       open
-      onOpenChange={(open) => {
-        if (!open && !busy) onClose();
-      }}
+      {...(busy ? {} : { onOpenChange: (open: boolean) => open || onClose() })}
       title="导入费率表"
       className="md:w-[720px]"
       fallbackFocus={fallbackFocus}
@@ -442,11 +444,17 @@ function Upload({
             onPick(event.dataTransfer.files[0] ?? null);
           }}
           className={cn(
-            'flex cursor-pointer flex-col items-center gap-1.5 rounded-[10px] border border-dashed border-input px-4 py-6 text-center text-[13px] has-focus-visible:ring-[3px] has-focus-visible:ring-ring',
+            'flex cursor-pointer flex-col items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-input px-4 py-8 text-center text-sm has-focus-visible:ring-[3px] has-focus-visible:ring-ring',
             dragging && 'border-primary bg-brand-soft',
             fileError && 'border-err',
           )}
         >
+          <span
+            aria-hidden
+            className="flex size-10 items-center justify-center rounded-[10px] bg-muted text-lg text-muted-foreground"
+          >
+            ⤒
+          </span>
           {file ? (
             <>
               <span className="font-semibold break-all">{file.name}</span>
@@ -455,9 +463,9 @@ function Upload({
               </span>
             </>
           ) : (
-            <span>
-              拖拽 CSV 文件到此处，或
-              <span className="font-medium text-primary">点击选择文件</span>
+            <span className="font-medium">
+              拖拽 CSV 文件到此处，或{' '}
+              <span className="text-primary">点击选择文件</span>
             </span>
           )}
           <span className="text-xs text-muted-foreground">
@@ -481,10 +489,13 @@ function Upload({
             {fileError}
           </span>
         ) : null}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
           <span>
-            格式：<span className="font-mono">prefix,country,rate</span>
-            ，每行一个前缀，覆盖整张费率表
+            格式：
+            <span className="font-mono text-foreground">
+              prefix,country,rate
+            </span>
+            <span className="ml-3">每行一个前缀，覆盖整张费率表</span>
           </span>
           <span className="flex-1" />
           <RateCsvTemplateLink />
@@ -494,6 +505,7 @@ function Upload({
         choice={choice}
         error={scheduleError}
         disabled={busy}
+        descriptions={scheduleDescriptions}
         onChange={onChoice}
       />
       {error ? <ProblemAlert error={error} /> : null}
@@ -513,7 +525,7 @@ function Upload({
         </Button>
         <Button
           className="h-12 md:h-9"
-          disabled={busy || blocked}
+          disabled={busy || blocked || !file}
           aria-describedby={blocked ? `${id}-blocked` : undefined}
           onClick={onNext}
         >
@@ -539,14 +551,17 @@ function RowErrors({
     <>
       <div
         role="alert"
-        className="flex flex-col gap-1 rounded-lg border border-err-border bg-err-soft px-3.5 py-3 text-[13px] text-err"
+        className="flex items-start gap-2.5 rounded-[10px] border border-err-border bg-err-soft px-4 py-3.5"
       >
-        <span className="font-semibold">
-          发现 {errors.length} 处错误，文件未导入
-        </span>
-        <span>
-          有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。
-        </span>
+        <CalloutIcon tone="err" />
+        <div className="flex flex-col gap-1">
+          <span className="text-[15px] font-semibold text-err">
+            发现 {errors.length} 处错误，文件未导入
+          </span>
+          <span className="text-[13px]">
+            有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。
+          </span>
+        </div>
       </div>
       <div className="max-h-[320px] overflow-auto rounded-lg border border-border">
         <table className="w-full border-collapse text-[13px]">
@@ -567,7 +582,7 @@ function RowErrors({
                 key={`${error.line}-${index}`}
                 className="border-t border-border"
               >
-                <td className="py-2 pr-2 pl-3.5 whitespace-nowrap tabular-nums">
+                <td className="py-2 pr-2 pl-3.5 font-semibold whitespace-nowrap tabular-nums">
                   第 {error.line} 行
                 </td>
                 <td className="px-2 py-2 text-err">{error.reason}</td>

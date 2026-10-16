@@ -161,7 +161,7 @@ test('refreshes after settlement conflict', async ({ page }) => {
   await expect(
     dialog.getByRole('button', { name: '确认收款 ¥500.00' }),
   ).toHaveCount(0);
-  await dialog.getByRole('button', { name: '关闭' }).click();
+  await dialog.getByRole('button', { name: '关闭', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   expect(posts).toHaveLength(1);
 
@@ -289,4 +289,46 @@ test('voids with linked adjustment', async ({ page }) => {
   await expect(
     page.getByRole('list', { name: '已作废合计' }).getByRole('listitem'),
   ).toHaveText(['已作废总额 · CNY¥500.00', '已作废总额 · USD$0.00']);
+});
+
+test('mobile cards keep full-height row actions', async ({ page }) => {
+  await openTenants(page);
+  const run = uniqueCode('RCM');
+  const tenant = await seedTenant(page, 'CNY', run);
+  const received = await creditTopup(page, tenant, 'CNY', '600');
+  const confirm = await page.request.post(
+    `/api/admin/receivables/${received}/confirm-payment`,
+    {
+      data: {
+        expectedLatestSettlementId: null,
+        receivedOn: beijingToday(),
+        note: '',
+      },
+    },
+  );
+  expect(confirm.status()).toBe(200);
+  await creditTopup(page, tenant, 'CNY', '700');
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  const heights = async (status: string, names: string[]) => {
+    await page.goto(`/admin/receivables?status=${status}&search=${run}`);
+    return Promise.all(
+      names.map(async (name) => {
+        const button = page.getByRole('button', { name }).filter({
+          visible: true,
+        });
+        await expect(button).toBeVisible();
+        return (await button.boundingBox())?.height;
+      }),
+    );
+  };
+  expect(
+    await heights('pending', [
+      `确认收款 ${tenant.code} ¥700.00`,
+      `作废 ${tenant.code} ¥700.00`,
+    ]),
+  ).toEqual([40, 40]);
+  expect(
+    await heights('received', [`撤销确认 ${tenant.code} ¥600.00`]),
+  ).toEqual([40]);
 });

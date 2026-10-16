@@ -27,7 +27,7 @@ import { formatExactMoney, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import { webConfig } from '../../config';
 import { Money } from '../data-format';
-import { StatusTag } from '../status-tag';
+import { statusTags } from '../status-tag';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { Field, invalidClass, MoneyInput } from './form-fields';
@@ -189,6 +189,14 @@ export function BalanceDialog({
   );
 }
 
+/** 操作后状态提示框的颜色，与状态标签同色系（稿 3d 为「正常」的绿色）。 */
+const outcomeTones = {
+  ok: 'border-ok-border bg-ok-soft text-ok',
+  warn: 'border-warn-border bg-warn-soft text-warn',
+  err: 'border-err-border bg-err-soft text-err',
+  off: 'border-off-border bg-off-soft text-off',
+} as const;
+
 function BalanceFlow({
   owner,
   tenant,
@@ -336,7 +344,7 @@ function BalanceFlow({
         </div>
         <dl className="m-0 grid grid-cols-[88px_1fr] overflow-hidden rounded-[10px] border border-border text-sm tabular-nums">
           {[
-            ['租户', tenantLabel],
+            ['租户', `${tenant.code} ${tenant.name}`],
             ['类型', rule.confirmType],
             [
               '金额',
@@ -389,7 +397,7 @@ function BalanceFlow({
               </dt>
               <dd
                 className={cn(
-                  'm-0 px-3.5 py-2.5 break-all',
+                  'm-0 px-3.5 py-2.5 break-words',
                   index < rows.length - 1 && 'border-b border-border',
                 )}
               >
@@ -398,13 +406,20 @@ function BalanceFlow({
             </div>
           ))}
         </dl>
-        <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground tabular-nums">
-          操作后状态
-          <StatusTag status={healthStatus[projected.health]} />· 可用额度{' '}
+        <div
+          className={cn(
+            'rounded-lg border px-3.5 py-2.5 text-[13px] tabular-nums',
+            outcomeTones[statusTags[healthStatus[projected.health]].tone],
+          )}
+        >
+          {rule.label}后可用额度{' '}
           {formatMoney({
             currency: tenant.currency,
             amount: projected.available,
           })}
+          ，状态
+          {projected.health === tenant.health ? '保持' : '将变为'}「
+          {statusTags[healthStatus[projected.health]].label}」
         </div>
         {tenant.status === 'disabled' ? (
           <div

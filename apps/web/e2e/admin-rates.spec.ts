@@ -94,7 +94,6 @@ test('cancels selected scheduled version', async ({ page }) => {
   await expect(card).toContainText(
     `${slot.shown} 起生效 · 新增 0 · 修改 1 · 删除 0`,
   );
-  await card.getByRole('button', { name: '查看变动' }).click();
   await expect(card.getByRole('row')).toHaveCount(2);
   await expect(card.getByRole('row').nth(1)).toHaveText(
     /修改447英国手机0\.0450\s*→\s*0\.0480\+6\.7%/,
@@ -184,24 +183,32 @@ test('minute picker submits Beijing schedule', async ({ page }) => {
 test('cancel edit reschedule audits each step', async ({ page }) => {
   const tenant = await createTenant(page, { rates });
   const slot = beijingSlot(3, '09:00');
+  await openRates(page, tenant.id);
+
+  // 编辑对话框打开后才有排定版本：按钮来不及禁用，由 409 兜底（G4）。
+  let confirm = await editRate(page, '86 中国', '0.0550');
   const firstId = await scheduleEdit(
     page,
     tenant.id,
     { prefix: '447', country: '英国手机', rate: '0.0480' },
     slot.iso,
   );
-  await openRates(page, tenant.id);
-
-  let confirm = await editRate(page, '86 中国', '0.0550');
   await confirm.getByRole('button', { name: '确认修改' }).click();
   await expect(confirm.getByRole('alert')).toContainText(
     '费率表已被修改，请刷新后重试',
   );
-  await expect(confirm).toContainText('请先取消排定，修改后再重新排期');
   await confirm.getByRole('button', { name: '刷新' }).click();
   await expect(confirm).toHaveCount(0);
 
   const card = page.getByRole('region', { name: '排定的新版本' });
+  const edit86 = page.getByRole('button', { name: '编辑 86 中国' });
+  await expect(edit86).toBeDisabled();
+  await expect(edit86).toHaveAccessibleDescription(
+    '已有排定的新版本，请先取消排定',
+  );
+  await expect(
+    page.getByRole('row').filter({ hasText: '英国手机' }).last(),
+  ).toContainText(`${slot.shown.slice(5, 10)} 起 0.0480`);
   await card.getByRole('button', { name: '取消排定' }).click();
   await page
     .getByRole('dialog', { name: '取消排定的新版本？' })
@@ -358,9 +365,13 @@ test('mobile only views and searches rates', async ({ page }) => {
   await expect(page.getByRole('button', { name: '导入 CSV' })).toBeHidden();
   await expect(page.getByText('请在电脑上操作')).toBeVisible();
   await expect(page.getByRole('button', { name: /^编辑 / })).toHaveCount(0);
+  await expect(card.getByRole('row').nth(1)).toContainText('447英国手机');
   await page.getByRole('searchbox', { name: '搜索前缀或国家' }).fill('英国');
-  await expect(page.getByRole('row')).toHaveCount(2);
-  await expect(page.getByRole('row').nth(1)).toContainText('447英国手机0.0450');
+  const table = page.getByRole('table').last();
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await expect(table.getByRole('row').nth(1)).toContainText(
+    '447英国手机0.0450',
+  );
 });
 
 /** 在复制对话框里按编码搜索并选中租户，等待其费率表快照读完。 */

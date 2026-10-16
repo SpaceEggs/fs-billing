@@ -19,6 +19,7 @@ import { SearchBox } from '../../components/search-box';
 import { QueryError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
+import { Select } from '../../components/ui/select';
 import { apiQuery } from '../../lib/admin-api';
 import type { TenantListSearch } from '../../lib/admin-search';
 import { cn } from '../../lib/utils';
@@ -69,7 +70,7 @@ function Filters() {
         <label htmlFor={statusId} className="sr-only">
           状态
         </label>
-        <select
+        <Select
           id={statusId}
           value={search.status ?? ''}
           onChange={(event) => {
@@ -78,7 +79,7 @@ function Filters() {
             )?.value;
             setFilter({ status });
           }}
-          className="h-11 flex-1 rounded-lg border border-input bg-background px-3 text-base outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9 md:w-[150px] md:flex-none md:text-sm"
+          className="flex-1 md:w-[150px] md:flex-none"
         >
           <option value="">全部状态</option>
           {healthOptions.map((option) => (
@@ -86,7 +87,7 @@ function Filters() {
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
         <div
           role="group"
           aria-label="币种"

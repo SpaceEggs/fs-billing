@@ -277,21 +277,25 @@ function Actions({
   const blocked = actions.isBlocked(receivable);
   const size = mobile ? 'h-10 flex-1' : 'h-[30px]';
   if (payment.status === 'voided') return null;
+  // 手机按钮用 flex-1 横向铺满，必须放在横向的 flex 容器里，否则在卡片的纵向 flex 中被压扁。
+  const row = cn('flex gap-2', mobile ? 'mt-1' : 'justify-end');
   if (payment.status === 'received')
     return (
-      <Button
-        variant="danger"
-        size="sm"
-        aria-label={`撤销确认 ${target}`}
-        disabled={blocked}
-        onClick={() => actions.onReverse(receivable, payment)}
-        className={cn('bg-background', size)}
-      >
-        撤销确认
-      </Button>
+      <span className={row}>
+        <Button
+          variant="danger"
+          size="sm"
+          aria-label={`撤销确认 ${target}`}
+          disabled={blocked}
+          onClick={() => actions.onReverse(receivable, payment)}
+          className={cn('bg-background', size)}
+        >
+          撤销确认
+        </Button>
+      </span>
     );
   return (
-    <span className={cn('flex gap-2', mobile ? 'mt-1' : 'justify-end')}>
+    <span className={row}>
       <Button
         variant="outline"
         size="sm"

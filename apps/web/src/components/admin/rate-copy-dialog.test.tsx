@@ -233,10 +233,11 @@ describe('rate copy dialog', () => {
       within(dialog).getByRole('button', { name: '下一步：预览变动' }),
     );
     expect(
-      await within(dialog).findByText(
-        'BJH003 的费率表将新增 1 条、修改 0 条、删除 1 条，其余 0 条不变',
-      ),
+      await within(dialog).findByText('BJH003 的费率表将'),
     ).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(
+      'BJH003 的费率表将新增 1 条、修改 0 条、删除 1 条，其余 0 条不变',
+    );
     expect(dialog).toHaveTextContent(
       '将覆盖 BJH003 的整张费率表；删除后，拨打 64 新西兰 的呼叫将被拒绝',
     );

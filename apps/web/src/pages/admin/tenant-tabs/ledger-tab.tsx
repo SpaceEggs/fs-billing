@@ -9,12 +9,22 @@ import {
 import { DateTime, Money } from '../../../components/data-format';
 import { Pagination } from '../../../components/pagination';
 import { QueryError } from '../../../components/query-error';
+import { Select } from '../../../components/ui/select';
 import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
 import { ledgerKindLabels } from '../../../lib/balance-operation';
 import { formatDateTime } from '../../../lib/format';
+import { cn } from '../../../lib/utils';
 
 const ledgerPageSize = 25;
+
+/** 北京时间日期（YYYY-MM-DD）转成接口的闭区间 from/to，空的一端不限。 */
+export function beijingDayRange(range: { from: string; to: string }) {
+  return {
+    ...(range.from ? { from: `${range.from}T00:00:00.000+08:00` } : {}),
+    ...(range.to ? { to: `${range.to}T23:59:59.999+08:00` } : {}),
+  };
+}
 
 const paymentTags = {
   pending: 'unpaid',
@@ -155,11 +165,18 @@ function LedgerCards({
   );
 }
 
-/** 余额流水（设计稿第一批 2a/2b）：按时间倒序分页，可按类型筛选。 */
+/**
+ * 余额流水（设计稿第一批 2a/2b）：按时间倒序分页，可按北京时间日期范围（含两端）与类型筛选。
+ * 契约没有收款状态筛选和流水导出，设计稿中的这两项省略。
+ */
 export function LedgerTab({ tenantId }: { tenantId: string }) {
   const kindId = useId();
+  const rangeErrorId = useId();
   const [kind, setKind] = useState<AdminLedgerKind | undefined>();
+  const [range, setRange] = useState({ from: '', to: '' });
   const [page, setPage] = useState(1);
+  const rangeInvalid =
+    range.from !== '' && range.to !== '' && range.from > range.to;
   const ledger = useQuery({
     ...apiQuery('adminTenantLedger', {
       params: { tenantId },
@@ -167,25 +184,61 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         page,
         pageSize: ledgerPageSize,
         ...(kind ? { kind } : {}),
+        ...(rangeInvalid ? {} : beijingDayRange(range)),
       },
     }),
     placeholderData: keepPreviousData,
   });
   const data = ledger.data;
+  const filtered = kind !== undefined || range.from !== '' || range.to !== '';
+  const updateRange = (patch: Partial<typeof range>) => {
+    setRange((current) => ({ ...current, ...patch }));
+    setPage(1);
+  };
+  const dateClass =
+    'h-full min-w-0 flex-1 bg-transparent text-base tabular-nums outline-none md:w-[124px] md:flex-none md:text-sm';
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div
+          role="group"
+          aria-label="日期范围（北京时间）"
+          aria-describedby={rangeInvalid ? rangeErrorId : undefined}
+          className={cn(
+            'flex h-11 w-full items-center gap-2 rounded-lg border border-input px-3 has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50 md:h-9 md:w-auto',
+            rangeInvalid && 'border-err',
+          )}
+        >
+          <input
+            type="date"
+            aria-label="开始日期"
+            value={range.from}
+            max={range.to || undefined}
+            onChange={(event) => updateRange({ from: event.target.value })}
+            className={dateClass}
+          />
+          <span aria-hidden className="text-muted-foreground">
+            —
+          </span>
+          <input
+            type="date"
+            aria-label="结束日期"
+            value={range.to}
+            min={range.from || undefined}
+            onChange={(event) => updateRange({ to: event.target.value })}
+            className={dateClass}
+          />
+        </div>
         <label htmlFor={kindId} className="sr-only">
           类型
         </label>
-        <select
+        <Select
           id={kindId}
           value={kind ?? ''}
           onChange={(event) => {
             setKind(adminLedgerKindSchema.safeParse(event.target.value).data);
             setPage(1);
           }}
-          className="h-11 rounded-lg border border-input bg-background px-3 text-base md:h-9 md:text-sm"
         >
           <option value="">全部类型</option>
           {adminLedgerKindSchema.options.map((option) => (
@@ -193,8 +246,12 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
               {ledgerKindLabels[option]}
             </option>
           ))}
-        </select>
-        {data ? (
+        </Select>
+        {rangeInvalid ? (
+          <span id={rangeErrorId} role="alert" className="text-xs text-err">
+            开始日期不能晚于结束日期
+          </span>
+        ) : data ? (
           <span className="text-[13px] text-muted-foreground tabular-nums">
             共 {data.pagination.total} 条
           </span>
@@ -216,10 +273,14 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
       ) : data.items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-[10px] border border-border px-5 py-14 text-center">
           <span className="text-[15px] font-semibold">
-            {kind ? `没有${ledgerKindLabels[kind]}流水` : '暂无余额流水'}
+            {filtered
+              ? `没有符合条件的${kind ? ledgerKindLabels[kind] : ''}流水`
+              : '暂无余额流水'}
           </span>
           <span className="text-[13px] text-muted-foreground">
-            充值、赊账、赠送、调账和通话扣费都会记录在这里
+            {filtered
+              ? '请调整日期范围或类型'
+              : '充值、赊账、赠送、调账和通话扣费都会记录在这里'}
           </span>
         </div>
       ) : (

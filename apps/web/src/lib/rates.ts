@@ -7,7 +7,7 @@ import {
 } from '@fs-billing/shared';
 import { ApiRequestError } from './api';
 import { apiProblem } from './api-problem';
-import { formatDateTime } from './format';
+import { formatDate, formatDateTime, formatRate } from './format';
 
 /** 与服务端预览相同的比较：前缀相同而国家或费率（按数值）不同算修改。 */
 export function diffRateTables(
@@ -29,6 +29,28 @@ export function diffRateTables(
   for (const entry of previous.values())
     changes.push({ kind: 'deleted', before: entry });
   return changes;
+}
+
+/**
+ * 当前表中被排定版本修改或删除的行的提示（稿 7b「10-01 起 0.0480」，删除为「10-01 起删除」），
+ * 以前缀为键；日期为生效时间的北京时间月-日。
+ */
+export function scheduledRowHints(
+  current: readonly AdminRateEntry[],
+  scheduled: { effectiveFrom: string; entries: readonly AdminRateEntry[] },
+) {
+  const day = formatDate(scheduled.effectiveFrom).slice(5);
+  const hints = new Map<string, string>();
+  for (const change of diffRateTables(current, scheduled.entries)) {
+    if (change.kind === 'modified')
+      hints.set(
+        change.before.prefix,
+        `${day} 起 ${formatRate(change.after.rate)}`,
+      );
+    else if (change.kind === 'deleted')
+      hints.set(change.before.prefix, `${day} 起删除`);
+  }
+  return hints;
 }
 
 export function countChanges(changes: readonly AdminRateChange[]) {

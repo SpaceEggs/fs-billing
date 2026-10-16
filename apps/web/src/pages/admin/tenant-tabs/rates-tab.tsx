@@ -32,7 +32,7 @@ import { Button } from '../../../components/ui/button';
 import { apiQuery, useApiMutation } from '../../../lib/admin-api';
 import { downloadText } from '../../../lib/download';
 import { formatDateTime, formatRate } from '../../../lib/format';
-import { rateChangePercent } from '../../../lib/rates';
+import { rateChangePercent, scheduledRowHints } from '../../../lib/rates';
 import { cn } from '../../../lib/utils';
 
 const entriesPerPage = 100;
@@ -122,6 +122,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const currentId = data.current.id;
   const versions = full.data ? [full.data.current, ...full.data.scheduled] : [];
   const hasScheduled = versions.length > 1;
+  const rowHints =
+    full.data && versions[1]
+      ? scheduledRowHints(full.data.current.entries, versions[1])
+      : new Map<string, string>();
   const emptyTable = entries.length === 0 && !deferred;
 
   function openImport() {
@@ -195,7 +199,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
         />
       ))}
-      <div className="rounded-lg border border-border bg-muted px-3.5 py-2.5 text-[13px] md:hidden">
+      <div className="rounded-lg border border-brand-border bg-brand-soft px-3.5 py-2.5 text-[13px] md:hidden">
         <span className="font-semibold">请在电脑上操作</span>
         <span className="block text-muted-foreground">
           导入、复制费率表涉及大量明细核对，手机上仅支持查看和搜索。
@@ -319,28 +323,47 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                 </tr>
               </thead>
               <tbody className="tabular-nums">
-                {visible.map((entry) => (
-                  <tr key={entry.prefix} className="border-t border-border">
-                    <td className="px-4 py-2.5 font-mono">{entry.prefix}</td>
-                    <td className="px-3 py-2.5">{entry.country}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <Rate value={entry.rate} />
-                    </td>
-                    <td className="hidden px-4 py-2.5 text-right md:table-cell">
-                      <button
-                        type="button"
-                        aria-label={`编辑 ${entry.prefix} ${entry.country}`}
-                        onClick={() => {
-                          setNotice(null);
-                          setEditing({ baseVersionId: currentId, entry });
-                        }}
-                        className="rounded text-[13px] text-primary underline-offset-[3px] outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
-                      >
-                        编辑
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {visible.map((entry) => {
+                  const hint = rowHints.get(entry.prefix);
+                  return (
+                    <tr
+                      key={entry.prefix}
+                      className={cn(
+                        'border-t border-border',
+                        hint && 'bg-brand-soft',
+                      )}
+                    >
+                      <td className="px-4 py-2.5 font-mono">{entry.prefix}</td>
+                      <td className="px-3 py-2.5">{entry.country}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Rate value={entry.rate} />
+                        {hint ? (
+                          <span className="block text-[11px] text-primary">
+                            {hint}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="hidden px-4 py-2.5 text-right md:table-cell">
+                        {/* G4：已有排定版本时不能单条编辑，提示与导入按钮共用。 */}
+                        <button
+                          type="button"
+                          aria-label={`编辑 ${entry.prefix} ${entry.country}`}
+                          disabled={hasScheduled}
+                          aria-describedby={
+                            hasScheduled ? importBlockedId : undefined
+                          }
+                          onClick={() => {
+                            setNotice(null);
+                            setEditing({ baseVersionId: currentId, entry });
+                          }}
+                          className="rounded text-[13px] text-primary underline-offset-[3px] outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                        >
+                          编辑
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

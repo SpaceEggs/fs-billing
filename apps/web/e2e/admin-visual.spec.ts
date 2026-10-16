@@ -14,7 +14,8 @@ import {
   type DesignFrame,
 } from '../scripts/screenshots/design-frames';
 import { test, uniqueCode } from './admin';
-import { recordCalls } from './db';
+import { accounts } from './accounts';
+import { recordCalls, recordPastCredit } from './db';
 import { webOrigin } from './env';
 import { expectPath, submitLogin } from './helpers';
 
@@ -212,6 +213,13 @@ async function seed(page: Page): Promise<Seed> {
   await post(page, `/api/admin/receivables/${voided}/void`, {
     adjustmentLedgerEntryId: reversal,
     reason: '客户合同终止',
+  });
+  // 已欠 42 天的待收款，展示逾期高亮（决定 10，同稿 6a GZT007）。记在目标租户，不改变 CNY 租户的余额。
+  await recordPastCredit(target.id, {
+    amount: '2000',
+    note: '季度结算',
+    daysAgo: 42,
+    adminEmail: accounts.admin,
   });
   // 4824.50 入账 − 4859.70 通话扣费 = −35.20，透支额度 100 → 可用 64.80（同稿 2a）。
   await recordCalls(cny.id, { charge: '4859.70', minutes: '97' });
@@ -582,8 +590,9 @@ const shots: Shot[] = [
     viewport: pageViewport,
     fullPage: true,
     open: async (page, seed) => {
-      await page.goto('/admin/receivables');
+      await page.goto(`/admin/receivables?search=${seed.run}`);
       await expect(visibleText(page, seed.cny.code)).toBeVisible();
+      await expect(visibleText(page, '42 天')).toBeVisible();
       await settle(page);
     },
   },

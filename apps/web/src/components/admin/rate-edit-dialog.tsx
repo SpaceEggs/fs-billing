@@ -123,9 +123,9 @@ export function RateEditDialog({
   return (
     <ModalDialog
       open
-      onOpenChange={(open) => {
-        if (!open && !edit.isPending) onClose();
-      }}
+      {...(edit.isPending
+        ? {}
+        : { onOpenChange: (open: boolean) => open || onClose() })}
       title={step === 'form' ? '编辑费率' : '确认修改费率'}
       className="md:w-[500px]"
     >
@@ -334,11 +334,14 @@ export function ScheduleField({
   choice,
   error,
   disabled,
+  descriptions,
   onChange,
 }: {
   choice: ScheduleChoice;
   error: string | undefined;
   disabled: boolean;
+  /** 选项下的说明（导入稿 1a），省略时只显示选项名。 */
+  descriptions?: Record<ScheduleChoice['kind'], string>;
   onChange: (choice: ScheduleChoice) => void;
 }) {
   const id = useId();
@@ -359,7 +362,12 @@ export function ScheduleField({
         {options.map((option) => (
           <label
             key={option.kind}
-            className="relative flex h-11 cursor-pointer items-center gap-2.5 rounded-lg border border-input px-3 has-checked:border-primary has-checked:bg-brand-soft has-checked:font-medium has-checked:text-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring md:h-10"
+            className={cn(
+              'relative flex cursor-pointer gap-2.5 rounded-lg border border-input px-3 has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring',
+              descriptions
+                ? 'items-start py-2.5'
+                : 'h-11 items-center has-checked:font-medium has-checked:text-primary md:h-10',
+            )}
           >
             <input
               type="radio"
@@ -374,9 +382,30 @@ export function ScheduleField({
                     : { kind: 'scheduled', minute },
                 )
               }
-              className="size-4 accent-primary"
+              {...(descriptions
+                ? {
+                    'aria-label': option.label,
+                    'aria-describedby': `${id}-${option.kind}`,
+                  }
+                : {})}
+              className={cn(
+                'size-4 shrink-0 accent-primary',
+                descriptions && 'mt-0.5',
+              )}
             />
-            {option.label}
+            {descriptions ? (
+              <span className="flex flex-col gap-0.5">
+                <span className="font-medium">{option.label}</span>
+                <span
+                  id={`${id}-${option.kind}`}
+                  className="text-xs text-muted-foreground"
+                >
+                  {descriptions[option.kind]}
+                </span>
+              </span>
+            ) : (
+              option.label
+            )}
           </label>
         ))}
       </div>

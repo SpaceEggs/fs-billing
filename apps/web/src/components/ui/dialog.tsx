@@ -15,7 +15,7 @@ function currentOpener(): HTMLElement | null {
 /**
  * 电脑居中、手机底部弹出的对话框。Radix 负责焦点进入与焦点圈定；
  * 没有 Dialog.Trigger，关闭（含卸载）后由这里把焦点还给打开时聚焦的元素。
- * `onOpenChange` 省略时不可通过 Esc 或点击遮罩关闭（例如只显示一次的密码）。
+ * `onOpenChange` 省略时不可通过 Esc、点击遮罩或标题栏 × 关闭（例如只显示一次的密码、提交中），× 也不显示。
  * `returnFocus` 指向关闭时已挂载的元素（例如成功提示）时优先聚焦它，用于打开者随操作消失的情形；
  * 两者都不可聚焦（已卸载或已禁用）时聚焦 `fallbackFocus`（例如页面上的列表区域），焦点不落到 body。
  */
@@ -91,6 +91,15 @@ export function ModalDialog({
             </Dialog.Description>
           ) : null}
           {children}
+          {dismissible ? (
+            // 放在内容之后：打开时焦点仍落在第一个字段或按钮上。
+            <Dialog.Close
+              aria-label="关闭对话框"
+              className="absolute top-6 right-3 flex size-8 items-center justify-center rounded-md text-lg leading-none text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring md:top-5 md:right-5"
+            >
+              ✕
+            </Dialog.Close>
+          ) : null}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

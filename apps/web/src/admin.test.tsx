@@ -553,7 +553,7 @@ describe('tenant detail', () => {
     expect(within(dialog).getByRole('note')).toHaveTextContent(
       '该租户已停用，状态不会改变',
     );
-    expect(dialog).toHaveTextContent('操作后状态已停用');
+    expect(dialog).toHaveTextContent('，状态保持「已停用」');
   });
 
   it('server field issues return to the form on the matching field', async () => {

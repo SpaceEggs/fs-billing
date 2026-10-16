@@ -228,7 +228,7 @@ function TenantDetail({
         title={title}
         {...(tenant
           ? {
-              meta: (
+              badge: (
                 <TenantStatus
                   health={tenant.health}
                   settingsConfigured={tenant.settingsConfigured}
