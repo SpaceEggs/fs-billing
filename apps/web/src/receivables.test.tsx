@@ -13,6 +13,7 @@ import {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   sessionExpiry.clear();
   passwordGate.clear();
 });
@@ -636,6 +637,94 @@ describe('confirm payment', () => {
     expect(postedTokens(calls)).toEqual([null, null]);
   });
 
+  it('data cached in the same millisecond as the failure does not count as refreshed', async () => {
+    // 固定时钟：列表首次返回、确认失败、发起刷新都在同一毫秒。
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+    const refetch = deferred<Reply>();
+    let listed = 0;
+    const { calls, user } = openReceivables(
+      () => {
+        listed += 1;
+        if (listed === 1) return { status: 200, body: listing([gzt]) };
+        if (listed === 2) return refetch.promise;
+        return { status: 503, body: apiError('SERVICE_UNAVAILABLE') };
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => {
+          throw new TypeError('network down');
+        },
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    const submit = within(dialog).getByRole('button', {
+      name: '确认收款 ¥2,000.00',
+    });
+    await user.click(submit);
+    await within(dialog).findByRole('alert');
+    await waitFor(() => expect(listCalls(calls)).toHaveLength(2));
+    expect(dialog).toHaveTextContent('正在刷新列表…');
+    expect(dialog).not.toHaveTextContent('列表已刷新');
+    expect(submit).toBeDisabled();
+
+    refetch.resolve({ status: 503, body: apiError('SERVICE_UNAVAILABLE') });
+    expect(
+      await within(dialog).findByText(
+        '列表刷新失败，页面显示的可能不是最新状态。',
+        undefined,
+        { timeout: 8000 },
+      ),
+    ).toBeVisible();
+    expect(dialog).not.toHaveTextContent('列表已刷新');
+    expect(submit).toBeDisabled();
+    expect(postedTokens(calls)).toEqual([null]);
+  }, 15_000);
+
+  it('closing a conflict while the refresh is pending focuses the list, not the disabled row', async () => {
+    const refetch = deferred<Reply>();
+    let listed = 0;
+    const { user } = openReceivables(
+      () => {
+        listed += 1;
+        return listed === 1
+          ? { status: 200, body: listing([gzt]) }
+          : refetch.promise;
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => ({
+          status: 409,
+          body: apiError('SETTLEMENT_CONFLICT'),
+        }),
+      },
+    );
+    const table = await screen.findByRole('table');
+    const opener = within(table).getByRole('button', { name: /GZT007/ });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: '确认收款 ¥2,000.00' }),
+    );
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '正在刷新列表…',
+    );
+    await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+
+    const list = screen.getByRole('region', { name: '待收款列表' });
+    await waitFor(() => expect(list).toHaveFocus());
+    expect(opener).toBeDisabled();
+    expect(list).toHaveTextContent(
+      '正在刷新列表，刷新完成前不能确认 GZT007 ¥2,000.00。',
+    );
+
+    refetch.resolve({
+      status: 200,
+      body: listing([{ ...gzt, latestSettlementId: ids.settlement }]),
+    });
+    await waitFor(() => expect(opener).toBeEnabled());
+    expect(list).not.toHaveTextContent('正在刷新列表');
+  });
+
   it('a failed refresh after a conflict is reported with retry and keeps the row disabled', async () => {
     let listed = 0;
     let recovered = false;
@@ -675,6 +764,9 @@ describe('confirm payment', () => {
     ).toBeVisible();
     expect(alert).not.toHaveTextContent('列表已刷新');
     await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+    // 打开者已禁用：焦点落到列表区域，紧接着就是刷新失败提示与重试。
+    const list = screen.getByRole('region', { name: '待收款列表' });
+    await waitFor(() => expect(list).toHaveFocus());
 
     const notice = screen.getByRole('alert');
     expect(notice).toHaveTextContent('待收款刷新失败，列表可能不是最新');

@@ -20,10 +20,10 @@ import { Pagination } from '../../components/pagination';
 import { QueryError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { Button } from '../../components/ui/button';
-import { apiQuery, invalidateTenant } from '../../lib/admin-api';
+import { apiKey, invalidateTenant, send } from '../../lib/admin-api';
 import type { ReceivablesSearch } from '../../lib/admin-search';
 import { formatMoney } from '../../lib/format';
-import { listRefresh, visibleTotals } from '../../lib/receivables';
+import { sequencedRequests, visibleTotals } from '../../lib/receivables';
 import { cn } from '../../lib/utils';
 
 export const receivablePageSize = 25;
@@ -395,23 +395,28 @@ function ConfirmedNotice({
 export function ReceivablesPage({ identity }: { identity: Identity }) {
   const { search, update } = useReceivablesSearch();
   const page = search.page ?? 1;
+  const [requests] = useState(sequencedRequests);
+  const listInput = {
+    query: {
+      ...search,
+      status: 'pending' as const,
+      page,
+      pageSize: receivablePageSize,
+    },
+  };
+  const listKey = apiKey('adminReceivables', listInput);
   const receivables = useQuery({
-    ...apiQuery('adminReceivables', {
-      query: {
-        ...search,
-        status: 'pending',
-        page,
-        pageSize: receivablePageSize,
-      },
-    }),
+    queryKey: listKey,
+    queryFn: requests.wrap(() => send('adminReceivables', listInput)),
     placeholderData: keepPreviousData,
   });
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState<AdminReceivable | null>(null);
   const [confirmed, setConfirmed] = useState<AdminReceivable | null>(null);
-  /** 确认失败后需要与服务端核对的行：ledgerEntryId → 发起刷新的时间。 */
+  /** 确认失败后需要与服务端核对的行：ledgerEntryId → 发起核对时已发出的最大列表请求序号。 */
   const [reconciling, setReconciling] = useState<Record<string, number>>({});
   const noticeRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLElement>(null);
   const data = receivables.data;
   const lastPage = Math.max(
     1,
@@ -434,7 +439,23 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
   });
 
   const refreshOf = (receivable: AdminReceivable) =>
-    listRefresh(reconciling[receivable.ledgerEntryId], receivables);
+    requests.refresh(reconciling[receivable.ledgerEntryId], receivables);
+  const pendingRefresh = data?.items.find(
+    (item) => refreshOf(item) === 'refreshing',
+  );
+
+  function reconcile(receivable: AdminReceivable) {
+    const mark = requests.mark();
+    setReconciling((flagged) => ({
+      ...flagged,
+      [receivable.ledgerEntryId]: mark,
+    }));
+    void invalidateTenant(queryClient, receivable.tenant.id).then(() => {
+      // 失效只会取消已有数据的查询的在途请求；若沿用了核对前发出的请求，补发一次。
+      if (requests.mark() === mark)
+        void queryClient.refetchQueries({ queryKey: listKey, exact: true });
+    });
+  }
 
   function openConfirm(receivable: AdminReceivable) {
     setConfirmed(null);
@@ -463,45 +484,58 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
           />
         ) : null}
         <Filters />
-        {receivables.isError && data ? (
-          <QueryError
-            title="待收款刷新失败，列表可能不是最新"
-            error={receivables.error}
-            retrying={receivables.isFetching}
-            onRetry={() => void receivables.refetch()}
-          />
-        ) : null}
-        {receivables.isError && !data ? (
-          <QueryError
-            title="待收款加载失败"
-            error={receivables.error}
-            retrying={receivables.isFetching}
-            onRetry={() => void receivables.refetch()}
-          />
-        ) : !data || pastLastPage ? (
-          <LoadingRows />
-        ) : data.pagination.total === 0 ? (
-          <EmptyState search={search} />
-        ) : (
-          <>
-            <ReceivableTable
-              items={data.items}
-              onConfirm={openConfirm}
-              isBlocked={(receivable) => refreshOf(receivable) !== 'fresh'}
+        <section
+          ref={listRef}
+          tabIndex={-1}
+          aria-label="待收款列表"
+          className="flex flex-col gap-5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        >
+          {pendingRefresh ? (
+            <p className="m-0 text-[13px] text-muted-foreground">
+              正在刷新列表，刷新完成前不能确认 {pendingRefresh.tenant.code}{' '}
+              {formatMoney(receivableMoney(pendingRefresh))}。
+            </p>
+          ) : null}
+          {receivables.isError && data ? (
+            <QueryError
+              title="待收款刷新失败，列表可能不是最新"
+              error={receivables.error}
+              retrying={receivables.isFetching}
+              onRetry={() => void receivables.refetch()}
             />
-            <ReceivableCards
-              items={data.items}
-              onConfirm={openConfirm}
-              isBlocked={(receivable) => refreshOf(receivable) !== 'fresh'}
+          ) : null}
+          {receivables.isError && !data ? (
+            <QueryError
+              title="待收款加载失败"
+              error={receivables.error}
+              retrying={receivables.isFetching}
+              onRetry={() => void receivables.refetch()}
             />
-            <Pagination
-              page={page}
-              pageSize={receivablePageSize}
-              rowCount={data.pagination.total}
-              onPage={goToPage}
-            />
-          </>
-        )}
+          ) : !data || pastLastPage ? (
+            <LoadingRows />
+          ) : data.pagination.total === 0 ? (
+            <EmptyState search={search} />
+          ) : (
+            <>
+              <ReceivableTable
+                items={data.items}
+                onConfirm={openConfirm}
+                isBlocked={(receivable) => refreshOf(receivable) !== 'fresh'}
+              />
+              <ReceivableCards
+                items={data.items}
+                onConfirm={openConfirm}
+                isBlocked={(receivable) => refreshOf(receivable) !== 'fresh'}
+              />
+              <Pagination
+                page={page}
+                pageSize={receivablePageSize}
+                rowCount={data.pagination.total}
+                onPage={goToPage}
+              />
+            </>
+          )}
+        </section>
       </PageBody>
       {confirming ? (
         <ConfirmPaymentDialog
@@ -511,15 +545,10 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
             (item) => item.ledgerEntryId === confirming.ledgerEntryId,
           )}
           refresh={refreshOf(confirming)}
-          onReconcile={() => {
-            setReconciling((flagged) => ({
-              ...flagged,
-              [confirming.ledgerEntryId]: Date.now(),
-            }));
-            void invalidateTenant(queryClient, confirming.tenant.id);
-          }}
+          onReconcile={() => reconcile(confirming)}
           onRetryRefresh={() => void receivables.refetch()}
           returnFocus={noticeRef}
+          fallbackFocus={listRef}
           onClose={() => setConfirming(null)}
           onDone={() => {
             setConfirmed(confirming);

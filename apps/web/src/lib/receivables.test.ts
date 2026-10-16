@@ -3,6 +3,7 @@ import { ApiRequestError } from './api';
 import { formatMoney } from './format';
 import {
   confirmPaymentFailure,
+  sequencedRequests,
   validateConfirmPayment,
   visibleTotals,
 } from './receivables';
@@ -106,6 +107,74 @@ describe('confirmPaymentFailure', () => {
     });
     expect(confirmPaymentFailure(conflict('SERVICE_UNAVAILABLE', 503))).toEqual(
       { kind: 'general' },
+    );
+  });
+});
+
+describe('sequencedRequests', () => {
+  const settle = <Value>() => {
+    let resolve!: (value: Value) => void;
+    let reject!: (error: unknown) => void;
+    const promise = new Promise<Value>((ok, fail) => {
+      resolve = ok;
+      reject = fail;
+    });
+    return { promise, resolve, reject };
+  };
+
+  it('treats rows that were never flagged as fresh', () => {
+    const requests = sequencedRequests();
+    expect(
+      requests.refresh(undefined, {
+        data: undefined,
+        error: null,
+        isFetching: true,
+      }),
+    ).toBe('fresh');
+  });
+
+  it('ignores a response to a request issued before the mark, even if it settles after', async () => {
+    const requests = sequencedRequests();
+    const early = settle<{ items: string[] }>();
+    const before = requests.wrap(() => early.promise)();
+    const mark = requests.mark();
+    early.resolve({ items: ['old'] });
+    const data = await before;
+    expect(data).toEqual({ items: ['old'], request: 1 });
+    expect(
+      requests.refresh(mark, { data, error: null, isFetching: false }),
+    ).toBe('refreshing');
+
+    const after = await requests.wrap(() =>
+      Promise.resolve({ items: ['new'] }),
+    )();
+    expect(
+      requests.refresh(mark, { data: after, error: null, isFetching: false }),
+    ).toBe('fresh');
+  });
+
+  it('reports failure only for a request issued after the mark, once nothing is in flight', async () => {
+    const requests = sequencedRequests();
+    const data = await requests.wrap(() => Promise.resolve({ items: [] }))();
+    const staleError = conflict('SERVICE_UNAVAILABLE', 503);
+    await expect(
+      requests.wrap(() => Promise.reject(staleError))(),
+    ).rejects.toBe(staleError);
+    const mark = requests.mark();
+    // 核对前的失败不算核对结果。
+    expect(
+      requests.refresh(mark, { data, error: staleError, isFetching: false }),
+    ).toBe('refreshing');
+
+    const error = conflict('SERVICE_UNAVAILABLE', 503);
+    await expect(requests.wrap(() => Promise.reject(error))()).rejects.toBe(
+      error,
+    );
+    expect(requests.refresh(mark, { data, error, isFetching: true })).toBe(
+      'refreshing',
+    );
+    expect(requests.refresh(mark, { data, error, isFetching: false })).toBe(
+      'failed',
     );
   });
 });

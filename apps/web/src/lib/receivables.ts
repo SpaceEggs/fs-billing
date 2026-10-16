@@ -98,16 +98,46 @@ export function confirmPaymentFailure(error: unknown): ConfirmPaymentFailure {
 }
 
 /**
- * 确认失败（409 或网络中断）后列表是否已与服务端核对：`flaggedAt` 是发起刷新的时间，
- * 此后有一次成功的列表请求才算核对完成；刷新失败时保留“失败”，由管理员重试。
+ * 确认失败（409 或网络中断）后列表是否已与服务端核对。不比较时间戳：每次列表请求（含自动重试）
+ * 领一个递增序号，成功的响应带上序号，失败的错误按序号登记。发起核对时记下已发出的最大序号（`mark`），
+ * 此后发出的请求成功才算核对完成；此后发出的请求失败且没有请求在途时为失败，由管理员重试。
  */
 export type ListRefresh = 'fresh' | 'refreshing' | 'failed';
 
-export function listRefresh(
-  flaggedAt: number | undefined,
-  list: { dataUpdatedAt: number; isError: boolean; isFetching: boolean },
-): ListRefresh {
-  if (flaggedAt === undefined || list.dataUpdatedAt >= flaggedAt)
-    return 'fresh';
-  return list.isError && !list.isFetching ? 'failed' : 'refreshing';
+export type Sequenced<Data> = Data & { request: number };
+
+export function sequencedRequests() {
+  let issued = 0;
+  const failures = new WeakMap<object, number>();
+  return {
+    wrap<Data extends object>(fetch: () => Promise<Data>) {
+      return async (): Promise<Sequenced<Data>> => {
+        const request = ++issued;
+        try {
+          return { ...(await fetch()), request };
+        } catch (error) {
+          if (typeof error === 'object' && error !== null)
+            failures.set(error, request);
+          throw error;
+        }
+      };
+    },
+    mark: () => issued,
+    refresh(
+      mark: number | undefined,
+      list: {
+        data: { request: number } | undefined;
+        error: unknown;
+        isFetching: boolean;
+      },
+    ): ListRefresh {
+      if (mark === undefined || (list.data?.request ?? 0) > mark)
+        return 'fresh';
+      const failed =
+        typeof list.error === 'object' && list.error !== null
+          ? (failures.get(list.error) ?? 0)
+          : 0;
+      return failed > mark && !list.isFetching ? 'failed' : 'refreshing';
+    },
+  };
 }

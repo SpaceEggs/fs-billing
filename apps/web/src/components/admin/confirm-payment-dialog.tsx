@@ -55,6 +55,7 @@ export function ConfirmPaymentDialog({
   onReconcile,
   onRetryRefresh,
   returnFocus,
+  fallbackFocus,
   onClose,
   onDone,
 }: {
@@ -66,6 +67,8 @@ export function ConfirmPaymentDialog({
   onReconcile: () => void;
   onRetryRefresh: () => void;
   returnFocus: React.RefObject<HTMLElement | null>;
+  /** 打开者已禁用（核对中）或已不在列表时关闭后聚焦的位置。 */
+  fallbackFocus: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -123,6 +126,7 @@ export function ConfirmPaymentDialog({
       description={`${tenant.code} ${tenant.name}（${tenant.currency}）`}
       className="md:w-[480px]"
       returnFocus={returnFocus}
+      fallbackFocus={fallbackFocus}
     >
       <div className="flex flex-col gap-1">
         <h2 className="m-0 text-[17px] font-semibold">确认收款</h2>

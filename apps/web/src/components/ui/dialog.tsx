@@ -16,7 +16,8 @@ function currentOpener(): HTMLElement | null {
  * 电脑居中、手机底部弹出的对话框。Radix 负责焦点进入与焦点圈定；
  * 没有 Dialog.Trigger，关闭（含卸载）后由这里把焦点还给打开时聚焦的元素。
  * `onOpenChange` 省略时不可通过 Esc 或点击遮罩关闭（例如只显示一次的密码）。
- * `returnFocus` 指向关闭时已挂载的元素（例如成功提示）时优先聚焦它，用于打开者随操作消失的情形。
+ * `returnFocus` 指向关闭时已挂载的元素（例如成功提示）时优先聚焦它，用于打开者随操作消失的情形；
+ * 两者都不可聚焦（已卸载或已禁用）时聚焦 `fallbackFocus`（例如页面上的列表区域），焦点不落到 body。
  */
 export function ModalDialog({
   open,
@@ -26,6 +27,7 @@ export function ModalDialog({
   children,
   className,
   returnFocus,
+  fallbackFocus,
 }: {
   open: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -34,6 +36,7 @@ export function ModalDialog({
   children: React.ReactNode;
   className?: string;
   returnFocus?: React.RefObject<HTMLElement | null>;
+  fallbackFocus?: React.RefObject<HTMLElement | null>;
 }) {
   const dismissible = onOpenChange !== undefined;
   // 每次打开时（首次挂载即打开，或 open 由 false 变 true）在渲染中记下打开者，此时焦点尚未移入对话框。
@@ -53,14 +56,16 @@ export function ModalDialog({
           }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            const target = returnFocus?.current?.isConnected
-              ? returnFocus.current
-              : opener;
+            const target = [
+              returnFocus?.current,
+              opener,
+              fallbackFocus?.current,
+            ].find(
+              (element) =>
+                element?.isConnected && !element.matches(':disabled'),
+            );
             // 换成下一步对话框时焦点留在新对话框里。
-            if (
-              target?.isConnected &&
-              !document.querySelector('[role="dialog"]')
-            )
+            if (target && !document.querySelector('[role="dialog"]'))
               target.focus();
           }}
           {...(description ? {} : { 'aria-describedby': undefined })}
