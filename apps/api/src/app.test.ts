@@ -185,6 +185,79 @@ test('strict request schemas reject tenant overrides and invalid credentials bef
   expect(query.statusCode).toBe(400);
 });
 
+test.each([
+  {
+    error: new Error('private timestamp write detail'),
+    status: 500,
+    code: 'INTERNAL_ERROR',
+  },
+  {
+    error: new DatabaseUnavailableError(
+      new Error('Connection terminated unexpectedly'),
+    ),
+    status: 503,
+    code: 'SERVICE_UNAVAILABLE',
+  },
+] as const)(
+  'login discards the new session when recording its timestamp fails with $code',
+  async ({ error, status, code }) => {
+    const login = vi.spyOn(auth, 'login').mockResolvedValue({
+      authUserId: 'test-admin',
+      email: 'admin@example.com',
+      token: 'new-login-session',
+      expiresAt: new Date('2099-01-01'),
+      passwordChangeRequired: false,
+      setCookie: ['session=new-login-session; HttpOnly; Path=/'],
+    });
+    const identity = vi.spyOn(business.db, 'execute').mockResolvedValue({
+      command: 'SELECT',
+      rowCount: 1,
+      oid: 0,
+      fields: [],
+      rows: [
+        {
+          kind: 'admin',
+          profile_id: '11111111-1111-4111-8111-111111111111',
+          tenant_id: null,
+          profile_name: 'Test admin',
+          profile_status: 'active',
+          tenant_code: null,
+          tenant_name: null,
+          tenant_currency: null,
+          tenant_status: null,
+        },
+      ],
+    });
+    const transaction = vi
+      .spyOn(business.db, 'transaction')
+      .mockRejectedValue(error);
+    const discard = vi.spyOn(auth, 'discardSession').mockResolvedValue();
+    const isolated = createApi({ businessDb: business.db, auth });
+    try {
+      const response = await isolated.inject({
+        method: 'POST',
+        url: '/api/auth/login',
+        payload: { email: 'admin@example.com', password: 'valid-password' },
+      });
+      expect(response.statusCode).toBe(status);
+      expect(apiErrorSchemas[code].parse(response.json()).error.code).toBe(
+        code,
+      );
+      expect(identity).toHaveBeenCalledOnce();
+      expect(transaction).toHaveBeenCalledOnce();
+      expect(discard).toHaveBeenCalledExactlyOnceWith('new-login-session');
+      expect(response.headers['set-cookie']).toBeUndefined();
+      expect(response.body).not.toContain('private');
+    } finally {
+      await isolated.close();
+      login.mockRestore();
+      identity.mockRestore();
+      transaction.mockRestore();
+      discard.mockRestore();
+    }
+  },
+);
+
 test('credential routes share one IP limit before validation and ignore forwarded IP headers', async () => {
   const limited = createApi({
     businessDb: business.db,
