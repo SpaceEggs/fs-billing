@@ -3,7 +3,6 @@ import { z } from 'zod';
 import {
   adminPortalAccountCreateRequestSchema,
   adminTenantCreateRequestSchema,
-  DEFAULT_ADMIN_CSV_MAX_BYTES,
   DEFAULT_TENANT_OVERDRAFT_LIMIT,
   newPasswordSchema,
   type AdminPortalAccountCreateRequest,
@@ -244,18 +243,4 @@ export function serverFieldErrors(issues: ValidationIssue[]): FieldErrors {
     if (!errors[field]) errors[field] = issue.message;
   }
   return errors;
-}
-
-export function csvTooLarge(bytes: number) {
-  return bytes > DEFAULT_ADMIN_CSV_MAX_BYTES;
-}
-
-/** 原样保留字节，由服务端识别 UTF-8 / GBK。 */
-export async function fileToBase64(file: Blob) {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = '';
-  const chunk = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunk)
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
-  return btoa(binary);
 }

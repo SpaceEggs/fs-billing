@@ -329,7 +329,8 @@ function RateComparison({
   );
 }
 
-function ScheduleField({
+/** 生效时间：立即，或北京时间分钟（单条编辑与整表导入共用）。 */
+export function ScheduleField({
   choice,
   error,
   disabled,

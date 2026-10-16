@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useId, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type {
   AdminRateEntry,
@@ -15,6 +15,11 @@ import {
   ScheduledRateVersion,
 } from '../../../components/admin/scheduled-rate-version';
 import { ProblemAlert } from '../../../components/admin/problem-alert';
+import { RateCsvTemplateLink } from '../../../components/admin/rate-csv-template-link';
+import {
+  RateImportDialog,
+  type RateImportBase,
+} from '../../../components/admin/rate-import-dialog';
 import { DateTime, Rate } from '../../../components/data-format';
 import { Pagination, pageSlice } from '../../../components/pagination';
 import { QueryError } from '../../../components/query-error';
@@ -50,7 +55,7 @@ function editNotice(
 }
 
 /**
- * 费率（设计稿第二批 §7、§8）：当前版本、排定的新版本与取消、单条编辑、导出当前版本。
+ * 费率（设计稿第二批 §7、§8、§10）：当前版本、排定的新版本与取消、单条编辑、导入与导出 CSV。
  * 手机只能查看和搜索（pages.md §3.6）。
  */
 export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
@@ -64,6 +69,8 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     entry: AdminRateEntry;
   } | null>(null);
   const [cancelling, setCancelling] = useState<AdminRateVersion | null>(null);
+  const [importing, setImporting] = useState<RateImportBase | null>(null);
+  const importBlockedId = useId();
   const [notice, setNotice] = useState<Notice | null>(null);
   const rates = useQuery({
     ...apiQuery('adminRates', {
@@ -100,6 +107,28 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const visible = pageSlice(entries, page, entriesPerPage);
   const currentId = data.current.id;
   const versions = full.data ? [full.data.current, ...full.data.scheduled] : [];
+  const hasScheduled = versions.length > 1;
+  const emptyTable = entries.length === 0 && !deferred;
+
+  function openImport() {
+    if (!full.data) return;
+    setNotice(null);
+    setImporting({
+      versionId: full.data.current.id,
+      entryCount: full.data.current.entries.length,
+      hasScheduled: full.data.scheduled.length > 0,
+    });
+  }
+  const importButton = (
+    <Button
+      className="hidden md:inline-flex"
+      disabled={!full.data || hasScheduled}
+      aria-describedby={hasScheduled ? importBlockedId : undefined}
+      onClick={openImport}
+    >
+      导入 CSV
+    </Button>
+  );
 
   async function download() {
     setNotice(null);
@@ -128,6 +157,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
         />
       ))}
+      <div className="rounded-lg border border-border bg-muted px-3.5 py-2.5 text-[13px] md:hidden">
+        <span className="font-semibold">请在电脑上操作</span>
+        <span className="block text-muted-foreground">
+          导入、复制费率表涉及大量明细核对，手机上仅支持查看和搜索。
+        </span>
+      </div>
       {notice ? (
         <div
           role="status"
@@ -179,6 +214,15 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         >
           导出 CSV
         </Button>
+        {emptyTable ? null : importButton}
+        {hasScheduled ? (
+          <span
+            id={importBlockedId}
+            className="hidden w-full text-right text-xs md:block"
+          >
+            已有排定的新版本，请先取消排定
+          </span>
+        ) : null}
       </div>
       {exportCsv.error ? <ProblemAlert error={exportCsv.error} /> : null}
       {entries.length === 0 ? (
@@ -191,6 +235,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
               ? '请换一个前缀或国家名称'
               : '没有费率时该租户的呼叫无法计费'}
           </span>
+          {emptyTable ? (
+            <div className="mt-2 hidden flex-col items-center gap-2 md:flex">
+              {importButton}
+              <RateCsvTemplateLink />
+            </div>
+          ) : null}
         </div>
       ) : (
         <>
@@ -249,12 +299,24 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           tenant={{ id: tenantId, code: tenant.code, currency: data.currency }}
           baseVersionId={editing.baseVersionId}
           entry={editing.entry}
-          hasScheduled={versions.length > 1}
+          hasScheduled={hasScheduled}
           onClose={() => setEditing(null)}
           onDone={(result) => {
             setEditing(null);
             setNotice(editNotice(result, unit));
           }}
+        />
+      ) : null}
+      {importing ? (
+        <RateImportDialog
+          tenant={{
+            id: tenantId,
+            code: tenant.code,
+            name: tenant.name,
+            currency: data.currency,
+          }}
+          base={importing}
+          onClose={() => setImporting(null)}
         />
       ) : null}
       {cancelling ? (

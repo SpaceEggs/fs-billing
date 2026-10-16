@@ -33,8 +33,6 @@ import { apiProblem, problemNotice } from '../../lib/api-problem';
 import {
   buildSubmission,
   changeCurrency,
-  csvTooLarge,
-  fileToBase64,
   initialTenantForm,
   normalizedCode,
   serverFieldErrors,
@@ -42,6 +40,8 @@ import {
   type RatesChoice,
   type TenantForm,
 } from '../../lib/tenant-create';
+import { csvTooLarge, fileToBase64 } from '../../lib/rate-csv';
+import { RateCsvTemplateLink } from '../../components/admin/rate-csv-template-link';
 import { cn } from '../../lib/utils';
 
 const currencyLabel = {
@@ -165,6 +165,7 @@ function CsvPicker({
         onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
         className="text-[13px] font-normal file:mr-3 file:h-9 file:rounded-lg file:border file:border-input file:bg-transparent file:px-3 file:text-sm file:text-foreground"
       />
+      <RateCsvTemplateLink className="self-start" />
       <span
         role={reading ? 'status' : undefined}
         className="text-xs font-normal text-muted-foreground"

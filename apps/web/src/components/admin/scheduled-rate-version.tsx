@@ -1,38 +1,17 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type {
-  AdminRateChange,
-  AdminRateVersion,
-  Currency,
-} from '@fs-billing/shared';
+import type { AdminRateVersion, Currency } from '@fs-billing/shared';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
-import { formatDateTime, formatRate } from '../../lib/format';
+import { formatDateTime } from '../../lib/format';
 import {
   cancelFailureMessage,
   countChanges,
   diffRateTables,
-  rateChangePercent,
 } from '../../lib/rates';
-import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { ProblemAlert } from './problem-alert';
-import { rateUnit } from './rate-edit-dialog';
-
-const changeTags = {
-  added: { label: '新增', className: 'border-ok-border bg-ok-soft text-ok' },
-  modified: {
-    label: '修改',
-    className: 'border-brand-border bg-brand-soft text-primary',
-  },
-  deleted: {
-    label: '删除',
-    className: 'border-err-border bg-err-soft text-err',
-  },
-} as const satisfies Record<
-  AdminRateChange['kind'],
-  { label: string; className: string }
->;
+import { RateChangesTable } from './rate-changes-table';
 
 /**
  * 排定的新版本（设计稿第二批 7b、CSV 导入原型）。变动由前端比较该版本与前一版本的整表得出，
@@ -95,78 +74,10 @@ export function ScheduledRateVersion({
           id={detailId}
           className="max-h-[320px] overflow-auto rounded-lg border border-border bg-card"
         >
-          <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-            <thead className="sr-only">
-              <tr>
-                <th>变动</th>
-                <th>前缀</th>
-                <th>国家/备注</th>
-                <th>当前费率</th>
-                <th>新费率（{rateUnit[currency]}）</th>
-                <th>涨跌</th>
-              </tr>
-            </thead>
-            <tbody className="tabular-nums">
-              {changes.map((change) => (
-                <ChangeRow
-                  key={`${change.kind}-${(change.kind === 'added' ? change.after : change.before).prefix}`}
-                  change={change}
-                />
-              ))}
-            </tbody>
-          </table>
+          <RateChangesTable changes={changes} currency={currency} />
         </div>
       ) : null}
     </section>
-  );
-}
-
-function ChangeRow({ change }: { change: AdminRateChange }) {
-  const tag = changeTags[change.kind];
-  const entry = change.kind === 'added' ? change.after : change.before;
-  const before = change.kind === 'added' ? null : change.before;
-  const after = change.kind === 'deleted' ? null : change.after;
-  const percent =
-    before && after ? rateChangePercent(before.rate, after.rate) : null;
-  return (
-    <tr className="border-t border-border first:border-t-0">
-      <td className="py-2 pr-2 pl-3.5">
-        <span
-          className={cn(
-            'inline-flex h-5 items-center rounded-[5px] border px-1.5 text-[11px] font-medium',
-            tag.className,
-          )}
-        >
-          {tag.label}
-        </span>
-      </td>
-      <td className="px-2 py-2 font-mono font-semibold">{entry.prefix}</td>
-      <td className="w-full px-2 py-2">{(after ?? entry).country}</td>
-      <td
-        className={cn(
-          'px-2 py-2 text-right text-muted-foreground',
-          change.kind === 'deleted' && 'line-through',
-        )}
-      >
-        {before ? formatRate(before.rate) : '—'}
-        {change.kind === 'modified' ? (
-          <span aria-hidden className="pl-2">
-            →
-          </span>
-        ) : null}
-      </td>
-      <td className="px-2 py-2 text-right font-semibold">
-        {after ? formatRate(after.rate) : '—'}
-      </td>
-      <td
-        className={cn(
-          'py-2 pr-3.5 pl-2 text-right',
-          percent?.rising ? 'text-neg' : 'text-pos',
-        )}
-      >
-        {percent?.text ?? ''}
-      </td>
-    </tr>
   );
 }
 

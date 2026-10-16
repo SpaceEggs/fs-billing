@@ -13,7 +13,6 @@ import {
 } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import { AdminAccountsPage } from './pages/admin/admin-accounts';
-import { AdminPlaceholderPage } from './pages/admin/placeholder';
 import { ReceivablesPage } from './pages/admin/receivables';
 import { TenantCreatePage } from './pages/admin/tenant-create';
 import { TenantDetailPage } from './pages/admin/tenant-detail';
@@ -192,19 +191,6 @@ const adminTenantEdit = createRoute({
   component: () => <TenantEditPage identity={useZoneIdentity()} />,
 });
 
-const adminTenantRateImport = createRoute({
-  getParentRoute: () => adminLayout,
-  path: 'tenants/$tenantId/rates/import',
-  component: () => (
-    <AdminPlaceholderPage
-      identity={useZoneIdentity()}
-      title="导入费率表"
-      crumb="租户 / 导入费率表"
-      activeNav="租户"
-    />
-  ),
-});
-
 const adminReceivables = createRoute({
   getParentRoute: () => adminLayout,
   path: 'receivables',
@@ -290,7 +276,6 @@ const routeTree = rootRoute.addChildren([
     adminTenantCreate,
     adminTenantDetail,
     adminTenantEdit,
-    adminTenantRateImport,
     adminReceivables,
     adminAccounts,
   ]),

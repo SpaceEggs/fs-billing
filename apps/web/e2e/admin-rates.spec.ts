@@ -59,6 +59,18 @@ function openRates(page: Page, tenantId: string) {
   return page.goto(`/admin/tenants/${tenantId}?tab=rates`);
 }
 
+async function openImport(page: Page, csv: string) {
+  await page.getByRole('button', { name: '导入 CSV' }).click();
+  const dialog = page.getByRole('dialog', { name: '导入费率表' });
+  await dialog.getByLabel('选择 CSV 文件').setInputFiles({
+    name: '费率_修订版.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(csv, 'utf8'),
+  });
+  await dialog.getByRole('button', { name: '下一步：预览' }).click();
+  return dialog;
+}
+
 async function editRate(page: Page, name: string, rate: string) {
   await page.getByRole('button', { name: `编辑 ${name}` }).click();
   const form = page.getByRole('dialog', { name: '编辑费率' });
@@ -258,6 +270,77 @@ test('exports the current version as CSV', async ({ page }) => {
   expect(exported?.content).toMatchObject({ rateVersionId: current.id });
 });
 
+test('shows every CSV error line', async ({ page }) => {
+  const tenant = await createTenant(page, { rates });
+  const before = await readRates(page, tenant.id);
+  await openRates(page, tenant.id);
+  const dialog = await openImport(
+    page,
+    [
+      '前缀,国家,费率',
+      '8a6,中国,0.05',
+      '447,英国手机,-0.1',
+      '33,法国,0.06',
+      '1,美国,0.12345',
+      '',
+    ].join('\r\n'),
+  );
+  await expect(dialog.getByRole('alert')).toContainText(
+    '发现 3 处错误，文件未导入',
+  );
+  const rows = dialog.getByRole('row');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(1)).toContainText('第 2 行');
+  await expect(rows.nth(1)).toContainText('8a6,中国,0.05');
+  await expect(rows.nth(2)).toContainText('第 3 行');
+  await expect(rows.nth(2)).toContainText('447,英国手机,-0.1');
+  await expect(rows.nth(3)).toContainText('第 5 行');
+  await expect(rows.nth(3)).toContainText('1,美国,0.12345');
+  await expect(dialog.getByRole('button', { name: '确认导入' })).toHaveCount(0);
+
+  expect(await readRates(page, tenant.id)).toEqual(before);
+  expect((await operationLogs(tenant.id)).map((log) => log.action)).toEqual([
+    'tenant_create',
+  ]);
+});
+
+test('imports a CSV immediately and updates the table', async ({ page }) => {
+  const tenant = await createTenant(page, { rates });
+  await openRates(page, tenant.id);
+  const dialog = await openImport(
+    page,
+    '\uFEFFprefix,country,rate\n86,中国,0.0550\n33,法国,0.0600\n',
+  );
+  await expect(dialog).toContainText('费率_修订版.csv · UTF-8 · 2 条');
+  await expect(dialog).toContainText(
+    '将新增 1 条、修改 1 条、删除 1 条，其余 0 条不变',
+  );
+  await expect(dialog).toContainText(
+    '删除后，拨打这些前缀的呼叫将被拒绝：447 英国手机',
+  );
+  await expect(dialog.getByRole('row').filter({ hasText: '修改' })).toHaveText(
+    /修改86中国0\.0500\s*→\s*0\.0550\+10\.0%/,
+  );
+  await dialog.getByRole('button', { name: '确认导入' }).click();
+  await expect(dialog.getByRole('status')).toContainText('已导入，已生效');
+  await expect(dialog.getByRole('status')).toContainText('已记入操作日志');
+  await dialog.getByRole('button', { name: '返回费率表' }).click();
+  await expect(dialog).toHaveCount(0);
+
+  await expect(page.getByRole('row')).toHaveCount(3);
+  await expect(page.getByRole('row').nth(1)).toContainText('33法国0.0600');
+  await expect(page.getByRole('row').nth(2)).toContainText('86中国0.0550');
+  const after = await readRates(page, tenant.id);
+  expect(after.scheduled).toEqual([]);
+  expect(after.current.entries).toEqual([
+    { prefix: '33', country: '法国', rate: '0.06' },
+    { prefix: '86', country: '中国', rate: '0.055' },
+  ]);
+  const imported = (await operationLogs(tenant.id)).at(-1);
+  expect(imported?.action).toBe('rate_import');
+  expect(imported?.content).toMatchObject({ rateVersionId: after.current.id });
+});
+
 test('mobile only views and searches rates', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const tenant = await createTenant(page, { rates });
@@ -272,6 +355,8 @@ test('mobile only views and searches rates', async ({ page }) => {
   await expect(card).toContainText('修改 1');
   await expect(card.getByRole('button', { name: '取消排定' })).toBeHidden();
   await expect(page.getByRole('button', { name: '导出 CSV' })).toBeHidden();
+  await expect(page.getByRole('button', { name: '导入 CSV' })).toBeHidden();
+  await expect(page.getByText('请在电脑上操作')).toBeVisible();
   await expect(page.getByRole('button', { name: /^编辑 / })).toHaveCount(0);
   await page.getByRole('searchbox', { name: '搜索前缀或国家' }).fill('英国');
   await expect(page.getByRole('row')).toHaveCount(2);
