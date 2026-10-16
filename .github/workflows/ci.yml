@@ -1,8 +1,18 @@
 name: CI
 
+# 分支只经 pull_request 跑一次；push 只看 main，免得同一提交跑两遍。
+# 只忽略任何检查都不读的文件：design/ 已被 ESLint、prettier 排除，证据里的这些类型 prettier 不解析。
 on:
   push:
+    branches: [main]
+    paths-ignore: &unchecked
+      - 'design/**'
+      - 'docs/evidence/**/*.png'
+      - 'docs/evidence/**/*.txt'
+      - 'docs/evidence/**/*.diff'
   pull_request:
+    paths-ignore: *unchecked
+  workflow_dispatch:
 
 permissions:
   contents: read
