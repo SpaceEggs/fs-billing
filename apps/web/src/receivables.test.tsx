@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import { onlineManager } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatDate } from './lib/format';
@@ -16,6 +17,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   sessionExpiry.clear();
   passwordGate.clear();
+  onlineManager.setOnline(true);
 });
 
 const ids = {
@@ -1432,6 +1434,62 @@ describe('void receivable', () => {
     );
     expect(await within(back).findByRole('radio')).toBeVisible();
     expect(within(back).queryByRole('button', { name: /去调账/ })).toBeNull();
+    expect(
+      calls.filter((call) => call.path.endsWith('/balance-operations')),
+    ).toHaveLength(1);
+  });
+
+  it('going offline after a prefilled adjustment keeps another one blocked until the resumed rescan succeeds', async () => {
+    const rescan = deferred<Reply>();
+    let scans = 0;
+    const { calls, user, dialog } = await openVoid({
+      [ledgerPath]: () => {
+        scans += 1;
+        return scans === 1 ? ledger([])() : rescan.promise;
+      },
+      [`GET /api/admin/tenants/${ids.tenantGzt}`]: () => ({
+        status: 200,
+        body: tenantDetail,
+      }),
+      [`POST /api/admin/tenants/${ids.tenantGzt}/balance-operations`]: () => ({
+        status: 200,
+        body: {
+          auditId: ids.audit,
+          currency: 'CNY',
+          balance: '0',
+          entry: entry(adjustmentId, '-2000.0000', '2026-10-16T00:00:00.000Z'),
+        },
+      }),
+    });
+    await user.click(
+      await within(dialog).findByRole('button', { name: '去调账 -¥2,000.00' }),
+    );
+    const balance = await screen.findByRole('dialog', { name: '余额操作' });
+    await user.click(within(balance).getByRole('button', { name: '下一步' }));
+    await user.click(within(balance).getByRole('button', { name: '确认调账' }));
+    const done = await within(balance).findByRole('button', { name: '完成' });
+    onlineManager.setOnline(false);
+    await user.click(done);
+
+    // 断网时重新扫描暂停：缓存的空结果仍是 success，但不能再开一笔调账。
+    const back = await screen.findByRole('dialog', { name: '作废应收' });
+    expect(back).toHaveTextContent('网络恢复后重新查找冲正调账…');
+    expect(
+      within(back).getByRole('button', { name: '去调账 -¥2,000.00' }),
+    ).toBeDisabled();
+    expect(scans).toBe(1);
+
+    onlineManager.setOnline(true);
+    await waitFor(() => expect(scans).toBe(2));
+    expect(back).toHaveTextContent('正在重新查找冲正调账…');
+    expect(
+      within(back).getByRole('button', { name: '去调账 -¥2,000.00' }),
+    ).toBeDisabled();
+
+    rescan.resolve(
+      ledger([entry(adjustmentId, '-2000.0000', '2026-10-16T00:00:00.000Z')])(),
+    );
+    expect(await within(back).findByRole('radio')).toBeVisible();
     expect(
       calls.filter((call) => call.path.endsWith('/balance-operations')),
     ).toHaveLength(1);
