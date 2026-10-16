@@ -73,10 +73,10 @@ export async function recordLogin(db: Db, principal: Principal): Promise<void> {
   await withAdmin(db, async (tx) => {
     const result = await tx.execute(
       principal.kind === 'admin'
-        ? sql`update admins set last_login_at = statement_timestamp()
+        ? sql`update admins set last_login_at = GREATEST(last_login_at, statement_timestamp())
               where id = ${principal.profileId} and auth_user_id = ${principal.authUserId}
               returning id`
-        : sql`update portal_accounts set last_login_at = statement_timestamp()
+        : sql`update portal_accounts set last_login_at = GREATEST(last_login_at, statement_timestamp())
               where id = ${principal.profileId} and auth_user_id = ${principal.authUserId}
                 and tenant_id = ${principal.tenantId}
               returning id`,

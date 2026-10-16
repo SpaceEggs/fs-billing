@@ -78,6 +78,26 @@ it.each(profiles)(
 );
 
 it.each(profiles)(
+  '$kind credential login preserves a later existing timestamp',
+  async ({ kind, table }) => {
+    const user = userFor(kind);
+    await connections.owner.pool.query(
+      `UPDATE public.${table}
+       SET last_login_at = statement_timestamp() + interval '1 day'
+       WHERE id = $1`,
+      [user.profileId],
+    );
+    const recorded = await lastLoginAt(kind);
+    expect(recorded).not.toBeNull();
+    expect(Date.parse(recorded!)).toBeGreaterThan(await databaseTime());
+
+    await login(api, user);
+
+    expect(await lastLoginAt(kind)).toBe(recorded);
+  },
+);
+
+it.each(profiles)(
   '$kind failed logins preserve the previous timestamp',
   async ({ kind, table }) => {
     const user = userFor(kind);
