@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -65,9 +66,9 @@ const conflict = (code: string) => ({
 
 type Reply = { status: number; body?: unknown } | 'network';
 
-/** `post` 按路径结尾（preview / commit）应答；GET 返回 `current()`。 */
+/** `post` 按路径结尾（preview / commit）应答，可返回待定的应答；GET 返回 `current()`。 */
 function stubApi(
-  post: (path: string, body: unknown) => Reply,
+  post: (path: string, body: unknown) => Reply | Promise<Reply>,
   current: () => unknown = () => rates(versionA),
 ) {
   const posts: { path: string; body: unknown }[] = [];
@@ -81,11 +82,10 @@ function stubApi(
       }
       const body: unknown = JSON.parse(init.body as string);
       posts.push({ path, body });
-      const reply = post(path, body);
-      if (reply === 'network') return Promise.reject(new TypeError('offline'));
-      return Promise.resolve(
-        Response.json(reply.body ?? null, { status: reply.status }),
-      );
+      return Promise.resolve(post(path, body)).then((reply) => {
+        if (reply === 'network') throw new TypeError('offline');
+        return Response.json(reply.body ?? null, { status: reply.status });
+      });
     }),
   );
   return { posts, gets };
@@ -102,10 +102,23 @@ function renderTab() {
   );
 }
 
-const csv = (text: string) =>
-  new File([new TextEncoder().encode(text)], '费率_修订版.csv', {
-    type: 'text/csv',
-  });
+const csv = (text: string, name = '费率_修订版.csv') =>
+  new File([new TextEncoder().encode(text)], name, { type: 'text/csv' });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => (resolve = done));
+  return { promise, resolve };
+}
+
+const drop = (target: Element, file: File) =>
+  fireEvent.drop(target, { dataTransfer: { files: [file] } });
+
+const scheduledVersion = {
+  id: versionB,
+  effectiveFrom: '2026-11-01T00:00:00.000Z',
+  entries,
+};
 
 async function openAndUpload(
   file = csv('prefix,country,rate\n86,中国,0.05\n'),
@@ -334,6 +347,112 @@ describe('rate import dialog', () => {
     expect(gets.length).toBeGreaterThan(getsBefore);
     expect(commits).toBe(2);
     expect(posts).toHaveLength(3);
+  });
+
+  it('ignores a file dropped while a preview is pending and shows the preview under the file that was sent', async () => {
+    const reply = deferred<Reply>();
+    const { posts } = stubApi(() => reply.promise);
+    renderTab();
+    const { user, dialog } = await openAndUpload(csv('a', 'A.csv'));
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：预览' }),
+    );
+    expect(
+      within(dialog).getByRole('button', { name: '正在预览…' }),
+    ).toBeDisabled();
+    drop(
+      within(dialog).getByText('A.csv').closest('label')!,
+      csv('b', 'B.csv'),
+    );
+    expect(within(dialog).getByText('A.csv')).toBeInTheDocument();
+    expect(within(dialog).queryByText('B.csv')).not.toBeInTheDocument();
+
+    reply.resolve({ status: 200, body: okPreview });
+    expect(
+      await within(dialog).findByRole('button', { name: '确认导入' }),
+    ).toBeEnabled();
+    expect(dialog).toHaveTextContent('A.csv · GBK · 3 条');
+    expect(dialog).not.toHaveTextContent('B.csv');
+    expect(posts).toHaveLength(1);
+    expect(posts[0]!.body).toMatchObject({ file: { filename: 'A.csv' } });
+  });
+
+  it('drops a preview response that a newer file selection made obsolete', async () => {
+    const reply = deferred<Reply>();
+    const { posts } = stubApi(() => reply.promise);
+    renderTab();
+    const { dialog } = await openAndUpload(csv('a', 'A.csv'));
+    const next = within(dialog).getByRole('button', { name: '下一步：预览' });
+    const zone = within(dialog).getByText('A.csv').closest('label')!;
+    // 同一批事件里先预览再换文件：换文件时界面还没进入「正在预览」，靠请求编号丢弃 A 的应答。
+    act(() => {
+      fireEvent.click(next);
+      drop(zone, csv('b', 'B.csv'));
+    });
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]!.body).toMatchObject({ file: { filename: 'A.csv' } });
+
+    await act(async () => {
+      reply.resolve({ status: 200, body: okPreview });
+      await reply.promise;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(
+      within(dialog).queryByRole('button', { name: '确认导入' }),
+    ).not.toBeInTheDocument();
+    expect(within(dialog).getByText('B.csv')).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: '下一步：预览' }),
+    ).toBeEnabled();
+  });
+
+  it('returns focus to the rates section when a scheduled import disables the import button', async () => {
+    let current = rates(versionA);
+    stubApi(
+      (path) => {
+        if (isPreview(path)) return { status: 200, body: okPreview };
+        current = rates(versionA, [scheduledVersion]);
+        return {
+          status: 200,
+          body: {
+            auditId: '00000000-0000-4000-8000-0000000000dd',
+            version: scheduledVersion,
+          },
+        };
+      },
+      () => current,
+    );
+    renderTab();
+    const { user, dialog } = await openAndUpload();
+    await user.click(
+      within(dialog).getByRole('radio', { name: '指定时间生效' }),
+    );
+    fireEvent.change(
+      within(dialog).getByLabelText('指定生效时间（北京时间）'),
+      {
+        target: { value: beijingMinute(Date.now() + 2 * 24 * 60 * 60 * 1000) },
+      },
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：预览' }),
+    );
+    await user.click(
+      await within(dialog).findByRole('button', { name: '确认导入' }),
+    );
+    expect(await within(dialog).findByRole('status')).toHaveTextContent(
+      '已导入，已排定新版本',
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: '导入 CSV', hidden: true }),
+      ).toBeDisabled(),
+    );
+
+    await user.click(
+      within(dialog).getByRole('button', { name: '返回费率表' }),
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '费率表' })).toHaveFocus();
   });
 
   it('disables import while a scheduled version exists', async () => {

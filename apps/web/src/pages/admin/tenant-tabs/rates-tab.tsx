@@ -1,4 +1,4 @@
-import { useDeferredValue, useId, useState } from 'react';
+import { useDeferredValue, useId, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type {
   AdminRateEntry,
@@ -54,6 +54,9 @@ function editNotice(
   };
 }
 
+/** 只供脚本聚焦、不进 Tab 顺序（写在函数外：money lint 把 RatesTab 里的负数当作费率运算）。 */
+const scriptFocusOnly = -1;
+
 /**
  * 费率（设计稿第二批 §7、§8、§10）：当前版本、排定的新版本与取消、单条编辑、导入与导出 CSV。
  * 手机只能查看和搜索（pages.md §3.6）。
@@ -71,6 +74,8 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const [cancelling, setCancelling] = useState<AdminRateVersion | null>(null);
   const [importing, setImporting] = useState<RateImportBase | null>(null);
   const importBlockedId = useId();
+  // 排定导入后「导入 CSV」随即禁用，关闭对话框时焦点退到这里。
+  const sectionRef = useRef<HTMLElement>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const rates = useQuery({
     ...apiQuery('adminRates', {
@@ -144,7 +149,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <section
+      ref={sectionRef}
+      tabIndex={scriptFocusOnly}
+      aria-label="费率表"
+      className="flex flex-col gap-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+    >
       {versions.slice(1).map((version, index) => (
         <ScheduledRateVersion
           key={version.id}
@@ -317,6 +327,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
           base={importing}
           onClose={() => setImporting(null)}
+          fallbackFocus={sectionRef}
         />
       ) : null}
       {cancelling ? (
@@ -335,6 +346,6 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
         />
       ) : null}
-    </div>
+    </section>
   );
 }

@@ -40,6 +40,7 @@ export type RateImportBase = {
 };
 
 /**
+ * 第 2 步起记下发去预览的那个文件，副标题与「原始内容」都取它，不取之后选中的文件。
  * `uncertain`：确认导入时网络中断或服务端 5xx，不知道是否已导入。
  * 之后再确认收到 PREVIEW_STALE / RATE_VERSION_CONFLICT，多半是上次其实已导入。
  */
@@ -48,6 +49,7 @@ export type RateImportState =
   | { step: 'previewing' }
   | {
       step: 'step2-ok';
+      file: File;
       preview: Preview;
       schedule: AdminRateSchedule;
       error: unknown;
@@ -55,11 +57,13 @@ export type RateImportState =
     }
   | {
       step: 'step2-errors';
+      file: File;
       errors: AdminCsvRowError[];
       lines: string[] | null;
     }
   | {
       step: 'committing';
+      file: File;
       preview: Preview;
       schedule: AdminRateSchedule;
       uncertain: boolean;
@@ -89,10 +93,12 @@ export function RateImportDialog({
   tenant,
   base: initialBase,
   onClose,
+  fallbackFocus,
 }: {
   tenant: { id: string; code: string; name: string; currency: Currency };
   base: RateImportBase;
   onClose: () => void;
+  fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const queryClient = useQueryClient();
   const preview = useApiMutation('adminRateImportPreview');
@@ -111,6 +117,8 @@ export function RateImportDialog({
     error: null,
   });
   const headingRef = useRef<HTMLHeadingElement>(null);
+  // 每次预览或换文件加一；应答回来时编号已变就丢弃，过时的预览不会显示成可确认。
+  const previewRequest = useRef(0);
   const busy = state.step === 'previewing' || state.step === 'committing';
 
   useEffect(() => {
@@ -118,7 +126,8 @@ export function RateImportDialog({
   }, [state.step, busy]);
 
   function pick(selected: File | null) {
-    if (!selected) return;
+    if (!selected || busy) return;
+    previewRequest.current += 1;
     if (csvTooLarge(selected.size)) {
       setFileError('文件超过 2 MB 上限，请拆分或删减后重新选择');
       setFile(null);
@@ -167,35 +176,43 @@ export function RateImportDialog({
     }
     setScheduleError(undefined);
     setState({ step: 'previewing' });
+    const request = (previewRequest.current += 1);
+    const sent = file;
+    const latest = () => request === previewRequest.current;
     try {
       const result = await preview.mutateAsync({
         params: { tenantId: tenant.id },
         body: {
           file: {
-            filename: file.name,
-            contentBase64: await fileToBase64(file),
+            filename: sent.name,
+            contentBase64: await fileToBase64(sent),
           },
           baseVersionId: base.versionId,
           schedule: resolved.schedule,
         },
       });
+      if (!latest()) return;
       if (result.ok)
         setState({
           step: 'step2-ok',
+          file: sent,
           preview: result,
           schedule: resolved.schedule,
           error: null,
           uncertain: false,
         });
-      else await showRowErrors(result.errors);
+      else await showRowErrors(sent, result.errors, latest);
     } catch (error) {
+      if (!latest()) return;
       const problem = apiProblem(error);
-      if (problem.kind === 'csv-invalid') return showRowErrors(problem.rows);
+      if (problem.kind === 'csv-invalid')
+        return showRowErrors(sent, problem.rows, latest);
       if (
         problem.kind === 'conflict' &&
         problem.code === 'RATE_VERSION_CONFLICT'
       ) {
         await rebase();
+        if (!latest()) return;
         setState({
           step: 'step1',
           notice: '费率表已被修改，已载入最新版本，请重新预览',
@@ -208,23 +225,31 @@ export function RateImportDialog({
     }
   }
 
-  async function showRowErrors(errors: AdminCsvRowError[]) {
+  async function showRowErrors(
+    sent: File,
+    errors: AdminCsvRowError[],
+    latest: () => boolean,
+  ) {
     let lines: string[] | null = null;
     try {
-      lines = file
-        ? decodeCsvLines(new Uint8Array(await file.arrayBuffer()))
-        : null;
+      lines = decodeCsvLines(new Uint8Array(await sent.arrayBuffer()));
     } catch {
       // 读不出原文时「原始内容」显示「—」。
     }
-    setState({ step: 'step2-errors', errors, lines });
+    if (latest()) setState({ step: 'step2-errors', file: sent, errors, lines });
   }
 
   async function runCommit(
     current: Extract<RateImportState, { step: 'step2-ok' }>,
   ) {
-    const { preview: result, schedule, uncertain } = current;
-    setState({ step: 'committing', preview: result, schedule, uncertain });
+    const { file: sent, preview: result, schedule, uncertain } = current;
+    setState({
+      step: 'committing',
+      file: sent,
+      preview: result,
+      schedule,
+      uncertain,
+    });
     try {
       const response = await commit.mutateAsync({
         params: { tenantId: tenant.id },
@@ -263,6 +288,7 @@ export function RateImportDialog({
       }
       setState({
         step: 'step2-ok',
+        file: sent,
         preview: result,
         schedule,
         error,
@@ -275,9 +301,9 @@ export function RateImportDialog({
   const failed = state.step === 'step2-errors';
   const subtitle =
     state.step === 'step2-ok' || state.step === 'committing'
-      ? `${file?.name ?? ''} · ${state.preview.encoding} · ${tableSizes(base.entryCount, state.preview.counts).rows} 条`
+      ? `${state.file.name} · ${state.preview.encoding} · ${tableSizes(base.entryCount, state.preview.counts).rows} 条`
       : state.step === 'step2-errors'
-        ? (file?.name ?? '')
+        ? state.file.name
         : `${tenant.code} ${tenant.name}（${tenant.currency}）`;
 
   return (
@@ -288,6 +314,7 @@ export function RateImportDialog({
       }}
       title="导入费率表"
       className="md:w-[720px]"
+      fallbackFocus={fallbackFocus}
     >
       <Heading headingRef={headingRef} subtitle={subtitle} />
       <ol
