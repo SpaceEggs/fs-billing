@@ -3,7 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatDate } from './lib/format';
 import { passwordGate, sessionExpiry } from './lib/session';
-import { adminApi, apiError, renderApp, type ApiHandler } from './test/app';
+import {
+  adminApi,
+  apiError,
+  deferred,
+  renderApp,
+  type ApiHandler,
+} from './test/app';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -62,7 +68,29 @@ const listing = (
   items: unknown[],
   totals = { CNY: '6300', USD: '1700' },
   total = items.length,
-) => ({ items, totals, pagination: { page: 1, pageSize: 25, total } });
+  page = 1,
+) => ({ items, totals, pagination: { page, pageSize: 25, total } });
+
+type Reply = { status: number; body?: unknown };
+
+const confirmed = (ledgerEntryId: string) => ({
+  status: 200,
+  body: {
+    auditId: ids.audit,
+    settlementId: ids.newSettlement,
+    ledgerEntryId,
+    receivedOn: formatDate(new Date()),
+  },
+});
+
+const postedTokens = (calls: { method: string; body: unknown }[]) =>
+  calls
+    .filter((call) => call.method === 'POST')
+    .map(
+      (call) =>
+        (call.body as { expectedLatestSettlementId: string | null })
+          .expectedLatestSettlementId,
+    );
 
 function openReceivables(
   list: ApiHandler,
@@ -129,6 +157,43 @@ describe('receivables list', () => {
       page: '1',
       pageSize: '25',
     });
+  });
+
+  it('hides the previous filter totals while the newly selected filter loads', async () => {
+    const all = deferred<Reply>();
+    const { user } = openReceivables(
+      (path) =>
+        path.includes('currency=CNY')
+          ? { status: 200, body: listing([gzt], { CNY: '6300', USD: '0' }) }
+          : all.promise,
+      {},
+      '/admin/receivables?currency=CNY',
+    );
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: '全部币种' }));
+    const totals = screen.getByRole('list', { name: '待收款合计' });
+    await waitFor(() =>
+      expect(within(totals).getAllByRole('listitem')).toHaveLength(2),
+    );
+    // 上一次（CNY 筛选）响应里的 USD "0" 只是占位，不能显示成 USD 合计。
+    expect(totals).toHaveAttribute('aria-busy', 'true');
+    expect(totals).not.toHaveTextContent('$');
+    expect(totals).not.toHaveTextContent('¥');
+    expect(
+      within(totals)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['待收款总额 · CNY加载中', '待收款总额 · USD加载中']);
+
+    all.resolve({ status: 200, body: listing([gzt, nyc]) });
+    await waitFor(() =>
+      expect(
+        within(totals)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['待收款总额 · CNY¥6,300.00', '待收款总额 · USD$1,700.00']),
+    );
+    expect(totals).toHaveAttribute('aria-busy', 'false');
   });
 
   it('search resets to the first page and an empty filtered result offers clearing', async () => {
@@ -347,4 +412,278 @@ describe('confirm payment', () => {
       ),
     ).toEqual([null, ids.settlement]);
   });
+  it('moves to the last valid page after confirming the only item on a later page', async () => {
+    let paid = false;
+    const others = Array.from({ length: 25 }, (_, index) =>
+      receivable({
+        ledgerEntryId: `00000000-0000-4000-8000-0000000e1${String(index).padStart(3, '0')}`,
+        tenant: { ...gzt.tenant, code: `OTH${String(index).padStart(3, '0')}` },
+      }),
+    );
+    const { calls, user, location } = openReceivables(
+      (path) => {
+        const page = new URL(path, 'http://x').searchParams.get('page');
+        if (page === '2')
+          return {
+            status: 200,
+            body: paid
+              ? listing([], undefined, 25, 2)
+              : listing([gzt], undefined, 26, 2),
+          };
+        return {
+          status: 200,
+          body: listing(others, undefined, paid ? 25 : 26),
+        };
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => {
+          paid = true;
+          return confirmed(ids.gzt);
+        },
+      },
+      '/admin/receivables?page=2',
+    );
+    const table = await screen.findByRole('table');
+    expect(screen.getByRole('navigation', { name: '分页' })).toHaveTextContent(
+      '第 2 / 2 页',
+    );
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: /确认收款 ¥/ }),
+    );
+    await waitFor(() => expect(location()).toBe('/admin/receivables'));
+    expect(
+      await within(screen.getByRole('table')).findByText(/OTH000/),
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole('button', { name: /确认收款 OTH/ }),
+    ).toHaveLength(50);
+    expect(screen.queryByText('所有赊账均已收款')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'GZT007 ¥2,000.00 已确认收款',
+    );
+    expect(postedTokens(calls)).toEqual([null]);
+  });
+
+  it('focuses the success notice after the confirmed row disappears', async () => {
+    let paid = false;
+    const { user } = openReceivables(
+      () => ({ status: 200, body: listing(paid ? [nyc] : [gzt, nyc]) }),
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => {
+          paid = true;
+          return confirmed(ids.gzt);
+        },
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: /确认收款 ¥/ }),
+    );
+    const notice = await screen.findByRole('status');
+    await waitFor(() =>
+      expect(
+        within(table).queryByRole('button', { name: /GZT007/ }),
+      ).toBeNull(),
+    );
+    await waitFor(() => expect(notice).toHaveFocus());
+  });
+
+  it('cancelling still returns focus to the row that opened the dialog', async () => {
+    const { user } = openReceivables(() => ({
+      status: 200,
+      body: listing([gzt]),
+    }));
+    const table = await screen.findByRole('table');
+    const opener = within(table).getByRole('button', { name: /GZT007/ });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(within(dialog).getByRole('button', { name: '取消' }));
+    await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it.each([
+    [
+      'the row now has a different settlement token',
+      () => listing([{ ...gzt, latestSettlementId: ids.settlement }]),
+      '请关闭后从列表重新打开再确认',
+    ],
+    [
+      'the row is no longer pending',
+      () => listing([nyc]),
+      '刷新后的列表中已没有这笔待收款',
+    ],
+  ])(
+    'an open dialog keeps its token and refuses to submit once a refetch shows %s',
+    async (_case, refreshed, warning) => {
+      const refetch = deferred<Reply>();
+      let listed = 0;
+      const { calls, user, queryClient } = openReceivables(
+        () => {
+          listed += 1;
+          return listed === 1
+            ? { status: 200, body: listing([gzt, nyc]) }
+            : refetch.promise;
+        },
+        {
+          [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () =>
+            confirmed(ids.gzt),
+        },
+      );
+      const table = await screen.findByRole('table');
+      await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+      const dialog = screen.getByRole('dialog', { name: '确认收款' });
+      const submit = within(dialog).getByRole('button', {
+        name: '确认收款 ¥2,000.00',
+      });
+
+      void queryClient.invalidateQueries();
+      await waitFor(() => expect(listCalls(calls)).toHaveLength(2));
+      // 刷新尚未返回：仍可提交打开时的令牌。
+      expect(submit).toBeEnabled();
+
+      refetch.resolve({ status: 200, body: refreshed() });
+      const alert = await within(dialog).findByRole('alert');
+      expect(alert).toHaveTextContent('该笔状态已变化，不能在此确认');
+      expect(alert).toHaveTextContent(warning);
+      expect(submit).toBeDisabled();
+      await user.click(submit);
+      expect(postedTokens(calls)).toEqual([]);
+      await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+    },
+  );
+
+  it('reopening after a refetch adopts the refreshed token', async () => {
+    let listed = 0;
+    const { calls, user, queryClient } = openReceivables(
+      () => {
+        listed += 1;
+        return {
+          status: 200,
+          body: listing([
+            listed === 1 ? gzt : { ...gzt, latestSettlementId: ids.settlement },
+          ]),
+        };
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () =>
+          confirmed(ids.gzt),
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    let dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await queryClient.invalidateQueries();
+    await within(dialog).findByText(/请关闭后从列表重新打开再确认/);
+    await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: '确认收款 ¥2,000.00' }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'GZT007 ¥2,000.00 已确认收款',
+    );
+    expect(postedTokens(calls)).toEqual([ids.settlement]);
+  });
+
+  it('a network failure keeps confirm disabled until the list refresh lands', async () => {
+    const refetch = deferred<Reply>();
+    let listed = 0;
+    let posts = 0;
+    const { calls, user } = openReceivables(
+      () => {
+        listed += 1;
+        return listed === 1
+          ? { status: 200, body: listing([gzt]) }
+          : refetch.promise;
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => {
+          posts += 1;
+          if (posts === 1) throw new TypeError('network down');
+          return confirmed(ids.gzt);
+        },
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    const submit = within(dialog).getByRole('button', {
+      name: '确认收款 ¥2,000.00',
+    });
+    await user.click(submit);
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '网络中断',
+    );
+    expect(dialog).toHaveTextContent('正在刷新列表…');
+    expect(dialog).not.toHaveTextContent('列表已刷新');
+    expect(submit).toBeDisabled();
+
+    refetch.resolve({ status: 200, body: listing([gzt]) });
+    expect(await within(dialog).findByText('列表已刷新。')).toBeVisible();
+    // 刷新后令牌未变：可用原令牌手动再试。
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'GZT007 ¥2,000.00 已确认收款',
+    );
+    expect(postedTokens(calls)).toEqual([null, null]);
+  });
+
+  it('a failed refresh after a conflict is reported with retry and keeps the row disabled', async () => {
+    let listed = 0;
+    let recovered = false;
+    const { user } = openReceivables(
+      () => {
+        listed += 1;
+        if (listed === 1) return { status: 200, body: listing([gzt]) };
+        return recovered
+          ? {
+              status: 200,
+              body: listing([{ ...gzt, latestSettlementId: ids.settlement }]),
+            }
+          : { status: 503, body: apiError('SERVICE_UNAVAILABLE') };
+      },
+      {
+        [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => ({
+          status: 409,
+          body: apiError('SETTLEMENT_CONFLICT'),
+        }),
+      },
+    );
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: /GZT007/ }));
+    const dialog = screen.getByRole('dialog', { name: '确认收款' });
+    await user.click(
+      within(dialog).getByRole('button', { name: '确认收款 ¥2,000.00' }),
+    );
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent('未确认收款');
+    expect(alert).toHaveTextContent('正在刷新列表…');
+    expect(
+      await within(alert).findByText(
+        '列表刷新失败，页面显示的可能不是最新状态。',
+        undefined,
+        { timeout: 8000 },
+      ),
+    ).toBeVisible();
+    expect(alert).not.toHaveTextContent('列表已刷新');
+    await user.click(within(dialog).getByRole('button', { name: '关闭' }));
+
+    const notice = screen.getByRole('alert');
+    expect(notice).toHaveTextContent('待收款刷新失败，列表可能不是最新');
+    const row = within(table).getByRole('button', { name: /GZT007/ });
+    expect(row).toBeDisabled();
+
+    recovered = true;
+    await user.click(within(notice).getByRole('button', { name: '重试' }));
+    await waitFor(() => expect(row).toBeEnabled());
+    expect(screen.queryByRole('alert')).toBeNull();
+  }, 15_000);
 });

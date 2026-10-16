@@ -65,15 +65,12 @@ describe('validateConfirmPayment', () => {
 
 describe('confirmPaymentFailure', () => {
   it.each([
-    [
-      'ALREADY_RECEIVED',
-      '该笔已确认收款，可能已由其他管理员处理。列表已刷新。',
-    ],
+    ['ALREADY_RECEIVED', '该笔已确认收款，可能已由其他管理员处理。'],
     [
       'SETTLEMENT_CONFLICT',
-      '该笔的收款状态已变化（例如确认后又被撤销）。列表已刷新，请核对后重新确认。',
+      '该笔的收款状态已变化（例如确认后又被撤销），请核对后重新确认。',
     ],
-    ['RECEIVABLE_VOIDED', '该笔应收已作废，不能再确认收款。列表已刷新。'],
+    ['RECEIVABLE_VOIDED', '该笔应收已作废，不能再确认收款。'],
   ])('maps 409 %s to a stale refresh', (code, message) => {
     expect(confirmPaymentFailure(conflict(code))).toEqual({
       kind: 'stale',
@@ -84,7 +81,7 @@ describe('confirmPaymentFailure', () => {
   it('treats a vanished receivable as stale', () => {
     expect(confirmPaymentFailure(conflict('NOT_FOUND', 404))).toEqual({
       kind: 'stale',
-      message: '该笔应收不存在或已被删除。列表已刷新。',
+      message: '该笔应收不存在或已被删除。',
     });
   });
 

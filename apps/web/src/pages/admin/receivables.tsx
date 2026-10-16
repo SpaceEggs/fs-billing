@@ -1,5 +1,9 @@
-import { useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   currencySchema,
@@ -16,10 +20,10 @@ import { Pagination } from '../../components/pagination';
 import { QueryError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { Button } from '../../components/ui/button';
-import { apiQuery } from '../../lib/admin-api';
+import { apiQuery, invalidateTenant } from '../../lib/admin-api';
 import type { ReceivablesSearch } from '../../lib/admin-search';
 import { formatMoney } from '../../lib/format';
-import { visibleTotals } from '../../lib/receivables';
+import { listRefresh, visibleTotals } from '../../lib/receivables';
 import { cn } from '../../lib/utils';
 
 export const receivablePageSize = 25;
@@ -88,20 +92,26 @@ function Filters() {
   );
 }
 
-/** 分币种合计（6a/6b）：按筛选后的全部结果统计，不只当前页；CNY 与 USD 不相加。 */
+const zeroTotals = { CNY: '0', USD: '0' };
+
+/**
+ * 分币种合计（6a/6b）：按筛选后的全部结果统计，不只当前页；CNY 与 USD 不相加。
+ * `totals` 为 null 表示新筛选的结果还没到：上一次响应的合计属于旧筛选，不能当作当前合计显示。
+ */
 function Totals({
   totals,
   currency,
 }: {
-  totals: Parameters<typeof visibleTotals>[0];
+  totals: Parameters<typeof visibleTotals>[0] | null;
   currency: ReceivablesSearch['currency'];
 }) {
   return (
     <ul
       aria-label="待收款合计"
+      aria-busy={totals === null}
       className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 tabular-nums md:grid-cols-3 md:gap-4"
     >
-      {visibleTotals(totals, currency).map((money) => (
+      {visibleTotals(totals ?? zeroTotals, currency).map((money) => (
         <li
           key={money.currency}
           aria-label={`待收款总额 ${money.currency}`}
@@ -111,11 +121,17 @@ function Totals({
             <span className="hidden md:inline">待收款总额 · </span>
             {money.currency}
           </span>
-          <Money
-            value={money}
-            tone="plain"
-            className="text-xl font-semibold md:text-[28px] md:tracking-[-0.02em]"
-          />
+          {totals ? (
+            <Money
+              value={money}
+              tone="plain"
+              className="text-xl font-semibold md:text-[28px] md:tracking-[-0.02em]"
+            />
+          ) : (
+            <span className="text-xl font-semibold text-muted-foreground md:text-[28px]">
+              加载中
+            </span>
+          )}
         </li>
       ))}
     </ul>
@@ -139,9 +155,11 @@ const overdueRow = 'bg-warn-soft shadow-[inset_3px_0_0_var(--warn-fg)]';
 function ReceivableTable({
   items,
   onConfirm,
+  isBlocked,
 }: {
   items: AdminReceivable[];
   onConfirm: (receivable: AdminReceivable) => void;
+  isBlocked: (receivable: AdminReceivable) => boolean;
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
@@ -196,6 +214,7 @@ function ReceivableTable({
                   variant="outline"
                   size="sm"
                   aria-label={`确认收款 ${receivable.tenant.code} ${formatMoney(receivableMoney(receivable))}`}
+                  disabled={isBlocked(receivable)}
                   onClick={() => onConfirm(receivable)}
                   className="h-[30px] bg-background text-primary"
                 >
@@ -213,9 +232,11 @@ function ReceivableTable({
 function ReceivableCards({
   items,
   onConfirm,
+  isBlocked,
 }: {
   items: AdminReceivable[];
   onConfirm: (receivable: AdminReceivable) => void;
+  isBlocked: (receivable: AdminReceivable) => boolean;
 }) {
   return (
     <ul className="m-0 flex list-none flex-col gap-2.5 p-0 tabular-nums md:hidden">
@@ -248,6 +269,7 @@ function ReceivableCards({
           <Button
             variant="outline"
             aria-label={`确认收款 ${receivable.tenant.code} ${formatMoney(receivableMoney(receivable))}`}
+            disabled={isBlocked(receivable)}
             onClick={() => onConfirm(receivable)}
             className="mt-1 h-10 bg-background text-primary"
           >
@@ -333,14 +355,18 @@ function LoadingRows() {
 function ConfirmedNotice({
   receivable,
   onDismiss,
+  ref,
 }: {
   receivable: AdminReceivable;
   onDismiss: () => void;
+  ref: React.Ref<HTMLDivElement>;
 }) {
   return (
     <div
+      ref={ref}
       role="status"
-      className="flex items-center gap-2 rounded-[10px] border border-ok-border bg-ok-soft px-3.5 py-2.5 text-sm text-ok"
+      tabIndex={-1}
+      className="flex items-center gap-2 rounded-[10px] border border-ok-border bg-ok-soft px-3.5 py-2.5 text-sm text-ok outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >
       <span aria-hidden className="font-bold">
         ✓
@@ -380,9 +406,35 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
     }),
     placeholderData: keepPreviousData,
   });
+  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState<AdminReceivable | null>(null);
   const [confirmed, setConfirmed] = useState<AdminReceivable | null>(null);
+  /** 确认失败后需要与服务端核对的行：ledgerEntryId → 发起刷新的时间。 */
+  const [reconciling, setReconciling] = useState<Record<string, number>>({});
+  const noticeRef = useRef<HTMLDivElement>(null);
   const data = receivables.data;
+  const lastPage = Math.max(
+    1,
+    Math.ceil((data?.pagination.total ?? 0) / receivablePageSize),
+  );
+  // 本页最后一笔被确认（或 URL 里的页码过大）后跳到最后一个有效页，而不是显示空页。
+  const pastLastPage =
+    data !== undefined &&
+    !receivables.isPlaceholderData &&
+    data.items.length === 0 &&
+    page > lastPage;
+
+  const goToPage = (next: number) =>
+    update(
+      next > 1 ? { ...withoutPage(search), page: next } : withoutPage(search),
+    );
+
+  useEffect(() => {
+    if (pastLastPage) goToPage(lastPage);
+  });
+
+  const refreshOf = (receivable: AdminReceivable) =>
+    listRefresh(reconciling[receivable.ledgerEntryId], receivables);
 
   function openConfirm(receivable: AdminReceivable) {
     setConfirmed(null);
@@ -399,14 +451,26 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
       <PageBody title="待收款" meta="赊账充值，客户付款后确认收款">
         {confirmed ? (
           <ConfirmedNotice
+            ref={noticeRef}
             receivable={confirmed}
             onDismiss={() => setConfirmed(null)}
           />
         ) : null}
         {data ? (
-          <Totals totals={data.totals} currency={search.currency} />
+          <Totals
+            totals={receivables.isPlaceholderData ? null : data.totals}
+            currency={search.currency}
+          />
         ) : null}
         <Filters />
+        {receivables.isError && data ? (
+          <QueryError
+            title="待收款刷新失败，列表可能不是最新"
+            error={receivables.error}
+            retrying={receivables.isFetching}
+            onRetry={() => void receivables.refetch()}
+          />
+        ) : null}
         {receivables.isError && !data ? (
           <QueryError
             title="待收款加载失败"
@@ -414,25 +478,27 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
             retrying={receivables.isFetching}
             onRetry={() => void receivables.refetch()}
           />
-        ) : !data ? (
+        ) : !data || pastLastPage ? (
           <LoadingRows />
-        ) : data.items.length === 0 ? (
+        ) : data.pagination.total === 0 ? (
           <EmptyState search={search} />
         ) : (
           <>
-            <ReceivableTable items={data.items} onConfirm={openConfirm} />
-            <ReceivableCards items={data.items} onConfirm={openConfirm} />
+            <ReceivableTable
+              items={data.items}
+              onConfirm={openConfirm}
+              isBlocked={(receivable) => refreshOf(receivable) !== 'fresh'}
+            />
+            <ReceivableCards
+              items={data.items}
+              onConfirm={openConfirm}
+              isBlocked={(receivable) => refreshOf(receivable) !== 'fresh'}
+            />
             <Pagination
               page={page}
               pageSize={receivablePageSize}
               rowCount={data.pagination.total}
-              onPage={(next) =>
-                update(
-                  next > 1
-                    ? { ...withoutPage(search), page: next }
-                    : withoutPage(search),
-                )
-              }
+              onPage={goToPage}
             />
           </>
         )}
@@ -441,6 +507,19 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
         <ConfirmPaymentDialog
           key={confirming.ledgerEntryId}
           receivable={confirming}
+          current={data?.items.find(
+            (item) => item.ledgerEntryId === confirming.ledgerEntryId,
+          )}
+          refresh={refreshOf(confirming)}
+          onReconcile={() => {
+            setReconciling((flagged) => ({
+              ...flagged,
+              [confirming.ledgerEntryId]: Date.now(),
+            }));
+            void invalidateTenant(queryClient, confirming.tenant.id);
+          }}
+          onRetryRefresh={() => void receivables.refetch()}
+          returnFocus={noticeRef}
           onClose={() => setConfirming(null)}
           onDone={() => {
             setConfirmed(confirming);

@@ -48,12 +48,15 @@ export function validateConfirmPayment(
   return errors;
 }
 
-/** 确认收款的 409：页面数据已过时。列表随即刷新，由管理员核对后重新确认，不自动重试。 */
+/**
+ * 确认收款的 409：页面数据已过时。列表随即刷新，由管理员核对后重新确认，不自动重试。
+ * 刷新是否完成由对话框另行说明，这里的文案不预先声称“已刷新”。
+ */
 const staleMessages = {
-  ALREADY_RECEIVED: '该笔已确认收款，可能已由其他管理员处理。列表已刷新。',
+  ALREADY_RECEIVED: '该笔已确认收款，可能已由其他管理员处理。',
   SETTLEMENT_CONFLICT:
-    '该笔的收款状态已变化（例如确认后又被撤销）。列表已刷新，请核对后重新确认。',
-  RECEIVABLE_VOIDED: '该笔应收已作废，不能再确认收款。列表已刷新。',
+    '该笔的收款状态已变化（例如确认后又被撤销），请核对后重新确认。',
+  RECEIVABLE_VOIDED: '该笔应收已作废，不能再确认收款。',
 } as const;
 
 export type ConfirmPaymentFailure =
@@ -81,7 +84,7 @@ export function confirmPaymentFailure(error: unknown): ConfirmPaymentFailure {
     }
   }
   if (problem.kind === 'not-found')
-    return { kind: 'stale', message: '该笔应收不存在或已被删除。列表已刷新。' };
+    return { kind: 'stale', message: '该笔应收不存在或已被删除。' };
   if (problem.kind === 'validation') {
     const fields = fieldIssues(problem);
     const errors: ConfirmPaymentErrors = {};
@@ -92,4 +95,19 @@ export function confirmPaymentFailure(error: unknown): ConfirmPaymentFailure {
     if (Object.keys(errors).length) return { kind: 'fields', errors };
   }
   return { kind: 'general' };
+}
+
+/**
+ * 确认失败（409 或网络中断）后列表是否已与服务端核对：`flaggedAt` 是发起刷新的时间，
+ * 此后有一次成功的列表请求才算核对完成；刷新失败时保留“失败”，由管理员重试。
+ */
+export type ListRefresh = 'fresh' | 'refreshing' | 'failed';
+
+export function listRefresh(
+  flaggedAt: number | undefined,
+  list: { dataUpdatedAt: number; isError: boolean; isFetching: boolean },
+): ListRefresh {
+  if (flaggedAt === undefined || list.dataUpdatedAt >= flaggedAt)
+    return 'fresh';
+  return list.isError && !list.isFetching ? 'failed' : 'refreshing';
 }

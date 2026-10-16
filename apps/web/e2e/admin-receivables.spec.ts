@@ -145,8 +145,9 @@ test('refreshes after settlement conflict and reconfirms with fresh token', asyn
   await dialog.getByRole('button', { name: '确认收款 ¥500.00' }).click();
   const alert = dialog.getByRole('alert');
   await expect(alert).toContainText('未确认收款');
-  await expect(alert).toContainText('列表已刷新，请核对后重新确认');
+  await expect(alert).toContainText('请核对后重新确认');
   await refreshed;
+  await expect(alert).toContainText('列表已刷新。');
   await expect(
     dialog.getByRole('button', { name: '确认收款 ¥500.00' }),
   ).toHaveCount(0);
