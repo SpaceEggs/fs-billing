@@ -1,13 +1,12 @@
-import { createServer, type Server } from 'node:http';
-import { mkdirSync, readFileSync } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { accounts } from '../../e2e/accounts';
 import { repoRoot } from '../../e2e/env';
 import { expectPath, loginAs } from '../../e2e/helpers';
 import { writeComposite } from './composite';
+import { captureDesignFrame, serveDesigns } from './design-frames';
 
-const designDir = join(repoRoot, 'design/设计系统规范确认');
 const outDir = join(repoRoot, 'docs/evidence/phase-4-web/screenshots');
 mkdirSync(outDir, { recursive: true });
 
@@ -52,35 +51,13 @@ const pages = {
 
 const mobileViewport = { width: 375, height: 812 };
 
-let server: Server;
-let designOrigin = '';
+let designs: Awaited<ReturnType<typeof serveDesigns>>;
 
 test.beforeAll(async () => {
-  server = createServer((request, response) => {
-    const path = normalize(
-      decodeURIComponent(new URL(request.url ?? '/', 'http://x').pathname),
-    );
-    const file = join(designDir, path);
-    if (!file.startsWith(designDir)) return void response.writeHead(403).end();
-    try {
-      const type = extname(file) === '.js' ? 'text/javascript' : 'text/html';
-      response
-        .writeHead(200, { 'content-type': `${type}; charset=utf-8` })
-        .end(readFileSync(file));
-    } catch {
-      response.writeHead(404).end();
-    }
-  });
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const address = server.address();
-  if (!address || typeof address === 'string')
-    throw new Error('No design server address');
-  designOrigin = `http://127.0.0.1:${address.port}`;
+  designs = await serveDesigns();
 });
 
-test.afterAll(
-  () => new Promise<void>((resolve) => server.close(() => resolve())),
-);
+test.afterAll(() => designs.close());
 
 async function captureDesign(
   page: Page,
@@ -89,23 +66,14 @@ async function captureDesign(
 ) {
   const spec = pages[name];
   const frame = variant === 'mobile' ? spec.mobileFrame : spec.desktopFrame;
-  await page.setViewportSize({ width: 2400, height: 1600 });
-  await page.goto(`${designOrigin}/${encodeURIComponent(spec.design)}`);
-  const themed = page.locator('[data-theme]').first();
-  await expect(themed).toBeVisible({ timeout: 30_000 });
-  await themed.evaluate(
-    (element, theme) => element.setAttribute('data-theme', theme),
-    variant === 'dark' ? 'dark' : 'light',
-  );
-  const label = page
-    .locator(`section[data-screen-label="${frame.section}"]`)
-    .getByText(frame.label, { exact: true });
-  const target = label.locator(
-    'xpath=ancestor-or-self::div[1]/following-sibling::div[1]',
-  );
-  await target.scrollIntoViewIfNeeded();
   const path = join(outDir, `design-${name}-${variant}.png`);
-  await target.screenshot({ path });
+  await captureDesignFrame(
+    page,
+    designs.origin,
+    { file: spec.design, ...frame },
+    variant === 'dark' ? 'dark' : 'light',
+    path,
+  );
   return path;
 }
 
