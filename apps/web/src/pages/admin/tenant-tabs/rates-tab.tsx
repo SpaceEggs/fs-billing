@@ -20,6 +20,11 @@ import {
   RateImportDialog,
   type RateImportBase,
 } from '../../../components/admin/rate-import-dialog';
+import {
+  RateCopyDialog,
+  type CopySide,
+  type RateCopyDirection,
+} from '../../../components/admin/rate-copy-dialog';
 import { DateTime, Rate } from '../../../components/data-format';
 import { Pagination, pageSlice } from '../../../components/pagination';
 import { QueryError } from '../../../components/query-error';
@@ -73,6 +78,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   } | null>(null);
   const [cancelling, setCancelling] = useState<AdminRateVersion | null>(null);
   const [importing, setImporting] = useState<RateImportBase | null>(null);
+  const [copying, setCopying] = useState<{
+    direction: RateCopyDirection;
+    self: CopySide;
+  } | null>(null);
   const importBlockedId = useId();
   // 排定导入后「导入 CSV」随即禁用，关闭对话框时焦点退到这里。
   const sectionRef = useRef<HTMLElement>(null);
@@ -134,6 +143,25 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       导入 CSV
     </Button>
   );
+
+  function openCopy(direction: RateCopyDirection) {
+    if (!full.data) return;
+    setNotice(null);
+    setCopying({
+      direction,
+      self: {
+        tenant: {
+          id: tenantId,
+          code: tenant.code,
+          name: tenant.name,
+          currency: full.data.currency,
+        },
+        versionId: full.data.current.id,
+        entryCount: full.data.current.entries.length,
+        hasScheduled: full.data.scheduled.length > 0,
+      },
+    });
+  }
 
   async function download() {
     setNotice(null);
@@ -216,6 +244,16 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           最长前缀优先匹配
         </span>
         <span className="flex-1" />
+        {emptyTable ? null : (
+          <Button
+            variant="outline"
+            className="hidden md:inline-flex"
+            disabled={!full.data}
+            onClick={() => openCopy('push')}
+          >
+            复制到其他租户
+          </Button>
+        )}
         <Button
           variant="outline"
           className="hidden md:inline-flex"
@@ -243,11 +281,21 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           <span className="text-[13px] text-muted-foreground">
             {deferred
               ? '请换一个前缀或国家名称'
-              : '没有费率时该租户的呼叫无法计费'}
+              : `导入 CSV，或复制一个同币种（${data.currency}）租户的费率表作为起点`}
           </span>
           {emptyTable ? (
             <div className="mt-2 hidden flex-col items-center gap-2 md:flex">
-              {importButton}
+              <div className="flex gap-2">
+                {importButton}
+                <Button
+                  variant="outline"
+                  disabled={!full.data || hasScheduled}
+                  aria-describedby={hasScheduled ? importBlockedId : undefined}
+                  onClick={() => openCopy('pull')}
+                >
+                  复制其他租户的费率表
+                </Button>
+              </div>
               <RateCsvTemplateLink />
             </div>
           ) : null}
@@ -328,6 +376,13 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           base={importing}
           onClose={() => setImporting(null)}
           fallbackFocus={sectionRef}
+        />
+      ) : null}
+      {copying ? (
+        <RateCopyDialog
+          direction={copying.direction}
+          self={copying.self}
+          onClose={() => setCopying(null)}
         />
       ) : null}
       {cancelling ? (

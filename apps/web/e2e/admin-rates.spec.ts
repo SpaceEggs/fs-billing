@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { expect, type Page } from '@playwright/test';
-import { createTenant, test } from './admin';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { createTenant, test, uniqueCode } from './admin';
 import { operationLogs } from './db';
 
 const rates = [
@@ -361,4 +361,102 @@ test('mobile only views and searches rates', async ({ page }) => {
   await page.getByRole('searchbox', { name: '搜索前缀或国家' }).fill('英国');
   await expect(page.getByRole('row')).toHaveCount(2);
   await expect(page.getByRole('row').nth(1)).toContainText('447英国手机0.0450');
+});
+
+/** 在复制对话框里按编码搜索并选中租户，等待其费率表快照读完。 */
+async function pickCopyTenant(dialog: Locator, code: string) {
+  await dialog.getByLabel('搜索租户编码或名称').fill(code);
+  await dialog.getByRole('radio', { name: new RegExp(code) }).check();
+  await expect(dialog.getByText(/已选：.*· \d+ 条/)).toBeVisible();
+}
+
+test('pushes a full rate table to a same-currency tenant', async ({ page }) => {
+  const source = await createTenant(page, {
+    code: uniqueCode('CPS'),
+    rates: [...rates, { prefix: '33', country: '法国', rate: '0.0600' }],
+  });
+  const target = await createTenant(page, {
+    code: uniqueCode('CPT'),
+    rates: [
+      { prefix: '86', country: '中国', rate: '0.0400' },
+      { prefix: '64', country: '新西兰', rate: '0.2000' },
+    ],
+  });
+  const usd = await createTenant(page, {
+    code: uniqueCode('CPU'),
+    currency: 'USD',
+    rates,
+  });
+  const sourceBefore = await readRates(page, source.id);
+  const targetBefore = await readRates(page, target.id);
+  await openRates(page, source.id);
+
+  await page.getByRole('button', { name: '复制到其他租户' }).click();
+  const dialog = page.getByRole('dialog', { name: '复制费率表到其他租户' });
+  await expect(dialog).toContainText('将覆盖目标租户的整张费率表');
+  await dialog.getByLabel('搜索租户编码或名称').fill(usd.code);
+  await expect(dialog.getByText('没有匹配的同币种租户')).toBeVisible();
+  await dialog.getByLabel('搜索租户编码或名称').fill(source.code);
+  await expect(dialog.getByText('没有匹配的同币种租户')).toBeVisible();
+
+  await pickCopyTenant(dialog, target.code);
+  const request = page.waitForRequest((candidate) =>
+    candidate.url().endsWith('/rates/copy/preview'),
+  );
+  await dialog.getByRole('button', { name: '下一步：预览变动' }).click();
+  const preview = await request;
+  expect(preview.url()).toContain(`/api/admin/tenants/${source.id}/`);
+  expect(preview.postDataJSON()).toEqual({
+    sourceVersionId: sourceBefore.current.id,
+    targetTenantId: target.id,
+    targetBaseVersionId: targetBefore.current.id,
+    schedule: { kind: 'immediate' },
+  });
+  await expect(dialog).toContainText(
+    `${target.code} 的费率表将新增 2 条、修改 1 条、删除 1 条，其余 0 条不变`,
+  );
+  await expect(dialog).toContainText(
+    `将覆盖 ${target.code} 的整张费率表；删除后，拨打 64 新西兰 的呼叫将被拒绝`,
+  );
+  await dialog.getByRole('button', { name: `确认覆盖 ${target.code}` }).click();
+  await expect(dialog.getByRole('status')).toContainText(
+    `已复制到 ${target.code}`,
+  );
+  await expect(dialog.getByRole('status')).toContainText('已记入操作日志');
+
+  const after = await readRates(page, target.id);
+  expect(after.current.entries).toEqual(sourceBefore.current.entries);
+  const copied = (await operationLogs(target.id)).at(-1);
+  expect(copied?.action).toBe('rate_copy');
+  expect(copied?.content).toMatchObject({
+    rateVersionId: after.current.id,
+    sourceTenantId: source.id,
+    sourceVersionId: sourceBefore.current.id,
+  });
+});
+
+test('pulls a rate table into an empty tenant', async ({ page }) => {
+  const source = await createTenant(page, { code: uniqueCode('CPS'), rates });
+  const target = await createTenant(page, { code: uniqueCode('CPE') });
+  await openRates(page, target.id);
+  await expect(page.getByText('费率表为空')).toBeVisible();
+
+  await page.getByRole('button', { name: '复制其他租户的费率表' }).click();
+  const dialog = page.getByRole('dialog', { name: '复制其他租户的费率表' });
+  await expect(dialog).toContainText(`将覆盖 ${target.code} 的整张费率表`);
+  await pickCopyTenant(dialog, source.code);
+  await dialog.getByRole('button', { name: '下一步：预览变动' }).click();
+  await expect(dialog).toContainText(
+    `${target.code} 的费率表将新增 2 条、修改 0 条、删除 0 条，其余 0 条不变`,
+  );
+  await dialog.getByRole('button', { name: `确认覆盖 ${target.code}` }).click();
+  await dialog.getByRole('button', { name: '完成' }).click();
+
+  await expect(page.getByRole('row')).toHaveCount(3);
+  await expect(
+    page.getByRole('button', { name: '编辑 447 英国手机' }),
+  ).toBeVisible();
+  expect((await readRates(page, target.id)).current.entries).toEqual(
+    (await readRates(page, source.id)).current.entries,
+  );
 });

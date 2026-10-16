@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
   type AdminCsvRowError,
-  type AdminRatePreviewResponse,
   type AdminRateSchedule,
   type AdminRateVersionResponse,
   type Currency,
@@ -26,11 +25,18 @@ import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { ProblemAlert } from './problem-alert';
-import { RateChangesTable } from './rate-changes-table';
+import {
+  DialogHeading,
+  PreviewChanges,
+  StepList,
+  tableSizes,
+  type PreviewLabels,
+  type RatePreview,
+} from './rate-preview';
 import { RateCsvTemplateLink } from './rate-csv-template-link';
 import { ScheduleField } from './rate-edit-dialog';
 
-type Preview = Extract<AdminRatePreviewResponse, { ok: true }>;
+type Preview = RatePreview;
 
 /** 预览所据的当前版本，打开时取快照；冲突后按刷新到的完整表重新取。 */
 export type RateImportBase = {
@@ -77,13 +83,20 @@ export type RateImportState =
 
 const steps = ['上传', '预览与校验', '确认导入'] as const;
 
+const importLabels: PreviewLabels = {
+  summary: '将',
+  confirm: '确认导入',
+  busy: '正在导入…',
+  networkMessage: '无法确认是否已导入，请核对费率表后再操作。',
+  uncertainNote:
+    '上次确认导入的结果未知。再次确认不会重复导入：如已导入，系统会提示核对。',
+};
+
 function stepIndex(step: RateImportState['step']) {
   if (step === 'step1' || step === 'previewing') return 0;
   if (step === 'done') return 2;
   return 1;
 }
-
-const deleteListLimit = 5;
 
 /**
  * 导入 CSV（设计稿第二批「导入 CSV」、CSV 导入原型；pages.md §3.6）：上传 → 预览与校验 → 确认导入。
@@ -297,8 +310,6 @@ export function RateImportDialog({
     }
   }
 
-  const current = steps[stepIndex(state.step)];
-  const failed = state.step === 'step2-errors';
   const subtitle =
     state.step === 'step2-ok' || state.step === 'committing'
       ? `${state.file.name} · ${state.preview.encoding} · ${tableSizes(base.entryCount, state.preview.counts).rows} 条`
@@ -316,48 +327,18 @@ export function RateImportDialog({
       className="md:w-[720px]"
       fallbackFocus={fallbackFocus}
     >
-      <Heading headingRef={headingRef} subtitle={subtitle} />
-      <ol
-        aria-label="导入步骤"
-        className="m-0 flex list-none items-center gap-2 p-0 text-[13px]"
-      >
-        {steps.map((label, index) => {
-          const position = stepIndex(state.step);
-          const done = index < position || state.step === 'done';
-          const error = failed && index === 1;
-          return (
-            <li
-              key={label}
-              aria-current={label === current ? 'step' : undefined}
-              className={cn(
-                'flex items-center gap-1.5',
-                index > position && 'text-muted-foreground',
-                label === current && 'font-semibold',
-              )}
-            >
-              <span
-                aria-hidden
-                className={cn(
-                  'inline-flex size-5 items-center justify-center rounded-full border text-[11px]',
-                  error
-                    ? 'border-err bg-err text-white'
-                    : done
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : label === current
-                        ? 'border-primary text-primary'
-                        : 'border-input',
-                )}
-              >
-                {error ? '!' : done ? '✓' : index + 1}
-              </span>
-              {label}
-              {index < steps.length - 1 ? (
-                <span aria-hidden className="mx-1 h-px w-6 bg-input" />
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
+      <DialogHeading
+        headingRef={headingRef}
+        title="导入费率表"
+        subtitle={subtitle}
+      />
+      <StepList
+        label="导入步骤"
+        steps={steps}
+        position={stepIndex(state.step)}
+        complete={state.step === 'done'}
+        failedAt={state.step === 'step2-errors' ? 1 : undefined}
+      />
 
       {state.step === 'step1' || state.step === 'previewing' ? (
         <Upload
@@ -391,6 +372,7 @@ export function RateImportDialog({
             tableSizes(base.entryCount, state.preview.counts).unchanged
           }
           schedule={state.schedule}
+          labels={importLabels}
           error={state.step === 'step2-ok' ? state.error : null}
           uncertain={state.uncertain}
           busy={state.step === 'committing'}
@@ -404,27 +386,6 @@ export function RateImportDialog({
         <ImportDone state={state} onClose={onClose} />
       )}
     </ModalDialog>
-  );
-}
-
-function Heading({
-  headingRef,
-  subtitle,
-}: {
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-  subtitle: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <h2
-        ref={headingRef}
-        tabIndex={-1}
-        className="m-0 text-[17px] font-semibold outline-none"
-      >
-        导入费率表
-      </h2>
-      <span className="text-[13px] text-muted-foreground">{subtitle}</span>
-    </div>
   );
 }
 
@@ -633,112 +594,6 @@ function RowErrors({
   );
 }
 
-function PreviewChanges({
-  preview,
-  unchanged,
-  schedule,
-  error,
-  uncertain,
-  busy,
-  onBack,
-  onCancel,
-  onConfirm,
-}: {
-  preview: Preview;
-  unchanged: number;
-  schedule: AdminRateSchedule;
-  error: unknown;
-  uncertain: boolean;
-  busy: boolean;
-  onBack: () => void;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const { counts, changes } = preview;
-  const deleted = changes.flatMap((change) =>
-    change.kind === 'deleted' ? [change.before] : [],
-  );
-  return (
-    <>
-      <div className="flex flex-col gap-1 rounded-lg border border-ok-border bg-ok-soft px-3.5 py-3 text-[13px]">
-        <span className="font-semibold text-ok">校验通过</span>
-        <span className="tabular-nums">
-          将新增 {counts.added} 条、修改 {counts.modified} 条、删除{' '}
-          {counts.deleted} 条，其余 {unchanged} 条不变
-        </span>
-      </div>
-      {deleted.length ? (
-        <div className="rounded-lg border border-err-border bg-err-soft px-3.5 py-2.5 text-[13px] text-err">
-          <span className="font-semibold">
-            删除后，拨打这些前缀的呼叫将被拒绝
-          </span>
-          ：
-          {deleted
-            .slice(0, deleteListLimit)
-            .map((entry) => `${entry.prefix} ${entry.country}`)
-            .join('、')}
-          {deleted.length > deleteListLimit
-            ? ` 等 ${deleted.length} 个前缀`
-            : ''}
-        </div>
-      ) : null}
-      {changes.length ? (
-        <div className="max-h-[320px] overflow-auto rounded-lg border border-border">
-          <RateChangesTable
-            changes={changes}
-            currency={preview.currency}
-            showHeader
-          />
-        </div>
-      ) : (
-        <span className="text-[13px] text-muted-foreground">
-          与当前费率表相同，没有变动。
-        </span>
-      )}
-      <span className="text-[13px]">
-        生效时间：
-        <span className="font-semibold tabular-nums">
-          {schedule.kind === 'scheduled'
-            ? `${formatDateTime(schedule.effectiveFrom)} 起（北京时间）`
-            : '立即生效'}
-        </span>
-      </span>
-      {error ? (
-        <ProblemAlert
-          error={error}
-          networkMessage="无法确认是否已导入，请核对费率表后再操作。"
-        />
-      ) : null}
-      {uncertain ? (
-        <span className="text-xs text-muted-foreground">
-          上次确认导入的结果未知。再次确认不会重复导入：如已导入，系统会提示核对。
-        </span>
-      ) : null}
-      <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
-        <Button
-          variant="outline"
-          className="h-12 md:h-9"
-          disabled={busy}
-          onClick={onBack}
-        >
-          上一步
-        </Button>
-        <Button
-          variant="outline"
-          className="h-12 md:h-9"
-          disabled={busy}
-          onClick={onCancel}
-        >
-          取消
-        </Button>
-        <Button className="h-12 md:h-9" disabled={busy} onClick={onConfirm}>
-          {busy ? '正在导入…' : '确认导入'}
-        </Button>
-      </div>
-    </>
-  );
-}
-
 function ImportDone({
   state,
   onClose,
@@ -776,14 +631,6 @@ function ImportDone({
       </div>
     </>
   );
-}
-
-/** 导入后的整表条数与不变的条数（条数，不是金额）。 */
-function tableSizes(entryCount: number, counts: Preview['counts']) {
-  return {
-    rows: entryCount + counts.added - counts.deleted,
-    unchanged: entryCount - counts.modified - counts.deleted,
-  };
 }
 
 function formatFileSize(bytes: number) {
