@@ -12,6 +12,7 @@ import { Alert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { callApi } from '../lib/api';
+import { clearBalanceAttempts } from '../lib/balance-operation';
 import {
   loginAlert,
   loginProblem,
@@ -129,11 +130,12 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
   }, [waitOver]);
 
   const login = useMutation({
-    mutationFn: (request: LoginRequest) => callApi('login', request),
+    mutationFn: (request: LoginRequest) => callApi('login', { body: request }),
     onMutate: () => setProblem(null),
     onError: (error) => setProblem(loginProblem(error, Date.now())),
     onSuccess: (session) => {
       queryClient.clear();
+      clearBalanceAttempts();
       sessionExpiry.clear();
       const state: SessionState = { status: 'active', session };
       queryClient.setQueryData(sessionQueryKey, state);

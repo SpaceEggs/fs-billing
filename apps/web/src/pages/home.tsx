@@ -1,4 +1,5 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import type { Identity } from '@fs-billing/shared';
 import { AppShell, PageBody } from '../components/app-shell';
 import { Money } from '../components/data-format';
@@ -76,9 +77,25 @@ export function AdminHome({ identity }: { identity: Identity }) {
       <PageBody title="概览">
         {loadFailure(context) ?? (
           <p className="m-0 text-sm text-muted-foreground">
-            {context.data
-              ? `欢迎，${context.data.identity.name}。租户、待收款等后台功能将在后续版本开放。`
-              : ' '}
+            {context.data ? (
+              <>
+                欢迎，{context.data.identity.name}。可在
+                <Link to="/admin/tenants" className="text-primary">
+                  租户
+                </Link>
+                、
+                <Link to="/admin/receivables" className="text-primary">
+                  待收款
+                </Link>
+                和
+                <Link to="/admin/admins" className="text-primary">
+                  管理员
+                </Link>
+                中开展工作；概览指标与需要关注的事项将在后续版本开放。
+              </>
+            ) : (
+              ' '
+            )}
           </p>
         )}
       </PageBody>

@@ -71,7 +71,7 @@ export function ThemeSegmented({ className }: { className?: string }) {
       {themeOptions.map((option) => (
         <label
           key={option.value}
-          className="flex h-[30px] flex-1 cursor-pointer items-center justify-center rounded-[7px] px-3.5 text-muted-foreground has-checked:bg-background has-checked:font-medium has-checked:text-foreground has-checked:shadow-[0_1px_2px_rgba(0,0,0,.08)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+          className="relative flex h-[30px] flex-1 cursor-pointer items-center justify-center rounded-[7px] px-3.5 text-muted-foreground has-checked:bg-background has-checked:font-medium has-checked:text-foreground has-checked:shadow-[0_1px_2px_rgba(0,0,0,.08)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
         >
           <input
             type="radio"
@@ -79,7 +79,7 @@ export function ThemeSegmented({ className }: { className?: string }) {
             value={option.value}
             checked={option.value === preference}
             onChange={() => setThemePreference(option.value)}
-            className="sr-only"
+            className="absolute inset-0 cursor-pointer appearance-none outline-none"
           />
           {option.label}
         </label>

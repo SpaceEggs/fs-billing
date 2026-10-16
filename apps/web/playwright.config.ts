@@ -6,7 +6,7 @@ const ci = Boolean(process.env['CI']);
 export default defineConfig({
   testDir: 'e2e',
   globalSetup: './e2e/global-setup.ts',
-  // 测试共享真实数据库、账户锁定计数与每 IP 登录限流，必须串行。
+  // 测试共享真实数据库与账户锁定计数，必须串行。
   workers: 1,
   fullyParallel: false,
   forbidOnly: ci,
@@ -25,7 +25,9 @@ export default defineConfig({
       cwd: repoRoot,
       url: `${apiOrigin}/api/health`,
       env: apiEnvironment(),
-      reuseExistingServer: !ci,
+      // 不复用已在运行的 API：它未必带 apiEnvironment() 的测试覆盖（如认证限流放宽），
+      // 用例会遇到 429。3000 端口被占用时 Playwright 直接报错，请先停掉本地 API。
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {

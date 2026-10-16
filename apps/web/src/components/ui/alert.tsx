@@ -31,3 +31,24 @@ export function Alert({
     </div>
   );
 }
+
+const iconTones = {
+  ok: 'border border-ok-border bg-ok-soft text-ok',
+  warn: 'border-[1.5px] border-current text-warn',
+  err: 'border-[1.5px] border-current text-err',
+} as const;
+
+/** 提示框开头的圆形图标：警告与错误为「!」，成功为「✓」。 */
+export function CalloutIcon({ tone }: { tone: keyof typeof iconTones }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'mt-px flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+        iconTones[tone],
+      )}
+    >
+      {tone === 'ok' ? '✓' : '!'}
+    </span>
+  );
+}

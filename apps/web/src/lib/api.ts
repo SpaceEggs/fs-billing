@@ -1,40 +1,61 @@
 import type { z } from 'zod';
 import {
+  adminApiContract,
+  adminApiErrorSchema,
   apiContract,
-  apiErrorSchema,
-  type ApiError,
+  type AdminApiError,
   type ApiOperation,
-  type ApiOperationId,
 } from '@fs-billing/shared';
 
-type Operation<Id extends ApiOperationId> = (typeof apiContract)[Id];
-type Responses<Id extends ApiOperationId> = Operation<Id>['responses'];
+/** 浏览器可调用的全部操作：阶段 4 认证与上下文，加阶段 5 后台契约。 */
+export const webApiContract = { ...apiContract, ...adminApiContract };
+export type OperationId = keyof typeof webApiContract;
+type Operation<Id extends OperationId> = (typeof webApiContract)[Id];
+type Request<Id extends OperationId> = Operation<Id>['request'];
+type Responses<Id extends OperationId> = Operation<Id>['responses'];
 
-/** 浏览器调用的操作都没有路径参数；含 `{id}` 的后台操作在后续阶段接入。 */
-export type BrowserOperationId = {
-  [Id in ApiOperationId]: Operation<Id>['path'] extends `${string}{${string}`
-    ? never
-    : Id;
-}[ApiOperationId];
-
-export type ApiSuccess<Id extends ApiOperationId> = z.output<
+export type ApiSuccess<Id extends OperationId> = z.output<
   Responses<Id>[Extract<keyof Responses<Id>, 200 | 204>]
 >;
-export type ApiBody<Id extends ApiOperationId> = z.input<
-  Operation<Id>['request']['body']
->;
+
+/** 没有必填字段的部分可以省略，例如空 params、全部可选的 query。 */
+type Part<Key extends string, Value> = undefined extends Value
+  ? { [K in Key]?: Value }
+  : Record<never, never> extends Value
+    ? { [K in Key]?: Value }
+    : { [K in Key]: Value };
+export type ApiInput<Id extends OperationId> = Part<
+  'params',
+  z.input<Request<Id>['params']>
+> &
+  Part<'query', z.input<Request<Id>['query']>> &
+  Part<'body', z.input<Request<Id>['body']>>;
+export type ApiBody<Id extends OperationId> = z.input<Request<Id>['body']>;
+export type ApiQuery<Id extends OperationId> = z.input<Request<Id>['query']>;
 
 export class ApiRequestError extends Error {
   constructor(
     readonly status: number,
-    readonly body: ApiError | null,
+    readonly body: AdminApiError | null,
+    options?: ErrorOptions,
   ) {
-    super(body?.error.message ?? `API request failed with status ${status}`);
+    super(
+      body?.error.message ?? `API request failed with status ${status}`,
+      options,
+    );
     this.name = 'ApiRequestError';
   }
 
   get code() {
     return this.body?.error.code ?? null;
+  }
+
+  /**
+   * 不知道服务端是否已执行：请求没有得到响应（status 0），
+   * 或成功状态的响应体读不出、不符合契约（连接在读响应体时中断）。写操作须先刷新核实再提交。
+   */
+  get outcomeUnknown() {
+    return this.status === 0 || (this.status >= 200 && this.status < 300);
   }
 }
 
@@ -50,13 +71,55 @@ export function needsReauthentication(
   );
 }
 
-export async function callApi<Id extends BrowserOperationId>(
+export function apiPath(
+  operation: ApiOperation,
+  input: { params?: unknown; query?: unknown },
+) {
+  const params = operation.request.params.parse(input.params ?? {}) as Record<
+    string,
+    string
+  >;
+  const path = operation.path.replaceAll(/\{([^}]+)\}/g, (_, name: string) =>
+    encodeURIComponent(params[name] ?? ''),
+  );
+  const query = operation.request.query.parse(input.query ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query))
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    )
+      search.set(key, String(value));
+  const queryString = search.toString();
+  return queryString ? `${path}?${queryString}` : path;
+}
+
+/**
+ * 按契约调用：请求在发送前用请求 schema 解析（含编码大写、邮箱去重等规范化），
+ * 成功响应按状态码 schema 解析，失败响应解析为后台错误联合。
+ */
+export function callApi<Id extends OperationId>(
   operationId: Id,
-  ...[body]: undefined extends ApiBody<Id>
-    ? [body?: ApiBody<Id>]
-    : [body: ApiBody<Id>]
+  ...[input]: Record<never, never> extends ApiInput<Id>
+    ? [input?: ApiInput<Id>]
+    : [input: ApiInput<Id>]
 ): Promise<ApiSuccess<Id>> {
-  const operation: ApiOperation = apiContract[operationId];
+  // 契约以 operationId 索引成功 schema；运行时 parse 后的值即该类型。
+  return callOperation(webApiContract[operationId], input ?? {}) as Promise<
+    ApiSuccess<Id>
+  >;
+}
+
+/** 按任意契约操作发送请求；返回值已由该操作的成功 schema 解析。 */
+export async function callOperation(
+  operation: ApiOperation,
+  input: { params?: unknown; query?: unknown; body?: unknown },
+): Promise<unknown> {
+  const { params, query, body } = input;
   const headers: Record<string, string> = { accept: 'application/json' };
   const init: RequestInit = {
     method: operation.method,
@@ -67,22 +130,30 @@ export async function callApi<Id extends BrowserOperationId>(
     headers['content-type'] = 'application/json';
     init.body = JSON.stringify(operation.request.body.parse(body));
   }
+  const url = apiPath(operation, { params, query });
   let response: Response;
   try {
-    response = await fetch(operation.path, init);
+    response = await fetch(url, init);
   } catch {
     throw new ApiRequestError(0, null);
   }
-  const payload: unknown =
-    response.status === 204
-      ? undefined
-      : await response.json().catch(() => undefined);
   const schema = operation.responses[response.status];
   if (response.ok) {
     if (!schema) throw new ApiRequestError(response.status, null);
-    // 契约以 operationId 索引成功 schema；运行时 parse 后的值即该类型。
-    return schema.parse(payload) as ApiSuccess<Id>;
+    let payload: unknown;
+    try {
+      payload = response.status === 204 ? undefined : await response.json();
+    } catch (cause) {
+      throw new ApiRequestError(response.status, null, { cause });
+    }
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success)
+      throw new ApiRequestError(response.status, null, {
+        cause: parsed.error,
+      });
+    return parsed.data;
   }
-  const error = apiErrorSchema.safeParse(payload);
+  const payload: unknown = await response.json().catch(() => undefined);
+  const error = adminApiErrorSchema.safeParse(payload);
   throw new ApiRequestError(response.status, error.success ? error.data : null);
 }

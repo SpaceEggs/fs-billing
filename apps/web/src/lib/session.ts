@@ -24,7 +24,9 @@ export async function loadSession(): Promise<SessionState> {
   }
 }
 
-export function blockedCode(error: unknown) {
+export type BlockedCode = Extract<SessionState, { status: 'blocked' }>['code'];
+
+export function blockedCode(error: unknown): BlockedCode | null {
   if (!(error instanceof ApiRequestError)) return null;
   return error.code === 'ACCOUNT_DISABLED' ||
     error.code === 'IDENTITY_UNAVAILABLE'
@@ -32,28 +34,73 @@ export function blockedCode(error: unknown) {
     : null;
 }
 
-/** 页面内的请求收到 reauthenticate 后，弹出“登录已过期”对话框。 */
-let expired = false;
-const listeners = new Set<() => void>();
+export function requiresPasswordChange(error: unknown) {
+  return (
+    error instanceof ApiRequestError &&
+    error.code === 'PASSWORD_CHANGE_REQUIRED'
+  );
+}
 
-export const sessionExpiry = {
-  mark() {
-    if (expired) return;
-    expired = true;
+function createFlag() {
+  let value = false;
+  const listeners = new Set<() => void>();
+  const set = (next: boolean) => {
+    if (value === next) return;
+    value = next;
     listeners.forEach((listener) => listener());
-  },
-  clear() {
-    if (!expired) return;
-    expired = false;
+  };
+  return {
+    mark: () => set(true),
+    clear: () => set(false),
+    set,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    get: () => value,
+  };
+}
+
+/** 页面内的请求收到 reauthenticate 后，弹出“登录已过期”对话框。 */
+export const sessionExpiry = createFlag();
+
+/**
+ * 会话带 passwordChangeRequired，或任一请求返回 403 PASSWORD_CHANGE_REQUIRED 时置位；
+ * 根组件据此跳转到所在区域的改密页，改密成功后清除。
+ */
+export const passwordGate = createFlag();
+
+/**
+ * 页面内任一请求返回 ACCOUNT_DISABLED / IDENTITY_UNAVAILABLE 时记下原因；区域布局据此改显示停用页，
+ * 不再显示缓存的页面和操作。退出登录或下一次确认会话有效时清除。
+ */
+export const identityBlock = (() => {
+  let value: BlockedCode | null = null;
+  const listeners = new Set<() => void>();
+  const set = (next: BlockedCode | null) => {
+    if (value === next) return;
+    value = next;
     listeners.forEach((listener) => listener());
-  },
-  subscribe: (listener: () => void) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  },
-  get: () => expired,
-};
+  };
+  return {
+    mark: (code: BlockedCode) => set(code),
+    clear: () => set(null),
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    get: () => value,
+  };
+})();
+
+export function useIdentityBlock() {
+  return useSyncExternalStore(identityBlock.subscribe, identityBlock.get);
+}
 
 export function useSessionExpired() {
   return useSyncExternalStore(sessionExpiry.subscribe, sessionExpiry.get);
+}
+
+export function usePasswordChangeRequired() {
+  return useSyncExternalStore(passwordGate.subscribe, passwordGate.get);
 }

@@ -3,6 +3,7 @@ import {
   formatBilledMinutes,
   formatDateTime,
   formatDuration,
+  formatExactMoney,
   formatMoney,
   formatMonth,
   formatRate,
@@ -30,6 +31,18 @@ describe('formatMoney', () => {
     expect(isNegativeMoney({ currency: 'CNY', amount: '-35.2' })).toBe(true);
     expect(isNegativeMoney({ currency: 'CNY', amount: '-0.004' })).toBe(false);
     expect(isNegativeMoney({ currency: 'CNY', amount: '35.2' })).toBe(false);
+  });
+});
+
+describe('formatExactMoney', () => {
+  it.each([
+    ['CNY', '-12.3456', '-¥12.3456'],
+    ['CNY', '-0.0001', '-¥0.0001'],
+    ['CNY', '500', '¥500.00'],
+    ['USD', '1234.5', '$1,234.50'],
+    ['CNY', '-9999999999.9999', '-¥9,999,999,999.9999'],
+  ] as const)('%s %s → %s', (currency, amount, expected) => {
+    expect(formatExactMoney({ currency, amount })).toBe(expected);
   });
 });
 
