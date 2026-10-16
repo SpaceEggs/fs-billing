@@ -58,7 +58,11 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search.trim());
   const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<AdminRateEntry | null>(null);
+  // 打开时连同所据版本一起取快照：后台刷新不能把旧草稿换到新版本上提交（乐观并发，冲突应得 409）。
+  const [editing, setEditing] = useState<{
+    baseVersionId: string;
+    entry: AdminRateEntry;
+  } | null>(null);
   const [cancelling, setCancelling] = useState<AdminRateVersion | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const rates = useQuery({
@@ -220,7 +224,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                         aria-label={`编辑 ${entry.prefix} ${entry.country}`}
                         onClick={() => {
                           setNotice(null);
-                          setEditing(entry);
+                          setEditing({ baseVersionId: currentId, entry });
                         }}
                         className="rounded text-[13px] text-primary underline-offset-[3px] outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring"
                       >
@@ -243,8 +247,8 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       {editing ? (
         <RateEditDialog
           tenant={{ id: tenantId, code: tenant.code, currency: data.currency }}
-          baseVersionId={data.current.id}
-          entry={editing}
+          baseVersionId={editing.baseVersionId}
+          entry={editing.entry}
           hasScheduled={versions.length > 1}
           onClose={() => setEditing(null)}
           onDone={(result) => {
