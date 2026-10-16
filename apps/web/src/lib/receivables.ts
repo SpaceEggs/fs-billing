@@ -181,6 +181,8 @@ export function sequencedRequests() {
   const sequencer = Symbol('list requests');
   let issued = 0;
   const failures = new WeakMap<object, number>();
+  const answers = (mark: number, data: { request: Request } | undefined) =>
+    data?.request.sequencer === sequencer && data.request.number > mark;
   return {
     wrap<Data extends object>(fetch: () => Promise<Data>) {
       return async (): Promise<Sequenced<Data>> => {
@@ -195,6 +197,8 @@ export function sequencedRequests() {
       };
     },
     mark: () => issued,
+    /** 响应是否由本发号器在 `mark` 之后发出。 */
+    answers,
     refresh(
       mark: number | undefined,
       list: {
@@ -203,12 +207,7 @@ export function sequencedRequests() {
         isFetching: boolean;
       },
     ): ListRefresh {
-      const request = list.data?.request;
-      if (
-        mark === undefined ||
-        (request?.sequencer === sequencer && request.number > mark)
-      )
-        return 'fresh';
+      if (mark === undefined || answers(mark, list.data)) return 'fresh';
       const failed =
         typeof list.error === 'object' && list.error !== null
           ? (failures.get(list.error) ?? 0)

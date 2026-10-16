@@ -34,6 +34,7 @@ import {
   adminNames,
   receivableViews,
   sequencedRequests,
+  type Sequenced,
   visibleTotals,
 } from '../../lib/receivables';
 import { cn } from '../../lib/utils';
@@ -734,8 +735,9 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
       [receivable.ledgerEntryId]: mark,
     }));
     void invalidateTenant(queryClient, receivable.tenant.id).then(() => {
-      // 失效只会取消已有数据的查询的在途请求；若沿用了核对前发出的请求，补发一次。
-      if (requests.mark() === mark)
+      // 失效只会取消已有数据的查询的在途请求；若该列表沿用了核对前（或上次挂载）发出的请求，补发一次。
+      const settled = queryClient.getQueryData<Sequenced<object>>(listKey);
+      if (!requests.answers(mark, settled))
         void queryClient.refetchQueries({ queryKey: listKey, exact: true });
     });
   }

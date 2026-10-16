@@ -70,11 +70,17 @@ function Candidates({
             ? `只检查了赊账之后最近 ${adjustmentScanLimit} 条调账。`
             : null}
         </span>
+        {ledger.isFetching ? (
+          <span aria-busy className="text-muted-foreground">
+            正在重新查找冲正调账…
+          </span>
+        ) : null}
+        {/* 缓存的空结果在重新扫描完成前可能已过时（如刚做完调账），此时再开一笔会重复调账。 */}
         <Button
           variant="outline"
           size="sm"
           className="self-start"
-          disabled={disabled}
+          disabled={disabled || ledger.isFetching}
           onClick={onAdjust}
         >
           去调账 {reversal}

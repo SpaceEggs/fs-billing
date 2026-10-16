@@ -699,6 +699,85 @@ describe('confirm payment', () => {
     expect(submit).toBeEnabled();
   });
 
+  it.each([
+    ['succeeds', { status: 200, body: listing([gzt]) }],
+    ['fails', { status: 503, body: apiError('SERVICE_UNAVAILABLE') }],
+  ] as const)(
+    'a filter request from an earlier mount that %s after another filter loaded is followed by a fresh one',
+    async (_outcome, original) => {
+      // B = 仅 CNY：首次请求挂起到最后，期间页面重新挂载并访问过 A（全部）、C（仅 USD）。
+      const earlier = deferred<Reply>();
+      let filtered = 0;
+      const { calls, router, user } = openReceivables(
+        (path) => {
+          const currency = new URL(path, 'http://x').searchParams.get(
+            'currency',
+          );
+          if (currency === 'CNY' && ++filtered === 1) return earlier.promise;
+          const items = { CNY: [gzt], USD: [nyc] }[currency ?? ''];
+          return { status: 200, body: listing(items ?? [gzt, nyc]) };
+        },
+        {
+          [`POST /api/admin/receivables/${ids.gzt}/confirm-payment`]: () => {
+            throw new TypeError('network down');
+          },
+        },
+      );
+      await screen.findByRole('table');
+      await router.navigate({
+        to: '/admin/receivables',
+        search: { currency: 'CNY' },
+      });
+      await waitFor(() => expect(filtered).toBe(1));
+      await router.navigate({ to: '/admin/change-password' });
+      await waitFor(() => expect(screen.queryByRole('table')).toBeNull());
+      await router.navigate({ to: '/admin/receivables' });
+      await screen.findByRole('table');
+      await router.navigate({
+        to: '/admin/receivables',
+        search: { currency: 'CNY' },
+      });
+
+      // B 仍在等第一次挂载发出的请求，显示的是 A 的占位数据。
+      const table = await screen.findByRole('table');
+      await user.click(
+        within(table).getByRole('button', { name: /确认收款 GZT007/ }),
+      );
+      const dialog = screen.getByRole('dialog', { name: '确认收款' });
+      await user.click(
+        within(dialog).getByRole('button', { name: '确认收款 ¥2,000.00' }),
+      );
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        '网络中断',
+      );
+      await user.click(within(dialog).getByRole('button', { name: '取消' }));
+      const before = listCalls(calls).length;
+      await router.navigate({
+        to: '/admin/receivables',
+        search: { currency: 'USD' },
+      });
+      await waitFor(() => expect(listCalls(calls).length).toBe(before + 1));
+      await router.navigate({
+        to: '/admin/receivables',
+        search: { currency: 'CNY' },
+      });
+
+      earlier.resolve(original);
+      // 旧请求（及其自动重试）带着旧发号器的序号落地，不算核对结果：须为 B 补发一次。
+      await waitFor(
+        () =>
+          expect(
+            within(screen.getByRole('table')).getByRole('button', {
+              name: /确认收款 GZT007/,
+            }),
+          ).toBeEnabled(),
+        { timeout: 8000 },
+      );
+      expect(screen.queryByText(/正在刷新列表/)).toBeNull();
+    },
+    15_000,
+  );
+
   it('data cached in the same millisecond as the failure does not count as refreshed', async () => {
     // 固定时钟：列表首次返回、确认失败、发起刷新都在同一毫秒。
     vi.spyOn(Date, 'now').mockReturnValue(Date.now());
@@ -1190,6 +1269,30 @@ describe('void receivable', () => {
     },
   };
 
+  const tenantDetail = {
+    id: ids.tenantGzt,
+    code: 'GZT007',
+    name: '广州通达云科技有限公司',
+    currency: 'CNY',
+    status: 'active',
+    health: 'normal',
+    settingsConfigured: true,
+    balance: '2000',
+    overdraftLimit: '0',
+    availableBalance: '2000',
+    monthConsumption: '0',
+    pendingReceivable: '2000',
+    contactName: '',
+    contactPhone: '',
+    remark: '',
+    settings: {
+      overdraftLimit: '0',
+      lowBalanceThreshold: '0',
+      emails: [],
+    },
+    createdAt: '2026-08-01T00:00:00.000Z',
+  };
+
   async function openVoid(
     routes: Record<string, ApiHandler>,
     list: ApiHandler = () => ({ status: 200, body: listing([gzt]) }),
@@ -1264,29 +1367,7 @@ describe('void receivable', () => {
       [ledgerPath]: ledger([]),
       [`GET /api/admin/tenants/${ids.tenantGzt}`]: () => ({
         status: 200,
-        body: {
-          id: ids.tenantGzt,
-          code: 'GZT007',
-          name: '广州通达云科技有限公司',
-          currency: 'CNY',
-          status: 'active',
-          health: 'normal',
-          settingsConfigured: true,
-          balance: '2000',
-          overdraftLimit: '0',
-          availableBalance: '2000',
-          monthConsumption: '0',
-          pendingReceivable: '2000',
-          contactName: '',
-          contactPhone: '',
-          remark: '',
-          settings: {
-            overdraftLimit: '0',
-            lowBalanceThreshold: '0',
-            emails: [],
-          },
-          createdAt: '2026-08-01T00:00:00.000Z',
-        },
+        body: tenantDetail,
       }),
     });
     expect(await within(dialog).findByText('没有可用的冲正调账')).toBeVisible();
@@ -1304,6 +1385,56 @@ describe('void receivable', () => {
     expect(
       await screen.findByRole('dialog', { name: '作废应收' }),
     ).toBeVisible();
+  });
+
+  it('after a prefilled adjustment, another one cannot open until the ledger rescan succeeds', async () => {
+    const rescan = deferred<Reply>();
+    let scans = 0;
+    const { calls, user, dialog } = await openVoid({
+      [ledgerPath]: () => {
+        scans += 1;
+        return scans === 1 ? ledger([])() : rescan.promise;
+      },
+      [`GET /api/admin/tenants/${ids.tenantGzt}`]: () => ({
+        status: 200,
+        body: tenantDetail,
+      }),
+      [`POST /api/admin/tenants/${ids.tenantGzt}/balance-operations`]: () => ({
+        status: 200,
+        body: {
+          auditId: ids.audit,
+          currency: 'CNY',
+          balance: '0',
+          entry: entry(adjustmentId, '-2000.0000', '2026-10-16T00:00:00.000Z'),
+        },
+      }),
+    });
+    await user.click(
+      await within(dialog).findByRole('button', { name: '去调账 -¥2,000.00' }),
+    );
+    const balance = await screen.findByRole('dialog', { name: '余额操作' });
+    await user.click(within(balance).getByRole('button', { name: '下一步' }));
+    await user.click(within(balance).getByRole('button', { name: '确认调账' }));
+    await user.click(
+      await within(balance).findByRole('button', { name: '完成' }),
+    );
+
+    // 缓存里仍是调账前的空结果：重新扫描完成前不能再开一笔调账。
+    const back = await screen.findByRole('dialog', { name: '作废应收' });
+    await waitFor(() => expect(scans).toBe(2));
+    expect(back).toHaveTextContent('正在重新查找冲正调账…');
+    expect(
+      within(back).getByRole('button', { name: '去调账 -¥2,000.00' }),
+    ).toBeDisabled();
+
+    rescan.resolve(
+      ledger([entry(adjustmentId, '-2000.0000', '2026-10-16T00:00:00.000Z')])(),
+    );
+    expect(await within(back).findByRole('radio')).toBeVisible();
+    expect(within(back).queryByRole('button', { name: /去调账/ })).toBeNull();
+    expect(
+      calls.filter((call) => call.path.endsWith('/balance-operations')),
+    ).toHaveLength(1);
   });
 
   it.each([
