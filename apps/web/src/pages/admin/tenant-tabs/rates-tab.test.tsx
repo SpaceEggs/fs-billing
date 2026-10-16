@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
 import { beijingMinute } from '../../../lib/rates';
+import { createQueryClient } from '../../../query-client';
 import { RatesTab } from './rates-tab';
 
 const tenant: AdminTenantDetailResponse = {
@@ -379,5 +380,114 @@ describe('rates tab scheduled activation', () => {
     const after = fetchMock.mock.calls.length;
     await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
     expect(fetchMock.mock.calls.length).toBe(after);
+  });
+});
+
+describe('rates tab scheduled activation after unmount', () => {
+  const start = Date.parse('2026-10-16T10:00:00.000Z');
+  const effectiveFrom = start + 60_000;
+  const scheduledVersion = {
+    id: versionB,
+    effectiveFrom: new Date(effectiveFrom).toISOString(),
+    entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+  };
+
+  /**
+   * 用应用自己的 QueryClient（含失败重试）；gcTime 设为不过期，缓存不挂计时器，
+   * 卸载后剩下的计时器只可能来自生效刷新或请求重试。
+   */
+  function renderWithPendingActivation() {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    onTestFinished(() => void vi.useRealTimers());
+    vi.setSystemTime(start);
+    const consoleErrors = vi.spyOn(console, 'error');
+    const consoleWarnings = vi.spyOn(console, 'warn');
+    onTestFinished(() => void vi.restoreAllMocks());
+    let release: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn(() =>
+      Date.now() < effectiveFrom
+        ? Promise.resolve(
+            json(200, {
+              ...rates(versionA, '0.045'),
+              scheduled: [scheduledVersion],
+            }),
+          )
+        : new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, gcTime: Infinity },
+    });
+    const view = render(
+      <QueryClientProvider client={client}>
+        <RatesTab tenant={tenant} />
+      </QueryClientProvider>,
+    );
+    return {
+      ...view,
+      fetchMock,
+      consoleErrors,
+      consoleWarnings,
+      release: (response: Response) => release!(response),
+    };
+  }
+
+  it.each([
+    ['succeeds', () => json(200, rates(versionB, '0.05'))],
+    [
+      'fails',
+      () =>
+        json(503, {
+          error: {
+            code: 'SERVICE_UNAVAILABLE',
+            message: '服务暂不可用',
+            requestId: 'req-test',
+          },
+        }),
+    ],
+  ])(
+    'an activation refetch that %s after the tab unmounts updates nothing and leaves no timer or retry',
+    async (_outcome, response) => {
+      const view = renderWithPendingActivation();
+      expect(
+        await screen.findByRole('region', { name: '排定的新版本' }),
+      ).toBeVisible();
+
+      // 到点刷新已发出、尚未返回时用户离开费率标签页。
+      const before = view.fetchMock.mock.calls.length;
+      await act(() => vi.advanceTimersByTimeAsync(60_000 + 1_000));
+      await waitFor(() =>
+        expect(view.fetchMock.mock.calls.length).toBe(before + 1),
+      );
+      view.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+
+      view.release(response());
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(vi.getTimerCount()).toBe(0);
+      await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
+      expect(view.fetchMock.mock.calls.length).toBe(before + 1);
+      expect(view.consoleErrors).not.toHaveBeenCalled();
+      expect(view.consoleWarnings).not.toHaveBeenCalled();
+    },
+  );
+
+  it('unmounting before the activation time cancels the pending refetch', async () => {
+    const view = renderWithPendingActivation();
+    expect(
+      await screen.findByRole('region', { name: '排定的新版本' }),
+    ).toBeVisible();
+    expect(vi.getTimerCount()).toBe(1);
+
+    const before = view.fetchMock.mock.calls.length;
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
+    expect(view.fetchMock.mock.calls.length).toBe(before);
+    expect(view.consoleErrors).not.toHaveBeenCalled();
+    expect(view.consoleWarnings).not.toHaveBeenCalled();
   });
 });
