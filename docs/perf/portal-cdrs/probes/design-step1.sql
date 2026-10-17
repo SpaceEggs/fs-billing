@@ -6,6 +6,7 @@
 -- 3. 同一段：覆盖索引 (tenant_id, occurred_at) INCLUDE (amount) 与 InitPlan 策略各自对锚点求和的耗时。
 -- 4. 流水三个月份、两种锚点的整条查询：InitPlan 策略。
 -- 5. 话单 started_at 下界取 1 天、31 天、93 天：InitPlan 策略下的汇总与中间页。
+-- 6. 首页最近 10 通已接通话单，不加日期下界：原策略。
 \pset pager off
 begin;
 set local role fs_billing_app;
@@ -212,4 +213,16 @@ explain (analyze, timing off, summary on) select call_uuid, started_at, answered
 explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
 \echo == floor 93 days mid page run3
 explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+rollback;
+
+begin;
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == home recent 10 answered calls, no date bound, original policy
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, matched_prefix, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, matched_prefix, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, matched_prefix, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+\echo == home recent 10 for a tenant with no calls, original policy
+explain (analyze, timing off, summary on) select call_uuid from cdrs where tenant_id = '00000000-0000-4000-8000-000000000002' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
 rollback;

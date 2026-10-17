@@ -66,3 +66,7 @@ floor 93 days summary run2: 33.6
 floor 93 days mid page run2: 14.3
 floor 93 days summary run3: 34.5
 floor 93 days mid page run3: 15.5
+
+## 首页最近话单（第 6 段）
+home recent 10 answered calls, no date bound, original policy: 7.135, 0.164, 0.156
+home recent 10 for a tenant with no calls, original policy: 26.785
