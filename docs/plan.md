@@ -27,8 +27,8 @@
 | 1    | 计费核心（纯函数）   | 所有计费规则有测试覆盖                           | 已完成（PR #4，[验收记录](phase-1-rating.md)）                                                                                                                                   |
 | 2    | 数据库与账本         | 表结构、流水不可改、RLS 隔离可演示               | 已完成（PR #6，[验收记录](phase-2-db.md)）                                                                                                                                       |
 | 3    | FreeSWITCH 接口      | 用模拟请求打一通电话，完成授权、入话单、扣费     | 功能已完成（PR #9，[验收记录](phase-3-worker.md)）；收尾性能重跑通过（[3 次 p95 ≈ 5.5–6.3 ms](evidence/phase-3-closeout/perf-authorize.txt)），FreeSWITCH 实机通话待阶段 10 验收 |
-| 4    | API、登录与网页外壳  | 管理员和客户都能登录，越权测试自动运行           | 未开始                                                                                                                                                                           |
-| 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 未开始                                                                                                                                                                           |
+| 4    | API、登录与网页外壳  | 管理员和客户都能登录，越权测试自动运行           | 已完成（PR #17–#19，[后端记录](phase-4-api.md)、[Web 记录](phase-4-web.md)）                                                                                                     |
+| 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 进行中：功能已合并（PR #21–#28），5 条验收待完成，见[阶段 5 验收标准](#阶段-5管理后台开户与资金)                                                                                 |
 | 6    | 客户门户             | 客户能自助查余额、话单、流水                     | 未开始                                                                                                                                                                           |
 | 7    | 月账单               | 每月自动出账，客户可查看和导出                   | 未开始                                                                                                                                                                           |
 | 8    | 话单运维             | 未归属话单分配、删除话单、操作日志               | 未开始                                                                                                                                                                           |
@@ -173,7 +173,7 @@
 
 后端步骤 3 代码、行为测试和 CI 已实现。退款按已指定的 `window_id` UUID 实施细节完成，详见 [API 设计 §11.1](phase-4-api-design.md#111-api-自有-sql-账户锁定)。本地验证和 Bot 命令见 [运行与证据](phase-4-api.md)。Bot 已运行 `pnpm check`（309 pass）、`test:db` 连续三次（每次 235 pass）、`test:idor`（15 pass）、`prove:idor`、OpenAPI 导出及 build。依赖已安装并锁定。这些是 Bot 验证结果；PR #18 的 CI 与 FreeSWITCH integration 均通过，所有 SIPp e2e 用例均为 PASS，见 [CI 与联调证据](evidence/phase-4-api/ci.txt)。
 
-前端 Web 外壳代码、Vitest 行为测试、连接真实 API 的 Playwright e2e、截图脚本和 CI `web-e2e` job 已在分支 `phase-4-web` 实现，运行方法、决定和设计差异见 [阶段 4 Web 外壳](phase-4-web.md)。Bot 已验证 `pnpm check`、`pnpm test:e2e`（16 个场景）通过，CI `check` 与 `web-e2e` 均为绿色；Codex review 2 已批准，证据见 [evidence/phase-4-web](evidence/phase-4-web/)。
+前端 Web 外壳代码、Vitest 行为测试、连接真实 API 的 Playwright e2e、截图脚本和 CI `web-e2e` job 已由 PR #19 合并，运行方法、决定和设计差异见 [阶段 4 Web 外壳](phase-4-web.md)。Bot 已验证 `pnpm check`、`pnpm test:e2e`（16 个场景）通过，CI `check` 与 `web-e2e` 均为绿色；Codex review 2 已批准，证据见 [evidence/phase-4-web](evidence/phase-4-web/)。
 
 后端 criteria 状态如下。
 
@@ -215,38 +215,39 @@
 - 余额操作对话框：充值、赊账充值、赠送、调账（调账必须填原因；充值/赊账/赠送最多两位，调账最多四位，均有可配置金额上限），赊账备注仅内部可见
 - 费率表标签页：查看、单条编辑、指定生效时间调价、取消未来版本（现有 lock_tenants 下校验 DB 时间并保存完整审计快照）、CSV 导入（预览、逐行报错、整体不导入）、CSV 导出、复制到其他租户
 - 待收款页面：确认、撤销误确认后重新确认、credit 冲正后独立作废，均追加事件与审计；欠款超 30 天高亮、CNY/USD 分开合计
-- 管理员页面：新增、重置密码、停用、启用；管理员与门户共用先无 credential、关联 profile/审计、最后 activate 的流程
-- 2026-10-14 新增决定详见 [阶段 5 设计](phase-5-design.md#已决定新增2026-10-14)。本步交付共享契约与测试，DB/服务/Worker/Web/auth 行为按后续步骤实施；未来 6/6、1/1 精度在启用周期时再决定
+- 管理员页面：新增、重置密码、停用、启用；管理员与门户账号在同一事务内创建认证用户、资料、审计和临时密码，失败整体回滚（决定 m）
+- 2026-10-14 及之后的决定详见 [阶段 5 设计](phase-5-design.md#已决定新增2026-10-14)，业务规则已写回 [design.md](design.md)；未来 6/6、1/1 精度在启用这两种计费周期时再决定
 - 以上所有人工操作写入操作日志表（页面在阶段 8）
 
 **对应设计稿**：管理后台 第一批、第二批；第三批 · 租户详情（概况、设置、门户账号）；第三批 · 系统与账号（管理员）；CSV 导入原型
 
 **验收标准**
 
-- [ ] 用 Playwright 走完整流程：新建租户 ABC001（CNY）→ 导入费率 CSV → 赊账充值 ¥500.00 → 门户账号创建；结束时租户列表显示正确余额和状态
-- [ ] 导入一个含错误行的 CSV，显示所有错误行号，费率表不变
-- [ ] 调账不填原因无法提交；提交后流水中有反向记录，原记录不变
-- [ ] 待收款合计分别显示 ¥ 和 $，不出现两者相加的数字
-- [ ] 种子数据下各页面在浅色、深色、手机宽度的截图与设计稿逐页比对，差异记录在案并处理
-- [ ] 每个操作在操作日志表中有对应记录（操作人、时间、对象、内容）
-- [ ] 开户后首个“立即生效”费率版本的 `effectiveFrom ≤ now`，开户后立即授权匹配到费率（来自阶段 1）
-- [ ] 费率版本“指定时间”接受任意 ISO，必须在当前时间至可配置 horizon 的闭区间内，默认 365 天；接口 Zod 拒绝过去或超上限，秒/毫秒与边界测试覆盖，Web 后续北京时间分钟选择器。数据库层允许首个版本倒填（种子与测试使用），见阶段 2 的决定（来自阶段 2）
+状态核对于 2026-10-17，依据 `main`（`eeae604`）上的测试。证据格式为“文件 / 测试名”。一条标准的所有要求都有证据才打勾；未打勾的写明还差什么。
 
-- [ ] 取消指定未来版本只允许 `effective_from > DB now() + margin`，后续 service 配置余量默认 60 秒并监测 NTP，现有 trigger guard 保留，与生效竞态时拒绝；当前/历史费率不变，rate_schedule_cancel 保存取消版本 ID 和完整 entries；仅复用 lock_tenants
-- [ ] 管理员启用、门户账号停用/启用均要求管理员身份且成功写审计；门户停用撤销全部会话，不影响呼叫；账号启用不恢复旧会话
-- [ ] topup/credit_topup/gift 拒绝超过两位小数，adjustment 拒绝超过四位；正负金额都受可配置业务上限约束，默认最多 10 位整数，独立于传输长度；透支额度与阈值非负且最多两位
-- [ ] CSV 接受中文表头，文件 <=2 MiB，行数上限 10000（已决定，可配置）；超限整表不变，大表预览 TTL 可配置，默认 60 分钟
-- [ ] 创建编码规范化大写；后续迁移前检查存量大小写碰撞并人工重命名，核对现有 FreeSWITCH billing_tenant 与 stored codes，再加 DB 不区分大小写唯一；worker 授权与 CDR ingest 均规范化大写；邮箱小写去重后最多 20 个，空收件人可保存但设置页面在加载/保存后显示无法送达提醒
-- [ ] 门户与管理员开户均先创建 auth.user 且不创建 credential row，再在业务事务关联 profile 与审计，最后在 activate 写入 credential；关联失败留下无 credential 的不可登录 orphan，业务 API 拒绝无 profile 用户（故障测试仍为计划）
-- [ ] 停用租户提示不承诺呼叫停止，说明 Worker 超时时新呼叫仍可能放行最多 1800 秒；人工欺诈切断 runbook 按 billing_tenant 与租户编码不区分大小写核验 UUID 后执行 uuid_kill
+- [x] 用 Playwright 走完整流程：新建租户（CNY）→ 导入费率 CSV → 赊账充值 ¥500.00 → 门户账号创建；结束时租户列表显示正确余额和状态。种子数据已有 ABC001，e2e 改用每次运行唯一的编码。证据：`apps/web/e2e/admin-onboarding.spec.ts` / `creates a run-unique tenant, imports rates, credits 500 and opens portal account`
+- [x] 导入一个含错误行的 CSV，显示所有错误行号，费率表不变。证据：`apps/web/e2e/admin-rates.spec.ts` / `shows every CSV error line`；`packages/db/src/admin/rates.db.test.ts` / `invalid CSV reports all physical rows and writes no versions or audits`
+- [x] 调账不填原因无法提交；提交后流水中有反向记录，原记录不变。证据：`apps/web/e2e/admin-balance.spec.ts` / `blocks blank adjustment reason`；`packages/db/src/admin/tenants.db.test.ts` / `rejects missing adjustment reason, caps, precision and reserved keys before writing`；流水只增不改由阶段 2 的触发器保证
+- [x] 待收款合计分别显示 ¥ 和 $，不出现两者相加的数字。证据：`apps/web/e2e/admin-receivables.spec.ts` / `renders CNY and USD totals separately`；`apps/api/src/admin-receivables.db.test.ts` / `keeps exact CNY and USD totals over the full filtered set before pagination`
+- [ ] 种子数据下各页面在浅色、深色、手机宽度的截图与设计稿逐页比对，差异记录在案并处理。比对脚本 `apps/web/e2e/admin-visual.spec.ts` 已合并，省略的设计稿元素记录在 [阶段 5 设计](phase-5-design.md#已决定阶段-5-web-缺口2026-10-15)。**还差**：比对截图和差异清单只在 PR #23 的验证机上，没有提交到 `docs/evidence/`
+- [x] 每个操作在操作日志表中有对应记录（操作人、时间、对象、内容）。证据：`packages/shared/src/api/admin/admin.test.ts` / `audit payload requires actor, time, target and content and excludes credentials`；租户、余额、费率、待收款、账号各操作的 DB 测试均断言同一事务写入审计
+- [ ] 开户后首个“立即生效”费率版本的 `effectiveFrom ≤ now`，开户后立即授权匹配到费率（来自阶段 1）。`effectiveFrom ≤ now` 已有证据：`packages/db/src/admin/tenants.db.test.ts` / `creates an immediately effective empty version and explicit defaults`。**还差**：开户后立即调用 Worker 授权并匹配到费率的测试
+- [x] 费率版本“指定时间”接受任意 ISO，必须在当前时间至可配置 horizon 的闭区间内，默认 365 天；接口 Zod 拒绝过去或超上限，秒/毫秒与边界测试覆盖，Web 使用北京时间分钟选择器。数据库层允许首个版本倒填（种子与测试使用），见阶段 2 的决定（来自阶段 2）。证据：`packages/shared/src/api/admin/decisions.test.ts` / `schedule horizon accepts any ISO instant within inclusive configurable bounds`；`apps/api/src/admin-rates.test.ts` / `configured horizon governs edit, import and copy at the HTTP boundary`；`apps/web/e2e/admin-rates.spec.ts` / `minute picker submits Beijing schedule`
 
-- [ ] 撤销误确认必填原因并追加每 settlement 唯一的 reversal；重新成为 pending 后可重新全额确认；confirm 必填 expectedLatestSettlementId，与含已撤销的最新历史确认匹配；响应暴露 latestSettlementId，旧重试返回 SETTLEMENT_CONFLICT。作废优先返回 RECEIVABLE_VOIDED，保留 ALREADY_RECEIVED，重复/并发确认只存在一个未撤销 settlement（本步契约，后续 DB/服务/UI）。删除每 credit 单 settlement unique，view 取最新未撤销确认，仅用现有 lock_tenants，余额和原流水不变
-- [ ] credit 冲正后独立 void 关联原 credit 与相反金额 adjustment，必填原因及 actor 审计，每 credit 一个事件；已收须先撤销确认，voided 不可再确认且不进入 pending totals（本步契约，后续 DB/服务/UI）
-- [ ] disabled 租户仍可充值、赊账、赠送且不自动启用，确认框说明状态（后续余额 service/UI）；大额 gift/credit 超过前端可配置 CNY 10000 / USD 1500 阈值才二次确认，API 不接收 confirm token（后续 UI）
-- [ ] 紧急改价按取消排期、修改当前、重新排期三步各自审计并提示中间状态（后续 UI/service）；preview 默认 60 分钟到期且 commit 重查版本和时间（后续 service）
-- [ ] 管理员与门户首次登录及每次重置后均强制改密；临时密码 TTL 可配置默认 72 小时，从签发时刻计算，在登录拒绝到期密码，成功改密后解除限制，无后台过期任务（本步默认常量，后续独立 auth 步骤）
-- [ ] 管理员分步创建故障不能提前登录，恢复不重复创建或审计，missing profile 拒绝业务访问（后续 auth/service 故障测试）
-- [ ] 阶段 5 审计使用受限只读 DB 角色和按 tenant/action/time 的保存查询，写权限拒绝，页面仍阶段 8（后续运维）；停用管理员邮箱仍保留且设置页加载/保存后标记，无自动移除或兜底（后续 UI）
+- [ ] 取消指定未来版本只允许 `effective_from > DB now() + margin`，余量默认 60 秒并监测 NTP，现有 trigger guard 保留，与生效竞态时拒绝；当前/历史费率不变，rate_schedule_cancel 保存取消版本 ID 和完整 entries；仅复用 lock_tenants。代码已有证据：`packages/db/src/admin/rates.db.test.ts` / `cancels only future versions beyond configured margin and audits full entries`、`rejects cancellation exactly at the configured database clock margin`、`maps activation during a tenant lock wait to conflict and rolls back cancellation audit`。**还差**：FreeSWITCH 与数据库的 NTP 监测（运维项，随阶段 10 部署）
+- [x] 管理员启用、门户账号停用/启用均要求管理员身份且成功写审计；门户停用撤销全部会话，不影响呼叫；账号启用不恢复旧会话。证据：`apps/api/src/admin-accounts.db.test.ts` / `portal disable and enable audit without changing tenant status or restoring old sessions`、`admin enable audits without restoring sessions`、`customers cannot list or mutate admin or portal accounts`
+- [x] topup/credit_topup/gift 拒绝超过两位小数，adjustment 拒绝超过四位；正负金额都受可配置业务上限约束，默认最多 10 位整数，独立于传输长度；透支额度与阈值非负且最多两位。证据：`apps/api/src/admin-tenants.db.test.ts` / `rejects adjustment without a reason and invalid precision or caps before writes`、`uses the configured %i digit cap in routes and services`；`packages/db/src/admin/tenants.db.test.ts` / `edits, disables, enables and normalizes settings with audits in the transaction`
+- [x] CSV 接受中文表头，文件 <=2 MiB，行数上限 10000（已决定，可配置）；超限整表不变，大表预览 TTL 可配置，默认 60 分钟。证据：`packages/db/src/admin/rates.db.test.ts` / `Chinese CSV preview binds actor purpose and path and commits all rows once`、`enforces decoded byte and row limits before writes`、`expires configured TTL and rechecks stored schedule at commit`；`apps/api/src/app.test.ts` / `tenant CSV upload boundary honors two decoded MiB and maps excess size to the CSV contract`
+- [ ] 创建编码规范化大写；迁移前检查存量大小写碰撞并人工重命名，核对现有 FreeSWITCH billing_tenant 与 stored codes，再加 DB 不区分大小写唯一；worker 授权与 CDR ingest 均规范化大写；邮箱小写去重后最多 20 个，空收件人可保存但设置页面在加载/保存后显示无法送达提醒。代码已有证据：迁移 `0006_admin_receivables.sql` 先检查碰撞再建 `tenants_code_case_insensitive`；`apps/worker/src/app.db.test.ts` / `normalizes authorization and lowercase billing_tenant for %s stored codes`；`apps/web/e2e/admin-settings.spec.ts` / `warns for empty recipients after load and save`。**还差**：上线前核对现网 FreeSWITCH 的 `billing_tenant` 与数据库编码（运维项，随阶段 10）
+- [x] 门户与管理员开户在同一业务事务内创建认证用户、资料、审计和临时密码；失败整体回滚，不留下无资料的认证用户；业务 API 拒绝无资料的用户（决定 m，取代原“先建用户、最后 activate”的方案）。证据：`apps/api/src/admin-accounts.db.test.ts` / `creates admins with a same-transaction audit and initial temporary credential`、`failed account creation rolls back the auth user and writes no audit`；`apps/api/src/auth.db.test.ts` / `correct passwords reveal disabled or unavailable identities only after deleting the newly created session without cookies`
+- [x] 停用租户提示不承诺呼叫停止，说明 Worker 超时时新呼叫仍可能放行最多 1800 秒；人工欺诈切断 runbook 按 billing_tenant 与租户编码不区分大小写核验 UUID 后执行 uuid_kill。证据：`apps/web/e2e/admin-tenants.spec.ts` / `disable confirmation explains live call behavior`；runbook 见 [阶段 5 设计](phase-5-design.md) 与 [design.md §4.2](design.md#42-呼叫前授权)
+
+- [x] 撤销误确认必填原因并追加每 settlement 唯一的 reversal；重新成为 pending 后可重新全额确认；confirm 必填 expectedLatestSettlementId，与含已撤销的最新历史确认匹配；响应暴露 latestSettlementId，旧重试返回 SETTLEMENT_CONFLICT。作废优先返回 RECEIVABLE_VOIDED，保留 ALREADY_RECEIVED，重复/并发确认只存在一个未撤销 settlement；仅用现有 lock_tenants，余额和原流水不变。证据：`packages/db/src/admin/receivables.db.test.ts` / `confirms, reverses and reconfirms %s without changing the ledger or balance`、`serializes concurrent confirmations and concurrent reversals without duplicate audits`、`requires current tokens and rejects another credit settlement on reversal`；`apps/web/e2e/admin-receivables.spec.ts` / `reverses then reconfirms with fresh token`
+- [x] credit 冲正后独立 void 关联原 credit 与相反金额 adjustment，必填原因及 actor 审计，每 credit 一个事件；已收须先撤销确认，voided 不可再确认且不进入 pending totals。证据：`packages/db/src/admin/receivables.db.test.ts` / `does not automatically close a credit on adjustment; void requires reversal first and wins error precedence`、`rejects wrong amount, kind, tenant, missing adjustment and an earlier adjustment`、`concurrent voids produce one event and one complete audit`；`apps/web/e2e/admin-receivables.spec.ts` / `voids with linked adjustment`
+- [x] disabled 租户仍可充值、赊账、赠送且不自动启用，确认框说明状态；大额 gift/credit 超过前端可配置 CNY 10000 / USD 1500 阈值才二次确认，API 不接收 confirm token。证据：`apps/web/e2e/admin-balance.spec.ts` / `disabled tenant confirmation explains unchanged status`、`gift and credit require second confirmation only above configured currency threshold`；`packages/shared/src/api/admin/decisions.test.ts` / `large gift and credit requests require no confirmation token`
+- [x] 紧急改价按取消排期、修改当前、重新排期三步各自审计并提示中间状态；preview 默认 60 分钟到期且 commit 重查版本和时间。证据：`apps/web/e2e/admin-rates.spec.ts` / `cancel edit reschedule audits each step`；`packages/db/src/admin/rates.db.test.ts` / `expires configured TTL and rechecks stored schedule at commit`、`rejects stale previews after another version commits without partial writes`
+- [x] 管理员与门户首次登录及每次重置后均强制改密；临时密码 TTL 可配置默认 72 小时，从签发时刻计算，在登录拒绝到期密码，成功改密后解除限制，无后台过期任务。证据：`apps/api/src/admin-accounts.db.test.ts` / `blocks business routes until a temporary password is changed`、`enforces configured temporary credential TTL for admin and portal logins`、`temporary credentials reject after expiry and permanent password changes clear issuance`；`apps/web/e2e/admin-tenants.spec.ts` / `onboarding shows the generated portal password once and the new account must change it`
+- [ ] 阶段 5 审计使用受限只读 DB 角色和按 tenant/action/time 的保存查询，写权限拒绝，页面仍在阶段 8；停用管理员邮箱仍保留且设置页加载/保存后标记，无自动移除或兜底。邮箱标记已有证据：`apps/web/src/components/admin/form-fields.test.tsx`。**还差**：只读审计数据库角色和保存查询，迁移里还没有
 
 ---
 
