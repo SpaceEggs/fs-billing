@@ -437,8 +437,8 @@ function TenantDetail({
               ))}
             </nav>
             <TabContent tab={tab} tenant={tenant} />
-            {tab === 'settings' ? null : (
-              // 设置标签页底部是自己的保存按钮，不再叠一个余额操作。
+            {tab === 'settings' || tab === 'portal' ? null : (
+              // 设置标签页底部是自己的保存按钮；门户账号标签页按第三批 3j 稿不放余额操作。
               <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-border bg-background px-4 pt-3 pb-4 md:hidden">
                 <Button
                   size="lg"
