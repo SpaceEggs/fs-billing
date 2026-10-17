@@ -7,6 +7,37 @@ BEGIN
   END IF;
 END $$;
 
+-- 角色是集群级的，同名角色可能早已存在并带着别的权限。迁移不替它清理（别的库可能在用），只拒绝继续。
+DO $$
+DECLARE
+  problem text;
+BEGIN
+  SELECT CASE
+    WHEN r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolcanlogin
+      OR r.rolreplication THEN '带有 SUPERUSER/BYPASSRLS/CREATEROLE/CREATEDB/LOGIN/REPLICATION 属性'
+    WHEN EXISTS (SELECT FROM pg_auth_members m WHERE m.member = r.oid) THEN '是其他角色的成员'
+    WHEN EXISTS (
+      SELECT FROM pg_shdepend d JOIN pg_database db ON db.oid = d.dbid
+      WHERE db.datname = current_database() AND d.refclassid = 'pg_authid'::regclass
+        AND d.refobjid = r.oid AND d.deptype = 'o'
+    ) THEN '在本库拥有对象'
+    WHEN EXISTS (
+      SELECT FROM pg_class c
+      WHERE c.relnamespace IN ('public'::regnamespace, 'auth'::regnamespace)
+        AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+        AND (has_table_privilege(r.oid, c.oid,
+               'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+          OR has_any_column_privilege(r.oid, c.oid, 'SELECT, INSERT, UPDATE, REFERENCES'))
+    ) THEN '对 public 或 auth 的表、视图或序列有权限'
+    WHEN has_schema_privilege(r.oid, 'public', 'CREATE')
+      OR has_schema_privilege(r.oid, 'auth', 'CREATE') THEN '能在 public 或 auth 中建对象'
+  END INTO problem
+  FROM pg_roles r WHERE r.rolname = 'fs_billing_audit';
+  IF problem IS NOT NULL THEN
+    RAISE EXCEPTION '已有角色 fs_billing_audit %：迁移不会自动清理，请人工核查后再执行', problem;
+  END IF;
+END $$;
+
 GRANT USAGE ON SCHEMA public TO fs_billing_audit;
 
 -- 参数为 NULL 表示不过滤；时间窗为 [p_from, p_to)。STABLE 的 sql 函数不能写入。

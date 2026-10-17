@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import type { PoolClient } from 'pg';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   adminId,
@@ -9,21 +11,54 @@ import {
 
 const { app, owner } = connections();
 
-/** 在 owner 事务里切换到审计角色执行一条语句，结束时回滚。 */
-async function asAuditor<T extends object>(
-  text: string,
-  values: unknown[] = [],
-): Promise<T[]> {
+/** 在 owner 事务里执行，结束时回滚。 */
+async function rolledBack<T>(fn: (client: PoolClient) => Promise<T>) {
   const client = await owner.pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('SET LOCAL ROLE fs_billing_audit');
-    return (await client.query<T>(text, values)).rows;
+    return await fn(client);
   } finally {
     await client.query('ROLLBACK');
     client.release();
   }
 }
+
+const asAuditor = <T extends object>(text: string, values: unknown[] = []) =>
+  rolledBack(async (client) => {
+    await client.query('SET LOCAL ROLE fs_billing_audit');
+    return (await client.query<T>(text, values)).rows;
+  });
+
+const auditorRelations = async (client: PoolClient) =>
+  (
+    await client.query<{ relname: string }>(
+      `SELECT c.relname FROM pg_class c
+       WHERE c.relnamespace IN ('public'::regnamespace, 'auth'::regnamespace)
+         AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+         AND (has_table_privilege('fs_billing_audit', c.oid,
+                'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+           OR has_any_column_privilege('fs_billing_audit', c.oid,
+                'SELECT, INSERT, UPDATE, REFERENCES'))
+       ORDER BY 1`,
+    )
+  ).rows.map((row) => row.relname);
+
+const auditorFunctions = async (client: PoolClient) =>
+  (
+    await client.query<{ proname: string }>(
+      `SELECT p.proname FROM pg_proc p
+       WHERE p.pronamespace IN ('public'::regnamespace, 'auth'::regnamespace)
+         AND has_function_privilege('fs_billing_audit', p.oid, 'EXECUTE')
+       ORDER BY 1`,
+    )
+  ).rows.map((row) => row.proname);
+
+const migration = readFile(
+  new URL('../migrations/0014_audit_reader.sql', import.meta.url),
+  'utf8',
+);
+const dropAuditQuery =
+  'DROP FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz)';
 
 type AuditRow = {
   id: string;
@@ -129,20 +164,52 @@ describe('audit_operation_logs', () => {
     expect(rows.map((row) => row.target)).toEqual(['r1']);
   });
 
-  it.each(['operation_logs', 'tenants', 'ledger_entries'])(
-    'audit role cannot select, insert, update or delete %s',
-    async (table) => {
-      for (const statement of [
-        `SELECT 1 FROM ${table} LIMIT 1`,
-        `INSERT INTO ${table} DEFAULT VALUES`,
-        `UPDATE ${table} SET id = id`,
-        `DELETE FROM ${table}`,
-      ])
-        expect(await pgError(asAuditor(statement)), statement).toMatchObject({
-          code: '42501',
-        });
+  it('audit role has no relation privilege and executes only the audit query', async () => {
+    expect(
+      await rolledBack(async (client) => [
+        await auditorRelations(client),
+        await auditorFunctions(client),
+      ]),
+    ).toEqual([[], ['audit_operation_logs']]);
+  });
+
+  it('relation privilege check detects a stray grant', async () => {
+    expect(
+      await rolledBack(async (client) => {
+        await client.query('GRANT UPDATE ON tenants TO fs_billing_audit');
+        return auditorRelations(client);
+      }),
+    ).toEqual(['tenants']);
+  });
+
+  it.each([
+    ['GRANT fs_billing_app TO fs_billing_audit', '是其他角色的成员'],
+    [
+      'GRANT UPDATE ON tenants TO fs_billing_audit',
+      '对 public 或 auth 的表、视图或序列有权限',
+    ],
+  ])(
+    'migration refuses a pre-existing audit role after %s',
+    async (dirty, reason) => {
+      const error = await rolledBack(async (client) => {
+        await client.query(dirty);
+        await client.query(dropAuditQuery);
+        return pgError(client.query(await migration));
+      });
+      expect(error.code).toBe('P0001');
+      expect(error.message).toContain(reason);
     },
   );
+
+  it('migration replays over a clean pre-existing audit role', async () => {
+    expect(
+      await rolledBack(async (client) => {
+        await client.query(dropAuditQuery);
+        await client.query(await migration);
+        return auditorFunctions(client);
+      }),
+    ).toEqual(['audit_operation_logs']);
+  });
 
   it('application role cannot execute the audit query', async () => {
     expect(
