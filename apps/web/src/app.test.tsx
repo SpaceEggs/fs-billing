@@ -49,7 +49,7 @@ describe('session expiry', () => {
       within(dialog).getByRole('button', { name: '重新登录' }),
     );
     await waitFor(() => expect(location()).toBe('/login?reason=expired'));
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(await screen.findByRole('status')).toHaveTextContent(
       '登录已过期，请重新登录登录后将返回之前的页面',
     );
 
