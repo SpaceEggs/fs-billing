@@ -302,7 +302,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           <span aria-hidden className="size-1.5 rounded-full bg-current" />
           当前生效版本
         </span>
-        <span className="text-xs tabular-nums md:hidden">
+        <span className="w-full text-xs tabular-nums max-md:order-first md:hidden">
           当前生效版本 ·{' '}
           {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`}
         </span>
