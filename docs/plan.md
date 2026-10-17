@@ -28,7 +28,7 @@
 | 2    | 数据库与账本         | 表结构、流水不可改、RLS 隔离可演示               | 已完成（PR #6，[验收记录](phase-2-db.md)）                                                                                                                                       |
 | 3    | FreeSWITCH 接口      | 用模拟请求打一通电话，完成授权、入话单、扣费     | 功能已完成（PR #9，[验收记录](phase-3-worker.md)）；收尾性能重跑通过（[3 次 p95 ≈ 5.5–6.3 ms](evidence/phase-3-closeout/perf-authorize.txt)），FreeSWITCH 实机通话待阶段 10 验收 |
 | 4    | API、登录与网页外壳  | 管理员和客户都能登录，越权测试自动运行           | 已完成（PR #17–#19，[后端记录](phase-4-api.md)、[Web 记录](phase-4-web.md)）                                                                                                     |
-| 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 代码验收已完成，2 条运维项（NTP 监测、现网 billing_tenant 核对）随阶段 10，见[阶段 5 验收标准](#阶段-5管理后台开户与资金)                                                                                 |
+| 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 代码验收已完成（PR #21–#37，[视觉对照](evidence/phase-5-web/visual-diff.md)）；2 条运维项（NTP 监测、现网 billing_tenant 核对）随阶段 10                                                                                 |
 | 6    | 客户门户             | 客户能自助查余额、话单、流水                     | 未开始                                                                                                                                                                           |
 | 7    | 月账单               | 每月自动出账，客户可查看和导出                   | 未开始                                                                                                                                                                           |
 | 8    | 话单运维             | 未归属话单分配、删除话单、操作日志               | 未开始                                                                                                                                                                           |
@@ -223,7 +223,7 @@
 
 **验收标准**
 
-状态核对于 2026-10-17，依据 `main`（`eeae604`）上的测试。证据格式为“文件 / 测试名”。一条标准的所有要求都有证据才打勾；未打勾的写明还差什么。
+状态核对于 2026-10-17，依据 `main`（`027f21c`）上的测试。证据格式为“文件 / 测试名”。一条标准的所有要求都有证据才打勾；未打勾的写明还差什么。
 
 - [x] 用 Playwright 走完整流程：新建租户（CNY）→ 导入费率 CSV → 赊账充值 ¥500.00 → 门户账号创建；结束时租户列表显示正确余额和状态。种子数据已有 ABC001，e2e 改用每次运行唯一的编码。证据：`apps/web/e2e/admin-onboarding.spec.ts` / `creates a run-unique tenant, imports rates, credits 500 and opens portal account`
 - [x] 导入一个含错误行的 CSV，显示所有错误行号，费率表不变。证据：`apps/web/e2e/admin-rates.spec.ts` / `shows every CSV error line`；`packages/db/src/admin/rates.db.test.ts` / `invalid CSV reports all physical rows and writes no versions or audits`

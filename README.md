@@ -8,7 +8,7 @@ FreeSWITCH 话单计费系统：呼叫前授权、话单入库与扣费、余额
 | ---- | ------------------------------------------------- | ----------------------------------------- |
 | 0–3  | 工程骨架、计费核心、数据库与账本、FreeSWITCH 接口 | 已完成；FreeSWITCH 实机通话待阶段 10 验收 |
 | 4    | API、登录与网页外壳                               | 已完成                                    |
-| 5    | 管理后台：开户与资金                              | 进行中：功能已合并，5 条验收待完成        |
+| 5    | 管理后台：开户与资金                              | 代码验收已完成；2 条运维项待阶段 10       |
 | 6–10 | 客户门户、月账单、话单运维、通知、部署上线        | 未开始                                    |
 
 各阶段的验收证据和未完成项以 [docs/plan.md](docs/plan.md) 的阶段表为准。
@@ -63,6 +63,8 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 | `pnpm db:seed`     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20）。可重复执行               |
 | `pnpm screenshots` | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                      |
 
+管理后台的视觉对照用 `FSB_VISUAL=1 FSB_EVIDENCE_DIR=$PWD/docs/evidence/phase-5-web pnpm --filter @fs-billing/web exec playwright test e2e/admin-visual.spec.ts` 生成，需要与 `pnpm test:e2e` 相同的库和 `SEED_AUTH_PASSWORD`。对照图写入 `docs/evidence/phase-5-web/visual/`，差异清单见 `visual-diff.md`。
+
 服务目前用 `pnpm --filter @fs-billing/api start` 和 `pnpm --filter @fs-billing/worker start` 直接运行 TS 源码，生产打包在阶段 10 完成。
 
 ## 目录
@@ -85,7 +87,7 @@ docs/            设计、计划、各阶段设计与验收记录、证据
 
 应用运行时用 `APP_DATABASE_URL` 连接。角色 `fs_billing_app` 不是超级用户，也没有 BYPASSRLS。代码在事务内用 `withTenant(db, tenantId, fn)` 或 `withAdmin(db, fn)` 声明身份，未声明时读不到任何业务行。API 只从登录身份取租户编号，不信任请求里的租户参数。登录相关的表放在单独的 `auth` schema，用 `AUTH_DATABASE_URL` 连接。
 
-迁移是 `packages/db/migrations/` 下的手写 SQL，`packages/db/src/schema.ts` 是对应的 Drizzle 描述。表结构、账本不变量和费率版本规则见 [阶段 2 验收记录](docs/phase-2-db.md)，API 与登录的设计见 [阶段 4 后端设计](docs/phase-4-api-design.md)。
+迁移是 `packages/db/migrations/` 下的手写 SQL，`packages/db/src/schema.ts` 是对应的 Drizzle 描述。表结构、账本不变量和费率版本规则见 [阶段 2 验收记录](docs/phase-2-db.md)，API 与登录的设计见 [阶段 4 后端设计](docs/phase-4-api-design.md)。运维人工查操作日志用只读角色 `fs_billing_audit` 和 `audit_operation_logs(...)`，手动授权后用 `audit_role_violations()` 复查，见 [阶段 5 设计](docs/phase-5-design.md) 的「运维审计查询（决定 f）」。
 
 ## 金额保护
 
