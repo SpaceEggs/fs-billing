@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   formatBilledMinutes,
   formatDateTime,
-  formatDuration,
   formatExactMoney,
   formatMoney,
   formatMonth,
   formatRate,
   isNegativeMoney,
 } from './format';
+import { formatDuration } from './duration';
 
 describe('formatMoney', () => {
   it.each([

@@ -7,7 +7,7 @@ import { Alert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { useCredentialMutation } from '../lib/admin-api';
 import { ApiRequestError } from '../lib/api';
-import { formatDuration } from '../lib/format';
+import { formatDuration } from '../lib/duration';
 import { resolveReturnPath, takeReturnPath } from '../lib/return-to';
 import {
   passwordGate,

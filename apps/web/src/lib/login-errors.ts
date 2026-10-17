@@ -1,5 +1,5 @@
 import { ApiRequestError } from './api';
-import { formatDuration } from './format';
+import { formatDuration } from './duration';
 import type { Zone } from './zone';
 
 export type LoginProblem =
