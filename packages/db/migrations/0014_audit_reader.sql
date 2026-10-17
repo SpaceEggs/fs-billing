@@ -39,6 +39,7 @@ REVOKE ALL ON FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz
 GRANT EXECUTE ON FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz) TO fs_billing_audit;
 
 -- 列出 fs_billing_audit 超出白名单（public 的 USAGE、audit_operation_logs 的 EXECUTE）的权限，干净时为空。
+-- 白名单只豁免不带 GRANT OPTION 的权限，否则审计角色能把查询转授给应用角色。
 -- has_*_privilege 按角色 oid 判断，已包含经 PUBLIC 和成员关系得到的权限。
 CREATE FUNCTION audit_role_violations() RETURNS SETOF text
 LANGUAGE sql
@@ -75,8 +76,8 @@ AS $$
     WHERE pg_catalog.has_database_privilege(a.oid, pg_catalog.current_database(), 'CREATE')
     UNION ALL
     SELECT 5, 'schema ' || n.nspname || '：' || p.priv
-    FROM audit a, scoped n, (VALUES ('USAGE'), ('CREATE')) p(priv)
-    WHERE NOT (n.nspname = 'public' AND p.priv = 'USAGE')
+    FROM audit a, scoped n, (VALUES ('USAGE'), ('USAGE WITH GRANT OPTION'), ('CREATE')) p(priv)
+    WHERE p.priv <> CASE n.nspname WHEN 'public' THEN 'USAGE' ELSE 'USAGE WITH GRANT OPTION' END
       AND pg_catalog.has_schema_privilege(a.oid, n.oid, p.priv)
     UNION ALL
     SELECT 6, CASE c.relkind WHEN 'v' THEN '视图 ' WHEN 'm' THEN '物化视图 ' WHEN 'f' THEN '外部表 '
@@ -112,13 +113,15 @@ AS $$
     GROUP BY c.oid
     UNION ALL
     SELECT 9, CASE f.prokind WHEN 'p' THEN '过程 ' ELSE '函数 ' END
-      || f.oid::pg_catalog.regprocedure::text || '：EXECUTE'
+      || f.oid::pg_catalog.regprocedure::text || '：' || p.priv
     FROM audit a
     CROSS JOIN pg_catalog.pg_proc f
     JOIN scoped n ON n.oid = f.pronamespace
-    WHERE f.oid IS DISTINCT FROM
-        pg_catalog.to_regprocedure('public.audit_operation_logs(text,text,timestamptz,timestamptz)')
-      AND pg_catalog.has_function_privilege(a.oid, f.oid, 'EXECUTE')
+    CROSS JOIN (VALUES ('EXECUTE'), ('EXECUTE WITH GRANT OPTION')) p(priv)
+    WHERE p.priv = CASE WHEN f.oid
+        = pg_catalog.to_regprocedure('public.audit_operation_logs(text,text,timestamptz,timestamptz)')
+        THEN 'EXECUTE WITH GRANT OPTION' ELSE 'EXECUTE' END
+      AND pg_catalog.has_function_privilege(a.oid, f.oid, p.priv)
     UNION ALL
     -- 类型的 USAGE 本就默认授予 PUBLIC，不涉及数据，跳过 T。
     SELECT 10, '默认权限：' || d.defaclrole::pg_catalog.regrole::text || ' 在 '
@@ -129,9 +132,10 @@ AS $$
       || ' ' || pg_catalog.string_agg(e.privilege_type, ', ' ORDER BY e.privilege_type)
     FROM audit a
     CROSS JOIN pg_catalog.pg_default_acl d
-    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
+    LEFT JOIN scoped n ON n.oid = d.defaclnamespace
     CROSS JOIN LATERAL pg_catalog.aclexplode(d.defaclacl) e
     WHERE d.defaclobjtype <> 'T' AND e.grantee IN (a.oid, 0)
+      AND (d.defaclnamespace = 0 OR n.oid IS NOT NULL)
     GROUP BY d.oid, d.defaclrole, n.nspname, d.defaclobjtype, e.grantee
   )
   SELECT line FROM found ORDER BY ord, line;

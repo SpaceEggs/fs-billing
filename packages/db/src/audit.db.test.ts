@@ -46,6 +46,10 @@ const publicAuthInsert = `GRANT USAGE ON SCHEMA auth TO PUBLIC;
   GRANT EXECUTE ON FUNCTION auth.insert_user(text, text, text) TO PUBLIC`;
 const defaultTableUpdate =
   'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT UPDATE ON TABLES TO fs_billing_audit';
+const auditQueryGrantOption =
+  'GRANT EXECUTE ON FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz) TO fs_billing_audit WITH GRANT OPTION';
+const auditQueryGrantOptionLine =
+  '函数 public.audit_operation_logs(text,text,timestamp with time zone,timestamp with time zone)：EXECUTE WITH GRANT OPTION';
 
 type AuditRow = {
   id: string;
@@ -190,6 +194,23 @@ describe('audit_operation_logs', () => {
       ],
     ],
     [
+      'global default table privilege',
+      'ALTER DEFAULT PRIVILEGES GRANT UPDATE ON TABLES TO fs_billing_audit',
+      [
+        '默认权限：fs_billing 在 所有 schema 新建的表授予 fs_billing_audit UPDATE',
+      ],
+    ],
+    [
+      'EXECUTE WITH GRANT OPTION on the audit query',
+      auditQueryGrantOption,
+      [auditQueryGrantOptionLine],
+    ],
+    [
+      'USAGE WITH GRANT OPTION on schema public',
+      'GRANT USAGE ON SCHEMA public TO fs_billing_audit WITH GRANT OPTION',
+      ['schema public：USAGE WITH GRANT OPTION'],
+    ],
+    [
       'schema CREATE',
       'GRANT CREATE ON SCHEMA public TO fs_billing_audit',
       ['schema public：CREATE'],
@@ -212,6 +233,30 @@ describe('audit_operation_logs', () => {
     expect(await rolledBack(violations)).toEqual([]);
   });
 
+  it('audit_role_violations ignores default privileges in unrelated schemas', async () => {
+    expect(
+      await rolledBack(async (client) => {
+        await client.query(`CREATE SCHEMA audit_probe_outside;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA audit_probe_outside GRANT SELECT ON TABLES TO fs_billing_audit`);
+        return violations(client);
+      }),
+    ).toEqual([]);
+  });
+
+  it('audit_role_violations still reports the grant option after the auditor delegates it', async () => {
+    expect(
+      await rolledBack(async (client) => {
+        await client.query(auditQueryGrantOption);
+        await client.query('SET LOCAL ROLE fs_billing_audit');
+        await client.query(
+          'GRANT EXECUTE ON FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz) TO fs_billing_app',
+        );
+        await client.query('RESET ROLE');
+        return violations(client);
+      }),
+    ).toEqual([auditQueryGrantOptionLine]);
+  });
+
   it.each([
     [
       'membership',
@@ -227,6 +272,11 @@ describe('audit_operation_logs', () => {
       'default table privilege',
       defaultTableUpdate,
       '默认权限：fs_billing 在 schema public 新建的表授予 fs_billing_audit UPDATE',
+    ],
+    [
+      'a default EXECUTE WITH GRANT OPTION on new functions',
+      'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO fs_billing_audit WITH GRANT OPTION',
+      auditQueryGrantOptionLine,
     ],
   ])(
     'migration refuses a pre-existing audit role after %s',
