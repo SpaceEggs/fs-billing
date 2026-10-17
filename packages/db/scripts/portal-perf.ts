@@ -451,18 +451,19 @@ function ledgerRowWindow(t: string, range: Range, anchor: Anchor) {
 function ledgerDayWindow(t: string, range: Range, anchor: Anchor) {
   return sql`with anchor as (${anchorSql(t, range, anchor)}),
     merged as (
-      select case when kind = 'call_charge' then null else id end as id, kind,
+      select case when kind = 'call_charge' then null else id end as id,
+        (array_agg(id order by occurred_at desc, id desc))[1] as sort_id, kind,
         (occurred_at at time zone 'Asia/Shanghai')::date as day,
         max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount, max(note) as note
       from ledger_entries
       where tenant_id = ${t} and occurred_at >= ${range.from}::timestamptz
         and occurred_at < ${range.to}::timestamptz
-      group by 1, 2, 3
+      group by 1, 3, 4
     )
     select id, kind, day, at, calls, amount::text,
-      (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after
+      (anchor.a + sum(amount) over (order by at, sort_id))::text as balance_after
     from merged, anchor
-    order by at desc, id desc nulls last limit 50`;
+    order by at desc, sort_id desc limit 50`;
 }
 /** 后台现状（admin/balance.ts）：每行一个相关子查询求和全部更早流水。 */
 function adminLedger(t: string) {
