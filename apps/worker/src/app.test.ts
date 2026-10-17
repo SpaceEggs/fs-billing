@@ -1,4 +1,5 @@
 import { connect } from '@fs-billing/db';
+import { pino } from 'pino';
 import { INVALID_NUMBER_REASON, modJsonCdrSchema } from '@fs-billing/shared';
 import { expect, test, vi } from 'vitest';
 import { createWorker } from './app.js';
@@ -42,6 +43,62 @@ test('worker runs without an API or database process', async () => {
     expect(response.json()).toEqual({ status: 'ok', service: 'worker' });
   } finally {
     await app.close();
+  }
+});
+
+test('startup pool errors and worker logs share the supplied pino logger', async () => {
+  const lines: string[] = [];
+  const logger = pino({}, { write: (line) => lines.push(line) });
+  const connection = connect(
+    'postgres://user:private-password@localhost/billing',
+    {
+      poolName: 'worker.queue',
+      logger,
+    },
+  );
+  await Promise.resolve();
+  expect(() =>
+    connection.pool.emit(
+      'error',
+      Object.assign(
+        new Error('postgres://user:private-password@localhost/billing'),
+        {
+          code: 'ETIMEDOUT',
+        },
+      ),
+    ),
+  ).not.toThrow();
+  const app = createWorker({
+    loggerInstance: logger,
+    db: connection.db,
+    queue: { enqueue: async () => {} },
+    security: { secret: 'test-worker-key', allowedIps: ['127.0.0.1'] },
+  });
+  try {
+    app.log.error({ event: 'application.error' }, 'Application error');
+    const records = lines.map((line) => {
+      const record: unknown = JSON.parse(line);
+      return record;
+    });
+    expect(records).toHaveLength(2);
+    for (const record of records) {
+      expect(record).toMatchObject({
+        level: 50,
+        pid: process.pid,
+      });
+      expect(record).toHaveProperty('time', expect.any(Number));
+      expect(record).toHaveProperty('hostname', expect.any(String));
+    }
+    expect(records[0]).toMatchObject({
+      event: 'database.idle_client_error',
+      pool: 'worker.queue',
+      code: 'ETIMEDOUT',
+    });
+    expect(lines.join('')).not.toContain('private-password');
+    expect(lines.join('')).not.toContain('postgres://');
+  } finally {
+    await app.close();
+    await connection.pool.end();
   }
 });
 

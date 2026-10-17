@@ -1,4 +1,4 @@
-import Fastify, { LogController } from 'fastify';
+import Fastify, { LogController, type FastifyBaseLogger } from 'fastify';
 import swagger from '@fastify/swagger';
 import rateLimit from '@fastify/rate-limit';
 import {
@@ -39,11 +39,13 @@ import { rateHandlers } from './routes/admin/rates.js';
 import { createLiveApiContract } from './routes/contract.js';
 import { accountHandlers } from './routes/admin/accounts.js';
 import type { AdminAccountService } from './auth/admin-accounts.js';
+import { createApiLogger } from './logging.js';
 
 export type ApiDependencies = {
   businessDb: Db;
   auth: AuthGateway;
   logger?: boolean;
+  loggerInstance?: FastifyBaseLogger;
   trustedOrigins?: readonly string[];
   rateLimit?: { max: number; timeWindow: number };
   adminRates?: {
@@ -63,22 +65,12 @@ export function createApi(deps: ApiDependencies) {
   );
   const contract = createLiveApiContract(rateRequests, amountRequests);
   const app = Fastify({
-    logger: deps.logger ?? false,
     trustProxy: false,
     exposeHeadRoutes: false,
     logController: new LogController({ disableRequestLogging: true }),
-    ...(deps.logger
-      ? {
-          logger: {
-            redact: [
-              'req.headers.cookie',
-              'req.headers.authorization',
-              'req.body',
-              'res.headers.set-cookie',
-            ],
-          },
-        }
-      : {}),
+    ...(deps.loggerInstance || deps.logger
+      ? { loggerInstance: deps.loggerInstance ?? createApiLogger() }
+      : { logger: false }),
   }).withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);

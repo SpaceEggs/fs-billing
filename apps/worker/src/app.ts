@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import Fastify from 'fastify';
+import Fastify, { type FastifyBaseLogger } from 'fastify';
 import {
   authorizeRequestSchema,
   authorizeResponseSchema,
@@ -25,13 +25,18 @@ const sipCodes = {
 
 export interface WorkerDependencies {
   logger?: boolean;
+  loggerInstance?: FastifyBaseLogger;
   db: Db;
   queue: ChargeQueue;
   security: { secret: string; allowedIps: readonly string[] };
 }
 
 export function createWorker(dependencies?: WorkerDependencies) {
-  const app = Fastify({ logger: dependencies?.logger ?? false });
+  const app = Fastify(
+    dependencies?.loggerInstance
+      ? { loggerInstance: dependencies.loggerInstance }
+      : { logger: dependencies?.logger ?? false },
+  );
   app.get('/health', () =>
     healthResponseSchema.parse({ status: 'ok', service: 'worker' }),
   );

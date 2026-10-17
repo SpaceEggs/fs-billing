@@ -1,8 +1,12 @@
 import { sql } from 'drizzle-orm';
 import { authUsers } from './auth-schema.js';
+import type { RatePreviewPayload } from './admin/rate-preview.js';
 import {
   boolean,
+  check,
   date,
+  foreignKey,
+  index,
   integer,
   jsonb,
   numeric,
@@ -77,6 +81,29 @@ export const rateEntries = pgTable('rate_entries', {
   country: text('country').notNull(),
   rate: numeric('rate').notNull(),
 });
+
+export const adminRatePreviews = pgTable(
+  'admin_rate_previews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull(),
+    payload: jsonb('payload').$type<RatePreviewPayload>().notNull(),
+    expiresAt: at('expires_at').notNull(),
+    consumedAt: at('consumed_at'),
+  },
+  (table) => [
+    foreignKey({
+      name: 'admin_rate_previews_tenant_id_fkey',
+      columns: [table.tenantId],
+      foreignColumns: [tenants.id],
+    }),
+    check(
+      'admin_rate_previews_payload_check',
+      sql`jsonb_typeof(${table.payload}) = 'object'`,
+    ),
+    index('admin_rate_previews_expiry').on(table.expiresAt),
+  ],
+);
 
 export const ledgerKinds = [
   'recharge',

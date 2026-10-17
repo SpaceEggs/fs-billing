@@ -14,6 +14,7 @@ import {
 } from './auth/gateway.js';
 import { apiEnvironmentSchema, apiRateLimitOptions } from './config.js';
 import { generateOpenApi } from './openapi.js';
+import { createApiLogger } from './logging.js';
 
 const business = connect('postgresql://fs_billing_app@127.0.0.1/fs_billing');
 const pool = new pg.Pool();
@@ -35,6 +36,78 @@ test('API exposes an independent health endpoint', async () => {
   const response = await app.inject('/api/health');
   expect(response.statusCode).toBe(200);
   expect(response.json()).toEqual({ status: 'ok', service: 'api' });
+});
+
+test('startup pool errors and app logs share pino formatting and API redaction', async () => {
+  const lines: string[] = [];
+  const logger = createApiLogger({ write: (line) => lines.push(line) });
+  const connection = connect(
+    'postgres://user:private-password@localhost/billing',
+    {
+      poolName: 'api.business',
+      logger,
+    },
+  );
+  await Promise.resolve();
+  expect(() =>
+    connection.pool.emit(
+      'error',
+      Object.assign(
+        new Error('postgres://user:private-password@localhost/billing'),
+        {
+          code: 'ECONNRESET',
+        },
+      ),
+    ),
+  ).not.toThrow();
+  const isolated = createApi({
+    businessDb: connection.db,
+    auth,
+    loggerInstance: logger,
+  });
+  try {
+    isolated.log.error({ event: 'application.error' }, 'Application error');
+    logger.info({
+      req: {
+        headers: {
+          cookie: 'private-cookie',
+          authorization: 'private-authorization',
+        },
+        body: { password: 'private-body' },
+      },
+      res: { headers: { 'set-cookie': 'private-set-cookie' } },
+    });
+    const records = lines.map((line) => {
+      const record: unknown = JSON.parse(line);
+      return record;
+    });
+    expect(records).toHaveLength(3);
+    for (const record of records.slice(0, 2)) {
+      expect(record).toMatchObject({
+        level: 50,
+        pid: process.pid,
+      });
+      expect(record).toHaveProperty('time', expect.any(Number));
+      expect(record).toHaveProperty('hostname', expect.any(String));
+    }
+    expect(records[0]).toMatchObject({
+      event: 'database.idle_client_error',
+      pool: 'api.business',
+      code: 'ECONNRESET',
+    });
+    expect(records[2]).toMatchObject({
+      req: {
+        headers: { cookie: '[Redacted]', authorization: '[Redacted]' },
+        body: '[Redacted]',
+      },
+      res: { headers: { 'set-cookie': '[Redacted]' } },
+    });
+    expect(lines.join('')).not.toContain('private-');
+    expect(lines.join('')).not.toContain('postgres://');
+  } finally {
+    await isolated.close();
+    await connection.pool.end();
+  }
 });
 
 test.each([

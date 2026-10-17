@@ -4,6 +4,8 @@ import { afterAll, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
 import { connect } from '@fs-billing/db';
 import {
+  DEFAULT_ADMIN_CSV_MAX_BYTES,
+  DEFAULT_ADMIN_CSV_BODY_LIMIT,
   apiErrorSchema,
   createAdminRateRequestSchemas,
 } from '@fs-billing/shared';
@@ -127,13 +129,37 @@ it('rate import honors decoded CSV size and maps excessive transport size', asyn
         schedule: { kind: 'immediate' },
       },
     });
-  const atLimit = await request(2 * 1024 * 1024);
+  const atLimit = await request(DEFAULT_ADMIN_CSV_MAX_BYTES);
   expect(atLimit.statusCode, atLimit.body).toBe(401);
-  for (const size of [2 * 1024 * 1024 + 1, 3 * 1024 * 1024]) {
+  for (const size of [
+    DEFAULT_ADMIN_CSV_MAX_BYTES + 1,
+    DEFAULT_ADMIN_CSV_BODY_LIMIT,
+  ]) {
     const response = await request(size);
     expect(response.statusCode, response.body).toBe(413);
     expect(response.json()).toMatchObject({
       error: { code: 'CSV_LIMIT_EXCEEDED' },
+    });
+  }
+});
+
+it('CSV transport limit accepts the exact shared boundary and rejects one extra byte', async () => {
+  const json = JSON.stringify({
+    baseVersionId: versionId,
+    file: { filename: 'rates.csv', contentBase64: 'MQ==' },
+    schedule: { kind: 'immediate' },
+  });
+  for (const extra of [0, 1]) {
+    const response = await app.inject({
+      method: 'POST',
+      url: path + '/import/preview',
+      headers: { 'content-type': 'application/json' },
+      payload:
+        json + ' '.repeat(DEFAULT_ADMIN_CSV_BODY_LIMIT - json.length + extra),
+    });
+    expect(response.statusCode, response.body).toBe(extra === 0 ? 401 : 413);
+    expect(response.json()).toMatchObject({
+      error: { code: extra === 0 ? 'UNAUTHENTICATED' : 'CSV_LIMIT_EXCEEDED' },
     });
   }
 });

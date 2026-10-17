@@ -3,7 +3,10 @@ import { type RouteAccess } from '@fs-billing/shared';
 import { liveApiContract, type LiveApiOperationId } from './contract.js';
 import { AdminServiceError, type Db } from '@fs-billing/db';
 import { z } from 'zod';
-import { DEFAULT_ADMIN_CSV_MAX_BYTES } from '@fs-billing/shared';
+import {
+  DEFAULT_ADMIN_CSV_MAX_BYTES,
+  DEFAULT_ADMIN_CSV_BODY_LIMIT,
+} from '@fs-billing/shared';
 import type { AuthGateway } from '../auth/gateway.js';
 import { resolvePrincipal } from '../identity.js';
 import { ApiFailure } from '../errors.js';
@@ -83,7 +86,7 @@ export function registerRoutes(
       ...(['adminTenantCreate', 'adminRateImportPreview'].includes(
         operation.operationId,
       )
-        ? { bodyLimit: 3 * 1024 * 1024 }
+        ? { bodyLimit: DEFAULT_ADMIN_CSV_BODY_LIMIT }
         : {}),
       ...(credential ? { onRequest: credentialRateLimit } : {}),
       preValidation: (request, _reply, done) => {

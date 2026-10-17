@@ -1,4 +1,5 @@
 import { connect } from '@fs-billing/db';
+import { pino } from 'pino';
 import { startReconciliation } from './reconcile.js';
 import { createWorker } from './app.js';
 import { workerEnvironmentSchema } from './config.js';
@@ -7,18 +8,23 @@ import { chargeCdr } from './charge.js';
 import { startPartitionMaintenance } from './maintenance.js';
 
 const config = workerEnvironmentSchema.parse(process.env);
+const logger = pino();
 const connection = connect(config.APP_DATABASE_URL, {
+  poolName: 'worker.business',
+  logger,
   max: config.WORKER_DB_POOL_MAX,
   connectionTimeoutMillis: config.WORKER_DB_CONNECTION_TIMEOUT_MS,
 });
 // pg-boss 冷缓存读取不能等待入库事务占满的业务连接池。
 const queueConnection = connect(config.APP_DATABASE_URL, {
+  poolName: 'worker.queue',
+  logger,
   max: config.WORKER_QUEUE_POOL_MAX,
   connectionTimeoutMillis: config.WORKER_DB_CONNECTION_TIMEOUT_MS,
 });
 const boss = createBoss(queueConnection.db);
 const app = createWorker({
-  logger: true,
+  loggerInstance: logger,
   db: connection.db,
   queue: chargeQueue(boss),
   security: {
@@ -26,12 +32,6 @@ const app = createWorker({
     allowedIps: config.WORKER_ALLOWED_IPS,
   },
 });
-connection.pool.on('error', (error) =>
-  app.log.error({ err: error }, '数据库空闲连接错误'),
-);
-queueConnection.pool.on('error', (error) =>
-  app.log.error({ err: error }, '队列数据库空闲连接错误'),
-);
 boss.on('error', (error) => app.log.error({ err: error }, '队列错误'));
 app.addHook('onClose', async () => {
   await boss.stop();

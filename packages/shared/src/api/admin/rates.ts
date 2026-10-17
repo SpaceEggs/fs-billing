@@ -25,6 +25,13 @@ export const adminRateEntrySchema = z.strictObject({
   rate: adminRateAmountSchema,
 });
 export const DEFAULT_ADMIN_CSV_MAX_BYTES = 2 * 1024 * 1024;
+export const adminCsvBase64Length = (maxBytes: number) =>
+  4 * Math.ceil(maxBytes / 3);
+export const DEFAULT_ADMIN_CSV_MAX_BASE64_CHARS = adminCsvBase64Length(
+  DEFAULT_ADMIN_CSV_MAX_BYTES,
+);
+export const DEFAULT_ADMIN_CSV_BODY_LIMIT =
+  DEFAULT_ADMIN_CSV_MAX_BASE64_CHARS + 256 * 1024;
 export const DEFAULT_ADMIN_RATE_MAX_ROWS = 10000;
 export const DEFAULT_ADMIN_RATE_PREVIEW_TTL_MS = 60 * 60 * 1000;
 export const DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS = 365 * 24 * 60 * 60 * 1000;
@@ -45,22 +52,29 @@ export function createAdminRateEntriesSchema(
 }
 export const adminRateEntriesSchema = createAdminRateEntriesSchema();
 export const adminRateEntriesResponseSchema = z.array(adminRateEntrySchema);
+export const adminRateScheduleShapeSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('immediate') }),
+  z.strictObject({
+    kind: z.literal('scheduled'),
+    effectiveFrom: adminTimestampSchema,
+  }),
+]);
 export function createAdminRateScheduleSchema(
   horizonMs = DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
 ) {
   const limit = z.number().int().positive().parse(horizonMs);
   return z.discriminatedUnion('kind', [
-    z.strictObject({ kind: z.literal('immediate') }),
-    z.strictObject({
-      kind: z.literal('scheduled'),
-      effectiveFrom: adminTimestampSchema.refine(
-        (value) => {
-          const now = Date.now();
-          const effectiveFrom = Date.parse(value);
-          return effectiveFrom >= now && effectiveFrom <= now + limit;
-        },
-        { message: '指定生效时间必须在当前时间至配置的排期上限之间' },
-      ),
+    adminRateScheduleShapeSchema.options[0],
+    adminRateScheduleShapeSchema.options[1].extend({
+      effectiveFrom:
+        adminRateScheduleShapeSchema.options[1].shape.effectiveFrom.refine(
+          (value) => {
+            const now = Date.now();
+            const effectiveFrom = Date.parse(value);
+            return effectiveFrom >= now && effectiveFrom <= now + limit;
+          },
+          { message: '指定生效时间必须在当前时间至配置的排期上限之间' },
+        ),
     }),
   ]);
 }
@@ -91,7 +105,7 @@ export function createAdminCsvFileSchema(
     contentBase64: z
       .string()
       .min(4)
-      .max(4 * Math.ceil(limit / 3))
+      .max(adminCsvBase64Length(limit))
       .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
       .refine(
         (value) => {

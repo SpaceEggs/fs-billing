@@ -17,6 +17,7 @@
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.0.0",
     "pg-boss": "12.37.1",
+    "pino": "10.4.0",
     "zod": "^4.6.6"
   },
   "devDependencies": {

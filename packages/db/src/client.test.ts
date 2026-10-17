@@ -7,7 +7,7 @@ import {
 import { PgDialect } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { withAdmin, withSystem } from './client.js';
+import { connect, withAdmin, withSystem } from './client.js';
 import { retryTransaction } from './retry.js';
 import * as schema from './schema.js';
 
@@ -16,6 +16,104 @@ const pgError = (code: string) => Object.assign(new Error(code), { code });
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
+});
+
+describe('idle pool errors', () => {
+  it.each([
+    '57P01',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EPIPE',
+    'ECONNREFUSED',
+    'ECONNABORTED',
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'ENETUNREACH',
+    'EHOSTUNREACH',
+    'password=do-not-log-this',
+  ])('keeps errors handled and logs only safe fields for %s', async (code) => {
+    const logger = { error: vi.fn() };
+    const { pool } = connect('postgres://user:secret@localhost/billing', {
+      logger,
+    });
+    const client = new pg.Client();
+    const failure = Object.assign(
+      new Error('postgres://user:secret@localhost/billing'),
+      { code, detail: 'password=do-not-log-this', client },
+    );
+    try {
+      expect(() => pool.emit('error', failure, client)).not.toThrow();
+      expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+        {
+          event: 'database.idle_client_error',
+          pool: 'database',
+          code: code === 'password=do-not-log-this' ? 'unknown' : code,
+        },
+        'Database idle connection failed',
+      );
+      expect(JSON.stringify(logger.error.mock.calls)).not.toContain('secret');
+      expect(JSON.stringify(logger.error.mock.calls)).not.toContain(
+        'do-not-log-this',
+      );
+    } finally {
+      await pool.end();
+    }
+  });
+
+  it.each([
+    'api.business',
+    'api.auth',
+    'worker.business',
+    'worker.queue',
+    'future-service.reporting',
+  ] as const)(
+    'identifies the %s pool without logging the error message',
+    async (poolName) => {
+      const logger = { error: vi.fn() };
+      const { pool } = connect('postgres://user:secret@localhost/billing', {
+        poolName,
+        logger,
+      });
+      try {
+        pool.emit('error', new Error('Connection terminated unexpectedly'));
+        expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+          {
+            event: 'database.idle_client_error',
+            pool: poolName,
+            code: 'CONNECTION_TERMINATED',
+          },
+          'Database idle connection failed',
+        );
+        expect(JSON.stringify(logger.error.mock.calls)).not.toContain('secret');
+      } finally {
+        await pool.end();
+      }
+    },
+  );
+
+  it('uses the supplied logger across a startup async gap', async () => {
+    const logger = { error: vi.fn() };
+    const { pool } = connect('postgres://user:secret@localhost/billing', {
+      poolName: 'new-application.background',
+      logger,
+    });
+    await Promise.resolve();
+    try {
+      expect(() =>
+        pool.emit('error', new Error('password=secret'), new pg.Client()),
+      ).not.toThrow();
+      expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+        {
+          event: 'database.idle_client_error',
+          pool: 'new-application.background',
+          code: 'unknown',
+        },
+        'Database idle connection failed',
+      );
+    } finally {
+      await pool.end();
+    }
+  });
 });
 
 describe('transaction retry backoff', () => {
