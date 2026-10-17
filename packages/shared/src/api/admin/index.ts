@@ -2,6 +2,8 @@ export * from './common.js';
 export * from './accounts.js';
 export * from './tenants.js';
 export * from './balance.js';
+export * from './ledger.js';
+export * from './cdrs.js';
 export * from './rates.js';
 export * from './receivables.js';
 export * from './audit.js';
