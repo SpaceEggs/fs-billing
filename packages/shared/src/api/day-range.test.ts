@@ -80,6 +80,54 @@ describe('one-month range', () => {
   });
 });
 
+describe('malformed dates', () => {
+  it.each([
+    ['bad', 'bad'],
+    ['2026-xx-01', '2026-xx-01'],
+    ['2026-09-01', 'bad'],
+    ['bad', '2026-09-01'],
+  ])('fail as one ordinary issue for from=%s to=%s', (from, to) => {
+    const result = rangeSchema.safeParse({ from, to });
+    expect(result.success).toBe(false);
+    expect(
+      result.error?.issues.every((issue) => issue.code === 'invalid_format'),
+    ).toBe(true);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual(
+      [from, to].flatMap((value, index) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(value) ? [] : [[['from', 'to'][index]]],
+      ),
+    );
+  });
+});
+
+describe('one-month rule across every four-digit year', () => {
+  it.each([
+    ['0001-01-01', '0001-01-31', true],
+    ['0001-01-01', '0100-01-01', false],
+    ['0050-03-15', '0050-04-14', true],
+    ['0050-03-15', '0050-04-15', false],
+    ['0099-12-31', '0100-01-30', true],
+    ['9999-12-01', '9999-12-31', true],
+    ['9999-12-31', '9999-12-31', true],
+    ['0000-12-31', '0001-01-30', true],
+  ])('%s to %s is %s', (from, to, allowed) => {
+    expect(rangeSchema.safeParse({ from, to }).success).toBe(allowed);
+    expect(isDayRangeWithinOneMonth(from, to)).toBe(allowed);
+  });
+
+  it.each([
+    ['0001-01-01', '0001-01-31'],
+    ['0001-01-31', '0001-02-27'],
+    ['0099-02-01', '0099-02-28'],
+    ['0100-01-31', '0100-02-27'],
+    ['0400-01-31', '0400-02-28'],
+    ['9999-12-01', '9999-12-31'],
+    ['9999-12-31', '9999-12-31'],
+  ])('a range starting %s ends at the latest on %s', (from, latest) => {
+    expect(latestRangeEnd(from)).toBe(latest);
+  });
+});
+
 describe('beijingRangeBounds', () => {
   it('turns inclusive Beijing dates into a half-open UTC interval', () => {
     expect(
