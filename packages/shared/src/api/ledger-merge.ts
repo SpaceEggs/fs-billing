@@ -27,7 +27,8 @@ export const ledgerAmounts = {
 
 /**
  * 通话扣费按北京日合并后的一行。occurredAt 是当天最后一笔扣费的接通时间，
- * balanceAfter 是按显示顺序累计到这一行为止的余额。partial 为真表示 day 是读取时的当天，
+ * balanceAfter 是按 (occurred_at, id) 升序累计到这一行为止的余额；合并行的位置取当天最后一笔扣费的 (occurred_at, id)，
+ * 所以并列时与同一时刻的人工流水的先后和逐笔余额一致。partial 为真表示 day 是读取时的当天，
  * 当天后续的扣费还会改变这一行。
  */
 export const mergedChargeRowSchema = z
@@ -41,6 +42,8 @@ export const mergedChargeRowSchema = z
     partial: z.boolean(),
   })
   .superRefine((row, context) => {
+    // 格式错误已经由 occurredAt 字段报告；无效时刻无法换算成日期。
+    if (!Number.isFinite(Date.parse(row.occurredAt))) return;
     if (beijingDayOf(row.occurredAt) !== row.day)
       context.addIssue({
         code: 'custom',

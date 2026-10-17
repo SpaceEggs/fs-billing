@@ -20,6 +20,11 @@ export const portalCdrSchema = z
   .superRefine(checkCdrShape);
 export type PortalCdr = z.infer<typeof portalCdrSchema>;
 
+/** 首页「最近话单」只含已接通（决定 29），所以 answeredAt 不可为空。 */
+export const portalRecentCallSchema = z
+  .strictObject({ ...cdrFields, answeredAt: cdrFields.answeredAt.unwrap() })
+  .superRefine(checkCdrShape);
+
 export const portalCdrsQuerySchema = z
   .strictObject({ ...cdrFilterFields, page: pageNumberSchema })
   .superRefine(checkDayRange);

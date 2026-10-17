@@ -277,6 +277,17 @@ describe('portal ledger rows', () => {
     ).toBe(false);
   });
 
+  it.each(['bad', '2026-09-28T25:00:00Z'])(
+    'reports a malformed merged-row time %j as an ordinary issue',
+    (occurredAt) => {
+      const result = portalLedgerRowSchema.safeParse({ ...charge, occurredAt });
+      expect(result.success).toBe(false);
+      expect(
+        result.error?.issues.map((issue) => [issue.code, issue.path]),
+      ).toEqual([['invalid_format', ['occurredAt']]]);
+    },
+  );
+
   it('writes the merged note the same way for the page and the CSV', () => {
     expect(formatMergedChargeNote(charge)).toBe(
       '2026-09-28 通话扣费，共 356 通',
@@ -305,6 +316,37 @@ describe('portal ledger rows', () => {
         to: '2026-10-01',
       }).success,
     ).toBe(false);
+  });
+
+  it('fixes the page size at 25 for the response', () => {
+    const response = {
+      currency: 'CNY',
+      balance: '-35.2',
+      totalAmount: '1300',
+      items: [recharge, charge],
+      pagination: { page: 1, pageSize: 25, total: 2 },
+    };
+    for (const pageSize of [100, 24, 26])
+      expect(
+        portalLedgerResponseSchema.safeParse({
+          ...response,
+          pagination: { page: 1, pageSize, total: 2 },
+        }).success,
+      ).toBe(false);
+    expect(
+      portalLedgerResponseSchema.safeParse({
+        ...response,
+        items: Array.from({ length: 26 }, () => recharge),
+        pagination: { page: 1, pageSize: 25, total: 26 },
+      }).success,
+    ).toBe(false);
+    expect(
+      portalLedgerResponseSchema.safeParse({
+        ...response,
+        items: Array.from({ length: 25 }, () => recharge),
+        pagination: { page: 1, pageSize: 25, total: 25 },
+      }).success,
+    ).toBe(true);
   });
 
   it('returns the balance and the filtered total beside the page', () => {
@@ -383,6 +425,31 @@ describe('portal home', () => {
         recentCalls: Array.from({ length: 11 }, () => answered),
       }).success,
     ).toBe(false);
+  });
+
+  it('fails a malformed asOf as an ordinary issue', () => {
+    const result = portalHomeResponseSchema.safeParse({
+      ...home,
+      usage: { ...usage, asOf: 'bad' },
+    });
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([
+      ['usage', 'asOf'],
+    ]);
+  });
+
+  it('shows answered calls only in recent calls', () => {
+    const result = portalHomeResponseSchema.safeParse({
+      ...home,
+      recentCalls: [answered, unanswered],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([
+      ['recentCalls', 1, 'answeredAt'],
+    ]);
+    expect(
+      portalHomeResponseSchema.parse({ ...home, recentCalls: [answered] })
+        .recentCalls,
+    ).toEqual([answered]);
   });
 
   it.each(['suspended', 'overdraft', 'low_balance', 'normal', 'disabled'])(

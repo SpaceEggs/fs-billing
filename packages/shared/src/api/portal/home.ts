@@ -3,7 +3,7 @@ import { currencySchema } from '../identity.js';
 import { moneyAmountSchema, nonnegativeMoneyAmountSchema } from '../money.js';
 import { tenantHealthSchema } from '../tenant-health.js';
 import { checkUsageDailyWindow, tenantUsageWindowFields } from '../usage.js';
-import { portalCdrSchema } from './cdrs.js';
+import { portalRecentCallSchema } from './cdrs.js';
 
 export const PORTAL_HOME_RECENT_CALLS = 10;
 
@@ -21,6 +21,6 @@ export const portalHomeResponseSchema = z.strictObject({
   health: tenantHealthSchema,
   usage: portalUsageSchema,
   /** 最近的话单，按时间倒序，最多 10 条。 */
-  recentCalls: z.array(portalCdrSchema).max(PORTAL_HOME_RECENT_CALLS),
+  recentCalls: z.array(portalRecentCallSchema).max(PORTAL_HOME_RECENT_CALLS),
 });
 export type PortalHomeResponse = z.infer<typeof portalHomeResponseSchema>;

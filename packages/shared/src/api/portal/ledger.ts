@@ -65,26 +65,18 @@ export type PortalLedgerExportRequest = z.infer<
   typeof portalLedgerExportRequestSchema
 >;
 
-export const portalLedgerResponseSchema = z
-  .strictObject({
-    currency: currencySchema,
-    /** 读取时的当前余额，页头显示。 */
-    balance: moneyAmountSchema,
-    /** 筛选后全部行（不只当前页）的金额合计，类型筛选时显示。 */
-    totalAmount: moneyAmountSchema,
-    items: z.array(portalLedgerRowSchema).max(100),
-    pagination: z.strictObject({
-      page: z.int().min(1),
-      pageSize: z.int().min(1).max(100),
-      total: z.int().nonnegative(),
-    }),
-  })
-  .superRefine((response, context) => {
-    if (response.items.length > response.pagination.pageSize)
-      context.addIssue({
-        code: 'custom',
-        path: ['items'],
-        message: '条数不能超过每页条数',
-      });
-  });
+export const portalLedgerResponseSchema = z.strictObject({
+  currency: currencySchema,
+  /** 读取时的当前余额，页头显示。 */
+  balance: moneyAmountSchema,
+  /** 筛选后全部行（不只当前页）的金额合计，类型筛选时显示。 */
+  totalAmount: moneyAmountSchema,
+  items: z.array(portalLedgerRowSchema).max(PORTAL_LEDGER_PAGE_SIZE),
+  pagination: z.strictObject({
+    page: z.int().min(1),
+    /** 门户每页固定 25 条（决定 37），响应不接受别的值。 */
+    pageSize: z.literal(PORTAL_LEDGER_PAGE_SIZE),
+    total: z.int().nonnegative(),
+  }),
+});
 export type PortalLedgerResponse = z.infer<typeof portalLedgerResponseSchema>;

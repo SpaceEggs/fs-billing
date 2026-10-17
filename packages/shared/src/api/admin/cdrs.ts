@@ -11,10 +11,14 @@ import {
 } from '../cdr-fields.js';
 import { checkDayRange, dayRangeFields } from '../day-range.js';
 
-/** 查询串里的布尔值只接受 'true' 或 'false'，z.coerce.boolean() 会把 'false' 当成真。 */
-const queryFlagSchema = z
-  .enum(['true', 'false'])
-  .transform((value) => value === 'true');
+/**
+ * 查询串里的布尔值只接受 'true' 或 'false'，z.coerce.boolean() 会把 'false' 当成真。
+ * 也接受已解析的布尔值：路由解析一次，数据库服务入口再解析同一个 schema，输出必须能再次通过。
+ */
+const queryFlagSchema = z.union([
+  z.boolean(),
+  z.enum(['true', 'false']).transform((value) => value === 'true'),
+]);
 
 /** 后台话单行：门户话单行加 unverified（计费系统授权超时期间由 FreeSWITCH 放行）。 */
 export const adminCdrSchema = z
