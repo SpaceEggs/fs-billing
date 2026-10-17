@@ -110,7 +110,8 @@ export function parseRateCsv<C extends Currency>(
   return { ok: true, entries };
 }
 
-function quote(cell: string): string {
+/** 按 RFC 4180 给单元格加引号：含逗号、引号、换行或首尾空白时。 */
+export function quoteCsvCell(cell: string): string {
   return /[",\r\n]/.test(cell) || cell !== cell.trim()
     ? `"${cell.replace(/"/g, '""')}"`
     : cell;
@@ -119,7 +120,9 @@ function quote(cell: string): string {
 /** 导出为 `prefix,country,rate`，费率固定 4 位小数。 */
 export function formatRateCsv(entries: readonly RateEntry<Currency>[]): string {
   const rows = entries.map((e) =>
-    [e.prefix, quote(e.country), e.perMinute.perMinute.toFixed(4)].join(','),
+    [e.prefix, quoteCsvCell(e.country), e.perMinute.perMinute.toFixed(4)].join(
+      ',',
+    ),
   );
   return `${[HEADER.join(','), ...rows].join('\n')}\n`;
 }

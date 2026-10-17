@@ -1,0 +1,20 @@
+Aggregate  (cost=34842.48..34842.50 rows=1 width=68) (actual time=20.314..20.315 rows=1 loops=1)
+  Buffers: shared hit=7365
+  ->  Append  (cost=0.42..34824.35 rows=2417 width=8) (actual time=4.210..20.083 rows=4815 loops=1)
+        Buffers: shared hit=7365
+        ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual time=0.005..0.005 rows=0 loops=1)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+              Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (country = '牙买加'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+              Rows Removed by Filter: 1
+              Buffers: shared hit=4
+        ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.48..34803.79 rows=2416 width=8) (actual time=4.205..19.926 rows=4815 loops=1)
+              Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+              Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (country = '牙买加'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+              Rows Removed by Filter: 241760
+              Heap Blocks: exact=6144
+              Buffers: shared hit=7361
+              ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7991.88 rows=246996 width=0) (actual time=3.815..3.816 rows=246575 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Buffers: shared hit=1217
+Planning Time: 0.101 ms
+Execution Time: 20.346 ms

@@ -1,0 +1,50 @@
+ set_config |              set_config              
+------------+--------------------------------------
+ tenant     | 00000000-0000-4000-8000-000000000001
+(1 row)
+
+== answered summary (covering index)
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual time=101.581..101.581 rows=1 loops=1)
+   Buffers: shared hit=2231
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual time=0.019..91.805 rows=234277 loops=1)
+         Buffers: shared hit=2231
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual time=0.019..0.019 rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Buffers: shared hit=4
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual time=0.014..84.640 rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+               Buffers: shared hit=2227
+ Planning:
+   Buffers: shared hit=666
+ Planning Time: 1.256 ms
+ Execution Time: 101.620 ms
+(17 rows)
+
+== country 中国 summary (covering index)
+                                                                                                                                                                                                                                 QUERY PLAN                                                                                                                                                                                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22340.92..22340.94 rows=1 width=68) (actual time=41.409..41.410 rows=1 loops=1)
+   Buffers: shared hit=2231
+   ->  Append  (cost=0.42..22068.41 rows=36334 width=8) (actual time=0.006..38.398 rows=70390 loops=1)
+         Buffers: shared hit=2231
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual time=0.006..0.006 rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (country = '中国'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Buffers: shared hit=4
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21878.26 rows=36333 width=8) (actual time=0.007..36.215 rows=70389 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (country = '中国'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Rows Removed by Filter: 163887
+               Heap Fetches: 0
+               Buffers: shared hit=2227
+ Planning:
+   Buffers: shared hit=6
+ Planning Time: 0.148 ms
+ Execution Time: 41.425 ms
+(18 rows)
+

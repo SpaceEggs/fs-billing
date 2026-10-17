@@ -1,0 +1,1302 @@
+ set_config 
+------------
+ tenant
+(1 row)
+
+              set_config              
+--------------------------------------
+ 00000000-0000-4000-8000-000000000001
+(1 row)
+
+== original policy app_can_see(tenant_id)
+-- Q3 answered summary
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+ Planning Time: 3.228 ms
+ Execution Time: 104.962 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+ Planning Time: 0.222 ms
+ Execution Time: 90.677 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+ Planning Time: 0.141 ms
+ Execution Time: 87.736 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+ Planning Time: 0.171 ms
+ Execution Time: 91.667 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+ Planning Time: 0.155 ms
+ Execution Time: 91.071 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=22796.35..22796.38 rows=1 width=68) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..21888.13 rows=121096 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..21274.17 rows=121095 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+               Heap Fetches: 0
+ Planning Time: 0.160 ms
+ Execution Time: 92.760 ms
+(11 rows)
+
+-- Q1 answered mid page
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=49401.15..49422.24 rows=50 width=106) (actual rows=50 loops=1)
+   ->  Merge Append  (cost=0.86..51065.12 rows=121096 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..49845.68 rows=121095 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+ Planning Time: 0.320 ms
+ Execution Time: 54.747 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=49401.15..49422.24 rows=50 width=106) (actual rows=50 loops=1)
+   ->  Merge Append  (cost=0.86..51065.12 rows=121096 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..49845.68 rows=121095 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+ Planning Time: 0.151 ms
+ Execution Time: 48.092 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=49401.15..49422.24 rows=50 width=106) (actual rows=50 loops=1)
+   ->  Merge Append  (cost=0.86..51065.12 rows=121096 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..49845.68 rows=121095 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+ Planning Time: 0.149 ms
+ Execution Time: 48.115 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=49401.15..49422.24 rows=50 width=106) (actual rows=50 loops=1)
+   ->  Merge Append  (cost=0.86..51065.12 rows=121096 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..49845.68 rows=121095 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+ Planning Time: 0.126 ms
+ Execution Time: 47.600 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=49401.15..49422.24 rows=50 width=106) (actual rows=50 loops=1)
+   ->  Merge Append  (cost=0.86..51065.12 rows=121096 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..49845.68 rows=121095 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+ Planning Time: 0.172 ms
+ Execution Time: 48.286 ms
+(11 rows)
+
+                                                                                                                                                                                                                   QUERY PLAN                                                                                                                                                                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=49401.15..49422.24 rows=50 width=106) (actual rows=50 loops=1)
+   ->  Merge Append  (cost=0.86..51065.12 rows=121096 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..49845.68 rows=121095 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+ Planning Time: 0.178 ms
+ Execution Time: 50.004 ms
+(11 rows)
+
+-- Q4 common callee p1
+                                                                                                                                                                                                                                           QUERY PLAN                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+   ->  Sort  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..34814.33 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..34805.65 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.208 ms
+ Execution Time: 111.537 ms
+(18 rows)
+
+                                                                                                                                                                                                                                           QUERY PLAN                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+   ->  Sort  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..34814.33 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..34805.65 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.192 ms
+ Execution Time: 105.983 ms
+(18 rows)
+
+                                                                                                                                                                                                                                           QUERY PLAN                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+   ->  Sort  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..34814.33 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..34805.65 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.258 ms
+ Execution Time: 113.279 ms
+(18 rows)
+
+                                                                                                                                                                                                                                           QUERY PLAN                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+   ->  Sort  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..34814.33 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..34805.65 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.211 ms
+ Execution Time: 106.654 ms
+(18 rows)
+
+                                                                                                                                                                                                                                           QUERY PLAN                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+   ->  Sort  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..34814.33 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..34805.65 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.178 ms
+ Execution Time: 104.887 ms
+(18 rows)
+
+                                                                                                                                                                                                                                           QUERY PLAN                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+   ->  Sort  (cost=34815.39..34815.49 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..34814.33 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..34805.65 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.154 ms
+ Execution Time: 105.835 ms
+(18 rows)
+
+-- Q7 Sep day-window statement
+                                                                                                                                                              QUERY PLAN                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=140028.13..140028.26 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=140028.13..140317.52 rows=115754 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=132421.06..136182.87 rows=115754 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=132420.86..132710.25 rows=115754 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=86821.83..115958.55 rows=115754 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.14..23340.10 rows=1 width=36) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..140039.91 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       SubPlan 1
+                                         ->  Aggregate  (cost=23338.54..23338.55 rows=1 width=32) (actual rows=1 loops=1)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23320.66 rows=7149 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                           ->  HashAggregate  (cost=86821.69..91460.89 rows=115754 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.99..74631.35 rows=115754 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 3.677 ms
+ JIT:
+   Functions: 34
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 280.108 ms
+(32 rows)
+
+                                                                                                                                                              QUERY PLAN                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=140028.13..140028.26 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=140028.13..140317.52 rows=115754 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=132421.06..136182.87 rows=115754 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=132420.86..132710.25 rows=115754 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=86821.83..115958.55 rows=115754 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.14..23340.10 rows=1 width=36) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..140039.91 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       SubPlan 1
+                                         ->  Aggregate  (cost=23338.54..23338.55 rows=1 width=32) (actual rows=1 loops=1)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23320.66 rows=7149 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                           ->  HashAggregate  (cost=86821.69..91460.89 rows=115754 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.99..74631.35 rows=115754 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.232 ms
+ JIT:
+   Functions: 34
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 182.597 ms
+(32 rows)
+
+                                                                                                                                                              QUERY PLAN                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=140028.13..140028.26 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=140028.13..140317.52 rows=115754 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=132421.06..136182.87 rows=115754 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=132420.86..132710.25 rows=115754 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=86821.83..115958.55 rows=115754 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.14..23340.10 rows=1 width=36) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..140039.91 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       SubPlan 1
+                                         ->  Aggregate  (cost=23338.54..23338.55 rows=1 width=32) (actual rows=1 loops=1)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23320.66 rows=7149 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                           ->  HashAggregate  (cost=86821.69..91460.89 rows=115754 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.99..74631.35 rows=115754 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.208 ms
+ JIT:
+   Functions: 34
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 161.547 ms
+(32 rows)
+
+                                                                                                                                                              QUERY PLAN                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=140028.13..140028.26 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=140028.13..140317.52 rows=115754 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=132421.06..136182.87 rows=115754 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=132420.86..132710.25 rows=115754 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=86821.83..115958.55 rows=115754 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.14..23340.10 rows=1 width=36) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..140039.91 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       SubPlan 1
+                                         ->  Aggregate  (cost=23338.54..23338.55 rows=1 width=32) (actual rows=1 loops=1)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23320.66 rows=7149 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                           ->  HashAggregate  (cost=86821.69..91460.89 rows=115754 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.99..74631.35 rows=115754 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.205 ms
+ JIT:
+   Functions: 34
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 156.625 ms
+(32 rows)
+
+                                                                                                                                                              QUERY PLAN                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=140028.13..140028.26 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=140028.13..140317.52 rows=115754 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=132421.06..136182.87 rows=115754 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=132420.86..132710.25 rows=115754 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=86821.83..115958.55 rows=115754 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.14..23340.10 rows=1 width=36) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..140039.91 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       SubPlan 1
+                                         ->  Aggregate  (cost=23338.54..23338.55 rows=1 width=32) (actual rows=1 loops=1)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23320.66 rows=7149 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                           ->  HashAggregate  (cost=86821.69..91460.89 rows=115754 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.99..74631.35 rows=115754 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.190 ms
+ JIT:
+   Functions: 34
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 152.683 ms
+(32 rows)
+
+                                                                                                                                                              QUERY PLAN                                                                                                                                                               
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=140028.13..140028.26 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=140028.13..140317.52 rows=115754 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=132421.06..136182.87 rows=115754 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=132420.86..132710.25 rows=115754 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=86821.83..115958.55 rows=115754 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.14..23340.10 rows=1 width=36) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..140039.91 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       SubPlan 1
+                                         ->  Aggregate  (cost=23338.54..23338.55 rows=1 width=32) (actual rows=1 loops=1)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23320.66 rows=7149 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                           ->  HashAggregate  (cost=86821.69..91460.89 rows=115754 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.99..74631.35 rows=115754 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.161 ms
+ JIT:
+   Functions: 34
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 153.189 ms
+(32 rows)
+
+ set_config 
+------------
+ tenant
+(1 row)
+
+              set_config              
+--------------------------------------
+ 00000000-0000-4000-8000-000000000001
+(1 row)
+
+== initplan policy
+-- Q3 answered summary
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=18565.08..18565.10 rows=1 width=68) (actual rows=1 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..17658.42 rows=120881 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..17045.56 rows=120880 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+               Heap Fetches: 0
+ Planning Time: 0.177 ms
+ Execution Time: 24.734 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=18565.08..18565.10 rows=1 width=68) (actual rows=1 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..17658.42 rows=120881 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..17045.56 rows=120880 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+               Heap Fetches: 0
+ Planning Time: 0.142 ms
+ Execution Time: 23.437 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=18565.08..18565.10 rows=1 width=68) (actual rows=1 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..17658.42 rows=120881 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..17045.56 rows=120880 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+               Heap Fetches: 0
+ Planning Time: 0.120 ms
+ Execution Time: 23.265 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=18565.08..18565.10 rows=1 width=68) (actual rows=1 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..17658.42 rows=120881 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..17045.56 rows=120880 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+               Heap Fetches: 0
+ Planning Time: 0.117 ms
+ Execution Time: 23.154 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=18565.08..18565.10 rows=1 width=68) (actual rows=1 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..17658.42 rows=120881 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..17045.56 rows=120880 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+               Heap Fetches: 0
+ Planning Time: 0.180 ms
+ Execution Time: 24.330 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=18565.08..18565.10 rows=1 width=68) (actual rows=1 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Append  (cost=0.42..17658.42 rows=120881 width=8) (actual rows=234277 loops=1)
+         ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=8) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Only Scan using probe_cover on cdrs_2026_09 cdrs_2  (cost=0.42..17045.56 rows=120880 width=8) (actual rows=234276 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+               Heap Fetches: 0
+ Planning Time: 0.146 ms
+ Execution Time: 24.859 ms
+(17 rows)
+
+-- Q1 answered mid page
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=45388.87..45408.24 rows=50 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Merge Append  (cost=0.86..46834.34 rows=120881 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..45617.06 rows=120880 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+ Planning Time: 0.208 ms
+ Execution Time: 15.827 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=45388.87..45408.24 rows=50 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Merge Append  (cost=0.86..46834.34 rows=120881 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..45617.06 rows=120880 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+ Planning Time: 0.221 ms
+ Execution Time: 14.753 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=45388.87..45408.24 rows=50 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Merge Append  (cost=0.86..46834.34 rows=120881 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..45617.06 rows=120880 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+ Planning Time: 0.252 ms
+ Execution Time: 15.564 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=45388.87..45408.24 rows=50 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Merge Append  (cost=0.86..46834.34 rows=120881 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..45617.06 rows=120880 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+ Planning Time: 0.279 ms
+ Execution Time: 15.949 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=45388.87..45408.24 rows=50 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Merge Append  (cost=0.86..46834.34 rows=120881 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..45617.06 rows=120880 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+ Planning Time: 0.218 ms
+ Execution Time: 16.222 ms
+(17 rows)
+
+                                                                                                                               QUERY PLAN                                                                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=45388.87..45408.24 rows=50 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Merge Append  (cost=0.86..46834.34 rows=120881 width=106) (actual rows=117200 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=106) (actual rows=1 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+         ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..45617.06 rows=120880 width=106) (actual rows=117200 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+               Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+ Planning Time: 0.178 ms
+ Execution Time: 14.838 ms
+(17 rows)
+
+-- Q4 common callee p1
+                                                                                                                                                       QUERY PLAN                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=30492.28..30492.38 rows=40 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Sort  (cost=30492.23..30492.33 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..30491.16 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..30482.51 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.158 ms
+ Execution Time: 49.705 ms
+(24 rows)
+
+                                                                                                                                                       QUERY PLAN                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=30492.28..30492.38 rows=40 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Sort  (cost=30492.23..30492.33 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..30491.16 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..30482.51 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.195 ms
+ Execution Time: 42.948 ms
+(24 rows)
+
+                                                                                                                                                       QUERY PLAN                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=30492.28..30492.38 rows=40 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Sort  (cost=30492.23..30492.33 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..30491.16 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..30482.51 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.180 ms
+ Execution Time: 37.330 ms
+(24 rows)
+
+                                                                                                                                                       QUERY PLAN                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=30492.28..30492.38 rows=40 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Sort  (cost=30492.23..30492.33 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..30491.16 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..30482.51 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.189 ms
+ Execution Time: 33.614 ms
+(24 rows)
+
+                                                                                                                                                       QUERY PLAN                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=30492.28..30492.38 rows=40 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Sort  (cost=30492.23..30492.33 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..30491.16 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..30482.51 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.184 ms
+ Execution Time: 34.216 ms
+(24 rows)
+
+                                                                                                                                                       QUERY PLAN                                                                                                                                                        
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=30492.28..30492.38 rows=40 width=106) (actual rows=50 loops=1)
+   InitPlan 1
+     ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+   InitPlan 2
+     ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+   InitPlan 3
+     ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+   ->  Sort  (cost=30492.23..30492.33 rows=40 width=106) (actual rows=50 loops=1)
+         Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+         Sort Method: top-N heapsort  Memory: 42kB
+         ->  Append  (cost=0.42..30491.16 rows=40 width=106) (actual rows=11821 loops=1)
+               ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual rows=0 loops=1)
+                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 1
+               ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=7992.40..30482.51 rows=39 width=106) (actual rows=11821 loops=1)
+                     Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                     Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%100000%'::text))
+                     Rows Removed by Filter: 234754
+                     Heap Blocks: exact=6144
+                     ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..7992.39 rows=247037 width=0) (actual rows=246575 loops=1)
+                           Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.151 ms
+ Execution Time: 34.506 ms
+(24 rows)
+
+-- Q7 Sep day-window statement
+                                                                                                                                         QUERY PLAN                                                                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=135683.94..135684.06 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=135683.94..135972.96 rows=115609 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=128086.40..131843.49 rows=115609 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=128086.20..128375.22 rows=115609 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=82764.26..111644.12 rows=115609 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.19..23090.56 rows=1 width=36) (actual rows=1 loops=1)
+                                 InitPlan 8
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 9
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 10
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..138542.36 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1)))
+                                       SubPlan 7
+                                         ->  Aggregate  (cost=23088.98..23088.99 rows=1 width=32) (actual rows=1 loops=1)
+                                               InitPlan 4
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                               InitPlan 5
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                               InitPlan 6
+                                                 ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23071.08 rows=7140 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1)))
+                           ->  HashAggregate  (cost=82764.07..87397.46 rows=115609 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 InitPlan 1
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 2
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 3
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.96..70588.95 rows=115609 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.405 ms
+ JIT:
+   Functions: 43
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 93.606 ms
+(50 rows)
+
+                                                                                                                                         QUERY PLAN                                                                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=135683.94..135684.06 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=135683.94..135972.96 rows=115609 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=128086.40..131843.49 rows=115609 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=128086.20..128375.22 rows=115609 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=82764.26..111644.12 rows=115609 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.19..23090.56 rows=1 width=36) (actual rows=1 loops=1)
+                                 InitPlan 8
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 9
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 10
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..138542.36 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1)))
+                                       SubPlan 7
+                                         ->  Aggregate  (cost=23088.98..23088.99 rows=1 width=32) (actual rows=1 loops=1)
+                                               InitPlan 4
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                               InitPlan 5
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                               InitPlan 6
+                                                 ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23071.08 rows=7140 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1)))
+                           ->  HashAggregate  (cost=82764.07..87397.46 rows=115609 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 InitPlan 1
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 2
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 3
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.96..70588.95 rows=115609 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.177 ms
+ JIT:
+   Functions: 43
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 92.295 ms
+(50 rows)
+
+                                                                                                                                         QUERY PLAN                                                                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=135683.94..135684.06 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=135683.94..135972.96 rows=115609 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=128086.40..131843.49 rows=115609 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=128086.20..128375.22 rows=115609 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=82764.26..111644.12 rows=115609 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.19..23090.56 rows=1 width=36) (actual rows=1 loops=1)
+                                 InitPlan 8
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 9
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 10
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..138542.36 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1)))
+                                       SubPlan 7
+                                         ->  Aggregate  (cost=23088.98..23088.99 rows=1 width=32) (actual rows=1 loops=1)
+                                               InitPlan 4
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                               InitPlan 5
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                               InitPlan 6
+                                                 ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23071.08 rows=7140 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1)))
+                           ->  HashAggregate  (cost=82764.07..87397.46 rows=115609 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 InitPlan 1
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 2
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 3
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.96..70588.95 rows=115609 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.185 ms
+ JIT:
+   Functions: 43
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 90.899 ms
+(50 rows)
+
+                                                                                                                                         QUERY PLAN                                                                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=135683.94..135684.06 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=135683.94..135972.96 rows=115609 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=128086.40..131843.49 rows=115609 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=128086.20..128375.22 rows=115609 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=82764.26..111644.12 rows=115609 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.19..23090.56 rows=1 width=36) (actual rows=1 loops=1)
+                                 InitPlan 8
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 9
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 10
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..138542.36 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1)))
+                                       SubPlan 7
+                                         ->  Aggregate  (cost=23088.98..23088.99 rows=1 width=32) (actual rows=1 loops=1)
+                                               InitPlan 4
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                               InitPlan 5
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                               InitPlan 6
+                                                 ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23071.08 rows=7140 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1)))
+                           ->  HashAggregate  (cost=82764.07..87397.46 rows=115609 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 InitPlan 1
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 2
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 3
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.96..70588.95 rows=115609 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.197 ms
+ JIT:
+   Functions: 43
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 88.622 ms
+(50 rows)
+
+                                                                                                                                         QUERY PLAN                                                                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=135683.94..135684.06 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=135683.94..135972.96 rows=115609 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=128086.40..131843.49 rows=115609 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=128086.20..128375.22 rows=115609 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=82764.26..111644.12 rows=115609 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.19..23090.56 rows=1 width=36) (actual rows=1 loops=1)
+                                 InitPlan 8
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 9
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 10
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..138542.36 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1)))
+                                       SubPlan 7
+                                         ->  Aggregate  (cost=23088.98..23088.99 rows=1 width=32) (actual rows=1 loops=1)
+                                               InitPlan 4
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                               InitPlan 5
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                               InitPlan 6
+                                                 ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23071.08 rows=7140 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1)))
+                           ->  HashAggregate  (cost=82764.07..87397.46 rows=115609 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 InitPlan 1
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 2
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 3
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.96..70588.95 rows=115609 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.176 ms
+ JIT:
+   Functions: 43
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 88.090 ms
+(50 rows)
+
+                                                                                                                                         QUERY PLAN                                                                                                                                          
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=135683.94..135684.06 rows=50 width=108) (actual rows=33 loops=1)
+   ->  Sort  (cost=135683.94..135972.96 rows=115609 width=108) (actual rows=33 loops=1)
+         Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+         Sort Method: quicksort  Memory: 29kB
+         ->  WindowAgg  (cost=128086.40..131843.49 rows=115609 width=108) (actual rows=33 loops=1)
+               ->  Sort  (cost=128086.20..128375.22 rows=115609 width=108) (actual rows=33 loops=1)
+                     Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                     Sort Method: quicksort  Memory: 27kB
+                     ->  Nested Loop  (cost=82764.26..111644.12 rows=115609 width=108) (actual rows=33 loops=1)
+                           ->  Limit  (cost=0.19..23090.56 rows=1 width=36) (actual rows=1 loops=1)
+                                 InitPlan 8
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 9
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 10
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Index Scan Backward using monthly_statements_tenant_id_month_key on monthly_statements s  (cost=0.14..138542.36 rows=6 width=36) (actual rows=1 loops=1)
+                                       Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (month < '2026-09-01'::date))
+                                       Filter: ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1)))
+                                       SubPlan 7
+                                         ->  Aggregate  (cost=23088.98..23088.99 rows=1 width=32) (actual rows=1 loops=1)
+                                               InitPlan 4
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                               InitPlan 5
+                                                 ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                               InitPlan 6
+                                                 ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                               ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23071.08 rows=7140 width=5) (actual rows=0 loops=1)
+                                                     Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= ((s.month + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < '2026-08-31 16:00:00+00'::timestamp with time zone))
+                                                     Filter: ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1)))
+                           ->  HashAggregate  (cost=82764.07..87397.46 rows=115609 width=76) (actual rows=33 loops=1)
+                                 Group Key: CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END, ledger_entries.kind, ((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                                 Planned Partitions: 8  Batches: 1  Memory Usage: 801kB
+                                 InitPlan 1
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                                 InitPlan 2
+                                   ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                                 InitPlan 3
+                                   ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                                 ->  Bitmap Heap Scan on ledger_entries  (cost=11143.96..70588.95 rows=115609 width=45) (actual rows=234280 loops=1)
+                                       Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                       Filter: ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1)))
+                                       Heap Blocks: exact=4262
+                                       ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual rows=234280 loops=1)
+                                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+ Planning Time: 0.190 ms
+ JIT:
+   Functions: 43
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+ Execution Time: 87.203 ms
+(50 rows)
+

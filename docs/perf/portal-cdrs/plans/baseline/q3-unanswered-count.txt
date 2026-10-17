@@ -1,0 +1,8 @@
+Aggregate  (cost=8145.30..8145.31 rows=1 width=4) (actual time=6.181..6.181 rows=1 loops=1)
+  Buffers: shared hit=5331
+  ->  Index Scan using cdrs_2026_09_tenant_id_answered_at_idx on cdrs_2026_09 cdrs  (cost=0.42..8138.90 rows=2559 width=0) (actual time=0.010..5.942 rows=12297 loops=1)
+        Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+        Filter: ((started_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        Buffers: shared hit=5331
+Planning Time: 0.074 ms
+Execution Time: 6.194 ms

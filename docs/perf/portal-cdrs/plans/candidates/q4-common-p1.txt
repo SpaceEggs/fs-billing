@@ -1,0 +1,24 @@
+Limit  (cost=34853.97..34854.07 rows=40 width=106) (actual time=98.589..98.593 rows=50 loops=1)
+  Buffers: shared hit=7366
+  ->  Sort  (cost=34853.97..34854.07 rows=40 width=106) (actual time=98.589..98.590 rows=50 loops=1)
+        Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+        Sort Method: top-N heapsort  Memory: 42kB
+        Buffers: shared hit=7366
+        ->  Append  (cost=0.42..34852.91 rows=40 width=106) (actual time=4.091..97.099 rows=11821 loops=1)
+              Buffers: shared hit=7366
+              ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual time=0.008..0.008 rows=0 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                    Rows Removed by Filter: 1
+                    Buffers: shared hit=5
+              ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=8009.93..34844.23 rows=39 width=106) (actual time=4.083..96.710 rows=11821 loops=1)
+                    Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (billing_number ~~ '%100000%'::text))
+                    Rows Removed by Filter: 234754
+                    Heap Blocks: exact=6144
+                    Buffers: shared hit=7361
+                    ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..8009.93 rows=247480 width=0) (actual time=3.716..3.716 rows=246575 loops=1)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                          Buffers: shared hit=1217
+Planning Time: 0.142 ms
+Execution Time: 98.629 ms
