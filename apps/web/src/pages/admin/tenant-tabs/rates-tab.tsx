@@ -259,9 +259,9 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
         />
       ))}
-      <div className="rounded-lg border border-brand-border bg-brand-soft px-3.5 py-2.5 text-[13px] md:hidden">
-        <span className="font-semibold">请在电脑上操作</span>
-        <span className="block text-muted-foreground">
+      <div className="flex flex-col gap-0.5 rounded-[10px] border border-brand-border bg-brand-soft px-3.5 py-3 text-sm md:hidden">
+        <span className="font-semibold text-primary">请在电脑上操作</span>
+        <span className="text-[13px] text-muted-foreground">
           导入、复制费率表涉及大量明细核对，手机上仅支持查看和搜索。
         </span>
       </div>
