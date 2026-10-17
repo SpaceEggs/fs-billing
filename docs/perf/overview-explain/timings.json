@@ -1,0 +1,86 @@
+[
+  {
+    "tenant": "large",
+    "round": 1,
+    "callMs": 531.28,
+    "untimedExecutionMs": 410.624,
+    "timedExecutionMs": 474.379
+  },
+  {
+    "tenant": "small",
+    "round": 1,
+    "callMs": 4.273,
+    "untimedExecutionMs": 0.384,
+    "timedExecutionMs": 0.419
+  },
+  {
+    "tenant": "large",
+    "round": 2,
+    "callMs": 398.596,
+    "untimedExecutionMs": 438.132,
+    "timedExecutionMs": 474.533
+  },
+  {
+    "tenant": "small",
+    "round": 2,
+    "callMs": 3.674,
+    "untimedExecutionMs": 0.385,
+    "timedExecutionMs": 0.465
+  },
+  {
+    "tenant": "large",
+    "round": 3,
+    "callMs": 449.658,
+    "untimedExecutionMs": 448.252,
+    "timedExecutionMs": 480.276
+  },
+  {
+    "tenant": "small",
+    "round": 3,
+    "callMs": 3.076,
+    "untimedExecutionMs": 0.394,
+    "timedExecutionMs": 0.479
+  },
+  {
+    "tenant": "large",
+    "round": 4,
+    "callMs": 428.305,
+    "untimedExecutionMs": 454.825,
+    "timedExecutionMs": 460.39
+  },
+  {
+    "tenant": "small",
+    "round": 4,
+    "callMs": 4.878,
+    "untimedExecutionMs": 0.418,
+    "timedExecutionMs": 0.515
+  },
+  {
+    "tenant": "large",
+    "round": 5,
+    "callMs": 419.25,
+    "untimedExecutionMs": 436.191,
+    "timedExecutionMs": 463.623
+  },
+  {
+    "tenant": "small",
+    "round": 5,
+    "callMs": 3.686,
+    "untimedExecutionMs": 0.404,
+    "timedExecutionMs": 0.408
+  },
+  {
+    "tenant": "large",
+    "round": 0,
+    "callMs": 392.119,
+    "untimedExecutionMs": 414.007,
+    "timedExecutionMs": 478.131
+  },
+  {
+    "tenant": "small",
+    "round": 0,
+    "callMs": 3.785,
+    "untimedExecutionMs": 0.389,
+    "timedExecutionMs": 0.594
+  }
+]

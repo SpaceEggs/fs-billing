@@ -1,0 +1,231 @@
+{
+  "asOf": "2026-10-17T04:00:00.000Z",
+  "metadata": [
+    {
+      "version": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "max_parallel_workers_per_gather": "2",
+      "effective_cache_size": "4GB",
+      "jit": "on",
+      "plan_cache_mode": "auto",
+      "enable_partition_pruning": "on",
+      "track_io_timing": "off"
+    }
+  ],
+  "sizes": [
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000001",
+      "cdrs": 2000000,
+      "unanswered": 600000,
+      "rejected": 200000,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T03:59:57.408Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000002",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000003",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000004",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000005",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000006",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000007",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000008",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000009",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000010",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000011",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000012",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000013",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000014",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000015",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000016",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000017",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000018",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000019",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    },
+    {
+      "tenant_id": "00000000-0000-4000-8000-000000000020",
+      "cdrs": 1000,
+      "unanswered": 300,
+      "rejected": 100,
+      "first_started": "2026-08-18T04:00:00.000Z",
+      "last_started": "2026-10-17T02:33:36.000Z"
+    }
+  ],
+  "ledger": [
+    {
+      "kind": "adjustment",
+      "count": 400
+    },
+    {
+      "kind": "call_charge",
+      "count": 1413300
+    }
+  ],
+  "indexes": [
+    {
+      "parent_index": "cdrs_tenant_answered_at",
+      "partition_index": "cdrs_2026_08_tenant_id_answered_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_08_tenant_id_answered_at_idx ON public.cdrs_2026_08 USING btree (tenant_id, answered_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_answered_at",
+      "partition_index": "cdrs_2026_09_tenant_id_answered_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_09_tenant_id_answered_at_idx ON public.cdrs_2026_09 USING btree (tenant_id, answered_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_answered_at",
+      "partition_index": "cdrs_2026_10_tenant_id_answered_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_10_tenant_id_answered_at_idx ON public.cdrs_2026_10 USING btree (tenant_id, answered_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_answered_at",
+      "partition_index": "cdrs_2026_11_tenant_id_answered_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_11_tenant_id_answered_at_idx ON public.cdrs_2026_11 USING btree (tenant_id, answered_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_started_at",
+      "partition_index": "cdrs_2026_08_tenant_id_started_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_08_tenant_id_started_at_idx ON public.cdrs_2026_08 USING btree (tenant_id, started_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_started_at",
+      "partition_index": "cdrs_2026_09_tenant_id_started_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_09_tenant_id_started_at_idx ON public.cdrs_2026_09 USING btree (tenant_id, started_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_started_at",
+      "partition_index": "cdrs_2026_10_tenant_id_started_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_10_tenant_id_started_at_idx ON public.cdrs_2026_10 USING btree (tenant_id, started_at)"
+    },
+    {
+      "parent_index": "cdrs_tenant_started_at",
+      "partition_index": "cdrs_2026_11_tenant_id_started_at_idx",
+      "definition": "CREATE INDEX cdrs_2026_11_tenant_id_started_at_idx ON public.cdrs_2026_11 USING btree (tenant_id, started_at)"
+    }
+  ]
+}

@@ -26,6 +26,9 @@ export async function readTenantUsageOverview(
   const instant = now
     ? sql`${now.toISOString()}::timestamptz`
     : sql`statement_timestamp()`;
+  // 大租户要聚合上百万行，JIT 编译开销大于收益；只影响当前事务。
+  // bounds 被多处引用会物化，daily_spend 用标量子查询取边界，日期条件才能进入流水索引，见 docs/perf/overview-explain.md。
+  await tx.execute(sql`set local jit = off`);
   const { rows } = await tx.execute<{ overview: unknown }>(sql`
     with instant as (select ${instant} as as_of),
     bounds as (
@@ -36,10 +39,10 @@ export async function readTenantUsageOverview(
     ),
     daily_spend as (
       select (l.occurred_at at time zone 'Asia/Shanghai')::date as day, -sum(l.amount) as spend
-      from ledger_entries l cross join bounds b
+      from ledger_entries l
       where l.tenant_id = ${tenantId}::uuid and l.kind = 'call_charge'
-        and l.occurred_at >= (b.today - 29)::timestamp at time zone 'Asia/Shanghai'
-        and l.occurred_at < (b.today + 1)::timestamp at time zone 'Asia/Shanghai'
+        and l.occurred_at >= (select (today - 29)::timestamp at time zone 'Asia/Shanghai' from bounds)
+        and l.occurred_at < (select (today + 1)::timestamp at time zone 'Asia/Shanghai' from bounds)
       group by 1
     ),
     days as (

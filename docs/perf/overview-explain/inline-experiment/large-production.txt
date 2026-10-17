@@ -1,0 +1,86 @@
+Nested Loop  (cost=222061.68..244751.15 rows=1 width=32) (actual time=840.704..840.710 rows=1 loops=1)
+  Buffers: shared hit=10501 read=34832
+  CTE days
+    ->  Hash Right Join  (cost=111108.31..128607.98 rows=50761 width=36) (actual time=241.052..241.132 rows=30 loops=1)
+          Hash Cond: ((((l.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date) = (((statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text))::date - n.n))
+          Buffers: shared hit=7401 read=5829
+          ->  HashAggregate  (cost=111107.63..121246.94 rows=338408 width=36) (actual time=241.008..241.076 rows=30 loops=1)
+                Group Key: ((l.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                Planned Partitions: 16  Batches: 1  Memory Usage: 801kB
+                Buffers: shared hit=7401 read=5829
+                ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries l  (cost=0.46..88992.94 rows=345205 width=9) (actual time=0.031..196.835 rows=688334 loops=1)
+                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= (((((statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text))::date - 29))::timestamp without time zone AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < (((((statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text))::date + 1))::timestamp without time zone AT TIME ZONE 'Asia/Shanghai'::text)))
+                      Filter: ((kind = 'call_charge'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                      Rows Removed by Filter: 20
+                      Buffers: shared hit=7401 read=5829
+          ->  Hash  (cost=0.30..0.30 rows=30 width=4) (actual time=0.034..0.035 rows=30 loops=1)
+                Buckets: 1024  Batches: 1  Memory Usage: 10kB
+                ->  Function Scan on generate_series n  (cost=0.00..0.30 rows=30 width=4) (actual time=0.011..0.012 rows=30 loops=1)
+  InitPlan 3
+    ->  Aggregate  (cost=5617.07..5617.08 rows=1 width=32) (actual time=241.214..241.214 rows=1 loops=1)
+          Buffers: shared hit=7401 read=5829
+          ->  Sort  (cost=4982.56..5109.46 rows=50761 width=36) (actual time=241.156..241.157 rows=30 loops=1)
+                Sort Key: days.day
+                Sort Method: quicksort  Memory: 25kB
+                Buffers: shared hit=7401 read=5829
+                ->  CTE Scan on days  (cost=0.00..1015.22 rows=50761 width=36) (actual time=241.054..241.135 rows=30 loops=1)
+                      Buffers: shared hit=7401 read=5829
+  InitPlan 4
+    ->  Aggregate  (cost=1142.12..1142.14 rows=1 width=32) (actual time=0.007..0.007 rows=1 loops=1)
+          ->  CTE Scan on days days_1  (cost=0.00..1015.22 rows=50761 width=32) (actual time=0.000..0.001 rows=30 loops=1)
+  ->  Nested Loop  (cost=57309.02..57310.75 rows=1 width=56) (actual time=400.692..400.696 rows=1 loops=1)
+        Buffers: shared hit=3095 read=9251
+        ->  Seq Scan on tenants t  (cost=0.00..1.70 rows=1 width=20) (actual time=0.103..0.105 rows=1 loops=1)
+              Filter: ((id = '00000000-0000-4000-8000-000000000001'::uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+              Rows Removed by Filter: 19
+              Buffers: shared hit=1
+        ->  Aggregate  (cost=57309.02..57309.04 rows=1 width=36) (actual time=400.579..400.580 rows=1 loops=1)
+              Buffers: shared hit=3094 read=9251
+              ->  Append  (cost=0.45..56347.49 rows=192307 width=4) (actual time=0.038..387.430 rows=385000 loops=1)
+                    Buffers: shared hit=3094 read=9251
+                    Subplans Removed: 1
+                    ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_idx on cdrs_2026_08 c_1  (cost=0.45..8.50 rows=1 width=4) (actual time=0.018..0.018 rows=0 loops=1)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= (date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (answered_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)))
+                          Filter: ((started_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                          Buffers: shared hit=1 read=2
+                    ->  Index Scan using cdrs_2026_09_tenant_id_answered_at_idx on cdrs_2026_09 c_2  (cost=0.45..8.51 rows=1 width=4) (actual time=0.010..0.010 rows=0 loops=1)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= (date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (answered_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)))
+                          Filter: ((started_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                          Buffers: shared hit=1 read=2
+                    ->  Seq Scan on cdrs_2026_10 c_3  (cost=0.00..55368.94 rows=192304 width=4) (actual time=0.010..375.121 rows=385000 loops=1)
+                          Filter: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= (date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (answered_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (started_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                          Rows Removed by Filter: 170225
+                          Buffers: shared hit=3092 read=9247
+  ->  Aggregate  (cost=29385.45..29385.47 rows=1 width=4) (actual time=128.264..128.265 rows=1 loops=1)
+        Buffers: shared hit=3 read=12353
+        ->  Append  (cost=0.45..29176.73 rows=83491 width=0) (actual time=6.726..124.841 rows=165000 loops=1)
+              Buffers: shared hit=3 read=12353
+              Subplans Removed: 3
+              ->  Bitmap Heap Scan on cdrs_2026_10 c_5  (cost=5991.23..28742.29 rows=83488 width=0) (actual time=6.725..119.540 rows=165000 loops=1)
+                    Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    Filter: ((started_at >= (date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (started_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                    Heap Blocks: exact=12223
+                    Buffers: shared hit=3 read=12353
+                    ->  Bitmap Index Scan on cdrs_2026_10_tenant_id_answered_at_idx  (cost=0.00..5970.36 rows=166593 width=0) (actual time=2.376..2.376 rows=165000 loops=1)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Buffers: shared hit=2 read=131
+  SubPlan 2
+    ->  Aggregate  (cost=22687.69..22687.70 rows=1 width=32) (actual time=70.491..70.491 rows=1 loops=1)
+          Buffers: shared hit=2 read=7399
+          ->  Bitmap Heap Scan on ledger_entries l_1  (cost=634.21..22663.30 rows=9756 width=5) (actual time=8.206..56.753 rows=385000 loops=1)
+                Recheck Cond: ((tenant_id = t.id) AND (occurred_at >= (date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)))
+                Filter: ((kind = 'call_charge'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                Rows Removed by Filter: 20
+                Heap Blocks: exact=5501
+                Buffers: shared hit=2 read=7399
+                ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..631.77 rows=19466 width=0) (actual time=7.830..7.830 rows=385020 loops=1)
+                      Index Cond: ((tenant_id = t.id) AND (occurred_at >= (date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < ((date_trunc('month'::text, (statement_timestamp() AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)))
+                      Buffers: shared hit=1 read=1899
+Planning:
+  Buffers: shared hit=3 read=3
+Planning Time: 0.726 ms
+JIT:
+  Functions: 75
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 2.513 ms (Deform 0.440 ms), Inlining 0.000 ms, Optimization 0.688 ms, Emission 23.689 ms, Total 26.890 ms
+Execution Time: 864.315 ms
