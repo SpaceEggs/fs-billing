@@ -1,0 +1,1109 @@
+{
+  "run": "VISMVC8ZG2H",
+  "entries": [
+    {
+      "page": "tenant-list",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "租户列表",
+        "label": "1a 电脑"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-list-light.png",
+        "app": "app-tenant-list-light.png",
+        "compare": "compare-tenant-list-light.png"
+      }
+    },
+    {
+      "page": "tenant-create",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建 / 编辑租户",
+        "label": "4a 电脑 · 空白表单"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-create-light.png",
+        "app": "app-tenant-create-light.png",
+        "compare": "compare-tenant-create-light.png"
+      }
+    },
+    {
+      "page": "tenant-create-success",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建租户 · 手机与成功",
+        "label": "4e 电脑 · 创建成功"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-create-success-light.png",
+        "app": "app-tenant-create-success-light.png",
+        "compare": "compare-tenant-create-success-light.png"
+      }
+    },
+    {
+      "page": "tenant-edit",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建 / 编辑租户",
+        "label": "5a 电脑 · 编辑租户（编码、币种只读）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-edit-light.png",
+        "app": "app-tenant-edit-light.png",
+        "compare": "compare-tenant-edit-light.png"
+      }
+    },
+    {
+      "page": "tenant-overview",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1a 概况"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-overview-light.png",
+        "app": "app-tenant-overview-light.png",
+        "compare": "compare-tenant-overview-light.png"
+      }
+    },
+    {
+      "page": "tenant-ledger",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "租户详情",
+        "label": "2a 电脑 · ABC001 透支中"
+      },
+      "designTheme": "light",
+      "note": "第三批租户详情没有余额流水画框，对照第一批租户详情。",
+      "files": {
+        "design": "design-tenant-ledger-light.png",
+        "app": "app-tenant-ledger-light.png",
+        "compare": "compare-tenant-ledger-light.png"
+      }
+    },
+    {
+      "page": "tenant-rates",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "费率标签页",
+        "label": "7a 电脑 · 费率标签页（当前生效版本）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-rates-light.png",
+        "app": "app-tenant-rates-light.png",
+        "compare": "compare-tenant-rates-light.png"
+      }
+    },
+    {
+      "page": "tenant-rates-scheduled",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "费率标签页",
+        "label": "7b 电脑 · 有排定的新版本"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-rates-scheduled-light.png",
+        "app": "app-tenant-rates-scheduled-light.png",
+        "compare": "compare-tenant-rates-scheduled-light.png"
+      }
+    },
+    {
+      "page": "tenant-settings",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1h 设置 · 已修改，待保存"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-settings-light.png",
+        "app": "app-tenant-settings-light.png",
+        "compare": "compare-tenant-settings-light.png"
+      }
+    },
+    {
+      "page": "tenant-portal",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1j 门户账号"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-portal-light.png",
+        "app": "app-tenant-portal-light.png",
+        "compare": "compare-tenant-portal-light.png"
+      }
+    },
+    {
+      "page": "balance-dialog",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "余额操作对话框",
+        "label": "3a 充值（备注客户可见）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-balance-dialog-light.png",
+        "app": "app-balance-dialog-light.png",
+        "compare": "compare-balance-dialog-light.png"
+      }
+    },
+    {
+      "page": "balance-confirm",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "余额操作对话框",
+        "label": "3d 二次确认"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-balance-confirm-light.png",
+        "app": "app-balance-confirm-light.png",
+        "compare": "compare-balance-confirm-light.png"
+      }
+    },
+    {
+      "page": "rates-import-upload",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 上传",
+        "label": "1a 未选择文件 · 立即生效"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供导入，手机变体截费率标签页的「请在电脑上操作」提示。",
+      "files": {
+        "design": "design-rates-import-upload-light.png",
+        "app": "app-rates-import-upload-light.png",
+        "compare": "compare-rates-import-upload-light.png"
+      }
+    },
+    {
+      "page": "rates-import-preview",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 预览与确认",
+        "label": "2a 校验通过 · 预览变动"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供导入，见 rates-import-upload 手机变体。",
+      "files": {
+        "design": "design-rates-import-preview-light.png",
+        "app": "app-rates-import-preview-light.png",
+        "compare": "compare-rates-import-preview-light.png"
+      }
+    },
+    {
+      "page": "rates-import-errors",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 预览与确认",
+        "label": "2b 校验失败 · 不能继续"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供导入，见 rates-import-upload 手机变体。",
+      "files": {
+        "design": "design-rates-import-errors-light.png",
+        "app": "app-rates-import-errors-light.png",
+        "compare": "compare-rates-import-errors-light.png"
+      }
+    },
+    {
+      "page": "rates-copy-target",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "复制到其他租户",
+        "label": "9a ① 选择目标租户 · ② 覆盖提示"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供复制，手机变体截费率标签页的「请在电脑上操作」提示。",
+      "files": {
+        "design": "design-rates-copy-target-light.png",
+        "app": "app-rates-copy-target-light.png",
+        "compare": "compare-rates-copy-target-light.png"
+      }
+    },
+    {
+      "page": "rates-copy-preview",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "复制到其他租户",
+        "label": "9b ③ 预览变动 · ④ 生效时间"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供复制，见 rates-copy-target 手机变体。",
+      "files": {
+        "design": "design-rates-copy-preview-light.png",
+        "app": "app-rates-copy-preview-light.png",
+        "compare": "compare-rates-copy-preview-light.png"
+      }
+    },
+    {
+      "page": "receivables-pending",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6a 电脑 · 列表（超过 30 天高亮）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-receivables-pending-light.png",
+        "app": "app-receivables-pending-light.png",
+        "compare": "compare-receivables-pending-light.png"
+      }
+    },
+    {
+      "page": "receivables-received",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6a 电脑 · 列表（超过 30 天高亮）"
+      },
+      "designTheme": "light",
+      "note": "稿中只有待收款列表，已收款视图对照待收款画框。",
+      "files": {
+        "design": "design-receivables-received-light.png",
+        "app": "app-receivables-received-light.png",
+        "compare": "compare-receivables-received-light.png"
+      }
+    },
+    {
+      "page": "receivables-voided",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6a 电脑 · 列表（超过 30 天高亮）"
+      },
+      "designTheme": "light",
+      "note": "稿中只有待收款列表，已作废视图对照待收款画框。",
+      "files": {
+        "design": "design-receivables-voided-light.png",
+        "app": "app-receivables-voided-light.png",
+        "compare": "compare-receivables-voided-light.png"
+      }
+    },
+    {
+      "page": "receivables-confirm",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6c 电脑 · 确认收款对话框"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-receivables-confirm-light.png",
+        "app": "app-receivables-confirm-light.png",
+        "compare": "compare-receivables-confirm-light.png"
+      }
+    },
+    {
+      "page": "admin-accounts",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第三批 · 系统与账号.dc.html",
+        "section": "管理员",
+        "label": "2a 电脑 · 列表（王敏的「停用」悬停提示）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-admin-accounts-light.png",
+        "app": "app-admin-accounts-light.png",
+        "compare": "compare-admin-accounts-light.png"
+      }
+    },
+    {
+      "page": "admin-temporary-password",
+      "variant": "light",
+      "designFrame": {
+        "file": "管理后台 第三批 · 系统与账号.dc.html",
+        "section": "管理员",
+        "label": "2d 电脑 · 重置密码结果（只显示一次）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-admin-temporary-password-light.png",
+        "app": "app-admin-temporary-password-light.png",
+        "compare": "compare-admin-temporary-password-light.png"
+      }
+    },
+    {
+      "page": "forced-change-password",
+      "variant": "light",
+      "designFrame": {
+        "file": "客户门户 第三批.dc.html",
+        "section": "账号设置 电脑",
+        "label": "2a 默认"
+      },
+      "designTheme": "light",
+      "note": "管理后台没有改密画框；按已定口径复用客户门户「账号设置」卡片，放在登录布局。",
+      "files": {
+        "design": "design-forced-change-password-light.png",
+        "app": "app-forced-change-password-light.png",
+        "compare": "compare-forced-change-password-light.png"
+      }
+    },
+    {
+      "page": "tenant-list",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "租户列表",
+        "label": "1a 电脑"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-list-dark.png",
+        "app": "app-tenant-list-dark.png",
+        "compare": "compare-tenant-list-dark.png"
+      }
+    },
+    {
+      "page": "tenant-create",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建 / 编辑租户",
+        "label": "4a 电脑 · 空白表单"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-create-dark.png",
+        "app": "app-tenant-create-dark.png",
+        "compare": "compare-tenant-create-dark.png"
+      }
+    },
+    {
+      "page": "tenant-create-success",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建租户 · 手机与成功",
+        "label": "4e 电脑 · 创建成功"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-create-success-dark.png",
+        "app": "app-tenant-create-success-dark.png",
+        "compare": "compare-tenant-create-success-dark.png"
+      }
+    },
+    {
+      "page": "tenant-edit",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建 / 编辑租户",
+        "label": "5a 电脑 · 编辑租户（编码、币种只读）"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-edit-dark.png",
+        "app": "app-tenant-edit-dark.png",
+        "compare": "compare-tenant-edit-dark.png"
+      }
+    },
+    {
+      "page": "tenant-overview",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1a 概况"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-overview-dark.png",
+        "app": "app-tenant-overview-dark.png",
+        "compare": "compare-tenant-overview-dark.png"
+      }
+    },
+    {
+      "page": "tenant-ledger",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "租户详情",
+        "label": "2a 电脑 · ABC001 透支中"
+      },
+      "designTheme": "dark",
+      "note": "第三批租户详情没有余额流水画框，对照第一批租户详情。",
+      "files": {
+        "design": "design-tenant-ledger-dark.png",
+        "app": "app-tenant-ledger-dark.png",
+        "compare": "compare-tenant-ledger-dark.png"
+      }
+    },
+    {
+      "page": "tenant-rates",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "费率标签页",
+        "label": "7a 电脑 · 费率标签页（当前生效版本）"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-rates-dark.png",
+        "app": "app-tenant-rates-dark.png",
+        "compare": "compare-tenant-rates-dark.png"
+      }
+    },
+    {
+      "page": "tenant-rates-scheduled",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "费率标签页",
+        "label": "7b 电脑 · 有排定的新版本"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-rates-scheduled-dark.png",
+        "app": "app-tenant-rates-scheduled-dark.png",
+        "compare": "compare-tenant-rates-scheduled-dark.png"
+      }
+    },
+    {
+      "page": "tenant-settings",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1h 设置 · 已修改，待保存"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-settings-dark.png",
+        "app": "app-tenant-settings-dark.png",
+        "compare": "compare-tenant-settings-dark.png"
+      }
+    },
+    {
+      "page": "tenant-portal",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1j 门户账号"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-tenant-portal-dark.png",
+        "app": "app-tenant-portal-dark.png",
+        "compare": "compare-tenant-portal-dark.png"
+      }
+    },
+    {
+      "page": "balance-dialog",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "余额操作对话框",
+        "label": "3a 充值（备注客户可见）"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-balance-dialog-dark.png",
+        "app": "app-balance-dialog-dark.png",
+        "compare": "compare-balance-dialog-dark.png"
+      }
+    },
+    {
+      "page": "balance-confirm",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "余额操作对话框",
+        "label": "3d 二次确认"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-balance-confirm-dark.png",
+        "app": "app-balance-confirm-dark.png",
+        "compare": "compare-balance-confirm-dark.png"
+      }
+    },
+    {
+      "page": "rates-import-upload",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 上传",
+        "label": "1a 未选择文件 · 立即生效"
+      },
+      "designTheme": "dark",
+      "note": "手机端不提供导入，手机变体截费率标签页的「请在电脑上操作」提示。",
+      "files": {
+        "design": "design-rates-import-upload-dark.png",
+        "app": "app-rates-import-upload-dark.png",
+        "compare": "compare-rates-import-upload-dark.png"
+      }
+    },
+    {
+      "page": "rates-import-preview",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 预览与确认",
+        "label": "2a 校验通过 · 预览变动"
+      },
+      "designTheme": "dark",
+      "note": "手机端不提供导入，见 rates-import-upload 手机变体。",
+      "files": {
+        "design": "design-rates-import-preview-dark.png",
+        "app": "app-rates-import-preview-dark.png",
+        "compare": "compare-rates-import-preview-dark.png"
+      }
+    },
+    {
+      "page": "rates-import-errors",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 预览与确认",
+        "label": "2b 校验失败 · 不能继续"
+      },
+      "designTheme": "dark",
+      "note": "手机端不提供导入，见 rates-import-upload 手机变体。",
+      "files": {
+        "design": "design-rates-import-errors-dark.png",
+        "app": "app-rates-import-errors-dark.png",
+        "compare": "compare-rates-import-errors-dark.png"
+      }
+    },
+    {
+      "page": "rates-copy-target",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "复制到其他租户",
+        "label": "9a ① 选择目标租户 · ② 覆盖提示"
+      },
+      "designTheme": "dark",
+      "note": "手机端不提供复制，手机变体截费率标签页的「请在电脑上操作」提示。",
+      "files": {
+        "design": "design-rates-copy-target-dark.png",
+        "app": "app-rates-copy-target-dark.png",
+        "compare": "compare-rates-copy-target-dark.png"
+      }
+    },
+    {
+      "page": "rates-copy-preview",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "复制到其他租户",
+        "label": "9b ③ 预览变动 · ④ 生效时间"
+      },
+      "designTheme": "dark",
+      "note": "手机端不提供复制，见 rates-copy-target 手机变体。",
+      "files": {
+        "design": "design-rates-copy-preview-dark.png",
+        "app": "app-rates-copy-preview-dark.png",
+        "compare": "compare-rates-copy-preview-dark.png"
+      }
+    },
+    {
+      "page": "receivables-pending",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6a 电脑 · 列表（超过 30 天高亮）"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-receivables-pending-dark.png",
+        "app": "app-receivables-pending-dark.png",
+        "compare": "compare-receivables-pending-dark.png"
+      }
+    },
+    {
+      "page": "receivables-received",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6a 电脑 · 列表（超过 30 天高亮）"
+      },
+      "designTheme": "dark",
+      "note": "稿中只有待收款列表，已收款视图对照待收款画框。",
+      "files": {
+        "design": "design-receivables-received-dark.png",
+        "app": "app-receivables-received-dark.png",
+        "compare": "compare-receivables-received-dark.png"
+      }
+    },
+    {
+      "page": "receivables-voided",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6a 电脑 · 列表（超过 30 天高亮）"
+      },
+      "designTheme": "dark",
+      "note": "稿中只有待收款列表，已作废视图对照待收款画框。",
+      "files": {
+        "design": "design-receivables-voided-dark.png",
+        "app": "app-receivables-voided-dark.png",
+        "compare": "compare-receivables-voided-dark.png"
+      }
+    },
+    {
+      "page": "receivables-confirm",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6c 电脑 · 确认收款对话框"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-receivables-confirm-dark.png",
+        "app": "app-receivables-confirm-dark.png",
+        "compare": "compare-receivables-confirm-dark.png"
+      }
+    },
+    {
+      "page": "admin-accounts",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第三批 · 系统与账号.dc.html",
+        "section": "管理员",
+        "label": "2a 电脑 · 列表（王敏的「停用」悬停提示）"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-admin-accounts-dark.png",
+        "app": "app-admin-accounts-dark.png",
+        "compare": "compare-admin-accounts-dark.png"
+      }
+    },
+    {
+      "page": "admin-temporary-password",
+      "variant": "dark",
+      "designFrame": {
+        "file": "管理后台 第三批 · 系统与账号.dc.html",
+        "section": "管理员",
+        "label": "2d 电脑 · 重置密码结果（只显示一次）"
+      },
+      "designTheme": "dark",
+      "note": null,
+      "files": {
+        "design": "design-admin-temporary-password-dark.png",
+        "app": "app-admin-temporary-password-dark.png",
+        "compare": "compare-admin-temporary-password-dark.png"
+      }
+    },
+    {
+      "page": "forced-change-password",
+      "variant": "dark",
+      "designFrame": {
+        "file": "客户门户 第三批.dc.html",
+        "section": "账号设置 电脑",
+        "label": "2a 默认"
+      },
+      "designTheme": "dark",
+      "note": "管理后台没有改密画框；按已定口径复用客户门户「账号设置」卡片，放在登录布局。",
+      "files": {
+        "design": "design-forced-change-password-dark.png",
+        "app": "app-forced-change-password-dark.png",
+        "compare": "compare-forced-change-password-dark.png"
+      }
+    },
+    {
+      "page": "tenant-list",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "租户列表",
+        "label": "1b 手机"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-list-mobile.png",
+        "app": "app-tenant-list-mobile.png",
+        "compare": "compare-tenant-list-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-create",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建租户 · 手机与成功",
+        "label": "4a 手机 · 空白表单"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-create-mobile.png",
+        "app": "app-tenant-create-mobile.png",
+        "compare": "compare-tenant-create-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-create-success",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建租户 · 手机与成功",
+        "label": "4e 手机 · 创建成功"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-create-success-mobile.png",
+        "app": "app-tenant-create-success-mobile.png",
+        "compare": "compare-tenant-create-success-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-edit",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "新建租户 · 手机与成功",
+        "label": "5a 手机 · 编辑租户"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-edit-mobile.png",
+        "app": "app-tenant-edit-mobile.png",
+        "compare": "compare-tenant-edit-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-overview",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3a 概况"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-overview-mobile.png",
+        "app": "app-tenant-overview-mobile.png",
+        "compare": "compare-tenant-overview-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-ledger",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "租户详情",
+        "label": "2b 手机"
+      },
+      "designTheme": "light",
+      "note": "第三批租户详情没有余额流水画框，对照第一批租户详情。",
+      "files": {
+        "design": "design-tenant-ledger-mobile.png",
+        "app": "app-tenant-ledger-mobile.png",
+        "compare": "compare-tenant-ledger-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-rates",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "费率标签页",
+        "label": "7c 手机 · 查看与搜索（含排定版本）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-rates-mobile.png",
+        "app": "app-tenant-rates-mobile.png",
+        "compare": "compare-tenant-rates-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-rates-scheduled",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "费率标签页",
+        "label": "7c 手机 · 查看与搜索（含排定版本）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-rates-scheduled-mobile.png",
+        "app": "app-tenant-rates-scheduled-mobile.png",
+        "compare": "compare-tenant-rates-scheduled-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-settings",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3h 设置"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-settings-mobile.png",
+        "app": "app-tenant-settings-mobile.png",
+        "compare": "compare-tenant-settings-mobile.png"
+      }
+    },
+    {
+      "page": "tenant-portal",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3j 门户账号"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-tenant-portal-mobile.png",
+        "app": "app-tenant-portal-mobile.png",
+        "compare": "compare-tenant-portal-mobile.png"
+      }
+    },
+    {
+      "page": "balance-dialog",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "余额操作对话框",
+        "label": "3e 手机 · 底部弹出面板"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-balance-dialog-mobile.png",
+        "app": "app-balance-dialog-mobile.png",
+        "compare": "compare-balance-dialog-mobile.png"
+      }
+    },
+    {
+      "page": "balance-confirm",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第一批.dc.html",
+        "section": "余额操作对话框",
+        "label": "3d 二次确认"
+      },
+      "designTheme": "light",
+      "note": "稿中没有手机画框，对照电脑浅色画框。",
+      "files": {
+        "design": "design-balance-confirm-mobile.png",
+        "app": "app-balance-confirm-mobile.png",
+        "compare": "compare-balance-confirm-mobile.png"
+      }
+    },
+    {
+      "page": "rates-import-upload",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "导入 CSV · 上传",
+        "label": "1c 手机 · 费率标签页（导入请在电脑上操作）"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供导入，手机变体截费率标签页的「请在电脑上操作」提示。",
+      "files": {
+        "design": "design-rates-import-upload-mobile.png",
+        "app": "app-rates-import-upload-mobile.png",
+        "compare": "compare-rates-import-upload-mobile.png"
+      }
+    },
+    {
+      "page": "rates-copy-target",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "复制到其他租户",
+        "label": "9d 手机 · 复制 / 导入 → 请在电脑上操作"
+      },
+      "designTheme": "light",
+      "note": "手机端不提供复制，手机变体截费率标签页的「请在电脑上操作」提示。",
+      "files": {
+        "design": "design-rates-copy-target-mobile.png",
+        "app": "app-rates-copy-target-mobile.png",
+        "compare": "compare-rates-copy-target-mobile.png"
+      }
+    },
+    {
+      "page": "receivables-pending",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6b 手机 · 列表"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-receivables-pending-mobile.png",
+        "app": "app-receivables-pending-mobile.png",
+        "compare": "compare-receivables-pending-mobile.png"
+      }
+    },
+    {
+      "page": "receivables-received",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6b 手机 · 列表"
+      },
+      "designTheme": "light",
+      "note": "稿中只有待收款列表，已收款视图对照待收款画框。",
+      "files": {
+        "design": "design-receivables-received-mobile.png",
+        "app": "app-receivables-received-mobile.png",
+        "compare": "compare-receivables-received-mobile.png"
+      }
+    },
+    {
+      "page": "receivables-voided",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6b 手机 · 列表"
+      },
+      "designTheme": "light",
+      "note": "稿中只有待收款列表，已作废视图对照待收款画框。",
+      "files": {
+        "design": "design-receivables-voided-mobile.png",
+        "app": "app-receivables-voided-mobile.png",
+        "compare": "compare-receivables-voided-mobile.png"
+      }
+    },
+    {
+      "page": "receivables-confirm",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第二批.dc.html",
+        "section": "待收款",
+        "label": "6d 手机 · 确认收款（底部弹出）"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-receivables-confirm-mobile.png",
+        "app": "app-receivables-confirm-mobile.png",
+        "compare": "compare-receivables-confirm-mobile.png"
+      }
+    },
+    {
+      "page": "admin-accounts",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第三批 · 系统与账号.dc.html",
+        "section": "管理员",
+        "label": "2b 手机 · 列表"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-admin-accounts-mobile.png",
+        "app": "app-admin-accounts-mobile.png",
+        "compare": "compare-admin-accounts-mobile.png"
+      }
+    },
+    {
+      "page": "admin-temporary-password",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "管理后台 第三批 · 系统与账号.dc.html",
+        "section": "管理员",
+        "label": "2h 手机 · 重置密码结果"
+      },
+      "designTheme": "light",
+      "note": null,
+      "files": {
+        "design": "design-admin-temporary-password-mobile.png",
+        "app": "app-admin-temporary-password-mobile.png",
+        "compare": "compare-admin-temporary-password-mobile.png"
+      }
+    },
+    {
+      "page": "forced-change-password",
+      "variant": "mobile",
+      "designFrame": {
+        "file": "客户门户 第三批.dc.html",
+        "section": "账号设置 手机",
+        "label": "2a 手机 · 默认"
+      },
+      "designTheme": "light",
+      "note": "管理后台没有改密画框；按已定口径复用客户门户「账号设置」卡片，放在登录布局。",
+      "files": {
+        "design": "design-forced-change-password-mobile.png",
+        "app": "app-forced-change-password-mobile.png",
+        "compare": "compare-forced-change-password-mobile.png"
+      }
+    }
+  ]
+}
