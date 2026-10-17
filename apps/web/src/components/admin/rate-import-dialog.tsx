@@ -99,6 +99,16 @@ const importLabels: PreviewLabels = {
     '上次确认导入的结果未知。再次确认不会重复导入：如已导入，系统会提示核对。',
 };
 
+/** 电脑宽度随步骤变化（第二批导入稿）：上传 600、校验失败 620、预览 720；完成步保留步骤条，沿用 720。 */
+const dialogWidth = {
+  step1: 'md:w-[600px]',
+  previewing: 'md:w-[600px]',
+  'step2-errors': 'md:w-[620px]',
+  'step2-ok': 'md:w-[720px]',
+  committing: 'md:w-[720px]',
+  done: 'md:w-[720px]',
+} as const satisfies Record<RateImportState['step'], string>;
+
 function stepIndex(step: RateImportState['step']) {
   if (step === 'step1' || step === 'previewing') return 0;
   if (step === 'done') return 2;
@@ -326,7 +336,7 @@ export function RateImportDialog({
       open
       {...(busy ? {} : { onOpenChange: (open: boolean) => open || onClose() })}
       title="导入费率表"
-      className="md:w-[720px]"
+      className={dialogWidth[state.step]}
       fallbackFocus={fallbackFocus}
     >
       <DialogHeading
