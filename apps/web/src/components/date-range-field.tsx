@@ -179,9 +179,9 @@ function RangeCalendar({
         </Button>
         <Button
           className="h-12 md:h-9"
-          disabled={to === null}
+          disabled={to === null || to > max}
           onClick={() => {
-            if (to !== null) onConfirm({ from: draft.from, to });
+            if (to !== null && to <= max) onConfirm({ from: draft.from, to });
           }}
         >
           确定

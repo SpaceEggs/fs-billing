@@ -30,6 +30,23 @@ describe('day range', () => {
     ).toEqual({ from: '2026-09-01', to: '2026-09-29' });
   });
 
+  it('replaces endpoints after Beijing today with the month default', () => {
+    const now = new Date('2026-10-17T10:00:00.000Z');
+    expect(
+      rangeOrMonthToDate({ from: '2026-11-01', to: '2026-11-30' }, now),
+    ).toEqual({ from: '2026-10-01', to: '2026-10-17' });
+    expect(rangeOrMonthToDate({ from: '2026-11-01' }, now)).toEqual({
+      from: '2026-10-01',
+      to: '2026-10-17',
+    });
+    expect(
+      rangeOrMonthToDate({ from: '2026-09-20', to: '2026-10-18' }, now),
+    ).toEqual({ from: '2026-09-20', to: '2026-10-17' });
+    expect(
+      rangeOrMonthToDate({ from: '2026-10-17', to: '2026-10-17' }, now),
+    ).toEqual({ from: '2026-10-17', to: '2026-10-17' });
+  });
+
   it('labels the end without the year on mobile only within one year', () => {
     const range = { from: '2026-09-01', to: '2026-09-29' };
     expect(rangeLabel(range)).toBe('2026-09-01 — 2026-09-29');

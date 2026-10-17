@@ -15,14 +15,19 @@ export function beijingMonthToDate(now: Date): DayRange {
 }
 
 /**
- * 地址里的 from/to 缺一端时用本月默认值补齐；颠倒的两端交换，不出现开始晚于结束的范围。
+ * 地址里的 from/to 缺一端或晚于今天时用本月默认值替换；颠倒的两端交换，不出现开始晚于结束的范围。
  */
 export function rangeOrMonthToDate(
   search: { from?: string | undefined; to?: string | undefined },
   now: Date,
 ): DayRange {
   const fallback = beijingMonthToDate(now);
-  return orderedRange(search.from ?? fallback.from, search.to ?? fallback.to);
+  const pastOr = (day: string | undefined, other: string) =>
+    day !== undefined && day <= fallback.to ? day : other;
+  return orderedRange(
+    pastOr(search.from, fallback.from),
+    pastOr(search.to, fallback.to),
+  );
 }
 
 /** 电脑显示完整日期；手机同年时结束日省略年份，如「2026-09-01 — 09-29」。 */
