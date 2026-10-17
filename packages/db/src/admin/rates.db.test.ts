@@ -1,12 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, inject, it, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
+import pg from 'pg';
+import { z } from 'zod';
 import {
   adminRatePreviewResponseSchema,
   adminRateVersionResponseSchema,
   adminRateExportResponseSchema,
   adminRateCancelFutureVersionResponseSchema,
   createAdminRateRequestSchemas,
+  DEFAULT_ADMIN_RATE_MAX_ROWS,
 } from '@fs-billing/shared';
 import {
   connections,
@@ -15,11 +18,12 @@ import {
   deferred,
   waitForTenantLock,
 } from '../../test/support.js';
-import { lockTenants, withAdmin } from '../client.js';
+import { connect, lockTenants, withAdmin, withTenant } from '../client.js';
 import { databaseNow } from '../clock.js';
-import { operationLogs, rateVersions } from '../schema.js';
+import { adminRatePreviews, operationLogs, rateVersions } from '../schema.js';
 import { createTenant } from './tenants.js';
 import { createAdminRatesService } from './rates.js';
+import { ratePreviewPayloadSchema } from './rate-preview.js';
 
 const { app, owner } = connections();
 let actor: { id: string; name: string };
@@ -75,6 +79,381 @@ async function snapshot(tenantId: string) {
 }
 
 describe('admin rates service', () => {
+  it('reads only preview identity before the tenant lock and parses the full payload once afterward', async () => {
+    const context = await fixture();
+    const service = createAdminRatesService();
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file('1,美国,0.1'),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    if (!preview.ok) throw new Error('Expected successful preview');
+    const parse = vi.spyOn(ratePreviewPayloadSchema, 'safeParse');
+    const reads = vi.spyOn(pg.Client.prototype, 'query');
+    try {
+      await service.importCommit({
+        ...context,
+        request: { previewId: preview.previewId },
+      });
+      expect(parse).toHaveBeenCalledTimes(1);
+      const statements = reads.mock.calls.map(([query]) =>
+        z
+          .union([
+            z.string(),
+            z.object({ text: z.string() }).transform((value) => value.text),
+          ])
+          .parse(query),
+      );
+      const previewReads = statements.filter((statement) =>
+        statement.includes('from "admin_rate_previews"'),
+      );
+      expect(previewReads).toHaveLength(2);
+      expect(previewReads[0]).toContain('select "tenant_id", "consumed_at",');
+      for (const key of ['kind', 'pathTenantId', 'actorId'])
+        expect(previewReads[0]).toContain(`"payload"->>'${key}'`);
+      expect(previewReads[0]).not.toContain('"expires_at"');
+      expect(previewReads[1]).toContain('"payload", "expires_at"');
+      const lockIndex = statements.findIndex((statement) =>
+        statement.includes('lock_tenants'),
+      );
+      expect(statements.indexOf(previewReads[0]!)).toBeLessThan(lockIndex);
+      expect(statements.indexOf(previewReads[1]!)).toBeGreaterThan(lockIndex);
+    } finally {
+      parse.mockRestore();
+      reads.mockRestore();
+    }
+  });
+
+  it.each(['actor', 'consumed', 'kind', 'path'] as const)(
+    'rejects a stale %s before waiting for the target tenant lock',
+    async (reason) => {
+      const context = await fixture();
+      const service = createAdminRatesService();
+      const preview = await service.importPreview({
+        ...context,
+        request: {
+          baseVersionId: context.baseVersionId,
+          file: file('1,美国,0.1'),
+          schedule: { kind: 'immediate' },
+        },
+      });
+      if (!preview.ok) throw new Error('Expected successful preview');
+      const request = { previewId: preview.previewId };
+      if (reason === 'consumed')
+        await service.importCommit({ ...context, request });
+      const ready = deferred();
+      const release = deferred();
+      const blocker = withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [context.tenantId]);
+        ready.resolve();
+        await release.promise;
+      });
+      await ready.promise;
+      const input = {
+        ...context,
+        actor:
+          reason === 'actor'
+            ? { id: randomUUID(), name: 'Other admin' }
+            : context.actor,
+        tenantId: reason === 'path' ? randomUUID() : context.tenantId,
+        request,
+      };
+      const committing =
+        reason === 'kind'
+          ? service.copyCommit(input)
+          : service.importCommit(input);
+      const rejected = expect(committing).rejects.toMatchObject({
+        code: 'PREVIEW_STALE',
+      });
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          rejected,
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(
+              () =>
+                reject(new Error('Stale preview waited for the tenant lock')),
+              2000,
+            );
+          }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+        release.resolve();
+        await blocker;
+        await rejected;
+      }
+    },
+  );
+
+  it('accepts case-insensitive actor and path identities in both preflight and locked checks', async () => {
+    const context = await fixture();
+    const service = createAdminRatesService();
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file('1,美国,0.1'),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    if (!preview.ok) throw new Error('Expected successful preview');
+    await owner.pool.query(
+      "UPDATE admin_rate_previews SET payload = jsonb_set(jsonb_set(payload, '{actorId}', to_jsonb(upper(payload->>'actorId'))), '{pathTenantId}', to_jsonb(upper(payload->>'pathTenantId'))) WHERE id=$1",
+      [preview.previewId],
+    );
+    const result = await service.importCommit({
+      ...context,
+      tenantId: context.tenantId.toUpperCase(),
+      actor: { ...context.actor, id: context.actor.id.toUpperCase() },
+      request: { previewId: preview.previewId },
+    });
+    expect(result.version.entries).toEqual([
+      { prefix: '1', country: '美国', rate: '0.1' },
+    ]);
+  });
+
+  it('maps incompatible persisted payloads to PREVIEW_STALE without consuming them or writing rates', async () => {
+    const context = await fixture();
+    const service = createAdminRatesService();
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file('1,美国,0.1'),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    if (!preview.ok) throw new Error('Expected successful preview');
+    const before = await snapshot(context.tenantId);
+    await owner.pool.query(
+      'UPDATE admin_rate_previews SET payload = jsonb_set(payload, \'{schedule}\', \'{"kind":"unsupported"}\') WHERE id = $1',
+      [preview.previewId],
+    );
+    await expect(
+      service.importCommit({
+        ...context,
+        request: { previewId: preview.previewId },
+      }),
+    ).rejects.toMatchObject({ code: 'PREVIEW_STALE' });
+    expect(await snapshot(context.tenantId)).toEqual(before);
+    expect(
+      (
+        await owner.pool.query(
+          'SELECT consumed_at FROM admin_rate_previews WHERE id = $1',
+          [preview.previewId],
+        )
+      ).rows,
+    ).toEqual([{ consumed_at: null }]);
+  });
+  it.each(['import', 'copy'] as const)(
+    'shares %s previews across instances and consumes concurrent commits once',
+    async (kind) => {
+      const source = await fixture();
+      const target = kind === 'copy' ? await fixture() : source;
+      const first = createAdminRatesService();
+      const preview =
+        kind === 'import'
+          ? await first.importPreview({
+              ...source,
+              request: {
+                baseVersionId: source.baseVersionId,
+                file: file('1,美国,0.1'),
+                schedule: { kind: 'immediate' },
+              },
+            })
+          : await first.copyPreview({
+              ...source,
+              request: {
+                sourceVersionId: source.baseVersionId,
+                targetTenantId: target.tenantId,
+                targetBaseVersionId: target.baseVersionId,
+                schedule: { kind: 'immediate' },
+              },
+            });
+      if (!preview.ok) throw new Error('Expected successful preview');
+      const secondConnection = connect(inject('appUrl'), { max: 2 });
+      const before = await snapshot(target.tenantId);
+      try {
+        const commit = () => {
+          const instance = createAdminRatesService();
+          const input = {
+            ...source,
+            db: secondConnection.db,
+            request: { previewId: preview.previewId },
+          };
+          return kind === 'import'
+            ? instance.importCommit(input)
+            : instance.copyCommit(input);
+        };
+        const results = await Promise.allSettled([commit(), commit()]);
+        expect(
+          results.filter((result) => result.status === 'fulfilled'),
+        ).toHaveLength(1);
+        expect(
+          results.find((result) => result.status === 'rejected'),
+        ).toMatchObject({ reason: { code: 'PREVIEW_STALE' } });
+        const after = await snapshot(target.tenantId);
+        expect(after.versions).toHaveLength(before.versions.length + 1);
+        expect(after.logs).toHaveLength(before.logs.length + 1);
+        expect(after.logs.at(-1)?.action).toBe(
+          kind === 'import' ? 'rate_import' : 'rate_copy',
+        );
+        await expect(commit()).rejects.toMatchObject({ code: 'PREVIEW_STALE' });
+      } finally {
+        await secondConnection.pool.end();
+      }
+    },
+  );
+
+  it('rolls preview consumption and version back when audit validation fails and allows a fresh instance retry', async () => {
+    const context = await fixture();
+    const preview = await createAdminRatesService().importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file('1,美国,0.1'),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    if (!preview.ok) throw new Error('Expected successful preview');
+    const before = await snapshot(context.tenantId);
+    await expect(
+      createAdminRatesService().importCommit({
+        ...context,
+        actor: { ...context.actor, name: '' },
+        request: { previewId: preview.previewId },
+      }),
+    ).rejects.toMatchObject({ name: 'ZodError' });
+    expect(await snapshot(context.tenantId)).toEqual(before);
+    await createAdminRatesService().importCommit({
+      ...context,
+      request: { previewId: preview.previewId },
+    });
+    expect((await snapshot(context.tenantId)).versions).toHaveLength(2);
+  });
+
+  it('checks database expiry after waiting for the target tenant lock', async () => {
+    const context = await fixture();
+    const preview = await createAdminRatesService().importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file('1,美国,0.1'),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    if (!preview.ok) throw new Error('Expected successful preview');
+    const ready = deferred();
+    const release = deferred();
+    const blocker = withAdmin(app.db, async (tx) => {
+      await lockTenants(tx, [context.tenantId]);
+      ready.resolve();
+      await release.promise;
+    });
+    await ready.promise;
+    const pid = deferred<number>();
+    const committing = withAdmin(app.db, async (tx) => {
+      pid.resolve(await backendPid(tx));
+      return createAdminRatesService().importCommit({
+        ...context,
+        db: tx,
+        request: { previewId: preview.previewId },
+      });
+    });
+    const rejection = expect(committing).rejects.toMatchObject({
+      code: 'PREVIEW_EXPIRED',
+    });
+    try {
+      await waitForTenantLock(owner, await pid.promise, context.tenantId);
+      await owner.pool.query(
+        "UPDATE admin_rate_previews SET expires_at = clock_timestamp() - interval '1 second' WHERE id = $1",
+        [preview.previewId],
+      );
+    } finally {
+      release.resolve();
+    }
+    await blocker;
+    await rejection;
+    expect((await snapshot(context.tenantId)).versions).toHaveLength(1);
+  });
+
+  it('hides previews from tenant scope and cleans old expired records on new previews', async () => {
+    const context = await fixture();
+    const makePreview = () =>
+      createAdminRatesService().importPreview({
+        ...context,
+        request: {
+          baseVersionId: context.baseVersionId,
+          file: file('1,美国,0.1'),
+          schedule: { kind: 'immediate' },
+        },
+      });
+    const preview = await makePreview();
+    if (!preview.ok) throw new Error('Expected successful preview');
+    expect(
+      await withTenant(app.db, context.tenantId, (tx) =>
+        tx.select().from(adminRatePreviews),
+      ),
+    ).toEqual([]);
+    await expect(
+      withTenant(app.db, context.tenantId, (tx) =>
+        tx.execute(
+          sql`insert into admin_rate_previews (tenant_id, payload, expires_at) values (${context.tenantId}, '{}'::jsonb, now())`,
+        ),
+      ),
+    ).rejects.toThrow();
+    await owner.pool.query(
+      "UPDATE admin_rate_previews SET expires_at = clock_timestamp() - interval '2 days' WHERE id = $1",
+      [preview.previewId],
+    );
+    await makePreview();
+    expect(
+      (
+        await owner.pool.query(
+          'SELECT id FROM admin_rate_previews WHERE id = $1',
+          [preview.previewId],
+        )
+      ).rows,
+    ).toEqual([]);
+  });
+
+  it('accepts exactly the CSV row limit and rejects one extra row before saving a preview', async () => {
+    const context = await fixture();
+    const service = createAdminRatesService();
+    const rows = Array.from(
+      { length: DEFAULT_ADMIN_RATE_MAX_ROWS },
+      (_, index) => `${index + 10000},测试,0.1`,
+    );
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file(rows.join('\n')),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    expect(preview).toMatchObject({
+      ok: true,
+      counts: { added: DEFAULT_ADMIN_RATE_MAX_ROWS },
+    });
+    rows.push('99999,额外,0.1');
+    await expect(
+      service.importPreview({
+        ...context,
+        request: {
+          baseVersionId: context.baseVersionId,
+          file: file(rows.join('\n')),
+          schedule: { kind: 'immediate' },
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'CSV_LIMIT_EXCEEDED' });
+    expect((await snapshot(context.tenantId)).versions).toHaveLength(1);
+  });
+
   it('rejects multiline edits without writes and reimports exported quoted countries', async () => {
     const context = await fixture();
     const service = createAdminRatesService();

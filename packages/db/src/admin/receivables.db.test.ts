@@ -734,4 +734,150 @@ describe('admin receivable event services against Postgres', () => {
       adjustmentLedgerEntryId: adj,
     });
   });
+
+  it('rejects direct SQL voiding of received credits and all later events or mutations after voiding', async () => {
+    const f = await fixture();
+    const confirmed = await f.confirm();
+    const adj = await adjustment(f);
+    const insertVoid = () =>
+      withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [f.tenant.id]);
+        return tx.execute(sql`
+          insert into receivable_voids (tenant_id, ledger_entry_id, adjustment_ledger_entry_id, reason, voided_by)
+          values (${f.tenant.id}, ${f.credit.id}, ${adj}, '直接 SQL 作废', ${actor.id})
+        `);
+      });
+    expect(await pgError(insertVoid())).toMatchObject({
+      code: '23514',
+      constraint: 'receivable_voids_pending',
+    });
+    expect(
+      await pgError(
+        withTenant(app.db, f.tenant.id, async (tx) => {
+          await lockTenants(tx, [f.tenant.id]);
+          return tx.execute(sql`
+            insert into receivable_voids (tenant_id, ledger_entry_id, adjustment_ledger_entry_id, reason, voided_by)
+            values (${f.tenant.id}, ${f.credit.id}, ${adj}, '禁止', ${actor.id})
+          `);
+        }),
+      ),
+    ).toMatchObject({ code: '42501' });
+    expect(await f.state()).toMatchObject({ status: 'received' });
+    await f.reverse(confirmed.settlementId);
+    await insertVoid();
+
+    const insertEvent = (statement: ReturnType<typeof sql>) =>
+      withAdmin(app.db, async (tx) => {
+        await lockTenants(tx, [f.tenant.id]);
+        return tx.execute(statement);
+      });
+    expect(
+      await pgError(
+        insertEvent(sql`
+          insert into receivable_settlements (tenant_id, ledger_entry_id, received_on, confirmed_by)
+          values (${f.tenant.id}, ${f.credit.id}, ${beijingDate()}, ${actor.id})
+        `),
+      ),
+    ).toMatchObject({
+      code: '23514',
+      constraint: 'receivable_settlements_pending',
+    });
+    expect(
+      await pgError(
+        insertEvent(sql`
+          insert into receivable_settlement_reversals (tenant_id, settlement_id, reason, reversed_by)
+          values (${f.tenant.id}, ${confirmed.settlementId}, '作废后撤销', ${actor.id})
+        `),
+      ),
+    ).toMatchObject({
+      code: '23514',
+      constraint: 'receivable_settlement_reversals_not_voided',
+    });
+    for (const statement of [
+      "update ledger_entries set note = 'changed' where id = $1",
+      'delete from ledger_entries where id = $1',
+      "update receivable_settlements set note = 'changed' where ledger_entry_id = $1",
+      'delete from receivable_settlements where ledger_entry_id = $1',
+    ]) {
+      expect(
+        (await pgError(owner.pool.query(statement, [f.credit.id]))).code,
+      ).toBe('42501');
+    }
+    expect(await f.state()).toMatchObject({
+      status: 'voided',
+      adjustmentLedgerEntryId: adj,
+      latestSettlementId: confirmed.settlementId,
+    });
+    expect(await counts(f)).toMatchObject({
+      settlements: 1,
+      reversals: 1,
+      voids: 1,
+    });
+  });
+
+  it.each(['CNY', 'USD'] as const)(
+    'rejects direct SQL linking a CNY credit to another tenant adjustment in %s',
+    async (currency) => {
+      const f = await fixture('CNY');
+      const other = await fixture(currency);
+      const adj = await adjustment(other);
+      expect(
+        await pgError(
+          withAdmin(app.db, async (tx) => {
+            await lockTenants(tx, [f.tenant.id]);
+            return tx.execute(sql`
+              insert into receivable_voids (tenant_id, ledger_entry_id, adjustment_ledger_entry_id, reason, voided_by)
+              values (${f.tenant.id}, ${f.credit.id}, ${adj}, '其他租户或币种', ${actor.id})
+            `);
+          }),
+        ),
+      ).toMatchObject({ code: '23503' });
+      expect(
+        await pgError(
+          owner.pool.query('update tenants set currency = $1 where id = $2', [
+            currency === 'CNY' ? 'USD' : 'CNY',
+            other.tenant.id,
+          ]),
+        ),
+      ).toMatchObject({ code: '23514' });
+      expect(await f.state()).toMatchObject({ status: 'pending' });
+      expect(await counts(f)).toMatchObject({ voids: 0 });
+    },
+  );
+
+  it('serializes direct SQL confirmation against voiding with the existing tenant lock', async () => {
+    const f = await fixture();
+    const adj = await adjustment(f);
+    const statements = [
+      sql`
+        insert into receivable_settlements (tenant_id, ledger_entry_id, received_on, confirmed_by)
+        values (${f.tenant.id}, ${f.credit.id}, ${beijingDate()}, ${actor.id})
+      `,
+      sql`
+        insert into receivable_voids (tenant_id, ledger_entry_id, adjustment_ledger_entry_id, reason, voided_by)
+        values (${f.tenant.id}, ${f.credit.id}, ${adj}, '并发作废', ${actor.id})
+      `,
+    ];
+    const results = await Promise.all(
+      statements.map((statement) =>
+        withAdmin(app.db, async (tx) => {
+          await lockTenants(tx, [f.tenant.id]);
+          await tx.execute(statement);
+          return 'inserted';
+        }).catch(async (error: unknown) => {
+          if (!(error instanceof Error)) throw error;
+          return pgError(Promise.reject(error));
+        }),
+      ),
+    );
+    expect(results.filter((result) => result === 'inserted')).toHaveLength(1);
+    expect(results.filter((result) => result !== 'inserted')).toMatchObject([
+      { code: '23514' },
+    ]);
+    const persisted = await counts(f);
+    expect(persisted.settlements + persisted.voids).toBe(1);
+    expect(await f.state()).toMatchObject({
+      status: persisted.voids === 1 ? 'voided' : 'received',
+    });
+  });
 });

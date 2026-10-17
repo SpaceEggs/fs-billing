@@ -40,12 +40,66 @@ export interface Connection {
   readonly pool: pg.Pool;
 }
 
+interface PoolErrorLogger {
+  error(
+    fields: {
+      event: 'database.idle_client_error';
+      pool: string;
+      code: string;
+    },
+    message: string,
+  ): void;
+}
+
+const defaultPoolErrorLogger: PoolErrorLogger = {
+  error: (fields, message) => {
+    process.stderr.write(
+      `${JSON.stringify({ level: 'error', ...fields, message })}\n`,
+    );
+  },
+};
+
+const networkErrorCodes = new Set([
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EPIPE',
+  'ECONNREFUSED',
+  'ECONNABORTED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+]);
+
 // numeric 原样以字符串返回（pg 默认如此）；timestamptz 解析为 Date。
 export function connect(
   url: string,
-  options: Pick<pg.PoolConfig, 'max' | 'connectionTimeoutMillis'> = {},
+  options: Pick<pg.PoolConfig, 'max' | 'connectionTimeoutMillis'> & {
+    logger?: PoolErrorLogger;
+    poolName?: string;
+  } = {},
 ): Connection {
-  const pool = new pg.Pool({ connectionString: url, ...options });
+  const {
+    logger = defaultPoolErrorLogger,
+    poolName = 'database',
+    ...poolOptions
+  } = options;
+  const pool = new pg.Pool({ connectionString: url, ...poolOptions });
+  pool.on('error', (error) => {
+    // Error messages, stacks and client objects can contain connection credentials.
+    const code =
+      'code' in error &&
+      typeof error.code === 'string' &&
+      (/^[0-9A-Z]{5}$/.test(error.code) || networkErrorCodes.has(error.code))
+        ? error.code
+        : error.message === 'Connection terminated unexpectedly'
+          ? 'CONNECTION_TERMINATED'
+          : 'unknown';
+    logger.error(
+      { event: 'database.idle_client_error', pool: poolName, code },
+      'Database idle connection failed',
+    );
+  });
   pool.connect = normalizePgOperation(pool.connect.bind(pool));
   pool.query = normalizePgOperation(pool.query.bind(pool));
   pool.on('connect', (client) => {

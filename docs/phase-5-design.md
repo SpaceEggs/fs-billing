@@ -364,3 +364,38 @@ API integration、CSV handler 解析后限制、portal projection 路由接入�
 2026-10-14 新增 16 项决定本轮验证使用 `PATH=/tmp/phase-5-bin:/usr/bin:$PATH pnpm check`，退出码 0。lint、format:check、全仓 typecheck、374 项仓库测试（另 1 项跳过）、76 项 Web 测试与 Web production build 通过。shared admin 两个文件共 58 项通过，其中新增 7 项契约测试覆盖 horizon、void/reverse 端点和事件、状态、审计、无 confirm token 及配置默认值。完整输出 `/tmp/p5-pending-check.log`。本轮未实现迁移、服务、Worker、auth 或 Web 行为，验收映射中的后续测试仍为计划。
 
 2026-10-14 pending review 的 7 项修复使用 `PATH=/tmp/phase-5-bin:/usr/bin:$PATH pnpm check`，退出码 0。lint、format:check、全仓 typecheck、378 项仓库测试（另 1 项跳过）、76 项 Web 测试与 Web production build 通过。shared admin 测试共 62 项，新增 4 项覆盖确认 token 必填与冲突映射、pending 最新历史 token、短于与长于默认值的统一 horizon 及提交时重新验证。完整输出 `/tmp/p5-pend-review-check.log`。服务的 stale-request 状态比较、作废唯一约束、冲正时序和错误优先级仍按上述映射留待后续实现。
+
+## 阶段 5 后端补强，2026-10-17
+
+### 费率预览使用 Postgres 存储
+
+补强前 `createAdminRatesService` 把预览保存在进程 Map。预览和提交落在不同实例时无法读取，进程重启也会丢失预览。公开接口继续使用现有 previewId，不增加请求或响应字段。
+
+比较以下方案后，推荐并实现 Postgres 表。
+
+| 方案                                   | 优点                                                 | 代价与限制                                           |
+| -------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| Postgres `admin_rate_previews`，带 TTL | 多实例共享；重启保留；使用状态与版本、审计同事务提交 | 增加迁移和预览读写；需要清理过期数据                 |
+| 保留 Map，文档限制单实例               | 无迁移，改动少                                       | 必须始终单实例；滚动重启丢失预览；扩容前仍需重做存储 |
+
+数据库方案不要求粘性会话，也不把部署限制当作业务正确性的前提。
+
+表以 UUID previewId 为主键，保存目标 tenant_id、预览 payload、expires_at 和 consumed_at。payload 使用 import/copy 联合，绑定 actorId、路径租户、基准版本、完整费率快照、排期及文件摘要或来源版本。读回时按 Zod schema 解析；存储 schema 复用 shared 的静态排期形状，当前时间与 horizon 规则仍在提交时校验。不兼容的旧 payload 返回 PREVIEW_STALE。Drizzle 描述包含与迁移同名的外键、payload check 和过期索引，JSONB 类型从 payload schema 推导。RLS 仅允许 admin scope 读写，门户不可读取预览。预览不保存原始 CSV。
+
+`savePreview(tx, tenantId, preview, before, currency, encoding)` 在事务提交后返回现有预览响应。`commit(kind, mutation)` 在管理员事务内先读取目标 tenant_id、consumed_at 和 payload 的 kind、pathTenantId、actorId 文本投影；已使用或身份不符的请求立即返回 PREVIEW_STALE。取得现有目标 `lock_tenants` 后才读取和解析完整 payload，重新执行全部校验。锁后校验 actor、路径、用途和 consumed_at，并使用数据库 `clock_timestamp()` 检查 TTL，再校验基准版本和排期。复制使用预览中展示的来源版本快照，并验证来源版本仍存在。版本、审计和 consumed_at 在同一事务中写入，失败一起回滚。不显式获取预览行锁，不添加 advisory lock 或外部副作用。
+
+重复提交及不存在、用途或身份不符的 token 返回现有 `PREVIEW_STALE`；未使用但已过期的预览返回 `PREVIEW_EXPIRED`。并发提交通过同一个目标租户锁串行，后到者重读 used 状态后拒绝。新预览创建时清理过期超过一天的记录，保留一天用于返回明确的过期错误。TTL 是提交校验，不依赖清理是否执行；没有新预览时旧记录暂留但不可提交。
+
+此决定按 Model the Domain 使用 import/copy 联合和明确的 consumed_at 状态，按 Prove It Works 用跨 service、跨连接池及并发提交的真实数据库测试验证。数据库未分类错误继续交由现有映射返回 500 INTERNAL_ERROR，只有现有分类中的暂时性错误返回 503。
+
+### 其他补强的边界
+
+连接池在共享 `connect` 入口注册空闲连接错误处理器。API 的业务、认证池及 worker 的业务、队列池分别记录 api.business、api.auth、worker.business、worker.queue 标签。日志包含固定事件和 SQLSTATE 或白名单网络错误码；无错误码的已知连接终止消息转为固定 CONNECTION_TERMINATED。不记录原始错误、client、连接串或密钥。API 与 worker 在连接前创建 pino 实例，并把同一实例传给连接池和 Fastify loggerInstance。连接池日志保留 pino 的数字 level、time、pid 和 hostname，回调不引用尚未初始化的 app。API 四条 redact 规则仍覆盖 cookie、authorization、req.body 和 set-cookie。db 的 poolName 为 string，应用自行指定名称。连接清理由 pg 自己完成。
+
+应收事件继续使用现有复合外键绑定同一 tenant_id，币种由不可修改的 tenants.currency 决定。新迁移补充已收款不可直接作废、已作废不可追加撤销收款事件。现有确认触发器和 append-only 触发器保护确认及修改。门户写入仍先返回权限错误，不暴露状态校验结果。
+
+CSV 文件上限继续使用 shared 的 2 MiB，行数上限继续为 10000。文件 schema 和 `DEFAULT_ADMIN_CSV_BODY_LIMIT` 使用同一 Base64 长度函数，后者再加 256 KiB JSON 元数据余量，仅用于支持 CSV 的开户和导入预览路由。传输和解码字节超限均沿用 413 CSV_LIMIT_EXCEEDED，前端使用已有错误展示。
+
+`listAdmins` 使用一条数据查询，先按状态筛选再 JOIN 批量邮箱结果，排序、搜索、状态和分页保持原有语义。门户列表使用 MATERIALIZED CTE 共用租户筛选结果，再 JOIN 读取邮箱。密码重置在现有管理员事务中通过同一受限函数读取邮箱，管理员服务不再依赖 authPool。每租户最多一个门户账号，密码重置只查一个账号，均不属于随列表增长的 N+1。列表结果只做一次完整行 schema 校验。迁移新增 `auth.lookup_user_emails(text[])`，只返回指定 ID 的邮箱，仅 admin scope 可读。应用角色仍不可 SELECT auth.user，函数固定 search_path 并撤销 PUBLIC 权限。原始 SQL 时间值经 schema 转换后按原有 ISO 格式返回。
+
+各项验证分别位于 `packages/db/src/client.test.ts`、`client.db.test.ts`、`admin/rates.db.test.ts`、`admin/receivables.db.test.ts`、`apps/api/src/admin-rates.test.ts`、`admin-accounts.db.test.ts` 及 `apps/web/src/lib/api-problem.test.ts`。包含空闲连接替换、跨实例预览、并发提交一次、锁等待后的 TTL、审计失败回滚、直接违规 SQL、CSV 等于和超过边界、固定查询次数及前端错误展示。验收运行日志保存在本地 `.audit/phase5-backend/`，不提交。

@@ -11,6 +11,36 @@ import * as schema from './schema.js';
 const { app, owner } = connections();
 
 describe('迁移', () => {
+  it('preview foreign key, payload check and expiry index metadata match the migration', async () => {
+    const config = getTableConfig(schema.adminRatePreviews);
+    expect(config.foreignKeys.map((key) => key.getName())).toEqual([
+      'admin_rate_previews_tenant_id_fkey',
+    ]);
+    const reference = config.foreignKeys[0]!.reference();
+    expect(reference.foreignTable).toBe(schema.tenants);
+    expect(reference.columns.map((column) => column.name)).toEqual([
+      'tenant_id',
+    ]);
+    expect(reference.foreignColumns.map((column) => column.name)).toEqual([
+      'id',
+    ]);
+    expect(config.checks.map((constraint) => constraint.name)).toEqual([
+      'admin_rate_previews_payload_check',
+    ]);
+    expect(config.indexes.map((entry) => entry.config.name)).toEqual([
+      'admin_rate_previews_expiry',
+    ]);
+    expect(
+      (
+        await owner.pool.query<{ name: string }>(
+          "SELECT conname AS name FROM pg_constraint WHERE conrelid = 'admin_rate_previews'::regclass AND contype IN ('f','c') ORDER BY conname",
+        )
+      ).rows.map((row) => row.name),
+    ).toEqual([
+      'admin_rate_previews_payload_check',
+      'admin_rate_previews_tenant_id_fkey',
+    ]);
+  });
   it('tenant codes have case-insensitive uniqueness', async () => {
     const tenant = await createTenant(app, 'CNY');
     expect(
@@ -103,7 +133,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 11 }]);
+    expect(rows).toEqual([{ applied: 14 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {
@@ -172,6 +202,6 @@ describe('迁移', () => {
         config.columns.map((c) => c.name).sort(),
       );
     }
-    expect(tables).toHaveLength(19);
+    expect(tables).toHaveLength(20);
   });
 });

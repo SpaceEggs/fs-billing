@@ -1,8 +1,8 @@
 import { sql } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it, vi } from 'vitest';
 import { money } from '@fs-billing/rating';
 import { connections, createTenant, pgError } from '../test/support.js';
-import { withAdmin, withSystem, withTenant } from './client.js';
+import { connect, withAdmin, withSystem, withTenant } from './client.js';
 import { appendLedgerEntry } from './ledger.js';
 
 const { app } = connections();
@@ -11,6 +11,36 @@ const raise = (code: string) =>
   sql.raw(
     `do $$ begin raise exception 'forced' using errcode = '${code}'; end $$`,
   );
+
+it('survives an idle client error and queries through a replacement connection', async () => {
+  const logger = { error: vi.fn() };
+  const { pool } = connect(inject('appUrl'), { max: 1, logger });
+  try {
+    const client = await pool.connect();
+    const original = await client.query<{ pid: number }>(
+      'SELECT pg_backend_pid() AS pid',
+    );
+    client.release();
+    expect(pool.idleCount).toBe(1);
+    const failure = Object.assign(new Error('password=private'), {
+      code: '57P01',
+    });
+    expect(() => client.emit('error', failure)).not.toThrow();
+    expect(pool.idleCount).toBe(0);
+    expect(pool.totalCount).toBe(0);
+    expect(logger.error).toHaveBeenCalledExactlyOnceWith(
+      { event: 'database.idle_client_error', pool: 'database', code: '57P01' },
+      'Database idle connection failed',
+    );
+    const replacement = await pool.query<{ pid: number; value: number }>(
+      'SELECT pg_backend_pid() AS pid, 42 AS value',
+    );
+    expect(replacement.rows[0]?.value).toBe(42);
+    expect(replacement.rows[0]?.pid).not.toBe(original.rows[0]?.pid);
+  } finally {
+    await pool.end();
+  }
+});
 
 describe('withAdmin / withSystem 重试', () => {
   it('rejects nested isolation requests before running the callback', async () => {

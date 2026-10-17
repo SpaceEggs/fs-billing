@@ -21,6 +21,13 @@ describe('apiProblem', () => {
     expect(unavailable).toEqual(internal);
   });
 
+  it('CSV HTTP size errors retain the existing upload message', () => {
+    expect(apiProblem(failure(413, 'CSV_LIMIT_EXCEEDED'))).toEqual({
+      kind: 'csv-rejected',
+      message: '文件超过 2 MB 或 10000 行上限',
+    });
+  });
+
   it('a network failure is also unavailable', () => {
     expect(apiProblem(new ApiRequestError(0, null))).toEqual({
       kind: 'unavailable',

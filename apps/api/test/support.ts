@@ -174,7 +174,6 @@ export function fixtureApi(
     auth,
     accountService: createAdminAccountService({
       businessDb: options.ownerLane ? connections.owner.db : connections.app.db,
-      authPool: connections.authPool,
       auth: auth.auth,
     }),
     trustedOrigins: [origin],

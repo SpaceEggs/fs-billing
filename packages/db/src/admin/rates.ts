@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { z } from 'zod';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import {
   decimal,
   formatRateCsv,
@@ -37,10 +37,14 @@ import {
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
 import { createRateVersion } from '../rates.js';
-import { rateEntries, rateVersions } from '../schema.js';
+import { adminRatePreviews, rateEntries, rateVersions } from '../schema.js';
 import { writeAudit } from './audit.js';
 import { AdminServiceError } from './errors.js';
 import { readTenantCore } from './tenants.js';
+import {
+  ratePreviewPayloadSchema,
+  type RatePreviewPayload,
+} from './rate-preview.js';
 
 type Mutation<Request> = {
   db: Db | Tx;
@@ -48,17 +52,13 @@ type Mutation<Request> = {
   tenantId: string;
   request: Request;
 };
-type Preview = {
-  actorId: string;
-  tenantId: string;
-  baseVersionId: string;
-  entries: AdminRateEntry[];
-  schedule: AdminRateSchedule;
-  expiresAt: number;
-} & (
-  | { kind: 'import'; pathTenantId: string; fileDigest: string }
-  | { kind: 'copy'; pathTenantId: string; sourceVersionId: string }
-);
+
+function previewPayloadText(key: keyof RatePreviewPayload) {
+  return sql<
+    string | null
+  >`${adminRatePreviews.payload}->>${sql.raw(`'${key}'`)}`;
+}
+
 export type AdminRatesServiceOptions = {
   rateRequests?: ReturnType<typeof createAdminRateRequestSchemas>;
   previewTtlMs?: number;
@@ -172,23 +172,29 @@ export function createAdminRatesService(
   if (!Number.isFinite(margin) || margin < 0)
     throw new Error('取消余量必须为非负秒数');
   const entriesSchema = createAdminRateEntriesSchema(maxRows);
-  const previews = new Map<string, Preview>();
-
-  function savePreview(
-    preview: Preview,
+  async function savePreview(
+    tx: Tx,
+    tenantId: string,
+    preview: RatePreviewPayload,
     before: AdminRateEntry[],
     currency: Currency,
     encoding: 'UTF-8' | 'GBK',
-  ): AdminRatePreviewResponse {
-    for (const [id, value] of previews)
-      if (value.expiresAt <= Date.now()) previews.delete(id);
+  ): Promise<AdminRatePreviewResponse> {
+    await tx
+      .delete(adminRatePreviews)
+      .where(
+        sql`${adminRatePreviews.expiresAt} < clock_timestamp() - interval '1 day'`,
+      );
     const previewId = randomUUID();
-    previews.set(previewId, preview);
+    const expiresAt = new Date((await databaseNow(tx)).getTime() + ttl);
+    await tx
+      .insert(adminRatePreviews)
+      .values({ id: previewId, tenantId, payload: preview, expiresAt });
     const changes = differences(before, preview.entries);
     return {
       ok: true,
       previewId,
-      expiresAt: new Date(preview.expiresAt).toISOString(),
+      expiresAt: expiresAt.toISOString(),
       currency,
       encoding,
       changes,
@@ -403,21 +409,23 @@ export function createAdminRatesService(
         rate: entry.perMinute.perMinute.toFixed(),
       })),
     );
-    return savePreview(
-      {
-        kind: 'import',
-        actorId: actor.id.toLowerCase(),
-        pathTenantId: data.tenant.id,
-        tenantId: data.tenant.id,
-        baseVersionId: data.base.id,
-        entries,
-        schedule: input.schedule,
-        expiresAt: Date.now() + ttl,
-        fileDigest: createHash('sha256').update(bytes).digest('hex'),
-      },
-      data.base.entries,
-      data.tenant.currency,
-      encoding,
+    return withAdmin(db, (tx) =>
+      savePreview(
+        tx,
+        data.tenant.id,
+        {
+          kind: 'import',
+          actorId: actor.id.toLowerCase(),
+          pathTenantId: data.tenant.id,
+          baseVersionId: data.base.id,
+          entries,
+          schedule: input.schedule,
+          fileDigest: createHash('sha256').update(bytes).digest('hex'),
+        },
+        data.base.entries,
+        data.tenant.currency,
+        encoding,
+      ),
     );
   }
   async function copyPreview({
@@ -444,47 +452,89 @@ export function createAdminRatesService(
       };
     });
     const entries = entriesSchema.parse(data.version.entries);
-    return savePreview(
-      {
-        kind: 'copy',
-        actorId: actor.id.toLowerCase(),
-        pathTenantId: data.source.id,
-        tenantId: data.target.id,
-        sourceVersionId: data.version.id,
-        baseVersionId: data.base.id,
-        entries,
-        schedule: input.schedule,
-        expiresAt: Date.now() + ttl,
-      },
-      data.base.entries,
-      data.target.currency,
-      'UTF-8',
+    return withAdmin(db, (tx) =>
+      savePreview(
+        tx,
+        data.target.id,
+        {
+          kind: 'copy',
+          actorId: actor.id.toLowerCase(),
+          pathTenantId: data.source.id,
+          sourceVersionId: data.version.id,
+          baseVersionId: data.base.id,
+          entries,
+          schedule: input.schedule,
+        },
+        data.base.entries,
+        data.target.currency,
+        'UTF-8',
+      ),
     );
   }
   async function commit(
-    kind: Preview['kind'],
+    kind: RatePreviewPayload['kind'],
     { db, actor, tenantId, request }: Mutation<AdminRateImportCommitRequest>,
   ) {
     const input = adminRateImportCommitRequestSchema.parse(request);
-    const preview = previews.get(input.previewId.toLowerCase());
-    if (
-      !preview ||
-      preview.kind !== kind ||
-      preview.pathTenantId !== tenantId.toLowerCase() ||
-      preview.actorId !== actor.id.toLowerCase()
-    )
-      throw new AdminServiceError('PREVIEW_STALE', '预览已失效');
-    if (preview.expiresAt <= Date.now())
-      throw new AdminServiceError('PREVIEW_EXPIRED', '预览已过期');
+    function isPreviewStale(
+      preview: { consumedAt: Date | null } & {
+        [
+          Key in keyof Pick<
+            RatePreviewPayload,
+            'kind' | 'pathTenantId' | 'actorId'
+          >
+        ]: string | null;
+      },
+    ) {
+      return (
+        preview.consumedAt !== null ||
+        preview.kind !== kind ||
+        preview.pathTenantId?.toLowerCase() !== tenantId.toLowerCase() ||
+        preview.actorId?.toLowerCase() !== actor.id.toLowerCase()
+      );
+    }
     try {
       const response = await withAdmin(db, async (tx) => {
-        await lockTenants(tx, [preview.tenantId]);
-        if (preview.expiresAt <= Date.now())
+        const [initial] = await tx
+          .select({
+            tenantId: adminRatePreviews.tenantId,
+            consumedAt: adminRatePreviews.consumedAt,
+            kind: previewPayloadText('kind'),
+            pathTenantId: previewPayloadText('pathTenantId'),
+            actorId: previewPayloadText('actorId'),
+          })
+          .from(adminRatePreviews)
+          .where(eq(adminRatePreviews.id, input.previewId));
+        if (!initial || isPreviewStale(initial))
+          throw new AdminServiceError('PREVIEW_STALE', '预览已失效');
+        await lockTenants(tx, [initial.tenantId]);
+        const [row] = await tx
+          .select()
+          .from(adminRatePreviews)
+          .where(eq(adminRatePreviews.id, input.previewId));
+        if (!row) throw new AdminServiceError('PREVIEW_STALE', '预览已失效');
+        const payload = ratePreviewPayloadSchema.safeParse(row.payload);
+        if (
+          !payload.success ||
+          isPreviewStale({ ...payload.data, consumedAt: row.consumedAt })
+        )
+          throw new AdminServiceError('PREVIEW_STALE', '预览已失效');
+        const preview = {
+          ...payload.data,
+          tenantId: row.tenantId,
+          expiresAt: row.expiresAt,
+        };
+        const now = await databaseNow(tx);
+        if (preview.expiresAt <= now)
           throw new AdminServiceError('PREVIEW_EXPIRED', '预览已过期');
         const schedule = requests.schedule.safeParse(preview.schedule);
         if (!schedule.success)
           throw new AdminServiceError('PREVIEW_STALE', '预览排期已失效');
         await assertBase(tx, preview.tenantId, preview.baseVersionId, true);
+        await tx
+          .update(adminRatePreviews)
+          .set({ consumedAt: now })
+          .where(eq(adminRatePreviews.id, input.previewId));
         if (preview.kind === 'copy') {
           await readVersion(tx, preview.pathTenantId, preview.sourceVersionId);
           return writeVersion(tx, {
@@ -505,7 +555,6 @@ export function createAdminRatesService(
           action: 'rate_import',
         });
       });
-      previews.delete(input.previewId.toLowerCase());
       return response;
     } catch (error) {
       return conflict(error);

@@ -1,6 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import type { Pool } from 'pg';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   schema,
@@ -24,6 +23,21 @@ import { normalizeEmail } from './gateway.js';
 import type { AdminPrincipal } from '../types.js';
 
 const insertedSchema = z.object({ inserted: z.boolean() });
+const databaseTimestampSchema = z.coerce
+  .date()
+  .transform((value) => value.toISOString())
+  .pipe(adminAccountSchema.shape.createdAt);
+const adminListRowSchema = adminAccountSchema.extend({
+  lastLoginAt: databaseTimestampSchema.nullable(),
+  createdAt: databaseTimestampSchema,
+});
+const adminListRowsSchema = z.array(adminListRowSchema);
+const portalListRowsSchema = z.array(
+  adminPortalAccountSchema.extend({
+    lastLoginAt: databaseTimestampSchema.nullable(),
+    createdAt: databaseTimestampSchema,
+  }),
+);
 
 function isUserEmailConflict(error: unknown): boolean {
   for (let current = error; current instanceof Error; current = current.cause) {
@@ -40,19 +54,9 @@ function isUserEmailConflict(error: unknown): boolean {
 
 export function createAdminAccountService(deps: {
   businessDb: Db;
-  authPool: Pool;
   auth: BillingAuth;
 }) {
-  const { businessDb: db, authPool: pool, auth } = deps;
-  async function email(userId: string) {
-    const result = await pool.query<{ email: string }>(
-      'SELECT email FROM auth."user" WHERE id=$1',
-      [userId],
-    );
-    const value = result.rows[0]?.email;
-    if (!value) throw new Error('Linked auth user missing');
-    return value;
-  }
+  const { businessDb: db, auth } = deps;
   async function actor(tx: Tx, principal: AdminPrincipal) {
     const [row] = await tx
       .select()
@@ -217,29 +221,22 @@ export function createAdminAccountService(deps: {
       body: AdminPortalAccountCreateRequest,
     ) => create(principal, { kind: 'portal', tenantId, body }),
     async listAdmins(query: AdminAccountsQuery) {
-      const rows = await withAdmin(db, (tx) =>
-        tx
-          .select()
-          .from(schema.admins)
-          .where(
-            and(
-              query.status ? eq(schema.admins.status, query.status) : undefined,
-            ),
+      const result = await withAdmin(db, (tx) =>
+        tx.execute(sql`
+          WITH filtered_admins AS MATERIALIZED (
+            SELECT * FROM public.admins
+            WHERE ${query.status ? sql`status = ${query.status}` : sql`true`}
           )
-          .orderBy(asc(schema.admins.createdAt), asc(schema.admins.id)),
+          SELECT a.id, a.name, a.status, emails.email,
+            a.last_login_at AS "lastLoginAt", a.created_at AS "createdAt"
+          FROM filtered_admins a
+          LEFT JOIN auth.lookup_user_emails(
+            ARRAY(SELECT auth_user_id FROM filtered_admins)
+          ) emails ON emails.user_id = a.auth_user_id
+          ORDER BY a.created_at, a.id
+        `),
       );
-      const items = await Promise.all(
-        rows.map(async (row) =>
-          adminAccountSchema.parse({
-            id: row.id,
-            name: row.name,
-            status: row.status,
-            email: await email(row.authUserId),
-            lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
-            createdAt: row.createdAt.toISOString(),
-          }),
-        ),
-      );
+      const items = adminListRowsSchema.parse(result.rows);
       const search = query.search?.toLowerCase();
       const matching = search
         ? items.filter(
@@ -267,24 +264,21 @@ export function createAdminAccountService(deps: {
           .from(schema.tenants)
           .where(eq(schema.tenants.id, tenantId));
         if (!tenant) throw new AdminServiceError('NOT_FOUND', '租户不存在');
-        return tx
-          .select()
-          .from(schema.portalAccounts)
-          .where(eq(schema.portalAccounts.tenantId, tenantId));
+        const result = await tx.execute(sql`
+          WITH filtered_portal_accounts AS MATERIALIZED (
+            SELECT * FROM public.portal_accounts
+            WHERE tenant_id = ${tenantId}::uuid
+          )
+          SELECT p.id, p.status, emails.email,
+            p.last_login_at AS "lastLoginAt", p.created_at AS "createdAt"
+          FROM filtered_portal_accounts p
+          LEFT JOIN auth.lookup_user_emails(
+            ARRAY(SELECT auth_user_id FROM filtered_portal_accounts)
+          ) emails ON emails.user_id = p.auth_user_id
+        `);
+        return portalListRowsSchema.parse(result.rows);
       });
-      return {
-        items: await Promise.all(
-          rows.map(async (row) =>
-            adminPortalAccountSchema.parse({
-              id: row.id,
-              status: row.status,
-              email: await email(row.authUserId),
-              lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
-              createdAt: row.createdAt.toISOString(),
-            }),
-          ),
-        ),
-      };
+      return { items: rows };
     },
     async setStatus(
       principal: AdminPrincipal,
@@ -379,7 +373,12 @@ export function createAdminAccountService(deps: {
       await withAdmin(db, async (tx) => {
         const who = await actor(tx, principal);
         const row = await account(tx, kind, id);
-        const address = await email(row.authUserId);
+        const emails = await tx.execute(
+          sql`select email from auth.lookup_user_emails(ARRAY[${row.authUserId}::text])`,
+        );
+        const address = z
+          .object({ email: z.string().min(1) })
+          .parse(emails.rows[0]).email;
         await setCredential(tx, row.authUserId, hash);
         await clearLoginFailures(tx, normalizeEmail(address));
         await revokeSessions(tx, row.authUserId);

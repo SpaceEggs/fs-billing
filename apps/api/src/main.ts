@@ -4,10 +4,18 @@ import { apiEnvironmentSchema, apiRateLimitOptions } from './config.js';
 import { createAuthGateway } from './auth/gateway.js';
 import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 import { createAdminAccountService } from './auth/admin-accounts.js';
+import { createApiLogger } from './logging.js';
 
 const config = apiEnvironmentSchema.parse(process.env);
-const business = connect(config.APP_DATABASE_URL);
-const { pool: authPool } = connect(config.AUTH_DATABASE_URL);
+const logger = createApiLogger();
+const business = connect(config.APP_DATABASE_URL, {
+  poolName: 'api.business',
+  logger,
+});
+const { pool: authPool } = connect(config.AUTH_DATABASE_URL, {
+  poolName: 'api.auth',
+  logger,
+});
 const trustedOrigins = config.BETTER_AUTH_TRUSTED_ORIGINS ?? [
   new URL(config.BETTER_AUTH_URL).origin,
 ];
@@ -18,17 +26,13 @@ const auth = createAuthGateway({
   secureCookies: config.NODE_ENV === 'production',
   trustedOrigins,
   temporaryPasswordTtlMs: config.ADMIN_TEMPORARY_PASSWORD_TTL_MS,
-  logger: {
-    info: (fields, message) => app.log.info(fields, message),
-    error: (fields, message) => app.log.error(fields, message),
-  },
+  logger,
 });
 const app = createApi({
   businessDb: business.db,
   auth,
   accountService: createAdminAccountService({
     businessDb: business.db,
-    authPool,
     auth: auth.auth,
   }),
   adminAmountMaxIntegerDigits: config.ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
@@ -38,7 +42,7 @@ const app = createApi({
     cancelClockSkewMarginSeconds:
       config.ADMIN_RATE_CANCEL_CLOCK_SKEW_MARGIN_SECONDS,
   },
-  logger: true,
+  loggerInstance: logger,
   trustedOrigins,
   ...apiRateLimitOptions(config),
 });

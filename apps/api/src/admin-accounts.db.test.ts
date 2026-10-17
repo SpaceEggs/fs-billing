@@ -5,11 +5,13 @@ import {
   adminPortalAccountsResponseSchema,
   adminMutationResponseSchema,
   sessionResponseSchema,
+  type AdminAccountsQuery,
 } from '@fs-billing/shared';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { sql } from '@fs-billing/db';
-import type { PoolClient } from 'pg';
+import pg, { type PoolClient } from 'pg';
 import {
   apiConnections,
   createFixture,
@@ -29,7 +31,6 @@ const connections = apiConnections();
 const { api } = fixtureApi(connections);
 const service = createAdminAccountService({
   businessDb: connections.app.db,
-  authPool: connections.authPool,
   auth: connections.betterAuth,
 });
 let fixture: Fixture;
@@ -137,6 +138,167 @@ it('lists auth email through private lookup without leaking internal ids', async
       email: fixture.a.email,
     }),
   ]);
+});
+
+it('lists admins in one joined read with stable query count, search, order and pagination', async () => {
+  const marker = randomUUID();
+  const createdAt = new Date('2026-01-01T00:00:00.000Z');
+  const lastLoginAt = new Date('2026-01-02T00:00:00.000Z');
+  const expected = [];
+  async function add(index: number) {
+    const id = randomUUID();
+    const userId = randomUUID();
+    const email = `${marker}-${index}@example.com`;
+    const status = index === 2 ? 'disabled' : 'active';
+    const name =
+      index === 3 ? 'Name matches email search' : `Admin ${marker} ${index}`;
+    await connections.owner.pool.query(
+      'INSERT INTO auth."user"(id,name,email) VALUES($1,$2,$3)',
+      [userId, name, email],
+    );
+    await connections.owner.pool.query(
+      'INSERT INTO public.admins(id,auth_user_id,name,status,created_at,last_login_at) VALUES($1,$2,$3,$4,$5,$6)',
+      [id, userId, name, status, createdAt, index === 0 ? lastLoginAt : null],
+    );
+    return {
+      id,
+      email,
+      name,
+      status,
+      createdAt: createdAt.toISOString(),
+      lastLoginAt: index === 0 ? lastLoginAt.toISOString() : null,
+    };
+  }
+  async function observedList(
+    query: AdminAccountsQuery = {
+      search: marker.toUpperCase(),
+      page: 1,
+      pageSize: 100,
+    },
+  ) {
+    const queries = vi.spyOn(pg.Client.prototype, 'query');
+    const authQueries = vi.spyOn(connections.authPool, 'query');
+    try {
+      const result = await service.listAdmins(query);
+      expect(authQueries).not.toHaveBeenCalled();
+      const texts = queries.mock.calls.map(([query]) =>
+        z
+          .union([
+            z.string(),
+            z.object({ text: z.string() }).transform((value) => value.text),
+          ])
+          .parse(query),
+      );
+      expect(
+        texts.filter((text) => text.includes('lookup_user_emails')),
+      ).toHaveLength(1);
+      return { result, queryCount: queries.mock.calls.length };
+    } finally {
+      queries.mockRestore();
+      authQueries.mockRestore();
+    }
+  }
+  expected.push(await add(0));
+  const one = await observedList();
+  expect(one.result).toEqual({
+    items: expected,
+    pagination: { page: 1, pageSize: 100, total: 1 },
+  });
+  for (const index of [1, 2, 3]) expected.push(await add(index));
+  expected.sort((left, right) => left.id.localeCompare(right.id));
+  const many = await observedList();
+  expect(many.queryCount).toBe(one.queryCount);
+  expect(many.result).toEqual({
+    items: expected,
+    pagination: { page: 1, pageSize: 100, total: 4 },
+  });
+  const active = await observedList({
+    search: marker,
+    status: 'active',
+    page: 2,
+    pageSize: 1,
+  });
+  expect(active.queryCount).toBe(one.queryCount);
+  expect(active.result).toEqual({
+    items: expected.filter((row) => row.status === 'active').slice(1, 2),
+    pagination: { page: 2, pageSize: 1, total: 3 },
+  });
+  const disabled = await observedList({
+    search: marker,
+    status: 'disabled',
+    page: 1,
+    pageSize: 20,
+  });
+  expect(disabled.queryCount).toBe(one.queryCount);
+  expect(disabled.result).toEqual({
+    items: expected.filter((row) => row.status === 'disabled'),
+    pagination: { page: 1, pageSize: 20, total: 1 },
+  });
+});
+
+it('lists zero or one portal account without separate auth queries and preserves tenant isolation', async () => {
+  const tenantId = randomUUID();
+  await connections.owner.pool.query(
+    "INSERT INTO public.tenants(id,code,name,currency,overdraft_limit) VALUES($1,$2,'No portal','CNY',0)",
+    [tenantId, `empty${tenantId.replaceAll('-', '')}`],
+  );
+  async function observedList(id: string) {
+    const queries = vi.spyOn(pg.Client.prototype, 'query');
+    const authQueries = vi.spyOn(connections.authPool, 'query');
+    try {
+      const result = await service.listPortal(id);
+      expect(authQueries).not.toHaveBeenCalled();
+      return { result, queryCount: queries.mock.calls.length };
+    } finally {
+      queries.mockRestore();
+      authQueries.mockRestore();
+    }
+  }
+  const empty = await observedList(tenantId);
+  expect(empty.result).toEqual({ items: [] });
+  for (const user of [fixture.a, fixture.b]) {
+    if (!user.tenantId) throw new Error('Expected portal tenant');
+    const listed = await observedList(user.tenantId);
+    expect(listed.queryCount).toBe(empty.queryCount);
+    const stored = await connections.owner.pool.query<{
+      status: string;
+      last_login_at: Date | null;
+      created_at: Date;
+    }>(
+      'SELECT status,last_login_at,created_at FROM public.portal_accounts WHERE id=$1',
+      [user.profileId],
+    );
+    const row = stored.rows[0];
+    if (!row) throw new Error('Expected portal fixture');
+    expect(listed.result).toEqual({
+      items: [
+        {
+          id: user.profileId,
+          email: user.email,
+          status: row.status,
+          lastLoginAt: row.last_login_at?.toISOString() ?? null,
+          createdAt: row.created_at.toISOString(),
+        },
+      ],
+    });
+  }
+  await expect(service.listPortal(randomUUID())).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+});
+
+it('batch email lookup keeps auth tables private and requires admin scope', async () => {
+  await expect(
+    connections.app.pool.query('SELECT email FROM auth."user"'),
+  ).rejects.toMatchObject({ code: '42501' });
+  expect(
+    (
+      await connections.app.pool.query(
+        'SELECT * FROM auth.lookup_user_emails(ARRAY[$1::text])',
+        [fixture.admin.userId],
+      )
+    ).rows,
+  ).toEqual([]);
 });
 
 it('portal disable and enable audit without changing tenant status or restoring old sessions', async () => {
@@ -725,6 +887,72 @@ it('portal enable rereads a status changed while waiting for its tenant lock', a
     await holder.query('ROLLBACK');
     holder.release();
     await pending;
+  }
+});
+
+it('resets admin and portal credentials through the administrator transaction without querying the auth pool', async () => {
+  for (const kind of ['admin', 'portal'] as const) {
+    const user = kind === 'admin' ? fixture.otherAdmin : fixture.a;
+    const session = await login(api, user);
+    await connections.owner.pool.query(
+      'INSERT INTO auth.login_failures(email_key,window_id,failed_count,last_failed_at) VALUES($1,gen_random_uuid(),1,now())',
+      [user.email.toLowerCase()],
+    );
+    const authQueries = vi.spyOn(connections.authPool, 'query');
+    let temporaryPassword: string;
+    try {
+      ({ temporaryPassword } = await service.resetPassword(
+        principal(),
+        kind,
+        user.profileId,
+      ));
+      expect(authQueries).not.toHaveBeenCalled();
+    } finally {
+      authQueries.mockRestore();
+    }
+    const context = await connections.betterAuth.$context;
+    const credential = await connections.owner.pool.query<{
+      password: string;
+      temporary_password_issued_at: Date;
+    }>(
+      "SELECT password,temporary_password_issued_at FROM auth.account WHERE user_id=$1 AND provider_id='credential'",
+      [user.userId],
+    );
+    const row = credential.rows[0];
+    if (!row) throw new Error('Expected credential');
+    expect(row.temporary_password_issued_at).toBeInstanceOf(Date);
+    expect(
+      await context.password.verify({
+        hash: row.password,
+        password: temporaryPassword,
+      }),
+    ).toBe(true);
+    expect(
+      (
+        await connections.owner.pool.query(
+          'SELECT email_key FROM auth.login_failures WHERE email_key=$1',
+          [user.email.toLowerCase()],
+        )
+      ).rows,
+    ).toEqual([]);
+    expect(
+      (
+        await connections.owner.pool.query(
+          "SELECT tenant_id,action FROM public.operation_logs WHERE target=$1 AND action='reset_password'",
+          [user.profileId],
+        )
+      ).rows,
+    ).toEqual([
+      {
+        tenant_id: kind === 'portal' ? fixture.a.tenantId : null,
+        action: 'reset_password',
+      },
+    ]);
+    const stale = await api.inject({
+      url: '/api/auth/session',
+      headers: requestHeaders(session.cookie),
+    });
+    expect(stale.statusCode).toBe(401);
   }
 });
 

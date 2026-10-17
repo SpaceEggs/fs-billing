@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/coverage/**',
       'design/**',
+      '.audit/**',
       'apps/web/test-results/**',
       'apps/web/playwright-report/**',
     ],

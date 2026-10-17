@@ -27,7 +27,6 @@ const connections = apiConnections();
 const { api, auth, logs } = fixtureApi(connections);
 const accounts = createAdminAccountService({
   businessDb: connections.app.db,
-  authPool: connections.authPool,
   auth: connections.betterAuth,
 });
 let fixture: Fixture;
