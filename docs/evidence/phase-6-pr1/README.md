@@ -2,7 +2,7 @@
 
 PR 1 changes only the `tenant_read` `USING` predicates on the 13 tenant-scoped tables. Migration `0015_rls_initplan.sql` contains 13 explicit `ALTER POLICY` statements; `tenants` uses `id`, and the other tables use `tenant_id`. The test derives its RLS inventory from PostgreSQL catalogs, compares the migrated policy set with the intended targets, and checks real app-role row visibility against the legacy `app_can_see` behavior for populated tenant fixtures and the requested session-scope cases. No app source changed.
 
-The implementation is in the isolated `phase-6-rls-initplan` worktree. Independent Luna review found no blocking issue. Its initial cleanup concern was resolved in the final Worker harness, and the final review found no blocking finding. The review used one Luna model, with no second-model agreement signal. The PR is pending CI and merge. Phase 6 remains in progress. Review reports and the independent focused RLS test output are included below.
+The implementation is in the isolated `phase-6-rls-initplan` worktree. Independent Luna review found no blocking issue. Its initial cleanup concern was resolved in the final Worker harness, and the final review found no blocking finding. The review used one Luna model, with no second-model agreement signal. CI and merge status are tracked in [PR #40](https://github.com/SpaceEggs/fs-billing/pull/40). Phase 6 remains in progress. Review reports and the independent focused RLS test output are included below.
 
 ## Independent review
 
