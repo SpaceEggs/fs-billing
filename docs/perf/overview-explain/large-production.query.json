@@ -1,0 +1,141 @@
+{
+  "query": "\n    with instant as (select statement_timestamp() as as_of),\n    bounds as (\n      select as_of, (as_of at time zone 'Asia/Shanghai')::date as today,\n        date_trunc('month', as_of at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai' as month_start,\n        (date_trunc('month', as_of at time zone 'Asia/Shanghai') + interval '1 month') at time zone 'Asia/Shanghai' as month_end\n      from instant\n    ),\n    daily_spend as (\n      select (l.occurred_at at time zone 'Asia/Shanghai')::date as day, -sum(l.amount) as spend\n      from ledger_entries l\n      where l.tenant_id = $1::uuid and l.kind = 'call_charge'\n        and l.occurred_at >= (select (today - 29)::timestamp at time zone 'Asia/Shanghai' from bounds)\n        and l.occurred_at < (select (today + 1)::timestamp at time zone 'Asia/Shanghai' from bounds)\n      group by 1\n    ),\n    days as (\n      select b.today - n as day, coalesce(d.spend, 0) as spend\n      from bounds b cross join generate_series(0, 29) n\n      left join daily_spend d on d.day = b.today - n\n    ),\n    answered as (\n      select coalesce(sum(c.billed_minutes), 0)::text as minutes, count(*)::int as calls\n      from cdrs c cross join bounds b\n      where c.tenant_id = $2::uuid\n        and c.answered_at >= b.month_start and c.answered_at < b.month_end\n        and c.started_at < b.month_end\n    ),\n    unanswered as (\n      select count(*)::int as calls\n      from cdrs c cross join bounds b\n      where c.tenant_id = $3::uuid and c.answered_at is null\n        and c.started_at >= b.month_start and c.started_at < b.month_end\n    )\n    select jsonb_build_object(\n      'asOf', to_char(b.as_of at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),\n      'currency', t.currency,\n      'monthSpend', coalesce((\n    select -sum(l.amount) from ledger_entries l\n    where l.tenant_id = t.id and l.kind = 'call_charge'\n      and l.occurred_at >= date_trunc('month', b.as_of at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai'\n      and l.occurred_at < (date_trunc('month', b.as_of at time zone 'Asia/Shanghai') + interval '1 month') at time zone 'Asia/Shanghai'\n  ), 0)::text,\n      'monthCallMinutes', a.minutes,\n      'answeredCalls', a.calls,\n      'unansweredCalls', u.calls,\n      'daily', (select jsonb_agg(jsonb_build_object('date', day, 'spend', spend::text) order by day) from days),\n      'dailyTotal', (select sum(spend)::text from days)\n    ) as overview\n    from tenants t cross join bounds b cross join answered a cross join unanswered u\n    where t.id = $4::uuid\n  ",
+  "params": [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000001"
+  ],
+  "settings": ["set local jit = off"],
+  "overview": {
+    "asOf": "2026-10-17T01:35:43.273277Z",
+    "currency": "CNY",
+    "monthSpend": "7700.00",
+    "monthCallMinutes": "770000",
+    "answeredCalls": 385000,
+    "unansweredCalls": 165000,
+    "daily": [
+      {
+        "date": "2026-09-18",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-19",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-09-20",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-21",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-22",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-09-23",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-24",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-25",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-09-26",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-27",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-28",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-09-29",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-09-30",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-01",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-10-02",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-03",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-04",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-10-05",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-06",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-07",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-10-08",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-09",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-10",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-10-11",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-12",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-13",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-10-14",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-15",
+        "spend": "466.68"
+      },
+      {
+        "date": "2026-10-16",
+        "spend": "466.64"
+      },
+      {
+        "date": "2026-10-17",
+        "spend": "233.36"
+      }
+    ],
+    "dailyTotal": "13766.68"
+  }
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "current_user": "fs_billing_app",
+    "scope": "admin",
+    "transaction_read_only": "on",
+    "jit": "off",
+    "rolbypassrls": false,
+    "rolsuper": false
+  }
+]
