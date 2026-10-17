@@ -6,3 +6,4 @@ export * from './context.js';
 export * from './contract.js';
 export * from './admin/index.js';
 export * from './usage.js';
+export * from './tenant-health.js';

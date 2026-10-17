@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { tenantUsageOverviewSchema } from '../usage.js';
 import { moneyAmountSchema } from '../money.js';
 import { currencySchema, tenantIdentitySchema } from '../identity.js';
+import { tenantHealthSchema } from '../tenant-health.js';
 import {
   adminAuditedMutationResponseSchema,
   adminInputAmountSchemas,
@@ -18,13 +19,6 @@ export const DEFAULT_TENANT_OVERDRAFT_LIMIT = {
   USD: '15',
 } as const satisfies Record<z.infer<typeof currencySchema>, string>;
 
-export const adminTenantHealthSchema = z.enum([
-  'suspended',
-  'overdraft',
-  'low_balance',
-  'normal',
-  'disabled',
-]);
 export function createAdminTenantSettingsRequestSchema(
   amounts = adminInputAmountSchemas,
 ) {
@@ -94,7 +88,7 @@ export const adminTenantCreateRequestSchema =
   createAdminTenantCreateRequestSchema();
 export const adminTenantSummarySchema = tenantIdentitySchema.extend({
   status: adminStatusSchema,
-  health: adminTenantHealthSchema,
+  health: tenantHealthSchema,
   settingsConfigured: z.boolean(),
   balance: moneyAmountSchema,
   overdraftLimit: adminNonnegativeAmountSchema,
@@ -104,7 +98,7 @@ export const adminTenantSummarySchema = tenantIdentitySchema.extend({
 });
 export const adminTenantsQuerySchema = adminPageQuerySchema.extend({
   search: z.string().max(200).optional(),
-  status: adminTenantHealthSchema.optional(),
+  status: tenantHealthSchema.optional(),
   currency: currencySchema.optional(),
   sort: z.literal('status_currency_balance').default('status_currency_balance'),
 });
@@ -125,7 +119,6 @@ export const adminTenantCreateResponseSchema =
   });
 export const adminTenantOverviewResponseSchema = tenantUsageOverviewSchema;
 
-export type AdminTenantHealth = z.infer<typeof adminTenantHealthSchema>;
 export type AdminTenantSettingsRequest = z.infer<
   typeof adminTenantSettingsRequestSchema
 >;

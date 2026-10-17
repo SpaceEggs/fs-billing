@@ -1,4 +1,4 @@
-import type { AdminTenantHealth } from '@fs-billing/shared';
+import type { TenantHealth } from '@fs-billing/shared';
 import { StatusTag, statusTags, type StatusKey } from '../status-tag';
 
 export const healthStatus = {
@@ -7,14 +7,14 @@ export const healthStatus = {
   low_balance: 'lowBalance',
   normal: 'normal',
   disabled: 'disabled',
-} as const satisfies Record<AdminTenantHealth, StatusKey>;
+} as const satisfies Record<TenantHealth, StatusKey>;
 
-export const healthOptions = (
-  Object.keys(healthStatus) as AdminTenantHealth[]
-).map((health) => ({
-  value: health,
-  label: statusTags[healthStatus[health]].label,
-}));
+export const healthOptions = (Object.keys(healthStatus) as TenantHealth[]).map(
+  (health) => ({
+    value: health,
+    label: statusTags[healthStatus[health]].label,
+  }),
+);
 
 /**
  * 状态标签；存量租户缺少余额提醒设置时另加标记（详情会返回服务内部错误），
@@ -25,7 +25,7 @@ export function TenantStatus({
   settingsConfigured,
   className,
 }: {
-  health: AdminTenantHealth;
+  health: TenantHealth;
   settingsConfigured: boolean;
   className?: string;
 }) {
