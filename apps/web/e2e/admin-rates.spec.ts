@@ -397,10 +397,11 @@ test('mobile only views and searches rates', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^编辑 / })).toHaveCount(0);
   await expect(card.getByRole('row').nth(1)).toContainText('447英国手机');
   await page.getByRole('searchbox', { name: '搜索前缀或国家' }).fill('英国');
+  // 手机费率表不显示表头，每行带单位。
   const table = page.getByRole('table').last();
-  await expect(table.getByRole('row')).toHaveCount(2);
-  await expect(table.getByRole('row').nth(1)).toContainText(
-    '447英国手机0.0450',
+  await expect(table.getByRole('row')).toHaveCount(1);
+  await expect(table.getByRole('row')).toContainText(
+    '447英国手机0.0450元/分钟',
   );
 });
 
