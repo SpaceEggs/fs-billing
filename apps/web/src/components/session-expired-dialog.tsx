@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
-import { clearBalanceAttempts } from '../lib/balance-operation';
+import { clearBalanceAttempts } from '../lib/balance-attempts';
 import { rememberReturnPath } from '../lib/return-to';
 import { sessionExpiry, useSessionExpired } from '../lib/session';
 import { zones, type Zone } from '../lib/zone';

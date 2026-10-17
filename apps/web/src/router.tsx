@@ -30,7 +30,7 @@ import {
   validateTenantDetailSearch,
   validateTenantListSearch,
 } from './lib/admin-search';
-import { clearBalanceAttempts } from './lib/balance-operation';
+import { clearBalanceAttempts } from './lib/balance-attempts';
 import { rememberReturnPath } from './lib/return-to';
 import {
   loadSession,

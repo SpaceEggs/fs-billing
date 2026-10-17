@@ -12,7 +12,7 @@ import { Alert } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { callApi } from '../lib/api';
-import { clearBalanceAttempts } from '../lib/balance-operation';
+import { clearBalanceAttempts } from '../lib/balance-attempts';
 import {
   loginAlert,
   loginProblem,

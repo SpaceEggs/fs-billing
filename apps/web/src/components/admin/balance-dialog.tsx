@@ -16,13 +16,15 @@ import {
   balanceRequest,
   needsLargeAmountConfirm,
   projectBalance,
-  resolveBalanceAttempt,
   validateBalanceDraft,
-  type BalanceAttempt,
   type BalanceDraft,
   type BalanceErrors,
   type BalanceKind,
 } from '../../lib/balance-operation';
+import {
+  resolveBalanceAttempt,
+  type BalanceAttempt,
+} from '../../lib/balance-attempts';
 import { normalizeAmountInput } from '../../lib/amounts';
 import { formatExactMoney, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
