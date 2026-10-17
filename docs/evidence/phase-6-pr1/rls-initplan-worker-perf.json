@@ -1,0 +1,1662 @@
+{
+  "status": "complete",
+  "errors": 0,
+  "claim": "Loopback HTTP authorization p95 from the unchanged Worker perf:authorize script on fresh, identical local database clones.",
+  "requestValidation": "Each 1,000-request child run exits nonzero on any non-200 response or response-body mismatch; all 12 children exited zero.",
+  "environment": {
+    "benchmarkStartedAt": "2026-10-17T17:35:32.204Z",
+    "capturedAt": "2026-10-17T17:37:32.353Z",
+    "sourceDatabase": "fs_billing",
+    "databaseHost": "127.0.0.1",
+    "postgresVersion": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "serverAddress": "192.168.107.2/32",
+    "serverPort": 5432,
+    "nodeVersion": "v22.23.2",
+    "platform": "darwin",
+    "release": "27.0.0",
+    "cpuModel": "Apple M4",
+    "cpuCount": 10,
+    "totalMemoryBytes": 17179869184,
+    "loadAverageBefore": [2.58642578125, 3.12744140625, 3.310546875],
+    "loadAverageAfter": [3.9912109375, 3.37353515625, 3.373046875],
+    "uptimeSeconds": 559028
+  },
+  "setup": {
+    "fixtureSource": "Project migrations (including 0015) plus seedDatabase on a fresh local disposable database.",
+    "clonePairPolicyDiff": "Baseline clones restore the 13 tenant_read quals to app_can_see; candidate clones retain the actual migrated 0015 policies.",
+    "identicalIndexes": true,
+    "indexes": [
+      {
+        "tablename": "admin_rate_previews",
+        "indexname": "admin_rate_previews_expiry",
+        "indexdef": "CREATE INDEX admin_rate_previews_expiry ON public.admin_rate_previews USING btree (expires_at)"
+      },
+      {
+        "tablename": "admin_rate_previews",
+        "indexname": "admin_rate_previews_pkey",
+        "indexdef": "CREATE UNIQUE INDEX admin_rate_previews_pkey ON public.admin_rate_previews USING btree (id)"
+      },
+      {
+        "tablename": "admins",
+        "indexname": "admins_auth_user_id_unique",
+        "indexdef": "CREATE UNIQUE INDEX admins_auth_user_id_unique ON public.admins USING btree (auth_user_id)"
+      },
+      {
+        "tablename": "admins",
+        "indexname": "admins_pkey",
+        "indexdef": "CREATE UNIQUE INDEX admins_pkey ON public.admins USING btree (id)"
+      },
+      {
+        "tablename": "balance_alert_deliveries",
+        "indexname": "balance_alert_deliveries_pkey",
+        "indexdef": "CREATE UNIQUE INDEX balance_alert_deliveries_pkey ON public.balance_alert_deliveries USING btree (id)"
+      },
+      {
+        "tablename": "balance_alert_settings",
+        "indexname": "balance_alert_settings_pkey",
+        "indexdef": "CREATE UNIQUE INDEX balance_alert_settings_pkey ON public.balance_alert_settings USING btree (tenant_id)"
+      },
+      {
+        "tablename": "call_uuids",
+        "indexname": "call_uuids_pkey",
+        "indexdef": "CREATE UNIQUE INDEX call_uuids_pkey ON public.call_uuids USING btree (call_uuid)"
+      },
+      {
+        "tablename": "cdrs",
+        "indexname": "cdrs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_pkey ON ONLY public.cdrs USING btree (call_uuid, started_at)"
+      },
+      {
+        "tablename": "cdrs",
+        "indexname": "cdrs_tenant_answered_at",
+        "indexdef": "CREATE INDEX cdrs_tenant_answered_at ON ONLY public.cdrs USING btree (tenant_id, answered_at)"
+      },
+      {
+        "tablename": "cdrs",
+        "indexname": "cdrs_tenant_started_at",
+        "indexdef": "CREATE INDEX cdrs_tenant_started_at ON ONLY public.cdrs USING btree (tenant_id, started_at)"
+      },
+      {
+        "tablename": "cdrs_2026_09",
+        "indexname": "cdrs_2026_09_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_09_pkey ON public.cdrs_2026_09 USING btree (call_uuid, started_at)"
+      },
+      {
+        "tablename": "cdrs_2026_09",
+        "indexname": "cdrs_2026_09_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_09_tenant_id_answered_at_idx ON public.cdrs_2026_09 USING btree (tenant_id, answered_at)"
+      },
+      {
+        "tablename": "cdrs_2026_09",
+        "indexname": "cdrs_2026_09_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_09_tenant_id_started_at_idx ON public.cdrs_2026_09 USING btree (tenant_id, started_at)"
+      },
+      {
+        "tablename": "cdrs_2026_10",
+        "indexname": "cdrs_2026_10_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_10_pkey ON public.cdrs_2026_10 USING btree (call_uuid, started_at)"
+      },
+      {
+        "tablename": "cdrs_2026_10",
+        "indexname": "cdrs_2026_10_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_10_tenant_id_answered_at_idx ON public.cdrs_2026_10 USING btree (tenant_id, answered_at)"
+      },
+      {
+        "tablename": "cdrs_2026_10",
+        "indexname": "cdrs_2026_10_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_10_tenant_id_started_at_idx ON public.cdrs_2026_10 USING btree (tenant_id, started_at)"
+      },
+      {
+        "tablename": "cdrs_2026_11",
+        "indexname": "cdrs_2026_11_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_11_pkey ON public.cdrs_2026_11 USING btree (call_uuid, started_at)"
+      },
+      {
+        "tablename": "cdrs_2026_11",
+        "indexname": "cdrs_2026_11_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_11_tenant_id_answered_at_idx ON public.cdrs_2026_11 USING btree (tenant_id, answered_at)"
+      },
+      {
+        "tablename": "cdrs_2026_11",
+        "indexname": "cdrs_2026_11_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_11_tenant_id_started_at_idx ON public.cdrs_2026_11 USING btree (tenant_id, started_at)"
+      },
+      {
+        "tablename": "ledger_entries",
+        "indexname": "ledger_entries_id_tenant_id_kind_key",
+        "indexdef": "CREATE UNIQUE INDEX ledger_entries_id_tenant_id_kind_key ON public.ledger_entries USING btree (id, tenant_id, kind)"
+      },
+      {
+        "tablename": "ledger_entries",
+        "indexname": "ledger_entries_pkey",
+        "indexdef": "CREATE UNIQUE INDEX ledger_entries_pkey ON public.ledger_entries USING btree (id)"
+      },
+      {
+        "tablename": "ledger_entries",
+        "indexname": "ledger_entries_tenant_idempotency_key",
+        "indexdef": "CREATE UNIQUE INDEX ledger_entries_tenant_idempotency_key ON public.ledger_entries USING btree (tenant_id, idempotency_key)"
+      },
+      {
+        "tablename": "ledger_entries",
+        "indexname": "ledger_entries_tenant_occurred_at",
+        "indexdef": "CREATE INDEX ledger_entries_tenant_occurred_at ON public.ledger_entries USING btree (tenant_id, occurred_at)"
+      },
+      {
+        "tablename": "monthly_statements",
+        "indexname": "monthly_statements_pkey",
+        "indexdef": "CREATE UNIQUE INDEX monthly_statements_pkey ON public.monthly_statements USING btree (id)"
+      },
+      {
+        "tablename": "monthly_statements",
+        "indexname": "monthly_statements_tenant_id_month_key",
+        "indexdef": "CREATE UNIQUE INDEX monthly_statements_tenant_id_month_key ON public.monthly_statements USING btree (tenant_id, month)"
+      },
+      {
+        "tablename": "operation_logs",
+        "indexname": "operation_logs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX operation_logs_pkey ON public.operation_logs USING btree (id)"
+      },
+      {
+        "tablename": "portal_accounts",
+        "indexname": "portal_accounts_auth_user_id_unique",
+        "indexdef": "CREATE UNIQUE INDEX portal_accounts_auth_user_id_unique ON public.portal_accounts USING btree (auth_user_id)"
+      },
+      {
+        "tablename": "portal_accounts",
+        "indexname": "portal_accounts_pkey",
+        "indexdef": "CREATE UNIQUE INDEX portal_accounts_pkey ON public.portal_accounts USING btree (id)"
+      },
+      {
+        "tablename": "portal_accounts",
+        "indexname": "portal_accounts_tenant_id_key",
+        "indexdef": "CREATE UNIQUE INDEX portal_accounts_tenant_id_key ON public.portal_accounts USING btree (tenant_id)"
+      },
+      {
+        "tablename": "rate_entries",
+        "indexname": "rate_entries_pkey",
+        "indexdef": "CREATE UNIQUE INDEX rate_entries_pkey ON public.rate_entries USING btree (id)"
+      },
+      {
+        "tablename": "rate_entries",
+        "indexname": "rate_entries_rate_version_id_prefix_key",
+        "indexdef": "CREATE UNIQUE INDEX rate_entries_rate_version_id_prefix_key ON public.rate_entries USING btree (rate_version_id, prefix)"
+      },
+      {
+        "tablename": "rate_versions",
+        "indexname": "rate_versions_id_tenant_id_key",
+        "indexdef": "CREATE UNIQUE INDEX rate_versions_id_tenant_id_key ON public.rate_versions USING btree (id, tenant_id)"
+      },
+      {
+        "tablename": "rate_versions",
+        "indexname": "rate_versions_pkey",
+        "indexdef": "CREATE UNIQUE INDEX rate_versions_pkey ON public.rate_versions USING btree (id)"
+      },
+      {
+        "tablename": "rate_versions",
+        "indexname": "rate_versions_tenant_effective_from_key",
+        "indexdef": "CREATE UNIQUE INDEX rate_versions_tenant_effective_from_key ON public.rate_versions USING btree (tenant_id, effective_from)"
+      },
+      {
+        "tablename": "raw_cdrs",
+        "indexname": "raw_cdrs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX raw_cdrs_pkey ON ONLY public.raw_cdrs USING btree (id, received_at)"
+      },
+      {
+        "tablename": "raw_cdrs_2026_09",
+        "indexname": "raw_cdrs_2026_09_pkey",
+        "indexdef": "CREATE UNIQUE INDEX raw_cdrs_2026_09_pkey ON public.raw_cdrs_2026_09 USING btree (id, received_at)"
+      },
+      {
+        "tablename": "raw_cdrs_2026_10",
+        "indexname": "raw_cdrs_2026_10_pkey",
+        "indexdef": "CREATE UNIQUE INDEX raw_cdrs_2026_10_pkey ON public.raw_cdrs_2026_10 USING btree (id, received_at)"
+      },
+      {
+        "tablename": "raw_cdrs_2026_11",
+        "indexname": "raw_cdrs_2026_11_pkey",
+        "indexdef": "CREATE UNIQUE INDEX raw_cdrs_2026_11_pkey ON public.raw_cdrs_2026_11 USING btree (id, received_at)"
+      },
+      {
+        "tablename": "receivable_settlement_reversals",
+        "indexname": "receivable_settlement_reversals_pkey",
+        "indexdef": "CREATE UNIQUE INDEX receivable_settlement_reversals_pkey ON public.receivable_settlement_reversals USING btree (id)"
+      },
+      {
+        "tablename": "receivable_settlement_reversals",
+        "indexname": "receivable_settlement_reversals_settlement_id_key",
+        "indexdef": "CREATE UNIQUE INDEX receivable_settlement_reversals_settlement_id_key ON public.receivable_settlement_reversals USING btree (settlement_id)"
+      },
+      {
+        "tablename": "receivable_settlements",
+        "indexname": "receivable_settlements_credit_history",
+        "indexdef": "CREATE INDEX receivable_settlements_credit_history ON public.receivable_settlements USING btree (ledger_entry_id, created_at DESC, id DESC)"
+      },
+      {
+        "tablename": "receivable_settlements",
+        "indexname": "receivable_settlements_id_tenant_key",
+        "indexdef": "CREATE UNIQUE INDEX receivable_settlements_id_tenant_key ON public.receivable_settlements USING btree (id, tenant_id)"
+      },
+      {
+        "tablename": "receivable_settlements",
+        "indexname": "receivable_settlements_pkey",
+        "indexdef": "CREATE UNIQUE INDEX receivable_settlements_pkey ON public.receivable_settlements USING btree (id)"
+      },
+      {
+        "tablename": "receivable_voids",
+        "indexname": "receivable_voids_adjustment_ledger_entry_id_key",
+        "indexdef": "CREATE UNIQUE INDEX receivable_voids_adjustment_ledger_entry_id_key ON public.receivable_voids USING btree (adjustment_ledger_entry_id)"
+      },
+      {
+        "tablename": "receivable_voids",
+        "indexname": "receivable_voids_ledger_entry_id_key",
+        "indexdef": "CREATE UNIQUE INDEX receivable_voids_ledger_entry_id_key ON public.receivable_voids USING btree (ledger_entry_id)"
+      },
+      {
+        "tablename": "receivable_voids",
+        "indexname": "receivable_voids_pkey",
+        "indexdef": "CREATE UNIQUE INDEX receivable_voids_pkey ON public.receivable_voids USING btree (id)"
+      },
+      {
+        "tablename": "system_alerts",
+        "indexname": "system_alerts_pkey",
+        "indexdef": "CREATE UNIQUE INDEX system_alerts_pkey ON public.system_alerts USING btree (id)"
+      },
+      {
+        "tablename": "tenant_balances",
+        "indexname": "tenant_balances_pkey",
+        "indexdef": "CREATE UNIQUE INDEX tenant_balances_pkey ON public.tenant_balances USING btree (tenant_id)"
+      },
+      {
+        "tablename": "tenants",
+        "indexname": "tenants_code_case_insensitive",
+        "indexdef": "CREATE UNIQUE INDEX tenants_code_case_insensitive ON public.tenants USING btree (upper(code))"
+      },
+      {
+        "tablename": "tenants",
+        "indexname": "tenants_code_key",
+        "indexdef": "CREATE UNIQUE INDEX tenants_code_key ON public.tenants USING btree (code)"
+      },
+      {
+        "tablename": "tenants",
+        "indexname": "tenants_pkey",
+        "indexdef": "CREATE UNIQUE INDEX tenants_pkey ON public.tenants USING btree (id)"
+      },
+      {
+        "tablename": "unassigned_cdrs",
+        "indexname": "unassigned_cdrs_call_uuid_key",
+        "indexdef": "CREATE UNIQUE INDEX unassigned_cdrs_call_uuid_key ON public.unassigned_cdrs USING btree (call_uuid)"
+      },
+      {
+        "tablename": "unassigned_cdrs",
+        "indexname": "unassigned_cdrs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX unassigned_cdrs_pkey ON public.unassigned_cdrs USING btree (id)"
+      }
+    ],
+    "pgPolicies": {
+      "before": [
+        {
+          "schemaname": "public",
+          "tablename": "admin_rate_previews",
+          "policyname": "admin_previews",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "(app_scope() = 'admin'::text)",
+          "with_check": "(app_scope() = 'admin'::text)"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "admins",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "(app_scope() = 'admin'::text)",
+          "with_check": "(app_scope() = 'admin'::text)"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "call_uuids",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "operation_logs",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "(app_scope() = 'admin'::text)",
+          "with_check": "(app_scope() = 'admin'::text)"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "raw_cdrs",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlement_reversals",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlement_reversals",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_voids",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_voids",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "system_alerts",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "app_can_see(id)",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "unassigned_cdrs",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        }
+      ],
+      "after": [
+        {
+          "schemaname": "public",
+          "tablename": "admin_rate_previews",
+          "policyname": "admin_previews",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "(app_scope() = 'admin'::text)",
+          "with_check": "(app_scope() = 'admin'::text)"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "admins",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "(app_scope() = 'admin'::text)",
+          "with_check": "(app_scope() = 'admin'::text)"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_deliveries",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "balance_alert_settings",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "call_uuids",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "cdrs",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "ledger_entries",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "monthly_statements",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "operation_logs",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "(app_scope() = 'admin'::text)",
+          "with_check": "(app_scope() = 'admin'::text)"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "portal_accounts",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_entries",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "rate_versions",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "raw_cdrs",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlement_reversals",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlement_reversals",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_settlements",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_voids",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "receivable_voids",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "system_alerts",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(tenant_id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenant_balances",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "operator_delete",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "DELETE",
+          "qual": "app_is_operator()",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "operator_insert",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "INSERT",
+          "qual": null,
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "operator_update",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "UPDATE",
+          "qual": "app_can_see(id)",
+          "with_check": "app_is_operator()"
+        },
+        {
+          "schemaname": "public",
+          "tablename": "tenants",
+          "policyname": "tenant_read",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "SELECT",
+          "qual": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+          "with_check": null
+        },
+        {
+          "schemaname": "public",
+          "tablename": "unassigned_cdrs",
+          "policyname": "staff_only",
+          "permissive": "PERMISSIVE",
+          "roles": ["public"],
+          "cmd": "ALL",
+          "qual": "app_is_operator()",
+          "with_check": "app_is_operator()"
+        }
+      ],
+      "changedQuals": [
+        {
+          "table": "balance_alert_deliveries",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "balance_alert_settings",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "cdrs",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "ledger_entries",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "monthly_statements",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "portal_accounts",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "rate_entries",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "rate_versions",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "receivable_settlement_reversals",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "receivable_settlements",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "receivable_voids",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "tenant_balances",
+          "policy": "tenant_read",
+          "before": "app_can_see(tenant_id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        },
+        {
+          "table": "tenants",
+          "policy": "tenant_read",
+          "before": "app_can_see(id)",
+          "after": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (id = ( SELECT app_tenant_id() AS app_tenant_id))))"
+        }
+      ]
+    },
+    "orders": ["AB", "BA", "AB", "BA", "AB", "BA"],
+    "requestsPerSample": 1000,
+    "successfulRequests": 12000,
+    "failedRequests": 0,
+    "responseAssertionsPerRequest": "HTTP status 200 plus exact allowed/maxSeconds/billingNumber JSON.",
+    "rateEntriesPerSample": 500,
+    "disposableDatabasePrefix": "fsb_rls_w_555d3efa_"
+  },
+  "summary": {
+    "legacy": {
+      "runs": 6,
+      "medianP95Ms": 13.328166500000407,
+      "minP95Ms": 12.281333000000814,
+      "maxP95Ms": 14.268375000000106
+    },
+    "initplan": {
+      "runs": 6,
+      "medianP95Ms": 13.790603500000543,
+      "minP95Ms": 12.017041000000063,
+      "maxP95Ms": 14.320334000000003
+    }
+  },
+  "rawSamples": [
+    {
+      "round": 1,
+      "order": "AB",
+      "variant": "legacy",
+      "database": "fsb_rls_w_555d3efa_01_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 13.17316700000083,
+        "maxMs": 41.69883400000003,
+        "passed": true
+      }
+    },
+    {
+      "round": 1,
+      "order": "AB",
+      "variant": "initplan",
+      "database": "fsb_rls_w_555d3efa_01_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 14.320334000000003,
+        "maxMs": 31.094875000000002,
+        "passed": true
+      }
+    },
+    {
+      "round": 2,
+      "order": "BA",
+      "variant": "initplan",
+      "database": "fsb_rls_w_555d3efa_02_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 14.044582999999875,
+        "maxMs": 30.17429100000004,
+        "passed": true
+      }
+    },
+    {
+      "round": 2,
+      "order": "BA",
+      "variant": "legacy",
+      "database": "fsb_rls_w_555d3efa_02_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.281333000000814,
+        "maxMs": 23.094084000000066,
+        "passed": true
+      }
+    },
+    {
+      "round": 3,
+      "order": "AB",
+      "variant": "legacy",
+      "database": "fsb_rls_w_555d3efa_03_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 13.834125000000313,
+        "maxMs": 89.42604200000005,
+        "passed": true
+      }
+    },
+    {
+      "round": 3,
+      "order": "AB",
+      "variant": "initplan",
+      "database": "fsb_rls_w_555d3efa_03_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 13.728291000000354,
+        "maxMs": 32.56612499999994,
+        "passed": true
+      }
+    },
+    {
+      "round": 4,
+      "order": "BA",
+      "variant": "initplan",
+      "database": "fsb_rls_w_555d3efa_04_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 13.131666999999652,
+        "maxMs": 71.5762920000002,
+        "passed": true
+      }
+    },
+    {
+      "round": 4,
+      "order": "BA",
+      "variant": "legacy",
+      "database": "fsb_rls_w_555d3efa_04_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 13.483165999999983,
+        "maxMs": 47.43687500000033,
+        "passed": true
+      }
+    },
+    {
+      "round": 5,
+      "order": "AB",
+      "variant": "legacy",
+      "database": "fsb_rls_w_555d3efa_05_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 14.268375000000106,
+        "maxMs": 32.591542000000004,
+        "passed": true
+      }
+    },
+    {
+      "round": 5,
+      "order": "AB",
+      "variant": "initplan",
+      "database": "fsb_rls_w_555d3efa_05_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 13.852916000000732,
+        "maxMs": 35.545249999999214,
+        "passed": true
+      }
+    },
+    {
+      "round": 6,
+      "order": "BA",
+      "variant": "initplan",
+      "database": "fsb_rls_w_555d3efa_06_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.017041000000063,
+        "maxMs": 26.448916000000054,
+        "passed": true
+      }
+    },
+    {
+      "round": 6,
+      "order": "BA",
+      "variant": "legacy",
+      "database": "fsb_rls_w_555d3efa_06_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.472749999999905,
+        "maxMs": 33.97808299999997,
+        "passed": true
+      }
+    }
+  ],
+  "cleanup": "verified-empty"
+}

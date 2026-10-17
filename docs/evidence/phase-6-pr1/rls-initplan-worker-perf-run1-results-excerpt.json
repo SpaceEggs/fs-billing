@@ -1,0 +1,200 @@
+{
+  "status": "complete",
+  "environment": {
+    "capturedAt": "2026-10-17T17:33:51.865Z",
+    "sourceDatabase": "fs_billing",
+    "databaseHost": "127.0.0.1",
+    "postgresVersion": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "serverAddress": "192.168.107.2/32",
+    "serverPort": 5432,
+    "nodeVersion": "v22.23.2",
+    "platform": "darwin",
+    "release": "27.0.0",
+    "cpuModel": "Apple M4",
+    "cpuCount": 10,
+    "totalMemoryBytes": 17179869184,
+    "loadAverage": [2.84619140625, 3.3330078125, 3.39892578125],
+    "uptimeSeconds": 558807
+  },
+  "summary": {
+    "legacy": {
+      "runs": 6,
+      "medianP95Ms": 11.4825629999998,
+      "minP95Ms": 9.31204200000002,
+      "maxP95Ms": 12.400666000000001
+    },
+    "initplan": {
+      "runs": 6,
+      "medianP95Ms": 12.068520999999691,
+      "minP95Ms": 10.105999999999767,
+      "maxP95Ms": 12.296624999999949
+    }
+  },
+  "setup": {
+    "fixtureSource": "Project migrations (including 0015) plus seedDatabase on a fresh local disposable database.",
+    "clonePairPolicyDiff": "Baseline clones restore the 13 tenant_read quals to app_can_see; candidate clones retain the actual migrated 0015 policies.",
+    "identicalIndexes": true,
+    "orders": ["AB", "BA", "AB", "BA", "AB", "BA"],
+    "requestsPerSample": 1000,
+    "rateEntriesPerSample": 500,
+    "disposableDatabasePrefix": "fsb_rls_w_7da0cf33_"
+  },
+  "rawSamples": [
+    {
+      "round": 1,
+      "order": "AB",
+      "variant": "legacy",
+      "database": "fsb_rls_w_7da0cf33_01_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 9.31204200000002,
+        "maxMs": 31.39874999999995,
+        "passed": true
+      }
+    },
+    {
+      "round": 1,
+      "order": "AB",
+      "variant": "initplan",
+      "database": "fsb_rls_w_7da0cf33_01_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 10.105999999999767,
+        "maxMs": 27.373749999999973,
+        "passed": true
+      }
+    },
+    {
+      "round": 2,
+      "order": "BA",
+      "variant": "initplan",
+      "database": "fsb_rls_w_7da0cf33_02_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.007499999999709,
+        "maxMs": 26.963166,
+        "passed": true
+      }
+    },
+    {
+      "round": 2,
+      "order": "BA",
+      "variant": "legacy",
+      "database": "fsb_rls_w_7da0cf33_02_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 11.269416999999976,
+        "maxMs": 28.11408399999999,
+        "passed": true
+      }
+    },
+    {
+      "round": 3,
+      "order": "AB",
+      "variant": "legacy",
+      "database": "fsb_rls_w_7da0cf33_03_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 9.401959000000033,
+        "maxMs": 26.506667000000107,
+        "passed": true
+      }
+    },
+    {
+      "round": 3,
+      "order": "AB",
+      "variant": "initplan",
+      "database": "fsb_rls_w_7da0cf33_03_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 11.92633400000068,
+        "maxMs": 29.57300000000032,
+        "passed": true
+      }
+    },
+    {
+      "round": 4,
+      "order": "BA",
+      "variant": "initplan",
+      "database": "fsb_rls_w_7da0cf33_04_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.24566699999923,
+        "maxMs": 27.02237500000001,
+        "passed": true
+      }
+    },
+    {
+      "round": 4,
+      "order": "BA",
+      "variant": "legacy",
+      "database": "fsb_rls_w_7da0cf33_04_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.400666000000001,
+        "maxMs": 24.804041999999754,
+        "passed": true
+      }
+    },
+    {
+      "round": 5,
+      "order": "AB",
+      "variant": "legacy",
+      "database": "fsb_rls_w_7da0cf33_05_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.024334000000636,
+        "maxMs": 23.59699999999998,
+        "passed": true
+      }
+    },
+    {
+      "round": 5,
+      "order": "AB",
+      "variant": "initplan",
+      "database": "fsb_rls_w_7da0cf33_05_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.129541999999674,
+        "maxMs": 38.873083000000406,
+        "passed": true
+      }
+    },
+    {
+      "round": 6,
+      "order": "BA",
+      "variant": "initplan",
+      "database": "fsb_rls_w_7da0cf33_06_new",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 12.296624999999949,
+        "maxMs": 23.196124999999995,
+        "passed": true
+      }
+    },
+    {
+      "round": 6,
+      "order": "BA",
+      "variant": "legacy",
+      "database": "fsb_rls_w_7da0cf33_06_base",
+      "worker": {
+        "entries": 500,
+        "requests": 1000,
+        "p95Ms": 11.695708999999624,
+        "maxMs": 31.86304199999995,
+        "passed": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-17T17:43:13.451Z",
+  "endpoint": {
+    "urlHost": "127.0.0.1",
+    "database": "fs_billing",
+    "serverAddress": "192.168.107.2/32",
+    "serverPort": 5432,
+    "role": "fs_billing"
+  },
+  "runPrefix": "fsb_rls_w_7da0cf33_",
+  "remainingDatabases": []
+}
