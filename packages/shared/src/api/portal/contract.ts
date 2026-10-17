@@ -61,10 +61,10 @@ const post = <Body extends z.ZodType>(body: Body) => ({
 });
 
 /**
- * 阶段 6 门户操作。后端 PR 把它并入 liveApiContract，同时补 handler、OpenAPI 覆盖和 IDOR 用例；
- * 在那之前不注册，路由表不会出现没有实现的端点。
+ * 阶段 6 门户操作，按后端 PR 分组：每个后端 PR 把自己的一组并入 liveApiContract，
+ * 同时补 handler、OpenAPI 覆盖和 IDOR 用例。在那之前不注册，路由表不会出现没有实现的端点。
  */
-export const portalApiContract = {
+export const portalHomeApiContract = {
   portalHome: customerOperation(
     'portalHome',
     'GET',
@@ -73,6 +73,9 @@ export const portalApiContract = {
     portalHomeResponseSchema,
     { 404: apiErrorSchemas.NOT_FOUND },
   ),
+} as const satisfies Record<string, ApiOperation>;
+
+export const portalCdrApiContract = {
   portalCdrs: customerOperation(
     'portalCdrs',
     'GET',
@@ -97,6 +100,9 @@ export const portalApiContract = {
     csvExportResponseSchema,
     {},
   ),
+} as const satisfies Record<string, ApiOperation>;
+
+export const portalLedgerApiContract = {
   portalLedger: customerOperation(
     'portalLedger',
     'GET',
@@ -114,5 +120,11 @@ export const portalApiContract = {
     {},
   ),
 } as const satisfies Record<string, ApiOperation>;
+
+export const portalApiContract = {
+  ...portalHomeApiContract,
+  ...portalCdrApiContract,
+  ...portalLedgerApiContract,
+} as const;
 
 export type PortalApiOperationId = keyof typeof portalApiContract;
