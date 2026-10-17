@@ -1,6 +1,6 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { adminLedgerQuerySchema } from '@fs-billing/shared';
 import { adminApi, page, renderApp } from '../../../test/app';
 import { beijingDayRange } from './ledger-tab';
@@ -52,7 +52,14 @@ function ledgerApp(path: string) {
   return { gets, ...renderApp(path, handler) };
 }
 
+beforeEach(() => {
+  // 北京时间 2026-10-17 18:00。
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-17T10:00:00.000Z'));
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -64,27 +71,68 @@ describe('beijingDayRange', () => {
       to: '2026-09-29T23:59:59.999999+08:00',
     });
     // 同一时区、同一长度的时间串按字典序比较即按时间比较。
-    const { from: nextDay } = beijingDayRange({ from: '2026-09-30', to: '' });
-    expect(range.to! > '2026-09-29T23:59:59.999500+08:00').toBe(true);
-    expect(range.to! < nextDay!).toBe(true);
+    const { from: nextDay } = beijingDayRange({
+      from: '2026-09-30',
+      to: '2026-09-30',
+    });
+    expect(range.to > '2026-09-29T23:59:59.999500+08:00').toBe(true);
+    expect(range.to < nextDay).toBe(true);
     expect(adminLedgerQuerySchema.parse(range)).toMatchObject(range);
   });
 });
 
+const rangeButton = (from: string, to: string) =>
+  screen.getByRole('button', {
+    name: `日期范围（北京时间）：${from} 至 ${to}`,
+  });
+
 describe('ledger tab filters', () => {
-  it('queries whole Beijing days and keeps the range in the address, back on page one', async () => {
+  it('defaults to the current Beijing month up to today without writing the address', async () => {
+    const { gets, location } = ledgerApp(
+      `/admin/tenants/${tenantId}?tab=ledger`,
+    );
+    await screen.findByText('该日期范围内没有余额流水');
+    expect(rangeButton('2026-10-01', '2026-10-17')).toHaveTextContent(
+      '2026-10-01 — 2026-10-17',
+    );
+    expect(Object.fromEntries(gets.at(-1)!)).toEqual({
+      page: '1',
+      pageSize: '25',
+      from: '2026-10-01T00:00:00.000000+08:00',
+      to: '2026-10-17T23:59:59.999999+08:00',
+    });
+    expect(location()).toBe(`/admin/tenants/${tenantId}?tab=ledger`);
+  });
+
+  it('picks a range on the calendar, in either order, and goes back to page one', async () => {
     const { gets, location } = ledgerApp(
       `/admin/tenants/${tenantId}?tab=ledger&page=3`,
     );
-    await screen.findByText('暂无余额流水');
+    await screen.findByText('该日期范围内没有余额流水');
     expect(gets.at(-1)?.get('page')).toBe('3');
 
-    fireEvent.change(screen.getByLabelText('开始日期'), {
-      target: { value: '2026-09-01' },
-    });
-    fireEvent.change(screen.getByLabelText('结束日期'), {
-      target: { value: '2026-09-29' },
-    });
+    const user = userEvent.setup();
+    await user.click(rangeButton('2026-10-01', '2026-10-17'));
+    const dialog = screen.getByRole('dialog', { name: '日期范围（北京时间）' });
+    expect(
+      within(dialog).getByRole('button', { name: '2026-10-18' }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole('button', { name: '下个月' }),
+    ).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: '上个月' }));
+    expect(dialog).toHaveTextContent('2026年9月');
+    await user.click(
+      within(dialog).getByRole('button', { name: '2026-09-29' }),
+    );
+    expect(within(dialog).getByRole('button', { name: '确定' })).toBeDisabled();
+    expect(dialog).toHaveTextContent('2026-09-29 — 请选择结束日期');
+    await user.click(
+      within(dialog).getByRole('button', { name: '2026-09-01' }),
+    );
+    expect(dialog).toHaveTextContent('2026-09-01 — 2026-09-29');
+    await user.click(within(dialog).getByRole('button', { name: '确定' }));
+
     await waitFor(() =>
       expect(gets.at(-1)?.get('to')).toBe('2026-09-29T23:59:59.999999+08:00'),
     );
@@ -97,16 +145,27 @@ describe('ledger tab filters', () => {
         to: '2026-09-29',
       }),
     );
-    expect(await screen.findByText('请调整日期范围或类型')).toBeVisible();
+    expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
+  });
+
+  it('cancelling the calendar keeps the range', async () => {
+    const { gets } = ledgerApp(`/admin/tenants/${tenantId}?tab=ledger`);
+    await screen.findByText('该日期范围内没有余额流水');
+    const user = userEvent.setup();
+    await user.click(rangeButton('2026-10-01', '2026-10-17'));
+    await user.click(screen.getByRole('button', { name: '2026-10-05' }));
+    await user.click(screen.getByRole('button', { name: '取消' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(rangeButton('2026-10-01', '2026-10-17')).toBeVisible();
+    expect(gets.at(-1)?.get('from')).toBe('2026-10-01T00:00:00.000000+08:00');
   });
 
   it('restores the filters from the address and keeps them across tab switches', async () => {
     const { gets } = ledgerApp(
       `/admin/tenants/${tenantId}?tab=ledger&from=2026-09-01&to=2026-09-29&kind=gift&page=2`,
     );
-    await screen.findByText('没有符合条件的赠送流水');
-    expect(screen.getByLabelText('开始日期')).toHaveValue('2026-09-01');
-    expect(screen.getByLabelText('结束日期')).toHaveValue('2026-09-29');
+    await screen.findByText('该日期范围内没有赠送流水');
+    expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
     expect(screen.getByLabelText('类型')).toHaveValue('gift');
     expect(Object.fromEntries(gets.at(-1)!)).toEqual({
       page: '2',
@@ -120,40 +179,33 @@ describe('ledger tab filters', () => {
     await user.click(screen.getByRole('link', { name: '费率' }));
     await screen.findByRole('region', { name: '费率表' });
     await user.click(screen.getByRole('link', { name: '余额流水' }));
-    expect(await screen.findByLabelText('开始日期')).toHaveValue('2026-09-01');
-    expect(screen.getByLabelText('结束日期')).toHaveValue('2026-09-29');
+    await screen.findByText('该日期范围内没有赠送流水');
+    expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
     expect(screen.getByLabelText('类型')).toHaveValue('gift');
   });
 
-  it('drops malformed filters from the address', async () => {
-    const { gets } = ledgerApp(
+  it('falls back to the month for malformed filters', async () => {
+    const malformed = ledgerApp(
       `/admin/tenants/${tenantId}?tab=ledger&from=2026-02-30&to=yesterday&kind=bogus&page=0`,
     );
-    await screen.findByText('暂无余额流水');
-    expect(screen.getByLabelText('开始日期')).toHaveValue('');
-    expect(Object.fromEntries(gets.at(-1)!)).toEqual({
+    await screen.findByText('该日期范围内没有余额流水');
+    expect(rangeButton('2026-10-01', '2026-10-17')).toBeVisible();
+    expect(Object.fromEntries(malformed.gets.at(-1)!)).toEqual({
       page: '1',
       pageSize: '25',
+      from: '2026-10-01T00:00:00.000000+08:00',
+      to: '2026-10-17T23:59:59.999999+08:00',
     });
   });
 
-  it('flags a start after the end and keeps the range out of the query', async () => {
-    const { gets } = ledgerApp(`/admin/tenants/${tenantId}?tab=ledger`);
-    await screen.findByText('暂无余额流水');
-
-    fireEvent.change(screen.getByLabelText('结束日期'), {
-      target: { value: '2026-09-01' },
-    });
-    fireEvent.change(screen.getByLabelText('开始日期'), {
-      target: { value: '2026-09-02' },
-    });
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '开始日期不能晚于结束日期',
+  it('orders a reversed range from the address', async () => {
+    const reversed = ledgerApp(
+      `/admin/tenants/${tenantId}?tab=ledger&from=2026-09-29&to=2026-09-01`,
     );
-    expect(
-      screen.getByRole('group', { name: '日期范围（北京时间）' }),
-    ).toHaveAccessibleDescription('开始日期不能晚于结束日期');
-    expect(gets.at(-1)?.has('from')).toBe(false);
-    expect(gets.at(-1)?.has('to')).toBe(false);
+    await screen.findByText('该日期范围内没有余额流水');
+    expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
+    expect(reversed.gets.at(-1)?.get('from')).toBe(
+      '2026-09-01T00:00:00.000000+08:00',
+    );
   });
 });
