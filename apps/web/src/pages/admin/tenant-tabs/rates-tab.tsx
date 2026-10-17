@@ -311,7 +311,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`} ·
           最长前缀优先匹配
         </span>
-        <span className="flex-1" />
+        <span className="hidden flex-1 md:block" />
         {emptyTable ? null : (
           <Button
             variant="outline"
