@@ -29,36 +29,23 @@ const asAuditor = <T extends object>(text: string, values: unknown[] = []) =>
     return (await client.query<T>(text, values)).rows;
   });
 
-const auditorRelations = async (client: PoolClient) =>
+const violations = async (client: PoolClient) =>
   (
-    await client.query<{ relname: string }>(
-      `SELECT c.relname FROM pg_class c
-       WHERE c.relnamespace IN ('public'::regnamespace, 'auth'::regnamespace)
-         AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
-         AND (has_table_privilege('fs_billing_audit', c.oid,
-                'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
-           OR has_any_column_privilege('fs_billing_audit', c.oid,
-                'SELECT, INSERT, UPDATE, REFERENCES'))
-       ORDER BY 1`,
+    await client.query<{ line: string }>(
+      'SELECT line FROM audit_role_violations() line',
     )
-  ).rows.map((row) => row.relname);
-
-const auditorFunctions = async (client: PoolClient) =>
-  (
-    await client.query<{ proname: string }>(
-      `SELECT p.proname FROM pg_proc p
-       WHERE p.pronamespace IN ('public'::regnamespace, 'auth'::regnamespace)
-         AND has_function_privilege('fs_billing_audit', p.oid, 'EXECUTE')
-       ORDER BY 1`,
-    )
-  ).rows.map((row) => row.proname);
+  ).rows.map((row) => row.line);
 
 const migration = readFile(
   new URL('../migrations/0014_audit_reader.sql', import.meta.url),
   'utf8',
 );
-const dropAuditQuery =
-  'DROP FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz)';
+const dropAuditFunctions = `DROP FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz);
+  DROP FUNCTION audit_role_violations()`;
+const publicAuthInsert = `GRANT USAGE ON SCHEMA auth TO PUBLIC;
+  GRANT EXECUTE ON FUNCTION auth.insert_user(text, text, text) TO PUBLIC`;
+const defaultTableUpdate =
+  'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT UPDATE ON TABLES TO fs_billing_audit';
 
 type AuditRow = {
   id: string;
@@ -164,51 +151,105 @@ describe('audit_operation_logs', () => {
     expect(rows.map((row) => row.target)).toEqual(['r1']);
   });
 
-  it('audit role has no relation privilege and executes only the audit query', async () => {
-    expect(
-      await rolledBack(async (client) => [
-        await auditorRelations(client),
-        await auditorFunctions(client),
-      ]),
-    ).toEqual([[], ['audit_operation_logs']]);
-  });
-
-  it('relation privilege check detects a stray grant', async () => {
+  it.each([
+    [
+      'membership',
+      'CREATE ROLE audit_probe_group; GRANT audit_probe_group TO fs_billing_audit',
+      ['是角色 audit_probe_group 的成员'],
+    ],
+    [
+      'table UPDATE',
+      'GRANT UPDATE ON tenants TO fs_billing_audit',
+      ['表 public.tenants：UPDATE'],
+    ],
+    [
+      'table MAINTAIN',
+      'GRANT MAINTAIN ON tenants TO fs_billing_audit',
+      ['表 public.tenants：MAINTAIN'],
+    ],
+    [
+      'column UPDATE',
+      'GRANT UPDATE (name) ON tenants TO fs_billing_audit',
+      ['列 public.tenants.name：UPDATE'],
+    ],
+    [
+      'sequence USAGE',
+      'CREATE SEQUENCE review_seq; GRANT USAGE ON SEQUENCE review_seq TO fs_billing_audit',
+      ['序列 public.review_seq：USAGE'],
+    ],
+    [
+      'PUBLIC EXECUTE on an auth writer',
+      publicAuthInsert,
+      ['schema auth：USAGE', '函数 auth.insert_user(text,text,text)：EXECUTE'],
+    ],
+    [
+      'default table privilege',
+      defaultTableUpdate,
+      [
+        '默认权限：fs_billing 在 schema public 新建的表授予 fs_billing_audit UPDATE',
+      ],
+    ],
+    [
+      'schema CREATE',
+      'GRANT CREATE ON SCHEMA public TO fs_billing_audit',
+      ['schema public：CREATE'],
+    ],
+    [
+      'LOGIN attribute',
+      'ALTER ROLE fs_billing_audit LOGIN',
+      ['角色属性：LOGIN'],
+    ],
+  ])('audit_role_violations reports %s', async (_, dirty, expected) => {
     expect(
       await rolledBack(async (client) => {
-        await client.query('GRANT UPDATE ON tenants TO fs_billing_audit');
-        return auditorRelations(client);
+        await client.query(dirty);
+        return violations(client);
       }),
-    ).toEqual(['tenants']);
+    ).toEqual(expected);
+  });
+
+  it('audit_role_violations is empty for the migrated role', async () => {
+    expect(await rolledBack(violations)).toEqual([]);
   });
 
   it.each([
-    ['GRANT fs_billing_app TO fs_billing_audit', '是其他角色的成员'],
     [
-      'GRANT UPDATE ON tenants TO fs_billing_audit',
-      '对 public 或 auth 的表、视图或序列有权限',
+      'membership',
+      'GRANT fs_billing_app TO fs_billing_audit',
+      '是角色 fs_billing_app 的成员',
+    ],
+    [
+      'PUBLIC EXECUTE on an auth writer',
+      publicAuthInsert,
+      '函数 auth.insert_user(text,text,text)：EXECUTE',
+    ],
+    [
+      'default table privilege',
+      defaultTableUpdate,
+      '默认权限：fs_billing 在 schema public 新建的表授予 fs_billing_audit UPDATE',
     ],
   ])(
     'migration refuses a pre-existing audit role after %s',
-    async (dirty, reason) => {
+    async (_, dirty, violation) => {
       const error = await rolledBack(async (client) => {
         await client.query(dirty);
-        await client.query(dropAuditQuery);
+        await client.query(dropAuditFunctions);
         return pgError(client.query(await migration));
       });
       expect(error.code).toBe('P0001');
-      expect(error.message).toContain(reason);
+      expect(error.message).toContain('fs_billing_audit 超出只读权限：');
+      expect(error.message).toContain(violation);
     },
   );
 
   it('migration replays over a clean pre-existing audit role', async () => {
     expect(
       await rolledBack(async (client) => {
-        await client.query(dropAuditQuery);
+        await client.query(dropAuditFunctions);
         await client.query(await migration);
-        return auditorFunctions(client);
+        return violations(client);
       }),
-    ).toEqual(['audit_operation_logs']);
+    ).toEqual([]);
   });
 
   it('application role cannot execute the audit query', async () => {
@@ -217,12 +258,9 @@ describe('audit_operation_logs', () => {
     ).toMatchObject({ code: '42501' });
   });
 
-  it('audit role is a non-login, non-superuser, non-BYPASSRLS group role', async () => {
-    const { rows } = await owner.pool.query(
-      "SELECT rolsuper, rolbypassrls, rolcanlogin FROM pg_roles WHERE rolname = 'fs_billing_audit'",
-    );
-    expect(rows).toEqual([
-      { rolsuper: false, rolbypassrls: false, rolcanlogin: false },
-    ]);
+  it('application role cannot execute audit_role_violations', async () => {
+    expect(
+      await pgError(app.pool.query('SELECT * FROM audit_role_violations()')),
+    ).toMatchObject({ code: '42501' });
   });
 });

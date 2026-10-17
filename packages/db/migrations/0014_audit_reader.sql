@@ -7,37 +7,6 @@ BEGIN
   END IF;
 END $$;
 
--- 角色是集群级的，同名角色可能早已存在并带着别的权限。迁移不替它清理（别的库可能在用），只拒绝继续。
-DO $$
-DECLARE
-  problem text;
-BEGIN
-  SELECT CASE
-    WHEN r.rolsuper OR r.rolbypassrls OR r.rolcreaterole OR r.rolcreatedb OR r.rolcanlogin
-      OR r.rolreplication THEN '带有 SUPERUSER/BYPASSRLS/CREATEROLE/CREATEDB/LOGIN/REPLICATION 属性'
-    WHEN EXISTS (SELECT FROM pg_auth_members m WHERE m.member = r.oid) THEN '是其他角色的成员'
-    WHEN EXISTS (
-      SELECT FROM pg_shdepend d JOIN pg_database db ON db.oid = d.dbid
-      WHERE db.datname = current_database() AND d.refclassid = 'pg_authid'::regclass
-        AND d.refobjid = r.oid AND d.deptype = 'o'
-    ) THEN '在本库拥有对象'
-    WHEN EXISTS (
-      SELECT FROM pg_class c
-      WHERE c.relnamespace IN ('public'::regnamespace, 'auth'::regnamespace)
-        AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
-        AND (has_table_privilege(r.oid, c.oid,
-               'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
-          OR has_any_column_privilege(r.oid, c.oid, 'SELECT, INSERT, UPDATE, REFERENCES'))
-    ) THEN '对 public 或 auth 的表、视图或序列有权限'
-    WHEN has_schema_privilege(r.oid, 'public', 'CREATE')
-      OR has_schema_privilege(r.oid, 'auth', 'CREATE') THEN '能在 public 或 auth 中建对象'
-  END INTO problem
-  FROM pg_roles r WHERE r.rolname = 'fs_billing_audit';
-  IF problem IS NOT NULL THEN
-    RAISE EXCEPTION '已有角色 fs_billing_audit %：迁移不会自动清理，请人工核查后再执行', problem;
-  END IF;
-END $$;
-
 GRANT USAGE ON SCHEMA public TO fs_billing_audit;
 
 -- 参数为 NULL 表示不过滤；时间窗为 [p_from, p_to)。STABLE 的 sql 函数不能写入。
@@ -68,3 +37,115 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION audit_operation_logs(text, text, timestamptz, timestamptz) TO fs_billing_audit;
+
+-- 列出 fs_billing_audit 超出白名单（public 的 USAGE、audit_operation_logs 的 EXECUTE）的权限，干净时为空。
+-- has_*_privilege 按角色 oid 判断，已包含经 PUBLIC 和成员关系得到的权限。
+CREATE FUNCTION audit_role_violations() RETURNS SETOF text
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, pg_temp
+AS $$
+  WITH audit AS (
+    SELECT * FROM pg_catalog.pg_roles WHERE rolname = 'fs_billing_audit'
+  ),
+  scoped AS (
+    SELECT oid, nspname FROM pg_catalog.pg_namespace WHERE nspname IN ('public', 'auth')
+  ),
+  found(ord, line) AS (
+    SELECT 1, '角色属性：' || v.attr
+    FROM audit a, LATERAL (VALUES
+      ('SUPERUSER', a.rolsuper), ('BYPASSRLS', a.rolbypassrls), ('CREATEROLE', a.rolcreaterole),
+      ('CREATEDB', a.rolcreatedb), ('LOGIN', a.rolcanlogin), ('REPLICATION', a.rolreplication)
+    ) v(attr, granted)
+    WHERE v.granted
+    UNION ALL
+    SELECT 2, '是角色 ' || m.roleid::pg_catalog.regrole::text || ' 的成员'
+    FROM audit a JOIN pg_catalog.pg_auth_members m ON m.member = a.oid
+    UNION ALL
+    SELECT 3, '在本库拥有 ' || pg_catalog.pg_describe_object(d.classid, d.objid, d.objsubid)
+    FROM audit a
+    JOIN pg_catalog.pg_shdepend d
+      ON d.refclassid = 'pg_catalog.pg_authid'::pg_catalog.regclass AND d.refobjid = a.oid
+    JOIN pg_catalog.pg_database db ON db.oid = d.dbid
+    WHERE db.datname = pg_catalog.current_database() AND d.deptype = 'o'
+    UNION ALL
+    -- CONNECT、TEMP 是 PUBLIC 的默认库权限，读不到业务数据，不算越权。
+    SELECT 4, '数据库 ' || pg_catalog.current_database() || '：CREATE'
+    FROM audit a
+    WHERE pg_catalog.has_database_privilege(a.oid, pg_catalog.current_database(), 'CREATE')
+    UNION ALL
+    SELECT 5, 'schema ' || n.nspname || '：' || p.priv
+    FROM audit a, scoped n, (VALUES ('USAGE'), ('CREATE')) p(priv)
+    WHERE NOT (n.nspname = 'public' AND p.priv = 'USAGE')
+      AND pg_catalog.has_schema_privilege(a.oid, n.oid, p.priv)
+    UNION ALL
+    SELECT 6, CASE c.relkind WHEN 'v' THEN '视图 ' WHEN 'm' THEN '物化视图 ' WHEN 'f' THEN '外部表 '
+        ELSE '表 ' END || c.oid::pg_catalog.regclass::text || '：'
+      || pg_catalog.string_agg(p.priv, ', ' ORDER BY p.n)
+    FROM audit a
+    JOIN pg_catalog.pg_class c ON c.relkind IN ('r', 'p', 'v', 'm', 'f')
+    JOIN scoped n ON n.oid = c.relnamespace
+    CROSS JOIN pg_catalog.unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES',
+      'TRIGGER', 'MAINTAIN']) WITH ORDINALITY p(priv, n)
+    WHERE pg_catalog.has_table_privilege(a.oid, c.oid, p.priv)
+    GROUP BY c.oid, c.relkind
+    UNION ALL
+    SELECT 7, '列 ' || c.oid::pg_catalog.regclass::text || '.' || pg_catalog.quote_ident(att.attname)
+      || '：' || pg_catalog.string_agg(p.priv, ', ' ORDER BY p.n)
+    FROM audit a
+    JOIN pg_catalog.pg_class c ON c.relkind IN ('r', 'p', 'v', 'm', 'f')
+    JOIN scoped n ON n.oid = c.relnamespace
+    JOIN pg_catalog.pg_attribute att
+      ON att.attrelid = c.oid AND att.attnum > 0 AND NOT att.attisdropped
+    CROSS JOIN pg_catalog.unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'REFERENCES']) WITH ORDINALITY p(priv, n)
+    WHERE pg_catalog.has_column_privilege(a.oid, c.oid, att.attnum, p.priv)
+      AND NOT pg_catalog.has_table_privilege(a.oid, c.oid, p.priv)
+    GROUP BY c.oid, att.attname
+    UNION ALL
+    SELECT 8, '序列 ' || c.oid::pg_catalog.regclass::text || '：'
+      || pg_catalog.string_agg(p.priv, ', ' ORDER BY p.n)
+    FROM audit a
+    JOIN pg_catalog.pg_class c ON c.relkind = 'S'
+    JOIN scoped n ON n.oid = c.relnamespace
+    CROSS JOIN pg_catalog.unnest(ARRAY['USAGE', 'SELECT', 'UPDATE']) WITH ORDINALITY p(priv, n)
+    WHERE pg_catalog.has_sequence_privilege(a.oid, c.oid, p.priv)
+    GROUP BY c.oid
+    UNION ALL
+    SELECT 9, CASE f.prokind WHEN 'p' THEN '过程 ' ELSE '函数 ' END
+      || f.oid::pg_catalog.regprocedure::text || '：EXECUTE'
+    FROM audit a
+    CROSS JOIN pg_catalog.pg_proc f
+    JOIN scoped n ON n.oid = f.pronamespace
+    WHERE f.oid IS DISTINCT FROM
+        pg_catalog.to_regprocedure('public.audit_operation_logs(text,text,timestamptz,timestamptz)')
+      AND pg_catalog.has_function_privilege(a.oid, f.oid, 'EXECUTE')
+    UNION ALL
+    -- 类型的 USAGE 本就默认授予 PUBLIC，不涉及数据，跳过 T。
+    SELECT 10, '默认权限：' || d.defaclrole::pg_catalog.regrole::text || ' 在 '
+      || coalesce('schema ' || n.nspname, '所有 schema') || ' 新建的'
+      || CASE d.defaclobjtype WHEN 'r' THEN '表' WHEN 'S' THEN '序列' WHEN 'f' THEN '函数'
+        WHEN 'n' THEN 'schema' ELSE d.defaclobjtype::text END
+      || '授予 ' || CASE e.grantee WHEN 0 THEN 'PUBLIC' ELSE e.grantee::pg_catalog.regrole::text END
+      || ' ' || pg_catalog.string_agg(e.privilege_type, ', ' ORDER BY e.privilege_type)
+    FROM audit a
+    CROSS JOIN pg_catalog.pg_default_acl d
+    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
+    CROSS JOIN LATERAL pg_catalog.aclexplode(d.defaclacl) e
+    WHERE d.defaclobjtype <> 'T' AND e.grantee IN (a.oid, 0)
+    GROUP BY d.oid, d.defaclrole, n.nspname, d.defaclobjtype, e.grantee
+  )
+  SELECT line FROM found ORDER BY ord, line;
+$$;
+REVOKE ALL ON FUNCTION audit_role_violations() FROM PUBLIC;
+
+-- 角色是集群级的，同名角色可能早已存在并带着别的权限。迁移不替它清理（别的库可能在用），只拒绝继续。
+DO $$
+DECLARE
+  problems text;
+BEGIN
+  SELECT string_agg(v.line, '；' ORDER BY v.n) INTO problems
+  FROM audit_role_violations() WITH ORDINALITY v(line, n);
+  IF problems IS NOT NULL THEN
+    RAISE EXCEPTION 'fs_billing_audit 超出只读权限：%；迁移不会自动清理，请人工核查后再执行', problems;
+  END IF;
+END $$;
