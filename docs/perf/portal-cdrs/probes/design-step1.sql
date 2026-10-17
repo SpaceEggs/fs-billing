@@ -1,0 +1,228 @@
+-- 阶段 6 设计补测（docs/phase-6-design.md 引用）。在 fs_billing_perf 上以 fs_billing_app 身份读，每段 rollback，不改库。
+-- 用法：docker exec -i fs-billing-postgres-1 psql -U fs_billing -d fs_billing_perf -f - < design-step1.sql
+-- 数据与 portal-perf.ts seed 相同：PORTALBIG 300 万话单、285 万笔扣费流水。结果摘要见 design-step1.txt。
+-- 1. 国家列表（group by）和后台未经验证汇总：原策略对 InitPlan 策略。
+-- 2. 余额流水 2026-04（历史中段，两种锚点都要读百万行）：原策略。
+-- 3. 同一段：覆盖索引 (tenant_id, occurred_at) INCLUDE (amount) 与 InitPlan 策略各自对锚点求和的耗时。
+-- 4. 流水三个月份、两种锚点的整条查询：InitPlan 策略。
+-- 5. 话单 started_at 下界取 1 天、31 天、93 天：InitPlan 策略下的汇总与中间页。
+-- 6. 首页最近 10 通已接通话单，不加日期下界：原策略。
+\pset pager off
+begin;
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == countries group by, month 2026-09, original policy
+explain (analyze, timing off, summary on) select country, count(*)::int as calls from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and country is not null group by country order by calls desc, country;
+explain (analyze, timing off, summary on) select country, count(*)::int as calls from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and country is not null group by country order by calls desc, country;
+explain (analyze, timing off, summary on) select country, count(*)::int as calls from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and country is not null group by country order by calls desc, country;
+\echo == admin unverified-only list first page, month 2026-09, admin scope, original policy
+select set_config('app.scope','admin',true);
+explain (analyze, timing off, summary on) select call_uuid from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and unverified order by answered_at desc, call_uuid desc limit 50;
+explain (analyze, timing off, summary on) select call_uuid from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and unverified order by answered_at desc, call_uuid desc limit 50;
+\echo == admin summary with unverified count
+explain (analyze, timing off, summary on) select count(*)::int as calls, count(*) filter (where answered_at is null)::int as unanswered, count(*) filter (where unverified)::int as unverified, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and coalesce(answered_at, started_at) >= '2026-09-01T00:00:00+08:00'::timestamptz and coalesce(answered_at, started_at) < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+explain (analyze, timing off, summary on) select count(*)::int as calls, count(*) filter (where answered_at is null)::int as unanswered, count(*) filter (where unverified)::int as unverified, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and coalesce(answered_at, started_at) >= '2026-09-01T00:00:00+08:00'::timestamptz and coalesce(answered_at, started_at) < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+rollback;
+begin;
+alter policy tenant_read on cdrs using ((select app_is_operator()) or ((select app_scope()) = 'tenant' and tenant_id = (select app_tenant_id())));
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == countries group by, month 2026-09, InitPlan policy
+explain (analyze, timing off, summary on) select country, count(*)::int as calls from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and country is not null group by country order by calls desc, country;
+explain (analyze, timing off, summary on) select country, count(*)::int as calls from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and country is not null group by country order by calls desc, country;
+explain (analyze, timing off, summary on) select country, count(*)::int as calls from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz and country is not null group by country order by calls desc, country;
+\echo == admin summary with unverified count, InitPlan policy
+select set_config('app.scope','admin',true);
+explain (analyze, timing off, summary on) select count(*)::int as calls, count(*) filter (where answered_at is null)::int as unanswered, count(*) filter (where unverified)::int as unverified, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and coalesce(answered_at, started_at) >= '2026-09-01T00:00:00+08:00'::timestamptz and coalesce(answered_at, started_at) < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+explain (analyze, timing off, summary on) select count(*)::int as calls, count(*) filter (where answered_at is null)::int as unanswered, count(*) filter (where unverified)::int as unverified, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and coalesce(answered_at, started_at) >= '2026-09-01T00:00:00+08:00'::timestamptz and coalesce(answered_at, started_at) < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+rollback;
+select to_char(date_trunc('month', occurred_at at time zone 'Asia/Shanghai'), 'YYYY-MM') as month, count(*) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' group by 1 order by 1;
+begin;
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == ledger 2026-04 day window, prior anchor
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == ledger 2026-04 day window, balance anchor
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == ledger 2026-04 day window, balance anchor, second run
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+rollback;
+begin;
+create index probe_ledger_cover on ledger_entries (tenant_id, occurred_at) include (amount);
+analyze ledger_entries;
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == ledger 2026-04 prior anchor only, covering index
+explain (analyze, timing off, summary on) select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz;
+explain (analyze, timing off, summary on) select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz;
+\echo == ledger 2026-04 month group-by only, covering index
+explain (analyze, timing off, summary on) select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3;
+\echo == ledger 2026-04 prior anchor only, existing index
+rollback;
+begin;
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+explain (analyze, timing off, summary on) select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz;
+explain (analyze, timing off, summary on) select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz;
+\echo == ledger 2026-04 month group-by only, existing index
+explain (analyze, timing off, summary on) select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3;
+rollback;
+begin;
+alter policy tenant_read on ledger_entries using ((select app_is_operator()) or ((select app_scope()) = 'tenant' and tenant_id = (select app_tenant_id())));
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == ledger 2026-04 prior anchor only, existing index, InitPlan policy
+explain (analyze, timing off, summary on) select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz;
+explain (analyze, timing off, summary on) select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz;
+rollback;
+begin;
+alter policy tenant_read on ledger_entries using ((select app_is_operator()) or ((select app_scope()) = 'tenant' and tenant_id = (select app_tenant_id())));
+alter policy tenant_read on tenant_balances using ((select app_is_operator()) or ((select app_scope()) = 'tenant' and tenant_id = (select app_tenant_id())));
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == 2025-12 prior run1 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2025-12-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-01-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2025-12 prior run2 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2025-12-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-01-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2025-12 prior run3 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2025-12-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-01-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2025-12 balance run1 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-01-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2025-12 balance run2 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-01-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2025-12 balance run3 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2025-12-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-01-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-04 prior run1 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-04 prior run2 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-04 prior run3 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-04-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-04 balance run1 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-04 balance run2 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-04 balance run3 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-04-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-05-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-09 prior run1 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-09-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-10-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-09 prior run2 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-09-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-10-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-09 prior run3 initplan
+explain (analyze, timing off, summary on) with anchor as (select coalesce(sum(amount), 0) as a from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at < '2026-09-01T00:00:00+08:00'::timestamptz),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-10-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-09 balance run1 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-10-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-09 balance run2 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-10-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+\echo == 2026-09 balance run3 initplan
+explain (analyze, timing off, summary on) with anchor as (select b.balance - coalesce((select sum(amount) from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz), 0) as a from tenant_balances b where b.tenant_id = '00000000-0000-4000-8000-000000000001'),
+merged as (select case when kind = 'call_charge' then null else id end as id, kind, (occurred_at at time zone 'Asia/Shanghai')::date as day, max(occurred_at) as at, count(*)::int as calls, sum(amount) as amount from ledger_entries where tenant_id = '00000000-0000-4000-8000-000000000001' and occurred_at >= '2026-09-01T00:00:00+08:00'::timestamptz and occurred_at < '2026-10-01T00:00:00+08:00'::timestamptz group by 1, 2, 3)
+select id, kind, day, at, calls, amount::text, (anchor.a + sum(amount) over (order by at, id nulls first))::text as balance_after from merged, anchor order by at desc, id desc nulls last limit 50;
+rollback;
+begin;
+alter policy tenant_read on cdrs using ((select app_is_operator()) or ((select app_scope()) = 'tenant' and tenant_id = (select app_tenant_id())));
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == floor 1 day summary run1
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 1 day mid page run1
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 1 day summary run2
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 1 day mid page run2
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 1 day summary run3
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 1 day mid page run3
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-31T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 31 days summary run1
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 31 days mid page run1
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 31 days summary run2
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 31 days mid page run2
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 31 days summary run3
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 31 days mid page run3
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-08-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 93 days summary run1
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 93 days mid page run1
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 93 days summary run2
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 93 days mid page run2
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+\echo == floor 93 days summary run3
+explain (analyze, timing off, summary on) select count(*)::int as calls, sum(billed_minutes)::text as minutes, sum(charge)::text as charge from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz;
+\echo == floor 93 days mid page run3
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at >= '2026-09-01T00:00:00+08:00'::timestamptz and answered_at < '2026-10-01T00:00:00+08:00'::timestamptz and started_at >= '2026-06-01T00:00:00+08:00'::timestamptz and started_at < '2026-10-01T00:00:00+08:00'::timestamptz order by answered_at desc, call_uuid desc limit 50 offset 117150;
+rollback;
+
+begin;
+set local role fs_billing_app;
+select set_config('app.scope','tenant',true);
+select set_config('app.tenant_id','00000000-0000-4000-8000-000000000001',true);
+\echo == home recent 10 answered calls, no date bound, original policy
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, matched_prefix, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, matched_prefix, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+explain (analyze, timing off, summary on) select call_uuid, started_at, answered_at, ended_at, caller, callee, country, matched_prefix, duration_seconds, billed_minutes, rate, charge, hangup_cause from cdrs where tenant_id = '00000000-0000-4000-8000-000000000001' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+\echo == home recent 10 for a tenant with no calls, original policy
+explain (analyze, timing off, summary on) select call_uuid from cdrs where tenant_id = '00000000-0000-4000-8000-000000000002' and answered_at is not null order by answered_at desc, call_uuid desc limit 10;
+rollback;

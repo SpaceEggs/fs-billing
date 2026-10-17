@@ -7,6 +7,9 @@ import {
 } from '../contract.js';
 import { apiErrorSchemas } from '../errors.js';
 import * as accounts from './accounts.js';
+import { cdrCountriesResponseSchema } from '../cdr-fields.js';
+import { csvExportResponseSchema } from '../export.js';
+import * as cdrs from './cdrs.js';
 import * as balance from './balance.js';
 import * as rates from './rates.js';
 import * as receivables from './receivables.js';
@@ -379,3 +382,35 @@ export function createAdminApiContract(
 }
 export const adminApiContract = createAdminApiContract();
 export type AdminApiOperationId = keyof typeof adminApiContract;
+
+/**
+ * 阶段 6 后台话单操作，登记方式同 portalApiContract：后端 PR 把它并入 liveApiContract。
+ * 导出是 POST，因为它写 cdr_export 操作日志（纯 GET 不承担写审计）；成功响应是流式 CSV。
+ */
+export const adminCdrApiContract = {
+  adminTenantCdrs: operation(
+    'adminTenantCdrs',
+    'GET',
+    '/api/admin/tenants/{tenantId}/cdrs',
+    { ...tenantRequest, query: cdrs.adminCdrsQuerySchema },
+    cdrs.adminCdrsResponseSchema,
+    {},
+  ),
+  adminTenantCdrCountries: operation(
+    'adminTenantCdrCountries',
+    'GET',
+    '/api/admin/tenants/{tenantId}/cdrs/countries',
+    { ...tenantRequest, query: cdrs.adminCdrCountriesQuerySchema },
+    cdrCountriesResponseSchema,
+    {},
+  ),
+  adminTenantCdrsExport: operation(
+    'adminTenantCdrsExport',
+    'POST',
+    '/api/admin/tenants/{tenantId}/cdrs/export',
+    { ...tenantRequest, body: cdrs.adminCdrExportRequestSchema },
+    csvExportResponseSchema,
+    {},
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminCdrApiOperationId = keyof typeof adminCdrApiContract;

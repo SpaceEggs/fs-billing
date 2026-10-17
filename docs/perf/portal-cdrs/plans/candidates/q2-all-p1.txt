@@ -1,0 +1,16 @@
+Limit  (cost=0.86..37.21 rows=50 width=114) (actual time=0.018..0.044 rows=50 loops=1)
+  Buffers: shared hit=14
+  ->  Merge Append  (cost=0.86..90184.73 rows=124025 width=114) (actual time=0.018..0.042 rows=50 loops=1)
+        Sort Key: (COALESCE(cdrs.answered_at, cdrs.started_at)) DESC, cdrs.call_uuid DESC
+        Buffers: shared hit=14
+        ->  Index Scan Backward using cdrs_2026_08_tenant_id_coalesce_call_uuid_started_at_answer_idx on cdrs_2026_08 cdrs_1  (cost=0.42..37381.41 rows=1 width=114) (actual time=0.007..0.007 rows=1 loops=1)
+              Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+              Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (COALESCE(answered_at, started_at) >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (COALESCE(answered_at, started_at) < '2026-09-30 16:00:00+00'::timestamp with time zone))
+              Buffers: shared hit=4
+        ->  Index Scan Backward using cdrs_2026_09_tenant_id_coalesce_call_uuid_started_at_answer_idx on cdrs_2026_09 cdrs_2  (cost=0.42..51563.06 rows=124024 width=114) (actual time=0.010..0.033 rows=50 loops=1)
+              Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+              Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (COALESCE(answered_at, started_at) >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (COALESCE(answered_at, started_at) < '2026-09-30 16:00:00+00'::timestamp with time zone))
+              Rows Removed by Filter: 2
+              Buffers: shared hit=10
+Planning Time: 0.118 ms
+Execution Time: 0.067 ms

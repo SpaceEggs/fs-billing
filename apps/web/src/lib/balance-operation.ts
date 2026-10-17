@@ -4,7 +4,7 @@ import type {
   AdminBalanceOperationRequest,
   AdminLedgerKind,
   AdminTenantDetailResponse,
-  AdminTenantHealth,
+  TenantHealth,
   Currency,
   ValidationIssue,
   adminBalanceOperationRequestSchema,
@@ -194,7 +194,7 @@ export function healthAfter(
     'status' | 'overdraftLimit' | 'settings'
   >,
   balance: Decimal,
-): AdminTenantHealth {
+): TenantHealth {
   if (tenant.status === 'disabled') return 'disabled';
   if (balance.plus(tenant.overdraftLimit).lte(0)) return 'suspended';
   if (balance.lt(0)) return 'overdraft';

@@ -1,0 +1,67 @@
+Limit  (cost=207258.46..207258.59 rows=50 width=128) (actual time=522.392..522.396 rows=33 loops=1)
+  Buffers: shared hit=12676 read=3483, temp read=5276 written=5286
+  CTE running
+    ->  WindowAgg  (cost=172395.38..175289.21 rows=115754 width=74) (actual time=281.028..366.959 rows=234280 loops=1)
+          Buffers: shared hit=12676 read=3483, temp read=1751 written=1756
+          InitPlan 1
+            ->  Aggregate  (cost=84168.11..84168.12 rows=1 width=32) (actual time=155.298..155.299 rows=1 loops=1)
+                  Buffers: shared hit=6338 read=3481
+                  ->  Bitmap Heap Scan on ledger_entries  (cost=16668.93..83711.62 rows=182598 width=5) (actual time=6.937..140.902 rows=363077 loops=1)
+                        Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone))
+                        Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                        Heap Blocks: exact=6603
+                        Buffers: shared hit=6338 read=3481
+                        ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..16623.28 rows=364285 width=0) (actual time=6.501..6.501 rows=363077 loops=1)
+                              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone))
+                              Buffers: shared hit=2076 read=1140
+          ->  Sort  (cost=88227.23..88516.62 rows=115754 width=47) (actual time=125.696..134.688 rows=234280 loops=1)
+                Sort Key: l.occurred_at, l.id
+                Sort Method: external merge  Disk: 14008kB
+                Buffers: shared hit=6338 read=2, temp read=1751 written=1756
+                ->  Nested Loop  (cost=11148.14..74928.91 rows=115754 width=47) (actual time=4.468..105.858 rows=234280 loops=1)
+                      Buffers: shared hit=6338 read=2
+                      ->  Bitmap Heap Scan on tenant_balances b  (cost=4.15..8.18 rows=1 width=5) (actual time=0.027..0.027 rows=1 loops=1)
+                            Recheck Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                            Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                            Heap Blocks: exact=1
+                            Buffers: shared read=2
+                            ->  Bitmap Index Scan on tenant_balances_pkey  (cost=0.00..4.15 rows=1 width=0) (actual time=0.012..0.012 rows=1 loops=1)
+                                  Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                                  Buffers: shared read=1
+                      ->  Bitmap Heap Scan on ledger_entries l  (cost=11143.99..73763.19 rows=115754 width=42) (actual time=4.437..89.790 rows=234280 loops=1)
+                            Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                            Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                            Heap Blocks: exact=4262
+                            Buffers: shared hit=6338
+                            ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11115.06 rows=230930 width=0) (actual time=4.137..4.137 rows=234280 loops=1)
+                                  Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                  Buffers: shared hit=2076
+  ->  Sort  (cost=31969.25..32241.00 rows=108697 width=128) (actual time=510.109..510.110 rows=33 loops=1)
+        Sort Key: (max(running.occurred_at)) DESC, (NULL::uuid) DESC NULLS LAST
+        Sort Method: quicksort  Memory: 29kB
+        Buffers: shared hit=12676 read=3483, temp read=5276 written=5286
+        ->  Result  (cost=18854.55..28358.42 rows=108697 width=128) (actual time=472.034..510.094 rows=33 loops=1)
+              Buffers: shared hit=12676 read=3483, temp read=5276 written=5286
+              ->  Append  (cost=18854.55..26184.48 rows=108697 width=128) (actual time=472.031..510.087 rows=33 loops=1)
+                    Buffers: shared hit=12676 read=3483, temp read=5276 written=5286
+                    ->  GroupAggregate  (cost=18854.55..23036.52 rows=108696 width=128) (actual time=472.031..500.256 rows=30 loops=1)
+                          Group Key: (((running.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date)
+                          Buffers: shared hit=12676 read=3483, temp read=3359 written=5285
+                          ->  Sort  (cost=18854.55..19143.94 rows=115754 width=92) (actual time=471.104..479.376 rows=234277 loops=1)
+                                Sort Key: (((running.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date), running.occurred_at DESC, running.id DESC
+                                Sort Method: external merge  Disk: 12864kB
+                                Buffers: shared hit=12676 read=3483, temp read=3359 written=5285
+                                ->  CTE Scan on running  (cost=0.00..3183.23 rows=115754 width=92) (actual time=281.037..441.288 rows=234277 loops=1)
+                                      Filter: (kind = 'call_charge'::text)
+                                      Rows Removed by Filter: 3
+                                      Buffers: shared hit=12676 read=3483, temp read=1751 written=3672
+                    ->  CTE Scan on running running_1  (cost=0.00..2604.47 rows=1 width=128) (actual time=0.161..9.829 rows=3 loops=1)
+                          Filter: (kind <> 'call_charge'::text)
+                          Rows Removed by Filter: 234277
+                          Buffers: temp read=1917 written=1
+Planning Time: 0.214 ms
+JIT:
+  Functions: 38
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 1.110 ms (Deform 0.449 ms), Inlining 0.000 ms, Optimization 0.428 ms, Emission 11.918 ms, Total 13.457 ms
+Execution Time: 525.253 ms

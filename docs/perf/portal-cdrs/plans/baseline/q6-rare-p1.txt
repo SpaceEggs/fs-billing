@@ -1,0 +1,22 @@
+Limit  (cost=23.78..1079.68 rows=50 width=106) (actual time=0.151..0.218 rows=50 loops=1)
+  Buffers: shared hit=119
+  ->  Incremental Sort  (cost=23.78..51065.86 rows=2417 width=106) (actual time=0.151..0.216 rows=50 loops=1)
+        Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+        Presorted Key: cdrs.answered_at
+        Full-sort Groups: 2  Sort Method: quicksort  Average Memory: 32kB  Peak Memory: 32kB
+        Buffers: shared hit=119
+        ->  Merge Append  (cost=0.86..50963.85 rows=2417 width=106) (actual time=0.016..0.207 rows=51 loops=1)
+              Sort Key: cdrs.answered_at DESC
+              Buffers: shared hit=119
+              ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.47 rows=1 width=106) (actual time=0.007..0.007 rows=0 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (country = '牙买加'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                    Rows Removed by Filter: 1
+                    Buffers: shared hit=5
+              ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..50931.19 rows=2416 width=106) (actual time=0.009..0.198 rows=51 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (country = '牙买加'::text) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                    Rows Removed by Filter: 2141
+                    Buffers: shared hit=114
+Planning Time: 0.124 ms
+Execution Time: 0.236 ms

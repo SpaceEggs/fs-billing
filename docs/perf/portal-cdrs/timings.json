@@ -1,0 +1,558 @@
+{
+  "rounds": 20,
+  "baseline": [
+    {
+      "name": "Q1 answered p1",
+      "n": 20,
+      "min": 1.6,
+      "p50": 2.1,
+      "p95": 2.9,
+      "max": 3.3
+    },
+    {
+      "name": "Q1 answered mid",
+      "n": 20,
+      "min": 140.9,
+      "p50": 142.8,
+      "p95": 162.7,
+      "max": 175.9
+    },
+    {
+      "name": "Q1 answered last",
+      "n": 20,
+      "min": 135.4,
+      "p50": 140.2,
+      "p95": 143.7,
+      "max": 148.1
+    },
+    {
+      "name": "Q1 answered last (reverse)",
+      "n": 20,
+      "min": 1.4,
+      "p50": 2,
+      "p95": 2.7,
+      "max": 3.7
+    },
+    {
+      "name": "Q2 all p1",
+      "n": 20,
+      "min": 135.6,
+      "p50": 138.3,
+      "p95": 141.8,
+      "max": 142.4
+    },
+    {
+      "name": "Q2 all mid",
+      "n": 20,
+      "min": 172,
+      "p50": 175.5,
+      "p95": 180.4,
+      "max": 184.1
+    },
+    {
+      "name": "Q2 all p1 (union)",
+      "n": 20,
+      "min": 133,
+      "p50": 136.2,
+      "p95": 140.8,
+      "max": 141.4
+    },
+    {
+      "name": "Q2 all p1 (started_at)",
+      "n": 20,
+      "min": 1.3,
+      "p50": 1.9,
+      "p95": 2.5,
+      "max": 2.8
+    },
+    {
+      "name": "Q2 all mid (started_at)",
+      "n": 20,
+      "min": 58.5,
+      "p50": 60.3,
+      "p95": 61.8,
+      "max": 62.4
+    },
+    {
+      "name": "Q3 answered summary",
+      "n": 20,
+      "min": 98.4,
+      "p50": 100.1,
+      "p95": 103.7,
+      "max": 104.2
+    },
+    {
+      "name": "Q3 unanswered count",
+      "n": 20,
+      "min": 7,
+      "p50": 7.6,
+      "p95": 8.5,
+      "max": 8.6
+    },
+    {
+      "name": "Q3 all summary",
+      "n": 20,
+      "min": 107.5,
+      "p50": 110.4,
+      "p95": 112.3,
+      "max": 112.8
+    },
+    {
+      "name": "Q4 common p1",
+      "n": 20,
+      "min": 99.9,
+      "p50": 102.7,
+      "p95": 105.1,
+      "max": 106.2
+    },
+    {
+      "name": "Q4 common summary",
+      "n": 20,
+      "min": 97.1,
+      "p50": 100,
+      "p95": 106.1,
+      "max": 108.9
+    },
+    {
+      "name": "Q4 rare p1",
+      "n": 20,
+      "min": 96.7,
+      "p50": 99.3,
+      "p95": 104.7,
+      "max": 105
+    },
+    {
+      "name": "Q4 rare summary",
+      "n": 20,
+      "min": 96.2,
+      "p50": 99.1,
+      "p95": 103.1,
+      "max": 106.3
+    },
+    {
+      "name": "Q5 keyset mid",
+      "n": 20,
+      "min": 1.4,
+      "p50": 1.9,
+      "p95": 2.6,
+      "max": 2.8
+    },
+    {
+      "name": "Q6 common p1",
+      "n": 20,
+      "min": 1.5,
+      "p50": 1.8,
+      "p95": 2.7,
+      "max": 3.6
+    },
+    {
+      "name": "Q6 common summary",
+      "n": 20,
+      "min": 46.1,
+      "p50": 47,
+      "p95": 53.6,
+      "max": 56.9
+    },
+    {
+      "name": "Q6 rare p1",
+      "n": 20,
+      "min": 1.6,
+      "p50": 2,
+      "p95": 2.5,
+      "max": 4.6
+    },
+    {
+      "name": "Q6 rare summary",
+      "n": 20,
+      "min": 21.3,
+      "p50": 21.6,
+      "p95": 23.1,
+      "max": 39.9
+    },
+    {
+      "name": "Q7 Sep row-window prior",
+      "n": 20,
+      "min": 1278.3,
+      "p50": 1299.8,
+      "p95": 1470.6,
+      "max": 1552.2
+    },
+    {
+      "name": "Q7 Sep row-window balance",
+      "n": 20,
+      "min": 475.9,
+      "p50": 481.6,
+      "p95": 503.2,
+      "max": 552
+    },
+    {
+      "name": "Q7 Sep day-window prior",
+      "n": 20,
+      "min": 1104,
+      "p50": 1122.7,
+      "p95": 1172.2,
+      "max": 1330.3
+    },
+    {
+      "name": "Q7 Sep day-window balance",
+      "n": 20,
+      "min": 291.9,
+      "p50": 299.5,
+      "p95": 312.1,
+      "max": 326.4
+    },
+    {
+      "name": "Q7 Sep day-window statement",
+      "n": 20,
+      "min": 153.7,
+      "p50": 158,
+      "p95": 161.5,
+      "max": 168
+    },
+    {
+      "name": "Q7 Oct day-window balance",
+      "n": 20,
+      "min": 165.8,
+      "p50": 168.5,
+      "p95": 173.8,
+      "max": 177.3
+    },
+    {
+      "name": "Q7 Oct day-window statement",
+      "n": 20,
+      "min": 116.9,
+      "p50": 119.2,
+      "p95": 121.5,
+      "max": 123.5
+    },
+    {
+      "name": "Q7 Dec day-window prior",
+      "n": 20,
+      "min": 305.7,
+      "p50": 312,
+      "p95": 339.1,
+      "max": 405.3
+    },
+    {
+      "name": "Q7 Dec day-window balance",
+      "n": 20,
+      "min": 1116.6,
+      "p50": 1136.1,
+      "p95": 1237.2,
+      "max": 1276.7
+    },
+    {
+      "name": "Q7 Dec day-window statement",
+      "n": 20,
+      "min": 160.2,
+      "p50": 163.3,
+      "p95": 175.3,
+      "max": 179
+    }
+  ],
+  "candidates": [
+    {
+      "name": "Q1 answered p1",
+      "n": 20,
+      "min": 1.2,
+      "p50": 1.8,
+      "p95": 2,
+      "max": 2.2
+    },
+    {
+      "name": "Q1 answered mid",
+      "n": 20,
+      "min": 51.4,
+      "p50": 52.5,
+      "p95": 57.3,
+      "max": 58.7
+    },
+    {
+      "name": "Q1 answered last",
+      "n": 20,
+      "min": 96.6,
+      "p50": 98.9,
+      "p95": 104.6,
+      "max": 105.1
+    },
+    {
+      "name": "Q1 answered last (reverse)",
+      "n": 20,
+      "min": 1.3,
+      "p50": 1.8,
+      "p95": 2.2,
+      "max": 2.4
+    },
+    {
+      "name": "Q2 all p1",
+      "n": 20,
+      "min": 1.1,
+      "p50": 1.6,
+      "p95": 2.1,
+      "max": 2.3
+    },
+    {
+      "name": "Q2 all mid",
+      "n": 20,
+      "min": 173,
+      "p50": 176,
+      "p95": 179.8,
+      "max": 180.9
+    },
+    {
+      "name": "Q2 all p1 (union)",
+      "n": 20,
+      "min": 135,
+      "p50": 136.9,
+      "p95": 140.2,
+      "max": 142.7
+    },
+    {
+      "name": "Q2 all p1 (started_at)",
+      "n": 20,
+      "min": 1.3,
+      "p50": 1.6,
+      "p95": 1.9,
+      "max": 2
+    },
+    {
+      "name": "Q2 all mid (started_at)",
+      "n": 20,
+      "min": 58.3,
+      "p50": 59.5,
+      "p95": 61.2,
+      "max": 65.7
+    },
+    {
+      "name": "Q3 answered summary",
+      "n": 20,
+      "min": 98.2,
+      "p50": 100.2,
+      "p95": 102.4,
+      "max": 103.5
+    },
+    {
+      "name": "Q3 unanswered count",
+      "n": 20,
+      "min": 5.3,
+      "p50": 5.6,
+      "p95": 5.9,
+      "max": 5.9
+    },
+    {
+      "name": "Q3 all summary",
+      "n": 20,
+      "min": 106.8,
+      "p50": 109.7,
+      "p95": 113,
+      "max": 113
+    },
+    {
+      "name": "Q4 common p1",
+      "n": 20,
+      "min": 99.7,
+      "p50": 102.5,
+      "p95": 105,
+      "max": 106.5
+    },
+    {
+      "name": "Q4 common summary",
+      "n": 20,
+      "min": 97.4,
+      "p50": 100.4,
+      "p95": 103.1,
+      "max": 104.6
+    },
+    {
+      "name": "Q4 rare p1",
+      "n": 20,
+      "min": 97.1,
+      "p50": 99,
+      "p95": 102.6,
+      "max": 107.2
+    },
+    {
+      "name": "Q4 rare summary",
+      "n": 20,
+      "min": 96.8,
+      "p50": 97.8,
+      "p95": 100.1,
+      "max": 101.5
+    },
+    {
+      "name": "Q5 keyset mid",
+      "n": 20,
+      "min": 1.2,
+      "p50": 1.7,
+      "p95": 1.8,
+      "max": 1.9
+    },
+    {
+      "name": "Q6 common p1",
+      "n": 20,
+      "min": 1.5,
+      "p50": 1.6,
+      "p95": 2.2,
+      "max": 2.4
+    },
+    {
+      "name": "Q6 common summary",
+      "n": 20,
+      "min": 45.3,
+      "p50": 46.4,
+      "p95": 47.6,
+      "max": 48.6
+    },
+    {
+      "name": "Q6 rare p1",
+      "n": 20,
+      "min": 1.5,
+      "p50": 1.8,
+      "p95": 2.1,
+      "max": 2.2
+    },
+    {
+      "name": "Q6 rare summary",
+      "n": 20,
+      "min": 21,
+      "p50": 21.4,
+      "p95": 21.9,
+      "max": 21.9
+    },
+    {
+      "name": "Q7 Sep row-window prior",
+      "n": 20,
+      "min": 1285.8,
+      "p50": 1307.8,
+      "p95": 1315.4,
+      "max": 1319.1
+    },
+    {
+      "name": "Q7 Sep row-window balance",
+      "n": 20,
+      "min": 474.5,
+      "p50": 479.8,
+      "p95": 487.2,
+      "max": 493.9
+    },
+    {
+      "name": "Q7 Sep day-window prior",
+      "n": 20,
+      "min": 1111.9,
+      "p50": 1127,
+      "p95": 1169.6,
+      "max": 1179.2
+    },
+    {
+      "name": "Q7 Sep day-window balance",
+      "n": 20,
+      "min": 290.6,
+      "p50": 297.8,
+      "p95": 302.8,
+      "max": 305.4
+    },
+    {
+      "name": "Q7 Sep day-window statement",
+      "n": 20,
+      "min": 154.8,
+      "p50": 158.3,
+      "p95": 161.7,
+      "max": 168.4
+    },
+    {
+      "name": "Q7 Oct day-window balance",
+      "n": 20,
+      "min": 163.6,
+      "p50": 166.8,
+      "p95": 170.9,
+      "max": 172.2
+    },
+    {
+      "name": "Q7 Oct day-window statement",
+      "n": 20,
+      "min": 116.8,
+      "p50": 118.8,
+      "p95": 121.7,
+      "max": 122.5
+    },
+    {
+      "name": "Q7 Dec day-window prior",
+      "n": 20,
+      "min": 306.4,
+      "p50": 311.4,
+      "p95": 320,
+      "max": 324
+    },
+    {
+      "name": "Q7 Dec day-window balance",
+      "n": 20,
+      "min": 1116.5,
+      "p50": 1143.4,
+      "p95": 1166.3,
+      "max": 1190.2
+    },
+    {
+      "name": "Q7 Dec day-window statement",
+      "n": 20,
+      "min": 159.3,
+      "p50": 163.1,
+      "p95": 168.6,
+      "max": 171.3
+    },
+    {
+      "name": "Q1 answered mid (deferred)",
+      "n": 20,
+      "min": 43.4,
+      "p50": 45.3,
+      "p95": 47.4,
+      "max": 48.3
+    },
+    {
+      "name": "Q2 all mid (deferred)",
+      "n": 20,
+      "min": 115,
+      "p50": 117.5,
+      "p95": 121.9,
+      "max": 123.5
+    }
+  ],
+  "admin": {
+    "name": "Q7 admin correlated sum",
+    "ms": [54743.7, 54171.5, 54252.9]
+  },
+  "cold": [
+    {
+      "variant": "Q1 answered p1",
+      "evictedBuffers": 16342,
+      "runs": [9.7, 1.9, 1.8]
+    },
+    {
+      "variant": "Q1 answered mid",
+      "evictedBuffers": 219,
+      "runs": [152.2, 135.8, 140]
+    },
+    {
+      "variant": "Q3 answered summary",
+      "evictedBuffers": 7574,
+      "runs": [116.6, 103.7, 101.6]
+    }
+  ],
+  "indexSizes": [
+    {
+      "index": "cdrs_tenant_all_keys",
+      "size": "253 MB"
+    },
+    {
+      "index": "cdrs_tenant_answered_at",
+      "size": "226 MB"
+    },
+    {
+      "index": "cdrs_tenant_answered_keys",
+      "size": "222 MB"
+    },
+    {
+      "index": "cdrs_tenant_started_at",
+      "size": "133 MB"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+Limit  (cost=154778.31..154778.44 rows=50 width=108) (actual time=176.473..176.475 rows=19 loops=1)
+  Buffers: shared hit=6973 read=1, temp read=1357 written=1359
+  InitPlan 1
+    ->  Aggregate  (cost=64652.62..64652.63 rows=1 width=32) (actual time=53.594..53.594 rows=1 loops=1)
+          Buffers: shared hit=3486
+          ->  Bitmap Heap Scan on ledger_entries ledger_entries_1  (cost=6102.69..64485.50 rows=66844 width=5) (actual time=2.161..48.511 rows=128797 loops=1)
+                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-09-30 16:00:00+00'::timestamp with time zone))
+                Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                Heap Blocks: exact=2343
+                Buffers: shared hit=3486
+                ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..6085.98 rows=133355 width=0) (actual time=2.027..2.027 rows=128797 loops=1)
+                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-09-30 16:00:00+00'::timestamp with time zone))
+                      Buffers: shared hit=1143
+  ->  Sort  (cost=90125.69..90292.44 rows=66701 width=108) (actual time=166.874..166.875 rows=19 loops=1)
+        Sort Key: (max(ledger_entries.occurred_at)) DESC, (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) DESC NULLS LAST
+        Sort Method: quicksort  Memory: 27kB
+        Buffers: shared hit=6973 read=1, temp read=1357 written=1359
+        ->  WindowAgg  (cost=85575.59..87909.93 rows=66701 width=108) (actual time=166.857..166.870 rows=19 loops=1)
+              Buffers: shared hit=6973 read=1, temp read=1357 written=1359
+              ->  Sort  (cost=85575.39..85742.15 rows=66701 width=81) (actual time=113.252..113.254 rows=19 loops=1)
+                    Sort Key: (max(ledger_entries.occurred_at)), (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END) NULLS FIRST
+                    Sort Method: quicksort  Memory: 26kB
+                    Buffers: shared hit=3487 read=1, temp read=1357 written=1359
+                    ->  Nested Loop  (cost=73032.74..77038.84 rows=66701 width=81) (actual time=98.644..113.249 rows=19 loops=1)
+                          Buffers: shared hit=3487 read=1, temp read=1357 written=1359
+                          ->  Bitmap Heap Scan on tenant_balances b  (cost=4.15..8.18 rows=1 width=5) (actual time=0.010..0.010 rows=1 loops=1)
+                                Recheck Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                                Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                Heap Blocks: exact=1
+                                Buffers: shared hit=2
+                                ->  Bitmap Index Scan on tenant_balances_pkey  (cost=0.00..4.15 rows=1 width=0) (actual time=0.004..0.004 rows=1 loops=1)
+                                      Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                                      Buffers: shared hit=1
+                          ->  GroupAggregate  (cost=73028.60..75696.64 rows=66701 width=108) (actual time=98.631..113.234 rows=19 loops=1)
+                                Group Key: (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END), ledger_entries.kind, (((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date)
+                                Buffers: shared hit=3485 read=1, temp read=1357 written=1359
+                                ->  Sort  (cost=73028.60..73195.35 rows=66701 width=45) (actual time=98.617..102.569 rows=128797 loops=1)
+                                      Sort Key: (CASE WHEN (ledger_entries.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries.id END), ledger_entries.kind, (((ledger_entries.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date)
+                                      Sort Method: external sort  Disk: 5432kB
+                                      Buffers: shared hit=3485 read=1, temp read=1357 written=1359
+                                      ->  Bitmap Heap Scan on ledger_entries  (cost=6424.48..65629.54 rows=66701 width=45) (actual time=2.305..69.234 rows=128797 loops=1)
+                                            Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-09-30 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-10-31 16:00:00+00'::timestamp with time zone))
+                                            Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                                            Heap Blocks: exact=2343
+                                            Buffers: shared hit=3485 read=1
+                                            ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..6407.81 rows=133070 width=0) (actual time=2.158..2.158 rows=128797 loops=1)
+                                                  Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-09-30 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-10-31 16:00:00+00'::timestamp with time zone))
+                                                  Buffers: shared hit=1142 read=1
+Planning Time: 0.179 ms
+JIT:
+  Functions: 30
+  Options: Inlining false, Optimization false, Expressions true, Deforming true
+  Timing: Generation 0.855 ms (Deform 0.311 ms), Inlining 0.000 ms, Optimization 0.328 ms, Emission 9.295 ms, Total 10.479 ms
+Execution Time: 177.706 ms

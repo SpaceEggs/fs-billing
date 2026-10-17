@@ -1,0 +1,73 @@
+Nested Loop  (cost=42485.50..47987.33 rows=1 width=130) (actual time=127.562..127.645 rows=50 loops=1)
+  Buffers: shared hit=1161 read=1314, temp read=842 written=1274
+  ->  Limit  (cost=42485.08..42485.20 rows=50 width=32) (actual time=127.541..127.545 rows=50 loops=1)
+        Buffers: shared hit=963 read=1312, temp read=842 written=1274
+        ->  Sort  (cost=42176.95..42487.02 rows=124025 width=32) (actual time=122.201..125.660 rows=123300 loops=1)
+              Sort Key: (COALESCE(cdrs.answered_at, cdrs.started_at)) DESC, cdrs.call_uuid DESC
+              Sort Method: external merge  Disk: 10152kB
+              Buffers: shared hit=963 read=1312, temp read=842 written=1274
+              ->  Append  (cost=273.91..28716.27 rows=124025 width=32) (actual time=3.189..101.503 rows=246574 loops=1)
+                    Buffers: shared hit=963 read=1312
+                    ->  Bitmap Heap Scan on cdrs_2026_08 cdrs_1  (cost=273.91..7543.27 rows=1 width=32) (actual time=3.189..3.189 rows=1 loops=1)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                          Filter: ((COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (COALESCE(answered_at, started_at) >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (COALESCE(answered_at, started_at) < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                          Rows Removed by Filter: 8218
+                          Heap Blocks: exact=206
+                          Buffers: shared read=250
+                          ->  Bitmap Index Scan on cdrs_2026_08_tenant_id_started_at_idx  (cost=0.00..273.91 rows=8439 width=0) (actual time=0.181..0.181 rows=8219 loops=1)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                                Buffers: shared read=44
+                    ->  Index Only Scan using cdrs_2026_09_tenant_id_answered_at_call_uuid_started_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..20552.87 rows=124024 width=32) (actual time=0.012..90.891 rows=246573 loops=1)
+                          Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                          Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))) AND (COALESCE(answered_at, started_at) >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (COALESCE(answered_at, started_at) < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                          Rows Removed by Filter: 2
+                          Heap Fetches: 0
+                          Buffers: shared hit=963 read=1062
+  ->  Append  (cost=0.42..109.89 rows=14 width=106) (actual time=0.002..0.002 rows=1 loops=50)
+        Buffers: shared hit=198 read=2
+        ->  Index Scan using cdrs_2025_10_tenant_id_started_at_idx on cdrs_2025_10 c_1  (cost=0.42..8.38 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2025_11_tenant_id_started_at_idx on cdrs_2025_11 c_2  (cost=0.42..8.46 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2025_12_tenant_id_started_at_idx on cdrs_2025_12 c_3  (cost=0.42..8.47 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_01_tenant_id_started_at_idx on cdrs_2026_01 c_4  (cost=0.42..8.47 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_02_tenant_id_started_at_idx on cdrs_2026_02 c_5  (cost=0.42..8.38 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_03_tenant_id_started_at_idx on cdrs_2026_03 c_6  (cost=0.42..8.47 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_04_tenant_id_started_at_idx on cdrs_2026_04 c_7  (cost=0.42..8.46 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_05_tenant_id_started_at_idx on cdrs_2026_05 c_8  (cost=0.42..8.47 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_06_tenant_id_started_at_idx on cdrs_2026_06 c_9  (cost=0.42..8.46 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_07_tenant_id_started_at_idx on cdrs_2026_07 c_10  (cost=0.42..8.47 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_08_tenant_id_started_at_idx on cdrs_2026_08 c_11  (cost=0.42..8.47 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Index Scan using cdrs_2026_09_tenant_id_started_at_idx on cdrs_2026_09 c_12  (cost=0.42..8.47 rows=1 width=106) (actual time=0.001..0.001 rows=1 loops=50)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+              Buffers: shared hit=198 read=2
+        ->  Index Scan using cdrs_2026_10_tenant_id_started_at_idx on cdrs_2026_10 c_13  (cost=0.42..8.38 rows=1 width=106) (never executed)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at = cdrs.started_at))
+              Filter: ((call_uuid = cdrs.call_uuid) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+        ->  Seq Scan on cdrs_2026_11 c_14  (cost=0.00..0.00 rows=1 width=268) (never executed)
+              Filter: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (call_uuid = cdrs.call_uuid) AND (cdrs.started_at = started_at) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+Planning:
+  Buffers: shared hit=5
+Planning Time: 0.779 ms
+Execution Time: 128.138 ms

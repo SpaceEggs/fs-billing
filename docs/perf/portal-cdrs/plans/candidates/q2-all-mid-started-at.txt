@@ -1,0 +1,13 @@
+Limit  (cost=50562.08..50582.60 rows=50 width=106) (actual time=63.859..63.879 rows=50 loops=1)
+  Buffers: shared hit=4400
+  ->  Incremental Sort  (cost=0.87..50889.86 rows=124049 width=106) (actual time=0.024..61.970 rows=123300 loops=1)
+        Sort Key: cdrs.started_at DESC, cdrs.call_uuid DESC
+        Presorted Key: cdrs.started_at
+        Full-sort Groups: 3854  Sort Method: quicksort  Average Memory: 30kB  Peak Memory: 30kB
+        Buffers: shared hit=4400
+        ->  Index Scan Backward using cdrs_2026_09_tenant_id_started_at_idx on cdrs_2026_09 cdrs  (cost=0.42..45918.65 rows=124049 width=106) (actual time=0.007..48.934 rows=123301 loops=1)
+              Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+              Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+              Buffers: shared hit=4400
+Planning Time: 0.059 ms
+Execution Time: 63.890 ms

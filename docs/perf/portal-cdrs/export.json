@@ -1,0 +1,200 @@
+[
+  {
+    "round": 0,
+    "code": "EXPORT50K",
+    "how": "cursor",
+    "rows": 50000,
+    "ms": 324,
+    "rssBeforeMb": 132.1,
+    "maxRssMb": 151.3,
+    "peakHeapMb": 66,
+    "bytes": 5584353
+  },
+  {
+    "round": 0,
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "rows": 100000,
+    "ms": 681,
+    "rssBeforeMb": 132.3,
+    "maxRssMb": 156,
+    "peakHeapMb": 65.5,
+    "bytes": 11169753
+  },
+  {
+    "round": 0,
+    "code": "EXPORT200K",
+    "how": "cursor",
+    "rows": 200000,
+    "ms": 1433,
+    "rssBeforeMb": 131.8,
+    "maxRssMb": 166.6,
+    "peakHeapMb": 74.1,
+    "bytes": 22339588
+  },
+  {
+    "round": 0,
+    "code": "EXPORT50K",
+    "how": "naive",
+    "rows": 50000,
+    "ms": 200,
+    "rssBeforeMb": 132,
+    "maxRssMb": 173.1,
+    "peakHeapMb": 64.1,
+    "bytes": 5584353
+  },
+  {
+    "round": 0,
+    "code": "EXPORT100K",
+    "how": "naive",
+    "rows": 100000,
+    "ms": 341,
+    "rssBeforeMb": 132,
+    "maxRssMb": 241.5,
+    "peakHeapMb": 112.7,
+    "bytes": 11169753
+  },
+  {
+    "round": 0,
+    "code": "EXPORT200K",
+    "how": "naive",
+    "rows": 200000,
+    "ms": 511,
+    "rssBeforeMb": 131.4,
+    "maxRssMb": 356.1,
+    "peakHeapMb": 213.1,
+    "bytes": 22339588
+  },
+  {
+    "round": 1,
+    "code": "EXPORT50K",
+    "how": "cursor",
+    "rows": 50000,
+    "ms": 333,
+    "rssBeforeMb": 131.7,
+    "maxRssMb": 152.8,
+    "peakHeapMb": 66.4,
+    "bytes": 5584353
+  },
+  {
+    "round": 1,
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "rows": 100000,
+    "ms": 618,
+    "rssBeforeMb": 132,
+    "maxRssMb": 156.4,
+    "peakHeapMb": 66.2,
+    "bytes": 11169753
+  },
+  {
+    "round": 1,
+    "code": "EXPORT200K",
+    "how": "cursor",
+    "rows": 200000,
+    "ms": 1626,
+    "rssBeforeMb": 131.9,
+    "maxRssMb": 162.9,
+    "peakHeapMb": 71.9,
+    "bytes": 22339588
+  },
+  {
+    "round": 1,
+    "code": "EXPORT50K",
+    "how": "naive",
+    "rows": 50000,
+    "ms": 190,
+    "rssBeforeMb": 131.7,
+    "maxRssMb": 172.8,
+    "peakHeapMb": 64.3,
+    "bytes": 5584353
+  },
+  {
+    "round": 1,
+    "code": "EXPORT100K",
+    "how": "naive",
+    "rows": 100000,
+    "ms": 322,
+    "rssBeforeMb": 131.4,
+    "maxRssMb": 241.9,
+    "peakHeapMb": 112.8,
+    "bytes": 11169753
+  },
+  {
+    "round": 1,
+    "code": "EXPORT200K",
+    "how": "naive",
+    "rows": 200000,
+    "ms": 555,
+    "rssBeforeMb": 131.6,
+    "maxRssMb": 371.5,
+    "peakHeapMb": 210.4,
+    "bytes": 22339588
+  },
+  {
+    "round": 2,
+    "code": "EXPORT50K",
+    "how": "cursor",
+    "rows": 50000,
+    "ms": 322,
+    "rssBeforeMb": 132,
+    "maxRssMb": 151.5,
+    "peakHeapMb": 66.3,
+    "bytes": 5584353
+  },
+  {
+    "round": 2,
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "rows": 100000,
+    "ms": 837,
+    "rssBeforeMb": 131.8,
+    "maxRssMb": 156.3,
+    "peakHeapMb": 66.4,
+    "bytes": 11169753
+  },
+  {
+    "round": 2,
+    "code": "EXPORT200K",
+    "how": "cursor",
+    "rows": 200000,
+    "ms": 1684,
+    "rssBeforeMb": 131.5,
+    "maxRssMb": 167.4,
+    "peakHeapMb": 74.1,
+    "bytes": 22339588
+  },
+  {
+    "round": 2,
+    "code": "EXPORT50K",
+    "how": "naive",
+    "rows": 50000,
+    "ms": 191,
+    "rssBeforeMb": 132,
+    "maxRssMb": 173.1,
+    "peakHeapMb": 64.2,
+    "bytes": 5584353
+  },
+  {
+    "round": 2,
+    "code": "EXPORT100K",
+    "how": "naive",
+    "rows": 100000,
+    "ms": 325,
+    "rssBeforeMb": 131.9,
+    "maxRssMb": 241.7,
+    "peakHeapMb": 112.7,
+    "bytes": 11169753
+  },
+  {
+    "round": 2,
+    "code": "EXPORT200K",
+    "how": "naive",
+    "rows": 200000,
+    "ms": 522,
+    "rssBeforeMb": 131.3,
+    "maxRssMb": 371.4,
+    "peakHeapMb": 210.6,
+    "bytes": 22339588
+  }
+]

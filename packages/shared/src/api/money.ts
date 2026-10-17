@@ -8,6 +8,10 @@ export const moneyAmountSchema = z
   .refine((amount) => !/^-0(?:\.0+)?$/.test(amount), {
     message: '金额不得为负零',
   });
+export const nonnegativeMoneyAmountSchema = moneyAmountSchema.refine(
+  (amount) => !amount.startsWith('-'),
+  { message: '金额不能为负' },
+);
 export const moneySchema = z.strictObject({
   currency: currencySchema,
   amount: moneyAmountSchema,

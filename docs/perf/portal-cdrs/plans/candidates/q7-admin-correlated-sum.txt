@@ -1,0 +1,30 @@
+Limit  (cost=1.43..3733496.56 rows=50 width=100) (actual time=1237.166..57046.659 rows=50 loops=1)
+  Buffers: shared hit=52 read=3678220
+  ->  Result  (cost=1.43..8643339897.25 rows=115754 width=100) (actual time=1146.596..56956.062 rows=50 loops=1)
+        Buffers: shared hit=52 read=3678220
+        ->  Incremental Sort  (cost=1.43..120184.85 rows=115754 width=84) (actual time=0.072..0.131 rows=50 loops=1)
+              Sort Key: l.occurred_at DESC, l.id DESC
+              Presorted Key: l.occurred_at
+              Full-sort Groups: 2  Sort Method: quicksort  Average Memory: 29kB  Peak Memory: 29kB
+              Buffers: shared hit=1 read=4
+              ->  Index Scan Backward using ledger_entries_tenant_occurred_at on ledger_entries l  (cost=0.43..114981.18 rows=115754 width=84) (actual time=0.046..0.075 rows=51 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (occurred_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false)))
+                    Buffers: shared hit=1 read=4
+        SubPlan 1
+          ->  Aggregate  (cost=74668.83..74668.85 rows=1 width=32) (actual time=1139.114..1139.114 rows=1 loops=50)
+                Buffers: shared hit=51 read=3678216
+                ->  Bitmap Heap Scan on ledger_entries prior  (cost=11193.72..74362.24 rows=122637 width=5) (actual time=66.018..1051.316 rows=2721366 loops=50)
+                      Recheck Cond: (tenant_id = l.tenant_id)
+                      Filter: ((ROW(occurred_at, id) <= ROW(l.occurred_at, l.id)) AND (COALESCE((current_setting('app.scope'::text, true) = ANY ('{admin,system}'::text[])), false) OR ((current_setting('app.scope'::text, true) = 'tenant'::text) AND COALESCE((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid), false))))
+                      Heap Blocks: exact=2474017
+                      Buffers: shared hit=51 read=3678216
+                      ->  Bitmap Index Scan on ledger_entries_tenant_occurred_at  (cost=0.00..11163.06 rows=244663 width=0) (actual time=61.979..61.979 rows=2721366 loops=50)
+                            Index Cond: ((tenant_id = l.tenant_id) AND (occurred_at <= l.occurred_at))
+                            Buffers: shared hit=1 read=1204249
+Planning Time: 0.153 ms
+JIT:
+  Functions: 24
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 0.990 ms (Deform 0.311 ms), Inlining 8.329 ms, Optimization 43.612 ms, Emission 38.661 ms, Total 91.592 ms
+Execution Time: 57047.966 ms

@@ -1,0 +1,202 @@
+{
+  "asOf": "2026-10-17T04:00:00.000Z",
+  "month": {
+    "from": "2026-09-01T00:00:00+08:00",
+    "to": "2026-10-01T00:00:00+08:00"
+  },
+  "metadata": [
+    {
+      "version": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "random_page_cost": "4",
+      "jit": "on",
+      "max_parallel_workers_per_gather": "2",
+      "effective_cache_size": "4GB",
+      "database_size": "2884 MB"
+    }
+  ],
+  "shape": [
+    {
+      "code": "PORTALBIG",
+      "cdrs": 3000000,
+      "unanswered": 149851,
+      "unverified": 30001,
+      "countries": 20,
+      "first_started": "2025-10-17T04:00:00.000Z",
+      "last_started": "2026-10-17T03:59:49.488Z"
+    },
+    {
+      "code": "EXPORT200K",
+      "cdrs": 200000,
+      "unanswered": 0,
+      "unverified": 1992,
+      "countries": 20,
+      "first_started": "2026-08-31T16:00:00.000Z",
+      "last_started": "2026-09-30T14:59:47.058Z"
+    },
+    {
+      "code": "EXPORT100K",
+      "cdrs": 100000,
+      "unanswered": 0,
+      "unverified": 1027,
+      "countries": 20,
+      "first_started": "2026-08-31T16:00:00.000Z",
+      "last_started": "2026-09-30T14:59:34.116Z"
+    },
+    {
+      "code": "EXPORT50K",
+      "cdrs": 50000,
+      "unanswered": 0,
+      "unverified": 533,
+      "countries": 20,
+      "first_started": "2026-08-31T16:00:00.000Z",
+      "last_started": "2026-09-30T14:59:08.232Z"
+    },
+    {
+      "code": "PORTALS3",
+      "cdrs": 30000,
+      "unanswered": 1460,
+      "unverified": 317,
+      "countries": 20,
+      "first_started": "2025-10-17T04:00:00.000Z",
+      "last_started": "2026-10-17T03:42:28.800Z"
+    },
+    {
+      "code": "PORTALS2",
+      "cdrs": 30000,
+      "unanswered": 1460,
+      "unverified": 317,
+      "countries": 20,
+      "first_started": "2025-10-17T04:00:00.000Z",
+      "last_started": "2026-10-17T03:42:28.800Z"
+    },
+    {
+      "code": "PORTALS1",
+      "cdrs": 30000,
+      "unanswered": 1460,
+      "unverified": 317,
+      "countries": 20,
+      "first_started": "2025-10-17T04:00:00.000Z",
+      "last_started": "2026-10-17T03:42:28.800Z"
+    },
+    {
+      "code": "ABC001",
+      "cdrs": 3,
+      "unanswered": 1,
+      "unverified": 0,
+      "countries": 2,
+      "first_started": "2026-09-28T06:03:10.000Z",
+      "last_started": "2026-09-28T06:20:00.000Z"
+    },
+    {
+      "code": "GZT007",
+      "cdrs": 2,
+      "unanswered": 0,
+      "unverified": 0,
+      "countries": 2,
+      "first_started": "2026-09-28T01:30:00.000Z",
+      "last_started": "2026-09-28T01:40:00.000Z"
+    }
+  ],
+  "partitions": [
+    {
+      "relname": "cdrs_2025_10",
+      "rows": "122755",
+      "heap": "24 MB"
+    },
+    {
+      "relname": "cdrs_2025_11",
+      "rows": "253973",
+      "heap": "49 MB"
+    },
+    {
+      "relname": "cdrs_2025_12",
+      "rows": "262438",
+      "heap": "51 MB"
+    },
+    {
+      "relname": "cdrs_2026_01",
+      "rows": "262439",
+      "heap": "51 MB"
+    },
+    {
+      "relname": "cdrs_2026_02",
+      "rows": "237040",
+      "heap": "46 MB"
+    },
+    {
+      "relname": "cdrs_2026_03",
+      "rows": "262438",
+      "heap": "51 MB"
+    },
+    {
+      "relname": "cdrs_2026_04",
+      "rows": "253974",
+      "heap": "49 MB"
+    },
+    {
+      "relname": "cdrs_2026_05",
+      "rows": "262438",
+      "heap": "51 MB"
+    },
+    {
+      "relname": "cdrs_2026_06",
+      "rows": "253974",
+      "heap": "49 MB"
+    },
+    {
+      "relname": "cdrs_2026_07",
+      "rows": "262438",
+      "heap": "51 MB"
+    },
+    {
+      "relname": "cdrs_2026_08",
+      "rows": "262439",
+      "heap": "51 MB"
+    },
+    {
+      "relname": "cdrs_2026_09",
+      "rows": "603975",
+      "heap": "118 MB"
+    },
+    {
+      "relname": "cdrs_2026_10",
+      "rows": "139684",
+      "heap": "27 MB"
+    },
+    {
+      "relname": "cdrs_2026_11",
+      "rows": "0",
+      "heap": "0 bytes"
+    }
+  ],
+  "ledger": [
+    {
+      "kind": "adjustment",
+      "count": 12
+    },
+    {
+      "kind": "call_charge",
+      "count": 2850149
+    },
+    {
+      "kind": "gift",
+      "count": 13
+    },
+    {
+      "kind": "recharge",
+      "count": 13
+    }
+  ],
+  "facts": {
+    "answered": 234277,
+    "unanswered": 12297,
+    "answered_crossing": 1,
+    "max_ring": "00:00:27",
+    "common_hits": 11821,
+    "rare_hits": 1,
+    "china": 70390,
+    "jamaica": 4815
+  }
+}

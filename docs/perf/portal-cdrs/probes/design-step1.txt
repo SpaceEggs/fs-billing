@@ -1,0 +1,72 @@
+# 阶段 6 设计补测结果（design-step1.sql 的 Execution Time，单位 ms，按运行顺序）
+# 首遍常偏慢；表示一条查询在同一事务内连跑的各次。
+
+## PORTALBIG 各北京月的流水条数
+2025-10 113357
+2025-11 234324
+2025-12 242042
+2026-01 241884
+2026-02 218737
+2026-03 242119
+2026-04 234254
+2026-05 242187
+2026-06 234261
+2026-07 241954
+2026-08 241991
+2026-09 234280
+2026-10 128797
+
+## Execution Time
+countries group by, month 2026-09, original policy: 123.8, 112.7, 106.5
+admin unverified-only list first page, month 2026-09, admin scope, original policy: 0.7, 0.4
+admin summary with unverified count: 56.4, 48.6
+countries group by, month 2026-09, InitPlan policy: 36.0, 35.6, 35.6
+admin summary with unverified count, InitPlan policy: 34.4, 34.7
+ledger 2026-04 day window, prior anchor: 1101.8, 764.4
+ledger 2026-04 day window, balance anchor: 909.6, 827.7
+ledger 2026-04 day window, balance anchor, second run: 809.6
+ledger 2026-04 prior anchor only, covering index: 485.8, 460.3
+ledger 2026-04 month group-by only, covering index: 148.8
+ledger 2026-04 prior anchor only, existing index: 547.7, 551.0
+ledger 2026-04 month group-by only, existing index: 146.7
+ledger 2026-04 prior anchor only, existing index, InitPlan policy: 191.4, 189.2
+2025-12 prior run1 initplan: 140.4
+2025-12 prior run2 initplan: 122.0
+2025-12 prior run3 initplan: 122.9
+2025-12 balance run1 initplan: 344.3
+2025-12 balance run2 initplan: 357.3
+2025-12 balance run3 initplan: 345.2
+2026-04 prior run1 initplan: 291.1
+2026-04 prior run2 initplan: 279.4
+2026-04 prior run3 initplan: 268.8
+2026-04 balance run1 initplan: 281.1
+2026-04 balance run2 initplan: 288.8
+2026-04 balance run3 initplan: 282.0
+2026-09 prior run1 initplan: 352.0
+2026-09 prior run2 initplan: 356.0
+2026-09 prior run3 initplan: 384.6
+2026-09 balance run1 initplan: 134.9
+2026-09 balance run2 initplan: 124.5
+2026-09 balance run3 initplan: 124.7
+floor 1 day summary run1: 61.3
+floor 1 day mid page run1: 22.8
+floor 1 day summary run2: 46.2
+floor 1 day mid page run2: 15.5
+floor 1 day summary run3: 35.5
+floor 1 day mid page run3: 15.3
+floor 31 days summary run1: 35.3
+floor 31 days mid page run1: 15.3
+floor 31 days summary run2: 34.2
+floor 31 days mid page run2: 14.4
+floor 31 days summary run3: 33.5
+floor 31 days mid page run3: 14.3
+floor 93 days summary run1: 33.5
+floor 93 days mid page run1: 14.3
+floor 93 days summary run2: 33.6
+floor 93 days mid page run2: 14.3
+floor 93 days summary run3: 34.5
+floor 93 days mid page run3: 15.5
+
+## 首页最近话单（第 6 段）
+home recent 10 answered calls, no date bound, original policy: 7.135, 0.164, 0.156
+home recent 10 for a tenant with no calls, original policy: 26.785

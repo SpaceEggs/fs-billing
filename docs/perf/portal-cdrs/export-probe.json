@@ -1,0 +1,200 @@
+[
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 100,
+    "settings": {},
+    "rows": 100000,
+    "ms": 887,
+    "rssBeforeMb": 132.9,
+    "maxRssMb": 151.5,
+    "peakHeapMb": 67.8
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 100000,
+    "ms": 430,
+    "rssBeforeMb": 131.3,
+    "maxRssMb": 153.3,
+    "peakHeapMb": 68.2
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 5000,
+    "settings": {},
+    "rows": 100000,
+    "ms": 305,
+    "rssBeforeMb": 132,
+    "maxRssMb": 154,
+    "peakHeapMb": 68.1
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": { "cursor_tuple_fraction": "1" },
+    "rows": 100000,
+    "ms": 394,
+    "rssBeforeMb": 132.3,
+    "maxRssMb": 152.3,
+    "peakHeapMb": 66.7
+  },
+  {
+    "code": "PORTALBIG",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 234277,
+    "ms": 1245,
+    "rssBeforeMb": 132.5,
+    "maxRssMb": 159.3,
+    "peakHeapMb": 71.7
+  },
+  {
+    "code": "PORTALBIG",
+    "how": "naive",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 234277,
+    "ms": 629,
+    "rssBeforeMb": 131.6,
+    "maxRssMb": 418.1,
+    "peakHeapMb": 242.1
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 100,
+    "settings": {},
+    "rows": 100000,
+    "ms": 534,
+    "rssBeforeMb": 132,
+    "maxRssMb": 149.9,
+    "peakHeapMb": 64.9
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 100000,
+    "ms": 417,
+    "rssBeforeMb": 131.6,
+    "maxRssMb": 155.8,
+    "peakHeapMb": 69
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 5000,
+    "settings": {},
+    "rows": 100000,
+    "ms": 307,
+    "rssBeforeMb": 131.4,
+    "maxRssMb": 154.3,
+    "peakHeapMb": 67.8
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": { "cursor_tuple_fraction": "1" },
+    "rows": 100000,
+    "ms": 352,
+    "rssBeforeMb": 132.4,
+    "maxRssMb": 152.9,
+    "peakHeapMb": 66.7
+  },
+  {
+    "code": "PORTALBIG",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 234277,
+    "ms": 1084,
+    "rssBeforeMb": 131.7,
+    "maxRssMb": 162.2,
+    "peakHeapMb": 75.5
+  },
+  {
+    "code": "PORTALBIG",
+    "how": "naive",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 234277,
+    "ms": 577,
+    "rssBeforeMb": 131.6,
+    "maxRssMb": 416.8,
+    "peakHeapMb": 242.2
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 100,
+    "settings": {},
+    "rows": 100000,
+    "ms": 655,
+    "rssBeforeMb": 131.5,
+    "maxRssMb": 151.3,
+    "peakHeapMb": 68.1
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 100000,
+    "ms": 456,
+    "rssBeforeMb": 132,
+    "maxRssMb": 150.4,
+    "peakHeapMb": 65.6
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 5000,
+    "settings": {},
+    "rows": 100000,
+    "ms": 302,
+    "rssBeforeMb": 131.9,
+    "maxRssMb": 154.4,
+    "peakHeapMb": 67.8
+  },
+  {
+    "code": "EXPORT100K",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": { "cursor_tuple_fraction": "1" },
+    "rows": 100000,
+    "ms": 357,
+    "rssBeforeMb": 131.8,
+    "maxRssMb": 154.4,
+    "peakHeapMb": 66.8
+  },
+  {
+    "code": "PORTALBIG",
+    "how": "cursor",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 234277,
+    "ms": 1156,
+    "rssBeforeMb": 132.1,
+    "maxRssMb": 159.4,
+    "peakHeapMb": 71.9
+  },
+  {
+    "code": "PORTALBIG",
+    "how": "naive",
+    "fetchSize": 1000,
+    "settings": {},
+    "rows": 234277,
+    "ms": 622,
+    "rssBeforeMb": 131.6,
+    "maxRssMb": 417.9,
+    "peakHeapMb": 243.3
+  }
+]

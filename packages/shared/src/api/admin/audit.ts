@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cdrStatusSchema } from '../cdr-fields.js';
 import { currencySchema } from '../identity.js';
 import { adminRateEntriesResponseSchema } from './rates.js';
 import {
@@ -32,6 +33,7 @@ export const auditActionSchema = z.enum([
   'admin_create',
   'admin_disable',
   'admin_enable',
+  'cdr_export',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 export const auditChangeSchema = z.strictObject({
@@ -147,6 +149,20 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
   auditVariant('admin_create', { email: z.email() }),
   auditVariant('admin_disable', {}),
   auditVariant('admin_enable', {}),
+  auditVariant('cdr_export', {
+    rowCount: z.int().nonnegative(),
+    filters: z.strictObject({
+      from: z.iso.date(),
+      to: z.iso.date(),
+      status: cdrStatusSchema,
+      callee: z
+        .string()
+        .regex(/^[1-9][0-9]{0,14}$/)
+        .optional(),
+      country: z.string().min(1).max(200).optional(),
+      unverifiedOnly: z.boolean(),
+    }),
+  }),
 ]);
 export const auditContentSchema = z.discriminatedUnion('action', [
   auditPayloadSchema.options[0].pick({ action: true, content: true }),
