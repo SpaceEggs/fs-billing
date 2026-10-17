@@ -10,7 +10,7 @@ const tones = {
   muted: 'border-border text-muted-foreground',
 } as const;
 
-/** 设计系统 · 状态标签：租户状态带圆点，其余为纯文字标签。 */
+/** 设计系统 · 状态标签：租户状态在电脑上带圆点（手机稿不带），其余为纯文字标签。 */
 export const statusTags = {
   normal: { label: '正常', tone: 'ok', dot: true },
   lowBalance: { label: '余额不足', tone: 'warn', dot: true },
@@ -48,7 +48,10 @@ export function StatusTag({
       )}
     >
       {tag.dot ? (
-        <span aria-hidden className="size-1.5 rounded-full bg-current" />
+        <span
+          aria-hidden
+          className="hidden size-1.5 rounded-full bg-current md:block"
+        />
       ) : null}
       {tag.label}
     </span>

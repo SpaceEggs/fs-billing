@@ -39,6 +39,10 @@ const accountStatus = {
   },
 } as const satisfies Record<AdminStatus, { label: string; className: string }>;
 
+const fieldRow =
+  'flex flex-col gap-0.5 border-b border-border py-3 last:border-b-0 md:grid md:grid-cols-[140px_1fr] md:items-center md:gap-0';
+const fieldLabel = 'text-xs text-muted-foreground md:text-sm';
+
 const tenantDisabledEnableNote =
   '租户仍为停用状态。启用门户账号不会启用租户，租户启用前客户仍无法登录。';
 
@@ -321,52 +325,53 @@ export function PortalTab({
         aria-label="客户门户账号"
         className="rounded-xl border border-border"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="hidden items-center justify-between gap-3 border-b border-border px-5 py-4 md:flex">
           <div className="flex flex-col gap-1">
             <span className="text-[15px] font-semibold">客户门户账号</span>
             <span className="text-xs text-muted-foreground">
               第一版每个租户一个门户账号
             </span>
           </div>
-          {actions ? (
-            <div className="hidden gap-2 md:flex">{actions}</div>
-          ) : null}
+          {actions ? <div className="flex gap-2">{actions}</div> : null}
         </div>
         {account ? (
-          <dl className="m-0 grid grid-cols-[112px_1fr] px-5 pt-1 pb-2 text-sm tabular-nums md:grid-cols-[140px_1fr]">
-            <dt className="border-b border-border py-3 text-muted-foreground">
-              登录邮箱
-            </dt>
-            <dd className="m-0 border-b border-border py-3 break-all">
-              {account.email}
-            </dd>
-            <dt className="border-b border-border py-3 text-muted-foreground">
-              状态
-            </dt>
-            <dd className="m-0 border-b border-border py-2.5">
-              <span
-                className={cn(
-                  'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium',
-                  accountStatus[account.status].className,
+          // 手机（第三批 3j）标签在上、值在下，状态标签靠右；电脑为两列。
+          <dl className="m-0 px-3.5 py-1 text-sm tabular-nums md:px-5 md:pt-1 md:pb-2">
+            <div className={fieldRow}>
+              <dt className={fieldLabel}>登录邮箱</dt>
+              <dd className="m-0 break-all">{account.email}</dd>
+            </div>
+            <div
+              className={cn(fieldRow, 'flex-row items-center justify-between')}
+            >
+              <dt className={fieldLabel}>状态</dt>
+              <dd className="m-0">
+                <span
+                  className={cn(
+                    'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium',
+                    accountStatus[account.status].className,
+                  )}
+                >
+                  {accountStatus[account.status].label}
+                </span>
+              </dd>
+            </div>
+            <div className={fieldRow}>
+              <dt className={fieldLabel}>最后登录时间</dt>
+              <dd className="m-0">
+                {account.lastLoginAt ? (
+                  <DateTime value={account.lastLoginAt} />
+                ) : (
+                  <span className="text-muted-foreground">从未登录</span>
                 )}
-              >
-                {accountStatus[account.status].label}
-              </span>
-            </dd>
-            <dt className="border-b border-border py-3 text-muted-foreground">
-              最后登录时间
-            </dt>
-            <dd className="m-0 border-b border-border py-3">
-              {account.lastLoginAt ? (
-                <DateTime value={account.lastLoginAt} />
-              ) : (
-                <span className="text-muted-foreground">从未登录</span>
-              )}
-            </dd>
-            <dt className="py-3 text-muted-foreground">开通时间</dt>
-            <dd className="m-0 py-3">
-              <DateTime value={account.createdAt} />
-            </dd>
+              </dd>
+            </div>
+            <div className={fieldRow}>
+              <dt className={fieldLabel}>开通时间</dt>
+              <dd className="m-0">
+                <DateTime value={account.createdAt} />
+              </dd>
+            </div>
           </dl>
         ) : (
           <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
@@ -380,6 +385,9 @@ export function PortalTab({
           </div>
         )}
       </section>
+      <span className="text-xs text-muted-foreground md:hidden">
+        第一版每个租户一个门户账号
+      </span>
       {actions ? (
         <div className="flex flex-col gap-2 md:hidden">{actions}</div>
       ) : null}

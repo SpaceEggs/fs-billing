@@ -259,9 +259,9 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
         />
       ))}
-      <div className="rounded-lg border border-brand-border bg-brand-soft px-3.5 py-2.5 text-[13px] md:hidden">
-        <span className="font-semibold">请在电脑上操作</span>
-        <span className="block text-muted-foreground">
+      <div className="flex flex-col gap-0.5 rounded-[10px] border border-brand-border bg-brand-soft px-3.5 py-3 text-sm md:hidden">
+        <span className="font-semibold text-primary">请在电脑上操作</span>
+        <span className="text-[13px] text-muted-foreground">
           导入、复制费率表涉及大量明细核对，手机上仅支持查看和搜索。
         </span>
       </div>
@@ -298,16 +298,20 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
           className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9 md:w-[260px] md:text-sm"
         />
-        <span className="inline-flex h-6 items-center gap-1.5 rounded-md border border-ok-border bg-ok-soft px-2 text-xs font-medium text-ok">
+        <span className="hidden h-6 items-center gap-1.5 rounded-md border border-ok-border bg-ok-soft px-2 text-xs font-medium text-ok md:inline-flex">
           <span aria-hidden className="size-1.5 rounded-full bg-current" />
           当前生效版本
         </span>
-        <span className="tabular-nums">
+        <span className="w-full text-xs tabular-nums max-md:order-first md:hidden">
+          当前生效版本 ·{' '}
+          {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`}
+        </span>
+        <span className="hidden tabular-nums md:inline">
           自 <DateTime value={data.current.effectiveFrom} /> ·{' '}
           {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`} ·
           最长前缀优先匹配
         </span>
-        <span className="flex-1" />
+        <span className="hidden flex-1 md:block" />
         {emptyTable ? null : (
           <Button
             variant="outline"
@@ -366,9 +370,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-[10px] border border-border">
+          {/* 手机（第二批 1c/7c）同一张表排成每行带单位的列表，不显示表头。 */}
+          <div className="overflow-x-auto rounded-xl border border-border md:rounded-[10px]">
             <table className="w-full border-collapse text-[13px]">
-              <thead>
+              <thead className="hidden md:table-header-group">
                 <tr className="bg-muted text-xs whitespace-nowrap text-muted-foreground">
                   <th className="px-4 py-2.5 text-left font-medium">前缀</th>
                   <th className="px-3 py-2.5 text-left font-medium">
@@ -389,14 +394,23 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                     <tr
                       key={entry.prefix}
                       className={cn(
-                        'border-t border-border',
+                        'flex min-h-[52px] items-center gap-2.5 border-border px-3.5 py-2.5 not-first:border-t md:table-row md:border-t md:p-0',
                         hint && 'bg-brand-soft',
                       )}
                     >
-                      <td className="px-4 py-2.5 font-mono">{entry.prefix}</td>
-                      <td className="px-3 py-2.5">{entry.country}</td>
-                      <td className="px-4 py-2.5 text-right">
-                        <Rate value={entry.rate} />
+                      <td className="min-w-10 font-mono font-semibold md:px-4 md:py-2.5 md:font-normal">
+                        {entry.prefix}
+                      </td>
+                      <td className="flex-1 text-sm md:px-3 md:py-2.5 md:text-[13px]">
+                        {entry.country}
+                      </td>
+                      <td className="text-right md:px-4 md:py-2.5">
+                        <span className="text-sm font-medium md:text-[13px] md:font-normal">
+                          <Rate value={entry.rate} />
+                          <span className="ml-[3px] text-[11px] font-normal text-muted-foreground md:hidden">
+                            {unit}
+                          </span>
+                        </span>
                         {hint ? (
                           <span className="block text-[11px] text-primary">
                             {hint}

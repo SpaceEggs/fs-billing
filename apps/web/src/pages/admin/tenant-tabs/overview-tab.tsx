@@ -99,7 +99,7 @@ function DailyChart({
         )}
         <ol
           aria-label={`最近 ${days.length} 天每日消费`}
-          className="m-0 flex h-[120px] list-none items-end gap-[3px] border-b border-border bg-[linear-gradient(var(--border)_1px,transparent_1px)] bg-size-[100%_33.333%] p-0 md:h-[200px] md:gap-1.5"
+          className="m-0 flex h-[120px] list-none items-end gap-[3px] border-b border-border p-0 md:h-[200px] md:bg-[linear-gradient(var(--border)_1px,transparent_1px)] md:bg-size-[100%_33.333%] md:gap-1.5"
         >
           {days.map((day, index) => {
             const today = index === days.length - 1;

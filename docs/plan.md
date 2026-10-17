@@ -28,7 +28,7 @@
 | 2    | 数据库与账本         | 表结构、流水不可改、RLS 隔离可演示               | 已完成（PR #6，[验收记录](phase-2-db.md)）                                                                                                                                       |
 | 3    | FreeSWITCH 接口      | 用模拟请求打一通电话，完成授权、入话单、扣费     | 功能已完成（PR #9，[验收记录](phase-3-worker.md)）；收尾性能重跑通过（[3 次 p95 ≈ 5.5–6.3 ms](evidence/phase-3-closeout/perf-authorize.txt)），FreeSWITCH 实机通话待阶段 10 验收 |
 | 4    | API、登录与网页外壳  | 管理员和客户都能登录，越权测试自动运行           | 已完成（PR #17–#19，[后端记录](phase-4-api.md)、[Web 记录](phase-4-web.md)）                                                                                                     |
-| 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 进行中：功能已合并（PR #21–#28），4 条验收待完成，见[阶段 5 验收标准](#阶段-5管理后台开户与资金)                                                                                 |
+| 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 代码验收已完成，2 条运维项（NTP 监测、现网 billing_tenant 核对）随阶段 10，见[阶段 5 验收标准](#阶段-5管理后台开户与资金)                                                                                 |
 | 6    | 客户门户             | 客户能自助查余额、话单、流水                     | 未开始                                                                                                                                                                           |
 | 7    | 月账单               | 每月自动出账，客户可查看和导出                   | 未开始                                                                                                                                                                           |
 | 8    | 话单运维             | 未归属话单分配、删除话单、操作日志               | 未开始                                                                                                                                                                           |
@@ -229,9 +229,9 @@
 - [x] 导入一个含错误行的 CSV，显示所有错误行号，费率表不变。证据：`apps/web/e2e/admin-rates.spec.ts` / `shows every CSV error line`；`packages/db/src/admin/rates.db.test.ts` / `invalid CSV reports all physical rows and writes no versions or audits`
 - [x] 调账不填原因无法提交；提交后流水中有反向记录，原记录不变。证据：`apps/web/e2e/admin-balance.spec.ts` / `blocks blank adjustment reason`；`packages/db/src/admin/tenants.db.test.ts` / `rejects missing adjustment reason, caps, precision and reserved keys before writing`；流水只增不改由阶段 2 的触发器保证
 - [x] 待收款合计分别显示 ¥ 和 $，不出现两者相加的数字。证据：`apps/web/e2e/admin-receivables.spec.ts` / `renders CNY and USD totals separately`；`apps/api/src/admin-receivables.db.test.ts` / `keeps exact CNY and USD totals over the full filtered set before pagination`
-- [ ] 种子数据下各页面在浅色、深色、手机宽度的截图与设计稿逐页比对，差异记录在案并处理。比对脚本 `apps/web/e2e/admin-visual.spec.ts` 已合并，省略的设计稿元素记录在 [阶段 5 设计](phase-5-design.md#已决定阶段-5-web-缺口2026-10-15)。**还差**：比对截图和差异清单只在 PR #23 的验证机上，没有提交到 `docs/evidence/`
+- [x] 种子数据下各页面在浅色、深色、手机宽度的截图与设计稿逐页比对，差异记录在案并处理。比对脚本 `apps/web/e2e/admin-visual.spec.ts` 已合并，省略的设计稿元素记录在 [阶段 5 设计](phase-5-design.md#已决定阶段-5-web-缺口2026-10-15)。2026-10-17 修复后再次运行，69 张对照图与逐页差异清单见 [`docs/evidence/phase-5-web/visual-diff.md`](evidence/phase-5-web/visual-diff.md)：C1–C7、C10、C11 已修复，C8、C9、C12、C13 记为[视觉对照决定](phase-5-design.md#已决定阶段-5-视觉对照2026-10-17)。C13 也记为决定。修复后 `admin-visual.spec.ts` 69 项无错误，全部 e2e 49 passed。
 - [x] 每个操作在操作日志表中有对应记录（操作人、时间、对象、内容）。证据：`packages/shared/src/api/admin/admin.test.ts` / `audit payload requires actor, time, target and content and excludes credentials`；租户、余额、费率、待收款、账号各操作的 DB 测试均断言同一事务写入审计
-- [ ] 开户后首个“立即生效”费率版本的 `effectiveFrom ≤ now`，开户后立即授权匹配到费率（来自阶段 1）。`effectiveFrom ≤ now` 已有证据：`packages/db/src/admin/tenants.db.test.ts` / `creates an immediately effective empty version and explicit defaults`。**还差**：开户后立即调用 Worker 授权并匹配到费率的测试
+- [x] 开户后首个“立即生效”费率版本的 `effectiveFrom ≤ now`，开户后立即授权匹配到费率（来自阶段 1）。证据：`packages/db/src/admin/tenants.db.test.ts` / `creates an immediately effective empty version and explicit defaults`；`apps/worker/src/app.db.test.ts` / `开户（$kind 初始费率）后立即授权即匹配到首个费率版本`（逐条与 CSV 两种初始费率，经管理服务开户后立即调用 `/authorize` 放行并返回计费号码）
 - [x] 费率版本“指定时间”接受任意 ISO，必须在当前时间至可配置 horizon 的闭区间内，默认 365 天；接口 Zod 拒绝过去或超上限，秒/毫秒与边界测试覆盖，Web 使用北京时间分钟选择器。数据库层允许首个版本倒填（种子与测试使用），见阶段 2 的决定（来自阶段 2）。证据：`packages/shared/src/api/admin/decisions.test.ts` / `schedule horizon accepts any ISO instant within inclusive configurable bounds`；`apps/api/src/admin-rates.test.ts` / `configured horizon governs edit, import and copy at the HTTP boundary`；`apps/web/e2e/admin-rates.spec.ts` / `minute picker submits Beijing schedule`
 
 - [ ] 取消指定未来版本只允许 `effective_from > DB now() + margin`，余量默认 60 秒并监测 NTP，现有 trigger guard 保留，与生效竞态时拒绝；当前/历史费率不变，rate_schedule_cancel 保存取消版本 ID 和完整 entries；仅复用 lock_tenants。代码已有证据：`packages/db/src/admin/rates.db.test.ts` / `cancels only future versions beyond configured margin and audits full entries`、`rejects cancellation exactly at the configured database clock margin`、`maps activation during a tenant lock wait to conflict and rolls back cancellation audit`。**还差**：FreeSWITCH 与数据库的 NTP 监测（运维项，随阶段 10 部署）
@@ -370,6 +370,8 @@
 - [ ] 压测中重启 API 和 Web：通话和话单不受影响
 - [ ] 压测中停掉 Workers 1 分钟：FreeSWITCH 按 1800 秒放行并标记未经验证，Workers 恢复后补推的话单全部入库且不重复，系统告警记录了这次故障
 - [ ] 在 FreeSWITCH 测试机上实际打一通电话：授权放行、到时自动挂断、话单推送并扣费，并核对真实话单中的主叫号码字段位置与入库值正确，截图/日志存档（用户测试机部署验收；阶段 3 标准 8 的 Docker/SIPp 功能验证已通过，来自阶段 3 评审）
+- [ ] FreeSWITCH 与数据库服务器的 NTP 时钟监测上线，偏差告警可演示（来自阶段 5：取消未来费率版本依赖 DB 时钟余量）
+- [ ] 上线前核对现网 FreeSWITCH 的 `billing_tenant` 取值与数据库租户编码，不区分大小写一一对应，核对结果存档（来自阶段 5）
 - [ ] 在有历史数据的数据库上演练迁移，测量并记录锁持有时长与部署窗口；`lock_timeout=5s` 只限制等锁时间，不限制持锁或扫描时间（来自阶段 3 收尾评审）
 - [ ] 制定上线后大分区表（如 `cdrs`）新增索引的运维手册：当前 migrator 在事务内运行，不能执行 `CREATE INDEX CONCURRENTLY`。上线后必须在迁移事务外逐分区执行 `CREATE INDEX CONCURRENTLY`，再将分区索引附加到以 `ON ONLY` 创建的父索引；`0010` 的普通 `CREATE INDEX` 仅适用于上线前的开发、CI 或空库。
 - [ ] 在有历史数据的数据库上验证 `0004_billing_number_not_null.sql` guard：合法数据升级成功，非法数据拒绝升级且迁移原子失败（来自阶段 3 收尾评审）

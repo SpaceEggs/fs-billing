@@ -5,6 +5,7 @@ import { sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createRateVersion,
+  createTenant as onboardTenant,
   ensureCdrPartitions,
   lockTenants,
   withSystem,
@@ -18,6 +19,7 @@ import {
 import { z } from 'zod';
 import { fromDrizzle } from 'pg-boss';
 import {
+  adminId,
   connections,
   createTenant,
   pgError,
@@ -627,6 +629,58 @@ describe('Worker HTTP 与真实数据库', () => {
       ).rows,
     ).toHaveLength(2);
   });
+
+  it.each([
+    {
+      kind: 'entries' as const,
+      entries: [{ prefix: '447', country: '英国手机', rate: '0.048' }],
+    },
+    {
+      kind: 'csv' as const,
+      file: {
+        filename: 'rates.csv',
+        contentBase64: Buffer.from(
+          'prefix,country,rate\n447,英国手机,0.048',
+        ).toString('base64'),
+      },
+    },
+  ])(
+    '开户（$kind 初始费率）后立即授权即匹配到首个费率版本',
+    async (initialRates) => {
+      const code = `n${randomUUID().replaceAll('-', '').slice(0, 10)}`;
+      await onboardTenant({
+        db: connection.db,
+        actor: { id: await adminId(owner), name: '管理员' },
+        creatorEmail: 'admin@example.com',
+        request: {
+          code,
+          name: '开户即授权',
+          currency: 'CNY',
+          contactName: '',
+          contactPhone: '',
+          remark: '',
+          settings: { lowBalanceThreshold: '20' },
+          initialRates,
+        },
+      });
+      const authorization = await worker.inject({
+        method: 'POST',
+        url: '/authorize',
+        headers: { 'x-billing-key': security.secret },
+        payload: {
+          uuid: randomUUID(),
+          tenant: code,
+          callee: '447700900123',
+          dialedNumber: '+447700900123',
+        },
+      });
+      expect(authorization.json()).toEqual({
+        allowed: true,
+        maxSeconds: 14400,
+        billingNumber: '447700900123',
+      });
+    },
+  );
 
   it('授权读取实时余额、状态与费率：放行或给出拒绝原因，错误号码返回 400', async () => {
     const tenant = await fixture();
