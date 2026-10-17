@@ -45,7 +45,10 @@ export function DateRangeField({
       >
         <span className="md:hidden">{rangeLabel(value, true)}</span>
         <span className="hidden md:inline">{rangeLabel(value)}</span>
-        <span aria-hidden className="text-xs text-muted-foreground">
+        <span
+          aria-hidden
+          className="hidden text-xs text-muted-foreground md:inline"
+        >
           ▦
         </span>
       </button>
