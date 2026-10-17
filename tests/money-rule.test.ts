@@ -53,6 +53,7 @@ test.each([
   expect(lint(code)).toEqual([]);
 });
 
+// Full repository typed ESLint config; cost grows with the codebase.
 test.each(['packages/rating/src/index.ts', 'apps/worker/src/app.ts'])(
   'repository ESLint config protects %s',
   async (filePath) => {
@@ -65,4 +66,5 @@ test.each(['packages/rating/src/index.ts', 'apps/worker/src/app.ts'])(
         .some((message) => message.ruleId === 'money/no-number-money'),
     ).toBe(true);
   },
+  30_000,
 );
