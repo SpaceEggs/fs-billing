@@ -7,5 +7,4 @@ export * from './receivables.js';
 export * from './audit.js';
 export * from './errors.js';
 export * from './contract.js';
-export * from './portal-projection.js';
 export * from './amount-requests.js';

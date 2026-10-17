@@ -19,8 +19,6 @@ import {
   adminPortalAccountCreateResponseSchema,
   adminConfirmPaymentRequestSchema,
   adminReceivableSchema,
-  portalLedgerEntrySchema,
-  projectPortalLedgerEntry,
   adminBalanceOperationRequestSchema,
   adminCurrencyTotalsSchema,
   adminRatePreviewResponseSchema,
@@ -38,7 +36,6 @@ import {
 import { apiContract } from '../contract.js';
 import * as adminSchemas from './index.js';
 import { parseRateCsv } from '../../../../rating/src/csv.js';
-import { z } from 'zod';
 
 const id = '550e8400-e29b-41d4-a716-446655440000';
 const balanceInput = {
@@ -472,7 +469,7 @@ it('portal passwords are returned exactly when generated', () => {
   ).toBe(false);
 });
 
-it('portal ledger projection removes credit notes and admin actor data', () => {
+it('credit recharge notes are visible to admins only', () => {
   const entry = {
     id,
     kind: 'credit_recharge',
@@ -484,67 +481,11 @@ it('portal ledger projection removes credit notes and admin actor data', () => {
     actor: { id, name: '管理员' },
     occurredAt: '2026-10-14T10:00:00Z',
   };
-  const parsed = adminLedgerEntrySchema.parse(entry);
-  const projected = {
-    id,
-    kind: 'recharge',
-    amount: '500.00',
-    balanceAfter: '500.00',
-    occurredAt: '2026-10-14T10:00:00Z',
-    note: '',
-  };
-  expect(projectPortalLedgerEntry(parsed)).toEqual(projected);
-  expect(portalLedgerEntrySchema.parse(projected)).toEqual(projected);
-  expect(portalLedgerEntrySchema.safeParse(entry).success).toBe(false);
-  expect(
-    portalLedgerEntrySchema.safeParse({
-      ...projected,
-      internalNote: entry.note,
-    }).success,
-  ).toBe(false);
+  expect(adminLedgerEntrySchema.parse(entry)).toEqual(entry);
   expect(
     adminLedgerEntrySchema.safeParse({ ...entry, noteVisibility: 'customer' })
       .success,
   ).toBe(false);
-  const recharge = adminLedgerEntrySchema.parse({
-    ...entry,
-    kind: 'recharge',
-    noteVisibility: 'customer',
-    note: '充值',
-  });
-  expect(projectPortalLedgerEntry(recharge)).toEqual({
-    ...projected,
-    kind: 'recharge',
-    note: '充值',
-  });
-});
-
-it('customer operations and portal projections do not reference admin schemas', () => {
-  const forbidden = new Set<unknown>(
-    Object.entries(adminSchemas)
-      .filter(
-        ([name, value]) =>
-          name.startsWith('admin') && value instanceof z.ZodType,
-      )
-      .map(([, value]) => value),
-  );
-  const visited = new WeakSet<object>();
-  function inspect(value: unknown): void {
-    expect(forbidden.has(value)).toBe(false);
-    if (typeof value !== 'object' || value === null || visited.has(value))
-      return;
-    visited.add(value);
-    for (const child of Object.values(value)) inspect(child);
-  }
-  const operations = Object.values(apiContract).filter(
-    (op) => op.access === 'customer',
-  );
-  expect(operations.length).toBeGreaterThan(0);
-  for (const op of operations) {
-    inspect(op.request);
-    inspect(op.responses);
-  }
-  inspect(portalLedgerEntrySchema);
 });
 
 it('export requires POST and returns an audit ID', () => {

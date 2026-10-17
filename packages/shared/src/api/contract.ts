@@ -58,7 +58,7 @@ const sessionErrors = z.union([
   apiErrorSchemas.UNAUTHENTICATED,
   apiErrorSchemas.SESSION_EXPIRED,
 ]);
-const protectedErrors = {
+export const protectedErrors = {
   ...rateLimitedErrors,
   401: sessionErrors,
   403: z.union([apiErrorSchemas.FORBIDDEN, identityErrors]),
