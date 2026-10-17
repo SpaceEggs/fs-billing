@@ -4,16 +4,18 @@ import {
   balanceFieldErrors,
   balanceRequest,
   beginBalanceAttempt,
-  clearBalanceAttempts,
   draftFingerprint,
   needsLargeAmountConfirm,
   projectBalance,
-  resolveBalanceAttempt,
-  unresolvedBalanceAttempts,
   validateBalanceDraft,
   type BalanceDraft,
   type BalanceKind,
 } from './balance-operation';
+import {
+  clearBalanceAttempts,
+  resolveBalanceAttempt,
+  unresolvedBalanceAttempts,
+} from './balance-attempts';
 import { normalizeAmountInput } from './amounts';
 
 const draft = (kind: BalanceKind, amount: string, note = '') => ({

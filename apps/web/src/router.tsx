@@ -5,32 +5,26 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   useLocation,
   useRouteContext,
   useRouter,
   type ParsedLocation,
+  type RouteComponent,
 } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
-import { AdminAccountsPage } from './pages/admin/admin-accounts';
-import { ReceivablesPage } from './pages/admin/receivables';
-import { TenantCreatePage } from './pages/admin/tenant-create';
-import { TenantDetailPage } from './pages/admin/tenant-detail';
-import { TenantEditPage } from './pages/admin/tenant-edit';
-import { TenantListPage } from './pages/admin/tenant-list';
 import { BlockedPage } from './pages/blocked';
-import { ChangePasswordPage } from './pages/change-password';
 import { ErrorPage } from './pages/error';
-import { AdminHome, PortalHome } from './pages/home';
-import { LoginPage } from './pages/login';
 import { NotFoundPage } from './pages/not-found';
+import { PendingPage } from './pages/pending';
 import {
   validateAdminAccountsSearch,
   validateReceivablesSearch,
   validateTenantDetailSearch,
   validateTenantListSearch,
 } from './lib/admin-search';
-import { clearBalanceAttempts } from './lib/balance-operation';
+import { clearBalanceAttempts } from './lib/balance-attempts';
 import { rememberReturnPath } from './lib/return-to';
 import {
   loadSession,
@@ -42,6 +36,55 @@ import {
   type SessionState,
 } from './lib/session';
 import { zoneOfIdentity, zoneOfPath, zones, type Zone } from './lib/zone';
+
+const AdminAccountsPage = lazyRouteComponent(
+  () => import('./pages/admin/admin-accounts'),
+  'AdminAccountsPage',
+);
+const ReceivablesPage = lazyRouteComponent(
+  () => import('./pages/admin/receivables'),
+  'ReceivablesPage',
+);
+const TenantCreatePage = lazyRouteComponent(
+  () => import('./pages/admin/tenant-create'),
+  'TenantCreatePage',
+);
+const TenantDetailPage = lazyRouteComponent(
+  () => import('./pages/admin/tenant-detail'),
+  'TenantDetailPage',
+);
+const TenantEditPage = lazyRouteComponent(
+  () => import('./pages/admin/tenant-edit'),
+  'TenantEditPage',
+);
+const TenantListPage = lazyRouteComponent(
+  () => import('./pages/admin/tenant-list'),
+  'TenantListPage',
+);
+const ChangePasswordPage = lazyRouteComponent(
+  () => import('./pages/change-password'),
+  'ChangePasswordPage',
+);
+const AdminHome = lazyRouteComponent(() => import('./pages/home'), 'AdminHome');
+const PortalHome = lazyRouteComponent(
+  () => import('./pages/home'),
+  'PortalHome',
+);
+const LoginPage = lazyRouteComponent(
+  () => import('./pages/login'),
+  'LoginPage',
+);
+
+/**
+ * 路由组件是读取会话或搜索参数的外层函数，把内层懒加载页面的 preload 交给路由，
+ * 导航时先下载页面代码，超过 pendingMs 才显示加载中。
+ */
+function lazyRoute(
+  component: () => React.JSX.Element,
+  page: { preload?: () => Promise<void> | undefined },
+): RouteComponent {
+  return Object.assign(component, { preload: () => page.preload?.() });
+}
 
 type LoginSearch = { reason?: 'expired' };
 
@@ -118,14 +161,14 @@ const portalLogin = createRoute({
   getParentRoute: () => rootRoute,
   path: 'login',
   validateSearch: validateLoginSearch,
-  component: PortalLogin,
+  component: lazyRoute(PortalLogin, LoginPage),
 });
 
 const adminLogin = createRoute({
   getParentRoute: () => rootRoute,
   path: 'admin/login',
   validateSearch: validateLoginSearch,
-  component: AdminLogin,
+  component: lazyRoute(AdminLogin, LoginPage),
 });
 
 const portalLayout = createRoute({
@@ -139,13 +182,16 @@ const portalLayout = createRoute({
 const portalHome = createRoute({
   getParentRoute: () => portalLayout,
   path: '/',
-  component: PortalIndex,
+  component: lazyRoute(PortalIndex, PortalHome),
 });
 
 const portalChangePassword = createRoute({
   getParentRoute: () => portalLayout,
   path: 'change-password',
-  component: () => <ZoneChangePassword zone="portal" />,
+  component: lazyRoute(
+    () => <ZoneChangePassword zone="portal" />,
+    ChangePasswordPage,
+  ),
 });
 
 const adminLayout = createRoute({
@@ -159,53 +205,77 @@ const adminLayout = createRoute({
 const adminHome = createRoute({
   getParentRoute: () => adminLayout,
   path: '/',
-  component: () => <AdminHome identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <AdminHome identity={useZoneIdentity()} />,
+    AdminHome,
+  ),
 });
 
 const adminChangePassword = createRoute({
   getParentRoute: () => adminLayout,
   path: 'change-password',
-  component: () => <ZoneChangePassword zone="admin" />,
+  component: lazyRoute(
+    () => <ZoneChangePassword zone="admin" />,
+    ChangePasswordPage,
+  ),
 });
 
 const adminTenants = createRoute({
   getParentRoute: () => adminLayout,
   path: 'tenants',
   validateSearch: validateTenantListSearch,
-  component: () => <TenantListPage identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <TenantListPage identity={useZoneIdentity()} />,
+    TenantListPage,
+  ),
 });
 
 const adminTenantCreate = createRoute({
   getParentRoute: () => adminLayout,
   path: 'tenants/new',
-  component: () => <TenantCreatePage identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <TenantCreatePage identity={useZoneIdentity()} />,
+    TenantCreatePage,
+  ),
 });
 
 const adminTenantDetail = createRoute({
   getParentRoute: () => adminLayout,
   path: 'tenants/$tenantId',
   validateSearch: validateTenantDetailSearch,
-  component: () => <TenantDetailPage identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <TenantDetailPage identity={useZoneIdentity()} />,
+    TenantDetailPage,
+  ),
 });
 
 const adminTenantEdit = createRoute({
   getParentRoute: () => adminLayout,
   path: 'tenants/$tenantId/edit',
-  component: () => <TenantEditPage identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <TenantEditPage identity={useZoneIdentity()} />,
+    TenantEditPage,
+  ),
 });
 
 const adminReceivables = createRoute({
   getParentRoute: () => adminLayout,
   path: 'receivables',
   validateSearch: validateReceivablesSearch,
-  component: () => <ReceivablesPage identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <ReceivablesPage identity={useZoneIdentity()} />,
+    ReceivablesPage,
+  ),
 });
 
 const adminAccounts = createRoute({
   getParentRoute: () => adminLayout,
   path: 'admins',
   validateSearch: validateAdminAccountsSearch,
-  component: () => <AdminAccountsPage identity={useZoneIdentity()} />,
+  component: lazyRoute(
+    () => <AdminAccountsPage identity={useZoneIdentity()} />,
+    AdminAccountsPage,
+  ),
 });
 
 function PortalLogin(): React.JSX.Element {
@@ -292,6 +362,7 @@ export function createAppRouter(
     ...(history ? { history } : {}),
     notFoundMode: 'root',
     defaultPreload: false,
+    defaultPendingComponent: PendingPage,
   });
 }
 

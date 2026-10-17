@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
 import { apiQuery } from '../../lib/admin-api';
-import { clearBalanceAttempts } from '../../lib/balance-operation';
+import { clearBalanceAttempts } from '../../lib/balance-attempts';
 import { BalanceDialog } from './balance-dialog';
 
 let tenantSeq = 0;

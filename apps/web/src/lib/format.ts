@@ -86,12 +86,6 @@ export function formatMonth(value: string | Date) {
   return `${p.year}年${p.month}月`;
 }
 
-/** 通话时长与倒计时：3分50秒、12分04秒。 */
-export function formatDuration(durationSeconds: number) {
-  const seconds = Math.max(0, Math.ceil(durationSeconds));
-  return `${Math.floor(seconds / 60)}分${pad(seconds % 60)}秒`;
-}
-
 export function formatBilledMinutes(minutes: number) {
   return `${minutes}分钟`;
 }
