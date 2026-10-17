@@ -530,9 +530,9 @@ describe('rate import dialog', () => {
       within(table)
         .getAllByRole('row')
         .find((row) => row.textContent?.startsWith(prefix))?.textContent;
-    expect(rowText('86')).toBe('86中国0.045011-01 起 0.0480编辑');
-    expect(rowText('1876')).toBe('1876牙买加0.300011-01 起删除编辑');
-    expect(rowText('44')).toBe('44英国0.0500编辑');
+    expect(rowText('86')).toBe('86中国0.0450元/分钟11-01 起 0.0480编辑');
+    expect(rowText('1876')).toBe('1876牙买加0.3000元/分钟11-01 起删除编辑');
+    expect(rowText('44')).toBe('44英国0.0500元/分钟编辑');
     for (const name of ['编辑 86 中国', '编辑 44 英国']) {
       const edit = screen.getByRole('button', { name });
       expect(edit).toBeDisabled();
