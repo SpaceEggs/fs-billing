@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
-  beijingRangeBounds,
   checkDayRange,
   dayRangeFields,
   isDayRangeWithinOneMonth,
@@ -125,30 +124,5 @@ describe('one-month rule across every four-digit year', () => {
     ['9999-12-31', '9999-12-31'],
   ])('a range starting %s ends at the latest on %s', (from, latest) => {
     expect(latestRangeEnd(from)).toBe(latest);
-  });
-});
-
-describe('beijingRangeBounds', () => {
-  it('turns inclusive Beijing dates into a half-open UTC interval', () => {
-    expect(
-      beijingRangeBounds({ from: '2026-09-01', to: '2026-09-30' }),
-    ).toEqual({
-      start: '2026-08-31T16:00:00.000Z',
-      end: '2026-09-30T16:00:00.000Z',
-    });
-  });
-
-  it('puts a call answered at UTC 2026-09-28 16:30 on the 29th', () => {
-    const { start, end } = beijingRangeBounds({
-      from: '2026-09-29',
-      to: '2026-09-29',
-    });
-    const answered = '2026-09-28T16:30:00.000Z';
-    expect(start <= answered && answered < end).toBe(true);
-    const previous = beijingRangeBounds({
-      from: '2026-09-28',
-      to: '2026-09-28',
-    });
-    expect(previous.start <= answered && answered < previous.end).toBe(false);
   });
 });

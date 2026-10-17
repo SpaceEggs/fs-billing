@@ -447,6 +447,8 @@ function ledgerRowWindow(t: string, range: Range, anchor: Anchor) {
 /**
  * 门户余额流水，先合并后窗口：一次扫描把扣费按北京日分组、其他流水各成一组，
  * 再对约 33 行算累计余额。合并行位于当天最后一笔扣费的时间，相邻行余额逐行可对上。
+ * docs/perf/portal-cdrs.md 里的耗时和计划测的是加有序 array_agg 排序键之前的版本，
+ * 这个版本还没重测，PR 2 用本脚本重测。
  */
 function ledgerDayWindow(t: string, range: Range, anchor: Anchor) {
   return sql`with anchor as (${anchorSql(t, range, anchor)}),

@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-const DAY_MS = 86_400_000;
-
 const MAX_YEAR = 9999;
 
 function parseDay(day: string) {
@@ -74,14 +72,4 @@ export function checkDayRange(
       path: ['to'],
       message: '日期范围最长一个月',
     });
-}
-
-/** 含两端的北京日范围转成半开区间 [start, end) 的 ISO 时刻，供服务端按 occurred_at / answered_at 过滤。 */
-export function beijingRangeBounds(range: { from: string; to: string }) {
-  const start = Date.parse(`${range.from}T00:00:00+08:00`);
-  const end = Date.parse(`${range.to}T00:00:00+08:00`) + DAY_MS;
-  return {
-    start: new Date(start).toISOString(),
-    end: new Date(end).toISOString(),
-  };
 }
