@@ -1,5 +1,14 @@
 import { expect, test } from 'vitest';
-import { formatRateCsv, parseRateCsv, rate } from './index.js';
+import {
+  CSV_BOM,
+  CSV_EOL,
+  csvCell,
+  csvRecord,
+  formatRateCsv,
+  neutralizeCsvFormula,
+  parseRateCsv,
+  rate,
+} from './index.js';
 
 test('valid file with header, BOM and CRLF', () => {
   const result = parseRateCsv(
@@ -177,4 +186,48 @@ test('malformed numeric prefixes remain data errors on the first row', () => {
     ok: false,
     errors: [{ line: 1, reason: '前缀只能是数字：44a' }],
   });
+});
+
+test.each([
+  ['=1+1', "'=1+1"],
+  ['=HYPERLINK("http://x")', `"'=HYPERLINK(""http://x"")"`],
+  ['@SUM(A1)', "'@SUM(A1)"],
+  ['+cmd|calc', "'+cmd|calc"],
+  ['+44 7700 900123', "'+44 7700 900123"],
+  ['-abc', "'-abc"],
+  ['-1+1', "'-1+1"],
+  ['\t=1', "'\t=1"],
+  ['\r=1', `"'\r=1"`],
+])('csvCell neutralizes the formula in %j', (input, expected) => {
+  expect(csvCell(input)).toBe(expected);
+});
+
+test.each([
+  '+447700900123',
+  '-5',
+  '-35.20',
+  '+1300.00',
+  '8613800138000',
+  '075586001234',
+  'NORMAL_CLEARING',
+  '牙买加',
+  '',
+])('csvCell keeps the plain number or text %j', (input) => {
+  expect(neutralizeCsvFormula(input)).toBe(input);
+  expect(csvCell(input)).toBe(input);
+});
+
+test('csvCell applies the formula guard before RFC 4180 quoting', () => {
+  expect(csvCell('a,b')).toBe('"a,b"');
+  expect(csvCell('He said "hi"')).toBe('"He said ""hi"""');
+  expect(csvCell('=a,b')).toBe(`"'=a,b"`);
+  expect(csvCell(' padded ')).toBe('" padded "');
+  expect(csvCell('line\nbreak')).toBe('"line\nbreak"');
+});
+
+test('csvRecord joins guarded cells without a line terminator', () => {
+  expect(
+    csvRecord(['2026-09-28 10:00:00', '=evil', '+447700900123', '-12.50', '']),
+  ).toBe("2026-09-28 10:00:00,'=evil,+447700900123,-12.50,");
+  expect(CSV_BOM + csvRecord(['a']) + CSV_EOL).toBe('﻿a\r\n');
 });

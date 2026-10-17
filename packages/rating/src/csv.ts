@@ -117,6 +117,32 @@ export function quoteCsvCell(cell: string): string {
     : cell;
 }
 
+const NUMBER_LIKE = /^[+-]\d+(?:\.\d+)?$/;
+
+/**
+ * Excel 和 WPS 会把以 = + - @ 开头的单元格当公式执行。只中和危险内容：
+ * 以 = 或 @ 开头，或以 + - 开头但整格不是带符号的数字，前面加单引号；
+ * 开头的制表符和回车同样加单引号。纯号码（+447700900123）和带符号金额（-35.20）原样导出。
+ */
+export function neutralizeCsvFormula(cell: string): string {
+  if (/^[=@\t\r]/.test(cell)) return `'${cell}`;
+  if (/^[+-]/.test(cell) && !NUMBER_LIKE.test(cell)) return `'${cell}`;
+  return cell;
+}
+
+/** 话单与流水 CSV 共用的单元格输出：先中和公式，再按 RFC 4180 加引号。 */
+export function csvCell(cell: string): string {
+  return quoteCsvCell(neutralizeCsvFormula(cell));
+}
+
+export const CSV_BOM = '\uFEFF';
+export const CSV_EOL = '\r\n';
+
+/** 一条记录，不含行结束符。 */
+export function csvRecord(cells: readonly string[]): string {
+  return cells.map(csvCell).join(',');
+}
+
 /** 导出为 `prefix,country,rate`，费率固定 4 位小数。 */
 export function formatRateCsv(entries: readonly RateEntry<Currency>[]): string {
   const rows = entries.map((e) =>
