@@ -119,3 +119,31 @@ test('gift and credit require second confirmation only above configured currency
   await expect(dialog).toContainText('金额超过 USD 大额阈值 $1,500.00');
   await expect(dialog.getByRole('button', { name: '确认赠送' })).toBeDisabled();
 });
+
+test('ledger range defaults to this Beijing month and filters by a picked range', async ({
+  page,
+}) => {
+  await openTenants(page);
+  const tenant = await createTenant(page);
+  await page.goto(`/admin/tenants/${tenant.id}`);
+  const dialog = await fillBalance(page, '充值', '20', '银行转账');
+  await dialog.getByRole('button', { name: '确认充值' }).click();
+  await dialog.getByRole('button', { name: '完成' }).click();
+
+  await page.getByRole('link', { name: '余额流水' }).click();
+  const range = page.getByRole('button', { name: /^日期范围（北京时间）：/ });
+  await expect(range).toHaveAccessibleName(
+    /：\d{4}-\d{2}-01 至 \d{4}-\d{2}-\d{2}$/,
+  );
+  await expect(page.getByRole('table')).toContainText('+¥20.00');
+
+  await range.click();
+  const calendar = page.getByRole('dialog', { name: '日期范围（北京时间）' });
+  await calendar.getByRole('button', { name: '上个月' }).click();
+  const days = calendar.getByRole('button', { name: /^\d{4}-\d{2}-0[12]$/ });
+  await days.nth(1).click();
+  await days.nth(0).click();
+  await calendar.getByRole('button', { name: '确定' }).click();
+  await expect(page.getByText('该日期范围内没有余额流水')).toBeVisible();
+  await expect(page).toHaveURL(/from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-02/);
+});
