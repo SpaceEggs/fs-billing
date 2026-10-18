@@ -25,8 +25,8 @@ packages/db typecheck$ tsc -p tsconfig.json
 apps/web typecheck$ tsc -p tsconfig.json
 packages/db typecheck: Done
 apps/web typecheck: Done
-apps/worker typecheck$ tsc -p tsconfig.json
 apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck$ tsc -p tsconfig.json
 apps/worker typecheck: Done
 apps/api typecheck: Done
 
@@ -39,8 +39,8 @@ apps/api typecheck: Done
 
  Test Files  32 passed (32)
       Tests  660 passed | 1 skipped (661)
-   Start at  15:33:40
-   Duration  2.86s (import 46%, tests 39%, transform 13%, worker 1%)
+   Start at  15:40:49
+   Duration  2.60s (import 53%, tests 41%, transform 4%, worker 1%)
 
 
 > @fs-billing/web@ test /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing/apps/web
@@ -51,12 +51,12 @@ apps/api typecheck: Done
 
 
  Test Files  31 passed (31)
-      Tests  382 passed (382)
-   Start at  15:33:43
-   Duration  23.80s (tests 78%, environment 14%, import 4%, setup 3%, transform 1%)
+      Tests  384 passed (384)
+   Start at  15:40:52
+   Duration  23.63s (tests 79%, environment 13%, import 4%, setup 3%, transform 1%)
 
-    Isolate  31 workers spawned · ~531ms startup each (spawn + environment, per file)
-             at least ~1.30s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  31 workers spawned · ~502ms startup each (spawn + environment, per file)
+             at least ~1.23s faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ build /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing/apps/web
@@ -84,24 +84,24 @@ dist/assets/query-error-BxUL3dKt.js               1.50 kB │ gzip:  0.91 kB
 dist/assets/dialog-cNMl4bAb.js                    2.03 kB │ gzip:  1.12 kB
 dist/assets/data-format-BQWKT7B1.js               2.04 kB │ gzip:  0.96 kB
 dist/assets/copy-field-D1BxqQG-.js                2.73 kB │ gzip:  1.14 kB
-dist/assets/home-DIj4PyUD.js                      3.19 kB │ gzip:  1.48 kB
+dist/assets/home-Bw_34WFs.js                      3.19 kB │ gzip:  1.48 kB
 dist/assets/api-problem-M8seAZCN.js               3.61 kB │ gzip:  1.72 kB
-dist/assets/filter-sheet-CoIKlwmW.js              3.93 kB │ gzip:  1.59 kB
+dist/assets/filter-sheet-BlKJjqen.js              3.93 kB │ gzip:  1.59 kB
 dist/assets/change-password-tHRLrh1x.js           5.32 kB │ gzip:  2.51 kB
-dist/assets/tenant-edit-BJAvW_cS.js               6.15 kB │ gzip:  2.72 kB
-dist/assets/login-CrPXsAy1.js                     6.21 kB │ gzip:  2.46 kB
+dist/assets/tenant-edit-DVLAYxVn.js               6.15 kB │ gzip:  2.72 kB
+dist/assets/login-D4IbvQuC.js                     6.21 kB │ gzip:  2.46 kB
 dist/assets/accounts-CG85wvp8.js                  8.53 kB │ gzip:  3.35 kB
-dist/assets/tenant-list-DaKp_E5L.js               9.58 kB │ gzip:  3.19 kB
+dist/assets/tenant-list-DPlp2sKK.js               9.58 kB │ gzip:  3.18 kB
 dist/assets/form-fields-Cd140FoM.js              10.53 kB │ gzip:  4.23 kB
-dist/assets/admin-accounts-CEFzWqbx.js           12.94 kB │ gzip:  4.31 kB
-dist/assets/balance-dialog-CH4jA4L6.js           14.13 kB │ gzip:  5.41 kB
-dist/assets/tenant-create-Br137tvU.js            18.54 kB │ gzip:  6.77 kB
+dist/assets/admin-accounts-DtM3nt28.js           12.94 kB │ gzip:  4.31 kB
+dist/assets/balance-dialog-Dl-qDZ2F.js           14.13 kB │ gzip:  5.41 kB
+dist/assets/tenant-create-CVs0Qb5P.js            18.54 kB │ gzip:  6.77 kB
 dist/assets/decimal-i_D9dVJK.js                  31.94 kB │ gzip: 12.93 kB
-dist/assets/receivables-CbRc6wGi.js              35.46 kB │ gzip: 10.29 kB
-dist/assets/tenant-detail-qQb20xQh.js            94.31 kB │ gzip: 24.87 kB
+dist/assets/receivables-x_ysV6KF.js              35.48 kB │ gzip: 10.30 kB
+dist/assets/tenant-detail-C_4NNjCT.js            94.31 kB │ gzip: 24.87 kB
 dist/assets/session-expired-dialog-piAuF9f-.js  100.62 kB │ gzip: 35.13 kB
-dist/assets/index-CHYphn9U.js                   113.80 kB │ gzip: 38.11 kB
+dist/assets/index-BQOXUIl9.js                   113.80 kB │ gzip: 38.10 kB
 dist/assets/return-to-CeS2vsVd.js               168.20 kB │ gzip: 50.52 kB
 dist/assets/react-BPWasKn7.js                   218.76 kB │ gzip: 68.27 kB
 
-✓ built in 150ms
+✓ built in 158ms

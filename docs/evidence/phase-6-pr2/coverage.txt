@@ -9,8 +9,8 @@
 
  Test Files  32 passed (32)
       Tests  660 passed | 1 skipped (661)
-   Start at  15:34:08
-   Duration  3.83s (tests 47%, import 42%, transform 8%, worker 2%)
+   Start at  15:41:16
+   Duration  3.71s (tests 47%, import 45%, transform 5%, worker 3%)
 
  % Coverage report from v8
 --------------|---------|----------|---------|---------|-------------------

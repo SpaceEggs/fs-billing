@@ -255,11 +255,11 @@ export function adjustmentsSince(receivable: AdminReceivable) {
             query: { ...range, kind, pageSize, page },
           });
           const remaining = adjustmentScanLimit - items.length;
-          items.push(
-            ...result.items
-              .filter((entry) => entry.kind === 'adjustment')
-              .slice(0, remaining),
+          const rows = result.items.filter(
+            (entry) => entry.kind === 'adjustment',
           );
+          const pageTruncated = rows.length > remaining;
+          items.push(...rows.slice(0, remaining));
           scannedInRange += result.items.length;
           const rangeDone =
             result.items.length === 0 ||
@@ -268,7 +268,8 @@ export function adjustmentsSince(receivable: AdminReceivable) {
             return {
               tenantId,
               items,
-              truncated: !rangeDone || rangeIndex < ranges.length - 1,
+              truncated:
+                pageTruncated || !rangeDone || rangeIndex < ranges.length - 1,
             };
           }
           if (rangeDone) break;

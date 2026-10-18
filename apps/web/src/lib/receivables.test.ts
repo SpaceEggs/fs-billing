@@ -344,6 +344,52 @@ describe('adjustmentsSince', () => {
     expect(requests).toHaveLength(10);
     expect(requests.at(-1)?.get('page')).toBe('10');
   });
+
+  it.each([
+    { oldWindowRows: 100, truncated: true },
+    { oldWindowRows: 50, truncated: false },
+  ])(
+    'reports truncation accurately at the oldest window ($oldWindowRows rows)',
+    async ({ oldWindowRows, truncated }) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-18T00:00:00.000Z'));
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: string) => {
+          const query = new URL(input, 'http://localhost').searchParams;
+          const page = query.get('page') ?? '1';
+          const from = query.get('from');
+          const pageTotal =
+            from === '2026-09-18'
+              ? 950
+              : from === '2026-08-18'
+                ? oldWindowRows
+                : 0;
+          const pageCount =
+            from === '2026-09-18'
+              ? page === '10'
+                ? 50
+                : 100
+              : from === '2026-08-18'
+                ? oldWindowRows
+                : 0;
+          return Promise.resolve(
+            response(
+              Array.from({ length: pageCount }, () => row(1)),
+              Number(page),
+              pageTotal,
+            ),
+          );
+        }),
+      );
+      const result = await new QueryClient().fetchQuery(
+        adjustmentsSince(credit),
+      );
+      expect(result.items).toHaveLength(1000);
+      expect(result.items.at(-1)?.id).toBe(row(1).id);
+      expect(result.truncated).toBe(truncated);
+    },
+  );
 });
 
 describe('reason and action failures', () => {
