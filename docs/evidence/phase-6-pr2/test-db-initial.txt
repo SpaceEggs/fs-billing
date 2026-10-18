@@ -1,0 +1,39 @@
+
+> fs-billing@ test:db /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+
+ ❯ apps/api/src/admin-tenants.db.test.ts (18 tests | 1 failed) 1262ms
+   ❯ admin tenant and balance API (18)
+     × requires admin identity and rejects customer access to tenant data and balance mutations 83ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > requires admin identity and rejects customer access to tenant data and balance mutations
+AssertionError: {"error":{"message":"请求格式错误","requestId":"req-1z","issues":[{"path":[],"message":"请求格式错误"}],"code":"VALIDATION_ERROR"}}: expected 400 to be 403 // Object.is equality
+
+- Expected
++ Received
+
+- 403
++ 400
+
+ ❯ apps/api/src/admin-tenants.db.test.ts:749:50
+    747|         ...(payload ? { payload } : {}),
+    748|       });
+    749|       expect(response.statusCode, response.body).toBe(403);
+       |                                                  ^
+    750|       expect(response.json()).toMatchObject({ error: { code: 'FORBIDDE…
+    751|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 27 passed (28)
+      Tests  1 failed | 435 passed (436)
+   Start at  15:25:56
+   Duration  63.86s (tests 88%, import 12%)
+
+ ELIFECYCLE  Command failed with exit code 1.

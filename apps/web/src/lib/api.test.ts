@@ -19,10 +19,10 @@ describe('apiPath', () => {
     expect(
       apiPath(adminApiContract.adminTenantLedger, {
         params: { tenantId },
-        query: { kind: 'gift' },
+        query: { kind: 'gift', from: '2026-09-01', to: '2026-09-30' },
       }),
     ).toBe(
-      `/api/admin/tenants/${tenantId}/ledger?page=1&pageSize=25&kind=gift`,
+      `/api/admin/tenants/${tenantId}/ledger?from=2026-09-01&to=2026-09-30&kind=gift&page=1&pageSize=25`,
     );
   });
 

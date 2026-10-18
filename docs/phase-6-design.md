@@ -618,6 +618,14 @@ PR 4、5、6 之间没有代码依赖（都只依赖 PR 3 或 PR 2 的接口）�
 
 PR 1 的迁移、数据库测试和性能证据已在独立 worktree 落盘。完整检查通过，独立 Luna 审查为 PASS+NOTES，最终源码没有阻塞项。CI 与合并状态以 [PR #40](https://github.com/SpaceEggs/fs-billing/pull/40) 为准。Worker 两轮差异、50 ms p95 验收口径、首轮原始证据缺口和独立审查记录见[验收记录](evidence/phase-6-pr1/README.md)。Phase 6 仍在进行中，本记录不勾选整阶段验收。
 
+### PR 2 实现与验收进度（2026-10-18）
+
+PR 2 已实现共享 `mergedLedgerSql`、`listPortalLedger` 与后台流水切换，后台列表契约的 `Merged` 前缀已去掉。`adminLedgerEntrySchema` 仅保留人工余额操作的单条响应。`portalLedgerApiContract` 此时只包含列表；`portalLedgerExportApiContract` 单独留给 PR 3，没有注册导出路由。
+
+最终 SQL 按 `(北京日, 人工 id 或 NULL)` 分组，`max(kind)` 保留每组类型；人工 id 唯一，NULL id 组中全为通话扣费。排序键仍用有序 `array_agg` 取得最后一笔扣费 id。按日优先排序减少文本比较，没有改金额、余额或分页语义。后台 Web 使用判别联合显示合并行，作废应收选择调账的旧调用方也按一个月窗口扫描历史。
+
+[PR 2 验收记录](evidence/phase-6-pr2/README.md)保留 DB、原始 HTTP 防泄漏、IDOR、浏览器与完整检查的执行记录。[性能重测](perf/portal-cdrs.md#pr-2-实际合并查询与-http-实测)包含最初两个超 500 ms 的样本和优化后所有样本，最终 14 次后台 HTTP 全部小于 500 ms。CSV、门户流水页面和阶段 6 总体验收仍属于后续 PR。
+
 ## 风险
 
 - **阶段 6 的流水锚点在 RLS 改写之前会超预算。** PORTALBIG 历史中段月份整条查询约 0.8 至 1.1 s，改写后约 0.3 s（这两个数都是修正排序键之前的聚合的实测，PR 2 重测新查询）。更大的租户线性外推会再翻倍，没有实测。阶段 7 的月账单锚点把它降到 0.12 至 0.16 s。这是 PR 1 排在 PR 2 前面的原因。

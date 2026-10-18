@@ -1,0 +1,17 @@
+
+> fs-billing@ typecheck /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> pnpm -r typecheck && tsc -p tsconfig.json
+
+Scope: 6 of 7 workspace projects
+packages/rating typecheck$ tsc -p tsconfig.json
+packages/shared typecheck$ tsc -p tsconfig.json
+packages/rating typecheck: Done
+packages/shared typecheck: Done
+apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
+packages/db typecheck: Done
+apps/web typecheck: Done
+apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck$ tsc -p tsconfig.json
+apps/worker typecheck: Done
+apps/api typecheck: Done

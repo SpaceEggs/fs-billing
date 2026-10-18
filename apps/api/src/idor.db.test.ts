@@ -7,6 +7,7 @@ import { schema, withTenant } from '@fs-billing/db';
 import {
   apiErrorSchema,
   portalContextResponseSchema,
+  portalLedgerResponseSchema,
   sessionResponseSchema,
 } from '@fs-billing/shared';
 import { generateOpenApi } from './openapi.js';
@@ -55,6 +56,46 @@ async function assertBSession(api: TestApi, cookie: string, fixture: Fixture) {
   );
 }
 const cases = {
+  portalLedger: async ({ api, fixture, operation }: CaseContext) => {
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const range = `from=${day.slice(0, 7)}-01&to=${day}`;
+    const a = await login(api, fixture.a);
+    for (const [user, balance, currency] of [
+      [fixture.a, '111.25', 'CNY'],
+      [fixture.a2, '222.5', 'CNY'],
+      [fixture.b, '999.75', 'USD'],
+    ] as const) {
+      const session = user === fixture.a ? a : await login(api, user);
+      const response = await api.inject({
+        method: 'GET',
+        url: `${operation.path}?${range}`,
+        headers: forgedHeaders(session.cookie, fixture),
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      const body = portalLedgerResponseSchema.parse(response.json());
+      expect(body.currency, 'TENANT_FILTER_LEAK: portalLedger currency').toBe(
+        currency,
+      );
+      expect(body.balance, 'TENANT_FILTER_LEAK: portalLedger balance').toBe(
+        balance,
+      );
+      expect(body.totalAmount, 'TENANT_FILTER_LEAK: portalLedger amount').toBe(
+        balance,
+      );
+      expect(body.items).toHaveLength(1);
+      expect(body.items[0]?.amount).toBe(balance);
+      expect(body.pagination.total).toBe(1);
+    }
+    for (const key of ['tenantId', 'tenant_id']) {
+      const response = await api.inject({
+        url: `${operation.path}?${range}&${key}=${fixture.b.tenantId}`,
+        headers: forgedHeaders(a.cookie, fixture),
+      });
+      expect(response.statusCode).toBe(400);
+    }
+  },
   portalContext: async ({ api, fixture, operation }: CaseContext) => {
     const a = await login(api, fixture.a);
     const b = await login(api, fixture.b);
@@ -304,6 +345,7 @@ const cases = {
 } satisfies Record<string, (context: CaseContext) => Promise<void>>;
 const caseKinds = new Map([
   ['portalContext', 'tenant-read'],
+  ['portalLedger', 'tenant-read'],
   ['session', 'self-session'],
   ['logout', 'self-session-mutation'],
   ['revokeOtherSessions', 'self-session-mutation'],
@@ -424,9 +466,13 @@ for (const lane of lanes) {
       for (const operation of operations.filter(
         (operation) => operation['x-access'] !== 'public',
       )) {
-        const url = operation.path
+        let url = operation.path
           .replace('{id}', fixture.b.profileId)
           .replace('{tenantId}', fixture.b.tenantId ?? '');
+        if (
+          ['portalLedger', 'adminTenantLedger'].includes(operation.operationId)
+        )
+          url += '?from=2026-09-01&to=2026-09-30';
         const method = z
           .enum(['GET', 'POST'])
           .parse(operation.method.toUpperCase());

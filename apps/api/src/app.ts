@@ -15,8 +15,15 @@ import {
   adminApiErrorStatus,
   createAdminRateRequestSchemas,
   createAdminAmountRequestSchemas,
+  portalLedgerQuerySchema,
 } from '@fs-billing/shared';
-import { AdminServiceError, withTenant, type Db } from '@fs-billing/db';
+import {
+  AdminServiceError,
+  NotFoundError,
+  withTenant,
+  listPortalLedger,
+  type Db,
+} from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
 import { ApiFailure, isTransientServiceError, sendFailure } from './errors.js';
 import { recordLogin, resolvePrincipal } from './identity.js';
@@ -97,6 +104,8 @@ export function createApi(deps: ApiDependencies) {
         },
       });
     }
+    if (error instanceof NotFoundError)
+      return sendFailure(request, reply, new ApiFailure('NOT_FOUND'));
     if (error instanceof ApiFailure) return sendFailure(request, reply, error);
     if (error instanceof GatewayError) {
       sendCookies(reply, error.setCookie);
@@ -177,6 +186,14 @@ export function createApi(deps: ApiDependencies) {
     revokeOtherSessions: async (context, _request, reply) => {
       await deps.auth.revokeOtherSessions(sessionContext(context));
       return reply.code(204).send();
+    },
+    portalLedger: (context, request) => {
+      if (context.kind !== 'customer') throw new ApiFailure('INTERNAL_ERROR');
+      return listPortalLedger({
+        db: deps.businessDb,
+        tenantId: context.principal.tenantId,
+        query: portalLedgerQuerySchema.parse(request.query),
+      });
     },
     portalContext: async (context) => {
       if (context.kind !== 'customer') throw new ApiFailure('INTERNAL_ERROR');

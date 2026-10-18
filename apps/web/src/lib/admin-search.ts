@@ -4,6 +4,7 @@ import {
   adminPageQuerySchema,
   adminReceivablesQuerySchema,
   adminTenantsQuerySchema,
+  dayRangeFields,
 } from '@fs-billing/shared';
 
 const listShape = adminTenantsQuerySchema.shape;
@@ -101,8 +102,8 @@ export function validateTenantDetailSearch(
   const tab = tenantTabs.find(({ key }) => key === raw['tab'])?.key;
   return {
     tab: tab === 'overview' ? undefined : tab,
-    from: z.iso.date().safeParse(raw['from']).data,
-    to: z.iso.date().safeParse(raw['to']).data,
+    from: dayRangeFields.from.safeParse(raw['from']).data,
+    to: dayRangeFields.to.safeParse(raw['to']).data,
     kind: adminLedgerKindSchema.safeParse(raw['kind']).data,
     page: pageOf(raw['page']),
   };

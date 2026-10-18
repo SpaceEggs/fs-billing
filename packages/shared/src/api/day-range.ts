@@ -42,17 +42,21 @@ function clampYear(year: number, month: number, date: number) {
     : formatDay(year, month, date);
 }
 
-export function isDayRangeWithinOneMonth(from: string, to: string): boolean {
-  return from <= to && to <= latestRangeEnd(from);
-}
-
 /** 北京时间日期（YYYY-MM-DD），含两端。 */
+const supportedDaySchema = z.iso.date().refine((day) => day >= '0001-01-01', {
+  message: '日期范围必须在 0001-01-01 至 9999-12-31 之间',
+});
+
 export const dayRangeFields = {
-  from: z.iso.date(),
-  to: z.iso.date(),
+  from: supportedDaySchema,
+  to: supportedDaySchema,
 };
 
 const isDay = (value: string) => dayRangeFields.from.safeParse(value).success;
+
+export function isDayRangeWithinOneMonth(from: string, to: string): boolean {
+  return isDay(from) && isDay(to) && from <= to && to <= latestRangeEnd(from);
+}
 
 /** 两端都是合法日期才检查范围；格式错误已经由字段本身报告，这里再算日期会抛出 RangeError。 */
 export function checkDayRange(

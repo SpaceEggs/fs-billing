@@ -1,0 +1,42 @@
+
+> fs-billing@ coverage /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> vitest run --coverage
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+      Coverage enabled with v8
+
+ ❯ apps/api/src/app.test.ts (40 tests | 1 failed) 519ms
+   × new tenant and balance routes require a session before business reads 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/api/src/app.test.ts > new tenant and balance routes require a session before business reads
+AssertionError: {"error":{"message":"请求格式错误","requestId":"req-j","issues":[{"path":[],"message":"请求格式错误"}],"code":"VALIDATION_ERROR"}}: expected 400 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 400
+
+ ❯ apps/api/src/app.test.ts:663:48
+    661|       ...(payload ? { payload } : {}),
+    662|     });
+    663|     expect(response.statusCode, response.body).toBe(401);
+       |                                                ^
+    664|     expect(apiErrorSchema.parse(response.json()).error.code).toBe(
+    665|       'UNAUTHENTICATED',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 31 passed (32)
+      Tests  1 failed | 659 passed | 1 skipped (661)
+   Start at  15:30:21
+   Duration  4.61s (import 42%, tests 39%, transform 16%, worker 2%)
+
+    Isolate  32 workers spawned · ~102ms startup each (spawn + environment, per file)
+             at least ~260ms faster with isolate: false — reuses workers across files instead of one per file
+
+ ELIFECYCLE  Command failed with exit code 1.

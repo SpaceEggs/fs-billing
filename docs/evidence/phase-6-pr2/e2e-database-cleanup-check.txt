@@ -1,0 +1,3 @@
+Database: postgres
+SQL: SELECT to_char(clock_timestamp() AT TIME ZONE $1, $2) AS checked_at_jst, EXISTS (SELECT 1 FROM pg_database WHERE datname = $3) AS e2e_database_present, EXISTS (SELECT 1 FROM pg_database WHERE datname = $4) AS db_test_database_present [Asia/Tokyo, YYYY-MM-DD HH24:MI:SS, fs_billing_pr2_e2e, fs_billing_test]
+Result: {"checked_at_jst":"2026-10-18 19:18:43","e2e_database_present":false,"db_test_database_present":false}

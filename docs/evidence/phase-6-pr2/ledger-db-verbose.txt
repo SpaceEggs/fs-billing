@@ -1,0 +1,21 @@
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > places the merged row at the last charge of the day and chains balances row by row 24ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > orders a manual entry and the last charge of the day at the same instant by id 15ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > type filter keeps the running balance of the unfiltered list 16ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > returns total and totalAmount for an empty filter result and an out-of-range page 12ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > puts a charge at UTC 2026-09-28 16:30 on the 29th 11ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > groups charges by the Beijing day of occurred_at and not created_at 9ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > accepts from 0001-01-01 and returns only the rows inside that Beijing day 10ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > both anchors give the same balances in every month of the fixture 27ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > marks only today's row as partial 18ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > admin and portal agree on every merged row 8ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > keeps microsecond precision when replaying a single balance operation 23ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > does not read internal fields in the portal SQL 0ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  15:30:21
+   Duration  2.22s (import 51%, tests 27%, transform 22%)
+

@@ -1254,14 +1254,35 @@ describe('void receivable', () => {
     actor: { id: admins.liu, name: '刘洋' },
     occurredAt,
   });
-  const ledger = (items: unknown[]) => () => ({
-    status: 200,
-    body: {
-      currency: 'CNY',
-      items,
-      pagination: { page: 1, pageSize: 100, total: items.length },
-    },
-  });
+  const ledger = (items: unknown[]) => (url?: string) => {
+    const query = url
+      ? new URL(url, 'http://localhost').searchParams
+      : undefined;
+    const visible = query
+      ? items.filter((item) => {
+          if (
+            typeof item !== 'object' ||
+            item === null ||
+            !('occurredAt' in item)
+          )
+            return false;
+          const day = formatDate(String(item.occurredAt));
+          return (
+            day >= (query.get('from') ?? '') && day <= (query.get('to') ?? '')
+          );
+        })
+      : items;
+    return {
+      status: 200,
+      body: {
+        currency: 'CNY',
+        balance: '0',
+        totalAmount: '0',
+        items: visible,
+        pagination: { page: 1, pageSize: 100, total: visible.length },
+      },
+    };
+  };
   const voided = {
     status: 200,
     body: {
@@ -1337,12 +1358,18 @@ describe('void receivable', () => {
     const options = within(group).getAllByRole('radio');
     expect(options).toHaveLength(1);
     expect(group).toHaveTextContent('调账 -¥2,000.00');
-    const ledgerQuery = new URL(
-      calls.find((call) => call.path.includes('/ledger'))?.path ?? '',
-      'http://x',
-    ).searchParams;
-    expect(ledgerQuery.get('kind')).toBe('adjustment');
-    expect(ledgerQuery.get('from')).toBe(gzt.createdAt);
+    const scanQueries = calls
+      .filter((call) => call.path.includes('/ledger'))
+      .map((call) => new URL(call.path, 'http://x').searchParams);
+    expect(scanQueries[0]?.get('kind')).toBe('adjustment');
+    expect(scanQueries[0]?.get('from')).toBe('2026-10-18');
+    expect(
+      scanQueries.some(
+        (query) =>
+          query.get('from') === '2026-08-18' &&
+          query.get('to') === '2026-09-17',
+      ),
+    ).toBe(true);
 
     const submit = within(dialog).getByRole('button', {
       name: '作废 ¥2,000.00',
@@ -1393,9 +1420,14 @@ describe('void receivable', () => {
     const rescan = deferred<Reply>();
     let scans = 0;
     const { calls, user, dialog } = await openVoid({
-      [ledgerPath]: () => {
+      [ledgerPath]: (url) => {
+        const query = new URL(url, 'http://localhost').searchParams;
+        const containsRecentAdjustment =
+          (query.get('from') ?? '') <= '2026-10-16' &&
+          (query.get('to') ?? '') >= '2026-10-16';
+        if (!containsRecentAdjustment) return ledger([])(url);
         scans += 1;
-        return scans === 1 ? ledger([])() : rescan.promise;
+        return scans === 1 ? ledger([])(url) : rescan.promise;
       },
       [`GET /api/admin/tenants/${ids.tenantGzt}`]: () => ({
         status: 200,
@@ -1443,9 +1475,14 @@ describe('void receivable', () => {
     const rescan = deferred<Reply>();
     let scans = 0;
     const { calls, user, dialog } = await openVoid({
-      [ledgerPath]: () => {
+      [ledgerPath]: (url) => {
+        const query = new URL(url, 'http://localhost').searchParams;
+        const containsRecentAdjustment =
+          (query.get('from') ?? '') <= '2026-10-16' &&
+          (query.get('to') ?? '') >= '2026-10-16';
+        if (!containsRecentAdjustment) return ledger([])(url);
         scans += 1;
-        return scans === 1 ? ledger([])() : rescan.promise;
+        return scans === 1 ? ledger([])(url) : rescan.promise;
       },
       [`GET /api/admin/tenants/${ids.tenantGzt}`]: () => ({
         status: 200,

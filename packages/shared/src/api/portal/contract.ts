@@ -111,6 +111,9 @@ export const portalLedgerApiContract = {
     portalLedgerResponseSchema,
     { 404: apiErrorSchemas.NOT_FOUND },
   ),
+} as const satisfies Record<string, ApiOperation>;
+
+export const portalLedgerExportApiContract = {
   portalLedgerExport: customerOperation(
     'portalLedgerExport',
     'POST',
@@ -125,6 +128,7 @@ export const portalApiContract = {
   ...portalHomeApiContract,
   ...portalCdrApiContract,
   ...portalLedgerApiContract,
+  ...portalLedgerExportApiContract,
 } as const;
 
 export type PortalApiOperationId = keyof typeof portalApiContract;

@@ -1,0 +1,19 @@
+
+> fs-billing@ check /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm --filter @fs-billing/web build
+
+
+> fs-billing@ lint /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> eslint . --max-warnings 0
+
+
+/Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing/apps/web/src/lib/receivables.test.ts
+  303:56  error  Async arrow function has no 'await' expression                                     @typescript-eslint/require-await
+  319:56  error  Async arrow function has no 'await' expression                                     @typescript-eslint/require-await
+  326:24  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+✖ 3 problems (3 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.
+ ELIFECYCLE  Command failed with exit code 1.

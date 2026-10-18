@@ -1,0 +1,29 @@
+
+> fs-billing@ coverage /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> vitest run --coverage
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+      Coverage enabled with v8
+
+
+ Test Files  33 passed (33)
+      Tests  664 passed | 1 skipped (665)
+   Start at  19:16:10
+   Duration  3.75s (tests 47%, import 46%, transform 5%, worker 3%)
+
+ % Coverage report from v8
+--------------|---------|----------|---------|---------|-------------------
+File          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+--------------|---------|----------|---------|---------|-------------------
+All files     |     100 |    97.76 |     100 |     100 |                   
+ csv.ts       |     100 |    96.96 |     100 |     100 | 80,100            
+ rates.ts     |     100 |    92.85 |     100 |     100 | 48                
+--------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 100% ( 186/186 )
+Branches     : 97.76% ( 131/134 )
+Functions    : 100% ( 35/35 )
+Lines        : 100% ( 154/154 )
+================================================================================

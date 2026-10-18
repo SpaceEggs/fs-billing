@@ -108,10 +108,20 @@ describe('one-month rule across every four-digit year', () => {
     ['0099-12-31', '0100-01-30', true],
     ['9999-12-01', '9999-12-31', true],
     ['9999-12-31', '9999-12-31', true],
-    ['0000-12-31', '0001-01-30', true],
+    ['0000-12-31', '0001-01-30', false],
   ])('%s to %s is %s', (from, to, allowed) => {
     expect(rangeSchema.safeParse({ from, to }).success).toBe(allowed);
     expect(isDayRangeWithinOneMonth(from, to)).toBe(allowed);
+  });
+
+  it('rejects PostgreSQL year zero while keeping year 0001 available', () => {
+    expect(
+      rangeSchema.safeParse({ from: '0000-01-01', to: '0000-01-01' }).success,
+    ).toBe(false);
+    expect(
+      rangeSchema.safeParse({ from: '0001-01-01', to: '0001-01-01' }).success,
+    ).toBe(true);
+    expect(isDayRangeWithinOneMonth('0000-01-01', '0000-01-01')).toBe(false);
   });
 
   it.each([

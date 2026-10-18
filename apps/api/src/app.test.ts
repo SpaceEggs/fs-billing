@@ -619,7 +619,8 @@ test('new tenant and balance routes require a session before business reads', as
   for (const [method, url, payload] of [
     ['GET', '/api/admin/tenants', undefined],
     ['GET', path, undefined],
-    ['GET', path + '/ledger', undefined],
+    ['GET', path + '/ledger?from=2026-09-01&to=2026-09-30', undefined],
+    ['GET', '/api/portal/ledger?from=2026-09-01&to=2026-09-30', undefined],
     [
       'POST',
       '/api/admin/tenants',

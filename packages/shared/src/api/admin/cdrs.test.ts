@@ -9,9 +9,9 @@ import {
   adminCdrSchema,
   adminCdrsQuerySchema,
   adminCdrsResponseSchema,
-  adminMergedLedgerQuerySchema,
-  adminMergedLedgerResponseSchema,
-  adminMergedLedgerRowSchema,
+  adminLedgerQuerySchema,
+  adminLedgerResponseSchema,
+  adminLedgerRowSchema,
   auditPayloadSchema,
 } from './index.js';
 
@@ -55,7 +55,7 @@ describe('portal schemas against admin rows', () => {
   });
 
   it('refuse an admin ledger row because of its actor and payment fields', () => {
-    const row = adminMergedLedgerRowSchema.parse({
+    const row = adminLedgerRowSchema.parse({
       id,
       kind: 'recharge',
       amount: '500.00',
@@ -179,8 +179,8 @@ describe('admin merged ledger', () => {
   };
 
   it('shows credit recharges with their status and an admin-only note', () => {
-    expect(adminMergedLedgerRowSchema.parse(credit)).toEqual(credit);
-    expect(adminMergedLedgerRowSchema.parse(recharge)).toEqual(recharge);
+    expect(adminLedgerRowSchema.parse(credit)).toEqual(credit);
+    expect(adminLedgerRowSchema.parse(recharge)).toEqual(recharge);
     for (const wrong of [
       { ...credit, noteVisibility: 'customer' },
       { ...credit, paymentStatus: null },
@@ -188,29 +188,27 @@ describe('admin merged ledger', () => {
       { ...recharge, noteVisibility: 'admin' },
       { ...recharge, actor: null },
     ])
-      expect(adminMergedLedgerRowSchema.safeParse(wrong).success).toBe(false);
+      expect(adminLedgerRowSchema.safeParse(wrong).success).toBe(false);
   });
 
   it('uses the same merged charge row as the portal', () => {
-    expect(adminMergedLedgerRowSchema.parse(charge)).toEqual(charge);
+    expect(adminLedgerRowSchema.parse(charge)).toEqual(charge);
     expect(portalLedgerRowSchema.parse(charge)).toEqual(charge);
     expect(mergedChargeRowSchema.parse(charge)).toEqual(charge);
   });
 
   it('filters by all five kinds, pages like the old ledger, and caps the range', () => {
     expect(
-      adminMergedLedgerQuerySchema.parse({ ...range, kind: 'credit_recharge' }),
+      adminLedgerQuerySchema.parse({ ...range, kind: 'credit_recharge' }),
     ).toEqual({ ...range, kind: 'credit_recharge', page: 1, pageSize: 25 });
     expect(
-      adminMergedLedgerQuerySchema.parse({ ...range, kind: 'call_charge' })
-        .kind,
+      adminLedgerQuerySchema.parse({ ...range, kind: 'call_charge' }).kind,
     ).toBe('call_charge');
     expect(
-      adminMergedLedgerQuerySchema.safeParse({ ...range, pageSize: 101 })
-        .success,
+      adminLedgerQuerySchema.safeParse({ ...range, pageSize: 101 }).success,
     ).toBe(false);
     expect(
-      adminMergedLedgerQuerySchema.safeParse({
+      adminLedgerQuerySchema.safeParse({
         from: '2026-09-01',
         to: '2026-10-01',
       }).success,
@@ -225,7 +223,7 @@ describe('admin merged ledger', () => {
       items: [charge, credit],
       pagination: { page: 1, pageSize: 25, total: 2 },
     };
-    expect(adminMergedLedgerResponseSchema.parse(response)).toEqual(response);
+    expect(adminLedgerResponseSchema.parse(response)).toEqual(response);
   });
 });
 
