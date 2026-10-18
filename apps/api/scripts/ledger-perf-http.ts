@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { adminLedgerResponseSchema } from '@fs-billing/shared';
-import type { Db } from '@fs-billing/db';
+import type { PoolDb } from '@fs-billing/db';
 import { createApi } from '../src/app.js';
 import { createAuthGateway } from '../src/auth/gateway.js';
 
@@ -14,7 +14,7 @@ export async function measureAdminLedgerHttp({
   tenantId,
   rounds,
 }: {
-  db: Db;
+  db: PoolDb;
   owner: pg.Client;
   authUrl: string;
   tenantId: string;

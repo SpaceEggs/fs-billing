@@ -22,7 +22,8 @@ import {
   NotFoundError,
   withTenant,
   listPortalLedger,
-  type Db,
+  connect,
+  type PoolDb,
 } from '@fs-billing/db';
 import { GatewayError, type AuthGateway } from './auth/gateway.js';
 import { ApiFailure, isTransientServiceError, sendFailure } from './errors.js';
@@ -47,9 +48,11 @@ import { createLiveApiContract } from './routes/contract.js';
 import { accountHandlers } from './routes/admin/accounts.js';
 import type { AdminAccountService } from './auth/admin-accounts.js';
 import { createApiLogger } from './logging.js';
+import { cdrHandlers } from './routes/cdrs.js';
+import { exportHandlers } from './routes/exports.js';
 
 export type ApiDependencies = {
-  businessDb: Db;
+  businessDb: PoolDb;
   auth: AuthGateway;
   logger?: boolean;
   loggerInstance?: FastifyBaseLogger;
@@ -62,6 +65,7 @@ export type ApiDependencies = {
   };
   adminAmountMaxIntegerDigits?: number;
   accountService?: AdminAccountService;
+  exportPoolApplicationName?: string;
 };
 export function createApi(deps: ApiDependencies) {
   const rateRequests = createAdminRateRequestSchemas(
@@ -71,6 +75,19 @@ export function createApi(deps: ApiDependencies) {
     deps.adminAmountMaxIntegerDigits,
   );
   const contract = createLiveApiContract(rateRequests, amountRequests);
+  const exportConnectionString =
+    deps.businessDb.$client.options.connectionString;
+  if (!exportConnectionString)
+    throw new Error('API business pool must have a connection string');
+  const exportConnection = connect(exportConnectionString, {
+    max: 4,
+    connectionTimeoutMillis: 2_000,
+    idleTimeoutMillis: 30_000,
+    statement_timeout: 30_000,
+    idle_in_transaction_session_timeout: 30_000,
+    application_name: deps.exportPoolApplicationName ?? 'fsbilling-api-export',
+    poolName: 'api.export',
+  });
   const app = Fastify({
     trustProxy: false,
     exposeHeadRoutes: false,
@@ -144,6 +161,11 @@ export function createApi(deps: ApiDependencies) {
     ...receivableHandlers(deps.businessDb),
     ...rateHandlers(deps.businessDb, { ...deps.adminRates, rateRequests }),
     ...accountHandlers(deps.accountService),
+    ...cdrHandlers(deps.businessDb),
+    ...exportHandlers({
+      auditDb: exportConnection.db,
+      pool: exportConnection.pool,
+    }),
     health: () => Promise.resolve({ status: 'ok', service: 'api' }),
     login: async (_context, request, reply) => {
       const session = await deps.auth.login(
@@ -256,5 +278,6 @@ export function createApi(deps: ApiDependencies) {
     );
     done();
   });
+  app.addHook('onClose', async () => exportConnection.pool.end());
   return app;
 }
