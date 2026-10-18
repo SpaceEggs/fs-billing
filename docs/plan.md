@@ -29,7 +29,7 @@
 | 3    | FreeSWITCH 接口      | 用模拟请求打一通电话，完成授权、入话单、扣费     | 功能已完成（PR #9，[验收记录](phase-3-worker.md)）；收尾性能重跑通过（[3 次 p95 ≈ 5.5–6.3 ms](evidence/phase-3-closeout/perf-authorize.txt)），FreeSWITCH 实机通话待阶段 10 验收 |
 | 4    | API、登录与网页外壳  | 管理员和客户都能登录，越权测试自动运行           | 已完成（PR #17–#19，[后端记录](phase-4-api.md)、[Web 记录](phase-4-web.md)）                                                                                                     |
 | 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 代码验收已完成（PR #21–#37，[视觉对照](evidence/phase-5-web/visual-diff.md)）；2 条运维项（NTP 监测、现网 billing_tenant 核对）随阶段 10                                                                                 |
-| 6    | 客户门户             | 客户能自助查余额、话单、流水                     | 进行中，步骤 1 设计与共享契约见 [phase-6-design.md](phase-6-design.md)                                                                                                           |
+| 6    | 客户门户             | 客户能自助查余额、话单、流水                     | 进行中：PR 1（[PR #40](https://github.com/SpaceEggs/fs-billing/pull/40)）与 PR 2（[PR #41](https://github.com/SpaceEggs/fs-billing/pull/41)）已合并；阶段验收未完成。见[PR 1 证据](evidence/phase-6-pr1/README.md)、[PR 2 证据](evidence/phase-6-pr2/README.md)和[阶段设计与后续计划](phase-6-design.md) |
 | 7    | 月账单               | 每月自动出账，客户可查看和导出                   | 未开始                                                                                                                                                                           |
 | 8    | 话单运维             | 未归属话单分配、删除话单、操作日志               | 未开始                                                                                                                                                                           |
 | 9    | 通知与告警           | 余额提醒、停机通知、故障告警邮件                 | 未开始                                                                                                                                                                           |
@@ -270,7 +270,7 @@
 - [ ] 话单列表：在 300 万条话单（约一年数据量）的数据库上，按月翻页每页响应 < 500 毫秒
 - [ ] 透支中、已停机、无话单三种状态的截图与设计稿一致
 - [ ] 时间全部显示为北京时间：UTC 2026-09-28 16:30 接通的电话显示为 2026-09-29 00:30，并归入 29 日
-- [ ] 余额流水中通话扣费“按天合并”按 `occurred_at` 的北京日期分组（不是写入时间）（来自阶段 2）
+- [x] 余额流水中通话扣费“按天合并”按 `occurred_at` 的北京日期分组（不是写入时间）（来自阶段 2）。PR 2 的数据库服务测试验证北京日分组、迟到写入和同日排序；见[PR 2 验收记录](evidence/phase-6-pr2/README.md#behavior-covered)（`packages/db/src/ledger-merge.db.test.ts`）。
 
 ---
 
