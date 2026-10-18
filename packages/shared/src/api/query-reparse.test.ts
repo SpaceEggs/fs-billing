@@ -4,7 +4,7 @@ import {
   adminCdrCountriesQuerySchema,
   adminCdrExportRequestSchema,
   adminCdrsQuerySchema,
-  adminMergedLedgerQuerySchema,
+  adminLedgerQuerySchema,
 } from './admin/index.js';
 import {
   portalCdrCountriesQuerySchema,
@@ -102,14 +102,14 @@ const cases: [string, z.ZodType, unknown, unknown][] = [
     { ...range, status: 'answered', unverifiedOnly: false },
   ],
   [
-    'adminMergedLedgerQuerySchema',
-    adminMergedLedgerQuerySchema,
+    'adminLedgerQuerySchema',
+    adminLedgerQuerySchema,
     { ...range, kind: 'credit_recharge', page: '2', pageSize: '10' },
     { ...range, kind: 'credit_recharge', page: 2, pageSize: 10 },
   ],
   [
-    'adminMergedLedgerQuerySchema defaults',
-    adminMergedLedgerQuerySchema,
+    'adminLedgerQuerySchema defaults',
+    adminLedgerQuerySchema,
     range,
     { ...range, page: 1, pageSize: 25 },
   ],

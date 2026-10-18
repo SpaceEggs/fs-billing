@@ -1,0 +1,4 @@
+--- a/apps/api/src/routes/portal.ts
++++ b/apps/api/src/routes/portal.ts
+-    .where(eq(schema.tenantBalances.tenantId, principal.tenantId))
++

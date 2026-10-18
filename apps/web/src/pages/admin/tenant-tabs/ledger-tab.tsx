@@ -3,9 +3,10 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   adminLedgerKindSchema,
-  type AdminLedgerEntry,
+  type AdminLedgerRow,
   type Currency,
 } from '@fs-billing/shared';
+import { formatMergedChargeNote } from '@fs-billing/shared';
 import { DateTime, Money } from '../../../components/data-format';
 import { DateRangeField } from '../../../components/date-range-field';
 import {
@@ -21,21 +22,10 @@ import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
 import type { LedgerSearch } from '../../../lib/admin-search';
 import { ledgerKindLabels } from '../../../lib/balance-operation';
-import { type DayRange, rangeOrMonthToDate } from '../../../lib/day-range';
+import { rangeOrMonthToDate } from '../../../lib/day-range';
 import { formatDate, formatDateTime } from '../../../lib/format';
 
 const ledgerPageSize = 25;
-
-/**
- * 北京时间日期范围转成接口的闭区间 from/to。
- * occurred_at 精确到微秒，结束端取当天最后一微秒，避免漏掉 23:59:59.999 之后的流水。
- */
-export function beijingDayRange(range: DayRange) {
-  return {
-    from: `${range.from}T00:00:00.000000+08:00`,
-    to: `${range.to}T23:59:59.999999+08:00`,
-  };
-}
 
 const kindChoices = [
   { value: undefined, label: '全部类型' },
@@ -50,14 +40,18 @@ const paymentTags = {
   received: 'paid',
   voided: 'voided',
 } as const satisfies Record<
-  NonNullable<AdminLedgerEntry['paymentStatus']>,
+  NonNullable<
+    Extract<AdminLedgerRow, { kind: 'credit_recharge' }>['paymentStatus']
+  >,
   StatusKey
 >;
 
 /** 人工余额操作按输入精度显示（调账可到 4 位小数）；通话扣费仍按 2 位舍入。 */
-const exactAmount = (entry: AdminLedgerEntry) => entry.kind !== 'call_charge';
+const exactAmount = (entry: AdminLedgerRow) => entry.kind !== 'call_charge';
 
-function PaymentStatus({ entry }: { entry: AdminLedgerEntry }) {
+function PaymentStatus({ entry }: { entry: AdminLedgerRow }) {
+  if (entry.kind === 'call_charge')
+    return <span className="text-muted-foreground">—</span>;
   return entry.paymentStatus ? (
     <StatusTag status={paymentTags[entry.paymentStatus]} />
   ) : (
@@ -65,7 +59,9 @@ function PaymentStatus({ entry }: { entry: AdminLedgerEntry }) {
   );
 }
 
-function Note({ entry }: { entry: AdminLedgerEntry }) {
+function Note({ entry }: { entry: AdminLedgerRow }) {
+  if (entry.kind === 'call_charge')
+    return <span>{formatMergedChargeNote(entry)}</span>;
   return (
     <span className="flex items-center gap-2">
       <span className={entry.note ? undefined : 'text-muted-foreground'}>
@@ -85,7 +81,7 @@ function LedgerTable({
   items,
 }: {
   currency: Currency;
-  items: AdminLedgerEntry[];
+  items: AdminLedgerRow[];
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
@@ -103,7 +99,14 @@ function LedgerTable({
         </thead>
         <tbody className="tabular-nums">
           {items.map((entry) => (
-            <tr key={entry.id} className="border-t border-border">
+            <tr
+              key={
+                entry.kind === 'call_charge'
+                  ? `${entry.kind}:${entry.day}`
+                  : entry.id
+              }
+              className="border-t border-border"
+            >
               <td className="px-4 py-2.5 whitespace-nowrap">
                 <DateTime value={entry.occurredAt} />
               </td>
@@ -127,7 +130,7 @@ function LedgerTable({
                 <Note entry={entry} />
               </td>
               <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
-                {entry.actor?.name ?? '系统'}
+                {entry.kind === 'call_charge' ? '—' : entry.actor.name}
               </td>
             </tr>
           ))}
@@ -142,19 +145,25 @@ function LedgerCards({
   items,
 }: {
   currency: Currency;
-  items: AdminLedgerEntry[];
+  items: AdminLedgerRow[];
 }) {
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
       {items.map((entry) => (
         <li
-          key={entry.id}
+          key={
+            entry.kind === 'call_charge'
+              ? `${entry.kind}:${entry.day}`
+              : entry.id
+          }
           className="flex flex-col gap-1.5 rounded-[10px] border border-border px-3.5 py-3 tabular-nums"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2 text-[15px] font-medium">
               {ledgerKindLabels[entry.kind]}
-              {entry.paymentStatus ? (
+              {entry.kind === 'call_charge' ? (
+                <span className="text-muted-foreground">—</span>
+              ) : entry.paymentStatus ? (
                 <StatusTag
                   status={paymentTags[entry.paymentStatus]}
                   className="h-5 px-1.5 text-[11px]"
@@ -171,12 +180,19 @@ function LedgerCards({
           <div className="flex justify-between gap-2 text-xs text-muted-foreground">
             <span className="truncate">
               {formatDateTime(entry.occurredAt).slice(5, 16)} ·{' '}
-              {entry.note || '—'}
-              {entry.noteVisibility === 'admin' ? '（仅内部可见）' : ''}
+              {entry.kind === 'call_charge'
+                ? formatMergedChargeNote(entry)
+                : entry.note || '—'}
+              {entry.kind !== 'call_charge' && entry.noteVisibility === 'admin'
+                ? '（仅内部可见）'
+                : ''}
             </span>
             <span className="whitespace-nowrap">
               余额 <Money value={{ currency, amount: entry.balanceAfter }} />
             </span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            操作人 {entry.kind === 'call_charge' ? '—' : entry.actor.name}
           </div>
         </li>
       ))}
@@ -211,7 +227,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         page,
         pageSize: ledgerPageSize,
         ...(kind ? { kind } : {}),
-        ...beijingDayRange(range),
+        ...range,
       },
     }),
     placeholderData: keepPreviousData,
@@ -270,6 +286,22 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         </div>
       </div>
       <RefreshError title="余额流水刷新失败，列表可能不是最新" query={ledger} />
+      {data ? (
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] tabular-nums text-muted-foreground">
+          <span>
+            当前余额{' '}
+            <Money value={{ currency: data.currency, amount: data.balance }} />
+          </span>
+          <span>
+            筛选金额合计{' '}
+            <Money
+              value={{ currency: data.currency, amount: data.totalAmount }}
+              tone="signed"
+              exact
+            />
+          </span>
+        </div>
+      ) : null}
       {ledger.isError && !data ? (
         <QueryError
           title="余额流水加载失败"

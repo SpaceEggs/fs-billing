@@ -1,0 +1,1158 @@
+{
+  "measuredAt": "2026-10-18T01:26:15.070Z",
+  "facts": [
+    {
+      "version": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+      "current_database": "fs_billing_perf",
+      "current_user": "fs_billing",
+      "cdrs": 3000000,
+      "entries": 2850187,
+      "tenant_created_at": "2026-10-17T11:42:32.864Z",
+      "policy": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+      "work_mem": "4MB",
+      "shared_buffers": "128MB",
+      "random_page_cost": "4"
+    }
+  ],
+  "roles": {
+    "business": "fs_billing_app",
+    "auth": "fs_billing_auth"
+  },
+  "jit": "off (same as production service)",
+  "rounds": 7,
+  "warmups": 2,
+  "errors": 0,
+  "samples": [
+    {
+      "name": "2025-12-portal-balance",
+      "round": 0,
+      "ms": 641.6,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 0,
+      "ms": 532,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 0,
+      "ms": 479.3,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 0,
+      "ms": 436.9,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 0,
+      "ms": 488.5,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 0,
+      "ms": 439.7,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 0,
+      "ms": 451.1,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 0,
+      "ms": 445.4,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 0,
+      "ms": 547.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 0,
+      "ms": 457.1,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 0,
+      "ms": 518.1,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 0,
+      "ms": 509.3,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 0,
+      "ms": 430.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 0,
+      "ms": 403.8,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 0,
+      "ms": 511.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 0,
+      "ms": 454,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 0,
+      "ms": 453.9,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 0,
+      "ms": 428.8,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 1,
+      "ms": 472.2,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 1,
+      "ms": 424.6,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 1,
+      "ms": 420.4,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 1,
+      "ms": 720.3,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 1,
+      "ms": 558.5,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 1,
+      "ms": 527.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 1,
+      "ms": 458.8,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 1,
+      "ms": 461.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 1,
+      "ms": 430.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 1,
+      "ms": 562.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 1,
+      "ms": 455.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 1,
+      "ms": 480.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 1,
+      "ms": 426.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 1,
+      "ms": 527.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 1,
+      "ms": 460.3,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 1,
+      "ms": 449.8,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 1,
+      "ms": 401.3,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "round": 1,
+      "ms": 496.4,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 2,
+      "ms": 422,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 2,
+      "ms": 417.2,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 2,
+      "ms": 460.7,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 2,
+      "ms": 418.1,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 2,
+      "ms": 462.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 2,
+      "ms": 431,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 2,
+      "ms": 443.8,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 2,
+      "ms": 421.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 2,
+      "ms": 501.8,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 2,
+      "ms": 452,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 2,
+      "ms": 424.7,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 2,
+      "ms": 395.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 2,
+      "ms": 484.1,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 2,
+      "ms": 443.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 2,
+      "ms": 434.7,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 2,
+      "ms": 404.1,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "round": 2,
+      "ms": 508.2,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 2,
+      "ms": 468,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 3,
+      "ms": 406.7,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 3,
+      "ms": 472.6,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 3,
+      "ms": 430.4,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 3,
+      "ms": 457.6,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 3,
+      "ms": 421.6,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 3,
+      "ms": 439.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 3,
+      "ms": 415.3,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 3,
+      "ms": 493.6,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 3,
+      "ms": 444.6,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 3,
+      "ms": 406.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 3,
+      "ms": 390.4,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 3,
+      "ms": 488.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 3,
+      "ms": 447.1,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 3,
+      "ms": 420.1,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 3,
+      "ms": 402.3,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "round": 3,
+      "ms": 498.8,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 3,
+      "ms": 456.1,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 3,
+      "ms": 419.1,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 4,
+      "ms": 445.6,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 4,
+      "ms": 421.2,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 4,
+      "ms": 450.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 4,
+      "ms": 420.4,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 4,
+      "ms": 438.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 4,
+      "ms": 417,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 4,
+      "ms": 496.3,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 4,
+      "ms": 446,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 4,
+      "ms": 402.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 4,
+      "ms": 406.5,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 4,
+      "ms": 491.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 4,
+      "ms": 444.7,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 4,
+      "ms": 422.9,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 4,
+      "ms": 412.3,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "round": 4,
+      "ms": 506.1,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 4,
+      "ms": 486.9,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 4,
+      "ms": 451.4,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 4,
+      "ms": 406.9,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 5,
+      "ms": 429.3,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 5,
+      "ms": 493.1,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 5,
+      "ms": 444.7,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 5,
+      "ms": 628.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 5,
+      "ms": 482.9,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 5,
+      "ms": 624.6,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 5,
+      "ms": 474.5,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 5,
+      "ms": 413,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 5,
+      "ms": 406.7,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 5,
+      "ms": 494.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 5,
+      "ms": 462.8,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 5,
+      "ms": 450.9,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 5,
+      "ms": 476.6,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "round": 5,
+      "ms": 537.5,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 5,
+      "ms": 538,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 5,
+      "ms": 541.7,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 5,
+      "ms": 463.3,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 5,
+      "ms": 487.9,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "round": 6,
+      "ms": 533.4,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "round": 6,
+      "ms": 442.6,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "round": 6,
+      "ms": 448.5,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "round": 6,
+      "ms": 436.1,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "round": 6,
+      "ms": 507.7,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "round": 6,
+      "ms": 466.7,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "round": 6,
+      "ms": 427.2,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "round": 6,
+      "ms": 441.8,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "round": 6,
+      "ms": 510.6,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "round": 6,
+      "ms": 476.4,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "name": "2025-12-portal-prior",
+      "round": 6,
+      "ms": 446.9,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "round": 6,
+      "ms": 550.1,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "round": 6,
+      "ms": 525.9,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "round": 6,
+      "ms": 513.5,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "round": 6,
+      "ms": 437,
+      "total": 34,
+      "items": 25
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "round": 6,
+      "ms": 430.4,
+      "total": 34,
+      "items": 34
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "round": 6,
+      "ms": 460.3,
+      "total": 33,
+      "items": 25
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "round": 6,
+      "ms": 451.3,
+      "total": 33,
+      "items": 33
+    }
+  ],
+  "summary": [
+    {
+      "name": "2025-12-portal-prior",
+      "n": 7,
+      "min": 420.1,
+      "median": 446.9,
+      "max": 453.9
+    },
+    {
+      "name": "2025-12-admin-prior",
+      "n": 7,
+      "min": 401.3,
+      "median": 412.3,
+      "max": 550.1
+    },
+    {
+      "name": "2025-12-portal-balance",
+      "n": 7,
+      "min": 496.4,
+      "median": 508.2,
+      "max": 641.6
+    },
+    {
+      "name": "2025-12-admin-balance",
+      "n": 7,
+      "min": 456.1,
+      "median": 486.9,
+      "max": 538
+    },
+    {
+      "name": "2025-12-portal-auto",
+      "n": 7,
+      "min": 419.1,
+      "median": 437,
+      "max": 541.7
+    },
+    {
+      "name": "2025-12-admin-auto",
+      "n": 7,
+      "min": 406.7,
+      "median": 420.4,
+      "max": 463.3
+    },
+    {
+      "name": "2026-04-portal-prior",
+      "n": 7,
+      "min": 445.6,
+      "median": 472.6,
+      "max": 720.3
+    },
+    {
+      "name": "2026-04-admin-prior",
+      "n": 7,
+      "min": 418.1,
+      "median": 430.4,
+      "max": 558.5
+    },
+    {
+      "name": "2026-04-portal-balance",
+      "n": 7,
+      "min": 450.2,
+      "median": 462.9,
+      "max": 533.4
+    },
+    {
+      "name": "2026-04-admin-balance",
+      "n": 7,
+      "min": 420.4,
+      "median": 442.6,
+      "max": 458.8
+    },
+    {
+      "name": "2026-04-portal-auto",
+      "n": 7,
+      "min": 438.4,
+      "median": 448.5,
+      "max": 628.2
+    },
+    {
+      "name": "2026-04-admin-auto",
+      "n": 7,
+      "min": 415.3,
+      "median": 430.9,
+      "max": 482.9
+    },
+    {
+      "name": "2026-09-portal-prior",
+      "n": 7,
+      "min": 493.6,
+      "median": 507.7,
+      "max": 624.6
+    },
+    {
+      "name": "2026-09-admin-prior",
+      "n": 7,
+      "min": 444.6,
+      "median": 455.9,
+      "max": 509.3
+    },
+    {
+      "name": "2026-09-portal-balance",
+      "n": 7,
+      "min": 402.2,
+      "median": 424.7,
+      "max": 480.4
+    },
+    {
+      "name": "2026-09-admin-balance",
+      "n": 7,
+      "min": 390.4,
+      "median": 406.5,
+      "max": 441.8
+    },
+    {
+      "name": "2026-09-portal-auto",
+      "n": 7,
+      "min": 484.1,
+      "median": 494.4,
+      "max": 527.9
+    },
+    {
+      "name": "2026-09-admin-auto",
+      "n": 7,
+      "min": 443.9,
+      "median": 454,
+      "max": 476.4
+    }
+  ],
+  "http": {
+    "transport": "loopback HTTP fetch, real cookie gateway, app business role and auth role, response consumed and schema parsed",
+    "pageSize": 50,
+    "warmups": 2,
+    "rounds": 7,
+    "samples": [
+      {
+        "month": "2026-09",
+        "ms": 457.5,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 484.4,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 433.1,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-09",
+        "ms": 463.7,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-09",
+        "ms": 467,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 425.5,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 430.8,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-09",
+        "ms": 469.5,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-09",
+        "ms": 500.8,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 505.1,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 447.7,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-09",
+        "ms": 454.2,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-09",
+        "ms": 473.1,
+        "status": 200,
+        "bytes": 5893,
+        "total": 33,
+        "items": 33
+      },
+      {
+        "month": "2026-04",
+        "ms": 437,
+        "status": 200,
+        "bytes": 5875,
+        "total": 33,
+        "items": 33
+      }
+    ],
+    "errors": 0
+  }
+}

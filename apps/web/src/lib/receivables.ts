@@ -2,10 +2,12 @@ import {
   currencySchema,
   type AdminCurrencyTotals,
   type AdminLedgerEntry,
+  type AdminLedgerRow,
   type AdminReceivable,
   type AdminReceivableStatus,
   type Currency,
   type Money,
+  latestRangeEnd,
 } from '@fs-billing/shared';
 import Decimal from 'decimal.js';
 import { queryOptions } from '@tanstack/react-query';
@@ -224,29 +226,55 @@ export const adjustmentScanLimit = 1000;
 export function adjustmentsSince(receivable: AdminReceivable) {
   const tenantId = receivable.tenant.id;
   const pageSize = 100;
-  const query = {
-    kind: 'adjustment' as const,
-    from: receivable.createdAt,
-    pageSize,
-  };
+  const from = formatDate(receivable.createdAt);
+  const to = formatDate(new Date());
+  const ranges: { from: string; to: string }[] = [];
+  for (let start = from; start <= to;) {
+    const rangeEnd = latestRangeEnd(start);
+    const end = rangeEnd < to ? rangeEnd : to;
+    ranges.push({ from: start, to: end });
+    start = new Date(Date.parse(`${end}T00:00:00Z`) + 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+  }
+  ranges.reverse();
+  const kind = 'adjustment' as const;
+  const query = { kind, from, to, pageSize };
   return queryOptions({
     queryKey: [
       ...apiKey('adminTenantLedger', { params: { tenantId }, query }),
       'all',
     ],
     queryFn: async () => {
-      const items: AdminLedgerEntry[] = [];
-      for (let page = 1; ; page += 1) {
-        const result = await send('adminTenantLedger', {
-          params: { tenantId },
-          query: { ...query, page },
-        });
-        items.push(...result.items);
-        const done =
-          result.items.length === 0 || items.length >= result.pagination.total;
-        if (done || items.length >= adjustmentScanLimit)
-          return { tenantId, items, truncated: !done };
+      const items: Extract<AdminLedgerRow, { kind: 'adjustment' }>[] = [];
+      for (const [rangeIndex, range] of ranges.entries()) {
+        let scannedInRange = 0;
+        for (let page = 1; ; page += 1) {
+          const result = await send('adminTenantLedger', {
+            params: { tenantId },
+            query: { ...range, kind, pageSize, page },
+          });
+          const remaining = adjustmentScanLimit - items.length;
+          items.push(
+            ...result.items
+              .filter((entry) => entry.kind === 'adjustment')
+              .slice(0, remaining),
+          );
+          scannedInRange += result.items.length;
+          const rangeDone =
+            result.items.length === 0 ||
+            scannedInRange >= result.pagination.total;
+          if (items.length >= adjustmentScanLimit) {
+            return {
+              tenantId,
+              items,
+              truncated: !rangeDone || rangeIndex < ranges.length - 1,
+            };
+          }
+          if (rangeDone) break;
+        }
       }
+      return { tenantId, items, truncated: false };
     },
   });
 }

@@ -497,8 +497,13 @@ describe('admin tenant and balance API', () => {
       balance: '105.4999',
       pendingReceivable: '100.5',
     });
+    const ledgerDay = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
     const ledger = await api.inject({
-      url: path + '/ledger?pageSize=2',
+      url:
+        path +
+        `/ledger?pageSize=2&from=${ledgerDay.slice(0, 7)}-01&to=${ledgerDay}`,
       headers,
     });
     expect(ledger.statusCode, ledger.body).toBe(200);
@@ -721,7 +726,11 @@ describe('admin tenant and balance API', () => {
     const customer = (await login(api, fixture.a)).cookie;
     for (const [method, url, payload] of [
       ['GET', `/api/admin/tenants/${tenant.id}`, undefined],
-      ['GET', `/api/admin/tenants/${tenant.id}/ledger`, undefined],
+      [
+        'GET',
+        `/api/admin/tenants/${tenant.id}/ledger?from=2026-09-01&to=2026-09-30`,
+        undefined,
+      ],
       [
         'POST',
         `/api/admin/tenants/${tenant.id}/balance-operations`,

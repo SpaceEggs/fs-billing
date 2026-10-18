@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiRequestError } from './api';
 import { formatMoney } from './format';
 import type { AdminLedgerEntry, AdminReceivable } from '@fs-billing/shared';
 import {
   confirmPaymentFailure,
+  adjustmentsSince,
   reversalCandidates,
   reversePaymentFailure,
   sequencedRequests,
@@ -12,6 +13,12 @@ import {
   validateConfirmPayment,
   visibleTotals,
 } from './receivables';
+import { QueryClient } from '@tanstack/react-query';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 const conflict = (code: string, status = 409) =>
   new ApiRequestError(status, {
@@ -255,6 +262,87 @@ describe('reversalCandidates', () => {
         items: [adjustment('1', '-500.0000', later)],
       }),
     ).toEqual([]);
+  });
+});
+
+describe('adjustmentsSince', () => {
+  const tenantId = '00000000-0000-4000-8000-0000000a0001';
+  const credit = {
+    ledgerEntryId: '00000000-0000-4000-8000-0000000e0001',
+    tenant: { id: tenantId, code: 'GZT007', name: '广州', currency: 'CNY' },
+    amount: '500.00',
+    createdAt: '2026-08-18T02:00:00.000Z',
+  } as AdminReceivable;
+  const response = (items: unknown[], page: number, total: number) =>
+    new Response(
+      JSON.stringify({
+        currency: 'CNY',
+        balance: '0',
+        totalAmount: '0',
+        items,
+        pagination: { page, pageSize: 100, total },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  const row = (index: number) => ({
+    id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    kind: 'adjustment',
+    amount: '-1',
+    balanceAfter: '0',
+    occurredAt: '2026-10-16T00:00:00.000Z',
+    note: '冲正',
+    noteVisibility: 'customer',
+    paymentStatus: null,
+    actor: { id: '00000000-0000-4000-8000-000000000099', name: '王敏' },
+  });
+
+  it('scans all month-sized windows newest first across a multi-month history', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T00:00:00.000Z'));
+    const requests: URLSearchParams[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string) => {
+        requests.push(new URL(input, 'http://localhost').searchParams);
+        return Promise.resolve(response([], 1, 0));
+      }),
+    );
+    await new QueryClient().fetchQuery(adjustmentsSince(credit));
+    expect(
+      requests.map((query) => [query.get('from'), query.get('to')]),
+    ).toEqual([
+      ['2026-10-18', '2026-10-18'],
+      ['2026-09-18', '2026-10-17'],
+      ['2026-08-18', '2026-09-17'],
+    ]);
+  });
+
+  it('paginates within a range and stops at the 1000-row cap with truncation', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-18T00:00:00.000Z'));
+    const requests: URLSearchParams[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string) => {
+        const query = new URL(input, 'http://localhost').searchParams;
+        requests.push(query);
+        const page = Number(query.get('page'));
+        return Promise.resolve(
+          response(
+            Array.from({ length: 100 }, (_, index) => row(page * 100 + index)),
+            page,
+            1200,
+          ),
+        );
+      }),
+    );
+    const result = await new QueryClient().fetchQuery(
+      adjustmentsSince({ ...credit, createdAt: '2026-10-10T00:00:00.000Z' }),
+    );
+    expect(result.items).toHaveLength(1000);
+    expect(result.truncated).toBe(true);
+    expect(requests).toHaveLength(10);
+    expect(requests.at(-1)?.get('page')).toBe('10');
   });
 });
 

@@ -5,8 +5,6 @@ import { adminReceivableStatusSchema } from './receivables.js';
 import {
   adminAuditedMutationResponseSchema,
   adminInputAmountSchemas,
-  adminPageInfoSchema,
-  adminPageQuerySchema,
   adminTimestampSchema,
 } from './common.js';
 
@@ -78,24 +76,6 @@ export const adminLedgerEntrySchema = z
       (entry.kind === 'credit_recharge' ? 'admin' : 'customer'),
     { message: '赊账备注仅管理员可见' },
   );
-export const adminLedgerQuerySchema = adminPageQuerySchema
-  .extend({
-    kind: adminLedgerKindSchema.optional(),
-    from: adminTimestampSchema.optional(),
-    to: adminTimestampSchema.optional(),
-  })
-  .refine(
-    (query) =>
-      !query.from ||
-      !query.to ||
-      Date.parse(query.from) <= Date.parse(query.to),
-    { message: '开始时间不能晚于结束时间' },
-  );
-export const adminLedgerResponseSchema = z.strictObject({
-  currency: currencySchema,
-  items: z.array(adminLedgerEntrySchema),
-  pagination: adminPageInfoSchema,
-});
 export const adminBalanceOperationResponseSchema =
   adminAuditedMutationResponseSchema.extend({
     currency: currencySchema,
@@ -108,8 +88,6 @@ export type AdminBalanceOperationRequest = z.infer<
 >;
 export type AdminLedgerKind = z.infer<typeof adminLedgerKindSchema>;
 export type AdminLedgerEntry = z.infer<typeof adminLedgerEntrySchema>;
-export type AdminLedgerQuery = z.infer<typeof adminLedgerQuerySchema>;
-export type AdminLedgerResponse = z.infer<typeof adminLedgerResponseSchema>;
 export type AdminBalanceOperationResponse = z.infer<
   typeof adminBalanceOperationResponseSchema
 >;

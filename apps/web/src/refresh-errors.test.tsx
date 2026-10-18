@@ -45,6 +45,8 @@ const detail = {
 
 const ledger = {
   currency: 'CNY',
+  balance: '500',
+  totalAmount: '88.88',
   ...page([
     {
       id: '00000000-0000-4000-8000-0000000e0001',
@@ -54,7 +56,7 @@ const ledger = {
       note: '春节回馈',
       noteVisibility: 'customer',
       paymentStatus: null,
-      actor: null,
+      actor: { id: '00000000-0000-4000-8000-000000000099', name: '系统' },
       occurredAt: '2026-10-15T06:03:27.120Z',
     },
   ]),

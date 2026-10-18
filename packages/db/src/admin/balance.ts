@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, sql, desc } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { decimal, money } from '@fs-billing/rating';
 import {
   adminAmountRequestSchemas,
   type AdminAmountRequestSchemas,
   adminLedgerQuerySchema,
+  adminLedgerResponseSchema,
   type AdminBalanceOperationRequest,
   type AdminBalanceOperationResponse,
   type AdminLedgerEntry,
@@ -14,6 +15,8 @@ import {
 } from '@fs-billing/shared';
 import { withAdmin, lockTenants, type Db, type Tx } from '../client.js';
 import { appendLedgerEntry } from '../ledger.js';
+import { mergedLedgerSql } from '../ledger-merge.js';
+import { NotFoundError } from '../errors.js';
 import {
   admins,
   ledgerEntries,
@@ -37,14 +40,12 @@ const actions = {
   gift: 'balance_gift',
   adjustment: 'balance_adjustment',
 } as const;
-const balanceAfter = sql<string>`(select sum(prior.amount)::text from ledger_entries prior where prior.tenant_id = ${ledgerEntries.tenantId} and (prior.occurred_at,prior.id) <= (${ledgerEntries.occurredAt},${ledgerEntries.id}))`;
 function ledgerRows(tx: Tx) {
   return tx
     .select({
       id: ledgerEntries.id,
       kind: ledgerEntries.kind,
       amount: ledgerEntries.amount,
-      balanceAfter,
       note: ledgerEntries.note,
       paymentStatus: receivables.status,
       actorId: admins.id,
@@ -57,12 +58,13 @@ function ledgerRows(tx: Tx) {
 }
 function project(
   row: Awaited<ReturnType<typeof ledgerRows>>[number],
+  balanceAfter: string,
 ): AdminLedgerEntry {
   return {
     id: row.id,
     kind: row.kind,
     amount: row.amount,
-    balanceAfter: row.balanceAfter,
+    balanceAfter,
     note: row.note,
     noteVisibility: row.kind === 'credit_recharge' ? 'admin' : 'customer',
     paymentStatus: row.paymentStatus,
@@ -84,35 +86,17 @@ export function listTenantLedger({
 }): Promise<AdminLedgerResponse> {
   const input = adminLedgerQuerySchema.parse(query);
   return withAdmin(db, async (tx) => {
-    const tenant = await readTenantCore(tx, tenantId);
-    const filter = and(
-      eq(ledgerEntries.tenantId, tenant.id),
-      input.kind ? eq(ledgerEntries.kind, input.kind) : undefined,
-      input.from
-        ? sql`${ledgerEntries.occurredAt} >= ${input.from}::timestamptz`
-        : undefined,
-      input.to
-        ? sql`${ledgerEntries.occurredAt} <= ${input.to}::timestamptz`
-        : undefined,
-    );
-    const [count] = await tx
-      .select({ total: sql<number>`count(*)::int` })
-      .from(ledgerEntries)
-      .where(filter);
-    const rows = await ledgerRows(tx)
-      .where(filter)
-      .orderBy(desc(ledgerEntries.occurredAt), desc(ledgerEntries.id))
-      .limit(input.pageSize)
-      .offset((input.page - 1) * input.pageSize);
-    return {
-      currency: tenant.currency,
-      items: rows.map(project),
-      pagination: {
-        page: input.page,
+    await tx.execute(sql`set local jit = off`);
+    const { rows } = await tx.execute<{ ledger: unknown }>(
+      mergedLedgerSql({
+        tenantId,
+        query: input,
         pageSize: input.pageSize,
-        total: count?.total ?? 0,
-      },
-    };
+        audience: 'admin',
+      }),
+    );
+    if (!rows[0]) throw new NotFoundError('租户不存在');
+    return adminLedgerResponseSchema.parse(rows[0].ledger);
   });
 }
 export async function operateBalance({
@@ -228,10 +212,17 @@ export async function operateBalance({
       .from(tenantBalances)
       .where(eq(tenantBalances.tenantId, tenant.id));
     if (!row || !current) throw new Error('余额流水写入失败');
+    const { rows: balances } = await tx.execute<{ amount: string }>(sql`
+      select coalesce(sum(amount), 0)::text as amount from ledger_entries
+      where tenant_id = ${tenant.id}::uuid
+        and (occurred_at, id) <= (select occurred_at, id from ledger_entries where id = ${row.id}::uuid and tenant_id = ${tenant.id}::uuid)
+    `);
+    const balanceAfter = balances[0]?.amount;
+    if (balanceAfter === undefined) throw new Error('余额流水读取失败');
     return {
       auditId,
       currency: tenant.currency,
-      entry: project(row),
+      entry: project(row, balanceAfter),
       balance: current.balance,
     };
   });

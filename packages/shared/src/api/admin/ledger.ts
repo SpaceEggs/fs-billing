@@ -33,7 +33,7 @@ const adminManualRow = <const Kind extends 'recharge' | 'gift' | 'adjustment'>(
  * 后台流水行：与门户使用同一个合并查询，合并行（call_charge）完全相同，
  * 人工流水多收款状态、操作人和备注可见性。
  */
-export const adminMergedLedgerRowSchema = z.discriminatedUnion('kind', [
+export const adminLedgerRowSchema = z.discriminatedUnion('kind', [
   adminManualRow('recharge', ledgerAmounts.positive),
   z.strictObject({
     ...adminManualFields,
@@ -46,9 +46,9 @@ export const adminMergedLedgerRowSchema = z.discriminatedUnion('kind', [
   adminManualRow('adjustment', ledgerAmounts.nonzero),
   mergedChargeRowSchema,
 ]);
-export type AdminMergedLedgerRow = z.infer<typeof adminMergedLedgerRowSchema>;
+export type AdminLedgerRow = z.infer<typeof adminLedgerRowSchema>;
 
-export const adminMergedLedgerQuerySchema = z
+export const adminLedgerQuerySchema = z
   .strictObject({
     ...dayRangeFields,
     kind: adminLedgerKindSchema.optional(),
@@ -56,17 +56,13 @@ export const adminMergedLedgerQuerySchema = z
     pageSize: z.coerce.number().int().min(1).max(100).default(25),
   })
   .superRefine(checkDayRange);
-export type AdminMergedLedgerQuery = z.infer<
-  typeof adminMergedLedgerQuerySchema
->;
+export type AdminLedgerQuery = z.infer<typeof adminLedgerQuerySchema>;
 
-export const adminMergedLedgerResponseSchema = z.strictObject({
+export const adminLedgerResponseSchema = z.strictObject({
   currency: currencySchema,
   balance: moneyAmountSchema,
   totalAmount: moneyAmountSchema,
-  items: z.array(adminMergedLedgerRowSchema).max(100),
+  items: z.array(adminLedgerRowSchema).max(100),
   pagination: adminPageInfoSchema,
 });
-export type AdminMergedLedgerResponse = z.infer<
-  typeof adminMergedLedgerResponseSchema
->;
+export type AdminLedgerResponse = z.infer<typeof adminLedgerResponseSchema>;

@@ -98,7 +98,7 @@ function renderDialog(
     useQuery(
       apiQuery('adminTenantLedger', {
         params: { tenantId: tenant.id },
-        query: { page: 1 },
+        query: { page: 1, from: '2026-10-01', to: '2026-10-18' },
       }),
     );
     return (

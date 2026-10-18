@@ -1,0 +1,13 @@
+
+> fs-billing@ test:db /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+
+
+ Test Files  28 passed (28)
+      Tests  436 passed (436)
+   Start at  15:27:17
+   Duration  65.45s (tests 86%, import 13%)
+

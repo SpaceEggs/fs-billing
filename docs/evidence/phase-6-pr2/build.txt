@@ -1,0 +1,59 @@
+
+> fs-billing@ build /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> pnpm -r build
+
+Scope: 6 of 7 workspace projects
+packages/rating build$ tsc -p tsconfig.build.json
+packages/shared build$ tsc -p tsconfig.build.json
+packages/rating build: Done
+packages/shared build: Done
+packages/db build$ tsc -p tsconfig.build.json
+apps/web build$ vite build
+apps/web build: vite v8.3.4 building client environment for production...
+apps/web build: transforming...
+apps/web build: ✓ 435 modules transformed.
+apps/web build: rendering chunks...
+apps/web build: computing gzip size...
+apps/web build: dist/index.html                                   1.52 kB │ gzip:  0.76 kB
+apps/web build: dist/assets/index-Da3OnxYH.css                   44.44 kB │ gzip:  8.84 kB
+apps/web build: dist/assets/duration--1gSbKB4.js                  0.12 kB │ gzip:  0.13 kB
+apps/web build: dist/assets/input-Dk6kvs1Q.js                     0.42 kB │ gzip:  0.29 kB
+apps/web build: dist/assets/rolldown-runtime-CbXtAM7H.js          0.58 kB │ gzip:  0.36 kB
+apps/web build: dist/assets/select-D1nl8EmD.js                    0.63 kB │ gzip:  0.41 kB
+apps/web build: dist/assets/pagination-B-DdVlkD.js                0.65 kB │ gzip:  0.43 kB
+apps/web build: dist/assets/segmented-BgQLbpzP.js                 0.67 kB │ gzip:  0.43 kB
+apps/web build: dist/assets/search-box-BStuyRVD.js                0.76 kB │ gzip:  0.47 kB
+apps/web build: dist/assets/alert-Cy0CS3EL.js                     0.93 kB │ gzip:  0.48 kB
+apps/web build: dist/assets/admin-api-DEAdWfVr.js                 1.10 kB │ gzip:  0.59 kB
+apps/web build: dist/assets/rate-csv-template-link-Cw7M5lmu.js    1.13 kB │ gzip:  0.76 kB
+apps/web build: dist/assets/problem-alert-D-oIazDg.js             1.34 kB │ gzip:  0.61 kB
+apps/web build: dist/assets/query-error-BxUL3dKt.js               1.50 kB │ gzip:  0.91 kB
+apps/web build: dist/assets/dialog-cNMl4bAb.js                    2.03 kB │ gzip:  1.12 kB
+apps/web build: dist/assets/data-format-BQWKT7B1.js               2.04 kB │ gzip:  0.96 kB
+apps/web build: dist/assets/copy-field-D1BxqQG-.js                2.73 kB │ gzip:  1.14 kB
+apps/web build: dist/assets/home-DIj4PyUD.js                      3.19 kB │ gzip:  1.48 kB
+apps/web build: dist/assets/api-problem-M8seAZCN.js               3.61 kB │ gzip:  1.72 kB
+apps/web build: dist/assets/filter-sheet-CoIKlwmW.js              3.93 kB │ gzip:  1.59 kB
+apps/web build: dist/assets/change-password-tHRLrh1x.js           5.32 kB │ gzip:  2.51 kB
+apps/web build: dist/assets/tenant-edit-BJAvW_cS.js               6.15 kB │ gzip:  2.72 kB
+apps/web build: dist/assets/login-CrPXsAy1.js                     6.21 kB │ gzip:  2.46 kB
+apps/web build: dist/assets/accounts-CG85wvp8.js                  8.53 kB │ gzip:  3.35 kB
+apps/web build: dist/assets/tenant-list-DaKp_E5L.js               9.58 kB │ gzip:  3.19 kB
+apps/web build: dist/assets/form-fields-Cd140FoM.js              10.53 kB │ gzip:  4.23 kB
+apps/web build: dist/assets/admin-accounts-CEFzWqbx.js           12.94 kB │ gzip:  4.31 kB
+apps/web build: dist/assets/balance-dialog-CH4jA4L6.js           14.13 kB │ gzip:  5.41 kB
+apps/web build: dist/assets/tenant-create-Br137tvU.js            18.54 kB │ gzip:  6.77 kB
+apps/web build: dist/assets/decimal-i_D9dVJK.js                  31.94 kB │ gzip: 12.93 kB
+apps/web build: dist/assets/receivables-CbRc6wGi.js              35.46 kB │ gzip: 10.29 kB
+apps/web build: dist/assets/tenant-detail-qQb20xQh.js            94.31 kB │ gzip: 24.87 kB
+apps/web build: dist/assets/session-expired-dialog-piAuF9f-.js  100.62 kB │ gzip: 35.13 kB
+apps/web build: dist/assets/index-CHYphn9U.js                   113.80 kB │ gzip: 38.11 kB
+apps/web build: dist/assets/return-to-CeS2vsVd.js               168.20 kB │ gzip: 50.52 kB
+apps/web build: dist/assets/react-BPWasKn7.js                   218.76 kB │ gzip: 68.27 kB
+apps/web build: ✓ built in 154ms
+apps/web build: Done
+packages/db build: Done
+apps/api build$ tsc -p tsconfig.build.json
+apps/worker build$ tsc -p tsconfig.build.json
+apps/worker build: Done
+apps/api build: Done

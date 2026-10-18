@@ -33,6 +33,12 @@ import { operateBalance, listTenantLedger } from './balance.js';
 import { rateVersions, operationLogs } from '../schema.js';
 
 const { app, owner } = connections();
+const currentLedgerRange = () => {
+  const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  return { from: day.slice(0, 7) + '-01', to: day };
+};
 let actor: { id: string; name: string };
 let otherActor: { id: string; name: string };
 beforeAll(async () => {
@@ -830,7 +836,9 @@ describe('admin tenant and balance services', () => {
       await listTenantLedger({
         db: app.db,
         tenantId,
-        query: adminLedgerQuerySchema.parse({}),
+        query: adminLedgerQuerySchema.parse({
+          ...currentLedgerRange(),
+        }),
       }),
     ).toMatchObject({
       items: [],
@@ -946,7 +954,11 @@ describe('admin tenant and balance services', () => {
     const page = await listTenantLedger({
       db: app.db,
       tenantId,
-      query: adminLedgerQuerySchema.parse({ pageSize: 1, kind: 'recharge' }),
+      query: adminLedgerQuerySchema.parse({
+        pageSize: 1,
+        kind: 'recharge',
+        ...currentLedgerRange(),
+      }),
     });
     expect(page.items).toMatchObject([
       { kind: 'recharge', amount: '10', balanceAfter: '8' },

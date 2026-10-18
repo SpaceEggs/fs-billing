@@ -158,7 +158,7 @@ Merge Append  Sort Key: (COALESCE(cdrs.answered_at, cdrs.started_at)) DESC, cdrs
 
 ## 余额流水
 
-本节全部数字测的是修正排序键之前的合并查询（按 `at, id NULLS FIRST` 排序开窗，没有 `array_agg(id ORDER BY occurred_at DESC, id DESC)` 算出的 `sort_id`）。现在的查询多了这个有序聚合，耗时没有重测。PR 2 用同一个脚本 `packages/db/scripts/portal-perf.ts` 在 `fs_billing_perf` 上重测并把结果记在这里。
+本节下面的初测数字使用修正排序键之前的合并查询（按 `at, id NULLS FIRST` 排序开窗，没有有序 `array_agg` 算出的 `sort_id`）。PR 2 已用同一个 `packages/db/scripts/portal-perf.ts` 在 `fs_billing_perf` 重测实际服务查询，结果见[PR 2 实测](#pr-2-实际合并查询与-http-实测)。
 
 门户余额流水要把通话扣费按北京日合并，并显示每行变动后的累计余额。比较三种写法和三种锚点（月初余额），都在 `fs_billing_perf` 的大租户上（285 万条扣费流水加 38 条人工流水，分布在 13 个北京月）。
 
@@ -187,6 +187,38 @@ Merge Append  Sort Key: (COALESCE(cdrs.answered_at, cdrs.started_at)) DESC, cdrs
 - **边界情况**：`statement` 锚点在没有任何月账单时返回空行，余额成为 `NULL`。生产实现需要回退到 `prior`（没有月账单就意味着租户很新，前面流水少，开销小）。脚本里 `verify` 断言三种锚点在 9 月、10 月、12 月结果完全一致。
 - **后台现状**：`packages/db/src/admin/balance.ts:41` 对每行执行一个相关子查询，求所有更早流水之和。9 月一页 50 行要对 272 万行求和 50 次，每次约 1.1 s，合计 54 s（`read=3678216` 个缓冲页）。解释计划见 [q7-admin-correlated-sum.txt](portal-cdrs/plans/candidates/q7-admin-correlated-sum.txt)。
 - **对后台的意义**：把 `balanceAfter` 改成对筛选范围内行的窗口函数加月初锚点，同月逐条窗口加 balance 锚点是 482 ms，约快 113 倍。后台没有月份筛选时（扫全部 285 万条流水再取 50 行）耗时没测，不能引用上面的数字，需要先限定范围或另行测量。按页只算页内行余额（总余额减去更新的流水之和）更便宜，也没有测。
+
+### PR 2 实际合并查询与 HTTP 实测
+
+2026-10-18 在同一专用 `fs_billing_perf` 库运行 `portal-perf.ts ledger`，直接调用 `mergedLedgerSql`，不运行会删除和重建候选索引的 `measure` 命令。库为 PostgreSQL 17.9 ARM64，PORTALBIG 有 3,000,000 话单和 2,850,187 流水。已对该库应用合并后的 `0015` 迁移，流水计数未变，见[迁移前后记录](../evidence/phase-6-pr2/perf-migration.txt)。应用连接使用 `fs_billing_app`，`work_mem=4MB`、`shared_buffers=128MB`、`random_page_cost=4`，事务内 `jit=off` 与服务实现一致。
+
+先保留两个不同口径的结果。修正排序键前的原型只计算合并行余额；PR 2 服务查询包含有序 `array_agg(id ORDER BY occurred_at DESC, id DESC)`、窗口余额、类型筛选、总数、金额合计、分页和 JSON 投影。下面把旧原型三次原值与新门户服务七次的中位数、最小值和最大值并列，单位为 ms。两次测量不交替，不能把差额只归因于排序键。
+
+| 月份    | 锚点    | 修正排序键前，InitPlan，3 次原值 | PR 2 最终服务查询，7 次中位数（范围） |
+| ------- | ------- | -------------------------------- | ------------------------------------- |
+| 2025-12 | prior   | 140.4, 122.0, 122.9              | 306.2 (297.2 至 307.9)                |
+| 2025-12 | balance | 344.3, 357.3, 345.2              | 377.2 (375.2 至 382.6)                |
+| 2026-04 | prior   | 291.1, 279.4, 268.8              | 330.9 (329.7 至 336.3)                |
+| 2026-04 | balance | 281.1, 288.8, 282.0              | 336.5 (335.1 至 338.3)                |
+| 2026-09 | prior   | 352.0, 356.0, 384.6              | 378.9 (373.9 至 395.3)                |
+| 2026-09 | balance | 134.9, 124.5, 124.7              | 289.9 (288.4 至 299.2)                |
+
+旧原值来自[design-step1.txt](portal-cdrs/probes/design-step1.txt)。新查询的三个北京月、两个受众、`prior`、`balance` 与自动选择共 18 个变体，每个两次预热、七次计样。轮换变体起点，保留每一个样本。最终原始结果为[pr2-ledger-day-first/ledger.json](portal-cdrs/pr2-ledger-day-first/ledger.json)，[18 份计划](portal-cdrs/pr2-ledger-day-first/plans)含真实 `EXPLAIN (ANALYZE, BUFFERS)`，[命令 stdout](../evidence/phase-6-pr2/perf-command-day-first.txt)记录完整统计。所有 126 个计时都断言有效响应及非空结果。
+
+第一轮实际服务查询仍按 `(人工 id 或 NULL, kind, 北京日)` 分组。它的 14 次真实 HTTP 都返回 200，但有 500.8 ms 和 505.1 ms 两个超限样本。该轮的[原始结果](portal-cdrs/pr2-ledger/ledger.json)、[计划](portal-cdrs/pr2-ledger/plans)和[stdout](../evidence/phase-6-pr2/perf-command.txt)全部保留，没有删除慢样本。更早一轮与 Web 测试短暂重叠，只作为诊断留在 `/tmp/fs-billing-pr2-ledger-diagnostic-20261018`，没有进入验收数字。
+
+最终查询按 `(北京日, 人工 id 或 NULL)` 分组，用 `max(kind)` 取类型。每个人工 UUID 仅有一行，NULL id 组中全为同日通话扣费，因此类型和分组不变。日期整数先排序，去掉每次排序时比较 `kind` 文本的成本。有序 `array_agg` 仍在查询内，没有增加索引、提高 `work_mem` 或改写 fixture。四月管理员非计样计划中，月内 234,254 行扫描约 54 ms，分组合计约 170 ms，锚点约 154 ms，整条语句约 324 ms。初轮对应分组合计约 288 ms，锚点约 156 ms，扫描约 55 ms。耗时变化集中在分组排序；剩余耗时主要是锚点扫描与月内排序。最终排序仍落盘 14,696 kB，不能把结果解释成没有排序或只命中缓存的空操作。
+
+后台 HTTP 通过真实 Fastify 监听回环端口、真实签名 cookie 与认证网关，认证连接为 `fs_billing_auth`，业务连接为 `fs_billing_app`。每个响应完整读取并按 schema 解析，均返回 33 行，约 5.9 kB。每月两次预热、七次计样，按月份交替起点。
+
+| 后台请求，pageSize=50 | HTTP 中位数 |     全部 7 次范围 | 状态和行数           |
+| --------------------- | ----------: | ----------------: | -------------------- |
+| 2026-04               |    308.6 ms | 303.6 至 368.6 ms | 全部 200，每次 33 行 |
+| 2026-09               |    335.8 ms | 332.3 至 347.5 ms | 全部 200，每次 33 行 |
+
+14 次 HTTP 全部小于 500 ms。历史逐行相关子查询的三次约 54 s 数字仍在上表，来自旧 RLS 原型，不是同一次 HTTP A/B；本结果验证当前请求通过预算，不把两个时期的差额全部归因于一个改动。临时管理员会话在 `finally` 删除，[查询确认剩余 0 条](../evidence/phase-6-pr2/perf-session-cleanup.txt)。
+
+合成租户的 `created_at=2026-10-17` 晚于其历史流水，导致自动锚点甚至在九月也选择 `prior`。因此显式锚点与自动选择都单独测量，创建时间保持原值。结果只覆盖本机串行请求和已预热的缓存，不验证冷磁盘、并发客户端或更大租户。主机负载记录见[perf-host.txt](../evidence/phase-6-pr2/perf-host.txt)，复现命令见[commands.md](../evidence/phase-6-pr2/commands.md)。
 
 ## 汇总栏、总数与整请求
 
@@ -288,7 +320,7 @@ ALTER INDEX cdrs_tenant_all_keys ATTACH PARTITION cdrs_2026_09_tenant_all_keys;
 - **租户翻倍**：耗时随月内行数线性增长（每行约 0.4 µs），翻倍后"全部"中间页加汇总约 570 ms，超过预算（推算，没有实测）。按此推算现有索引的上限约 41 万条/月。单项里，Q3 汇总翻倍后约 200 ms，Q4 约 200 ms，Q1 中间页约 290 ms，都在预算内，是组合超了。
 - **候选索引能多撑多少**：只改善已接通深页（143 到 52 ms，翻倍后约 105 ms）和"全部"第 1 页。汇总、模糊搜索和"全部"深页都不变，所以租户翻倍后"全部"中间页加汇总仍约 570 ms。
 - **RLS 改写**：按本次测得的 3 到 4 倍推算，约能撑到 6 倍（约 140 万条/月），没有实测，也没有在翻倍租户上验证。
-- **后台流水**：现状 54 s，远超任何合理预算。
+- **后台流水**：初测旧查询为 54 s。PR 2 改写后的真实 HTTP 14 次全部小于 500 ms，范围 303.6 至 368.6 ms，见下方实测。
 - **没有缺口的项**：导出 10 万条 0.3 到 0.8 s（预算 30 s）；余额流水按天窗口 119 到 163 ms（修正排序键之前的聚合的实测，PR 2 重测），但翻倍后每月流水到 50 万行，线性推算约 320 ms。
 
 ## 数据和环境

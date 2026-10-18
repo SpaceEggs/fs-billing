@@ -11,6 +11,7 @@ import { cdrCountriesResponseSchema } from '../cdr-fields.js';
 import { csvExportResponseSchema } from '../export.js';
 import * as cdrs from './cdrs.js';
 import * as balance from './balance.js';
+import * as ledger from './ledger.js';
 import * as rates from './rates.js';
 import * as receivables from './receivables.js';
 import * as tenants from './tenants.js';
@@ -185,8 +186,8 @@ export function createAdminApiContract(
       'adminTenantLedger',
       'GET',
       '/api/admin/tenants/{tenantId}/ledger',
-      { ...tenantRequest, query: balance.adminLedgerQuerySchema },
-      balance.adminLedgerResponseSchema,
+      { ...tenantRequest, query: ledger.adminLedgerQuerySchema },
+      ledger.adminLedgerResponseSchema,
       {},
     ),
     adminBalanceOperation: operation(

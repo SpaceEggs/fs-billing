@@ -1,0 +1,4 @@
+
+> fs-billing@ lint /Users/lqzone/.codex/worktrees/phase-6-ledger/FS-Billing
+> eslint . --max-warnings 0
+

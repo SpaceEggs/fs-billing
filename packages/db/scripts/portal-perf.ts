@@ -9,7 +9,15 @@ import { sql, type SQL } from 'drizzle-orm';
 import pg from 'pg';
 import { decimal, quoteCsvCell } from '@fs-billing/rating';
 import { z } from 'zod';
-import { connect, withTenant, type Tx } from '../src/client.js';
+import { connect, withTenant, withAdmin, type Tx } from '../src/client.js';
+import { mergedLedgerSql } from '../src/ledger-merge.js';
+import {
+  adminLedgerQuerySchema,
+  portalLedgerQuerySchema,
+  adminLedgerResponseSchema,
+  portalLedgerResponseSchema,
+} from '@fs-billing/shared';
+import { measureAdminLedgerHttp } from '../../../apps/api/scripts/ledger-perf-http.js';
 
 const asOf = new Date(
   z.iso
@@ -1137,13 +1145,174 @@ async function measureExport() {
   console.table(results);
 }
 
+/** PR2 production query probe: no DDL, no fixture rewrites, explicit output directory. */
+async function measureLedger() {
+  assert(
+    process.env.PERF_OUT,
+    'ledger requires PERF_OUT to preserve historical evidence',
+  );
+  const authUrl = z.url().parse(process.env.PERF_AUTH_DATABASE_URL);
+  assert.equal(new URL(authUrl).pathname, '/fs_billing_perf');
+  assert.equal(new URL(authUrl).host, new URL(appUrl).host);
+  assert.equal(new URL(authUrl).username, 'fs_billing_auth');
+  const owner = new pg.Client({ connectionString: ownerUrl });
+  const { db, pool } = connect(appUrl, { max: 1 });
+  await owner.connect();
+  try {
+    await mkdir(output);
+    await mkdir(resolve(output, 'plans'), { recursive: true });
+    const facts =
+      await owner.query(`select version(), current_database(), current_user,
+      (select count(*) from cdrs where tenant_id = '${big.id}')::int as cdrs,
+      (select count(*) from ledger_entries where tenant_id = '${big.id}')::int as entries,
+      (select created_at from tenants where id = '${big.id}') as tenant_created_at,
+      (select pg_get_expr(polqual,polrelid) from pg_policy where polrelid='ledger_entries'::regclass and polname='tenant_read') as policy,
+      current_setting('work_mem') as work_mem, current_setting('shared_buffers') as shared_buffers,
+      current_setting('random_page_cost') as random_page_cost`);
+    const variants = ['2025-12', '2026-04', '2026-09'].flatMap((month) =>
+      (['prior', 'balance', undefined] as const).flatMap((anchor) =>
+        (['portal', 'admin'] as const).map((audience) => {
+          const input = {
+            from: `${month}-01`,
+            to: `${month}-${month === '2025-12' ? '31' : '30'}`,
+            page: 1,
+          };
+          const query =
+            audience === 'portal'
+              ? portalLedgerQuerySchema.parse(input)
+              : adminLedgerQuerySchema.parse({ ...input, pageSize: 50 });
+          return {
+            name: `${month}-${audience}-${anchor ?? 'auto'}`,
+            month,
+            audience,
+            query: mergedLedgerSql({
+              tenantId: big.id,
+              query,
+              pageSize: audience === 'portal' ? 25 : 50,
+              audience,
+              ...(anchor ? { anchor } : {}),
+            }),
+          };
+        }),
+      ),
+    );
+    const rounds = z.coerce
+      .number()
+      .int()
+      .min(5)
+      .parse(process.env.PERF_ROUNDS ?? 7);
+    const samples: {
+      name: string;
+      round: number;
+      ms: number;
+      total: number;
+      items: number;
+    }[] = [];
+    for (let round = -2; round < rounds; round++) {
+      const shift = (round + 2) % variants.length;
+      for (const variant of [
+        ...variants.slice(shift),
+        ...variants.slice(0, shift),
+      ]) {
+        const start = performance.now();
+        const result = await (
+          variant.audience === 'portal'
+            ? (fn: (tx: Tx) => Promise<unknown>) => withTenant(db, big.id, fn)
+            : (fn: (tx: Tx) => Promise<unknown>) => withAdmin(db, fn)
+        )(async (tx) => {
+          await tx.execute(sql`set local jit = off`);
+          return tx.execute<{ ledger: unknown }>(variant.query);
+        });
+        const rows = z
+          .object({ rows: z.array(z.object({ ledger: z.unknown() })) })
+          .parse(result).rows;
+        const body = (
+          variant.audience === 'portal'
+            ? portalLedgerResponseSchema
+            : adminLedgerResponseSchema
+        ).parse(rows[0]?.ledger);
+        assert(body.items.length >= 25 && body.pagination.total >= 30);
+        if (round >= 0)
+          samples.push({
+            name: variant.name,
+            round,
+            ms: Number((performance.now() - start).toFixed(1)),
+            total: body.pagination.total,
+            items: body.items.length,
+          });
+      }
+      process.stderr.write(`ledger round ${round}\n`);
+    }
+    for (const variant of variants) {
+      const plan = await (
+        variant.audience === 'portal'
+          ? (fn: (tx: Tx) => Promise<unknown>) => withTenant(db, big.id, fn)
+          : (fn: (tx: Tx) => Promise<unknown>) => withAdmin(db, fn)
+      )(async (tx) => {
+        await tx.execute(sql`set local jit = off`);
+        return rowsOf(tx, sql`explain (analyze, buffers) ${variant.query}`);
+      });
+      const rows = z.array(z.object({ 'QUERY PLAN': z.string() })).parse(plan);
+      await writeFile(
+        resolve(output, 'plans', `${variant.name}.txt`),
+        rows.map((row) => row['QUERY PLAN']).join('\n') + '\n',
+      );
+    }
+    const http = await measureAdminLedgerHttp({
+      db,
+      owner,
+      authUrl,
+      tenantId: big.id,
+      rounds,
+    });
+    const summary = variants.map(({ name }) => {
+      const values = samples
+        .filter((row) => row.name === name)
+        .map((row) => row.ms)
+        .sort((a, b) => a - b);
+      return {
+        name,
+        n: values.length,
+        min: values[0],
+        median: values[Math.floor(values.length / 2)],
+        max: values.at(-1),
+      };
+    });
+    await writeFile(
+      resolve(output, 'ledger.json'),
+      JSON.stringify(
+        {
+          measuredAt: new Date().toISOString(),
+          facts: facts.rows,
+          roles: { business: 'fs_billing_app', auth: 'fs_billing_auth' },
+          jit: 'off (same as production service)',
+          rounds,
+          warmups: 2,
+          errors: 0,
+          samples,
+          summary,
+          http,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+    console.table(summary);
+    console.table(http.samples);
+  } finally {
+    await pool.end();
+    await owner.end();
+  }
+}
+
 const [command, ...args] = process.argv.slice(2);
 if (command === 'seed') await seed();
 else if (command === 'measure') await measure();
+else if (command === 'ledger') await measureLedger();
 else if (command === 'export')
   await exportOnce(
     args[0]!,
     z.enum(['cursor', 'naive']).parse(args[1]),
     args[2]!,
   );
-else throw new Error('usage: portal-perf.ts seed | measure');
+else throw new Error('usage: portal-perf.ts seed | measure | ledger');

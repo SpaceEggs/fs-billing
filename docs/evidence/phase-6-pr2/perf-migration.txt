@@ -1,0 +1,33 @@
+node: ../../.env: not found
+ current_database |                                            version                                            
+------------------+-----------------------------------------------------------------------------------------------
+ fs_billing_perf  | PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+(1 row)
+
+     polname     |      pg_get_expr       
+-----------------+------------------------
+ tenant_read     | app_can_see(tenant_id)
+ operator_insert | 
+ operator_update | app_can_see(tenant_id)
+ operator_delete | app_is_operator()
+(4 rows)
+
+ entries 
+---------
+ 2850187
+(1 row)
+
+fs_billing_perf existing migrations applied successfully; existing data retained
+     polname     |                                                                               pg_get_expr                                                                                
+-----------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ operator_insert | 
+ operator_update | app_can_see(tenant_id)
+ operator_delete | app_is_operator()
+ tenant_read     | (( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))
+(4 rows)
+
+ entries 
+---------
+ 2850187
+(1 row)
+

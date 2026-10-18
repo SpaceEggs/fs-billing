@@ -1,0 +1,176 @@
+Nested Loop  (cost=139131.93..139132.00 rows=1 width=32) (actual time=326.968..326.983 rows=1 loops=1)
+  Buffers: shared hit=21972 read=41320, temp read=3671 written=3676
+  CTE bounds
+    ->  Result  (cost=0.00..0.01 rows=1 width=16) (actual time=0.000..0.000 rows=1 loops=1)
+  CTE tenant
+    ->  Nested Loop  (cost=4.24..9.57 rows=1 width=17) (actual time=0.012..0.018 rows=1 loops=1)
+          Buffers: shared hit=3
+          InitPlan 2
+            ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.001..0.002 rows=1 loops=1)
+          InitPlan 3
+            ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+          InitPlan 4
+            ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+          InitPlan 5
+            ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.000..0.000 rows=1 loops=1)
+          InitPlan 6
+            ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+          InitPlan 7
+            ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+          ->  Seq Scan on tenants t_1  (cost=0.00..1.30 rows=1 width=28) (actual time=0.005..0.007 rows=1 loops=1)
+                Filter: ((id = '00000000-0000-4000-8000-000000000001'::uuid) AND ((InitPlan 2).col1 OR (((InitPlan 3).col1 = 'tenant'::text) AND (id = (InitPlan 4).col1))))
+                Rows Removed by Filter: 16
+                Buffers: shared hit=1
+          ->  Bitmap Heap Scan on tenant_balances b  (cost=4.15..8.16 rows=1 width=21) (actual time=0.006..0.008 rows=1 loops=1)
+                Recheck Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                Filter: ((InitPlan 5).col1 OR (((InitPlan 6).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 7).col1)))
+                Heap Blocks: exact=1
+                Buffers: shared hit=2
+                ->  Bitmap Index Scan on tenant_balances_pkey  (cost=0.00..4.15 rows=1 width=0) (actual time=0.004..0.004 rows=1 loops=1)
+                      Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                      Buffers: shared hit=1
+  CTE filtered
+    ->  WindowAgg  (cost=137740.35..137900.80 rows=7140 width=176) (actual time=326.567..326.583 rows=33 loops=1)
+          Buffers: shared hit=21953 read=41314, temp read=3671 written=3676
+          InitPlan 13
+            ->  Aggregate  (cost=113290.82..113290.83 rows=1 width=32) (actual time=157.591..157.592 rows=1 loops=1)
+                  Buffers: shared hit=12068 read=41314
+                  InitPlan 9
+                    ->  CTE Scan on bounds  (cost=0.00..0.02 rows=1 width=8) (actual time=0.000..0.000 rows=1 loops=1)
+                  InitPlan 10
+                    ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.003..0.003 rows=1 loops=1)
+                  InitPlan 11
+                    ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                  InitPlan 12
+                    ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                  ->  Seq Scan on ledger_entries  (cost=0.00..112100.74 rows=476004 width=5) (actual time=0.090..122.588 rows=1292463 loops=1)
+                        Filter: ((occurred_at < (InitPlan 9).col1) AND (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND ((InitPlan 10).col1 OR (((InitPlan 11).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 12).col1))))
+                        Rows Removed by Filter: 1643508
+                        Buffers: shared hit=12068 read=41314
+          ->  Sort  (cost=24449.32..24467.17 rows=7140 width=144) (actual time=168.969..168.972 rows=33 loops=1)
+                Sort Key: (max(ledger_entries_1.occurred_at)), ((array_agg(ledger_entries_1.id ORDER BY ledger_entries_1.occurred_at DESC, ledger_entries_1.id DESC))[1])
+                Sort Method: quicksort  Memory: 27kB
+                Buffers: shared hit=9885, temp read=3671 written=3676
+                ->  Nested Loop  (cost=23581.73..23992.30 rows=7140 width=144) (actual time=135.829..168.959 rows=33 loops=1)
+                      Buffers: shared hit=9885, temp read=3671 written=3676
+                      ->  CTE Scan on tenant t_2  (cost=0.00..0.02 rows=1 width=0) (actual time=0.000..0.006 rows=1 loops=1)
+                      ->  GroupAggregate  (cost=23581.73..23920.88 rows=7140 width=144) (actual time=135.828..168.948 rows=33 loops=1)
+                            Group Key: (((ledger_entries_1.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date), (CASE WHEN (ledger_entries_1.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries_1.id END)
+                            Buffers: shared hit=9885, temp read=3671 written=3676
+                            InitPlan 14
+                              ->  CTE Scan on bounds bounds_1  (cost=0.00..0.02 rows=1 width=8) (actual time=0.001..0.001 rows=1 loops=1)
+                            InitPlan 15
+                              ->  CTE Scan on bounds bounds_2  (cost=0.00..0.02 rows=1 width=8) (actual time=0.000..0.000 rows=1 loops=1)
+                            InitPlan 16
+                              ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.000..0.001 rows=1 loops=1)
+                            InitPlan 17
+                              ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                            InitPlan 18
+                              ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                            ->  Sort  (cost=23581.64..23599.49 rows=7140 width=62) (actual time=135.813..144.010 rows=234254 loops=1)
+                                  Sort Key: (((ledger_entries_1.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date), (CASE WHEN (ledger_entries_1.kind = 'call_charge'::text) THEN NULL::uuid ELSE ledger_entries_1.id END), ledger_entries_1.occurred_at DESC, ledger_entries_1.id DESC
+                                  Sort Method: external sort  Disk: 14696kB
+                                  Buffers: shared hit=9885, temp read=3671 written=3676
+                                  ->  Index Scan Backward using ledger_entries_tenant_occurred_at on ledger_entries ledger_entries_1  (cost=0.43..23124.62 rows=7140 width=62) (actual time=0.011..53.989 rows=234254 loops=1)
+                                        Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= (InitPlan 14).col1) AND (occurred_at < (InitPlan 15).col1))
+                                        Filter: ((InitPlan 16).col1 OR (((InitPlan 17).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 18).col1)))
+                                        Buffers: shared hit=9885
+  InitPlan 38
+    ->  Aggregate  (cost=1043.04..1043.05 rows=1 width=32) (actual time=0.335..0.338 rows=1 loops=1)
+          Buffers: shared hit=16 read=6
+          InitPlan 20
+            ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.001..0.001 rows=1 loops=1)
+          InitPlan 21
+            ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+          InitPlan 22
+            ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+          InitPlan 23
+            ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+          InitPlan 24
+            ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+          InitPlan 25
+            ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+          InitPlan 26
+            ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+          InitPlan 27
+            ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+          InitPlan 28
+            ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+          ->  Nested Loop Left Join  (cost=381.02..1040.39 rows=50 width=231) (actual time=0.046..0.109 rows=33 loops=1)
+                Join Filter: (a.id = source.created_by)
+                Rows Removed by Join Filter: 60
+                Buffers: shared hit=16 read=6
+                ->  Nested Loop Left Join  (cost=381.02..1038.61 rows=50 width=224) (actual time=0.036..0.088 rows=33 loops=1)
+                      Buffers: shared hit=15 read=6
+                      ->  Nested Loop Left Join  (cost=380.59..615.86 rows=50 width=208) (actual time=0.033..0.072 rows=33 loops=1)
+                            Buffers: shared hit=3 read=6
+                            ->  Limit  (cost=379.99..380.11 rows=50 width=176) (actual time=0.025..0.028 rows=33 loops=1)
+                                  ->  Sort  (cost=379.99..397.84 rows=7140 width=176) (actual time=0.024..0.026 rows=33 loops=1)
+                                        Sort Key: filtered_1.at DESC, filtered_1.sort_id DESC
+                                        Sort Method: quicksort  Memory: 29kB
+                                        ->  CTE Scan on filtered filtered_1  (cost=0.00..142.80 rows=7140 width=176) (actual time=0.000..0.001 rows=33 loops=1)
+                            ->  Nested Loop Left Join  (cost=0.60..4.69 rows=1 width=48) (actual time=0.001..0.001 rows=0 loops=33)
+                                  Join Filter: (v.ledger_entry_id = e.id)
+                                  Buffers: shared hit=3 read=6
+                                  ->  Nested Loop Left Join  (cost=0.60..4.68 rows=1 width=32) (actual time=0.001..0.001 rows=0 loops=33)
+                                        Buffers: shared hit=3 read=6
+                                        ->  Nested Loop Left Join  (cost=0.55..4.60 rows=1 width=32) (actual time=0.001..0.001 rows=0 loops=33)
+                                              Buffers: shared hit=3 read=6
+                                              ->  Index Only Scan using ledger_entries_id_tenant_id_kind_key on ledger_entries e  (cost=0.43..4.46 rows=1 width=16) (actual time=0.001..0.001 rows=0 loops=33)
+                                                    Index Cond: ((id = filtered_1.id) AND (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (kind = 'credit_recharge'::text))
+                                                    Filter: ((InitPlan 23).col1 OR (((InitPlan 24).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 25).col1)))
+                                                    Heap Fetches: 0
+                                                    Buffers: shared hit=3 read=6
+                                              ->  Limit  (cost=0.12..0.12 rows=1 width=140) (never executed)
+                                                    InitPlan 29
+                                                      ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                                    InitPlan 30
+                                                      ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                                    InitPlan 31
+                                                      ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                                    InitPlan 32
+                                                      ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                                    InitPlan 33
+                                                      ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                                    InitPlan 34
+                                                      ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                                    ->  Sort  (cost=0.02..0.03 rows=1 width=140) (never executed)
+                                                          Sort Key: s.created_at DESC, s.id DESC
+                                                          ->  Nested Loop Anti Join  (cost=0.00..0.01 rows=1 width=140) (never executed)
+                                                                Join Filter: (r.settlement_id = s.id)
+                                                                ->  Seq Scan on receivable_settlements s  (cost=0.00..0.00 rows=1 width=24) (never executed)
+                                                                      Filter: ((ledger_entry_id = e.id) AND ((InitPlan 29).col1 OR (((InitPlan 30).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 31).col1))))
+                                                                ->  Seq Scan on receivable_settlement_reversals r  (cost=0.00..0.00 rows=1 width=16) (never executed)
+                                                                      Filter: ((InitPlan 32).col1 OR (((InitPlan 33).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 34).col1)))
+                                        ->  Limit  (cost=0.06..0.06 rows=1 width=24) (never executed)
+                                              InitPlan 35
+                                                ->  Result  (cost=0.00..0.01 rows=1 width=1) (never executed)
+                                              InitPlan 36
+                                                ->  Result  (cost=0.00..0.01 rows=1 width=32) (never executed)
+                                              InitPlan 37
+                                                ->  Result  (cost=0.00..0.02 rows=1 width=16) (never executed)
+                                              ->  Sort  (cost=0.01..0.02 rows=1 width=24) (never executed)
+                                                    Sort Key: s_1.created_at DESC, s_1.id DESC
+                                                    ->  Seq Scan on receivable_settlements s_1  (cost=0.00..0.00 rows=1 width=24) (never executed)
+                                                          Filter: ((ledger_entry_id = e.id) AND ((InitPlan 35).col1 OR (((InitPlan 36).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 37).col1))))
+                                  ->  Seq Scan on receivable_voids v  (cost=0.00..0.00 rows=1 width=32) (never executed)
+                                        Filter: ((InitPlan 26).col1 OR (((InitPlan 27).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 28).col1)))
+                      ->  Index Scan using ledger_entries_id_tenant_id_kind_key on ledger_entries source  (cost=0.43..8.46 rows=1 width=32) (actual time=0.000..0.000 rows=0 loops=33)
+                            Index Cond: ((id = filtered_1.id) AND (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid))
+                            Filter: ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1)))
+                            Buffers: shared hit=12
+                ->  Materialize  (cost=0.00..1.03 rows=1 width=23) (actual time=0.000..0.000 rows=2 loops=33)
+                      Buffers: shared hit=1
+                      ->  Seq Scan on admins a  (cost=0.00..1.03 rows=1 width=23) (actual time=0.008..0.008 rows=2 loops=1)
+                            Filter: (current_setting('app.scope'::text, true) = 'admin'::text)
+                            Buffers: shared hit=1
+  ->  CTE Scan on tenant t  (cost=0.00..0.02 rows=1 width=64) (actual time=0.013..0.013 rows=1 loops=1)
+        Buffers: shared hit=3
+  ->  Aggregate  (cost=178.50..178.51 rows=1 width=36) (actual time=326.592..326.593 rows=1 loops=1)
+        Buffers: shared hit=21953 read=41314, temp read=3671 written=3676
+        ->  CTE Scan on filtered  (cost=0.00..142.80 rows=7140 width=32) (actual time=326.568..326.588 rows=33 loops=1)
+              Buffers: shared hit=21953 read=41314, temp read=3671 written=3676
+Planning:
+  Buffers: shared hit=11
+Planning Time: 0.773 ms
+Execution Time: 327.801 ms

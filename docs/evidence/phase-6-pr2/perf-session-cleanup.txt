@@ -1,0 +1,5 @@
+ remaining_perf_sessions 
+-------------------------
+                       0
+(1 row)
+
