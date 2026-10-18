@@ -175,6 +175,138 @@ describe('ledger tab filters', () => {
     expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
   });
 
+  it('blocks a calendar range beyond one month and allows a valid replacement', async () => {
+    const { gets, location } = ledgerApp(
+      `/admin/tenants/${tenantId}?tab=ledger`,
+    );
+    await screen.findByText('该日期范围内没有余额流水');
+    const initialRequestCount = gets.length;
+    const user = userEvent.setup();
+    await user.click(rangeButton('2026-10-01', '2026-10-17'));
+    const calendar = screen.getByRole('dialog', {
+      name: '日期范围（北京时间）',
+    });
+    await user.click(within(calendar).getByRole('button', { name: '上个月' }));
+    await user.click(
+      within(calendar).getByRole('button', { name: '2026-09-01' }),
+    );
+    await user.click(within(calendar).getByRole('button', { name: '下个月' }));
+    expect(within(calendar).getByRole('status')).toHaveTextContent(
+      '选择结束日期不能晚于 2026-09-30（日期范围最长一个月；倒序选择时按较早日期重新计算）',
+    );
+    expect(
+      within(calendar).getByRole('button', { name: '2026-10-01' }),
+    ).toBeDisabled();
+    expect(
+      within(calendar).getByRole('button', { name: '确定' }),
+    ).toBeDisabled();
+    expect(gets).toHaveLength(initialRequestCount);
+    expect(location()).toBe(`/admin/tenants/${tenantId}?tab=ledger`);
+
+    await user.click(within(calendar).getByRole('button', { name: '上个月' }));
+    await user.click(
+      within(calendar).getByRole('button', { name: '2026-09-30' }),
+    );
+    expect(
+      within(calendar).getByRole('button', { name: '确定' }),
+    ).toBeEnabled();
+    await user.click(within(calendar).getByRole('button', { name: '确定' }));
+
+    await waitFor(() =>
+      expect(gets.length).toBeGreaterThan(initialRequestCount),
+    );
+    expect(gets.at(-1)?.get('from')).toBe('2026-09-01');
+    expect(gets.at(-1)?.get('to')).toBe('2026-09-30');
+    expect(new URLSearchParams(location().split('?')[1])).toEqual(
+      new URLSearchParams({
+        tab: 'ledger',
+        from: '2026-09-01',
+        to: '2026-09-30',
+      }),
+    );
+  });
+
+  it('blocks an overlong end when selecting the range in reverse', async () => {
+    const { gets } = ledgerApp(
+      `/admin/tenants/${tenantId}?tab=ledger&from=2026-09-01&to=2026-09-30`,
+    );
+    await screen.findByText('该日期范围内没有余额流水');
+    const initialRequestCount = gets.length;
+    const user = userEvent.setup();
+    await user.click(rangeButton('2026-09-01', '2026-09-30'));
+    const calendar = screen.getByRole('dialog', {
+      name: '日期范围（北京时间）',
+    });
+    await user.click(
+      within(calendar).getByRole('button', { name: '2026-09-30' }),
+    );
+    await user.click(within(calendar).getByRole('button', { name: '上个月' }));
+    expect(
+      within(calendar).getByRole('button', { name: '2026-08-30' }),
+    ).toBeDisabled();
+    expect(within(calendar).getByRole('status')).toHaveTextContent(
+      '日期范围最长一个月',
+    );
+    expect(within(calendar).getByRole('status')).toHaveTextContent(
+      '倒序选择时按较早日期重新计算',
+    );
+    expect(
+      within(calendar).getByRole('button', { name: '确定' }),
+    ).toBeDisabled();
+    expect(gets).toHaveLength(initialRequestCount);
+  });
+
+  it('explains an overlong URL range and does not request it', async () => {
+    const invalid = ledgerApp(
+      `/admin/tenants/${tenantId}?tab=ledger&from=2026-01-31&to=2026-02-28`,
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '日期范围超出一个月上限：2026-01-31 至 2026-02-28。结束日期不能晚于 2026-02-27。',
+    );
+    expect(rangeButton('2026-01-31', '2026-02-28')).toBeVisible();
+    expect(invalid.gets).toHaveLength(0);
+    expect(screen.queryByText('该日期范围内没有余额流水')).toBeNull();
+    const user = userEvent.setup();
+    await user.click(rangeButton('2026-01-31', '2026-02-28'));
+    const calendar = screen.getByRole('dialog', {
+      name: '日期范围（北京时间）',
+    });
+    expect(within(calendar).getByRole('alert')).toHaveTextContent(
+      '结束日期不能晚于 2026-02-27（日期范围最长一个月）',
+    );
+    expect(
+      within(calendar).getByRole('button', { name: '确定' }),
+    ).toBeDisabled();
+  });
+
+  it.each([
+    {
+      search: 'from=2026-09-01',
+      from: '2026-09-01',
+      to: '2026-10-17',
+      endLimit: '2026-09-30',
+    },
+    {
+      search: 'to=2026-08-01',
+      from: '2026-08-01',
+      to: '2026-10-01',
+      endLimit: '2026-08-31',
+    },
+  ])(
+    'validates the effective range when URL supplies only $search',
+    async ({ search, from, to, endLimit }) => {
+      const invalid = ledgerApp(
+        `/admin/tenants/${tenantId}?tab=ledger&${search}`,
+      );
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        `日期范围超出一个月上限：${from} 至 ${to}。结束日期不能晚于 ${endLimit}。`,
+      );
+      expect(rangeButton(from, to)).toBeVisible();
+      expect(invalid.gets).toHaveLength(0);
+      expect(screen.queryByLabelText('余额流水加载中')).toBeNull();
+    },
+  );
+
   it('cancelling the calendar keeps the range', async () => {
     const { gets } = ledgerApp(`/admin/tenants/${tenantId}?tab=ledger`);
     await screen.findByText('该日期范围内没有余额流水');
@@ -232,5 +364,18 @@ describe('ledger tab filters', () => {
     await screen.findByText('该日期范围内没有余额流水');
     expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
     expect(reversed.gets.at(-1)?.get('from')).toBe('2026-09-01');
+  });
+
+  it('drops year zero from ledger URL parsing before requesting the API', async () => {
+    const invalid = ledgerApp(
+      `/admin/tenants/${tenantId}?tab=ledger&from=0000-01-01&to=0000-01-01`,
+    );
+    await screen.findByText('该日期范围内没有余额流水');
+    expect(rangeButton('2026-10-01', '2026-10-17')).toBeVisible();
+    expect(invalid.gets.at(-1)?.get('from')).toBe('2026-10-01');
+    expect(invalid.gets.at(-1)?.get('to')).toBe('2026-10-17');
+    expect(
+      invalid.gets.some((query) => query.get('from')?.startsWith('0000')),
+    ).toBe(false);
   });
 });

@@ -1,15 +1,11 @@
 import { z } from 'zod';
+import { beijingDateOf } from './beijing-time.js';
 import { moneyAmountSchema } from './money.js';
 
-const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
 const timestamp = z.iso.datetime({ offset: true });
 
 /** 北京日期，用于核对合并行的 day 与 occurredAt 属于同一天。 */
-export function beijingDayOf(instant: string): string {
-  return new Date(Date.parse(instant) + BEIJING_OFFSET_MS)
-    .toISOString()
-    .slice(0, 10);
-}
+export const beijingDayOf = beijingDateOf;
 
 /** 流水金额的符号规则与 ledger_entries_kind_shape 一致。 */
 export const ledgerAmounts = {

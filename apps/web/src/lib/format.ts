@@ -1,5 +1,9 @@
 import Decimal from 'decimal.js';
-import type { Currency, Money } from '@fs-billing/shared';
+import {
+  beijingDateTimeParts,
+  type Currency,
+  type Money,
+} from '@fs-billing/shared';
 
 const currencySymbol = { CNY: '¥', USD: '$' } as const satisfies Record<
   Currency,
@@ -47,42 +51,25 @@ export function formatRate(
   return options.currency === 'CNY' ? `${value} 元/分钟` : `$${value}/分钟`;
 }
 
-const beijingOffsetMs = 8 * 60 * 60 * 1000;
 const pad = (value: number) => String(value).padStart(2, '0');
 
-/** 中国不实行夏令时，北京时间固定为 UTC+8。 */
-function beijingParts(value: string | Date) {
-  const instant = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(instant.getTime()))
-    throw new RangeError(`Invalid date: ${String(value)}`);
-  const shifted = new Date(instant.getTime() + beijingOffsetMs);
-  return {
-    year: shifted.getUTCFullYear(),
-    month: shifted.getUTCMonth() + 1,
-    day: shifted.getUTCDate(),
-    hour: shifted.getUTCHours(),
-    minute: shifted.getUTCMinutes(),
-    second: shifted.getUTCSeconds(),
-  };
-}
-
 export function formatDateTime(value: string | Date) {
-  const p = beijingParts(value);
-  return `${p.year}-${pad(p.month)}-${pad(p.day)} ${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
+  const p = beijingDateTimeParts(value);
+  return `${String(p.year).padStart(4, '0')}-${pad(p.month)}-${pad(p.day)} ${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
 }
 
 export function formatDate(value: string | Date) {
-  const p = beijingParts(value);
-  return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+  const p = beijingDateTimeParts(value);
+  return `${String(p.year).padStart(4, '0')}-${pad(p.month)}-${pad(p.day)}`;
 }
 
 export function formatTime(value: string | Date) {
-  const p = beijingParts(value);
+  const p = beijingDateTimeParts(value);
   return `${pad(p.hour)}:${pad(p.minute)}`;
 }
 
 export function formatMonth(value: string | Date) {
-  const p = beijingParts(value);
+  const p = beijingDateTimeParts(value);
   return `${p.year}年${p.month}月`;
 }
 

@@ -1,0 +1,155 @@
+{
+  "startedAt": "2026-10-18T10:11:15.841Z",
+  "finishedAt": "2026-10-18T10:11:23.162Z",
+  "host": {
+    "coreCount": 10,
+    "loadAverageBefore": [2.05517578125, 2.66357421875, 2.93115234375],
+    "loadAverageAfter": [2.03955078125, 2.64111328125, 2.91943359375]
+  },
+  "database": "fs_billing_perf",
+  "roles": {
+    "business": "fs_billing_app",
+    "auth": "fs_billing_auth",
+    "queryOwner": "database owner"
+  },
+  "transport": "loopback HTTP fetch, real cookie gateway, app business role and auth role, response consumed and schema parsed",
+  "pageSize": 50,
+  "warmupsPerMonth": 2,
+  "countedSamplesPerMonth": 7,
+  "summaries": [
+    {
+      "month": "2026-04",
+      "n": 7,
+      "medianMs": 307.5,
+      "minMs": 302.9,
+      "maxMs": 323.4
+    },
+    {
+      "month": "2026-09",
+      "n": 7,
+      "medianMs": 334.3,
+      "minMs": 331.6,
+      "maxMs": 349.2
+    }
+  ],
+  "samples": [
+    {
+      "month": "2026-09",
+      "ms": 341,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 312.2,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 309.1,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-09",
+      "ms": 340.3,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-09",
+      "ms": 349.2,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 323.4,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 307.5,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-09",
+      "ms": 334,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-09",
+      "ms": 331.6,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 302.9,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 305.8,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-09",
+      "ms": 333,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-09",
+      "ms": 334.3,
+      "status": 200,
+      "bytes": 5893,
+      "total": 33,
+      "items": 33
+    },
+    {
+      "month": "2026-04",
+      "ms": 305.7,
+      "status": 200,
+      "bytes": 5875,
+      "total": 33,
+      "items": 33
+    }
+  ],
+  "failures": 0,
+  "authSessions": {
+    "before": 0,
+    "after": 0,
+    "delta": 0
+  }
+}

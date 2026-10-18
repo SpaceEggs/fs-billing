@@ -23,24 +23,27 @@ const ids = {
   last: '30000000-0000-4000-8000-000000000001',
   later: '40000000-0000-4000-8000-000000000001',
 };
-async function entry({
-  id = randomUUID(),
-  kind = 'call_charge',
-  amount,
-  at,
-  createdAt = at,
-}: {
-  id?: string;
-  kind?: 'recharge' | 'gift' | 'adjustment' | 'call_charge';
-  amount: string;
-  at: string;
-  createdAt?: string;
-}) {
+async function entry(
+  {
+    id = randomUUID(),
+    kind = 'call_charge',
+    amount,
+    at,
+    createdAt = at,
+  }: {
+    id?: string;
+    kind?: 'recharge' | 'gift' | 'adjustment' | 'call_charge';
+    amount: string;
+    at: string;
+    createdAt?: string;
+  },
+  forTenantId = tenantId,
+) {
   await withAdmin(owner.db, async (tx) => {
-    await lockTenants(tx, [tenantId]);
+    await lockTenants(tx, [forTenantId]);
     await tx.execute(sql`insert into ledger_entries
       (id, tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at)
-      values (${id}::uuid, ${tenantId}::uuid, ${kind}, ${amount}, '',
+      values (${id}::uuid, ${forTenantId}::uuid, ${kind}, ${amount}, '',
         ${kind === 'call_charge' ? null : actorId}::uuid, ${id}, ${at}::timestamptz, ${createdAt}::timestamptz)`);
   });
 }
@@ -50,8 +53,8 @@ const query = (fields = {}) =>
     to: '2026-09-30',
     ...fields,
   });
-const list = (fields = {}) =>
-  listPortalLedger({ db: app.db, tenantId, query: query(fields) });
+const list = (fields = {}, forTenantId = tenantId) =>
+  listPortalLedger({ db: app.db, tenantId: forTenantId, query: query(fields) });
 beforeAll(async () => {
   tenantId = (await createTenant(owner, 'CNY')).id;
   actorId = await adminId(owner);
@@ -150,6 +153,42 @@ describe('merged ledger', () => {
       { day: '0001-01-01', amount: '-0.01', balanceAfter: '-0.01' },
     ]);
   });
+  it.each([
+    {
+      at: '1988-05-31T15:30:00Z',
+      day: '1988-06-01',
+      adjacentDay: '1988-05-31',
+    },
+    {
+      at: '0001-01-01T15:59:00Z',
+      day: '0001-01-02',
+      adjacentDay: '0001-01-01',
+    },
+  ])(
+    'uses Asia/Shanghai calendar dates for $at and excludes $adjacentDay',
+    async ({ at, day, adjacentDay }) => {
+      const historicalTenant = await createTenant(owner, 'CNY');
+      await entry({ amount: '-0.01', at }, historicalTenant.id);
+      expect(
+        (
+          await list(
+            { from: adjacentDay, to: adjacentDay },
+            historicalTenant.id,
+          )
+        ).items,
+      ).toEqual([]);
+      expect(
+        (await list({ from: day, to: day }, historicalTenant.id)).items,
+      ).toMatchObject([
+        {
+          kind: 'call_charge',
+          day,
+          amount: '-0.01',
+          occurredAt: at.replace('Z', '.000000Z'),
+        },
+      ]);
+    },
+  );
   it('both anchors give the same balances in every month of the fixture', async () => {
     for (const [from, to] of [
       ['0001-01-01', '0001-01-31'],

@@ -21,12 +21,15 @@ export function DateRangeField({
   label,
   value,
   max,
+  maxRangeEndForStart,
   onChange,
   className,
 }: {
   label: string;
   value: DayRange;
   max: string;
+  /** Optional maximum inclusive end date for a range beginning on the given day. */
+  maxRangeEndForStart?: (from: string) => string;
   onChange: (range: DayRange) => void;
   className?: string;
 }) {
@@ -57,6 +60,7 @@ export function DateRangeField({
           label={label}
           initial={value}
           max={max}
+          {...(maxRangeEndForStart ? { maxRangeEndForStart } : {})}
           onClose={() => setOpen(false)}
           onConfirm={(range) => {
             setOpen(false);
@@ -75,12 +79,14 @@ function RangeCalendar({
   label,
   initial,
   max,
+  maxRangeEndForStart,
   onClose,
   onConfirm,
 }: {
   label: string;
   initial: DayRange;
   max: string;
+  maxRangeEndForStart?: (from: string) => string;
   onClose: () => void;
   onConfirm: (range: DayRange) => void;
 }) {
@@ -96,6 +102,16 @@ function RangeCalendar({
         : { from: day, to: null },
     );
   const { to } = draft;
+  const completeRange = to === null ? null : orderedRange(draft.from, to);
+  const rangeIsAllowed = (range: DayRange) =>
+    maxRangeEndForStart === undefined ||
+    range.to <= maxRangeEndForStart(range.from);
+  const endLimit =
+    maxRangeEndForStart === undefined
+      ? undefined
+      : maxRangeEndForStart(completeRange?.from ?? draft.from);
+  const exceedsRangeLimit =
+    completeRange !== null && !rangeIsAllowed(completeRange);
   return (
     <ModalDialog
       open
@@ -136,6 +152,10 @@ function RangeCalendar({
       <div className="grid grid-cols-7 gap-y-1 text-center text-[15px] tabular-nums md:text-sm">
         {monthCells(view).map((day, index) => {
           if (day === null) return <span key={`blank-${index}`} />;
+          const exceedsPendingRangeLimit =
+            to === null &&
+            maxRangeEndForStart !== undefined &&
+            !rangeIsAllowed(orderedRange(draft.from, day));
           const start = day === draft.from;
           const end = day === (to ?? draft.from);
           const inside = to !== null && day > draft.from && day < to;
@@ -145,7 +165,7 @@ function RangeCalendar({
               type="button"
               aria-label={day}
               aria-pressed={start || end || inside}
-              disabled={day > max}
+              disabled={day > max || exceedsPendingRangeLimit}
               onClick={() => pick(day)}
               className={cn(
                 'h-11 outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:text-muted-foreground md:h-9',
@@ -169,19 +189,42 @@ function RangeCalendar({
         {to === null ? (
           <span>{draft.from} — 请选择结束日期</span>
         ) : (
-          <span>{rangeLabel({ from: draft.from, to })}</span>
+          <span>
+            {rangeLabel(completeRange ?? { from: draft.from, to }, false)}
+          </span>
         )}
         <span>北京时间</span>
       </div>
+      {maxRangeEndForStart !== undefined &&
+      endLimit !== undefined &&
+      (to === null || exceedsRangeLimit) ? (
+        <p
+          role={exceedsRangeLimit ? 'alert' : 'status'}
+          className={cn(
+            'm-0 text-[13px]',
+            exceedsRangeLimit ? 'text-err' : 'text-muted-foreground',
+          )}
+        >
+          {to === null
+            ? `选择结束日期不能晚于 ${endLimit}（日期范围最长一个月；倒序选择时按较早日期重新计算）`
+            : `结束日期不能晚于 ${endLimit}（日期范围最长一个月）`}
+        </p>
+      ) : null}
       <div className="grid grid-cols-[1fr_2fr] gap-2 md:flex md:justify-end">
         <Button variant="outline" className="h-12 md:h-9" onClick={onClose}>
           取消
         </Button>
         <Button
           className="h-12 md:h-9"
-          disabled={to === null || to > max}
+          disabled={to === null || to > max || exceedsRangeLimit}
           onClick={() => {
-            if (to !== null && to <= max) onConfirm({ from: draft.from, to });
+            if (
+              to !== null &&
+              completeRange !== null &&
+              to <= max &&
+              !exceedsRangeLimit
+            )
+              onConfirm(completeRange);
           }}
         >
           确定

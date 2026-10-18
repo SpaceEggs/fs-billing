@@ -134,6 +134,34 @@ describe('portal and admin ledger HTTP boundary', () => {
       expect(response.statusCode, filters).toBe(400);
     }
   });
+  it('rejects year zero and accepts the supported year 0001 on both ledger routes', async () => {
+    const paths = [
+      {
+        url: '/api/portal/ledger',
+        headers: requestHeaders(customerCookie),
+        schema: portalLedgerResponseSchema,
+      },
+      {
+        url: `/api/admin/tenants/${fixture.a.tenantId}/ledger`,
+        headers: requestHeaders(adminCookie),
+        schema: adminLedgerResponseSchema,
+      },
+    ];
+    for (const route of paths) {
+      const unsupported = await api.inject({
+        url: `${route.url}?from=0000-01-01&to=0000-01-01`,
+        headers: route.headers,
+      });
+      expect(unsupported.statusCode, unsupported.body).toBe(400);
+
+      const supported = await api.inject({
+        url: `${route.url}?from=0001-01-01&to=0001-01-01`,
+        headers: route.headers,
+      });
+      expect(supported.statusCode, supported.body).toBe(200);
+      expect(route.schema.parse(supported.json()).items).toEqual([]);
+    }
+  });
   it('returns empty items with totals for pages beyond the last page', async () => {
     const response = await api.inject({
       url: `/api/portal/ledger?${range()}&page=99`,

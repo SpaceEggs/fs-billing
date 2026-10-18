@@ -130,20 +130,62 @@ test('ledger range defaults to this Beijing month and filters by a picked range'
   await dialog.getByRole('button', { name: '确认充值' }).click();
   await dialog.getByRole('button', { name: '完成' }).click();
 
+  const ledgerRequests: URL[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (
+      request.method() === 'GET' &&
+      url.pathname.endsWith(`/tenants/${tenant.id}/ledger`)
+    )
+      ledgerRequests.push(url);
+  });
   await page.getByRole('link', { name: '余额流水' }).click();
   const range = page.getByRole('button', { name: /^日期范围（北京时间）：/ });
   await expect(range).toHaveAccessibleName(
     /：\d{4}-\d{2}-01 至 \d{4}-\d{2}-\d{2}$/,
   );
   await expect(page.getByRole('table')).toContainText('+¥20.00');
+  expect(ledgerRequests).toHaveLength(1);
+  const initialFrom = ledgerRequests[0]?.searchParams.get('from');
+  if (!initialFrom) throw new Error('ledger request did not include from');
+  const [currentYearText, currentMonthText] = initialFrom.split('-');
+  if (!currentYearText || !currentMonthText)
+    throw new Error(`invalid ledger date: ${initialFrom}`);
+  const currentYear = Number(currentYearText);
+  const currentMonth = Number(currentMonthText);
+  const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const currentMonthPrefix = `${currentYearText}-${currentMonthText}`;
+  const previousMonthPrefix = `${String(previousYear).padStart(4, '0')}-${String(previousMonth).padStart(2, '0')}`;
+  const previousMonthLastDay = new Date(
+    Date.UTC(previousYear, previousMonth, 0),
+  )
+    .getUTCDate()
+    .toString()
+    .padStart(2, '0');
 
   await range.click();
   const calendar = page.getByRole('dialog', { name: '日期范围（北京时间）' });
   await calendar.getByRole('button', { name: '上个月' }).click();
-  const days = calendar.getByRole('button', { name: /^\d{4}-\d{2}-0[12]$/ });
-  await days.nth(1).click();
-  await days.nth(0).click();
+  await calendar
+    .getByRole('button', { name: `${previousMonthPrefix}-01` })
+    .click();
+  await calendar.getByRole('button', { name: '下个月' }).click();
+  await expect(
+    calendar.getByRole('button', { name: `${currentMonthPrefix}-01` }),
+  ).toBeDisabled();
+  await expect(calendar.getByRole('status')).toContainText(
+    `选择结束日期不能晚于 ${previousMonthPrefix}-${previousMonthLastDay}`,
+  );
+  await expect(calendar.getByRole('button', { name: '确定' })).toBeDisabled();
+  expect(ledgerRequests).toHaveLength(1);
+
+  await calendar.getByRole('button', { name: '上个月' }).click();
+  await calendar
+    .getByRole('button', { name: `${previousMonthPrefix}-02` })
+    .click();
   await calendar.getByRole('button', { name: '确定' }).click();
   await expect(page.getByText('该日期范围内没有余额流水')).toBeVisible();
   await expect(page).toHaveURL(/from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-02/);
+  expect(ledgerRequests).toHaveLength(2);
 });

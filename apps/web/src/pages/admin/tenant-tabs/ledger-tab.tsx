@@ -3,6 +3,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   adminLedgerKindSchema,
+  isDayRangeWithinOneMonth,
+  latestRangeEnd,
   type AdminLedgerRow,
   type Currency,
 } from '@fs-billing/shared';
@@ -211,6 +213,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
   const { kind, page = 1 } = search;
   const now = new Date();
   const range = rangeOrMonthToDate(search, now);
+  const rangeIsOverlong = !isDayRangeWithinOneMonth(range.from, range.to);
   /** 值为 undefined 表示从地址中清除。 */
   const update = (patch: LedgerSearch) =>
     void navigate({
@@ -230,9 +233,10 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         ...range,
       },
     }),
+    enabled: !rangeIsOverlong,
     placeholderData: keepPreviousData,
   });
-  const data = ledger.data;
+  const data = rangeIsOverlong ? undefined : ledger.data;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -240,6 +244,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           label="日期范围（北京时间）"
           value={range}
           max={formatDate(now)}
+          maxRangeEndForStart={latestRangeEnd}
           onChange={(next) => setFilter(next)}
           className="min-w-0 flex-1 md:w-[260px] md:flex-none"
         />
@@ -286,6 +291,15 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         </div>
       </div>
       <RefreshError title="余额流水刷新失败，列表可能不是最新" query={ledger} />
+      {rangeIsOverlong ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-err/30 bg-err/5 px-3.5 py-3 text-[13px] text-err"
+        >
+          日期范围超出一个月上限：{range.from} 至 {range.to}。结束日期不能晚于{' '}
+          {latestRangeEnd(range.from)}。
+        </div>
+      ) : null}
       {data ? (
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] tabular-nums text-muted-foreground">
           <span>
@@ -302,7 +316,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           </span>
         </div>
       ) : null}
-      {ledger.isError && !data ? (
+      {rangeIsOverlong ? null : ledger.isError && !data ? (
         <QueryError
           title="余额流水加载失败"
           error={ledger.error}

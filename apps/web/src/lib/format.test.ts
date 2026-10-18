@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatBilledMinutes,
+  formatDate,
   formatDateTime,
   formatExactMoney,
   formatMoney,
@@ -59,12 +60,15 @@ describe('formatRate', () => {
   });
 });
 
-describe('time formatting in Beijing time', () => {
-  it('shifts UTC instants to UTC+8, crossing the day boundary', () => {
+describe('time formatting in Asia/Shanghai time', () => {
+  it('uses current and historical timezone rules, crossing the day boundary', () => {
     expect(formatDateTime('2026-09-28T16:30:00Z')).toBe('2026-09-29 00:30:00');
     expect(formatDateTime('2026-09-29T06:03:22.000Z')).toBe(
       '2026-09-29 14:03:22',
     );
+    expect(formatDateTime('1988-05-31T15:30:00Z')).toBe('1988-06-01 00:30:00');
+    expect(formatDateTime('0001-01-01T15:59:00Z')).toBe('0001-01-02 00:04:43');
+    expect(formatDate('0001-01-01T15:59:00Z')).toBe('0001-01-02');
   });
 
   it('formats months as YYYY年M月 in Beijing time', () => {
