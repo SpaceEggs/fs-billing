@@ -1,0 +1,9 @@
+{
+  "status": "pass",
+  "command": "set -o noclobber; printf ... > existing-path",
+  "expectedOverwriteExitNonzero": true,
+  "observedExitCode": 1,
+  "sha256Before": "7f1b6e1984c63e5da8caba1e669886ac53c4b9d15b1ccc4bc908b379619df030",
+  "sha256After": "7f1b6e1984c63e5da8caba1e669886ac53c4b9d15b1ccc4bc908b379619df030",
+  "originalHashUnchanged": true
+}

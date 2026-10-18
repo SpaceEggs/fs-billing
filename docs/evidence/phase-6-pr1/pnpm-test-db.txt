@@ -1,0 +1,15 @@
+
+> fs-billing@ test:db /Users/lqzone/.codex/worktrees/phase-6-rls-initplan/FS-Billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-rls-initplan/FS-Billing
+
+
+ Test Files  26 passed (26)
+      Tests  415 passed (415)
+   Start at  02:46:38
+   Duration  64.33s (tests 88%, import 11%)
+
+
+exit_code=0

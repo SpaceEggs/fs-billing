@@ -1,0 +1,32 @@
+Sat Oct 17 17:26:55 UTC 2026
+ 2:26  up 6 days, 11:07, 5 users, load averages: 4.16 4.46 3.72
+10
+  412  36.7 06-11:06:16 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer
+41540  20.0    02:02:04 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/155.0.8059.80/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)
+41609  13.5    02:02:01 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/155.0.8059.80/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)
+ 5936   9.2 06-08:58:05 /Applications/Ghostty.app/Contents/MacOS/ghostty
+54960   8.3       01:26 lazygit
+54574   5.6       04:18 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.40/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)
+41614   4.8    02:02:00 /Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex
+ 9249   3.5 04-05:46:40 /Applications/企业微信.app/Contents/MacOS/企业微信
+  554   2.8 06-11:06:15 /System/Library/DriverExtensions/com.apple.AppleUserHIDDrivers.dext/com.apple.AppleUserHIDDrivers
+  759   2.6 06-11:06:11 /System/Library/CoreServices/NotificationCenter.app/Contents/MacOS/NotificationCenter
+  417   2.2 06-11:06:16 /System/Library/CoreServices/loginwindow.app/Contents/MacOS/loginwindow
+  553   2.2 06-11:06:15 /System/Library/DriverExtensions/com.apple.DriverKit-AppleBCMWLAN.dext/com.apple.DriverKit-AppleBCMWLAN
+{
+  "owner": {
+    "host": "127.0.0.1",
+    "database": "/fs_billing",
+    "role": "fs_billing"
+  },
+  "perf": {
+    "host": "127.0.0.1",
+    "database": "/fs_billing_perf",
+    "role": "fs_billing"
+  },
+  "worker": {
+    "host": "127.0.0.1",
+    "database": "/fs_billing_perf",
+    "role": "fs_billing_app"
+  }
+}

@@ -1,0 +1,15 @@
+
+> fs-billing@ test:idor /Users/lqzone/.codex/worktrees/phase-6-rls-initplan/FS-Billing
+> vitest run --config vitest.db.config.ts apps/api/src/idor.db.test.ts
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/phase-6-rls-initplan/FS-Billing
+
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  02:47:47
+   Duration  4.25s (tests 87%, import 12%, transform 1%)
+
+
+exit_code=0

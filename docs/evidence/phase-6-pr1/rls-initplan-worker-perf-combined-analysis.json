@@ -1,0 +1,154 @@
+{
+  "status": "complete",
+  "interpretation": "Two fixed six-pair Worker runs; this aggregates captured values and does not represent a third run. Sign test is two-sided on the 12 within-run paired p95 differences.",
+  "run1": {
+    "source": "rls-initplan-worker-perf-run1-results-excerpt.json; parsed excerpt from parent tool output; missing 53 index definitions and 55 policy records",
+    "legacy": {
+      "medianMs": 11.4825629999998,
+      "minMs": 9.31204200000002,
+      "maxMs": 12.400666000000001
+    },
+    "initplan": {
+      "medianMs": 12.068520999999691,
+      "minMs": 10.105999999999767,
+      "maxMs": 12.296624999999949
+    },
+    "pairs": [
+      {
+        "round": 1,
+        "order": "AB",
+        "legacy": 9.31204200000002,
+        "initplan": 10.105999999999767,
+        "deltaMs": 0.7939579999997477
+      },
+      {
+        "round": 2,
+        "order": "BA",
+        "initplan": 12.007499999999709,
+        "legacy": 11.269416999999976,
+        "deltaMs": 0.7380829999997331
+      },
+      {
+        "round": 3,
+        "order": "AB",
+        "legacy": 9.401959000000033,
+        "initplan": 11.92633400000068,
+        "deltaMs": 2.5243750000006457
+      },
+      {
+        "round": 4,
+        "order": "BA",
+        "initplan": 12.24566699999923,
+        "legacy": 12.400666000000001,
+        "deltaMs": -0.15499900000077105
+      },
+      {
+        "round": 5,
+        "order": "AB",
+        "legacy": 12.024334000000636,
+        "initplan": 12.129541999999674,
+        "deltaMs": 0.10520799999903829
+      },
+      {
+        "round": 6,
+        "order": "BA",
+        "initplan": 12.296624999999949,
+        "legacy": 11.695708999999624,
+        "deltaMs": 0.6009160000003249
+      }
+    ]
+  },
+  "run2": {
+    "source": "rls-initplan-worker-perf-run2.json; complete runner output",
+    "legacy": {
+      "medianMs": 13.328166500000407,
+      "minMs": 12.281333000000814,
+      "maxMs": 14.268375000000106
+    },
+    "initplan": {
+      "medianMs": 13.790603500000543,
+      "minMs": 12.017041000000063,
+      "maxMs": 14.320334000000003
+    },
+    "pairs": [
+      {
+        "round": 1,
+        "order": "AB",
+        "legacy": 13.17316700000083,
+        "initplan": 14.320334000000003,
+        "deltaMs": 1.1471669999991718
+      },
+      {
+        "round": 2,
+        "order": "BA",
+        "initplan": 14.044582999999875,
+        "legacy": 12.281333000000814,
+        "deltaMs": 1.7632499999990614
+      },
+      {
+        "round": 3,
+        "order": "AB",
+        "legacy": 13.834125000000313,
+        "initplan": 13.728291000000354,
+        "deltaMs": -0.1058339999999589
+      },
+      {
+        "round": 4,
+        "order": "BA",
+        "initplan": 13.131666999999652,
+        "legacy": 13.483165999999983,
+        "deltaMs": -0.35149900000033085
+      },
+      {
+        "round": 5,
+        "order": "AB",
+        "legacy": 14.268375000000106,
+        "initplan": 13.852916000000732,
+        "deltaMs": -0.4154589999993732
+      },
+      {
+        "round": 6,
+        "order": "BA",
+        "initplan": 12.017041000000063,
+        "legacy": 12.472749999999905,
+        "deltaMs": -0.4557089999998425
+      }
+    ]
+  },
+  "combined": {
+    "pairs": 12,
+    "successfulRequests": 24000,
+    "legacy": {
+      "medianMs": 12.340999500000407,
+      "minMs": 9.31204200000002,
+      "maxMs": 14.268375000000106
+    },
+    "initplan": {
+      "medianMs": 12.27114599999959,
+      "minMs": 10.105999999999767,
+      "maxMs": 14.320334000000003
+    },
+    "medianPairedDeltaMs": 0.3530619999996816,
+    "pairedDeltaRangeMs": {
+      "min": -0.4557089999998425,
+      "max": 2.5243750000006457
+    },
+    "positivePairs": 7,
+    "negativePairs": 5,
+    "twoSidedExactSignTestP": 0.7744140625,
+    "maximumSingleRequestMs": 89.42604200000005,
+    "maximumSampleP95Ms": 14.320334000000003
+  },
+  "decision": "Under the user-selected existing 50 ms p95 criterion, both runs pass. Across the two fixed runs, pair directions and run medians differ; the results do not establish an HTTP latency improvement or exclude a small regression. Do not equate the p95-budget pass with no regression.",
+  "acceptance": {
+    "userDecision": {
+      "date": "2026-10-18 JST",
+      "source": "call_0917756c257f4e0d8926c10d864f3ea7",
+      "quote": "按现有 50 ms 上限验收，并完整披露两轮差异。"
+    },
+    "criterion": "Every 1,000-request sample has p95 < 50 ms, as required by the existing Worker authorization benchmark.",
+    "result": "PASS for both fixed six-pair runs: all 24 sample p95 values (12 per run; 6 per variant per run) are below 50 ms; the maximum sample p95 is 14.320334 ms.",
+    "disclosure": "The Worker test does not prove no regression or a speedup. The largest single-request maxMs was 89.426042 ms; the acceptance metric is p95, not maximum latency.",
+    "run1CompleteJsonLost": "The original run1 JSON was overwritten by the run2 capture. The included excerpt is restored from the parent tool output and lacks the 53 index definitions and 55 policy rows; provenance is documented separately."
+  }
+}
