@@ -74,7 +74,15 @@ const networkErrorCodes = new Set([
 // numeric 原样以字符串返回（pg 默认如此）；timestamptz 解析为 Date。
 export function connect(
   url: string,
-  options: Pick<pg.PoolConfig, 'max' | 'connectionTimeoutMillis'> & {
+  options: Pick<
+    pg.PoolConfig,
+    | 'max'
+    | 'connectionTimeoutMillis'
+    | 'application_name'
+    | 'idleTimeoutMillis'
+    | 'statement_timeout'
+    | 'idle_in_transaction_session_timeout'
+  > & {
     logger?: PoolErrorLogger;
     poolName?: string;
   } = {},

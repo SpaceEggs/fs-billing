@@ -1,0 +1,5634 @@
+{
+  "runId": "6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e",
+  "startedAtUtc": "2026-10-19T14:25:02.500Z",
+  "capturedAtUtc": "2026-10-19T14:25:34.414Z",
+  "gitHead": "74f27a9d1da540898443f1ca55c68675bd83333f",
+  "nodeArguments": [
+    "--env-file=/Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/.env",
+    "--import",
+    "tsx"
+  ],
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "databaseHost": "127.0.0.1",
+  "databasePort": "5432",
+  "databaseProfile": {
+    "id": "fs_billing_perf_pr3_uuid_v4:fs_billing_app:server-81ceda2d:journal-4385c314f1a7:cdr-indexes-f8043ccb4ef1",
+    "serverVersion": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "repositoryMigrationJournalSha256": "4385c314f1a7cfb6590099e22560a2e7774fc0d907fd136c866a139b4fb95e03",
+    "appliedMigrations": {
+      "count": 16,
+      "latestHash": "6444d3f11720a9821ca4f69e5809c90abca9a1ccf545f63847c161fd27a0bbc8",
+      "latestCreatedAt": "2026-10-28T00:00:00.000Z"
+    },
+    "cdrIndexDefinitionsSha256": "f8043ccb4ef14dfe6c16ce704fc71b0a68ddf1688bd29c4192474ad4dccf8c7f"
+  },
+  "connectionIdentities": {
+    "owner": {
+      "database": "fs_billing_perf_pr3_uuid_v4",
+      "role": "fs_billing"
+    },
+    "auth": {
+      "database": "fs_billing_perf_pr3_uuid_v4",
+      "role": "fs_billing_auth"
+    },
+    "app": {
+      "database": "fs_billing_perf_pr3_uuid_v4",
+      "role": "fs_billing_app"
+    }
+  },
+  "fixtureCounts": {
+    "PORTALBIG": 3000000,
+    "PORTALS3": 30000,
+    "EXPORT50K": 50000,
+    "EXPORT100K": 100000,
+    "EXPORT200K": 200000
+  },
+  "dateRange": {
+    "from": "2026-09-01",
+    "to": "2026-09-30"
+  },
+  "host": {
+    "loadAverage": [2.015625, 2.810546875, 3.44287109375],
+    "cores": 10,
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "rounds": 5,
+  "sourceHashes": {
+    "apps/api/scripts/portal-export-perf.ts": "03bf8d28ef31bb03fdf95e82183e0ca37e1a8ff9a927a4d6ac609ab3bf9520d3",
+    "apps/api/scripts/portal-list-perf.ts": "82a923bec8edb8f013400ef194ae5e76d4d2ee66a9405f5c2c577eb3fbf4041c",
+    "apps/api/scripts/portal-memory-gc.mjs": "a90acde1aa67272d32af59642298181a067352375078c568dc931cbfc08bf616",
+    "apps/api/src/export/stream-csv.ts": "6ea159093916f79d4f2cfe0824b548f60e3b3ed6100b00b4f174725859cf1566",
+    "apps/api/src/routes/exports.ts": "321851a7b2e42f20be3a3ccea191b552d193be7053267ca7644634e3d210705b",
+    "apps/api/src/export/slots.ts": "709d55ded8bd7e49833fc601a012d3464b68a4c8935828a8eefeb87e85add5bf",
+    "packages/rating/src/csv.ts": "dd41f4d7af54fbe10b80983e4d8a67130be9e0fea9d3985e8c6baff0f176e2e6",
+    "packages/db/src/cdr-query.ts": "8a148efb8629ffc4d6c31fbad4c3c22a653cd93d77e01801259cb01b63249b9c",
+    "packages/db/src/bounded-export-client.ts": "a383b85b67eb2f2784c9a9a0c73bf54cb0a478c10143b4feef6778222bf92734",
+    "packages/db/src/cancel-postgres.ts": "9387861a1a89af29f5d12aabd07f8042c13c5a5c1a9234d533c79e05a5bcd211",
+    "packages/db/src/client.ts": "2b95e3a5dff4c68b6f4080b31c04fc71d3d043d83de8e3fecbcee8e3944eb675",
+    "apps/api/src/app.ts": "d0cd48f5a180594615e92185e86162c74690c3fe84c3bf66882846cb326455f7",
+    "packages/db/src/portal/cdrs.ts": "4fae4da1dd05a476ecde20bc15a28d7b12bcf90884b05e4a366773f806a7308a",
+    "packages/db/src/admin/cdrs.ts": "6b58a6062ee6ed5b83f59c5f283ef4cc7f1a11cff85f39729d8be10862886119",
+    "pnpm-lock.yaml": "f4557d6d5ad93da2776514c5da739874a6f22277907181647e2a3e8df721a270"
+  },
+  "sourceHashesAfter": {
+    "apps/api/scripts/portal-export-perf.ts": "03bf8d28ef31bb03fdf95e82183e0ca37e1a8ff9a927a4d6ac609ab3bf9520d3",
+    "apps/api/scripts/portal-list-perf.ts": "82a923bec8edb8f013400ef194ae5e76d4d2ee66a9405f5c2c577eb3fbf4041c",
+    "apps/api/scripts/portal-memory-gc.mjs": "a90acde1aa67272d32af59642298181a067352375078c568dc931cbfc08bf616",
+    "apps/api/src/export/stream-csv.ts": "6ea159093916f79d4f2cfe0824b548f60e3b3ed6100b00b4f174725859cf1566",
+    "apps/api/src/routes/exports.ts": "321851a7b2e42f20be3a3ccea191b552d193be7053267ca7644634e3d210705b",
+    "apps/api/src/export/slots.ts": "709d55ded8bd7e49833fc601a012d3464b68a4c8935828a8eefeb87e85add5bf",
+    "packages/rating/src/csv.ts": "dd41f4d7af54fbe10b80983e4d8a67130be9e0fea9d3985e8c6baff0f176e2e6",
+    "packages/db/src/cdr-query.ts": "8a148efb8629ffc4d6c31fbad4c3c22a653cd93d77e01801259cb01b63249b9c",
+    "packages/db/src/bounded-export-client.ts": "a383b85b67eb2f2784c9a9a0c73bf54cb0a478c10143b4feef6778222bf92734",
+    "packages/db/src/cancel-postgres.ts": "9387861a1a89af29f5d12aabd07f8042c13c5a5c1a9234d533c79e05a5bcd211",
+    "packages/db/src/client.ts": "2b95e3a5dff4c68b6f4080b31c04fc71d3d043d83de8e3fecbcee8e3944eb675",
+    "apps/api/src/app.ts": "d0cd48f5a180594615e92185e86162c74690c3fe84c3bf66882846cb326455f7",
+    "packages/db/src/portal/cdrs.ts": "4fae4da1dd05a476ecde20bc15a28d7b12bcf90884b05e4a366773f806a7308a",
+    "packages/db/src/admin/cdrs.ts": "6b58a6062ee6ed5b83f59c5f283ef4cc7f1a11cff85f39729d8be10862886119",
+    "pnpm-lock.yaml": "f4557d6d5ad93da2776514c5da739874a6f22277907181647e2a3e8df721a270"
+  },
+  "sourceUnchanged": true,
+  "apiPid": 63065,
+  "method": "One real API child; no warmup exports; six cases alternate forward/reverse each round then portal/admin 200k repeats. Each export consumes/counts the complete CSV with bounded client buffers, verifies same-request server completion and clean database activity, and records three forced full GCs on separate event-loop turns before/after. RSS is sampled with ps every 50ms plus request start/end; sub-50ms peaks can be missed. Heap telemetry comes from that API child, not the load generator. GC is diagnostic and differs from normal production collection. No numeric memory pass threshold is imposed.",
+  "evidenceCaptureCommand": "cd apps/api && PERF_TARGET_DATABASE=fs_billing_perf_pr3_uuid_v4 PERF_DATABASE_PORT=5432 PERF_MEMORY=1 PERF_GC_ON_SIGUSR2=1 PERF_ROUNDS=5 node '--env-file=/Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/.env' '--import' 'tsx' scripts/portal-export-perf.ts",
+  "cleanup": {
+    "apiChild": {
+      "gracefulExit": true,
+      "forcedKill": false,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "auditRows": 20,
+    "adminRows": 1,
+    "portalAccountRows": 4,
+    "sessionRows": 5,
+    "userRows": 5
+  },
+  "cleanupErrors": [],
+  "createdRows": {
+    "userIds": [
+      "pr3-perf-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000001",
+      "pr3-perf-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000006",
+      "pr3-perf-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000005",
+      "pr3-perf-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000007",
+      "pr3-perf-admin-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000001"
+    ],
+    "portalAccountIds": [
+      "bec6b612-a701-473d-b051-ddd148c378e1",
+      "8edb6843-26cd-4720-8681-df5e3c684c54",
+      "7a41b89c-4b2b-4023-9eb1-a77899627e29",
+      "f4b03c37-5d4f-4f87-9091-58badf503a37"
+    ],
+    "adminIds": ["9f59a8e3-7a62-404a-a81b-498b13072ffc"],
+    "sessionIds": [
+      "pr3-perf-session-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000001",
+      "pr3-perf-session-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000006",
+      "pr3-perf-session-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000005",
+      "pr3-perf-session-portal-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000007",
+      "pr3-perf-session-admin-6bb0f85c-ef1e-46c0-8e4c-148eda1b8b3e-00000000-0000-4000-8000-000000000001"
+    ],
+    "auditIds": [
+      "4b6efa47-8f36-47eb-bec0-0e5563de17a2",
+      "cd7d1635-7776-462a-8d3a-2851a73ca052",
+      "d204b5ca-e964-4424-8b1a-e8238756406c",
+      "c2d7afe2-2818-4280-b914-5e177d89740d",
+      "ffb601d7-f705-4f70-981f-273d2f7c1ba5",
+      "17c752d0-0b53-4abc-9bbe-794b6a9e432a",
+      "ffb128bb-b80c-42e3-8606-cb9ac6a76f93",
+      "1aa0f5e1-ad6a-4a2e-afaf-7054657eb6ec",
+      "8a4627bc-18ed-4411-81ff-655bff7c5142",
+      "ea0a3808-d1c9-48a0-a0e1-a2daec6db0ba",
+      "c8bf70e1-ff70-47b3-8398-00112c8fffac",
+      "6af6dc88-1e1c-41a3-926f-c0c1441ac8e9",
+      "fbdb122a-e04c-4cb4-8401-52beaa71b513",
+      "3446b4cf-ab35-4d75-9638-253f9f5f09cf",
+      "4b06ed0d-e91e-474b-9176-bb502220127a",
+      "8e300475-9061-485f-9379-87525e3da068",
+      "caa7d8a4-d589-4c0f-9916-a57d2f23abfd",
+      "79692e3c-38bb-4da2-b46f-a824cedd71d0",
+      "b15cade2-1314-4844-aa3b-d64e8612ee7f",
+      "39f7a0f6-5f34-4807-a958-6f81eaf3ed48"
+    ]
+  },
+  "failures": [],
+  "summaries": [
+    {
+      "scenario": "admin-EXPORT50K",
+      "samples": 5,
+      "postGcHeapUsedBytes": {
+        "median": 39015112,
+        "min": 38750176,
+        "max": 40732256
+      },
+      "baselineRssBytes": {
+        "median": 260358144,
+        "min": 180191232,
+        "max": 283688960
+      },
+      "peakRssBytes": {
+        "median": 263831552,
+        "min": 202981376,
+        "max": 287260672
+      },
+      "peakRssDeltaBytes": {
+        "median": 3473408,
+        "min": 3473408,
+        "max": 22790144
+      },
+      "retainedHeapDeltaBytes": {
+        "median": 5256,
+        "min": -10352,
+        "max": 632424
+      },
+      "elapsedMs": {
+        "median": 287.5,
+        "min": 237.9,
+        "max": 419
+      }
+    },
+    {
+      "scenario": "portal-EXPORT50K",
+      "samples": 5,
+      "postGcHeapUsedBytes": {
+        "median": 39014624,
+        "min": 38745160,
+        "max": 40886384
+      },
+      "baselineRssBytes": {
+        "median": 258834432,
+        "min": 197804032,
+        "max": 271892480
+      },
+      "peakRssBytes": {
+        "median": 262291456,
+        "min": 201900032,
+        "max": 275791872
+      },
+      "peakRssDeltaBytes": {
+        "median": 3457024,
+        "min": 3440640,
+        "max": 4096000
+      },
+      "retainedHeapDeltaBytes": {
+        "median": 48,
+        "min": -20048,
+        "max": 144848
+      },
+      "elapsedMs": {
+        "median": 237.8,
+        "min": 226.2,
+        "max": 247.4
+      }
+    },
+    {
+      "scenario": "admin-EXPORT100K",
+      "samples": 5,
+      "postGcHeapUsedBytes": {
+        "median": 39034912,
+        "min": 38763912,
+        "max": 40967224
+      },
+      "baselineRssBytes": {
+        "median": 258736128,
+        "min": 200114176,
+        "max": 272351232
+      },
+      "peakRssBytes": {
+        "median": 262291456,
+        "min": 234864640,
+        "max": 277561344
+      },
+      "peakRssDeltaBytes": {
+        "median": 3555328,
+        "min": 3489792,
+        "max": 34750464
+      },
+      "retainedHeapDeltaBytes": {
+        "median": 53048,
+        "min": 12184,
+        "max": 80952
+      },
+      "elapsedMs": {
+        "median": 485.8,
+        "min": 476.8,
+        "max": 520.7
+      }
+    },
+    {
+      "scenario": "portal-EXPORT100K",
+      "samples": 5,
+      "postGcHeapUsedBytes": {
+        "median": 39021136,
+        "min": 38711312,
+        "max": 40999480
+      },
+      "baselineRssBytes": {
+        "median": 259342336,
+        "min": 233160704,
+        "max": 275824640
+      },
+      "peakRssBytes": {
+        "median": 262799360,
+        "min": 235421696,
+        "max": 279281664
+      },
+      "peakRssDeltaBytes": {
+        "median": 3457024,
+        "min": 2260992,
+        "max": 3457024
+      },
+      "retainedHeapDeltaBytes": {
+        "median": -9160,
+        "min": -32864,
+        "max": 32528
+      },
+      "elapsedMs": {
+        "median": 443.8,
+        "min": 440.3,
+        "max": 459.6
+      }
+    },
+    {
+      "scenario": "admin-EXPORT200K",
+      "samples": 5,
+      "postGcHeapUsedBytes": {
+        "median": 39052336,
+        "min": 38744552,
+        "max": 40090152
+      },
+      "baselineRssBytes": {
+        "median": 265551872,
+        "min": 231686144,
+        "max": 280805376
+      },
+      "peakRssBytes": {
+        "median": 271253504,
+        "min": 240828416,
+        "max": 284278784
+      },
+      "peakRssDeltaBytes": {
+        "median": 5701632,
+        "min": 3473408,
+        "max": 9142272
+      },
+      "retainedHeapDeltaBytes": {
+        "median": 31816,
+        "min": -909296,
+        "max": 43440
+      },
+      "elapsedMs": {
+        "median": 939.5,
+        "min": 938.4,
+        "max": 1112
+      }
+    },
+    {
+      "scenario": "portal-EXPORT200K",
+      "samples": 5,
+      "postGcHeapUsedBytes": {
+        "median": 39051560,
+        "min": 38713024,
+        "max": 40178040
+      },
+      "baselineRssBytes": {
+        "median": 264519680,
+        "min": 237355008,
+        "max": 280788992
+      },
+      "peakRssBytes": {
+        "median": 268976128,
+        "min": 248872960,
+        "max": 285966336
+      },
+      "peakRssDeltaBytes": {
+        "median": 4456448,
+        "min": 3473408,
+        "max": 11517952
+      },
+      "retainedHeapDeltaBytes": {
+        "median": 22016,
+        "min": -6832,
+        "max": 143696
+      },
+      "elapsedMs": {
+        "median": 969.4,
+        "min": 887.1,
+        "max": 981.2
+      }
+    }
+  ],
+  "repeated200k": [
+    {
+      "scenario": "admin-EXPORT200K",
+      "samples": 5,
+      "peakRssDeltaBytes": {
+        "median": 3932160,
+        "min": 3506176,
+        "max": 11124736
+      },
+      "postGcHeapUsedBytes": {
+        "median": 39058496,
+        "min": 38417016,
+        "max": 39078168
+      }
+    },
+    {
+      "scenario": "portal-EXPORT200K",
+      "samples": 5,
+      "peakRssDeltaBytes": {
+        "median": 5177344,
+        "min": 3457024,
+        "max": 19447808
+      },
+      "postGcHeapUsedBytes": {
+        "median": 39029784,
+        "min": 38569616,
+        "max": 39076192
+      }
+    }
+  ],
+  "samples": [
+    {
+      "round": 1,
+      "scenario": "admin-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 1,
+        "pid": 63065,
+        "rss": 180191232,
+        "heapUsed": 40099832,
+        "heapTotal": 79740928,
+        "external": 6147531,
+        "arrayBuffers": 2185010
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 2,
+        "pid": 63065,
+        "rss": 197804032,
+        "heapUsed": 40732256,
+        "heapTotal": 80003072,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "admin-EXPORT50K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-2",
+        "elapsedMs": 419,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9492390,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 419,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-2",
+        "rows": 50000,
+        "elapsedMs": 398,
+        "result": "success"
+      },
+      "baselineRssBytes": 180191232,
+      "peakRssBytes": 202981376,
+      "peakRssDeltaBytes": 22790144,
+      "retainedHeapDeltaBytes": 632424,
+      "rss": [
+        {
+          "elapsedMs": 3,
+          "receivedRows": 0,
+          "rssBytes": 180191232
+        },
+        {
+          "elapsedMs": 57,
+          "receivedRows": 0,
+          "rssBytes": 180404224
+        },
+        {
+          "elapsedMs": 110,
+          "receivedRows": 0,
+          "rssBytes": 180469760
+        },
+        {
+          "elapsedMs": 168,
+          "receivedRows": 0,
+          "rssBytes": 183844864
+        },
+        {
+          "elapsedMs": 214,
+          "receivedRows": 10000,
+          "rssBytes": 179421184
+        },
+        {
+          "elapsedMs": 264,
+          "receivedRows": 20000,
+          "rssBytes": 180256768
+        },
+        {
+          "elapsedMs": 314,
+          "receivedRows": 30000,
+          "rssBytes": 189005824
+        },
+        {
+          "elapsedMs": 365,
+          "receivedRows": 40000,
+          "rssBytes": 198148096
+        },
+        {
+          "elapsedMs": 416,
+          "receivedRows": 45000,
+          "rssBytes": 202981376
+        },
+        {
+          "elapsedMs": 425,
+          "receivedRows": 50000,
+          "rssBytes": 202981376
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "portal-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 3,
+        "pid": 63065,
+        "rss": 197804032,
+        "heapUsed": 40741536,
+        "heapTotal": 80003072,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 4,
+        "pid": 63065,
+        "rss": 200114176,
+        "heapUsed": 40886384,
+        "heapTotal": 80003072,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "portal-EXPORT50K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-3",
+        "elapsedMs": 245,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9435981,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 244.9,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-3",
+        "rows": 50000,
+        "elapsedMs": 237,
+        "result": "success"
+      },
+      "baselineRssBytes": 197804032,
+      "peakRssBytes": 201900032,
+      "peakRssDeltaBytes": 4096000,
+      "retainedHeapDeltaBytes": 144848,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 197804032
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 199524352
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 15346,
+          "rssBytes": 201900032
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 30000,
+          "rssBytes": 201703424
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 201703424
+        },
+        {
+          "elapsedMs": 250,
+          "receivedRows": 50000,
+          "rssBytes": 201834496
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "admin-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 5,
+        "pid": 63065,
+        "rss": 200114176,
+        "heapUsed": 40886272,
+        "heapTotal": 80003072,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 6,
+        "pid": 63065,
+        "rss": 233160704,
+        "heapUsed": 40967224,
+        "heapTotal": 80265216,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "admin-EXPORT100K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-4",
+        "elapsedMs": 520.7,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18985394,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 520.7,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-4",
+        "rows": 100000,
+        "elapsedMs": 513,
+        "result": "success"
+      },
+      "baselineRssBytes": 200114176,
+      "peakRssBytes": 234864640,
+      "peakRssDeltaBytes": 34750464,
+      "retainedHeapDeltaBytes": 80952,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 200114176
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 0,
+          "rssBytes": 200179712
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 10000,
+          "rssBytes": 201949184
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 20000,
+          "rssBytes": 204079104
+        },
+        {
+          "elapsedMs": 207,
+          "receivedRows": 30000,
+          "rssBytes": 202407936
+        },
+        {
+          "elapsedMs": 262,
+          "receivedRows": 45000,
+          "rssBytes": 202407936
+        },
+        {
+          "elapsedMs": 314,
+          "receivedRows": 55000,
+          "rssBytes": 206684160
+        },
+        {
+          "elapsedMs": 364,
+          "receivedRows": 65000,
+          "rssBytes": 214335488
+        },
+        {
+          "elapsedMs": 417,
+          "receivedRows": 80000,
+          "rssBytes": 221839360
+        },
+        {
+          "elapsedMs": 468,
+          "receivedRows": 85000,
+          "rssBytes": 230440960
+        },
+        {
+          "elapsedMs": 526,
+          "receivedRows": 100000,
+          "rssBytes": 234864640
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "portal-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 7,
+        "pid": 63065,
+        "rss": 233160704,
+        "heapUsed": 40966952,
+        "heapTotal": 80265216,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 8,
+        "pid": 63065,
+        "rss": 231686144,
+        "heapUsed": 40999480,
+        "heapTotal": 80265216,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "portal-EXPORT100K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-5",
+        "elapsedMs": 449.4,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18873057,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 449.4,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-5",
+        "rows": 100000,
+        "elapsedMs": 444,
+        "result": "success"
+      },
+      "baselineRssBytes": 233160704,
+      "peakRssBytes": 235421696,
+      "peakRssDeltaBytes": 2260992,
+      "retainedHeapDeltaBytes": 32528,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 233160704
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 235061248
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 20000,
+          "rssBytes": 235257856
+        },
+        {
+          "elapsedMs": 155,
+          "receivedRows": 30000,
+          "rssBytes": 235421696
+        },
+        {
+          "elapsedMs": 206,
+          "receivedRows": 40000,
+          "rssBytes": 232341504
+        },
+        {
+          "elapsedMs": 257,
+          "receivedRows": 55000,
+          "rssBytes": 235028480
+        },
+        {
+          "elapsedMs": 308,
+          "receivedRows": 65000,
+          "rssBytes": 233390080
+        },
+        {
+          "elapsedMs": 359,
+          "receivedRows": 75000,
+          "rssBytes": 233390080
+        },
+        {
+          "elapsedMs": 410,
+          "receivedRows": 90000,
+          "rssBytes": 233390080
+        },
+        {
+          "elapsedMs": 454,
+          "receivedRows": 100000,
+          "rssBytes": 235110400
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 9,
+        "pid": 63065,
+        "rss": 231686144,
+        "heapUsed": 40999448,
+        "heapTotal": 80265216,
+        "external": 6157811,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 10,
+        "pid": 63065,
+        "rss": 237355008,
+        "heapUsed": 40090152,
+        "heapTotal": 80003072,
+        "external": 6154217,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-6",
+        "elapsedMs": 998.1,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 998.1,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-6",
+        "rows": 200000,
+        "elapsedMs": 992,
+        "result": "success"
+      },
+      "baselineRssBytes": 231686144,
+      "peakRssBytes": 240828416,
+      "peakRssDeltaBytes": 9142272,
+      "retainedHeapDeltaBytes": -909296,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 231686144
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 231702528
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 5000,
+          "rssBytes": 236175360
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 15000,
+          "rssBytes": 234438656
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 25000,
+          "rssBytes": 235110400
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 35000,
+          "rssBytes": 236011520
+        },
+        {
+          "elapsedMs": 310,
+          "receivedRows": 45000,
+          "rssBytes": 236011520
+        },
+        {
+          "elapsedMs": 363,
+          "receivedRows": 60000,
+          "rssBytes": 233930752
+        },
+        {
+          "elapsedMs": 413,
+          "receivedRows": 70000,
+          "rssBytes": 235667456
+        },
+        {
+          "elapsedMs": 463,
+          "receivedRows": 80000,
+          "rssBytes": 233930752
+        },
+        {
+          "elapsedMs": 519,
+          "receivedRows": 95000,
+          "rssBytes": 235700224
+        },
+        {
+          "elapsedMs": 573,
+          "receivedRows": 105000,
+          "rssBytes": 235700224
+        },
+        {
+          "elapsedMs": 623,
+          "receivedRows": 115000,
+          "rssBytes": 233963520
+        },
+        {
+          "elapsedMs": 674,
+          "receivedRows": 125000,
+          "rssBytes": 235749376
+        },
+        {
+          "elapsedMs": 724,
+          "receivedRows": 135000,
+          "rssBytes": 235732992
+        },
+        {
+          "elapsedMs": 774,
+          "receivedRows": 150000,
+          "rssBytes": 235732992
+        },
+        {
+          "elapsedMs": 825,
+          "receivedRows": 160000,
+          "rssBytes": 233963520
+        },
+        {
+          "elapsedMs": 876,
+          "receivedRows": 170000,
+          "rssBytes": 235700224
+        },
+        {
+          "elapsedMs": 928,
+          "receivedRows": 180000,
+          "rssBytes": 235716608
+        },
+        {
+          "elapsedMs": 979,
+          "receivedRows": 195000,
+          "rssBytes": 235765760
+        },
+        {
+          "elapsedMs": 1002,
+          "receivedRows": 200000,
+          "rssBytes": 240828416
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 11,
+        "pid": 63065,
+        "rss": 237355008,
+        "heapUsed": 40089984,
+        "heapTotal": 80003072,
+        "external": 6154217,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 12,
+        "pid": 63065,
+        "rss": 245448704,
+        "heapUsed": 40178040,
+        "heapTotal": 80003072,
+        "external": 6154217,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-7",
+        "elapsedMs": 887.1,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 887.1,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-7",
+        "rows": 200000,
+        "elapsedMs": 881,
+        "result": "success"
+      },
+      "baselineRssBytes": 237355008,
+      "peakRssBytes": 248872960,
+      "peakRssDeltaBytes": 11517952,
+      "retainedHeapDeltaBytes": 88056,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 237355008
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 240844800
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 20000,
+          "rssBytes": 241221632
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 241254400
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 240762880
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 55000,
+          "rssBytes": 240762880
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 65000,
+          "rssBytes": 240762880
+        },
+        {
+          "elapsedMs": 360,
+          "receivedRows": 75000,
+          "rssBytes": 239042560
+        },
+        {
+          "elapsedMs": 412,
+          "receivedRows": 90000,
+          "rssBytes": 240762880
+        },
+        {
+          "elapsedMs": 464,
+          "receivedRows": 100000,
+          "rssBytes": 239042560
+        },
+        {
+          "elapsedMs": 515,
+          "receivedRows": 110000,
+          "rssBytes": 240713728
+        },
+        {
+          "elapsedMs": 566,
+          "receivedRows": 125000,
+          "rssBytes": 246513664
+        },
+        {
+          "elapsedMs": 615,
+          "receivedRows": 135000,
+          "rssBytes": 248266752
+        },
+        {
+          "elapsedMs": 666,
+          "receivedRows": 145000,
+          "rssBytes": 248872960
+        },
+        {
+          "elapsedMs": 717,
+          "receivedRows": 160000,
+          "rssBytes": 248872960
+        },
+        {
+          "elapsedMs": 767,
+          "receivedRows": 170000,
+          "rssBytes": 248872960
+        },
+        {
+          "elapsedMs": 819,
+          "receivedRows": 180000,
+          "rssBytes": 248872960
+        },
+        {
+          "elapsedMs": 870,
+          "receivedRows": 195000,
+          "rssBytes": 248872960
+        },
+        {
+          "elapsedMs": 891,
+          "receivedRows": 200000,
+          "rssBytes": 247169024
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 13,
+        "pid": 63065,
+        "rss": 245448704,
+        "heapUsed": 40177752,
+        "heapTotal": 80265216,
+        "external": 6154217,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 14,
+        "pid": 63065,
+        "rss": 252166144,
+        "heapUsed": 38417016,
+        "heapTotal": 79052800,
+        "external": 6159004,
+        "arrayBuffers": 2201394
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-8",
+        "elapsedMs": 978.9,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 978.9,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-8",
+        "rows": 200000,
+        "elapsedMs": 971,
+        "result": "success"
+      },
+      "baselineRssBytes": 245448704,
+      "peakRssBytes": 256573440,
+      "peakRssDeltaBytes": 11124736,
+      "retainedHeapDeltaBytes": -1760736,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 245448704
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 245448704
+        },
+        {
+          "elapsedMs": 110,
+          "receivedRows": 15000,
+          "rssBytes": 247185408
+        },
+        {
+          "elapsedMs": 161,
+          "receivedRows": 25000,
+          "rssBytes": 248922112
+        },
+        {
+          "elapsedMs": 211,
+          "receivedRows": 35000,
+          "rssBytes": 247185408
+        },
+        {
+          "elapsedMs": 264,
+          "receivedRows": 50000,
+          "rssBytes": 248954880
+        },
+        {
+          "elapsedMs": 314,
+          "receivedRows": 60000,
+          "rssBytes": 247218176
+        },
+        {
+          "elapsedMs": 366,
+          "receivedRows": 70000,
+          "rssBytes": 247234560
+        },
+        {
+          "elapsedMs": 416,
+          "receivedRows": 80000,
+          "rssBytes": 247234560
+        },
+        {
+          "elapsedMs": 468,
+          "receivedRows": 90000,
+          "rssBytes": 248971264
+        },
+        {
+          "elapsedMs": 519,
+          "receivedRows": 105000,
+          "rssBytes": 248971264
+        },
+        {
+          "elapsedMs": 569,
+          "receivedRows": 115000,
+          "rssBytes": 247234560
+        },
+        {
+          "elapsedMs": 620,
+          "receivedRows": 125000,
+          "rssBytes": 249004032
+        },
+        {
+          "elapsedMs": 671,
+          "receivedRows": 135000,
+          "rssBytes": 249004032
+        },
+        {
+          "elapsedMs": 721,
+          "receivedRows": 145000,
+          "rssBytes": 247267328
+        },
+        {
+          "elapsedMs": 771,
+          "receivedRows": 155000,
+          "rssBytes": 249020416
+        },
+        {
+          "elapsedMs": 821,
+          "receivedRows": 165000,
+          "rssBytes": 247300096
+        },
+        {
+          "elapsedMs": 878,
+          "receivedRows": 180000,
+          "rssBytes": 249036800
+        },
+        {
+          "elapsedMs": 932,
+          "receivedRows": 190000,
+          "rssBytes": 254738432
+        },
+        {
+          "elapsedMs": 977,
+          "receivedRows": 195343,
+          "rssBytes": 256573440
+        },
+        {
+          "elapsedMs": 983,
+          "receivedRows": 200000,
+          "rssBytes": 256573440
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 15,
+        "pid": 63065,
+        "rss": 252166144,
+        "heapUsed": 38416728,
+        "heapTotal": 79314944,
+        "external": 6159004,
+        "arrayBuffers": 2201394
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 16,
+        "pid": 63065,
+        "rss": 264519680,
+        "heapUsed": 38569616,
+        "heapTotal": 79314944,
+        "external": 6150812,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 1,
+        "requestId": "req-9",
+        "elapsedMs": 867.8,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 867.8,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-9",
+        "rows": 200000,
+        "elapsedMs": 862,
+        "result": "success"
+      },
+      "baselineRssBytes": 252166144,
+      "peakRssBytes": 267943936,
+      "peakRssDeltaBytes": 15777792,
+      "retainedHeapDeltaBytes": 152888,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 252166144
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 255688704
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 255836160
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 30000,
+          "rssBytes": 254164992
+        },
+        {
+          "elapsedMs": 211,
+          "receivedRows": 45000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 261,
+          "receivedRows": 55000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 316,
+          "receivedRows": 70000,
+          "rssBytes": 254672896
+        },
+        {
+          "elapsedMs": 366,
+          "receivedRows": 80000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 418,
+          "receivedRows": 90000,
+          "rssBytes": 254672896
+        },
+        {
+          "elapsedMs": 468,
+          "receivedRows": 105000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 519,
+          "receivedRows": 115000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 570,
+          "receivedRows": 125000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 619,
+          "receivedRows": 140000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 670,
+          "receivedRows": 150000,
+          "rssBytes": 254672896
+        },
+        {
+          "elapsedMs": 725,
+          "receivedRows": 165000,
+          "rssBytes": 256393216
+        },
+        {
+          "elapsedMs": 775,
+          "receivedRows": 175000,
+          "rssBytes": 256409600
+        },
+        {
+          "elapsedMs": 826,
+          "receivedRows": 185000,
+          "rssBytes": 264257536
+        },
+        {
+          "elapsedMs": 872,
+          "receivedRows": 200000,
+          "rssBytes": 267943936
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 17,
+        "pid": 63065,
+        "rss": 264519680,
+        "heapUsed": 38569328,
+        "heapTotal": 79314944,
+        "external": 6150812,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 18,
+        "pid": 63065,
+        "rss": 265551872,
+        "heapUsed": 38713024,
+        "heapTotal": 79314944,
+        "external": 6150812,
+        "arrayBuffers": 2193202
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-a",
+        "elapsedMs": 969.4,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 969.3,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-a",
+        "rows": 200000,
+        "elapsedMs": 964,
+        "result": "success"
+      },
+      "baselineRssBytes": 264519680,
+      "peakRssBytes": 268976128,
+      "peakRssDeltaBytes": 4456448,
+      "retainedHeapDeltaBytes": 143696,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 264519680
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 268288000
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 268730368
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 268926976
+        },
+        {
+          "elapsedMs": 206,
+          "receivedRows": 40000,
+          "rssBytes": 268943360
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 55000,
+          "rssBytes": 268943360
+        },
+        {
+          "elapsedMs": 308,
+          "receivedRows": 65000,
+          "rssBytes": 268943360
+        },
+        {
+          "elapsedMs": 359,
+          "receivedRows": 75000,
+          "rssBytes": 268943360
+        },
+        {
+          "elapsedMs": 409,
+          "receivedRows": 90000,
+          "rssBytes": 268943360
+        },
+        {
+          "elapsedMs": 460,
+          "receivedRows": 100000,
+          "rssBytes": 267223040
+        },
+        {
+          "elapsedMs": 514,
+          "receivedRows": 115000,
+          "rssBytes": 268976128
+        },
+        {
+          "elapsedMs": 565,
+          "receivedRows": 125000,
+          "rssBytes": 267255808
+        },
+        {
+          "elapsedMs": 638,
+          "receivedRows": 135000,
+          "rssBytes": 268976128
+        },
+        {
+          "elapsedMs": 675,
+          "receivedRows": 140000,
+          "rssBytes": 268959744
+        },
+        {
+          "elapsedMs": 721,
+          "receivedRows": 145000,
+          "rssBytes": 267239424
+        },
+        {
+          "elapsedMs": 772,
+          "receivedRows": 155000,
+          "rssBytes": 268959744
+        },
+        {
+          "elapsedMs": 824,
+          "receivedRows": 165346,
+          "rssBytes": 268959744
+        },
+        {
+          "elapsedMs": 876,
+          "receivedRows": 180000,
+          "rssBytes": 268959744
+        },
+        {
+          "elapsedMs": 925,
+          "receivedRows": 190000,
+          "rssBytes": 268959744
+        },
+        {
+          "elapsedMs": 974,
+          "receivedRows": 200000,
+          "rssBytes": 267272192
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 19,
+        "pid": 63065,
+        "rss": 265551872,
+        "heapUsed": 38712736,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193202
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 20,
+        "pid": 63065,
+        "rss": 267632640,
+        "heapUsed": 38744552,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-b",
+        "elapsedMs": 939.5,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 939.5,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-b",
+        "rows": 200000,
+        "elapsedMs": 934,
+        "result": "success"
+      },
+      "baselineRssBytes": 265551872,
+      "peakRssBytes": 271253504,
+      "peakRssDeltaBytes": 5701632,
+      "retainedHeapDeltaBytes": 31816,
+      "rss": [
+        {
+          "elapsedMs": 3,
+          "receivedRows": 0,
+          "rssBytes": 265551872
+        },
+        {
+          "elapsedMs": 57,
+          "receivedRows": 0,
+          "rssBytes": 265551872
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 10000,
+          "rssBytes": 269041664
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 20000,
+          "rssBytes": 269041664
+        },
+        {
+          "elapsedMs": 209,
+          "receivedRows": 35000,
+          "rssBytes": 269041664
+        },
+        {
+          "elapsedMs": 259,
+          "receivedRows": 45000,
+          "rssBytes": 267370496
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 55000,
+          "rssBytes": 269484032
+        },
+        {
+          "elapsedMs": 361,
+          "receivedRows": 65344,
+          "rssBytes": 271220736
+        },
+        {
+          "elapsedMs": 410,
+          "receivedRows": 80000,
+          "rssBytes": 271220736
+        },
+        {
+          "elapsedMs": 461,
+          "receivedRows": 90000,
+          "rssBytes": 271220736
+        },
+        {
+          "elapsedMs": 512,
+          "receivedRows": 100000,
+          "rssBytes": 269484032
+        },
+        {
+          "elapsedMs": 564,
+          "receivedRows": 115000,
+          "rssBytes": 269484032
+        },
+        {
+          "elapsedMs": 615,
+          "receivedRows": 125000,
+          "rssBytes": 271220736
+        },
+        {
+          "elapsedMs": 665,
+          "receivedRows": 135000,
+          "rssBytes": 269484032
+        },
+        {
+          "elapsedMs": 716,
+          "receivedRows": 145343,
+          "rssBytes": 271220736
+        },
+        {
+          "elapsedMs": 767,
+          "receivedRows": 160000,
+          "rssBytes": 269484032
+        },
+        {
+          "elapsedMs": 818,
+          "receivedRows": 170000,
+          "rssBytes": 271253504
+        },
+        {
+          "elapsedMs": 869,
+          "receivedRows": 180000,
+          "rssBytes": 269516800
+        },
+        {
+          "elapsedMs": 921,
+          "receivedRows": 195000,
+          "rssBytes": 271106048
+        },
+        {
+          "elapsedMs": 944,
+          "receivedRows": 200000,
+          "rssBytes": 271106048
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "portal-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 21,
+        "pid": 63065,
+        "rss": 267632640,
+        "heapUsed": 38744176,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 22,
+        "pid": 63065,
+        "rss": 267632640,
+        "heapUsed": 38711312,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT100K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-c",
+        "elapsedMs": 441.2,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18873057,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 441.2,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-c",
+        "rows": 100000,
+        "elapsedMs": 436,
+        "result": "success"
+      },
+      "baselineRssBytes": 267632640,
+      "peakRssBytes": 271073280,
+      "peakRssDeltaBytes": 3440640,
+      "retainedHeapDeltaBytes": -32864,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 267632640
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 271073280
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 20000,
+          "rssBytes": 271073280
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 30000,
+          "rssBytes": 269352960
+        },
+        {
+          "elapsedMs": 210,
+          "receivedRows": 45000,
+          "rssBytes": 271073280
+        },
+        {
+          "elapsedMs": 262,
+          "receivedRows": 55000,
+          "rssBytes": 271073280
+        },
+        {
+          "elapsedMs": 313,
+          "receivedRows": 65000,
+          "rssBytes": 271073280
+        },
+        {
+          "elapsedMs": 363,
+          "receivedRows": 80000,
+          "rssBytes": 271073280
+        },
+        {
+          "elapsedMs": 415,
+          "receivedRows": 90000,
+          "rssBytes": 269352960
+        },
+        {
+          "elapsedMs": 446,
+          "receivedRows": 100000,
+          "rssBytes": 271073280
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "admin-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 23,
+        "pid": 63065,
+        "rss": 267632640,
+        "heapUsed": 38710864,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 24,
+        "pid": 63065,
+        "rss": 267649024,
+        "heapUsed": 38763912,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT100K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-d",
+        "elapsedMs": 485.8,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18985394,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 485.8,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-d",
+        "rows": 100000,
+        "elapsedMs": 480,
+        "result": "success"
+      },
+      "baselineRssBytes": 267632640,
+      "peakRssBytes": 271122432,
+      "peakRssDeltaBytes": 3489792,
+      "retainedHeapDeltaBytes": 53048,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 267632640
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 269402112
+        },
+        {
+          "elapsedMs": 110,
+          "receivedRows": 15000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 160,
+          "receivedRows": 25000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 212,
+          "receivedRows": 35000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 262,
+          "receivedRows": 45000,
+          "rssBytes": 270319616
+        },
+        {
+          "elapsedMs": 314,
+          "receivedRows": 60000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 365,
+          "receivedRows": 70000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 416,
+          "receivedRows": 80000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 468,
+          "receivedRows": 95000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 490,
+          "receivedRows": 100000,
+          "rssBytes": 271122432
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "portal-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 25,
+        "pid": 63065,
+        "rss": 267649024,
+        "heapUsed": 38763656,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 26,
+        "pid": 63065,
+        "rss": 267649024,
+        "heapUsed": 38745160,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT50K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-e",
+        "elapsedMs": 226.2,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9435981,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 226.2,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-e",
+        "rows": 50000,
+        "elapsedMs": 221,
+        "result": "success"
+      },
+      "baselineRssBytes": 267649024,
+      "peakRssBytes": 271089664,
+      "peakRssDeltaBytes": 3440640,
+      "retainedHeapDeltaBytes": -18496,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 267649024
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 271089664
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 271089664
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 30000,
+          "rssBytes": 269369344
+        },
+        {
+          "elapsedMs": 210,
+          "receivedRows": 45000,
+          "rssBytes": 271089664
+        },
+        {
+          "elapsedMs": 230,
+          "receivedRows": 50000,
+          "rssBytes": 269369344
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "admin-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 27,
+        "pid": 63065,
+        "rss": 267649024,
+        "heapUsed": 38744920,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 28,
+        "pid": 63065,
+        "rss": 267649024,
+        "heapUsed": 38750176,
+        "heapTotal": 79577088,
+        "external": 6159004,
+        "arrayBuffers": 2201386
+      },
+      "request": {
+        "scenario": "admin-EXPORT50K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-f",
+        "elapsedMs": 240.1,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9492390,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 240,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-f",
+        "rows": 50000,
+        "elapsedMs": 235,
+        "result": "success"
+      },
+      "baselineRssBytes": 267649024,
+      "peakRssBytes": 271122432,
+      "peakRssDeltaBytes": 3473408,
+      "retainedHeapDeltaBytes": 5256,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 267649024
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 15000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 30000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 245,
+          "receivedRows": 50000,
+          "rssBytes": 271122432
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 29,
+        "pid": 63065,
+        "rss": 267649024,
+        "heapUsed": 38749936,
+        "heapTotal": 79577088,
+        "external": 6159004,
+        "arrayBuffers": 2201386
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 30,
+        "pid": 63065,
+        "rss": 267681792,
+        "heapUsed": 38816520,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-g",
+        "elapsedMs": 926.7,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 926.7,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-g",
+        "rows": 200000,
+        "elapsedMs": 920,
+        "result": "success"
+      },
+      "baselineRssBytes": 267649024,
+      "peakRssBytes": 271155200,
+      "peakRssDeltaBytes": 3506176,
+      "retainedHeapDeltaBytes": 66584,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 267649024
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 267649024
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 10000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 25000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 35000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 259,
+          "receivedRows": 45000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 60000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 359,
+          "receivedRows": 70000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 410,
+          "receivedRows": 80000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 461,
+          "receivedRows": 90000,
+          "rssBytes": 269385728
+        },
+        {
+          "elapsedMs": 512,
+          "receivedRows": 105000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 562,
+          "receivedRows": 115000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 613,
+          "receivedRows": 125000,
+          "rssBytes": 269418496
+        },
+        {
+          "elapsedMs": 664,
+          "receivedRows": 140000,
+          "rssBytes": 269418496
+        },
+        {
+          "elapsedMs": 714,
+          "receivedRows": 150000,
+          "rssBytes": 271155200
+        },
+        {
+          "elapsedMs": 764,
+          "receivedRows": 160000,
+          "rssBytes": 269418496
+        },
+        {
+          "elapsedMs": 814,
+          "receivedRows": 170343,
+          "rssBytes": 271155200
+        },
+        {
+          "elapsedMs": 864,
+          "receivedRows": 185000,
+          "rssBytes": 269418496
+        },
+        {
+          "elapsedMs": 914,
+          "receivedRows": 195000,
+          "rssBytes": 271155200
+        },
+        {
+          "elapsedMs": 932,
+          "receivedRows": 200000,
+          "rssBytes": 269418496
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 31,
+        "pid": 63065,
+        "rss": 267681792,
+        "heapUsed": 38816280,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 32,
+        "pid": 63065,
+        "rss": 283688960,
+        "heapUsed": 38781232,
+        "heapTotal": 79314944,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-h",
+        "elapsedMs": 880.9,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 880.9,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-h",
+        "rows": 200000,
+        "elapsedMs": 876,
+        "result": "success"
+      },
+      "baselineRssBytes": 267681792,
+      "peakRssBytes": 287129600,
+      "peakRssDeltaBytes": 19447808,
+      "retainedHeapDeltaBytes": -35048,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 267681792
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 20000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 30000,
+          "rssBytes": 269402112
+        },
+        {
+          "elapsedMs": 210,
+          "receivedRows": 45000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 261,
+          "receivedRows": 55000,
+          "rssBytes": 271122432
+        },
+        {
+          "elapsedMs": 312,
+          "receivedRows": 65000,
+          "rssBytes": 269402112
+        },
+        {
+          "elapsedMs": 363,
+          "receivedRows": 80000,
+          "rssBytes": 271138816
+        },
+        {
+          "elapsedMs": 413,
+          "receivedRows": 90000,
+          "rssBytes": 271138816
+        },
+        {
+          "elapsedMs": 464,
+          "receivedRows": 100000,
+          "rssBytes": 271138816
+        },
+        {
+          "elapsedMs": 514,
+          "receivedRows": 115000,
+          "rssBytes": 271138816
+        },
+        {
+          "elapsedMs": 565,
+          "receivedRows": 125000,
+          "rssBytes": 269418496
+        },
+        {
+          "elapsedMs": 616,
+          "receivedRows": 135000,
+          "rssBytes": 271138816
+        },
+        {
+          "elapsedMs": 666,
+          "receivedRows": 150000,
+          "rssBytes": 269418496
+        },
+        {
+          "elapsedMs": 717,
+          "receivedRows": 160000,
+          "rssBytes": 271204352
+        },
+        {
+          "elapsedMs": 767,
+          "receivedRows": 170000,
+          "rssBytes": 278085632
+        },
+        {
+          "elapsedMs": 819,
+          "receivedRows": 185000,
+          "rssBytes": 286801920
+        },
+        {
+          "elapsedMs": 869,
+          "receivedRows": 195000,
+          "rssBytes": 286916608
+        },
+        {
+          "elapsedMs": 885,
+          "receivedRows": 200000,
+          "rssBytes": 287129600
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "admin-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 33,
+        "pid": 63065,
+        "rss": 283688960,
+        "heapUsed": 38780944,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 34,
+        "pid": 63065,
+        "rss": 271892480,
+        "heapUsed": 38910488,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT50K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-i",
+        "elapsedMs": 300.9,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9492390,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 300.9,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-i",
+        "rows": 50000,
+        "elapsedMs": 296,
+        "result": "success"
+      },
+      "baselineRssBytes": 283688960,
+      "peakRssBytes": 287260672,
+      "peakRssDeltaBytes": 3571712,
+      "retainedHeapDeltaBytes": 129544,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 283688960
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 287260672
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 15000,
+          "rssBytes": 285720576
+        },
+        {
+          "elapsedMs": 164,
+          "receivedRows": 20000,
+          "rssBytes": 285687808
+        },
+        {
+          "elapsedMs": 210,
+          "receivedRows": 30000,
+          "rssBytes": 273170432
+        },
+        {
+          "elapsedMs": 260,
+          "receivedRows": 40000,
+          "rssBytes": 274989056
+        },
+        {
+          "elapsedMs": 305,
+          "receivedRows": 50000,
+          "rssBytes": 275365888
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "portal-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 35,
+        "pid": 63065,
+        "rss": 271892480,
+        "heapUsed": 38910248,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 36,
+        "pid": 63065,
+        "rss": 272351232,
+        "heapUsed": 38955680,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT50K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-j",
+        "elapsedMs": 237.8,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9435981,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 237.8,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-j",
+        "rows": 50000,
+        "elapsedMs": 232,
+        "result": "success"
+      },
+      "baselineRssBytes": 271892480,
+      "peakRssBytes": 275791872,
+      "peakRssDeltaBytes": 3899392,
+      "retainedHeapDeltaBytes": 45432,
+      "rss": [
+        {
+          "elapsedMs": 3,
+          "receivedRows": 0,
+          "rssBytes": 271892480
+        },
+        {
+          "elapsedMs": 57,
+          "receivedRows": 5000,
+          "rssBytes": 273629184
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 15000,
+          "rssBytes": 275398656
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 30000,
+          "rssBytes": 275398656
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 275791872
+        },
+        {
+          "elapsedMs": 243,
+          "receivedRows": 50000,
+          "rssBytes": 274071552
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "admin-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 37,
+        "pid": 63065,
+        "rss": 272351232,
+        "heapUsed": 38955440,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 38,
+        "pid": 63065,
+        "rss": 275824640,
+        "heapUsed": 39024768,
+        "heapTotal": 79577088,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT100K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-k",
+        "elapsedMs": 488.3,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18985394,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 488.3,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-k",
+        "rows": 100000,
+        "elapsedMs": 483,
+        "result": "success"
+      },
+      "baselineRssBytes": 272351232,
+      "peakRssBytes": 277561344,
+      "peakRssDeltaBytes": 5210112,
+      "retainedHeapDeltaBytes": 69328,
+      "rss": [
+        {
+          "elapsedMs": 3,
+          "receivedRows": 0,
+          "rssBytes": 272351232
+        },
+        {
+          "elapsedMs": 58,
+          "receivedRows": 5000,
+          "rssBytes": 275890176
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 15000,
+          "rssBytes": 274153472
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 25000,
+          "rssBytes": 275890176
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 35000,
+          "rssBytes": 275890176
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 45000,
+          "rssBytes": 274153472
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 55000,
+          "rssBytes": 274415616
+        },
+        {
+          "elapsedMs": 359,
+          "receivedRows": 70000,
+          "rssBytes": 277168128
+        },
+        {
+          "elapsedMs": 409,
+          "receivedRows": 80000,
+          "rssBytes": 277381120
+        },
+        {
+          "elapsedMs": 460,
+          "receivedRows": 90000,
+          "rssBytes": 277364736
+        },
+        {
+          "elapsedMs": 493,
+          "receivedRows": 100000,
+          "rssBytes": 277561344
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "portal-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 39,
+        "pid": 63065,
+        "rss": 275824640,
+        "heapUsed": 39015344,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 40,
+        "pid": 63065,
+        "rss": 275857408,
+        "heapUsed": 39006336,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT100K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-l",
+        "elapsedMs": 443.8,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18873057,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 443.8,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-l",
+        "rows": 100000,
+        "elapsedMs": 439,
+        "result": "success"
+      },
+      "baselineRssBytes": 275824640,
+      "peakRssBytes": 279281664,
+      "peakRssDeltaBytes": 3457024,
+      "retainedHeapDeltaBytes": -9008,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 275824640
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 30000,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 209,
+          "receivedRows": 40000,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 259,
+          "receivedRows": 55000,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 310,
+          "receivedRows": 65000,
+          "rssBytes": 277561344
+        },
+        {
+          "elapsedMs": 360,
+          "receivedRows": 75345,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 412,
+          "receivedRows": 90000,
+          "rssBytes": 279281664
+        },
+        {
+          "elapsedMs": 448,
+          "receivedRows": 100000,
+          "rssBytes": 277561344
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 41,
+        "pid": 63065,
+        "rss": 275857408,
+        "heapUsed": 39006096,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 42,
+        "pid": 63065,
+        "rss": 280674304,
+        "heapUsed": 39041136,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-m",
+        "elapsedMs": 938.4,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 938.4,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-m",
+        "rows": 200000,
+        "elapsedMs": 933,
+        "result": "success"
+      },
+      "baselineRssBytes": 275857408,
+      "peakRssBytes": 284147712,
+      "peakRssDeltaBytes": 8290304,
+      "retainedHeapDeltaBytes": 35040,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 275857408
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 275857408
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 10000,
+          "rssBytes": 277594112
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 25000,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 206,
+          "receivedRows": 35000,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 257,
+          "receivedRows": 45000,
+          "rssBytes": 277594112
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 60000,
+          "rssBytes": 277594112
+        },
+        {
+          "elapsedMs": 360,
+          "receivedRows": 70000,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 411,
+          "receivedRows": 80000,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 463,
+          "receivedRows": 90000,
+          "rssBytes": 277594112
+        },
+        {
+          "elapsedMs": 514,
+          "receivedRows": 100000,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 564,
+          "receivedRows": 110343,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 614,
+          "receivedRows": 125000,
+          "rssBytes": 279330816
+        },
+        {
+          "elapsedMs": 664,
+          "receivedRows": 135000,
+          "rssBytes": 277594112
+        },
+        {
+          "elapsedMs": 715,
+          "receivedRows": 145000,
+          "rssBytes": 277594112
+        },
+        {
+          "elapsedMs": 769,
+          "receivedRows": 160000,
+          "rssBytes": 281821184
+        },
+        {
+          "elapsedMs": 820,
+          "receivedRows": 170000,
+          "rssBytes": 282198016
+        },
+        {
+          "elapsedMs": 871,
+          "receivedRows": 180000,
+          "rssBytes": 283525120
+        },
+        {
+          "elapsedMs": 921,
+          "receivedRows": 195000,
+          "rssBytes": 282411008
+        },
+        {
+          "elapsedMs": 943,
+          "receivedRows": 200000,
+          "rssBytes": 284147712
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 43,
+        "pid": 63065,
+        "rss": 280674304,
+        "heapUsed": 39040848,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 44,
+        "pid": 63065,
+        "rss": 280313856,
+        "heapUsed": 39034016,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-n",
+        "elapsedMs": 981.2,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 981.2,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-n",
+        "rows": 200000,
+        "elapsedMs": 977,
+        "result": "success"
+      },
+      "baselineRssBytes": 280674304,
+      "peakRssBytes": 284246016,
+      "peakRssDeltaBytes": 3571712,
+      "retainedHeapDeltaBytes": -6832,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 280674304
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 284131328
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 20000,
+          "rssBytes": 284196864
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 50000,
+          "rssBytes": 282525696
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 60000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 360,
+          "receivedRows": 70000,
+          "rssBytes": 282525696
+        },
+        {
+          "elapsedMs": 410,
+          "receivedRows": 80000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 462,
+          "receivedRows": 90000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 512,
+          "receivedRows": 100000,
+          "rssBytes": 284164096
+        },
+        {
+          "elapsedMs": 563,
+          "receivedRows": 115000,
+          "rssBytes": 284131328
+        },
+        {
+          "elapsedMs": 614,
+          "receivedRows": 125000,
+          "rssBytes": 284131328
+        },
+        {
+          "elapsedMs": 665,
+          "receivedRows": 135000,
+          "rssBytes": 282411008
+        },
+        {
+          "elapsedMs": 715,
+          "receivedRows": 145000,
+          "rssBytes": 282411008
+        },
+        {
+          "elapsedMs": 766,
+          "receivedRows": 160000,
+          "rssBytes": 284114944
+        },
+        {
+          "elapsedMs": 819,
+          "receivedRows": 165000,
+          "rssBytes": 282411008
+        },
+        {
+          "elapsedMs": 867,
+          "receivedRows": 175000,
+          "rssBytes": 283754496
+        },
+        {
+          "elapsedMs": 919,
+          "receivedRows": 185000,
+          "rssBytes": 283754496
+        },
+        {
+          "elapsedMs": 969,
+          "receivedRows": 195000,
+          "rssBytes": 282034176
+        },
+        {
+          "elapsedMs": 986,
+          "receivedRows": 200000,
+          "rssBytes": 282034176
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 45,
+        "pid": 63065,
+        "rss": 280313856,
+        "heapUsed": 39033776,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 46,
+        "pid": 63065,
+        "rss": 280772608,
+        "heapUsed": 39058496,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-o",
+        "elapsedMs": 956.8,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 956.8,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-o",
+        "rows": 200000,
+        "elapsedMs": 951,
+        "result": "success"
+      },
+      "baselineRssBytes": 280313856,
+      "peakRssBytes": 284246016,
+      "peakRssDeltaBytes": 3932160,
+      "retainedHeapDeltaBytes": 24720,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 280313856
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 280313856
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 10000,
+          "rssBytes": 282050560
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 25000,
+          "rssBytes": 282050560
+        },
+        {
+          "elapsedMs": 207,
+          "receivedRows": 35000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 45000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 55000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 360,
+          "receivedRows": 70000,
+          "rssBytes": 282050560
+        },
+        {
+          "elapsedMs": 409,
+          "receivedRows": 80000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 460,
+          "receivedRows": 90000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 511,
+          "receivedRows": 100000,
+          "rssBytes": 282050560
+        },
+        {
+          "elapsedMs": 562,
+          "receivedRows": 110000,
+          "rssBytes": 282050560
+        },
+        {
+          "elapsedMs": 613,
+          "receivedRows": 120000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 667,
+          "receivedRows": 135000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 717,
+          "receivedRows": 145000,
+          "rssBytes": 282050560
+        },
+        {
+          "elapsedMs": 768,
+          "receivedRows": 155000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 819,
+          "receivedRows": 165000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 869,
+          "receivedRows": 180000,
+          "rssBytes": 283787264
+        },
+        {
+          "elapsedMs": 919,
+          "receivedRows": 190000,
+          "rssBytes": 282083328
+        },
+        {
+          "elapsedMs": 961,
+          "receivedRows": 200000,
+          "rssBytes": 284246016
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 47,
+        "pid": 63065,
+        "rss": 280772608,
+        "heapUsed": 39049072,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 48,
+        "pid": 63065,
+        "rss": 280788992,
+        "heapUsed": 39029784,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 3,
+        "requestId": "req-p",
+        "elapsedMs": 931.6,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 931.6,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-p",
+        "rows": 200000,
+        "elapsedMs": 926,
+        "result": "success"
+      },
+      "baselineRssBytes": 280772608,
+      "peakRssBytes": 284229632,
+      "peakRssDeltaBytes": 3457024,
+      "retainedHeapDeltaBytes": -19288,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 280772608
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 20000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 259,
+          "receivedRows": 55000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 310,
+          "receivedRows": 65000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 361,
+          "receivedRows": 75000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 411,
+          "receivedRows": 85000,
+          "rssBytes": 284213248
+        },
+        {
+          "elapsedMs": 463,
+          "receivedRows": 95000,
+          "rssBytes": 282476544
+        },
+        {
+          "elapsedMs": 513,
+          "receivedRows": 105000,
+          "rssBytes": 282476544
+        },
+        {
+          "elapsedMs": 562,
+          "receivedRows": 115000,
+          "rssBytes": 284196864
+        },
+        {
+          "elapsedMs": 613,
+          "receivedRows": 125000,
+          "rssBytes": 282476544
+        },
+        {
+          "elapsedMs": 667,
+          "receivedRows": 140000,
+          "rssBytes": 284196864
+        },
+        {
+          "elapsedMs": 718,
+          "receivedRows": 150000,
+          "rssBytes": 284196864
+        },
+        {
+          "elapsedMs": 768,
+          "receivedRows": 160000,
+          "rssBytes": 282476544
+        },
+        {
+          "elapsedMs": 818,
+          "receivedRows": 170000,
+          "rssBytes": 284196864
+        },
+        {
+          "elapsedMs": 869,
+          "receivedRows": 185000,
+          "rssBytes": 284196864
+        },
+        {
+          "elapsedMs": 921,
+          "receivedRows": 195000,
+          "rssBytes": 282509312
+        },
+        {
+          "elapsedMs": 936,
+          "receivedRows": 200000,
+          "rssBytes": 284229632
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 49,
+        "pid": 63065,
+        "rss": 280788992,
+        "heapUsed": 39029544,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 50,
+        "pid": 63065,
+        "rss": 280805376,
+        "heapUsed": 39051560,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-q",
+        "elapsedMs": 903.6,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 903.6,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-q",
+        "rows": 200000,
+        "elapsedMs": 896,
+        "result": "success"
+      },
+      "baselineRssBytes": 280788992,
+      "peakRssBytes": 285966336,
+      "peakRssDeltaBytes": 5177344,
+      "retainedHeapDeltaBytes": 22016,
+      "rss": [
+        {
+          "elapsedMs": 5,
+          "receivedRows": 0,
+          "rssBytes": 280788992
+        },
+        {
+          "elapsedMs": 58,
+          "receivedRows": 5000,
+          "rssBytes": 282525696
+        },
+        {
+          "elapsedMs": 111,
+          "receivedRows": 20000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 163,
+          "receivedRows": 30000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 214,
+          "receivedRows": 40000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 264,
+          "receivedRows": 55000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 315,
+          "receivedRows": 65000,
+          "rssBytes": 282525696
+        },
+        {
+          "elapsedMs": 370,
+          "receivedRows": 80000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 420,
+          "receivedRows": 90000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 471,
+          "receivedRows": 100000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 524,
+          "receivedRows": 115000,
+          "rssBytes": 285966336
+        },
+        {
+          "elapsedMs": 575,
+          "receivedRows": 125000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 626,
+          "receivedRows": 135000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 677,
+          "receivedRows": 150000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 728,
+          "receivedRows": 160000,
+          "rssBytes": 285966336
+        },
+        {
+          "elapsedMs": 779,
+          "receivedRows": 170000,
+          "rssBytes": 285966336
+        },
+        {
+          "elapsedMs": 830,
+          "receivedRows": 180000,
+          "rssBytes": 284246016
+        },
+        {
+          "elapsedMs": 881,
+          "receivedRows": 190000,
+          "rssBytes": 285966336
+        },
+        {
+          "elapsedMs": 911,
+          "receivedRows": 200000,
+          "rssBytes": 284246016
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 51,
+        "pid": 63065,
+        "rss": 280805376,
+        "heapUsed": 39051272,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 52,
+        "pid": 63065,
+        "rss": 260112384,
+        "heapUsed": 39052336,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-r",
+        "elapsedMs": 1112,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 1112,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-r",
+        "rows": 200000,
+        "elapsedMs": 1107,
+        "result": "success"
+      },
+      "baselineRssBytes": 280805376,
+      "peakRssBytes": 284278784,
+      "peakRssDeltaBytes": 3473408,
+      "retainedHeapDeltaBytes": 1064,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 280805376
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 280805376
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 10000,
+          "rssBytes": 284278784
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 20000,
+          "rssBytes": 282542080
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 30000,
+          "rssBytes": 282542080
+        },
+        {
+          "elapsedMs": 275,
+          "receivedRows": 35000,
+          "rssBytes": 264159232
+        },
+        {
+          "elapsedMs": 359,
+          "receivedRows": 40000,
+          "rssBytes": 228818944
+        },
+        {
+          "elapsedMs": 404,
+          "receivedRows": 45000,
+          "rssBytes": 238452736
+        },
+        {
+          "elapsedMs": 453,
+          "receivedRows": 55000,
+          "rssBytes": 239665152
+        },
+        {
+          "elapsedMs": 503,
+          "receivedRows": 65000,
+          "rssBytes": 240074752
+        },
+        {
+          "elapsedMs": 553,
+          "receivedRows": 75000,
+          "rssBytes": 238354432
+        },
+        {
+          "elapsedMs": 604,
+          "receivedRows": 85000,
+          "rssBytes": 240205824
+        },
+        {
+          "elapsedMs": 655,
+          "receivedRows": 95000,
+          "rssBytes": 240533504
+        },
+        {
+          "elapsedMs": 706,
+          "receivedRows": 105000,
+          "rssBytes": 242270208
+        },
+        {
+          "elapsedMs": 758,
+          "receivedRows": 120000,
+          "rssBytes": 240549888
+        },
+        {
+          "elapsedMs": 809,
+          "receivedRows": 130000,
+          "rssBytes": 243580928
+        },
+        {
+          "elapsedMs": 860,
+          "receivedRows": 140000,
+          "rssBytes": 242204672
+        },
+        {
+          "elapsedMs": 910,
+          "receivedRows": 150343,
+          "rssBytes": 244891648
+        },
+        {
+          "elapsedMs": 961,
+          "receivedRows": 165000,
+          "rssBytes": 247365632
+        },
+        {
+          "elapsedMs": 1013,
+          "receivedRows": 175000,
+          "rssBytes": 259375104
+        },
+        {
+          "elapsedMs": 1063,
+          "receivedRows": 185000,
+          "rssBytes": 259866624
+        },
+        {
+          "elapsedMs": 1119,
+          "receivedRows": 200000,
+          "rssBytes": 261832704
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "portal-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 53,
+        "pid": 63065,
+        "rss": 259473408,
+        "heapUsed": 39052048,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 54,
+        "pid": 63065,
+        "rss": 258736128,
+        "heapUsed": 39021136,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT100K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-s",
+        "elapsedMs": 459.6,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18873057,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 459.6,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-s",
+        "rows": 100000,
+        "elapsedMs": 454,
+        "result": "success"
+      },
+      "baselineRssBytes": 259342336,
+      "peakRssBytes": 262799360,
+      "peakRssDeltaBytes": 3457024,
+      "retainedHeapDeltaBytes": -30912,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 259342336
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 262799360
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 262651904
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 262569984
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 262275072
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 50000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 309,
+          "receivedRows": 60345,
+          "rssBytes": 262045696
+        },
+        {
+          "elapsedMs": 360,
+          "receivedRows": 75000,
+          "rssBytes": 260341760
+        },
+        {
+          "elapsedMs": 411,
+          "receivedRows": 85000,
+          "rssBytes": 260374528
+        },
+        {
+          "elapsedMs": 464,
+          "receivedRows": 100000,
+          "rssBytes": 262111232
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "admin-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 55,
+        "pid": 63065,
+        "rss": 258736128,
+        "heapUsed": 39011760,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 56,
+        "pid": 63065,
+        "rss": 258834432,
+        "heapUsed": 39034912,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT100K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-t",
+        "elapsedMs": 476.8,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18985394,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 476.7,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-t",
+        "rows": 100000,
+        "elapsedMs": 471,
+        "result": "success"
+      },
+      "baselineRssBytes": 258736128,
+      "peakRssBytes": 262291456,
+      "peakRssDeltaBytes": 3555328,
+      "retainedHeapDeltaBytes": 23152,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258736128
+        },
+        {
+          "elapsedMs": 59,
+          "receivedRows": 5000,
+          "rssBytes": 262209536
+        },
+        {
+          "elapsedMs": 109,
+          "receivedRows": 15000,
+          "rssBytes": 260472832
+        },
+        {
+          "elapsedMs": 160,
+          "receivedRows": 25000,
+          "rssBytes": 262225920
+        },
+        {
+          "elapsedMs": 211,
+          "receivedRows": 35000,
+          "rssBytes": 262275072
+        },
+        {
+          "elapsedMs": 261,
+          "receivedRows": 50000,
+          "rssBytes": 260538368
+        },
+        {
+          "elapsedMs": 313,
+          "receivedRows": 60000,
+          "rssBytes": 262275072
+        },
+        {
+          "elapsedMs": 364,
+          "receivedRows": 70000,
+          "rssBytes": 260538368
+        },
+        {
+          "elapsedMs": 415,
+          "receivedRows": 85000,
+          "rssBytes": 262275072
+        },
+        {
+          "elapsedMs": 466,
+          "receivedRows": 95000,
+          "rssBytes": 260538368
+        },
+        {
+          "elapsedMs": 481,
+          "receivedRows": 100000,
+          "rssBytes": 262291456
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "portal-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 57,
+        "pid": 63065,
+        "rss": 258834432,
+        "heapUsed": 39034672,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 58,
+        "pid": 63065,
+        "rss": 258867200,
+        "heapUsed": 39014624,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT50K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-u",
+        "elapsedMs": 226.9,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9435981,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 226.9,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-u",
+        "rows": 50000,
+        "elapsedMs": 222,
+        "result": "success"
+      },
+      "baselineRssBytes": 258834432,
+      "peakRssBytes": 262291456,
+      "peakRssDeltaBytes": 3457024,
+      "retainedHeapDeltaBytes": -20048,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258834432
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 262291456
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 262291456
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 30000,
+          "rssBytes": 260571136
+        },
+        {
+          "elapsedMs": 210,
+          "receivedRows": 45000,
+          "rssBytes": 262291456
+        },
+        {
+          "elapsedMs": 231,
+          "receivedRows": 50000,
+          "rssBytes": 260587520
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "admin-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 59,
+        "pid": 63065,
+        "rss": 258867200,
+        "heapUsed": 39014384,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 60,
+        "pid": 63065,
+        "rss": 258883584,
+        "heapUsed": 39015112,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT50K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-v",
+        "elapsedMs": 237.9,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9492390,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 237.9,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-v",
+        "rows": 50000,
+        "elapsedMs": 233,
+        "result": "success"
+      },
+      "baselineRssBytes": 258867200,
+      "peakRssBytes": 262340608,
+      "peakRssDeltaBytes": 3473408,
+      "retainedHeapDeltaBytes": 728,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258867200
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 262340608
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 15000,
+          "rssBytes": 262340608
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 260603904
+        },
+        {
+          "elapsedMs": 206,
+          "receivedRows": 40000,
+          "rssBytes": 262340608
+        },
+        {
+          "elapsedMs": 242,
+          "receivedRows": 50000,
+          "rssBytes": 262340608
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 61,
+        "pid": 63065,
+        "rss": 258883584,
+        "heapUsed": 39014872,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 62,
+        "pid": 63065,
+        "rss": 260308992,
+        "heapUsed": 39076960,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-w",
+        "elapsedMs": 914.1,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 914.1,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-w",
+        "rows": 200000,
+        "elapsedMs": 909,
+        "result": "success"
+      },
+      "baselineRssBytes": 258883584,
+      "peakRssBytes": 263766016,
+      "peakRssDeltaBytes": 4882432,
+      "retainedHeapDeltaBytes": 62088,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258883584
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 0,
+          "rssBytes": 258899968
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 10000,
+          "rssBytes": 262373376
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 25000,
+          "rssBytes": 262389760
+        },
+        {
+          "elapsedMs": 207,
+          "receivedRows": 35000,
+          "rssBytes": 262389760
+        },
+        {
+          "elapsedMs": 258,
+          "receivedRows": 45000,
+          "rssBytes": 260669440
+        },
+        {
+          "elapsedMs": 310,
+          "receivedRows": 60000,
+          "rssBytes": 260669440
+        },
+        {
+          "elapsedMs": 362,
+          "receivedRows": 70000,
+          "rssBytes": 262422528
+        },
+        {
+          "elapsedMs": 413,
+          "receivedRows": 80000,
+          "rssBytes": 260702208
+        },
+        {
+          "elapsedMs": 463,
+          "receivedRows": 95000,
+          "rssBytes": 260702208
+        },
+        {
+          "elapsedMs": 514,
+          "receivedRows": 105000,
+          "rssBytes": 262471680
+        },
+        {
+          "elapsedMs": 565,
+          "receivedRows": 115000,
+          "rssBytes": 262471680
+        },
+        {
+          "elapsedMs": 615,
+          "receivedRows": 130000,
+          "rssBytes": 263700480
+        },
+        {
+          "elapsedMs": 665,
+          "receivedRows": 140000,
+          "rssBytes": 261963776
+        },
+        {
+          "elapsedMs": 716,
+          "receivedRows": 150000,
+          "rssBytes": 263700480
+        },
+        {
+          "elapsedMs": 766,
+          "receivedRows": 165000,
+          "rssBytes": 263733248
+        },
+        {
+          "elapsedMs": 816,
+          "receivedRows": 175000,
+          "rssBytes": 263733248
+        },
+        {
+          "elapsedMs": 867,
+          "receivedRows": 185000,
+          "rssBytes": 263733248
+        },
+        {
+          "elapsedMs": 918,
+          "receivedRows": 200000,
+          "rssBytes": 263766016
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 63,
+        "pid": 63065,
+        "rss": 260308992,
+        "heapUsed": 39076720,
+        "heapTotal": 80101376,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 64,
+        "pid": 63065,
+        "rss": 260358144,
+        "heapUsed": 39050744,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 4,
+        "requestId": "req-x",
+        "elapsedMs": 857.7,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 857.7,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-x",
+        "rows": 200000,
+        "elapsedMs": 852,
+        "result": "success"
+      },
+      "baselineRssBytes": 260308992,
+      "peakRssBytes": 263798784,
+      "peakRssDeltaBytes": 3489792,
+      "retainedHeapDeltaBytes": -25976,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 260308992
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 263749632
+        },
+        {
+          "elapsedMs": 105,
+          "receivedRows": 20000,
+          "rssBytes": 263749632
+        },
+        {
+          "elapsedMs": 156,
+          "receivedRows": 30000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 210,
+          "receivedRows": 45000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 261,
+          "receivedRows": 55000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 315,
+          "receivedRows": 70000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 367,
+          "receivedRows": 80000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 420,
+          "receivedRows": 95000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 472,
+          "receivedRows": 105000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 526,
+          "receivedRows": 120000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 577,
+          "receivedRows": 130000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 631,
+          "receivedRows": 145000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 683,
+          "receivedRows": 155000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 736,
+          "receivedRows": 170000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 788,
+          "receivedRows": 180000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 841,
+          "receivedRows": 195000,
+          "rssBytes": 263782400
+        },
+        {
+          "elapsedMs": 862,
+          "receivedRows": 200000,
+          "rssBytes": 263798784
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "admin-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 65,
+        "pid": 63065,
+        "rss": 260358144,
+        "heapUsed": 39050456,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 66,
+        "pid": 63065,
+        "rss": 258555904,
+        "heapUsed": 39040104,
+        "heapTotal": 79839232,
+        "external": 6159004,
+        "arrayBuffers": 2201386
+      },
+      "request": {
+        "scenario": "admin-EXPORT50K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-y",
+        "elapsedMs": 287.5,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9492390,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 287.5,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-y",
+        "rows": 50000,
+        "elapsedMs": 282,
+        "result": "success"
+      },
+      "baselineRssBytes": 260358144,
+      "peakRssBytes": 263831552,
+      "peakRssDeltaBytes": 3473408,
+      "retainedHeapDeltaBytes": -10352,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 260358144
+        },
+        {
+          "elapsedMs": 55,
+          "receivedRows": 5000,
+          "rssBytes": 263831552
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 15000,
+          "rssBytes": 262094848
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 25000,
+          "rssBytes": 262094848
+        },
+        {
+          "elapsedMs": 212,
+          "receivedRows": 35000,
+          "rssBytes": 263323648
+        },
+        {
+          "elapsedMs": 261,
+          "receivedRows": 40000,
+          "rssBytes": 260276224
+        },
+        {
+          "elapsedMs": 292,
+          "receivedRows": 50000,
+          "rssBytes": 262012928
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "portal-EXPORT50K",
+      "expectedRows": 50000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 67,
+        "pid": 63065,
+        "rss": 258555904,
+        "heapUsed": 39030728,
+        "heapTotal": 79839232,
+        "external": 6159004,
+        "arrayBuffers": 2201386
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 68,
+        "pid": 63065,
+        "rss": 258539520,
+        "heapUsed": 39030776,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT50K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-z",
+        "elapsedMs": 247.4,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 9435981,
+        "crlfRecords": 50001,
+        "csvDataRows": 50000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT50K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 247.3,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-z",
+        "rows": 50000,
+        "elapsedMs": 242,
+        "result": "success"
+      },
+      "baselineRssBytes": 258555904,
+      "peakRssBytes": 261996544,
+      "peakRssDeltaBytes": 3440640,
+      "retainedHeapDeltaBytes": 48,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258555904
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 261996544
+        },
+        {
+          "elapsedMs": 108,
+          "receivedRows": 20000,
+          "rssBytes": 261980160
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 30000,
+          "rssBytes": 261980160
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 261980160
+        },
+        {
+          "elapsedMs": 252,
+          "receivedRows": 50000,
+          "rssBytes": 261980160
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "admin-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 69,
+        "pid": 63065,
+        "rss": 258539520,
+        "heapUsed": 39030536,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 70,
+        "pid": 63065,
+        "rss": 258572288,
+        "heapUsed": 39042720,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT100K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-10",
+        "elapsedMs": 481.2,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18985394,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 481.2,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-10",
+        "rows": 100000,
+        "elapsedMs": 475,
+        "result": "success"
+      },
+      "baselineRssBytes": 258539520,
+      "peakRssBytes": 262045696,
+      "peakRssDeltaBytes": 3506176,
+      "retainedHeapDeltaBytes": 12184,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258539520
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 110,
+          "receivedRows": 15000,
+          "rssBytes": 260292608
+        },
+        {
+          "elapsedMs": 160,
+          "receivedRows": 25000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 211,
+          "receivedRows": 35000,
+          "rssBytes": 260292608
+        },
+        {
+          "elapsedMs": 262,
+          "receivedRows": 45000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 311,
+          "receivedRows": 60000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 362,
+          "receivedRows": 70000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 413,
+          "receivedRows": 80000,
+          "rssBytes": 261931008
+        },
+        {
+          "elapsedMs": 464,
+          "receivedRows": 95000,
+          "rssBytes": 260308992
+        },
+        {
+          "elapsedMs": 486,
+          "receivedRows": 100000,
+          "rssBytes": 262045696
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "portal-EXPORT100K",
+      "expectedRows": 100000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 71,
+        "pid": 63065,
+        "rss": 258572288,
+        "heapUsed": 39042480,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 72,
+        "pid": 63065,
+        "rss": 258588672,
+        "heapUsed": 39033320,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT100K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-11",
+        "elapsedMs": 440.3,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18873057,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 440.3,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-11",
+        "rows": 100000,
+        "elapsedMs": 435,
+        "result": "success"
+      },
+      "baselineRssBytes": 258572288,
+      "peakRssBytes": 262029312,
+      "peakRssDeltaBytes": 3457024,
+      "retainedHeapDeltaBytes": -9160,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258572288
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 5000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 20000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 157,
+          "receivedRows": 30000,
+          "rssBytes": 260308992
+        },
+        {
+          "elapsedMs": 211,
+          "receivedRows": 45000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 261,
+          "receivedRows": 55000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 313,
+          "receivedRows": 65000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 363,
+          "receivedRows": 80000,
+          "rssBytes": 262029312
+        },
+        {
+          "elapsedMs": 413,
+          "receivedRows": 90000,
+          "rssBytes": 260308992
+        },
+        {
+          "elapsedMs": 445,
+          "receivedRows": 100000,
+          "rssBytes": 262029312
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 73,
+        "pid": 63065,
+        "rss": 258588672,
+        "heapUsed": 39033080,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 74,
+        "pid": 63065,
+        "rss": 258605056,
+        "heapUsed": 39076520,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-12",
+        "elapsedMs": 938.7,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 938.7,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-12",
+        "rows": 200000,
+        "elapsedMs": 933,
+        "result": "success"
+      },
+      "baselineRssBytes": 258588672,
+      "peakRssBytes": 262078464,
+      "peakRssDeltaBytes": 3489792,
+      "retainedHeapDeltaBytes": 43440,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258588672
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 258588672
+        },
+        {
+          "elapsedMs": 106,
+          "receivedRows": 10000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 159,
+          "receivedRows": 25000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 211,
+          "receivedRows": 35000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 262,
+          "receivedRows": 45000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 312,
+          "receivedRows": 55000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 365,
+          "receivedRows": 70000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 416,
+          "receivedRows": 80000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 468,
+          "receivedRows": 90000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 518,
+          "receivedRows": 105000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 568,
+          "receivedRows": 115000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 618,
+          "receivedRows": 125000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 669,
+          "receivedRows": 140000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 719,
+          "receivedRows": 150000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 771,
+          "receivedRows": 160000,
+          "rssBytes": 260325376
+        },
+        {
+          "elapsedMs": 825,
+          "receivedRows": 175000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 875,
+          "receivedRows": 185000,
+          "rssBytes": 262078464
+        },
+        {
+          "elapsedMs": 926,
+          "receivedRows": 195000,
+          "rssBytes": 260341760
+        },
+        {
+          "elapsedMs": 943,
+          "receivedRows": 200000,
+          "rssBytes": 262078464
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": false,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 75,
+        "pid": 63065,
+        "rss": 258605056,
+        "heapUsed": 39076280,
+        "heapTotal": 80101376,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 76,
+        "pid": 63065,
+        "rss": 256180224,
+        "heapUsed": 39072976,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-13",
+        "elapsedMs": 980.7,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 980.7,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-13",
+        "rows": 200000,
+        "elapsedMs": 975,
+        "result": "success"
+      },
+      "baselineRssBytes": 258605056,
+      "peakRssBytes": 262078464,
+      "peakRssDeltaBytes": 3473408,
+      "retainedHeapDeltaBytes": -3304,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 258605056
+        },
+        {
+          "elapsedMs": 57,
+          "receivedRows": 5000,
+          "rssBytes": 260341760
+        },
+        {
+          "elapsedMs": 108,
+          "receivedRows": 15000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 158,
+          "receivedRows": 30000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 208,
+          "receivedRows": 40000,
+          "rssBytes": 262062080
+        },
+        {
+          "elapsedMs": 259,
+          "receivedRows": 50000,
+          "rssBytes": 260358144
+        },
+        {
+          "elapsedMs": 312,
+          "receivedRows": 55000,
+          "rssBytes": 262078464
+        },
+        {
+          "elapsedMs": 361,
+          "receivedRows": 65000,
+          "rssBytes": 260489216
+        },
+        {
+          "elapsedMs": 416,
+          "receivedRows": 75000,
+          "rssBytes": 257835008
+        },
+        {
+          "elapsedMs": 463,
+          "receivedRows": 85000,
+          "rssBytes": 259555328
+        },
+        {
+          "elapsedMs": 512,
+          "receivedRows": 95000,
+          "rssBytes": 259555328
+        },
+        {
+          "elapsedMs": 563,
+          "receivedRows": 105000,
+          "rssBytes": 259604480
+        },
+        {
+          "elapsedMs": 614,
+          "receivedRows": 115000,
+          "rssBytes": 259604480
+        },
+        {
+          "elapsedMs": 665,
+          "receivedRows": 125000,
+          "rssBytes": 257900544
+        },
+        {
+          "elapsedMs": 715,
+          "receivedRows": 135000,
+          "rssBytes": 257900544
+        },
+        {
+          "elapsedMs": 770,
+          "receivedRows": 150000,
+          "rssBytes": 257900544
+        },
+        {
+          "elapsedMs": 819,
+          "receivedRows": 160000,
+          "rssBytes": 259620864
+        },
+        {
+          "elapsedMs": 870,
+          "receivedRows": 170000,
+          "rssBytes": 259620864
+        },
+        {
+          "elapsedMs": 920,
+          "receivedRows": 185000,
+          "rssBytes": 259620864
+        },
+        {
+          "elapsedMs": 971,
+          "receivedRows": 195000,
+          "rssBytes": 259620864
+        },
+        {
+          "elapsedMs": 985,
+          "receivedRows": 200000,
+          "rssBytes": 257900544
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "admin-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 77,
+        "pid": 63065,
+        "rss": 256180224,
+        "heapUsed": 39063584,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 78,
+        "pid": 63065,
+        "rss": 256458752,
+        "heapUsed": 39078168,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "admin-EXPORT200K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-14",
+        "elapsedMs": 927.5,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37970036,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 927.5,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-14",
+        "rows": 200000,
+        "elapsedMs": 922,
+        "result": "success"
+      },
+      "baselineRssBytes": 256180224,
+      "peakRssBytes": 259932160,
+      "peakRssDeltaBytes": 3751936,
+      "retainedHeapDeltaBytes": 14584,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 256180224
+        },
+        {
+          "elapsedMs": 56,
+          "receivedRows": 0,
+          "rssBytes": 256180224
+        },
+        {
+          "elapsedMs": 107,
+          "receivedRows": 10000,
+          "rssBytes": 257916928
+        },
+        {
+          "elapsedMs": 159,
+          "receivedRows": 25000,
+          "rssBytes": 259653632
+        },
+        {
+          "elapsedMs": 209,
+          "receivedRows": 35000,
+          "rssBytes": 259653632
+        },
+        {
+          "elapsedMs": 260,
+          "receivedRows": 45000,
+          "rssBytes": 257916928
+        },
+        {
+          "elapsedMs": 311,
+          "receivedRows": 60000,
+          "rssBytes": 257916928
+        },
+        {
+          "elapsedMs": 362,
+          "receivedRows": 70000,
+          "rssBytes": 259653632
+        },
+        {
+          "elapsedMs": 413,
+          "receivedRows": 80000,
+          "rssBytes": 257916928
+        },
+        {
+          "elapsedMs": 466,
+          "receivedRows": 95000,
+          "rssBytes": 259670016
+        },
+        {
+          "elapsedMs": 515,
+          "receivedRows": 105000,
+          "rssBytes": 259670016
+        },
+        {
+          "elapsedMs": 566,
+          "receivedRows": 115000,
+          "rssBytes": 257933312
+        },
+        {
+          "elapsedMs": 619,
+          "receivedRows": 130000,
+          "rssBytes": 258162688
+        },
+        {
+          "elapsedMs": 670,
+          "receivedRows": 140000,
+          "rssBytes": 259899392
+        },
+        {
+          "elapsedMs": 721,
+          "receivedRows": 150000,
+          "rssBytes": 258195456
+        },
+        {
+          "elapsedMs": 771,
+          "receivedRows": 160000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 822,
+          "receivedRows": 175000,
+          "rssBytes": 258195456
+        },
+        {
+          "elapsedMs": 872,
+          "receivedRows": 185000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 923,
+          "receivedRows": 195000,
+          "rssBytes": 258195456
+        },
+        {
+          "elapsedMs": 932,
+          "receivedRows": 200000,
+          "rssBytes": 259932160
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "scenario": "portal-EXPORT200K",
+      "expectedRows": 200000,
+      "repeated200k": true,
+      "beforeGc": {
+        "event": "perf.memory.gc",
+        "sequence": 79,
+        "pid": 63065,
+        "rss": 256458752,
+        "heapUsed": 39077928,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "afterGc": {
+        "event": "perf.memory.gc",
+        "sequence": 80,
+        "pid": 63065,
+        "rss": 256491520,
+        "heapUsed": 39076192,
+        "heapTotal": 79839232,
+        "external": 6150812,
+        "arrayBuffers": 2193194
+      },
+      "request": {
+        "scenario": "portal-EXPORT200K",
+        "attempt": "measured",
+        "round": 5,
+        "requestId": "req-15",
+        "elapsedMs": 890.1,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 37746119,
+        "crlfRecords": 200001,
+        "csvDataRows": 200000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT200K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 890.1,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-15",
+        "rows": 200000,
+        "elapsedMs": 885,
+        "result": "success"
+      },
+      "baselineRssBytes": 256458752,
+      "peakRssBytes": 261636096,
+      "peakRssDeltaBytes": 5177344,
+      "retainedHeapDeltaBytes": -1736,
+      "rss": [
+        {
+          "elapsedMs": 2,
+          "receivedRows": 0,
+          "rssBytes": 256458752
+        },
+        {
+          "elapsedMs": 59,
+          "receivedRows": 10000,
+          "rssBytes": 259899392
+        },
+        {
+          "elapsedMs": 109,
+          "receivedRows": 20000,
+          "rssBytes": 259899392
+        },
+        {
+          "elapsedMs": 161,
+          "receivedRows": 30000,
+          "rssBytes": 258195456
+        },
+        {
+          "elapsedMs": 213,
+          "receivedRows": 45000,
+          "rssBytes": 259915776
+        },
+        {
+          "elapsedMs": 263,
+          "receivedRows": 55000,
+          "rssBytes": 261636096
+        },
+        {
+          "elapsedMs": 314,
+          "receivedRows": 65000,
+          "rssBytes": 259915776
+        },
+        {
+          "elapsedMs": 368,
+          "receivedRows": 80000,
+          "rssBytes": 259915776
+        },
+        {
+          "elapsedMs": 420,
+          "receivedRows": 90000,
+          "rssBytes": 258195456
+        },
+        {
+          "elapsedMs": 474,
+          "receivedRows": 105000,
+          "rssBytes": 259915776
+        },
+        {
+          "elapsedMs": 525,
+          "receivedRows": 115000,
+          "rssBytes": 258211840
+        },
+        {
+          "elapsedMs": 576,
+          "receivedRows": 125000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 626,
+          "receivedRows": 140000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 676,
+          "receivedRows": 150000,
+          "rssBytes": 258211840
+        },
+        {
+          "elapsedMs": 726,
+          "receivedRows": 160000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 777,
+          "receivedRows": 170000,
+          "rssBytes": 258211840
+        },
+        {
+          "elapsedMs": 830,
+          "receivedRows": 185000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 881,
+          "receivedRows": 195000,
+          "rssBytes": 259932160
+        },
+        {
+          "elapsedMs": 895,
+          "receivedRows": 200000,
+          "rssBytes": 258211840
+        }
+      ]
+    }
+  ]
+}

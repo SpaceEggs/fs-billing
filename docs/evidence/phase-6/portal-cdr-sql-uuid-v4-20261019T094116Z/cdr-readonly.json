@@ -1,0 +1,207 @@
+{
+  "measuredAt": "2026-10-19T09:41:42.456Z",
+  "scope": "prototype SQL withTenant transactions; not DB service latency and not HTTP latency",
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "role": "fs_billing_app",
+  "server": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "settings": {
+    "shared_buffers": "128MB",
+    "work_mem": "4MB",
+    "random_page_cost": "4",
+    "jit": "on",
+    "effective_cache_size": "4GB",
+    "performanceOverrides": {}
+  },
+  "month": {
+    "from": "2026-09-01T00:00:00+08:00",
+    "to": "2026-10-01T00:00:00+08:00"
+  },
+  "facts": {
+    "answered": 234277,
+    "unanswered": 12297,
+    "common_hits": 11821,
+    "rare_hits": 1,
+    "china": 70390,
+    "jamaica": 4815,
+    "country_calls": 234277,
+    "country_count": 20
+  },
+  "verified": {
+    "all": 246574,
+    "cursor": {
+      "at": "2026-09-15 16:17:33.328+00",
+      "uuid": "c32ce482-8f32-46e2-833a-f3689b3d1928"
+    }
+  },
+  "tenantReadPolicy": "(( SELECT app_is_operator() AS app_is_operator) OR ((( SELECT app_scope() AS app_scope) = 'tenant'::text) AND (tenant_id = ( SELECT app_tenant_id() AS app_tenant_id))))",
+  "currentCdrIndexes": [
+    {
+      "indexname": "cdrs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX cdrs_pkey ON ONLY public.cdrs USING btree (call_uuid, started_at)"
+    },
+    {
+      "indexname": "cdrs_tenant_answered_at",
+      "indexdef": "CREATE INDEX cdrs_tenant_answered_at ON ONLY public.cdrs USING btree (tenant_id, answered_at)"
+    },
+    {
+      "indexname": "cdrs_tenant_started_at",
+      "indexdef": "CREATE INDEX cdrs_tenant_started_at ON ONLY public.cdrs USING btree (tenant_id, started_at)"
+    }
+  ],
+  "rounds": 7,
+  "warmups": 2,
+  "errors": 0,
+  "safety": {
+    "connectedAs": "fs_billing_app",
+    "connectedDatabase": "fs_billing_perf_pr3_uuid_v4",
+    "candidateIndexDDL": false,
+    "vacuum": false,
+    "seed": false
+  },
+  "samples": [
+    {
+      "name": "Q1 answered p1",
+      "n": 7,
+      "min": 1.3,
+      "p50": 1.5,
+      "p95": 2.5,
+      "max": 2.5
+    },
+    {
+      "name": "Q1 answered mid",
+      "n": 7,
+      "min": 66.3,
+      "p50": 67.4,
+      "p95": 72.3,
+      "max": 72.3
+    },
+    {
+      "name": "Q1 answered last",
+      "n": 7,
+      "min": 69.8,
+      "p50": 70.8,
+      "p95": 74.3,
+      "max": 74.3
+    },
+    {
+      "name": "Q2 all p1",
+      "n": 7,
+      "min": 66.1,
+      "p50": 67.5,
+      "p95": 70.4,
+      "max": 70.4
+    },
+    {
+      "name": "Q2 all mid",
+      "n": 7,
+      "min": 100.8,
+      "p50": 101.5,
+      "p95": 104.8,
+      "max": 104.8
+    },
+    {
+      "name": "Q3 answered summary",
+      "n": 7,
+      "min": 34.6,
+      "p50": 35.1,
+      "p95": 36,
+      "max": 36
+    },
+    {
+      "name": "Q3 unanswered count",
+      "n": 7,
+      "min": 4,
+      "p50": 4.2,
+      "p95": 5.2,
+      "max": 5.2
+    },
+    {
+      "name": "Q3 all summary",
+      "n": 7,
+      "min": 37.6,
+      "p50": 38.1,
+      "p95": 39.3,
+      "max": 39.3
+    },
+    {
+      "name": "Q4 common search p1",
+      "n": 7,
+      "min": 36.1,
+      "p50": 36.3,
+      "p95": 37.4,
+      "max": 37.4
+    },
+    {
+      "name": "Q4 common search summary",
+      "n": 7,
+      "min": 34.8,
+      "p50": 35.3,
+      "p95": 36.1,
+      "max": 36.1
+    },
+    {
+      "name": "Q4 rare search p1",
+      "n": 7,
+      "min": 33.8,
+      "p50": 34.2,
+      "p95": 34.6,
+      "max": 34.6
+    },
+    {
+      "name": "Q4 rare search summary",
+      "n": 7,
+      "min": 33.4,
+      "p50": 34.2,
+      "p95": 39.9,
+      "max": 39.9
+    },
+    {
+      "name": "Q5 keyset mid",
+      "n": 7,
+      "min": 2.1,
+      "p50": 2.2,
+      "p95": 4.6,
+      "max": 4.6
+    },
+    {
+      "name": "Q6 common country p1",
+      "n": 7,
+      "min": 1.4,
+      "p50": 1.6,
+      "p95": 2.1,
+      "max": 2.1
+    },
+    {
+      "name": "Q6 common country summary",
+      "n": 7,
+      "min": 26.3,
+      "p50": 26.9,
+      "p95": 27,
+      "max": 27
+    },
+    {
+      "name": "Q6 rare country p1",
+      "n": 7,
+      "min": 1.6,
+      "p50": 2.1,
+      "p95": 2.6,
+      "max": 2.6
+    },
+    {
+      "name": "Q6 rare country summary",
+      "n": 7,
+      "min": 21.3,
+      "p50": 21.8,
+      "p95": 24.9,
+      "max": 24.9
+    },
+    {
+      "name": "Q8 country options aggregate",
+      "n": 7,
+      "min": 36.1,
+      "p50": 36.4,
+      "p95": 38,
+      "max": 38
+    }
+  ]
+}

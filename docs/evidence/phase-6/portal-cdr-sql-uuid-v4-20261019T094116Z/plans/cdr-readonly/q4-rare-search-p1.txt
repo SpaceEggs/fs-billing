@@ -1,0 +1,30 @@
+Limit  (cost=30604.39..30604.49 rows=40 width=106) (actual time=33.826..33.827 rows=1 loops=1)
+  Buffers: shared hit=7366
+  InitPlan 1
+    ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.001..0.001 rows=1 loops=1)
+  InitPlan 2
+    ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual time=0.000..0.000 rows=1 loops=1)
+  InitPlan 3
+    ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=1)
+  ->  Sort  (cost=30604.35..30604.45 rows=40 width=106) (actual time=33.825..33.825 rows=1 loops=1)
+        Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=7366
+        ->  Append  (cost=0.42..30603.28 rows=40 width=106) (actual time=33.191..33.819 rows=1 loops=1)
+              Buffers: shared hit=7366
+              ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual time=0.013..0.014 rows=0 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%424242%'::text))
+                    Rows Removed by Filter: 1
+                    Buffers: shared hit=5
+              ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=8050.78..30594.62 rows=39 width=106) (actual time=33.177..33.804 rows=1 loops=1)
+                    Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (billing_number ~~ '%424242%'::text))
+                    Rows Removed by Filter: 246574
+                    Heap Blocks: exact=6144
+                    Buffers: shared hit=7361
+                    ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..8050.78 rows=248828 width=0) (actual time=4.293..4.293 rows=246575 loops=1)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                          Buffers: shared hit=1217
+Planning Time: 0.168 ms
+Execution Time: 33.876 ms

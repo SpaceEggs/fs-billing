@@ -1,12 +1,22 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { schema, withTenant } from '@fs-billing/db';
+import {
+  appendLedgerEntry,
+  ensureCdrPartitions,
+  schema,
+  withAdmin,
+  withTenant,
+} from '@fs-billing/db';
+import { money } from '@fs-billing/rating';
 import {
   apiErrorSchema,
   portalContextResponseSchema,
+  portalCdrsResponseSchema,
+  cdrCountriesResponseSchema,
   portalLedgerResponseSchema,
   sessionResponseSchema,
 } from '@fs-billing/shared';
@@ -55,7 +65,194 @@ async function assertBSession(api: TestApi, cookie: string, fixture: Fixture) {
     fixture.b.profileId,
   );
 }
+async function insertIsolatedCdrs(fixture: Fixture) {
+  await ensureCdrPartitions(connections.owner.db, { moment: new Date() });
+  const answeredAt = new Date();
+  const startedAt = new Date(answeredAt.getTime() - 60_000);
+  const endedAt = new Date(answeredAt.getTime() + 60_000);
+  for (const { tenantId, callee, country, unverified } of [
+    {
+      tenantId: fixture.a.tenantId,
+      callee: '8613800138001',
+      country: '中国',
+      unverified: false,
+    },
+    {
+      tenantId: fixture.a2.tenantId,
+      callee: '8613800138002',
+      country: '日本',
+      unverified: false,
+    },
+    {
+      tenantId: fixture.b.tenantId,
+      callee: '447700900123',
+      country: '英国',
+      unverified: true,
+    },
+  ]) {
+    expect(tenantId).not.toBeNull();
+    const existing = await connections.owner.pool.query<{ exists: boolean }>(
+      `select exists(select 1 from public.cdrs
+       where tenant_id = $1 and callee = $2) as exists`,
+      [tenantId, callee],
+    );
+    if (existing.rows[0]?.exists) continue;
+    await connections.owner.pool.query(
+      `insert into public.cdrs
+        (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
+         billing_number, duration_seconds, billed_minutes, matched_prefix, country,
+         rate, charge, hangup_cause, unverified)
+       values ($1,$2,$3,$4,$5,'1001',$6,$6,60,1,'86',$7,
+         123456789012345678901234567890.1234,0.25,'NORMAL_CLEARING',$8)`,
+      [
+        tenantId,
+        randomUUID(),
+        startedAt,
+        answeredAt,
+        endedAt,
+        callee,
+        country,
+        unverified,
+      ],
+    );
+  }
+}
 const cases = {
+  portalCdrs: async ({ api, fixture, operation }: CaseContext) => {
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const from = `${day.slice(0, 7)}-01`;
+    const a = await login(api, fixture.a);
+    const users = [
+      { user: fixture.a, session: a, amount: '8613800138001', country: '中国' },
+      {
+        user: fixture.a2,
+        session: await login(api, fixture.a2),
+        amount: '8613800138002',
+        country: '日本',
+      },
+      {
+        user: fixture.b,
+        session: await login(api, fixture.b),
+        amount: '447700900123',
+        country: '英国',
+      },
+    ] as const;
+    await insertIsolatedCdrs(fixture);
+    for (const { session, amount, country } of users) {
+      const response = await api.inject({
+        url: `${operation.path}?from=${from}&to=${day}&callee=${amount}`,
+        headers: forgedHeaders(session.cookie, fixture),
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      const body = portalCdrsResponseSchema.parse(response.json());
+      expect(body.pagination.total).toBe(1);
+      expect(body.items[0]?.country).toBe(country);
+      expect(body.items[0]?.callee).toBe(amount);
+      expect(JSON.stringify(body)).not.toContain('unverified');
+    }
+    for (const key of ['tenantId', 'tenant_id']) {
+      const attack = await api.inject({
+        url: `${operation.path}?from=${from}&to=${day}&${key}=${fixture.b.tenantId}`,
+        headers: forgedHeaders(a.cookie, fixture),
+      });
+      expect(attack.statusCode).toBe(400);
+    }
+  },
+  portalCdrCountries: async ({ api, fixture, operation }: CaseContext) => {
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const from = `${day.slice(0, 7)}-01`;
+    const a = await login(api, fixture.a);
+    const b = await login(api, fixture.b);
+    await insertIsolatedCdrs(fixture);
+    for (const { session, expectedCountry } of [
+      { session: a, expectedCountry: '中国' },
+      { session: b, expectedCountry: '英国' },
+    ]) {
+      const response = await api.inject({
+        url: `${operation.path}?from=${from}&to=${day}`,
+        headers: forgedHeaders(session.cookie, fixture),
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      expect(
+        cdrCountriesResponseSchema.parse(response.json()).countries,
+      ).toEqual([expectedCountry]);
+    }
+  },
+  portalCdrsExport: async ({ api, fixture, operation }: CaseContext) => {
+    const a = await login(api, fixture.a);
+    await insertIsolatedCdrs(fixture);
+    const tenantId = fixture.a.tenantId;
+    if (!tenantId) throw new Error('Expected tenant A to exist');
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const beforeAudit = await connections.owner.pool.query<{ count: number }>(
+      `select count(*)::int as count from public.operation_logs
+       where action = 'cdr_export' and tenant_id = $1`,
+      [tenantId],
+    );
+    const response = await api.inject({
+      method: 'POST',
+      url: operation.path,
+      headers: forgedHeaders(a.cookie, fixture),
+      payload: {
+        from: `${day.slice(0, 7)}-01`,
+        to: day,
+        callee: '8613800138001',
+      },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.body).toContain('8613800138001');
+    expect(response.body).not.toContain('447700900123');
+    expect(response.body).not.toContain('unverified');
+    expect(response.body).toContain('123456789012345678901234567890.1234');
+    const afterAudit = await connections.owner.pool.query<{ count: number }>(
+      `select count(*)::int as count from public.operation_logs
+       where action = 'cdr_export' and tenant_id = $1`,
+      [tenantId],
+    );
+    expect(afterAudit.rows[0]?.count).toBe(beforeAudit.rows[0]?.count);
+  },
+  portalLedgerExport: async ({ api, operation }: CaseContext) => {
+    const exportFixture = await createFixture(connections);
+    const a = await login(api, exportFixture.a);
+    const tenantId = exportFixture.a.tenantId;
+    if (!tenantId) throw new Error('Expected export tenant A to exist');
+    await withAdmin(connections.app.db, (tx) =>
+      appendLedgerEntry(
+        tx,
+        { id: tenantId, currency: 'CNY' },
+        {
+          kind: 'credit_recharge',
+          amount: money('CNY', '42.00'),
+          note: 'private receivable note',
+          adminId: exportFixture.admin.profileId,
+          idempotencyKey: `idor-export-credit:${randomUUID()}`,
+        },
+      ),
+    );
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const response = await api.inject({
+      method: 'POST',
+      url: operation.path,
+      headers: forgedHeaders(a.cookie, exportFixture),
+      payload: { from: `${day.slice(0, 7)}-01`, to: day },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.headers['content-type']).toContain('text/csv');
+    expect(response.body).toContain('111.25');
+    expect(response.body).toMatch(/,充值,42,/);
+    expect(response.body).toContain('账户充值');
+    expect(response.body).not.toContain('999.75');
+    expect(response.body).not.toContain('private receivable note');
+  },
   portalLedger: async ({ api, fixture, operation }: CaseContext) => {
     const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
       .toISOString()
@@ -345,6 +542,10 @@ const cases = {
 } satisfies Record<string, (context: CaseContext) => Promise<void>>;
 const caseKinds = new Map([
   ['portalContext', 'tenant-read'],
+  ['portalCdrs', 'tenant-read'],
+  ['portalCdrCountries', 'tenant-read'],
+  ['portalCdrsExport', 'tenant-read'],
+  ['portalLedgerExport', 'tenant-read'],
   ['portalLedger', 'tenant-read'],
   ['session', 'self-session'],
   ['logout', 'self-session-mutation'],
@@ -470,7 +671,14 @@ for (const lane of lanes) {
           .replace('{id}', fixture.b.profileId)
           .replace('{tenantId}', fixture.b.tenantId ?? '');
         if (
-          ['portalLedger', 'adminTenantLedger'].includes(operation.operationId)
+          [
+            'portalLedger',
+            'portalCdrs',
+            'portalCdrCountries',
+            'adminTenantLedger',
+            'adminTenantCdrs',
+            'adminTenantCdrCountries',
+          ].includes(operation.operationId)
         )
           url += '?from=2026-09-01&to=2026-09-30';
         const method = z
@@ -510,7 +718,11 @@ for (const lane of lanes) {
                         amount: '1',
                         idempotencyKey: 'idor-probe',
                       }
-                    : adminProbeBodies[operation.operationId];
+                    : operation.operationId === 'portalCdrsExport' ||
+                        operation.operationId === 'portalLedgerExport' ||
+                        operation.operationId === 'adminTenantCdrsExport'
+                      ? { from: '2026-09-01', to: '2026-09-30' }
+                      : adminProbeBodies[operation.operationId];
         const missing = await api.inject({
           method,
           url,

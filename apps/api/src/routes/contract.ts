@@ -1,6 +1,9 @@
 import {
   apiContract,
   portalLedgerApiContract,
+  portalLedgerExportApiContract,
+  portalCdrApiContract,
+  adminCdrApiContract,
   createAdminApiContract,
   adminRateRequestSchemas,
   adminAmountRequestSchemas,
@@ -11,7 +14,14 @@ export function createLiveApiContract(
   amountRequests = adminAmountRequestSchemas,
 ) {
   const admin = createAdminApiContract(rateRequests, amountRequests);
-  return { ...apiContract, ...admin, ...portalLedgerApiContract };
+  return {
+    ...apiContract,
+    ...admin,
+    ...adminCdrApiContract,
+    ...portalCdrApiContract,
+    ...portalLedgerApiContract,
+    ...portalLedgerExportApiContract,
+  };
 }
 export const liveApiContract = createLiveApiContract();
 export type LiveApiOperationId = keyof typeof liveApiContract;

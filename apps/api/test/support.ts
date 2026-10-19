@@ -150,6 +150,7 @@ export function fixtureApi(
     ownerLane?: boolean;
     hooks?: AuthHooks;
     rateLimit?: { max: number; timeWindow: number };
+    exportPoolApplicationName?: string;
   } = {},
 ) {
   const logs: object[] = [];
@@ -178,6 +179,9 @@ export function fixtureApi(
     }),
     trustedOrigins: [origin],
     rateLimit: options.rateLimit ?? { max: 1000, timeWindow: 60_000 },
+    ...(options.exportPoolApplicationName
+      ? { exportPoolApplicationName: options.exportPoolApplicationName }
+      : {}),
   });
   afterAll(() => api.close());
   return { api, auth, logs };

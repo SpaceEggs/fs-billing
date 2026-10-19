@@ -1,10 +1,14 @@
 export * from './client.js';
+export * from './cancel-postgres.js';
+export { withBoundedExportClient } from './bounded-export-client.js';
 export * from './clock.js';
 export * from './ledger.js';
+export * from './ledger-merge.js';
 export * from './partitions.js';
 export * from './rates.js';
 export * from './admin/receivables.js';
 export * from './admin/audit.js';
+export * from './admin/cdrs.js';
 export * from './admin/errors.js';
 export * as schema from './schema.js';
 export * as authSchema from './auth-schema.js';
@@ -17,3 +21,4 @@ export { readTenantUsageOverview } from './usage.js';
 export * from './errors.js';
 
 export * from './portal/ledger.js';
+export * from './portal/cdrs.js';

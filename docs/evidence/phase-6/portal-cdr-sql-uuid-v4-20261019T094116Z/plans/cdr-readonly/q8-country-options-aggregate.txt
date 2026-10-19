@@ -1,0 +1,31 @@
+Sort  (cost=31204.70..31204.75 rows=20 width=13) (actual time=44.208..44.209 rows=20 loops=1)
+  Sort Key: ((count(*))::integer) DESC, cdrs.country
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=7365
+  InitPlan 1
+    ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.001..0.001 rows=1 loops=1)
+  InitPlan 2
+    ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual time=0.000..0.000 rows=1 loops=1)
+  InitPlan 3
+    ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=1)
+  ->  HashAggregate  (cost=31203.97..31204.22 rows=20 width=13) (actual time=44.199..44.200 rows=20 loops=1)
+        Group Key: cdrs.country
+        Batches: 1  Memory Usage: 24kB
+        Buffers: shared hit=7365
+        ->  Append  (cost=0.42..30607.40 rows=119314 width=9) (actual time=0.013..31.808 rows=234277 loops=1)
+              Buffers: shared hit=7365
+              ->  Index Scan using cdrs_2026_08_tenant_id_answered_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.45 rows=1 width=9) (actual time=0.013..0.013 rows=1 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((country IS NOT NULL) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+                    Buffers: shared hit=4
+              ->  Bitmap Heap Scan on cdrs_2026_09 cdrs_2  (cost=8080.60..30002.37 rows=119313 width=9) (actual time=4.347..22.585 rows=234276 loops=1)
+                    Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                    Filter: ((country IS NOT NULL) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+                    Rows Removed by Filter: 12299
+                    Heap Blocks: exact=6144
+                    Buffers: shared hit=7361
+                    ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_started_at_idx  (cost=0.00..8050.78 rows=248828 width=0) (actual time=3.950..3.950 rows=246575 loops=1)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone))
+                          Buffers: shared hit=1217
+Planning Time: 0.156 ms
+Execution Time: 44.254 ms

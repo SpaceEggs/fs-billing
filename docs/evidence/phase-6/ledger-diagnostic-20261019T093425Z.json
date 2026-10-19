@@ -1,0 +1,376 @@
+{
+  "readOnly": true,
+  "startedAt": "2026-10-19T09:35:36.497Z",
+  "completedAt": "2026-10-19T09:35:48.531Z",
+  "comparison": "ordered dual-cursor merge of exact grouped ledger events by tenant, UTC day and occurred_at (six fractional digits), kind, original amount::text, scale(amount), trim_scale(amount)::text, note and normalized auth_user_id; multiplicity and source/target admin profile IDs retained",
+  "oldDatabase": "fs_billing_perf",
+  "newDatabase": "fs_billing_perf_pr3_uuid_v4",
+  "comparedGroups": 0,
+  "oldEventRows": 1,
+  "newEventRows": 2,
+  "groupRowsConsumed": {
+    "old": 1,
+    "new": 2
+  },
+  "oldActorIdentities": [
+    {
+      "auth_user_id": "seed:admin:li",
+      "email": "lijun@example.com",
+      "name": "李俊"
+    },
+    {
+      "auth_user_id": "seed:admin:wang",
+      "email": "wangmin@example.com",
+      "name": "王敏"
+    }
+  ],
+  "newActorIdentities": [
+    {
+      "auth_user_id": "seed:admin:li",
+      "email": "lijun@example.com",
+      "name": "李俊"
+    },
+    {
+      "auth_user_id": "seed:admin:wang",
+      "email": "wangmin@example.com",
+      "name": "王敏"
+    }
+  ],
+  "manualLedgerActorSummary": {
+    "old": [
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "12",
+        "amount": "-148.08",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "6500",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "390000",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "12",
+        "amount": "-1.4808",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "65.00",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "3900.00",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000003",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "12",
+        "amount": "-1.4808",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000003",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "65.00",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000003",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "3900.00",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000004",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "12",
+        "amount": "-1.4808",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000004",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "65.00",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000004",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "rows": "13",
+        "amount": "3900.00",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      }
+    ],
+    "new": [
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "12",
+        "amount": "-148.08",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "6500",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "390000",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "12",
+        "amount": "-1.4808",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "65.00",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "3900.00",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000003",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "12",
+        "amount": "-1.4808",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000003",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "65.00",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000003",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "3900.00",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000004",
+        "kind": "adjustment",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "12",
+        "amount": "-1.4808",
+        "first_occurred": "2025-10-20T02:00:00.000000Z",
+        "last_occurred": "2026-09-20T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000004",
+        "kind": "gift",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "65.00",
+        "first_occurred": "2025-10-15T02:00:00.000000Z",
+        "last_occurred": "2026-10-15T02:00:00.000000Z"
+      },
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000004",
+        "kind": "recharge",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "rows": "13",
+        "amount": "3900.00",
+        "first_occurred": "2025-10-01T02:00:00.000000Z",
+        "last_occurred": "2026-10-01T02:00:00.000000Z"
+      }
+    ]
+  },
+  "firstDifferenceActorCounterparts": {
+    "event": {
+      "tenant_id": "00000000-0000-4000-8000-000000000001",
+      "occurred_day_utc": "2025-10-01",
+      "occurred_at_utc": "2025-10-01T02:00:00.000000Z",
+      "kind": "recharge",
+      "amount_text": "30000",
+      "amount_scale": "0",
+      "amount_trimmed": "30000",
+      "note": "",
+      "auth_user_id": "seed:admin:li",
+      "multiplicity": 1,
+      "created_by_profile_ids": ["0399c7a7-6b34-4367-810c-61ab1d4f4294"]
+    },
+    "old": [
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "occurred_at_utc": "2025-10-01T02:00:00.000000Z",
+        "kind": "recharge",
+        "amount_text": "30000",
+        "amount_scale": "0",
+        "amount_trimmed": "30000",
+        "note": "",
+        "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+        "auth_user_id": "seed:admin:wang",
+        "email": "wangmin@example.com",
+        "name": "王敏",
+        "multiplicity": "1"
+      }
+    ],
+    "new": [
+      {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "occurred_at_utc": "2025-10-01T02:00:00.000000Z",
+        "kind": "recharge",
+        "amount_text": "30000",
+        "amount_scale": "0",
+        "amount_trimmed": "30000",
+        "note": "",
+        "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+        "auth_user_id": "seed:admin:li",
+        "email": "lijun@example.com",
+        "name": "李俊",
+        "multiplicity": "1"
+      }
+    ]
+  },
+  "firstDifferences": [
+    {
+      "type": "missing-in-old",
+      "old": null,
+      "new": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "occurred_day_utc": "2025-10-01",
+        "occurred_at_utc": "2025-10-01T02:00:00.000000Z",
+        "kind": "recharge",
+        "amount_text": "30000",
+        "amount_scale": "0",
+        "amount_trimmed": "30000",
+        "note": "",
+        "auth_user_id": "seed:admin:li",
+        "multiplicity": 1,
+        "created_by_profile_ids": ["0399c7a7-6b34-4367-810c-61ab1d4f4294"]
+      }
+    }
+  ],
+  "equal": false
+}

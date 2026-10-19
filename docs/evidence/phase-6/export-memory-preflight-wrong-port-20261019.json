@@ -1,0 +1,113 @@
+{
+  "runId": "c6a5f242-2ae2-4320-a578-a2f761606e9d",
+  "startedAtUtc": "2026-10-19T14:19:39.693Z",
+  "capturedAtUtc": "2026-10-19T14:19:39.754Z",
+  "gitHead": "74f27a9d1da540898443f1ca55c68675bd83333f",
+  "nodeArguments": [
+    "--env-file=/Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/.env",
+    "--import",
+    "tsx"
+  ],
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "databaseHost": "127.0.0.1",
+  "databasePort": "55432",
+  "fixtureCounts": {},
+  "dateRange": {
+    "from": "2026-09-01",
+    "to": "2026-09-30"
+  },
+  "host": {
+    "loadAverage": [2.97998046875, 3.7451171875, 3.91845703125],
+    "cores": 10,
+    "node": "v22.23.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "rounds": 5,
+  "sourceHashes": {
+    "apps/api/scripts/portal-export-perf.ts": "03bf8d28ef31bb03fdf95e82183e0ca37e1a8ff9a927a4d6ac609ab3bf9520d3",
+    "apps/api/scripts/portal-list-perf.ts": "82a923bec8edb8f013400ef194ae5e76d4d2ee66a9405f5c2c577eb3fbf4041c",
+    "apps/api/scripts/portal-memory-gc.mjs": "a90acde1aa67272d32af59642298181a067352375078c568dc931cbfc08bf616",
+    "apps/api/src/export/stream-csv.ts": "6ea159093916f79d4f2cfe0824b548f60e3b3ed6100b00b4f174725859cf1566",
+    "apps/api/src/routes/exports.ts": "321851a7b2e42f20be3a3ccea191b552d193be7053267ca7644634e3d210705b",
+    "apps/api/src/export/slots.ts": "709d55ded8bd7e49833fc601a012d3464b68a4c8935828a8eefeb87e85add5bf",
+    "packages/rating/src/csv.ts": "dd41f4d7af54fbe10b80983e4d8a67130be9e0fea9d3985e8c6baff0f176e2e6",
+    "packages/db/src/cdr-query.ts": "8a148efb8629ffc4d6c31fbad4c3c22a653cd93d77e01801259cb01b63249b9c",
+    "packages/db/src/bounded-export-client.ts": "85f9a92b9488ff5bdb6a72984ec347a622e3cde82dc13e41ac0737a44d4c33a6",
+    "packages/db/src/cancel-postgres.ts": "9387861a1a89af29f5d12aabd07f8042c13c5a5c1a9234d533c79e05a5bcd211",
+    "packages/db/src/client.ts": "2b95e3a5dff4c68b6f4080b31c04fc71d3d043d83de8e3fecbcee8e3944eb675",
+    "apps/api/src/app.ts": "d0cd48f5a180594615e92185e86162c74690c3fe84c3bf66882846cb326455f7",
+    "packages/db/src/portal/cdrs.ts": "4fae4da1dd05a476ecde20bc15a28d7b12bcf90884b05e4a366773f806a7308a",
+    "packages/db/src/admin/cdrs.ts": "6b58a6062ee6ed5b83f59c5f283ef4cc7f1a11cff85f39729d8be10862886119",
+    "pnpm-lock.yaml": "f4557d6d5ad93da2776514c5da739874a6f22277907181647e2a3e8df721a270"
+  },
+  "sourceHashesAfter": {
+    "apps/api/scripts/portal-export-perf.ts": "03bf8d28ef31bb03fdf95e82183e0ca37e1a8ff9a927a4d6ac609ab3bf9520d3",
+    "apps/api/scripts/portal-list-perf.ts": "82a923bec8edb8f013400ef194ae5e76d4d2ee66a9405f5c2c577eb3fbf4041c",
+    "apps/api/scripts/portal-memory-gc.mjs": "a90acde1aa67272d32af59642298181a067352375078c568dc931cbfc08bf616",
+    "apps/api/src/export/stream-csv.ts": "6ea159093916f79d4f2cfe0824b548f60e3b3ed6100b00b4f174725859cf1566",
+    "apps/api/src/routes/exports.ts": "321851a7b2e42f20be3a3ccea191b552d193be7053267ca7644634e3d210705b",
+    "apps/api/src/export/slots.ts": "709d55ded8bd7e49833fc601a012d3464b68a4c8935828a8eefeb87e85add5bf",
+    "packages/rating/src/csv.ts": "dd41f4d7af54fbe10b80983e4d8a67130be9e0fea9d3985e8c6baff0f176e2e6",
+    "packages/db/src/cdr-query.ts": "8a148efb8629ffc4d6c31fbad4c3c22a653cd93d77e01801259cb01b63249b9c",
+    "packages/db/src/bounded-export-client.ts": "85f9a92b9488ff5bdb6a72984ec347a622e3cde82dc13e41ac0737a44d4c33a6",
+    "packages/db/src/cancel-postgres.ts": "9387861a1a89af29f5d12aabd07f8042c13c5a5c1a9234d533c79e05a5bcd211",
+    "packages/db/src/client.ts": "2b95e3a5dff4c68b6f4080b31c04fc71d3d043d83de8e3fecbcee8e3944eb675",
+    "apps/api/src/app.ts": "d0cd48f5a180594615e92185e86162c74690c3fe84c3bf66882846cb326455f7",
+    "packages/db/src/portal/cdrs.ts": "4fae4da1dd05a476ecde20bc15a28d7b12bcf90884b05e4a366773f806a7308a",
+    "packages/db/src/admin/cdrs.ts": "6b58a6062ee6ed5b83f59c5f283ef4cc7f1a11cff85f39729d8be10862886119",
+    "pnpm-lock.yaml": "f4557d6d5ad93da2776514c5da739874a6f22277907181647e2a3e8df721a270"
+  },
+  "sourceUnchanged": true,
+  "method": "One real API child; no warmup exports; six cases alternate forward/reverse each round then portal/admin 200k repeats. Each export consumes/counts the complete CSV with bounded client buffers, verifies same-request server completion and clean database activity, and records three forced full GCs on separate event-loop turns before/after. RSS is sampled with ps every 50ms plus request start/end; sub-50ms peaks can be missed. Heap telemetry comes from that API child, not the load generator. GC is diagnostic and differs from normal production collection. No numeric memory pass threshold is imposed.",
+  "evidenceCaptureCommand": "cd apps/api && PERF_TARGET_DATABASE=fs_billing_perf_pr3_uuid_v4 PERF_DATABASE_PORT=55432 PERF_MEMORY=1 PERF_GC_ON_SIGUSR2=1 PERF_ROUNDS=5 node '--env-file=/Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/.env' '--import' 'tsx' scripts/portal-export-perf.ts",
+  "cleanup": {
+    "apiChild": {
+      "gracefulExit": true,
+      "forcedKill": false,
+      "exitCode": null,
+      "signalCode": null
+    }
+  },
+  "cleanupErrors": [],
+  "createdRows": {
+    "userIds": [],
+    "portalAccountIds": [],
+    "adminIds": [],
+    "sessionIds": [],
+    "auditIds": []
+  },
+  "failures": ["error: password authentication failed for user \"fs_billing\""],
+  "summaries": [],
+  "repeated200k": [
+    {
+      "scenario": "admin-EXPORT200K",
+      "samples": 0,
+      "peakRssDeltaBytes": {
+        "median": 0,
+        "min": null,
+        "max": null
+      },
+      "postGcHeapUsedBytes": {
+        "median": 0,
+        "min": null,
+        "max": null
+      }
+    },
+    {
+      "scenario": "portal-EXPORT200K",
+      "samples": 0,
+      "peakRssDeltaBytes": {
+        "median": 0,
+        "min": null,
+        "max": null
+      },
+      "postGcHeapUsedBytes": {
+        "median": 0,
+        "min": null,
+        "max": null
+      }
+    }
+  ],
+  "samples": []
+}

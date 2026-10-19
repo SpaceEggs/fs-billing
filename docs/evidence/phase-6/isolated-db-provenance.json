@@ -1,0 +1,154 @@
+{
+  "completedAt": "2026-10-19T09:12:07.275Z",
+  "sourceDatabase": "fs_billing_perf",
+  "targetDatabase": "fs_billing_perf_pr3_uuid_v4",
+  "ownerRole": "fs_billing",
+  "appRole": "fs_billing_app",
+  "authRole": "fs_billing_auth",
+  "identityRole": "fs_billing_identity",
+  "auditRole": "fs_billing_audit",
+  "postgresVersion": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "databaseOid": 139007,
+  "asOf": "2026-10-17T04:00:00Z",
+  "migrationCount": 16,
+  "appliedMigrations": [
+    {
+      "hash": "a3be69afe9dfd2684b93a10a113e602df6c852f96274b853b04e597785d82175",
+      "created_at": "1791849600000"
+    },
+    {
+      "hash": "793fe34850fc3109c1aeb5939e2730f6fe181878048cd280ca615ddfd46a4f9a",
+      "created_at": "1791936000000"
+    },
+    {
+      "hash": "14b6b1314e32253dc5cbf64fbf59abcc0b56424326f011b530bed5efacd81dff",
+      "created_at": "1792022400000"
+    },
+    {
+      "hash": "42bd198dcf219bc00e638632727f5bb89632cfa3c1f6533ca65943ae6365cc98",
+      "created_at": "1792108800000"
+    },
+    {
+      "hash": "b5bf4c39044472e7abed4e8b2039439570c5eea6a432294035813329013317f5",
+      "created_at": "1792195200000"
+    },
+    {
+      "hash": "c25f0b8ceaaab433d7f1ba4c415995c425c10733d00b0fda802c37194517a5ee",
+      "created_at": "1792281600000"
+    },
+    {
+      "hash": "2e55ace2bc63ed82e220863c0be818f995cc6b1b67ee1bd575f7a81541232fbc",
+      "created_at": "1792368000000"
+    },
+    {
+      "hash": "7a6599350def49e4b491589672a9c0fbeffc4ee3419f4ba012853574486bc7e6",
+      "created_at": "1792454400000"
+    },
+    {
+      "hash": "4d717c23529d0eac2b330c6db314d00c1850eabf57fa5bc667e4e43eb84d1363",
+      "created_at": "1792540800000"
+    },
+    {
+      "hash": "317ee40cb4f436a0a03dd641eee38e350bb8d8749ea159b3043aebe279856c92",
+      "created_at": "1792627200000"
+    },
+    {
+      "hash": "2867018e66242a13a0402a88d18556f69e55969c36b47f85f7b0945b13001d0a",
+      "created_at": "1792713600000"
+    },
+    {
+      "hash": "36d7a218eb20196475fdf115917760cf8999978da49c859f26f8a3b305a408be",
+      "created_at": "1792800000000"
+    },
+    {
+      "hash": "98b88e397bdf3eb0f2ce33a07e97d295fb1c07eea665833d0b3a11b7c440718e",
+      "created_at": "1792886400000"
+    },
+    {
+      "hash": "ea028d24070794d4458518a9fa0d96f9165c4ccab8c2d187ff60d1f49dc3bd1a",
+      "created_at": "1792972800000"
+    },
+    {
+      "hash": "b883e2671f02d981da1f034b9ce0d273dfd690b92e93128fb2fe402c7b21743d",
+      "created_at": "1793059200000"
+    },
+    {
+      "hash": "6444d3f11720a9821ca4f69e5809c90abca9a1ccf545f63847c161fd27a0bbc8",
+      "created_at": "1793145600000"
+    }
+  ],
+  "migrationJournalSha256": "4385c314f1a7cfb6590099e22560a2e7774fc0d907fd136c866a139b4fb95e03",
+  "setupSourceSha256": "7f0479cb8ed8f8e98ffc4d1ba3ba9488f5ed75a5286f331ae2b0748c4c74dc88",
+  "portalPerfSourceSha256": "cc14083d4e797cbc89e8782058df3cfdc75fc125924e74034a8793f7ddcf0593",
+  "roleConnections": [
+    {
+      "label": "owner",
+      "database": "fs_billing_perf",
+      "role": "fs_billing"
+    },
+    {
+      "label": "app",
+      "database": "fs_billing_perf",
+      "role": "fs_billing_app"
+    },
+    {
+      "label": "auth",
+      "database": "fs_billing_perf",
+      "role": "fs_billing_auth"
+    }
+  ],
+  "baselineAdminRows": [
+    {
+      "id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+      "auth_user_id": "seed:admin:li",
+      "email": "lijun@example.com",
+      "name": "李俊"
+    },
+    {
+      "id": "0fc0c713-f162-4572-bdf2-fb74ca859af0",
+      "auth_user_id": "seed:admin:wang",
+      "email": "wangmin@example.com",
+      "name": "王敏"
+    }
+  ],
+  "fixtureCounts": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "code": "PORTALBIG",
+      "cdrs": "3000000"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "code": "PORTALS1",
+      "cdrs": "30000"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "code": "PORTALS2",
+      "cdrs": "30000"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "code": "PORTALS3",
+      "cdrs": "30000"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "code": "EXPORT50K",
+      "cdrs": "50000"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "code": "EXPORT100K",
+      "cdrs": "100000"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "code": "EXPORT200K",
+      "cdrs": "200000"
+    }
+  ],
+  "newSetupPermanentWritesToSource": false,
+  "newSetupPermanentWritesToSnapshot": false,
+  "priorRunnerRecoveryAttestation": "/Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/docs/evidence/phase-6/isolated-db-create-recovery-attestation.json"
+}
