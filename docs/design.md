@@ -1,3 +1,11 @@
+---
+id: architecture
+type: architecture-design
+title: FS-Billing 业务与系统架构
+status: draft
+parent: goal-and-requirements
+---
+
 # FS-Billing 设计文档
 
 > 版本：v0.2（2026-10-17，补入阶段 5 的业务决定；v0.1 为 2026-09-29）
@@ -432,3 +440,12 @@ Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBi
 
 
 阶段 4 API 的认证 schema、受限身份函数及 API 自有账户锁定实现记录见 [后端设计 §11.1](phase-4-api-design.md#111-api-自有-sql-账户锁定) 与 [实施证据](phase-4-api.md)。`auth.login_failures.window_id UUID NOT NULL` 标识计数窗口，新窗口生成新 UUID，基础设施失败退款只递减同一 UUID，避免旧请求解除新窗口的锁。阶段 4 已全部验收，进度见 [plan.md](plan.md) 的阶段表。
+
+## 16. 代码边界与不变量
+
+本节记录代码已经执行、前面各章没有写明的约束。业务规则仍以各章为准。
+
+- **依赖方向**：`packages/shared` 只依赖 zod，`packages/rating` 只依赖 decimal.js；`packages/db` 依赖两者；`apps/api` 与 `apps/worker` 依赖 `packages/db`；`apps/web` 只依赖 `packages/shared`，不访问数据库。`freeswitch/` 只经 HTTP 契约调用 Worker。
+- **会话身份**：应用连接角色 `fs_billing_app` 没有 BYPASSRLS。业务事务必须经 `withTenant` / `withAdmin` / `withSystem` 声明 `app.scope`，未声明时任何业务行都读不到（§11）。登录相关的表放在独立的 `auth` schema，用 `fs_billing_auth` 角色连接。
+- **金额类型**：`Money<Currency>` / `Rate<Currency>` 品牌类型由 `packages/rating` 提供，不同币种相加在类型检查阶段报错。ESLint 规则 `money/no-number-money` 覆盖 `packages/rating`、`packages/db`、`apps/worker` 与 `apps/web/src`，禁止对金额做原生算术、自增自减、复合赋值，以及把小数或金额变量交给 `Math` / `Number` / `parseFloat` / `parseInt`。
+- **话单分区**：`cdrs` 与 `raw_cdrs` 按月分区，只在维护路径创建（迁移、种子、Worker 启动与每日任务）。持有租户锁的事务里不能建分区。
