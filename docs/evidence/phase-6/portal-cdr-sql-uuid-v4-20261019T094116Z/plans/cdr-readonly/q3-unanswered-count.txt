@@ -1,0 +1,14 @@
+Aggregate  (cost=8208.66..8208.68 rows=1 width=4) (actual time=2.892..2.892 rows=1 loops=1)
+  Buffers: shared hit=5331
+  InitPlan 1
+    ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.002..0.002 rows=1 loops=1)
+  InitPlan 2
+    ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual time=0.000..0.000 rows=1 loops=1)
+  InitPlan 3
+    ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=1)
+  ->  Index Scan using cdrs_2026_09_tenant_id_answered_at_idx on cdrs_2026_09 cdrs  (cost=0.42..8202.09 rows=2610 width=0) (actual time=0.020..2.666 rows=12297 loops=1)
+        Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+        Filter: ((started_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))))
+        Buffers: shared hit=5331
+Planning Time: 0.111 ms
+Execution Time: 2.910 ms

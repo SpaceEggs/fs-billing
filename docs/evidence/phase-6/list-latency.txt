@@ -1,0 +1,2633 @@
+{
+  "runId": "c9dd990c-7507-4e35-948f-8d8f46b6a1e1",
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "fixtureTenantCode": "PORTALBIG",
+  "fixtureTenantId": "00000000-0000-4000-8000-000000000001",
+  "databaseProfile": {
+    "id": "fs_billing_perf_pr3_uuid_v4:fs_billing_app:server-81ceda2d:journal-4385c314f1a7:cdr-indexes-f8043ccb4ef1",
+    "database": "fs_billing_perf_pr3_uuid_v4",
+    "role": "fs_billing_app",
+    "serverVersion": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "repositoryMigrationJournalSha256": "4385c314f1a7cfb6590099e22560a2e7774fc0d907fd136c866a139b4fb95e03",
+    "appliedMigrations": {
+      "count": 16,
+      "latestHash": "6444d3f11720a9821ca4f69e5809c90abca9a1ccf545f63847c161fd27a0bbc8",
+      "latestCreatedAt": "2026-10-28T00:00:00.000Z"
+    },
+    "cdrIndexes": [
+      {
+        "schemaname": "public",
+        "tablename": "cdrs",
+        "indexname": "cdrs_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_pkey ON ONLY public.cdrs USING btree (call_uuid, started_at)",
+        "level": 0
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs",
+        "indexname": "cdrs_tenant_answered_at",
+        "indexdef": "CREATE INDEX cdrs_tenant_answered_at ON ONLY public.cdrs USING btree (tenant_id, answered_at)",
+        "level": 0
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs",
+        "indexname": "cdrs_tenant_started_at",
+        "indexdef": "CREATE INDEX cdrs_tenant_started_at ON ONLY public.cdrs USING btree (tenant_id, started_at)",
+        "level": 0
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_10",
+        "indexname": "cdrs_2025_10_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2025_10_pkey ON public.cdrs_2025_10 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_10",
+        "indexname": "cdrs_2025_10_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2025_10_tenant_id_answered_at_idx ON public.cdrs_2025_10 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_10",
+        "indexname": "cdrs_2025_10_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2025_10_tenant_id_started_at_idx ON public.cdrs_2025_10 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_11",
+        "indexname": "cdrs_2025_11_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2025_11_pkey ON public.cdrs_2025_11 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_11",
+        "indexname": "cdrs_2025_11_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2025_11_tenant_id_answered_at_idx ON public.cdrs_2025_11 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_11",
+        "indexname": "cdrs_2025_11_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2025_11_tenant_id_started_at_idx ON public.cdrs_2025_11 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_12",
+        "indexname": "cdrs_2025_12_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2025_12_pkey ON public.cdrs_2025_12 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_12",
+        "indexname": "cdrs_2025_12_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2025_12_tenant_id_answered_at_idx ON public.cdrs_2025_12 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2025_12",
+        "indexname": "cdrs_2025_12_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2025_12_tenant_id_started_at_idx ON public.cdrs_2025_12 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_01",
+        "indexname": "cdrs_2026_01_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_01_pkey ON public.cdrs_2026_01 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_01",
+        "indexname": "cdrs_2026_01_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_01_tenant_id_answered_at_idx ON public.cdrs_2026_01 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_01",
+        "indexname": "cdrs_2026_01_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_01_tenant_id_started_at_idx ON public.cdrs_2026_01 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_02",
+        "indexname": "cdrs_2026_02_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_02_pkey ON public.cdrs_2026_02 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_02",
+        "indexname": "cdrs_2026_02_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_02_tenant_id_answered_at_idx ON public.cdrs_2026_02 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_02",
+        "indexname": "cdrs_2026_02_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_02_tenant_id_started_at_idx ON public.cdrs_2026_02 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_03",
+        "indexname": "cdrs_2026_03_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_03_pkey ON public.cdrs_2026_03 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_03",
+        "indexname": "cdrs_2026_03_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_03_tenant_id_answered_at_idx ON public.cdrs_2026_03 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_03",
+        "indexname": "cdrs_2026_03_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_03_tenant_id_started_at_idx ON public.cdrs_2026_03 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_04",
+        "indexname": "cdrs_2026_04_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_04_pkey ON public.cdrs_2026_04 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_04",
+        "indexname": "cdrs_2026_04_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_04_tenant_id_answered_at_idx ON public.cdrs_2026_04 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_04",
+        "indexname": "cdrs_2026_04_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_04_tenant_id_started_at_idx ON public.cdrs_2026_04 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_05",
+        "indexname": "cdrs_2026_05_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_05_pkey ON public.cdrs_2026_05 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_05",
+        "indexname": "cdrs_2026_05_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_05_tenant_id_answered_at_idx ON public.cdrs_2026_05 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_05",
+        "indexname": "cdrs_2026_05_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_05_tenant_id_started_at_idx ON public.cdrs_2026_05 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_06",
+        "indexname": "cdrs_2026_06_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_06_pkey ON public.cdrs_2026_06 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_06",
+        "indexname": "cdrs_2026_06_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_06_tenant_id_answered_at_idx ON public.cdrs_2026_06 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_06",
+        "indexname": "cdrs_2026_06_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_06_tenant_id_started_at_idx ON public.cdrs_2026_06 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_07",
+        "indexname": "cdrs_2026_07_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_07_pkey ON public.cdrs_2026_07 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_07",
+        "indexname": "cdrs_2026_07_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_07_tenant_id_answered_at_idx ON public.cdrs_2026_07 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_07",
+        "indexname": "cdrs_2026_07_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_07_tenant_id_started_at_idx ON public.cdrs_2026_07 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_08",
+        "indexname": "cdrs_2026_08_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_08_pkey ON public.cdrs_2026_08 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_08",
+        "indexname": "cdrs_2026_08_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_08_tenant_id_answered_at_idx ON public.cdrs_2026_08 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_08",
+        "indexname": "cdrs_2026_08_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_08_tenant_id_started_at_idx ON public.cdrs_2026_08 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_09",
+        "indexname": "cdrs_2026_09_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_09_pkey ON public.cdrs_2026_09 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_09",
+        "indexname": "cdrs_2026_09_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_09_tenant_id_answered_at_idx ON public.cdrs_2026_09 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_09",
+        "indexname": "cdrs_2026_09_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_09_tenant_id_started_at_idx ON public.cdrs_2026_09 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_10",
+        "indexname": "cdrs_2026_10_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_10_pkey ON public.cdrs_2026_10 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_10",
+        "indexname": "cdrs_2026_10_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_10_tenant_id_answered_at_idx ON public.cdrs_2026_10 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_10",
+        "indexname": "cdrs_2026_10_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_10_tenant_id_started_at_idx ON public.cdrs_2026_10 USING btree (tenant_id, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_11",
+        "indexname": "cdrs_2026_11_pkey",
+        "indexdef": "CREATE UNIQUE INDEX cdrs_2026_11_pkey ON public.cdrs_2026_11 USING btree (call_uuid, started_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_11",
+        "indexname": "cdrs_2026_11_tenant_id_answered_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_11_tenant_id_answered_at_idx ON public.cdrs_2026_11 USING btree (tenant_id, answered_at)",
+        "level": 1
+      },
+      {
+        "schemaname": "public",
+        "tablename": "cdrs_2026_11",
+        "indexname": "cdrs_2026_11_tenant_id_started_at_idx",
+        "indexdef": "CREATE INDEX cdrs_2026_11_tenant_id_started_at_idx ON public.cdrs_2026_11 USING btree (tenant_id, started_at)",
+        "level": 1
+      }
+    ],
+    "cdrIndexDefinitionsSha256": "f8043ccb4ef14dfe6c16ce704fc71b0a68ddf1688bd29c4192474ad4dccf8c7f"
+  },
+  "fixtureFacts": {
+    "tenantCdrRows": 3000000,
+    "answeredRangeRows": 234277,
+    "allRangeRows": 246574
+  },
+  "dateRange": {
+    "from": "2026-09-01",
+    "to": "2026-09-30"
+  },
+  "measurementClass": "formal repeated HTTP measurement",
+  "transport": "real API child process, loopback HTTP, real signed cookie and auth/business database roles; full response consumed and schema parsed",
+  "rounds": 7,
+  "warmupsPerScenario": 1,
+  "pageSize": 50,
+  "serverPid": 4732,
+  "serverRss": {
+    "sampler": "macOS ps -o rss=, 250 ms polling; API child RSS only; client process excluded",
+    "samples": 68,
+    "minBytes": 130564096,
+    "maxBytes": 182829056,
+    "trace": [
+      {
+        "elapsedMs": 6,
+        "receivedRows": 0,
+        "rssBytes": 182468608
+      },
+      {
+        "elapsedMs": 263,
+        "receivedRows": 0,
+        "rssBytes": 182632448
+      },
+      {
+        "elapsedMs": 513,
+        "receivedRows": 50,
+        "rssBytes": 182829056
+      },
+      {
+        "elapsedMs": 763,
+        "receivedRows": 77,
+        "rssBytes": 158023680
+      },
+      {
+        "elapsedMs": 1016,
+        "receivedRows": 154,
+        "rssBytes": 158040064
+      },
+      {
+        "elapsedMs": 1267,
+        "receivedRows": 181,
+        "rssBytes": 158121984
+      },
+      {
+        "elapsedMs": 1520,
+        "receivedRows": 281,
+        "rssBytes": 158236672
+      },
+      {
+        "elapsedMs": 1772,
+        "receivedRows": 335,
+        "rssBytes": 158482432
+      },
+      {
+        "elapsedMs": 2022,
+        "receivedRows": 385,
+        "rssBytes": 158564352
+      },
+      {
+        "elapsedMs": 2272,
+        "receivedRows": 462,
+        "rssBytes": 159088640
+      },
+      {
+        "elapsedMs": 2524,
+        "receivedRows": 489,
+        "rssBytes": 159088640
+      },
+      {
+        "elapsedMs": 2775,
+        "receivedRows": 589,
+        "rssBytes": 159137792
+      },
+      {
+        "elapsedMs": 3025,
+        "receivedRows": 616,
+        "rssBytes": 159793152
+      },
+      {
+        "elapsedMs": 3274,
+        "receivedRows": 690,
+        "rssBytes": 159825920
+      },
+      {
+        "elapsedMs": 3523,
+        "receivedRows": 740,
+        "rssBytes": 159825920
+      },
+      {
+        "elapsedMs": 3778,
+        "receivedRows": 764,
+        "rssBytes": 159842304
+      },
+      {
+        "elapsedMs": 4030,
+        "receivedRows": 788,
+        "rssBytes": 159875072
+      },
+      {
+        "elapsedMs": 4280,
+        "receivedRows": 888,
+        "rssBytes": 159891456
+      },
+      {
+        "elapsedMs": 4530,
+        "receivedRows": 912,
+        "rssBytes": 159891456
+      },
+      {
+        "elapsedMs": 4783,
+        "receivedRows": 936,
+        "rssBytes": 161120256
+      },
+      {
+        "elapsedMs": 5031,
+        "receivedRows": 986,
+        "rssBytes": 161153024
+      },
+      {
+        "elapsedMs": 5284,
+        "receivedRows": 1060,
+        "rssBytes": 161185792
+      },
+      {
+        "elapsedMs": 5533,
+        "receivedRows": 1084,
+        "rssBytes": 161185792
+      },
+      {
+        "elapsedMs": 5787,
+        "receivedRows": 1134,
+        "rssBytes": 161234944
+      },
+      {
+        "elapsedMs": 6038,
+        "receivedRows": 1184,
+        "rssBytes": 161267712
+      },
+      {
+        "elapsedMs": 6289,
+        "receivedRows": 1308,
+        "rssBytes": 161349632
+      },
+      {
+        "elapsedMs": 6543,
+        "receivedRows": 1408,
+        "rssBytes": 161415168
+      },
+      {
+        "elapsedMs": 6794,
+        "receivedRows": 1558,
+        "rssBytes": 161497088
+      },
+      {
+        "elapsedMs": 7046,
+        "receivedRows": 1708,
+        "rssBytes": 161873920
+      },
+      {
+        "elapsedMs": 7301,
+        "receivedRows": 1858,
+        "rssBytes": 165560320
+      },
+      {
+        "elapsedMs": 7550,
+        "receivedRows": 2058,
+        "rssBytes": 165560320
+      },
+      {
+        "elapsedMs": 7800,
+        "receivedRows": 2258,
+        "rssBytes": 165298176
+      },
+      {
+        "elapsedMs": 8053,
+        "receivedRows": 2408,
+        "rssBytes": 132071424
+      },
+      {
+        "elapsedMs": 8305,
+        "receivedRows": 2458,
+        "rssBytes": 133349376
+      },
+      {
+        "elapsedMs": 8557,
+        "receivedRows": 2535,
+        "rssBytes": 130564096
+      },
+      {
+        "elapsedMs": 8808,
+        "receivedRows": 2589,
+        "rssBytes": 131219456
+      },
+      {
+        "elapsedMs": 9060,
+        "receivedRows": 2639,
+        "rssBytes": 131661824
+      },
+      {
+        "elapsedMs": 9310,
+        "receivedRows": 2716,
+        "rssBytes": 131694592
+      },
+      {
+        "elapsedMs": 9564,
+        "receivedRows": 2743,
+        "rssBytes": 131710976
+      },
+      {
+        "elapsedMs": 9817,
+        "receivedRows": 2843,
+        "rssBytes": 131940352
+      },
+      {
+        "elapsedMs": 10066,
+        "receivedRows": 2870,
+        "rssBytes": 132104192
+      },
+      {
+        "elapsedMs": 10316,
+        "receivedRows": 2947,
+        "rssBytes": 133038080
+      },
+      {
+        "elapsedMs": 10568,
+        "receivedRows": 3024,
+        "rssBytes": 133431296
+      },
+      {
+        "elapsedMs": 10822,
+        "receivedRows": 3074,
+        "rssBytes": 133480448
+      },
+      {
+        "elapsedMs": 11069,
+        "receivedRows": 3098,
+        "rssBytes": 133496832
+      },
+      {
+        "elapsedMs": 11326,
+        "receivedRows": 3148,
+        "rssBytes": 133496832
+      },
+      {
+        "elapsedMs": 11579,
+        "receivedRows": 3172,
+        "rssBytes": 133496832
+      },
+      {
+        "elapsedMs": 11832,
+        "receivedRows": 3246,
+        "rssBytes": 133562368
+      },
+      {
+        "elapsedMs": 12082,
+        "receivedRows": 3296,
+        "rssBytes": 133562368
+      },
+      {
+        "elapsedMs": 12334,
+        "receivedRows": 3320,
+        "rssBytes": 133611520
+      },
+      {
+        "elapsedMs": 12585,
+        "receivedRows": 3394,
+        "rssBytes": 133693440
+      },
+      {
+        "elapsedMs": 12837,
+        "receivedRows": 3444,
+        "rssBytes": 133693440
+      },
+      {
+        "elapsedMs": 13089,
+        "receivedRows": 3468,
+        "rssBytes": 133758976
+      },
+      {
+        "elapsedMs": 13342,
+        "receivedRows": 3492,
+        "rssBytes": 133775360
+      },
+      {
+        "elapsedMs": 13595,
+        "receivedRows": 3592,
+        "rssBytes": 133791744
+      },
+      {
+        "elapsedMs": 13849,
+        "receivedRows": 3666,
+        "rssBytes": 133857280
+      },
+      {
+        "elapsedMs": 14099,
+        "receivedRows": 3766,
+        "rssBytes": 134250496
+      },
+      {
+        "elapsedMs": 14353,
+        "receivedRows": 3916,
+        "rssBytes": 134381568
+      },
+      {
+        "elapsedMs": 14604,
+        "receivedRows": 4066,
+        "rssBytes": 134791168
+      },
+      {
+        "elapsedMs": 14854,
+        "receivedRows": 4216,
+        "rssBytes": 135397376
+      },
+      {
+        "elapsedMs": 15105,
+        "receivedRows": 4416,
+        "rssBytes": 137641984
+      },
+      {
+        "elapsedMs": 15356,
+        "receivedRows": 4616,
+        "rssBytes": 138625024
+      },
+      {
+        "elapsedMs": 15610,
+        "receivedRows": 4816,
+        "rssBytes": 138772480
+      },
+      {
+        "elapsedMs": 15859,
+        "receivedRows": 4949,
+        "rssBytes": 139116544
+      },
+      {
+        "elapsedMs": 16113,
+        "receivedRows": 5115,
+        "rssBytes": 139247616
+      },
+      {
+        "elapsedMs": 16364,
+        "receivedRows": 5281,
+        "rssBytes": 139362304
+      },
+      {
+        "elapsedMs": 16616,
+        "receivedRows": 5397,
+        "rssBytes": 139362304
+      },
+      {
+        "elapsedMs": 16696,
+        "receivedRows": 5480,
+        "rssBytes": 139493376
+      }
+    ]
+  },
+  "identities": {
+    "portal": {
+      "profileId": "5a3166f7-4e01-4040-9f7b-0497ce93d702",
+      "userId": "pr3-perf-portal-c9dd990c-7507-4e35-948f-8d8f46b6a1e1",
+      "sessionId": "pr3-perf-session-portal-c9dd990c-7507-4e35-948f-8d8f46b6a1e1"
+    },
+    "admin": {
+      "profileId": "54e00de7-b208-443b-b2e9-6c93632979d7",
+      "userId": "pr3-perf-admin-c9dd990c-7507-4e35-948f-8d8f46b6a1e1",
+      "sessionId": "pr3-perf-session-admin-c9dd990c-7507-4e35-948f-8d8f46b6a1e1"
+    }
+  },
+  "createdRows": {
+    "userIds": [
+      "pr3-perf-portal-c9dd990c-7507-4e35-948f-8d8f46b6a1e1",
+      "pr3-perf-admin-c9dd990c-7507-4e35-948f-8d8f46b6a1e1"
+    ],
+    "portalAccountIds": [
+      "5a3166f7-4e01-4040-9f7b-0497ce93d702"
+    ],
+    "adminIds": [
+      "54e00de7-b208-443b-b2e9-6c93632979d7"
+    ],
+    "sessionIds": [
+      "pr3-perf-session-portal-c9dd990c-7507-4e35-948f-8d8f46b6a1e1",
+      "pr3-perf-session-admin-c9dd990c-7507-4e35-948f-8d8f46b6a1e1"
+    ],
+    "auditIds": []
+  },
+  "cleanup": {
+    "apiChild": {
+      "gracefulExit": true,
+      "forcedKill": false,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "auditRows": 0,
+    "adminRows": 1,
+    "portalAccountRows": 1,
+    "sessionRows": 2,
+    "userRows": 2
+  },
+  "cleanupErrors": [],
+  "failures": [],
+  "budget": {
+    "thresholdMs": 500,
+    "requests": 112,
+    "violations": []
+  },
+  "samples": [
+    {
+      "scenario": "portal-answered",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 352.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "deep-page-warmup",
+      "page": 4686,
+      "round": 0,
+      "elapsedMs": 203.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 202.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 1,
+      "elapsedMs": 177.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 2,
+      "elapsedMs": 174.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 152,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 157.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 3,
+      "elapsedMs": 170.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 4,
+      "elapsedMs": 166.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 157.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 147.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 5,
+      "elapsedMs": 161.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 6,
+      "elapsedMs": 164.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 149.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 148.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18849,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "portal-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 7,
+      "elapsedMs": 165,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10248,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 178,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "deep-page-warmup",
+      "page": 4932,
+      "round": 0,
+      "elapsedMs": 221,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 187.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 1,
+      "elapsedMs": 225.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 2,
+      "elapsedMs": 220.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 181.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 184.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 3,
+      "elapsedMs": 217.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 4,
+      "elapsedMs": 219.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 179,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 180.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 5,
+      "elapsedMs": 221.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 6,
+      "elapsedMs": 220.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 183.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 182.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18713,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "portal-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 7,
+      "elapsedMs": 227.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9128,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 95,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 92.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 92.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 94.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 95.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 95,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 92.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 96,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18871,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 80.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 77.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 78.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 74.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 73.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 75.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 78.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 74.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18724,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 64.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 63.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 62.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 62.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 63.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 65.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 65.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "portal-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 68.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 18712,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 161.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "deep-page-warmup",
+      "page": 4686,
+      "round": 0,
+      "elapsedMs": 167.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 151.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 1,
+      "elapsedMs": 164.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 2,
+      "elapsedMs": 165.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 154.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 147.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 3,
+      "elapsedMs": 182.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 4,
+      "elapsedMs": 167.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 156.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 151.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 5,
+      "elapsedMs": 164.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 6,
+      "elapsedMs": 162.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 149.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 146.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19822,
+      "total": 234277,
+      "items": 50
+    },
+    {
+      "scenario": "admin-answered",
+      "attempt": "measured",
+      "page": 4686,
+      "round": 7,
+      "elapsedMs": 167.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 10784,
+      "total": 234277,
+      "items": 27
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 183.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "deep-page-warmup",
+      "page": 4932,
+      "round": 0,
+      "elapsedMs": 229.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 180.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 1,
+      "elapsedMs": 222.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 2,
+      "elapsedMs": 223.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 179.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 179.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 3,
+      "elapsedMs": 221,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 4,
+      "elapsedMs": 219.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 177.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 180.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 5,
+      "elapsedMs": 221.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 6,
+      "elapsedMs": 217.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 177.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 179.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19686,
+      "total": 246574,
+      "items": 50
+    },
+    {
+      "scenario": "admin-all",
+      "attempt": "measured",
+      "page": 4932,
+      "round": 7,
+      "elapsedMs": 218.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 9607,
+      "total": 246574,
+      "items": 24
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 89.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 96.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 89.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 85.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 91.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 97.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 87.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 89.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19842,
+      "total": 11821,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 77.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 77.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 78.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 76.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 75.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 74.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 74.6,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 78.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19695,
+      "total": 70390,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 63.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 61.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 61.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 59.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 63.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 64.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 62.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-callee-country",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 61.1,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19683,
+      "total": 3634,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "warmup",
+      "page": 1,
+      "round": 0,
+      "elapsedMs": 70.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "deep-page-warmup",
+      "page": 47,
+      "round": 0,
+      "elapsedMs": 68,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 1,
+      "elapsedMs": 69,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 1,
+      "elapsedMs": 67.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 2,
+      "elapsedMs": 68.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 2,
+      "elapsedMs": 70,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 3,
+      "elapsedMs": 68.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 3,
+      "elapsedMs": 67.8,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 4,
+      "elapsedMs": 68.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 4,
+      "elapsedMs": 67.7,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 5,
+      "elapsedMs": 68.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 5,
+      "elapsedMs": 68.5,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 6,
+      "elapsedMs": 66.4,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 6,
+      "elapsedMs": 70.2,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 1,
+      "round": 7,
+      "elapsedMs": 67.9,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 19766,
+      "total": 2333,
+      "items": 50
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "attempt": "measured",
+      "page": 47,
+      "round": 7,
+      "elapsedMs": 68.3,
+      "status": 200,
+      "outcome": "complete",
+      "error": null,
+      "bodySummary": null,
+      "responseBytes": 13094,
+      "total": 2333,
+      "items": 33
+    }
+  ],
+  "summaries": [
+    {
+      "scenario": "portal-answered",
+      "samples": 14,
+      "failures": 0,
+      "p50Ms": 163.1,
+      "minMs": 147.4,
+      "maxMs": 202.9
+    },
+    {
+      "scenario": "portal-all",
+      "samples": 14,
+      "failures": 0,
+      "p50Ms": 202.3,
+      "minMs": 179,
+      "maxMs": 227.6
+    },
+    {
+      "scenario": "portal-callee",
+      "samples": 7,
+      "failures": 0,
+      "p50Ms": 94.7,
+      "minMs": 92.6,
+      "maxMs": 96
+    },
+    {
+      "scenario": "portal-country",
+      "samples": 7,
+      "failures": 0,
+      "p50Ms": 75.2,
+      "minMs": 73.9,
+      "maxMs": 78.6
+    },
+    {
+      "scenario": "portal-callee-country",
+      "samples": 7,
+      "failures": 0,
+      "p50Ms": 63.9,
+      "minMs": 62.1,
+      "maxMs": 68.3
+    },
+    {
+      "scenario": "admin-answered",
+      "samples": 14,
+      "failures": 0,
+      "p50Ms": 159.7,
+      "minMs": 146.9,
+      "maxMs": 182.4
+    },
+    {
+      "scenario": "admin-all",
+      "samples": 14,
+      "failures": 0,
+      "p50Ms": 199.1,
+      "minMs": 177.2,
+      "maxMs": 223.9
+    },
+    {
+      "scenario": "admin-callee",
+      "samples": 7,
+      "failures": 0,
+      "p50Ms": 89.9,
+      "minMs": 85.6,
+      "maxMs": 97.1
+    },
+    {
+      "scenario": "admin-country",
+      "samples": 7,
+      "failures": 0,
+      "p50Ms": 76.8,
+      "minMs": 74.5,
+      "maxMs": 78.3
+    },
+    {
+      "scenario": "admin-callee-country",
+      "samples": 7,
+      "failures": 0,
+      "p50Ms": 61.8,
+      "minMs": 59.7,
+      "maxMs": 64.9
+    },
+    {
+      "scenario": "admin-unverified-only",
+      "samples": 14,
+      "failures": 0,
+      "p50Ms": 68.4,
+      "minMs": 66.4,
+      "maxMs": 70.2
+    }
+  ],
+  "evidenceCaptureCommand": "cd apps/api && mkdir -p ../docs/evidence/phase-6 && set -o pipefail && PERF_TARGET_DATABASE=fs_billing_perf_pr3_uuid_v4 PERF_TENANT_CODE=PORTALBIG PERF_ROUNDS=7 node --env-file-if-exists=../../.env --import tsx scripts/portal-list-perf.ts 2>&1 | tee ../docs/evidence/phase-6/list-latency.txt"
+}

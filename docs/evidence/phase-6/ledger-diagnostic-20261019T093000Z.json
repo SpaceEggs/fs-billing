@@ -1,0 +1,59 @@
+{
+  "readOnly": true,
+  "startedAt": "2026-10-19T09:30:55.750Z",
+  "completedAt": "2026-10-19T09:31:11.289Z",
+  "comparison": "ordered dual-cursor merge of exact grouped ledger events by tenant, UTC day and occurred_at (six fractional digits), kind, original amount::text, scale(amount), trim_scale(amount)::text, note and normalized auth_user_id; multiplicity and source/target admin profile IDs retained",
+  "oldDatabase": "fs_billing_perf",
+  "newDatabase": "fs_billing_perf_pr3_uuid_v4",
+  "comparedGroups": 0,
+  "oldEventRows": 1,
+  "newEventRows": 2,
+  "groupRowsConsumed": {
+    "old": 1,
+    "new": 2
+  },
+  "oldActorIdentities": [
+    {
+      "auth_user_id": "seed:admin:li",
+      "email": "lijun@example.com",
+      "name": "李俊"
+    },
+    {
+      "auth_user_id": "seed:admin:wang",
+      "email": "wangmin@example.com",
+      "name": "王敏"
+    }
+  ],
+  "newActorIdentities": [
+    {
+      "auth_user_id": "seed:admin:li",
+      "email": "lijun@example.com",
+      "name": "李俊"
+    },
+    {
+      "auth_user_id": "seed:admin:wang",
+      "email": "wangmin@example.com",
+      "name": "王敏"
+    }
+  ],
+  "firstDifferences": [
+    {
+      "type": "missing-in-old",
+      "old": null,
+      "new": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "occurred_day_utc": "2025-10-01",
+        "occurred_at_utc": "2025-10-01T02:00:00.000000Z",
+        "kind": "recharge",
+        "amount_text": "30000",
+        "amount_scale": "0",
+        "amount_trimmed": "30000",
+        "note": "",
+        "auth_user_id": "seed:admin:li",
+        "multiplicity": 1,
+        "created_by_profile_ids": ["0399c7a7-6b34-4367-810c-61ab1d4f4294"]
+      }
+    }
+  ],
+  "equal": false
+}

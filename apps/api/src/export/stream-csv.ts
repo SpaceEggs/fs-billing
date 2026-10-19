@@ -394,6 +394,7 @@ export async function streamCsv<Row extends QueryResultRow>(
         response.setHeader(name, value);
     }
     response.removeHeader('content-length');
+    response.setHeader('x-request-id', input.request.id);
     response.setHeader('Content-Type', 'text/csv; charset=utf-8');
     response.setHeader(
       'Content-Disposition',

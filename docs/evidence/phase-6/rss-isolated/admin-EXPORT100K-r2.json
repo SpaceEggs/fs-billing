@@ -1,0 +1,478 @@
+{
+  "runId": "41e49e11-595c-46c0-ae39-557294bf1107",
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "connectionIdentities": {
+    "owner": {
+      "database": "fs_billing_perf_pr3_uuid_v4",
+      "role": "fs_billing"
+    },
+    "auth": {
+      "database": "fs_billing_perf_pr3_uuid_v4",
+      "role": "fs_billing_auth"
+    },
+    "app": {
+      "database": "fs_billing_perf_pr3_uuid_v4",
+      "role": "fs_billing_app"
+    }
+  },
+  "fixtureCounts": {
+    "EXPORT100K": 100000
+  },
+  "expectedPortalBigExportRows": 0,
+  "fixtureTenantIds": {
+    "PORTALBIG": "00000000-0000-4000-8000-000000000001",
+    "PORTALS3": "00000000-0000-4000-8000-000000000004",
+    "EXPORT50K": "00000000-0000-4000-8000-000000000005",
+    "EXPORT100K": "00000000-0000-4000-8000-000000000006",
+    "EXPORT200K": "00000000-0000-4000-8000-000000000007"
+  },
+  "dateRange": {
+    "from": "2026-09-01",
+    "to": "2026-09-30"
+  },
+  "transport": "real API child process, loopback HTTP POST, complete streaming body consumed unless explicitly throttled or aborted; CSV bytes/CRLF rows counted incrementally",
+  "warmupsPerFastScenario": 0,
+  "rounds": 1,
+  "measurementClass": "isolated-rss-admin-EXPORT100K-r2",
+  "fullAcceptanceRequested": false,
+  "slowCasesEnabled": false,
+  "totalDeadlineCaseEnabled": false,
+  "concurrencyCasesEnabled": false,
+  "serverPid": 29683,
+  "rssSampler": "macOS ps -o rss=, API child only, 50 ms polling from pre-request baseline through immediate post-request sample; HTTP client process RSS excluded. Transient peaks shorter than 50 ms can be missed; sample count and elapsed time are recorded per process.",
+  "rssRows": [
+    {
+      "elapsedMs": 6,
+      "receivedRows": 0,
+      "rssBytes": 167968768
+    },
+    {
+      "elapsedMs": 64,
+      "receivedRows": 0,
+      "rssBytes": 168198144
+    },
+    {
+      "elapsedMs": 117,
+      "receivedRows": 0,
+      "rssBytes": 168247296
+    },
+    {
+      "elapsedMs": 163,
+      "receivedRows": 0,
+      "rssBytes": 175161344
+    },
+    {
+      "elapsedMs": 213,
+      "receivedRows": 10000,
+      "rssBytes": 176996352
+    },
+    {
+      "elapsedMs": 264,
+      "receivedRows": 20000,
+      "rssBytes": 182829056
+    },
+    {
+      "elapsedMs": 315,
+      "receivedRows": 30000,
+      "rssBytes": 195100672
+    },
+    {
+      "elapsedMs": 367,
+      "receivedRows": 45000,
+      "rssBytes": 202604544
+    },
+    {
+      "elapsedMs": 417,
+      "receivedRows": 55000,
+      "rssBytes": 207454208
+    },
+    {
+      "elapsedMs": 469,
+      "receivedRows": 65000,
+      "rssBytes": 216301568
+    },
+    {
+      "elapsedMs": 519,
+      "receivedRows": 75000,
+      "rssBytes": 226836480
+    },
+    {
+      "elapsedMs": 574,
+      "receivedRows": 90000,
+      "rssBytes": 234307584
+    },
+    {
+      "elapsedMs": 618,
+      "receivedRows": 100000,
+      "rssBytes": 239157248
+    }
+  ],
+  "rssTraces": [
+    {
+      "scenario": "admin-EXPORT100K",
+      "round": 2,
+      "rss": [
+        {
+          "elapsedMs": 6,
+          "receivedRows": 0,
+          "rssBytes": 167968768
+        },
+        {
+          "elapsedMs": 64,
+          "receivedRows": 0,
+          "rssBytes": 168198144
+        },
+        {
+          "elapsedMs": 117,
+          "receivedRows": 0,
+          "rssBytes": 168247296
+        },
+        {
+          "elapsedMs": 163,
+          "receivedRows": 0,
+          "rssBytes": 175161344
+        },
+        {
+          "elapsedMs": 213,
+          "receivedRows": 10000,
+          "rssBytes": 176996352
+        },
+        {
+          "elapsedMs": 264,
+          "receivedRows": 20000,
+          "rssBytes": 182829056
+        },
+        {
+          "elapsedMs": 315,
+          "receivedRows": 30000,
+          "rssBytes": 195100672
+        },
+        {
+          "elapsedMs": 367,
+          "receivedRows": 45000,
+          "rssBytes": 202604544
+        },
+        {
+          "elapsedMs": 417,
+          "receivedRows": 55000,
+          "rssBytes": 207454208
+        },
+        {
+          "elapsedMs": 469,
+          "receivedRows": 65000,
+          "rssBytes": 216301568
+        },
+        {
+          "elapsedMs": 519,
+          "receivedRows": 75000,
+          "rssBytes": 226836480
+        },
+        {
+          "elapsedMs": 574,
+          "receivedRows": 90000,
+          "rssBytes": 234307584
+        },
+        {
+          "elapsedMs": 618,
+          "receivedRows": 100000,
+          "rssBytes": 239157248
+        }
+      ],
+      "startBytes": 167968768,
+      "peakBytes": 239157248,
+      "deltaBytes": 71188480
+    }
+  ],
+  "rssComparisons": [
+    {
+      "audience": "admin",
+      "points": [
+        {
+          "rows": 50000,
+          "rounds": 0,
+          "medianRssDeltaBytes": null,
+          "medianPeakRssBytes": null
+        },
+        {
+          "rows": 100000,
+          "rounds": 1,
+          "medianRssDeltaBytes": 71188480,
+          "medianPeakRssBytes": 239157248
+        },
+        {
+          "rows": 200000,
+          "rounds": 0,
+          "medianRssDeltaBytes": null,
+          "medianPeakRssBytes": null
+        }
+      ],
+      "adjacentDeltaRatios": [
+        {
+          "fromRows": 50000,
+          "toRows": 100000,
+          "ratio": null
+        },
+        {
+          "fromRows": 100000,
+          "toRows": 200000,
+          "ratio": null
+        }
+      ],
+      "interpretation": "raw and derived RSS observations for human review; no numeric nonlinearity threshold is asserted"
+    },
+    {
+      "audience": "portal",
+      "points": [
+        {
+          "rows": 50000,
+          "rounds": 0,
+          "medianRssDeltaBytes": null,
+          "medianPeakRssBytes": null
+        },
+        {
+          "rows": 100000,
+          "rounds": 0,
+          "medianRssDeltaBytes": null,
+          "medianPeakRssBytes": null
+        },
+        {
+          "rows": 200000,
+          "rounds": 0,
+          "medianRssDeltaBytes": null,
+          "medianPeakRssBytes": null
+        }
+      ],
+      "adjacentDeltaRatios": [
+        {
+          "fromRows": 50000,
+          "toRows": 100000,
+          "ratio": null
+        },
+        {
+          "fromRows": 100000,
+          "toRows": 200000,
+          "ratio": null
+        }
+      ],
+      "interpretation": "raw and derived RSS observations for human review; no numeric nonlinearity threshold is asserted"
+    }
+  ],
+  "rssMeasurementMethod": {
+    "processPid": 29683,
+    "isolatedFreshApiProcess": true,
+    "apiFreshForThisRequest": true,
+    "warmupRequestsInProcess": 0,
+    "measuredRoundsPerDataset": 1,
+    "sampleIntervalMs": 50,
+    "order": "one audience, fixture size, and round per fresh API process",
+    "tracesIncludeRequestStartPeakDelta": true
+  },
+  "identities": {
+    "rss": {
+      "profileId": "80138e58-c611-4fbf-bd79-f4445aeda484",
+      "userId": "pr3-perf-admin-41e49e11-595c-46c0-ae39-557294bf1107-00000000-0000-4000-8000-000000000006",
+      "sessionId": "pr3-perf-session-admin-41e49e11-595c-46c0-ae39-557294bf1107-00000000-0000-4000-8000-000000000006"
+    }
+  },
+  "createdRows": {
+    "userIds": [
+      "pr3-perf-admin-41e49e11-595c-46c0-ae39-557294bf1107-00000000-0000-4000-8000-000000000006"
+    ],
+    "portalAccountIds": [],
+    "adminIds": ["80138e58-c611-4fbf-bd79-f4445aeda484"],
+    "sessionIds": [
+      "pr3-perf-session-admin-41e49e11-595c-46c0-ae39-557294bf1107-00000000-0000-4000-8000-000000000006"
+    ],
+    "auditIds": ["25312e98-c938-4c71-ae82-34ccce4b17be"]
+  },
+  "cleanup": {
+    "apiChild": {
+      "gracefulExit": true,
+      "forcedKill": false,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "auditRows": 1,
+    "adminRows": 1,
+    "sessionRows": 1,
+    "userRows": 1
+  },
+  "cleanupErrors": [],
+  "failures": [],
+  "diagnosticOutcomes": [],
+  "results": [
+    {
+      "scenario": "admin-EXPORT100K",
+      "attempt": "measured",
+      "round": 2,
+      "requestId": "req-2",
+      "elapsedMs": 608.3,
+      "outcome": "complete",
+      "status": 200,
+      "bytes": 18985394,
+      "crlfRecords": 100001,
+      "csvDataRows": 100000,
+      "contentType": "text/csv; charset=utf-8",
+      "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+      "hasUtf8Bom": true,
+      "hasContentLength": false,
+      "responseEndElapsedMs": 608.2,
+      "responseAbortedElapsedMs": null,
+      "responseCloseElapsedMs": null,
+      "socketCloseElapsedMs": null,
+      "error": null,
+      "bodySummary": null
+    }
+  ],
+  "summaries": [
+    {
+      "scenario": "admin-EXPORT100K",
+      "samples": 1,
+      "p50Ms": 608.3,
+      "minMs": 608.3,
+      "maxMs": 608.3,
+      "totalRows": [100000],
+      "statuses": [200],
+      "outcomes": ["complete"]
+    }
+  ],
+  "observations": [
+    {
+      "name": "isolated-rss-sample",
+      "scenario": "admin-EXPORT100K",
+      "audience": "admin",
+      "tenantCode": "EXPORT100K",
+      "round": 2,
+      "apiProcessFreshForThisSample": true,
+      "apiPid": 29683,
+      "warmupRequestsInThisProcess": 0,
+      "expectedRows": 100000,
+      "request": {
+        "scenario": "admin-00000000-0000-4000-8000-000000000006",
+        "attempt": "measured",
+        "round": 2,
+        "requestId": "req-2",
+        "elapsedMs": 608.3,
+        "outcome": "complete",
+        "status": 200,
+        "bytes": 18985394,
+        "crlfRecords": 100001,
+        "csvDataRows": 100000,
+        "contentType": "text/csv; charset=utf-8",
+        "attachment": "attachment; filename=\"cdrs_EXPORT100K_2026-09-01_2026-09-30.csv\"",
+        "hasUtf8Bom": true,
+        "hasContentLength": false,
+        "responseEndElapsedMs": 608.2,
+        "responseAbortedElapsedMs": null,
+        "responseCloseElapsedMs": null,
+        "socketCloseElapsedMs": null,
+        "error": null,
+        "bodySummary": null
+      },
+      "serverCompletion": {
+        "requestId": "req-2",
+        "rows": 100000,
+        "elapsedMs": 580,
+        "result": "success"
+      },
+      "sampleIntervalMs": 50,
+      "sampleCount": 13,
+      "baseline": {
+        "elapsedMs": 6,
+        "receivedRows": 0,
+        "rssBytes": 167968768
+      },
+      "firstAfterStart": {
+        "elapsedMs": 64,
+        "receivedRows": 0,
+        "rssBytes": 168198144
+      },
+      "finalSample": {
+        "elapsedMs": 618,
+        "receivedRows": 100000,
+        "rssBytes": 239157248
+      },
+      "rssTrace": {
+        "scenario": "admin-EXPORT100K",
+        "round": 2,
+        "rss": [
+          {
+            "elapsedMs": 6,
+            "receivedRows": 0,
+            "rssBytes": 167968768
+          },
+          {
+            "elapsedMs": 64,
+            "receivedRows": 0,
+            "rssBytes": 168198144
+          },
+          {
+            "elapsedMs": 117,
+            "receivedRows": 0,
+            "rssBytes": 168247296
+          },
+          {
+            "elapsedMs": 163,
+            "receivedRows": 0,
+            "rssBytes": 175161344
+          },
+          {
+            "elapsedMs": 213,
+            "receivedRows": 10000,
+            "rssBytes": 176996352
+          },
+          {
+            "elapsedMs": 264,
+            "receivedRows": 20000,
+            "rssBytes": 182829056
+          },
+          {
+            "elapsedMs": 315,
+            "receivedRows": 30000,
+            "rssBytes": 195100672
+          },
+          {
+            "elapsedMs": 367,
+            "receivedRows": 45000,
+            "rssBytes": 202604544
+          },
+          {
+            "elapsedMs": 417,
+            "receivedRows": 55000,
+            "rssBytes": 207454208
+          },
+          {
+            "elapsedMs": 469,
+            "receivedRows": 65000,
+            "rssBytes": 216301568
+          },
+          {
+            "elapsedMs": 519,
+            "receivedRows": 75000,
+            "rssBytes": 226836480
+          },
+          {
+            "elapsedMs": 574,
+            "receivedRows": 90000,
+            "rssBytes": 234307584
+          },
+          {
+            "elapsedMs": 618,
+            "receivedRows": 100000,
+            "rssBytes": 239157248
+          }
+        ],
+        "startBytes": 167968768,
+        "peakBytes": 239157248,
+        "deltaBytes": 71188480
+      }
+    }
+  ],
+  "exportBudget": {
+    "rowCount": 100000,
+    "thresholdMs": 30000,
+    "requests": 1,
+    "violations": []
+  },
+  "evidenceCaptureCommand": "cd apps/api && PERF_TARGET_DATABASE=fs_billing_perf_pr3_uuid_v4 PERF_RSS_ISOLATED=1 PERF_RSS_TENANT=EXPORT100K PERF_RSS_AUDIENCE=admin PERF_RSS_ROUND=2 PERF_ROUNDS=1 node --env-file-if-exists=../../.env --import tsx scripts/portal-export-perf.ts"
+}

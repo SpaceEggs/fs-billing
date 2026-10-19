@@ -1,0 +1,672 @@
+{
+  "schema": "phase6-ledger-financial-only/v1",
+  "artifactPath": "docs/evidence/phase-6/ledger-financial-only-2026-10-19T11-54-03-013Z-2d1dd222.json",
+  "readOnly": true,
+  "startedAt": "2026-10-19T11:54:03.013Z",
+  "completedAt": "2026-10-19T11:54:25.537Z",
+  "status": "partial-verified-allowed-actor-difference",
+  "sourceEvidence": {
+    "cdr": {
+      "sourceArtifact": "fixture-crosscheck-20261019T092228Z.json",
+      "sourceArtifactSha256": "11bf710dd0da2af81b7d098bd8f35c551586832f58bb0e1191a7d0b446999127",
+      "sourceOverallStatus": "failed",
+      "sourceFailure": "AssertionError: ledger event multiset differs by tenant (stable actor, occurred_at, kind, amount, note, multiplicity)\n+ actual - expected\n\n  {\n+   '00000000-0000-4000-8000-000000000001': '0c4a638b0e8f03beae6bc14f14f4dda17ad83345ca79e9efc62011bbb0dd2246',\n+   '00000000-0000-4000-8000-000000000002': '1f3fef7c3f2de4c6f4e68a8bf87bb0894e97e01bce4fb35a9e0375c535e778e2',\n+   '00000000-0000-4000-8000-000000000003': 'b79dba175c3f5637f152deeb9bbfe88234fe9c7be040059da4a046f571c65600',\n+   '00000000-0000-4000-8000-000000000004': '0dada5c67de2dc9b302ccb3d664fd1c7767b8a29aacd585296c66e14750ac248',\n-   '00000000-0000-4000-8000-000000000001': '0add3bdd09f1ef94dcb82b68b23afaaa52899d430d7cedce006a414151456706',\n-   '00000000-0000-4000-8000-000000000002': '8c04f27049ec9c589943a26f16e9e6f44afeb8fd76c1b83188610485f77dc12c',\n-   '00000000-0000-4000-8000-000000000003': 'f1b9469b1d7e0725602881fc013713ef09670a64b84df2b13543e0915624e595',\n-   '00000000-0000-4000-8000-000000000004': '38bb204ca909a7d0ae986d0068bc9b06bba3fd83e903dc406d7d6b14eed53b38',\n    '00000000-0000-4000-8000-000000000005': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',\n    '00000000-0000-4000-8000-000000000006': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',\n    '00000000-0000-4000-8000-000000000007': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'\n  }\n",
+      "nonUuidFieldSha256ByTenant": {
+        "old": {
+          "00000000-0000-4000-8000-000000000001": "bce8c6938ae801c3d97c91f81b1f73e8df93a729d08bf61c2827fe45a80da435",
+          "00000000-0000-4000-8000-000000000002": "a3523bada074bd8053f5f450476cf45ce9f9fc7146fd119b82e5663cd9004e72",
+          "00000000-0000-4000-8000-000000000003": "64fa0c7b09dd4d25911df81e54e488eab6761c9da888ff667cf46aa5aea212a2",
+          "00000000-0000-4000-8000-000000000004": "f259b0aa1978c25ed823a9833292a71a23c00dff6b6b11d1aa3d983d319e2055",
+          "00000000-0000-4000-8000-000000000005": "bf76aaf7f1bb0e102614e5ff096c62024125d5d48e8b5a7282fab0e2ed1f82a1",
+          "00000000-0000-4000-8000-000000000006": "0c75276329b1aa8ae97b0c970a81ba306aa4098cbcecf075cc675ede70d16217",
+          "00000000-0000-4000-8000-000000000007": "cf01ba32e536a100baf03081d8a1989a9465604cb7329e15b0eef75702f74701"
+        },
+        "new": {
+          "00000000-0000-4000-8000-000000000001": "bce8c6938ae801c3d97c91f81b1f73e8df93a729d08bf61c2827fe45a80da435",
+          "00000000-0000-4000-8000-000000000002": "a3523bada074bd8053f5f450476cf45ce9f9fc7146fd119b82e5663cd9004e72",
+          "00000000-0000-4000-8000-000000000003": "64fa0c7b09dd4d25911df81e54e488eab6761c9da888ff667cf46aa5aea212a2",
+          "00000000-0000-4000-8000-000000000004": "f259b0aa1978c25ed823a9833292a71a23c00dff6b6b11d1aa3d983d319e2055",
+          "00000000-0000-4000-8000-000000000005": "bf76aaf7f1bb0e102614e5ff096c62024125d5d48e8b5a7282fab0e2ed1f82a1",
+          "00000000-0000-4000-8000-000000000006": "0c75276329b1aa8ae97b0c970a81ba306aa4098cbcecf075cc675ede70d16217",
+          "00000000-0000-4000-8000-000000000007": "cf01ba32e536a100baf03081d8a1989a9465604cb7329e15b0eef75702f74701"
+        }
+      },
+      "tenantCounts": {
+        "old": {
+          "00000000-0000-4000-8000-000000000001": 3000000,
+          "00000000-0000-4000-8000-000000000002": 30000,
+          "00000000-0000-4000-8000-000000000003": 30000,
+          "00000000-0000-4000-8000-000000000004": 30000,
+          "00000000-0000-4000-8000-000000000005": 50000,
+          "00000000-0000-4000-8000-000000000006": 100000,
+          "00000000-0000-4000-8000-000000000007": 200000
+        },
+        "new": {
+          "00000000-0000-4000-8000-000000000001": 3000000,
+          "00000000-0000-4000-8000-000000000002": 30000,
+          "00000000-0000-4000-8000-000000000003": 30000,
+          "00000000-0000-4000-8000-000000000004": 30000,
+          "00000000-0000-4000-8000-000000000005": 50000,
+          "00000000-0000-4000-8000-000000000006": 100000,
+          "00000000-0000-4000-8000-000000000007": 200000
+        }
+      },
+      "oldUuid": {
+        "zodAccepted": 429822,
+        "zodRejected": 3010178,
+        "legacyUuidState": {
+          "rows": "3440000",
+          "legacy_seed_uuid_rows": "3440000",
+          "nonlegacy_rows": "0"
+        }
+      },
+      "newUuid": {
+        "zodAccepted": 3440000,
+        "zodRejected": 0
+      },
+      "groupedCdrLedgerFactsExact": true,
+      "cdrRegistryAndRawUnassignedRefs": {
+        "old": {
+          "cdr_rows": "3440000",
+          "registry_rows": "3440000",
+          "cdr_without_registry": "0",
+          "registry_without_cdr": "0",
+          "raw_cdr_rows": "0",
+          "fixture_raw_rows": "0",
+          "unassigned_rows": "1",
+          "fixture_unassigned_rows": "0"
+        },
+        "new": {
+          "cdr_rows": "3440000",
+          "registry_rows": "3440000",
+          "cdr_without_registry": "0",
+          "registry_without_cdr": "0",
+          "raw_cdr_rows": "0",
+          "fixture_raw_rows": "0",
+          "unassigned_rows": "1",
+          "fixture_unassigned_rows": "0"
+        }
+      }
+    },
+    "priorLedgerActorDiagnostic": {
+      "sourceArtifact": "ledger-diagnostic-20261019T093425Z.json",
+      "sourceArtifactSha256": "dc62d2d8fa1de044062d86800fa4156a8fbf7d1df5051ffc7fb9195bc1a6a350",
+      "completeLedgerScan": false,
+      "firstDifferenceCounterpartRows": {
+        "old": 1,
+        "new": 2
+      },
+      "manualActorFinancialProjectionExact": true,
+      "oldActor": "seed:admin:wang",
+      "newActor": "seed:admin:li",
+      "manualActorFinancialProjection": {
+        "old": [
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-148.08",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "6500",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "390000",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000002",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-1.4808",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000002",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "65.00",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000002",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "3900.00",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000003",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-1.4808",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000003",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "65.00",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000003",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "3900.00",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000004",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-1.4808",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000004",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "65.00",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000004",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "3900.00",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          }
+        ],
+        "new": [
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-148.08",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "6500",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "390000",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000002",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-1.4808",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000002",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "65.00",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000002",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "3900.00",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000003",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-1.4808",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000003",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "65.00",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000003",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "3900.00",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000004",
+            "kind": "adjustment",
+            "rows": "12",
+            "amount": "-1.4808",
+            "first_occurred": "2025-10-20T02:00:00.000000Z",
+            "last_occurred": "2026-09-20T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000004",
+            "kind": "gift",
+            "rows": "13",
+            "amount": "65.00",
+            "first_occurred": "2025-10-15T02:00:00.000000Z",
+            "last_occurred": "2026-10-15T02:00:00.000000Z"
+          },
+          {
+            "tenant_id": "00000000-0000-4000-8000-000000000004",
+            "kind": "recharge",
+            "rows": "13",
+            "amount": "3900.00",
+            "first_occurred": "2025-10-01T02:00:00.000000Z",
+            "last_occurred": "2026-10-01T02:00:00.000000Z"
+          }
+        ]
+      },
+      "actorSelectionSource": {
+        "sourceFile": "packages/db/scripts/portal-perf.ts",
+        "sourceSha256": "5fcab8723830d6f849c5453efd14127861a04aa4b09bc061669ef5b7a344a443",
+        "query": "select id from admins order by id limit 1",
+        "insertColumn": "ledger_entries.created_by",
+        "evidenceMeaning": "The performance fixture chooses its synthetic admin at seed time; it does not establish a difference in packages/db/src/seed.ts baseline actor semantics."
+      }
+    }
+  },
+  "databases": {
+    "fs_billing_perf": {
+      "identity": {
+        "database": "fs_billing_perf",
+        "role": "fs_billing",
+        "server_version": "17.9"
+      },
+      "rows": 2935921,
+      "groupedRows": 2935921,
+      "sha256": "6c0794a94ddc8e248ae59f4b17fcd8c28deee307c592fea9b939b8b46d39deb5",
+      "sha256ByTenant": {
+        "00000000-0000-4000-8000-000000000001": "98c74276fbae2f83a52027b359b631956d54746b18a18815a770035edaf87cba",
+        "00000000-0000-4000-8000-000000000002": "2b224466fb53041d5ffbd60a86b97f48e27692298b379f58c504924f9bec2aaa",
+        "00000000-0000-4000-8000-000000000003": "d150b2d1abc7a82cca863bffa6451512d975dde81206722dd20436c5120162e7",
+        "00000000-0000-4000-8000-000000000004": "f46dab0022a92511b28c32b61705cf9fe09185eab2118f34dd8144ab9bc6c0d1",
+        "00000000-0000-4000-8000-000000000005": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "00000000-0000-4000-8000-000000000006": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "00000000-0000-4000-8000-000000000007": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "tenantCounts": {
+        "00000000-0000-4000-8000-000000000001": 2850187,
+        "00000000-0000-4000-8000-000000000002": 28578,
+        "00000000-0000-4000-8000-000000000003": 28578,
+        "00000000-0000-4000-8000-000000000004": 28578,
+        "00000000-0000-4000-8000-000000000005": 0,
+        "00000000-0000-4000-8000-000000000006": 0,
+        "00000000-0000-4000-8000-000000000007": 0
+      },
+      "amountComparison": {
+        "amountTextPreserved": true,
+        "amountScalePreserved": true,
+        "trimScaleRecordedOnly": true,
+        "normalizationApplied": false
+      },
+      "actorReferenceCheck": {
+        "allNonNullCreatedByReferencesResolve": true,
+        "nonNullCreatedByGroups": 12
+      },
+      "manualActors": [
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "adjustment",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "12",
+          "amount": "-148.08",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "gift",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "6500",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "recharge",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "390000",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000002",
+          "kind": "adjustment",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "12",
+          "amount": "-1.4808",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000002",
+          "kind": "gift",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "65.00",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000002",
+          "kind": "recharge",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "3900.00",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000003",
+          "kind": "adjustment",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "12",
+          "amount": "-1.4808",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000003",
+          "kind": "gift",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "65.00",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000003",
+          "kind": "recharge",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "3900.00",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000004",
+          "kind": "adjustment",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "12",
+          "amount": "-1.4808",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000004",
+          "kind": "gift",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "65.00",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000004",
+          "kind": "recharge",
+          "profile_id": "5536376c-0cf5-46ac-955d-11068c391b48",
+          "auth_user_id": "seed:admin:wang",
+          "rows": "13",
+          "amount": "3900.00",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        }
+      ]
+    },
+    "fs_billing_perf_pr3_uuid_v4": {
+      "identity": {
+        "database": "fs_billing_perf_pr3_uuid_v4",
+        "role": "fs_billing",
+        "server_version": "17.9"
+      },
+      "rows": 2935921,
+      "groupedRows": 2935921,
+      "sha256": "6c0794a94ddc8e248ae59f4b17fcd8c28deee307c592fea9b939b8b46d39deb5",
+      "sha256ByTenant": {
+        "00000000-0000-4000-8000-000000000001": "98c74276fbae2f83a52027b359b631956d54746b18a18815a770035edaf87cba",
+        "00000000-0000-4000-8000-000000000002": "2b224466fb53041d5ffbd60a86b97f48e27692298b379f58c504924f9bec2aaa",
+        "00000000-0000-4000-8000-000000000003": "d150b2d1abc7a82cca863bffa6451512d975dde81206722dd20436c5120162e7",
+        "00000000-0000-4000-8000-000000000004": "f46dab0022a92511b28c32b61705cf9fe09185eab2118f34dd8144ab9bc6c0d1",
+        "00000000-0000-4000-8000-000000000005": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "00000000-0000-4000-8000-000000000006": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "00000000-0000-4000-8000-000000000007": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "tenantCounts": {
+        "00000000-0000-4000-8000-000000000001": 2850187,
+        "00000000-0000-4000-8000-000000000002": 28578,
+        "00000000-0000-4000-8000-000000000003": 28578,
+        "00000000-0000-4000-8000-000000000004": 28578,
+        "00000000-0000-4000-8000-000000000005": 0,
+        "00000000-0000-4000-8000-000000000006": 0,
+        "00000000-0000-4000-8000-000000000007": 0
+      },
+      "amountComparison": {
+        "amountTextPreserved": true,
+        "amountScalePreserved": true,
+        "trimScaleRecordedOnly": true,
+        "normalizationApplied": false
+      },
+      "actorReferenceCheck": {
+        "allNonNullCreatedByReferencesResolve": true,
+        "nonNullCreatedByGroups": 12
+      },
+      "manualActors": [
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "adjustment",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "12",
+          "amount": "-148.08",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "gift",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "6500",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "kind": "recharge",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "390000",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000002",
+          "kind": "adjustment",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "12",
+          "amount": "-1.4808",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000002",
+          "kind": "gift",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "65.00",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000002",
+          "kind": "recharge",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "3900.00",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000003",
+          "kind": "adjustment",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "12",
+          "amount": "-1.4808",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000003",
+          "kind": "gift",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "65.00",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000003",
+          "kind": "recharge",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "3900.00",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000004",
+          "kind": "adjustment",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "12",
+          "amount": "-1.4808",
+          "first_occurred": "2025-10-20T02:00:00.000000Z",
+          "last_occurred": "2026-09-20T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000004",
+          "kind": "gift",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "65.00",
+          "first_occurred": "2025-10-15T02:00:00.000000Z",
+          "last_occurred": "2026-10-15T02:00:00.000000Z"
+        },
+        {
+          "tenant_id": "00000000-0000-4000-8000-000000000004",
+          "kind": "recharge",
+          "profile_id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+          "auth_user_id": "seed:admin:li",
+          "rows": "13",
+          "amount": "3900.00",
+          "first_occurred": "2025-10-01T02:00:00.000000Z",
+          "last_occurred": "2026-10-01T02:00:00.000000Z"
+        }
+      ]
+    }
+  },
+  "comparisons": {
+    "ledgerFinancialEventMultisetExact": true,
+    "actorIdentical": false,
+    "allowedFixtureMetadataDifference": true,
+    "actorDifference": {
+      "field": "ledger_entries.created_by mapped to auth.user.id",
+      "old": ["seed:admin:wang"],
+      "new": ["seed:admin:li"],
+      "cause": "The seed picks its baseline admin by admins.id order; independent fixture seeds selected different admins.",
+      "financialFieldsAndMultiplicityRemainExact": true
+    },
+    "actorReferencesValid": true,
+    "manualActorFinancialProjectionExact": true
+  },
+  "includedLedgerFields": [
+    "tenant_id",
+    "occurred_at (UTC, six fractional digits)",
+    "kind",
+    "amount::text (original value text)",
+    "scale(amount)",
+    "trim_scale(amount)::text (recorded, not used to normalize)",
+    "note",
+    "multiplicity"
+  ],
+  "excludedLedgerFields": [
+    "created_by / mapped auth_user_id (reported independently below as allowed seed metadata difference)",
+    "id (generated primary key)",
+    "idempotency_key (includes corrected call_uuid)",
+    "created_at (seed insertion time differs)"
+  ],
+  "previousLedgerDiagnostic": {
+    "sourceArtifact": "docs/evidence/phase-6/ledger-diagnostic-20261019T093425Z.json",
+    "sourceArtifactSha256": "dc62d2d8fa1de044062d86800fa4156a8fbf7d1df5051ffc7fb9195bc1a6a350",
+    "sourceOverallEqual": false,
+    "originalComparison": "ordered dual-cursor merge of exact grouped ledger events by tenant, UTC day and occurred_at (six fractional digits), kind, original amount::text, scale(amount), trim_scale(amount)::text, note and normalized auth_user_id; multiplicity and source/target admin profile IDs retained",
+    "originalScanWasPartial": true,
+    "firstDifferenceRowsConsumed": {
+      "old": 1,
+      "new": 2
+    }
+  }
+}

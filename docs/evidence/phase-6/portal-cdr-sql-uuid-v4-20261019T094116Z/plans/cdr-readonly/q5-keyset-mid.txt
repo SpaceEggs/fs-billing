@@ -1,0 +1,27 @@
+Limit  (cost=1.62..35.49 rows=50 width=106) (actual time=0.033..0.040 rows=50 loops=1)
+  Buffers: shared hit=11
+  InitPlan 1
+    ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual time=0.001..0.001 rows=1 loops=1)
+  InitPlan 2
+    ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual time=0.000..0.000 rows=1 loops=1)
+  InitPlan 3
+    ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=1)
+  ->  Incremental Sort  (cost=1.58..40242.88 rows=59410 width=106) (actual time=0.033..0.038 rows=50 loops=1)
+        Sort Key: cdrs.answered_at DESC, cdrs.call_uuid DESC
+        Presorted Key: cdrs.answered_at
+        Full-sort Groups: 2  Sort Method: quicksort  Average Memory: 30kB  Peak Memory: 30kB
+        Buffers: shared hit=11
+        ->  Merge Append  (cost=0.86..37784.75 rows=59410 width=106) (actual time=0.019..0.028 rows=51 loops=1)
+              Sort Key: cdrs.answered_at DESC
+              Buffers: shared hit=11
+              ->  Index Scan Backward using cdrs_2026_08_tenant_id_answered_at_idx on cdrs_2026_08 cdrs_1  (cost=0.42..8.46 rows=1 width=106) (actual time=0.011..0.011 rows=1 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (answered_at <= '2026-09-15 16:17:33.328+00'::timestamp with time zone))
+                    Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (ROW(answered_at, call_uuid) < ROW('2026-09-15 16:17:33.328+00'::timestamp with time zone, 'c32ce482-8f32-46e2-833a-f3689b3d1928'::uuid)))
+                    Buffers: shared hit=4
+              ->  Index Scan Backward using cdrs_2026_09_tenant_id_answered_at_idx on cdrs_2026_09 cdrs_2  (cost=0.42..37182.18 rows=59409 width=106) (actual time=0.008..0.015 rows=51 loops=1)
+                    Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= '2026-08-31 16:00:00+00'::timestamp with time zone) AND (answered_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND (answered_at <= '2026-09-15 16:17:33.328+00'::timestamp with time zone))
+                    Filter: ((started_at >= '2026-08-30 16:00:00+00'::timestamp with time zone) AND (started_at < '2026-09-30 16:00:00+00'::timestamp with time zone) AND ((InitPlan 1).col1 OR (((InitPlan 2).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 3).col1))) AND (ROW(answered_at, call_uuid) < ROW('2026-09-15 16:17:33.328+00'::timestamp with time zone, 'c32ce482-8f32-46e2-833a-f3689b3d1928'::uuid)))
+                    Rows Removed by Filter: 1
+                    Buffers: shared hit=7
+Planning Time: 0.139 ms
+Execution Time: 0.060 ms

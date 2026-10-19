@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import { once } from 'node:events';
 import { sql, type SQL } from 'drizzle-orm';
 import pg from 'pg';
@@ -24,20 +24,34 @@ const asOf = new Date(
     .datetime({ offset: true })
     .parse(process.env.PERF_AS_OF ?? '2026-10-17T04:00:00Z'),
 );
-const ownerUrl = z.url().parse(process.env.PERF_DATABASE_URL);
+const [command, ...args] = process.argv.slice(2);
+const targetDatabase = z
+  .enum(['fs_billing_perf', 'fs_billing_perf_pr3_uuid_v4'])
+  .parse(process.env.PERF_TARGET_DATABASE ?? 'fs_billing_perf');
 const appUrl = z.url().parse(process.env.PERF_APP_DATABASE_URL);
+const ownerUrl = z
+  .url()
+  .parse(
+    command === 'cdr-readonly'
+      ? process.env.PERF_APP_DATABASE_URL
+      : process.env.PERF_DATABASE_URL,
+  );
 for (const value of [ownerUrl, appUrl]) {
   const url = new URL(value);
   assert.equal(
     url.pathname,
-    '/fs_billing_perf',
-    'Use the dedicated fs_billing_perf database',
+    `/${targetDatabase}`,
+    `Database URL must select the explicitly approved ${targetDatabase} fixture database`,
   );
   assert(
     ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname),
     'Use local PostgreSQL',
   );
 }
+assert.equal(
+  new URL(ownerUrl).username,
+  command === 'cdr-readonly' ? 'fs_billing_app' : 'fs_billing',
+);
 assert.equal(new URL(appUrl).username, 'fs_billing_app');
 
 // PERF_OUT 把结果写到别处（调参对照）；PERF_SETTINGS="random_page_cost=1.1,work_mem=64MB" 在每个事务内 set local；
@@ -111,7 +125,10 @@ const CDR_INSERT = `
 insert into cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
   billing_number, duration_seconds, billed_minutes, matched_prefix, country, rate, charge,
   hangup_cause, unverified)
-select $1::uuid, md5($1::text || ':' || i::text)::uuid, t.started,
+select $1::uuid,
+  (substr(uuid_seed.hash, 1, 12) || '4' || substr(uuid_seed.hash, 14, 3) ||
+   substr('89ab', mod(strpos('0123456789abcdef', substr(uuid_seed.hash, 17, 1)) - 1, 4) + 1, 1) ||
+   substr(uuid_seed.hash, 18))::uuid, t.started,
   case when t.answered then t.started + t.ring end,
   t.started + t.ring + make_interval(secs => case when t.answered then t.dur else 0 end),
   '0755860' || lpad((h.u8 * 100)::int::text, 4, '0'),
@@ -126,6 +143,7 @@ select $1::uuid, md5($1::text || ':' || i::text)::uuid, t.started,
   case when t.answered then 'NORMAL_CLEARING' when h.u5 < 0.03 then 'USER_BUSY' else 'NO_ANSWER' end,
   h.u6 < 0.01
 from generate_series($2::int, $3::int) i
+cross join lateral (select md5($1::text || ':' || i::text) as hash) uuid_seed
 cross join lateral (select
   (hashint8extended(i, 1) & 2147483647)::float8 / 2147483648 as u1,
   (hashint8extended(i, 2) & 2147483647)::float8 / 2147483648 as u2,
@@ -173,7 +191,7 @@ async function seed() {
       assert.equal(
         existing.rows[0]?.count,
         '0',
-        `${tenant.code} is partially seeded; drop and recreate fs_billing_perf`,
+        `${tenant.code} is partially seeded; stop and inspect ${targetDatabase}`,
       );
       await owner.query(
         `insert into tenants (id, code, name, currency, overdraft_limit)
@@ -814,14 +832,19 @@ async function timeVariants(
   });
 }
 
-async function planVariants(db: Db, phase: string, variants: Variant[]) {
-  await mkdir(resolve(output, 'plans', phase), { recursive: true });
+async function planVariants(
+  db: Db,
+  phase: string,
+  variants: Variant[],
+  outputDir = output,
+) {
+  await mkdir(resolve(outputDir, 'plans', phase), { recursive: true });
   for (const v of variants) {
     const plan = await inTenant(db, (tx) =>
       rowsOf(tx, sql`explain (analyze, buffers) ${v.query}`),
     );
     await writeFile(
-      resolve(output, 'plans', phase, `${slug(v.name)}.txt`),
+      resolve(outputDir, 'plans', phase, `${slug(v.name)}.txt`),
       `${plan.map((r) => r['QUERY PLAN']).join('\n')}\n`,
     );
   }
@@ -835,6 +858,133 @@ const slug = (name: string) =>
     .replace(/^-|-$/g, '');
 const ids = (rows: Record<string, unknown>[]) =>
   rows.map((r) => String(r.call_uuid));
+
+function cdrCountryOptions(t: string) {
+  return sql`select country, count(*)::int as calls
+    from cdrs where ${answeredWhere(t)} and country is not null
+    group by country order by calls desc, country`;
+}
+
+function cdrReadonlyFactsQuery() {
+  return sql`select
+    count(*) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz)::int as answered,
+    count(*) filter (where answered_at is null
+      and started_at >= ${month.from}::timestamptz
+      and started_at < ${month.to}::timestamptz)::int as unanswered,
+    count(*) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz and billing_number like '%100000%')::int as common_hits,
+    count(*) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz and billing_number like '%424242%')::int as rare_hits,
+    count(*) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz and country = '中国')::int as china,
+    count(*) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz and country = '牙买加')::int as jamaica,
+    count(*) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz and country is not null)::int as country_calls,
+    count(distinct country) filter (where answered_at >= ${month.from}::timestamptz
+      and answered_at < ${month.to}::timestamptz and country is not null)::int as country_count
+    from cdrs where tenant_id = ${big.id}
+      and started_at >= ${startedFloor(month)}::timestamptz
+      and started_at < ${month.to}::timestamptz`;
+}
+
+type CdrReadonlyFacts = {
+  answered: number;
+  unanswered: number;
+  common_hits: number;
+  rare_hits: number;
+  china: number;
+  jamaica: number;
+  country_calls: number;
+  country_count: number;
+};
+
+async function verifyCdrReadonly(
+  db: Db,
+  facts: {
+    answered: number;
+    unanswered: number;
+    common_hits: number;
+    rare_hits: number;
+    china: number;
+    jamaica: number;
+    country_calls: number;
+    country_count: number;
+  },
+) {
+  const all = facts.answered + facts.unanswered;
+  const mid = (n: number) => Math.floor(n / 2 / 50) * 50;
+  const last = (n: number) => Math.floor((n - 1) / 50) * 50;
+  const cursor = await inTenant(db, async (tx) => {
+    const rows = await rowsOf(
+      tx,
+      answeredPage(big.id, mid(facts.answered) - 50),
+    );
+    const row = rows.at(-1);
+    assert(row, 'answered fixture must have a middle page');
+    return { at: String(row['answered_at']), uuid: String(row['call_uuid']) };
+  });
+
+  await inTenant(db, async (tx) => {
+    assert.equal((await rowsOf(tx, answeredPage(big.id, 0))).length, 50);
+    const answeredMid = await rowsOf(
+      tx,
+      answeredPage(big.id, mid(facts.answered)),
+    );
+    const keysetRows = await rowsOf(tx, answeredKeyset(big.id, cursor));
+    assert.deepEqual(ids(keysetRows), ids(answeredMid));
+    const answeredLast = await rowsOf(
+      tx,
+      answeredPage(big.id, last(facts.answered)),
+    );
+    const allFirst = await rowsOf(tx, allPage(big.id, 0));
+    assert.equal(allFirst.length, 50);
+    assert.equal((await rowsOf(tx, allPage(big.id, mid(all)))).length, 50);
+    assert.equal(
+      (await rowsOf(tx, allPage(big.id, last(all)))).length,
+      Math.min(50, all - last(all)),
+    );
+    assert.equal(
+      answeredLast.length,
+      Math.min(50, facts.answered - last(facts.answered)),
+    );
+
+    const [answeredSummaryRow] = await rowsOf(tx, answeredSummary(big.id));
+    assert.equal(answeredSummaryRow?.calls, facts.answered);
+    const [unansweredRow] = await rowsOf(tx, unansweredCount(big.id));
+    assert.equal(unansweredRow?.unanswered, facts.unanswered);
+    const [allSummaryRow] = await rowsOf(tx, allSummary(big.id));
+    assert.equal(allSummaryRow?.calls, all);
+    assert.equal(allSummaryRow?.unanswered, facts.unanswered);
+
+    const [commonRow] = await rowsOf(
+      tx,
+      answeredSummary(big.id, sql`billing_number like '%100000%'`),
+    );
+    assert.equal(commonRow?.calls, facts.common_hits);
+    const [rareRow] = await rowsOf(
+      tx,
+      answeredSummary(big.id, sql`billing_number like '%424242%'`),
+    );
+    assert.equal(rareRow?.calls, facts.rare_hits);
+    const options = await rowsOf(tx, cdrCountryOptions(big.id));
+    assert.equal(options.length, facts.country_count);
+    assert.equal(options[0]?.['country'], '中国');
+    assert.equal(String(options[0]?.['calls']), String(facts.china));
+    const jamaica = options.find((row) => row['country'] === '牙买加');
+    assert.equal(String(jamaica?.['calls']), String(facts.jamaica));
+  });
+
+  const hidden = await withTenant(db, tenants[1]!.id, (tx) =>
+    rowsOf(
+      tx,
+      sql`select count(*)::int as n from cdrs where tenant_id = ${big.id}`,
+    ),
+  );
+  assert.equal(hidden[0]?.['n'], 0, 'tenant RLS hides PORTALBIG rows');
+  return { all, cursor, mid, last };
+}
 
 /** 断言各变体返回同样的行，计数与 owner 直查一致：测的是正确的工作。 */
 async function verify(
@@ -971,6 +1121,206 @@ async function verifyCandidates(
       'deferred 全部 page equals plain page',
     );
   });
+}
+
+/** Read-only CDR prototype timing. This path intentionally never connects as owner or changes indexes. */
+async function measureCdrReadonly() {
+  const rounds = Number(process.env.PERF_ROUNDS ?? 7);
+  assert(
+    Number.isInteger(rounds) && rounds >= 5,
+    'PERF_ROUNDS must be at least 5',
+  );
+  const outputDir = resolve(
+    process.env.PERF_OUT ??
+      resolve(
+        import.meta.dirname,
+        `../../../docs/evidence/phase-6/portal-cdr-sql-${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`,
+      ),
+  );
+  const evidenceRoot = resolve(
+    import.meta.dirname,
+    '../../../docs/evidence/phase-6',
+  );
+  const outputRelative = relative(evidenceRoot, outputDir);
+  assert(
+    outputRelative.length > 0 &&
+      outputRelative !== '..' &&
+      !outputRelative.startsWith('../') &&
+      !outputRelative.startsWith('..\\'),
+    'PERF_OUT must be a new subdirectory under docs/evidence/phase-6',
+  );
+  const { db, pool } = connect(appUrl, {
+    max: 1,
+    connectionTimeoutMillis: 2_000,
+    statement_timeout: 30_000,
+    poolName: 'portal-perf.cdr-readonly',
+  });
+  try {
+    const identity = await db.execute<{
+      database: string;
+      role: string;
+      version: string;
+      shared_buffers: string;
+      work_mem: string;
+      random_page_cost: string;
+      jit: string;
+      effective_cache_size: string;
+    }>(sql`select current_database() as database, current_user as role, version(),
+      current_setting('shared_buffers') as shared_buffers,
+      current_setting('work_mem') as work_mem,
+      current_setting('random_page_cost') as random_page_cost,
+      current_setting('jit') as jit,
+      current_setting('effective_cache_size') as effective_cache_size`);
+    const environment = identity.rows[0];
+    assert(environment, 'database identity query returned no row');
+    assert.equal(environment.database, targetDatabase);
+    assert.equal(environment.role, 'fs_billing_app');
+    assert.match(environment.version, /^PostgreSQL 17\./);
+
+    const policyResult = await db.execute<{ qual: string | null }>(sql`
+      select qual from pg_policies
+      where schemaname='public' and tablename='cdrs' and policyname='tenant_read'
+    `);
+    assert.equal(
+      policyResult.rows.length,
+      1,
+      'expected the cdrs tenant_read RLS policy',
+    );
+    const policy = policyResult.rows[0]?.qual;
+    assert(policy, 'cdrs tenant_read policy has no USING predicate');
+    const indexResult = await db.execute<{
+      indexname: string;
+      indexdef: string;
+    }>(sql`
+      select indexname, indexdef from pg_indexes
+      where schemaname='public' and tablename='cdrs'
+      order by indexname
+    `);
+    const indexes = indexResult.rows;
+
+    const [facts] = await inTenant(
+      db,
+      async (tx) =>
+        (await tx.execute<CdrReadonlyFacts>(cdrReadonlyFactsQuery())).rows,
+    );
+    assert(facts, 'CDR fixture facts query returned no row');
+    assert(facts.answered > 0 && facts.unanswered > 0);
+    assert(facts.country_count > 0 && facts.country_calls > 0);
+    const all = facts.answered + facts.unanswered;
+    const mid = (count: number) => Math.floor(count / 2 / 50) * 50;
+    const last = (count: number) => Math.floor((count - 1) / 50) * 50;
+    const cursor = await inTenant(db, async (tx) => {
+      const rows = await rowsOf(
+        tx,
+        answeredPage(big.id, mid(facts.answered) - 50),
+      );
+      const row = rows.at(-1);
+      assert(row, 'answered middle page did not yield a cursor row');
+      return { at: String(row['answered_at']), uuid: String(row['call_uuid']) };
+    });
+
+    const substrings = { common: '100000', rare: '424242' };
+    const countries = { common: '中国', rare: '牙买加' };
+    const variants: Variant[] = [
+      { name: 'Q1 answered p1', query: answeredPage(big.id, 0) },
+      {
+        name: 'Q1 answered mid',
+        query: answeredPage(big.id, mid(facts.answered)),
+      },
+      {
+        name: 'Q1 answered last',
+        query: answeredPage(big.id, last(facts.answered)),
+      },
+      { name: 'Q2 all p1', query: allPage(big.id, 0) },
+      { name: 'Q2 all mid', query: allPage(big.id, mid(all)) },
+      { name: 'Q3 answered summary', query: answeredSummary(big.id) },
+      { name: 'Q3 unanswered count', query: unansweredCount(big.id) },
+      { name: 'Q3 all summary', query: allSummary(big.id) },
+      ...(['common', 'rare'] as const).flatMap((kind) => [
+        {
+          name: `Q4 ${kind} search p1`,
+          query: answeredPage(
+            big.id,
+            0,
+            sql`billing_number like ${'%' + substrings[kind] + '%'}`,
+          ),
+        },
+        {
+          name: `Q4 ${kind} search summary`,
+          query: answeredSummary(
+            big.id,
+            sql`billing_number like ${'%' + substrings[kind] + '%'}`,
+          ),
+        },
+      ]),
+      { name: 'Q5 keyset mid', query: answeredKeyset(big.id, cursor) },
+      ...(['common', 'rare'] as const).flatMap((kind) => {
+        const country = sql`country = ${countries[kind]}`;
+        return [
+          {
+            name: `Q6 ${kind} country p1`,
+            query: answeredPage(big.id, 0, country),
+          },
+          {
+            name: `Q6 ${kind} country summary`,
+            query: answeredSummary(big.id, country),
+          },
+        ];
+      }),
+      {
+        name: 'Q8 country options aggregate',
+        query: cdrCountryOptions(big.id),
+      },
+    ];
+
+    const verified = await verifyCdrReadonly(db, facts);
+    await mkdir(outputDir);
+    const samples = await timeVariants(db, 'cdr-readonly', variants, rounds);
+    await planVariants(db, 'cdr-readonly', variants, outputDir);
+    await writeFile(
+      resolve(outputDir, 'cdr-readonly.json'),
+      JSON.stringify(
+        {
+          measuredAt: new Date().toISOString(),
+          scope:
+            'prototype SQL withTenant transactions; not DB service latency and not HTTP latency',
+          database: environment.database,
+          role: environment.role,
+          server: environment.version,
+          settings: {
+            shared_buffers: environment.shared_buffers,
+            work_mem: environment.work_mem,
+            random_page_cost: environment.random_page_cost,
+            jit: environment.jit,
+            effective_cache_size: environment.effective_cache_size,
+            performanceOverrides: settings,
+          },
+          month,
+          facts,
+          verified,
+          tenantReadPolicy: policy,
+          currentCdrIndexes: indexes,
+          rounds,
+          warmups: 2,
+          errors: 0,
+          safety: {
+            connectedAs: 'fs_billing_app',
+            connectedDatabase: targetDatabase,
+            candidateIndexDDL: false,
+            vacuum: false,
+            seed: false,
+          },
+          samples,
+        },
+        null,
+        2,
+      ) + '\n',
+    );
+    console.table(samples);
+    process.stdout.write(`read-only CDR SQL evidence: ${outputDir}\n`);
+  } finally {
+    await pool.end();
+  }
 }
 
 /**
@@ -1152,7 +1502,7 @@ async function measureLedger() {
     'ledger requires PERF_OUT to preserve historical evidence',
   );
   const authUrl = z.url().parse(process.env.PERF_AUTH_DATABASE_URL);
-  assert.equal(new URL(authUrl).pathname, '/fs_billing_perf');
+  assert.equal(new URL(authUrl).pathname, `/${targetDatabase}`);
   assert.equal(new URL(authUrl).host, new URL(appUrl).host);
   assert.equal(new URL(authUrl).username, 'fs_billing_auth');
   const owner = new pg.Client({ connectionString: ownerUrl });
@@ -1305,14 +1655,17 @@ async function measureLedger() {
   }
 }
 
-const [command, ...args] = process.argv.slice(2);
 if (command === 'seed') await seed();
 else if (command === 'measure') await measure();
 else if (command === 'ledger') await measureLedger();
+else if (command === 'cdr-readonly') await measureCdrReadonly();
 else if (command === 'export')
   await exportOnce(
     args[0]!,
     z.enum(['cursor', 'naive']).parse(args[1]),
     args[2]!,
   );
-else throw new Error('usage: portal-perf.ts seed | measure | ledger');
+else
+  throw new Error(
+    'usage: portal-perf.ts seed | measure | ledger | cdr-readonly',
+  );

@@ -1,0 +1,19 @@
+{
+  "runId": "e8aee9a3-daed-498f-96d5-5e6893c4d784",
+  "rawPath": "/Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/docs/evidence/phase-6/export-formal-pr3-20261019T1051Z-stream-hold-r2.jsonl",
+  "rawBytes": 825144,
+  "driverCommand": "PERF_TARGET_DATABASE=fs_billing_perf_pr3_uuid_v4 PERF_ACCEPTANCE=1 PERF_ROUNDS=7 PERF_SLOW=1 PERF_DEADLINE=1 PERF_CONCURRENCY=1 node --env-file-if-exists=../../.env --import tsx scripts/portal-export-perf.ts 2>&1 | tee /Users/lqzone/.codex/worktrees/phase-6-cdr-backend/FS-Billing/docs/evidence/phase-6/export-formal-pr3-20261019T1051Z-stream-hold-r2.jsonl",
+  "exitCode": 0,
+  "exitSource": "functions.write_stdin completion for session_id 90012 after the driver exited naturally; recorded after completion, not embedded in the raw capture",
+  "driverPid": 20434,
+  "apiPid": 20437,
+  "sourceSha256": {
+    "apps/api/src/export/stream-csv.ts": "5aced5c81d0acbbda8034fbd9cbf0a5cd0d158ffef6becce5238c0b0b58fe3f8",
+    "apps/api/src/export/stream-csv.test.ts": "fa259873f49a58708862a3f3c68ff382955fa9d4f57dc63088390f0a64322685",
+    "apps/api/scripts/portal-export-perf.ts": "bc34b322917eb7a61bd05a3afc503dee9f989c8c93da464b0dd3691c1315f767",
+    "apps/api/scripts/portal-list-perf.ts": "b501cd943cb190c494fe13fb39e1385dd1c26e9d9639f705201283011d3aa290"
+  },
+  "postflightSummaryPath": "/tmp/fs-billing-pr3-formal-postflight-clean.json",
+  "failures": [],
+  "cleanupErrors": []
+}

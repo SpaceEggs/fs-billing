@@ -1,0 +1,50 @@
+{
+  "type": "recovery-attestation",
+  "originalCommand": "node --env-file=../../.env --import tsx scripts/setup-portal-perf-isolated.ts create (cwd packages/db)",
+  "originalExecSessionId": 45394,
+  "observedOuterExitCode": 1,
+  "failureStage": "portal-perf child command startup, after baseline migration and seed",
+  "observedError": "ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL: Command \"tsx\" not found from repository root",
+  "originalRawToolOutputPersisted": false,
+  "originalOsPidCaptured": false,
+  "databaseOidAtRecovery": 139007,
+  "verifiedOwnerAtRecovery": "fs_billing",
+  "verifiedAppliedMigrationHashes": [
+    "a3be69afe9dfd2684b93a10a113e602df6c852f96274b853b04e597785d82175",
+    "793fe34850fc3109c1aeb5939e2730f6fe181878048cd280ca615ddfd46a4f9a",
+    "14b6b1314e32253dc5cbf64fbf59abcc0b56424326f011b530bed5efacd81dff",
+    "42bd198dcf219bc00e638632727f5bb89632cfa3c1f6533ca65943ae6365cc98",
+    "b5bf4c39044472e7abed4e8b2039439570c5eea6a432294035813329013317f5",
+    "c25f0b8ceaaab433d7f1ba4c415995c425c10733d00b0fda802c37194517a5ee",
+    "2e55ace2bc63ed82e220863c0be818f995cc6b1b67ee1bd575f7a81541232fbc",
+    "7a6599350def49e4b491589672a9c0fbeffc4ee3419f4ba012853574486bc7e6",
+    "4d717c23529d0eac2b330c6db314d00c1850eabf57fa5bc667e4e43eb84d1363",
+    "317ee40cb4f436a0a03dd641eee38e350bb8d8749ea159b3043aebe279856c92",
+    "2867018e66242a13a0402a88d18556f69e55969c36b47f85f7b0945b13001d0a",
+    "36d7a218eb20196475fdf115917760cf8999978da49c859f26f8a3b305a408be",
+    "98b88e397bdf3eb0f2ce33a07e97d295fb1c07eea665833d0b3a11b7c440718e",
+    "ea028d24070794d4458518a9fa0d96f9165c4ccab8c2d187ff60d1f49dc3bd1a",
+    "b883e2671f02d981da1f034b9ce0d273dfd690b92e93128fb2fe402c7b21743d",
+    "6444d3f11720a9821ca4f69e5809c90abca9a1ccf545f63847c161fd27a0bbc8"
+  ],
+  "verifiedBaselineAdminRows": [
+    {
+      "id": "0399c7a7-6b34-4367-810c-61ab1d4f4294",
+      "auth_user_id": "seed:admin:li",
+      "email": "lijun@example.com",
+      "name": "李俊"
+    },
+    {
+      "id": "0fc0c713-f162-4572-bdf2-fb74ca859af0",
+      "auth_user_id": "seed:admin:wang",
+      "email": "wangmin@example.com",
+      "name": "王敏"
+    }
+  ],
+  "verifiedPerfFixtureRowsBeforeRetry": {
+    "tenant_rows": "0",
+    "cdr_rows": "0",
+    "registry_rows": "0",
+    "ledger_rows": "0"
+  }
+}

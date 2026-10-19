@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import Fastify from 'fastify';
 import { expect, describe, it, vi } from 'vitest';
 import type { QueryResultRow } from 'pg';
 import { ApiFailure } from '../errors.js';
@@ -256,7 +257,6 @@ function makeInput(
     },
     getHeaders() {
       return {
-        'x-request-id': request.id,
         'cache-control': 'no-store',
         'content-length': 321,
       };
@@ -432,6 +432,41 @@ describe('streamCsv', () => {
       result: 'success',
     });
     expectClean(response, client);
+  });
+
+  it('returns the request id on the real HTTP CSV response and completion log', async () => {
+    const records: Record<string, unknown>[] = [];
+    const app = Fastify({
+      genReqId: () => 'loopback-export-request',
+      logger: {
+        level: 'info',
+        stream: {
+          write(line) {
+            records.push(JSON.parse(line) as Record<string, unknown>);
+          },
+        },
+      },
+    });
+    const test = makeInput({ firstRows: [] });
+    app.get('/export.csv', async (request, reply) => {
+      await streamCsv({ ...test.input, request, reply }, new ExportSlots());
+    });
+
+    try {
+      const address = await app.listen({ host: '127.0.0.1', port: 0 });
+      const response = await fetch(new URL('/export.csv', address));
+      await response.text();
+
+      const requestId = response.headers.get('x-request-id');
+      const completion = records.find(
+        (record) => record.event === 'export.csv.completed',
+      );
+      expect(requestId).toBeTruthy();
+      expect(completion?.requestId).toBe(requestId);
+      expect(response.headers.get('content-type')).toContain('text/csv');
+    } finally {
+      await app.close();
+    }
   });
 
   it('aborts a response closed while waiting for drain and returns the connection', async () => {
