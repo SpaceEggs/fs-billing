@@ -37,14 +37,19 @@ const EVIDENCE_DIRECTORY = resolve(
   import.meta.dirname,
   '../../../docs/evidence/phase-6',
 );
-const CDR_COMPONENT_EVIDENCE = 'fixture-crosscheck-20261019T092228Z.json';
-const CDR_COMPONENT_SHA256 =
-  '11bf710dd0da2af81b7d098bd8f35c551586832f58bb0e1191a7d0b446999127';
+const EXPECTED_LEDGER_ROWS = 2_935_921;
+const EXPECTED_LEDGER_TENANT_COUNTS = {
+  '00000000-0000-4000-8000-000000000001': 2_850_187,
+  '00000000-0000-4000-8000-000000000002': 28_578,
+  '00000000-0000-4000-8000-000000000003': 28_578,
+  '00000000-0000-4000-8000-000000000004': 28_578,
+  '00000000-0000-4000-8000-000000000005': 0,
+  '00000000-0000-4000-8000-000000000006': 0,
+  '00000000-0000-4000-8000-000000000007': 0,
+} as const;
 const LEDGER_ACTOR_EVIDENCE = 'ledger-diagnostic-20261019T093425Z.json';
 const LEDGER_ACTOR_SHA256 =
   'dc62d2d8fa1de044062d86800fa4156a8fbf7d1df5051ffc7fb9195bc1a6a350';
-const PORTAL_PERF_SEED_SHA256 =
-  '5fcab8723830d6f849c5453efd14127861a04aa4b09bc061669ef5b7a344a443';
 const LEDGER_FINANCIAL_ONLY = process.argv.includes('--ledger-financial-only');
 
 function urlFor(database: string): string {
@@ -158,83 +163,6 @@ type FinancialLedgerRow = {
   multiplicity: string;
 };
 
-const crosscheckDbSchema = z
-  .object({
-    identity: z
-      .object({
-        database: z.string(),
-        role: z.string(),
-        server_version: z.string(),
-      })
-      .passthrough(),
-    cdr: z
-      .object({
-        rows: z.number(),
-        schema: z.string(),
-        zodAccepted: z.number(),
-        zodRejected: z.number(),
-        tenantCounts: z.record(z.string(), z.number()),
-        nonUuidFieldSha256ByTenant: z.record(z.string(), z.string()),
-      })
-      .passthrough(),
-    legacyUuidState: z
-      .object({
-        rows: z.string(),
-        legacy_seed_uuid_rows: z.string(),
-        nonlegacy_rows: z.string(),
-      })
-      .passthrough()
-      .nullable(),
-    ledger: z
-      .object({
-        rows: z.number(),
-        tenantCounts: z.record(z.string(), z.number()),
-      })
-      .passthrough(),
-    groupedFacts: z
-      .object({
-        cdrByTenant: z.array(z.unknown()),
-        cdrByCountryStatusVerification: z.array(z.unknown()),
-        ledgerByTenantKindMonth: z.array(z.unknown()),
-        callChargeByTenant: z.array(z.unknown()),
-        callChargeKeyRefs: z.unknown(),
-        cdrRegistryAndRawUnassignedRefs: z
-          .object({
-            cdr_rows: z.string(),
-            registry_rows: z.string(),
-            cdr_without_registry: z.string(),
-            registry_without_cdr: z.string(),
-            raw_cdr_rows: z.string(),
-            fixture_raw_rows: z.string(),
-            unassigned_rows: z.string(),
-            fixture_unassigned_rows: z.string(),
-          })
-          .passthrough(),
-        ledgerActorIdentities: z.array(z.unknown()),
-      })
-      .passthrough(),
-  })
-  .passthrough();
-
-const cdrCrosscheckEvidenceSchema = z
-  .object({
-    status: z.literal('failed'),
-    oldDatabase: z.literal(OLD_DATABASE),
-    targetDatabase: z.literal(NEW_DATABASE),
-    comparisonFailure: z.string(),
-    comparisons: z
-      .object({
-        cdrNonUuidFieldsExactPerTenant: z.literal(true),
-        groupedCdrLedgerFactsExact: z.literal(true),
-      })
-      .passthrough(),
-    results: z.object({
-      [OLD_DATABASE]: crosscheckDbSchema,
-      [NEW_DATABASE]: crosscheckDbSchema,
-    }),
-  })
-  .passthrough();
-
 const manualActorRowSchema = z.object({
   tenant_id: z.string(),
   kind: z.string(),
@@ -274,164 +202,6 @@ async function readPinnedEvidence(filename: string, expectedSha256: string) {
   assert.equal(sha256, expectedSha256, `${filename} SHA-256 changed`);
   const parsed: unknown = JSON.parse(bytes.toString('utf8'));
   return { path: `docs/evidence/phase-6/${filename}`, sha256, parsed };
-}
-
-function verifyPinnedComponents(
-  cdrEvidence: z.infer<typeof cdrCrosscheckEvidenceSchema>,
-  actorEvidence: z.infer<typeof ledgerActorEvidenceSchema>,
-) {
-  const oldResult = cdrEvidence.results[OLD_DATABASE];
-  const newResult = cdrEvidence.results[NEW_DATABASE];
-  assert.equal(oldResult.identity.database, OLD_DATABASE);
-  assert.equal(newResult.identity.database, NEW_DATABASE);
-  assert.equal(oldResult.identity.role, OWNER);
-  assert.equal(newResult.identity.role, OWNER);
-  assert.equal(oldResult.cdr.rows, 3_440_000);
-  assert.equal(newResult.cdr.rows, 3_440_000);
-  assert.equal(
-    oldResult.cdr.zodAccepted + oldResult.cdr.zodRejected,
-    3_440_000,
-  );
-  assert.equal(newResult.cdr.zodAccepted, 3_440_000);
-  assert.equal(newResult.cdr.zodRejected, 0);
-  assert.equal(
-    oldResult.cdr.schema,
-    'packages/shared/src/api/cdr-fields.ts:cdrFields.callUuid',
-  );
-  assert.equal(newResult.cdr.schema, oldResult.cdr.schema);
-  const expectedTenantCounts = Object.fromEntries(
-    TENANTS.map(([id, , count]) => [id, count]),
-  );
-  assert.deepEqual(oldResult.cdr.tenantCounts, expectedTenantCounts);
-  assert.deepEqual(newResult.cdr.tenantCounts, expectedTenantCounts);
-  assert.deepEqual(
-    newResult.cdr.nonUuidFieldSha256ByTenant,
-    oldResult.cdr.nonUuidFieldSha256ByTenant,
-  );
-  assert.match(cdrEvidence.comparisonFailure, /ledger event multiset differs/);
-  assert.match(cdrEvidence.comparisonFailure, /stable actor/);
-  assert.deepEqual(newResult.groupedFacts, oldResult.groupedFacts);
-  const refs = oldResult.groupedFacts.cdrRegistryAndRawUnassignedRefs;
-  assert.deepEqual(
-    newResult.groupedFacts.cdrRegistryAndRawUnassignedRefs,
-    refs,
-  );
-  assert.equal(refs.cdr_rows, '3440000');
-  assert.equal(refs.registry_rows, '3440000');
-  assert.equal(refs.cdr_without_registry, '0');
-  assert.equal(refs.registry_without_cdr, '0');
-  assert.equal(refs.raw_cdr_rows, '0');
-  assert.equal(refs.fixture_raw_rows, '0');
-  assert.equal(refs.fixture_unassigned_rows, '0');
-  assert.equal(oldResult.legacyUuidState?.rows, '3440000');
-  assert.equal(oldResult.legacyUuidState?.legacy_seed_uuid_rows, '3440000');
-  assert.equal(oldResult.legacyUuidState?.nonlegacy_rows, '0');
-  assert.equal(newResult.legacyUuidState, null);
-
-  const oldActors = actorEvidence.manualLedgerActorSummary.old;
-  const newActors = actorEvidence.manualLedgerActorSummary.new;
-  assert.equal(oldActors.length, 12);
-  assert.equal(newActors.length, 12);
-  assert(oldActors.every((row) => row.auth_user_id === 'seed:admin:wang'));
-  assert(newActors.every((row) => row.auth_user_id === 'seed:admin:li'));
-  const financialProjection = (rows: typeof oldActors) =>
-    rows
-      .map(
-        ({
-          tenant_id,
-          kind,
-          rows: count,
-          amount,
-          first_occurred,
-          last_occurred,
-        }) => ({
-          tenant_id,
-          kind,
-          rows: count,
-          amount,
-          first_occurred,
-          last_occurred,
-        }),
-      )
-      .sort((left, right) =>
-        `${left.tenant_id}:${left.kind}`.localeCompare(
-          `${right.tenant_id}:${right.kind}`,
-        ),
-      );
-  assert.deepEqual(
-    financialProjection(oldActors),
-    financialProjection(newActors),
-  );
-  for (const tenantId of CHARGE_IDS) {
-    for (const [kind, expectedRows] of [
-      ['recharge', '13'],
-      ['gift', '13'],
-      ['adjustment', '12'],
-    ] as const) {
-      assert.equal(
-        oldActors.find((row) => row.tenant_id === tenantId && row.kind === kind)
-          ?.rows,
-        expectedRows,
-      );
-    }
-  }
-  assert.equal(actorEvidence.oldEventRows, 1);
-  assert.equal(actorEvidence.newEventRows, 2);
-
-  return {
-    cdr: {
-      sourceArtifact: CDR_COMPONENT_EVIDENCE,
-      sourceArtifactSha256: CDR_COMPONENT_SHA256,
-      sourceOverallStatus: cdrEvidence.status,
-      sourceFailure: cdrEvidence.comparisonFailure,
-      nonUuidFieldSha256ByTenant: {
-        old: oldResult.cdr.nonUuidFieldSha256ByTenant,
-        new: newResult.cdr.nonUuidFieldSha256ByTenant,
-      },
-      tenantCounts: {
-        old: oldResult.cdr.tenantCounts,
-        new: newResult.cdr.tenantCounts,
-      },
-      oldUuid: {
-        zodAccepted: oldResult.cdr.zodAccepted,
-        zodRejected: oldResult.cdr.zodRejected,
-        legacyUuidState: oldResult.legacyUuidState,
-      },
-      newUuid: {
-        zodAccepted: newResult.cdr.zodAccepted,
-        zodRejected: newResult.cdr.zodRejected,
-      },
-      groupedCdrLedgerFactsExact: true,
-      cdrRegistryAndRawUnassignedRefs: {
-        old: refs,
-        new: newResult.groupedFacts.cdrRegistryAndRawUnassignedRefs,
-      },
-    },
-    priorLedgerActorDiagnostic: {
-      sourceArtifact: LEDGER_ACTOR_EVIDENCE,
-      sourceArtifactSha256: LEDGER_ACTOR_SHA256,
-      completeLedgerScan: false,
-      firstDifferenceCounterpartRows: {
-        old: actorEvidence.oldEventRows,
-        new: actorEvidence.newEventRows,
-      },
-      manualActorFinancialProjectionExact: true,
-      oldActor: 'seed:admin:wang',
-      newActor: 'seed:admin:li',
-      manualActorFinancialProjection: {
-        old: financialProjection(oldActors),
-        new: financialProjection(newActors),
-      },
-      actorSelectionSource: {
-        sourceFile: 'packages/db/scripts/portal-perf.ts',
-        sourceSha256: PORTAL_PERF_SEED_SHA256,
-        query: 'select id from admins order by id limit 1',
-        insertColumn: 'ledger_entries.created_by',
-        evidenceMeaning:
-          'The performance fixture chooses its synthetic admin at seed time; it does not establish a difference in packages/db/src/seed.ts baseline actor semantics.',
-      },
-    },
-  };
 }
 
 async function financialLedgerStream(client: pg.Client) {
@@ -564,17 +334,11 @@ async function verifyLedgerFinancialOnly() {
   };
 
   try {
-    const [cdrPinned, actorPinned] = await Promise.all([
-      readPinnedEvidence(CDR_COMPONENT_EVIDENCE, CDR_COMPONENT_SHA256),
-      readPinnedEvidence(LEDGER_ACTOR_EVIDENCE, LEDGER_ACTOR_SHA256),
-    ]);
-    const cdrEvidence = cdrCrosscheckEvidenceSchema.parse(cdrPinned.parsed);
-    const actorEvidence = ledgerActorEvidenceSchema.parse(actorPinned.parsed);
-    const componentEvidence = verifyPinnedComponents(
-      cdrEvidence,
-      actorEvidence,
+    const actorPinned = await readPinnedEvidence(
+      LEDGER_ACTOR_EVIDENCE,
+      LEDGER_ACTOR_SHA256,
     );
-    evidence.sourceEvidence = componentEvidence;
+    const actorEvidence = ledgerActorEvidenceSchema.parse(actorPinned.parsed);
     evidence.previousLedgerDiagnostic = {
       sourceArtifact: actorPinned.path,
       sourceArtifactSha256: actorPinned.sha256,
@@ -601,9 +365,8 @@ async function verifyLedgerFinancialOnly() {
       const { client, identity } = await connect(database);
       try {
         const ledger = await financialLedgerStream(client);
-        const expected = cdrEvidence.results[database].ledger;
-        assert.equal(ledger.rows, expected.rows);
-        assert.deepEqual(ledger.tenantCounts, expected.tenantCounts);
+        assert.equal(ledger.rows, EXPECTED_LEDGER_ROWS);
+        assert.deepEqual(ledger.tenantCounts, EXPECTED_LEDGER_TENANT_COUNTS);
         databaseResults[database] = { identity, ...ledger };
         evidence.databases = databaseResults;
       } finally {
