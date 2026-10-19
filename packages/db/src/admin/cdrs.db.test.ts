@@ -177,7 +177,10 @@ describe('admin CDR export acceptance audit', () => {
         [waiting.pid],
       );
       const cleanupDeadline = Date.now() + 5_000;
-      while (after.rows.length > 0 && Date.now() < cleanupDeadline) {
+      while (
+        after.rows.some((row) => row.state !== 'idle') &&
+        Date.now() < cleanupDeadline
+      ) {
         await new Promise((resolve) => setTimeout(resolve, 25));
         after = await owner.pool.query<{
           state: string;
@@ -202,9 +205,13 @@ describe('admin CDR export acceptance audit', () => {
           elapsedMs,
         })}\n`,
       );
-      expect(after.rows).toEqual([]);
+      expect(after.rows.every((row) => row.state === 'idle')).toBe(true);
       expect(app.pool.waitingCount).toBe(0);
-      expect(app.pool.totalCount).toBe(0);
+      const reusable = await app.pool.query<{ scope: string | null }>(
+        "select nullif(current_setting('app.scope', true), '') as scope",
+      );
+      expect(reusable.rows[0]?.scope).toBeNull();
+      expect(app.pool.idleCount).toBe(app.pool.totalCount);
     } finally {
       await locker.query('rollback');
       locker.release();

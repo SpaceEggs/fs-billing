@@ -1,5 +1,6 @@
 import type { EventEmitter } from 'node:events';
 import type { QueryResultRow } from 'pg';
+import { withBoundedExportClient } from '@fs-billing/db';
 import { CSV_BOM, CSV_EOL, csvRecord } from '@fs-billing/rating';
 import { ApiFailure } from '../errors.js';
 import { ExportSlots, exportSlots } from './slots.js';
@@ -69,6 +70,8 @@ export interface ExportClient<Row extends QueryResultRow> extends EventMethods {
     readonly stream: {
       readonly destroyed: boolean;
       destroy(error?: Error): unknown;
+      once: EventEmitter['once'];
+      removeListener: EventEmitter['removeListener'];
     };
   };
 }
@@ -217,14 +220,8 @@ export async function streamCsv<Row extends QueryResultRow>(
   }
 
   const controller = new AbortController();
-  let client: ExportClient<Row> | undefined;
-  let committed = false;
   let responseStarted = false;
   let responseFinished = false;
-  let clientConnectionBroken = false;
-  let queryInFlight = false;
-  let backendPid: number | undefined;
-  let cancelPromise: Promise<void> | undefined;
   let rowsWritten = 0;
   let result: ExportResult = 'preflight_error';
   let stage = 'prepare';
@@ -233,58 +230,12 @@ export async function streamCsv<Row extends QueryResultRow>(
   const listenedSocket: { current: ExportSocket | null } = { current: null };
   let destroyingResponse = false;
 
-  const query = async (
-    text: string | { readonly text: string; readonly values?: unknown[] },
-    values?: unknown[],
-    allowAborted = false,
-  ): Promise<{ readonly rows: Row[] }> => {
-    if (!client) throw new Error('Export connection is not available');
-    if (controller.signal.aborted && !allowAborted)
-      throw abortReason(controller.signal);
-    queryInFlight = true;
-    try {
-      const result = await client.query(text, values);
-      if (controller.signal.aborted && !allowAborted)
-        throw abortReason(controller.signal);
-      return result;
-    } finally {
-      queryInFlight = false;
-    }
-  };
-
-  const cancelActiveQuery = () => {
-    if (!client || !queryInFlight || cancelPromise) return;
-    const activeClient = client;
-    const pid = backendPid;
-    if (pid === undefined) {
-      clientConnectionBroken = true;
-      activeClient.connection.stream.destroy();
-      return;
-    }
-    cancelPromise = Promise.resolve()
-      .then(() => input.cancelBackend(pid))
-      .then((cancelled) => {
-        if (!cancelled)
-          throw new Error('PostgreSQL did not cancel the export query');
-      })
-      .catch((error: unknown) => {
-        clientConnectionBroken = true;
-        activeClient.connection.stream.destroy(
-          error instanceof Error
-            ? error
-            : new Error('Could not cancel the export query'),
-        );
-      });
-  };
-
   const interrupt = (kind: AbortKind, cause?: unknown) => {
     if (controller.signal.aborted) return;
     controller.abort(new ExportAbortError(kind, cause));
-    if (kind === 'database_error') clientConnectionBroken = true;
-    if (queryInFlight) cancelActiveQuery();
-    else if (kind === 'database_error' && client) {
-      clientConnectionBroken = true;
-      client.connection.stream.destroy();
+    if (kind === 'deadline' && responseStarted && !responseFinished) {
+      destroyingResponse = true;
+      input.reply.raw.destroy();
     }
   };
   const onResponseClose = () => {
@@ -349,93 +300,108 @@ export async function streamCsv<Row extends QueryResultRow>(
     if (controller.signal.aborted) throw abortReason(controller.signal);
 
     stage = 'connect';
-    client = await input.pool.connect();
-    client.on('error', onClientError);
-    client.on('end', onClientEnd);
-    attachSocket();
-    if (controller.signal.aborted) throw abortReason(controller.signal);
+    await withBoundedExportClient(
+      {
+        pool: input.pool,
+        signal: controller.signal,
+        cancelBackend: input.cancelBackend,
+      },
+      async (client) => {
+        let committed = false;
+        const query = client.query.bind(client);
+        client.on('error', onClientError);
+        client.on('end', onClientEnd);
+        attachSocket();
+        try {
+          stage = 'query';
+          await query('BEGIN');
+          await query(STATEMENT_TIMEOUT);
+          await query(IDLE_TIMEOUT);
+          if (input.scope.kind === 'tenant') {
+            await query(
+              "SELECT set_config('app.scope', 'tenant', true), set_config('app.tenant_id', $1, true)",
+              [input.scope.tenantId],
+            );
+          } else {
+            await query("SELECT set_config('app.scope', 'admin', true)");
+          }
+          await query({
+            text: `DECLARE ${CURSOR_NAME} NO SCROLL CURSOR FOR ${input.cursor.text}`,
+            values: [...input.cursor.values],
+          });
+          const firstBatch = await query(
+            `FETCH FORWARD ${FETCH_SIZE} FROM ${CURSOR_NAME}`,
+          );
+          const firstBatchText = serializedRows(
+            firstBatch.rows,
+            input.rowToCells,
+          );
 
-    stage = 'query';
-    queryInFlight = true;
-    try {
-      const backend = await client.query('SELECT pg_backend_pid() AS pid');
-      if (controller.signal.aborted) throw abortReason(controller.signal);
-      backendPid = backend.rows[0]?.pid;
-      if (backendPid === undefined)
-        throw new Error('Could not identify export backend');
-    } finally {
-      queryInFlight = false;
-    }
-    await query('BEGIN');
-    await query(STATEMENT_TIMEOUT);
-    await query(IDLE_TIMEOUT);
-    if (input.scope.kind === 'tenant') {
-      await query(
-        "SELECT set_config('app.scope', 'tenant', true), set_config('app.tenant_id', $1, true)",
-        [input.scope.tenantId],
-      );
-    } else {
-      await query("SELECT set_config('app.scope', 'admin', true)");
-    }
-    await query({
-      text: `DECLARE ${CURSOR_NAME} NO SCROLL CURSOR FOR ${input.cursor.text}`,
-      values: [...input.cursor.values],
-    });
-    const firstBatch = await query(
-      `FETCH FORWARD ${FETCH_SIZE} FROM ${CURSOR_NAME}`,
+          input.reply.hijack();
+          attachSocket();
+          const response = input.reply.raw;
+          for (const [name, value] of Object.entries(
+            input.reply.getHeaders(),
+          )) {
+            if (value !== undefined && name.toLowerCase() !== 'content-length')
+              response.setHeader(name, value);
+          }
+          response.removeHeader('content-length');
+          response.setHeader('x-request-id', input.request.id);
+          response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+          response.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${safeFilename(prepared.filename)}"`,
+          );
+          response.setHeader('X-Content-Type-Options', 'nosniff');
+          response.writeHead(200);
+          responseStarted = response.headersSent;
+
+          stage = 'write';
+          await write(
+            `${CSV_BOM}${csvRecord(input.headers)}${CSV_EOL}${firstBatchText}`,
+            firstBatch.rows.length,
+          );
+
+          let batch = firstBatch;
+          while (batch.rows.length > 0) {
+            stage = 'query';
+            batch = await query(
+              `FETCH FORWARD ${FETCH_SIZE} FROM ${CURSOR_NAME}`,
+            );
+            if (batch.rows.length === 0) break;
+            stage = 'write';
+            await write(
+              serializedRows(batch.rows, input.rowToCells),
+              batch.rows.length,
+            );
+          }
+
+          stage = 'commit';
+          await query('COMMIT');
+          committed = true;
+          stage = 'end';
+          const finish = waitForFinish(response, controller.signal);
+          activeDrain = finish.cancel;
+          try {
+            response.end();
+            await finish.promise;
+          } finally {
+            finish.cancel();
+            activeDrain = undefined;
+          }
+          result = 'success';
+        } finally {
+          try {
+            if (!committed)
+              await client.query('ROLLBACK').catch(() => undefined);
+          } finally {
+            client.removeListener('error', onClientError);
+            client.removeListener('end', onClientEnd);
+          }
+        }
+      },
     );
-    const firstBatchText = serializedRows(firstBatch.rows, input.rowToCells);
-
-    input.reply.hijack();
-    attachSocket();
-    const response = input.reply.raw;
-    for (const [name, value] of Object.entries(input.reply.getHeaders())) {
-      if (value !== undefined && name.toLowerCase() !== 'content-length')
-        response.setHeader(name, value);
-    }
-    response.removeHeader('content-length');
-    response.setHeader('x-request-id', input.request.id);
-    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    response.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${safeFilename(prepared.filename)}"`,
-    );
-    response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.writeHead(200);
-    responseStarted = response.headersSent;
-
-    stage = 'write';
-    await write(
-      `${CSV_BOM}${csvRecord(input.headers)}${CSV_EOL}${firstBatchText}`,
-      firstBatch.rows.length,
-    );
-
-    let batch = firstBatch;
-    while (batch.rows.length > 0) {
-      stage = 'query';
-      batch = await query(`FETCH FORWARD ${FETCH_SIZE} FROM ${CURSOR_NAME}`);
-      if (batch.rows.length === 0) break;
-      stage = 'write';
-      await write(
-        serializedRows(batch.rows, input.rowToCells),
-        batch.rows.length,
-      );
-    }
-
-    stage = 'commit';
-    await query('COMMIT');
-    committed = true;
-    stage = 'end';
-    const finish = waitForFinish(response, controller.signal);
-    activeDrain = finish.cancel;
-    try {
-      response.end();
-      await finish.promise;
-    } finally {
-      finish.cancel();
-      activeDrain = undefined;
-    }
-    result = 'success';
   } catch (error) {
     const failure = controller.signal.aborted
       ? abortReason(controller.signal)
@@ -456,30 +422,6 @@ export async function streamCsv<Row extends QueryResultRow>(
     if (listenedSocket.current) {
       listenedSocket.current.removeListener('close', onSocketClose);
       listenedSocket.current.removeListener('error', onSocketError);
-    }
-
-    if (client) {
-      if (cancelPromise) await cancelPromise;
-      client.removeListener('error', onClientError);
-      client.removeListener('end', onClientEnd);
-      let releaseError: Error | boolean | undefined = clientConnectionBroken
-        ? true
-        : undefined;
-      if (!committed) {
-        try {
-          await query('ROLLBACK', undefined, true);
-        } catch (rollbackError) {
-          clientConnectionBroken = true;
-          client.connection.stream.destroy();
-          releaseError =
-            rollbackError instanceof Error
-              ? rollbackError
-              : new Error('CSV export rollback failed');
-        }
-      }
-      client.release(
-        releaseError ?? (clientConnectionBroken ? true : undefined),
-      );
     }
 
     releaseSlot();

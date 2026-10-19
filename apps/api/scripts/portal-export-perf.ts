@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { request as httpRequest, type IncomingMessage } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import type { Socket } from 'node:net';
+import { cpus, loadavg } from 'node:os';
 import { resolve } from 'node:path';
 import pg from 'pg';
 import {
@@ -21,6 +24,7 @@ import {
   type ExportCompletedEvent,
   type Identity,
   type RssSample,
+  type MemoryGcEvent,
 } from './portal-list-perf.js';
 
 const DATABASE = PERF_DATABASE;
@@ -31,6 +35,7 @@ const ROUNDS = Number(process.env.PERF_ROUNDS ?? 7);
 const INCLUDE_SLOW = process.env.PERF_SLOW === '1';
 const INCLUDE_DEADLINE = process.env.PERF_DEADLINE === '1';
 const INCLUDE_CONCURRENCY = process.env.PERF_CONCURRENCY === '1';
+const MEMORY_MEASUREMENT = process.env.PERF_MEMORY === '1';
 const FULL_ACCEPTANCE = process.env.PERF_ACCEPTANCE === '1';
 const IDLE_DIAGNOSTIC_ONLY = process.env.PERF_DIAGNOSTIC_IDLE_ONLY === '1';
 const ISOLATED_RSS_SAMPLE = process.env.PERF_RSS_ISOLATED === '1';
@@ -115,6 +120,21 @@ type RssTrace = {
   startBytes: number | null;
   peakBytes: number | null;
   deltaBytes: number | null;
+};
+type MemoryMeasurement = {
+  round: number;
+  scenario: string;
+  expectedRows: number;
+  repeated200k: boolean;
+  beforeGc: MemoryGcEvent;
+  afterGc: MemoryGcEvent;
+  request: ExportResult;
+  serverCompletion: ExportCompletedEvent;
+  baselineRssBytes: number;
+  peakRssBytes: number;
+  peakRssDeltaBytes: number;
+  retainedHeapDeltaBytes: number;
+  rss: RssSample[];
 };
 type ExportActivity = {
   connections: number;
@@ -921,6 +941,13 @@ async function deleteAuditRows(
 }
 
 async function main() {
+  if (MEMORY_MEASUREMENT) {
+    assert.equal(DATABASE, PR3_PERF_DATABASE);
+    assert.equal(process.env.PERF_GC_ON_SIGUSR2, '1');
+    assert(!ISOLATED_RSS_SAMPLE && !IDLE_DIAGNOSTIC_ONLY && !FULL_ACCEPTANCE);
+    assert(!INCLUDE_SLOW && !INCLUDE_DEADLINE && !INCLUDE_CONCURRENCY);
+    assert(Number.isInteger(ROUNDS) && ROUNDS >= 5 && ROUNDS <= 20);
+  }
   if (ISOLATED_RSS_SAMPLE) {
     assert.equal(IDLE_DIAGNOSTIC_ONLY, false);
     assert.equal(FULL_ACCEPTANCE, false);
@@ -1004,6 +1031,48 @@ async function main() {
   const rssTraces: RssTrace[] = [];
   const rssRows: RssSample[] = [];
   const observations: Record<string, unknown>[] = [];
+  const memoryMeasurements: MemoryMeasurement[] = [];
+  const startedAtUtc = new Date().toISOString();
+  const memorySourcePaths = [
+    'apps/api/scripts/portal-export-perf.ts',
+    'apps/api/scripts/portal-list-perf.ts',
+    'apps/api/scripts/portal-memory-gc.mjs',
+    'apps/api/src/export/stream-csv.ts',
+    'apps/api/src/routes/exports.ts',
+    'apps/api/src/export/slots.ts',
+    'packages/rating/src/csv.ts',
+    'packages/db/src/cdr-query.ts',
+    'packages/db/src/bounded-export-client.ts',
+    'packages/db/src/cancel-postgres.ts',
+    'packages/db/src/client.ts',
+    'apps/api/src/app.ts',
+    'packages/db/src/portal/cdrs.ts',
+    'packages/db/src/admin/cdrs.ts',
+    'pnpm-lock.yaml',
+  ];
+  const sourceHashes = MEMORY_MEASUREMENT
+    ? Object.fromEntries(
+        await Promise.all(
+          memorySourcePaths.map(async (path): Promise<[string, string]> => [
+            path,
+            createHash('sha256')
+              .update(
+                await readFile(resolve(evidenceDirectory, '../../..', path)),
+              )
+              .digest('hex'),
+          ]),
+        ),
+      )
+    : undefined;
+  const host = MEMORY_MEASUREMENT
+    ? {
+        loadAverage: loadavg(),
+        cores: cpus().length,
+        node: process.version,
+        platform: process.platform,
+        arch: process.arch,
+      }
+    : undefined;
   let deadlineRateBasis:
     | {
         sourceScenario: string;
@@ -1234,7 +1303,111 @@ async function main() {
         rounds: ROUNDS,
       },
     ];
-    if (ISOLATED_RSS_SAMPLE) {
+    if (MEMORY_MEASUREMENT) {
+      assert(child.pid);
+      const pid = child.pid;
+      const collectGc = async () => {
+        const prior = started.memoryEvents().at(-1)?.sequence ?? 0;
+        process.kill(pid, 'SIGUSR2');
+        const deadline = performance.now() + 5000;
+        while (performance.now() < deadline) {
+          const event = started
+            .memoryEvents()
+            .find((event) => event.sequence > prior);
+          if (event) {
+            assert.equal(event.pid, pid);
+            return event;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        throw new Error('API GC telemetry timed out');
+      };
+      for (let round = 1; round <= ROUNDS; round += 1) {
+        const cases = round % 2 ? fastCases : [...fastCases].reverse();
+        const repeats = fastCases.filter(
+          (entry) => entry.tenantCode === 'EXPORT200K',
+        );
+        for (const [index, scenario] of [...cases, ...repeats].entries()) {
+          const fixture = tenantRows.get(scenario.tenantCode);
+          assert(fixture && scenario.identity);
+          const beforeGc = await collectGc();
+          let receivedRows = 0;
+          const rss = startRssSampler(pid, () => receivedRows, 50);
+          let result: ExportResult;
+          try {
+            result = await queryExport(
+              origin,
+              fixture.id,
+              scenario.audience,
+              scenario.identity,
+              (_bytes, records) => {
+                receivedRows = Math.max(0, records - 1);
+              },
+              { attempt: 'measured', round, maxDurationMs: 30_000 },
+            );
+          } finally {
+            rss.stop();
+          }
+          const expectedRows = EXPECTED_FIXTURE_ROWS[scenario.tenantCode];
+          assert.equal(result.outcome, 'complete');
+          assert.equal(result.status, 200);
+          assert.equal(result.csvDataRows, expectedRows);
+          assert.equal(result.crlfRecords, expectedRows + 1);
+          assert(result.bytes > 0 && result.requestId);
+          assert.equal(result.hasUtf8Bom, true);
+          assert.equal(result.hasContentLength, false);
+          assert.match(
+            result.contentType ?? '',
+            /^text\/csv;\s*charset=utf-8$/i,
+          );
+          let completion = started
+            .exportEvents()
+            .find((event) => event.requestId === result.requestId);
+          const deadline = performance.now() + 2000;
+          while (!completion && performance.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            completion = started
+              .exportEvents()
+              .find((event) => event.requestId === result.requestId);
+          }
+          assert(completion, 'same-request server completion missing');
+          assert.equal(completion.rows, expectedRows);
+          assert.equal(completion.result, 'success');
+          const activity = await waitForExportCleanup(owner);
+          assert.equal(
+            activity.idleInTransaction +
+              activity.activeOrWaiting +
+              activity.cancelConnections,
+            0,
+          );
+          const afterGc = await collectGc();
+          const baseline = rss.samples[0];
+          assert(baseline);
+          assert.equal(baseline.receivedRows, 0);
+          assert.equal(rss.samples.at(-1)?.receivedRows, expectedRows);
+          const name = `${scenario.audience}-${scenario.tenantCode}`;
+          memoryMeasurements.push({
+            round,
+            scenario: name,
+            expectedRows,
+            repeated200k: index >= cases.length,
+            beforeGc,
+            afterGc,
+            request: { ...result, scenario: name },
+            serverCompletion: completion,
+            baselineRssBytes: baseline.rssBytes,
+            peakRssBytes: Math.max(
+              ...rss.samples.map((sample) => sample.rssBytes),
+            ),
+            peakRssDeltaBytes:
+              Math.max(...rss.samples.map((sample) => sample.rssBytes)) -
+              baseline.rssBytes,
+            retainedHeapDeltaBytes: afterGc.heapUsed - beforeGc.heapUsed,
+            rss: rss.samples,
+          });
+        }
+      }
+    } else if (ISOLATED_RSS_SAMPLE) {
       const fixture = tenantRows.get(RSS_TENANT_CODE);
       const identity = identities.rss;
       assert(fixture && identity && origin && child?.pid);
@@ -2134,6 +2307,121 @@ async function main() {
       auth.end(),
       ...(appConnected ? [appClient.end()] : []),
     ]);
+  }
+
+  if (MEMORY_MEASUREMENT) {
+    const sourceHashesAfter = Object.fromEntries(
+      await Promise.all(
+        memorySourcePaths.map(async (path): Promise<[string, string]> => [
+          path,
+          createHash('sha256')
+            .update(
+              await readFile(resolve(evidenceDirectory, '../../..', path)),
+            )
+            .digest('hex'),
+        ]),
+      ),
+    );
+    const sourceUnchanged =
+      JSON.stringify(sourceHashes) === JSON.stringify(sourceHashesAfter);
+    const range = (values: number[]) => ({
+      median: summaryNumberMedian(values),
+      min: Math.min(...values),
+      max: Math.max(...values),
+    });
+    const summaries = [
+      ...new Set(memoryMeasurements.map((sample) => sample.scenario)),
+    ].map((name) => {
+      const values = memoryMeasurements.filter(
+        (sample) => sample.scenario === name && !sample.repeated200k,
+      );
+      return {
+        scenario: name,
+        samples: values.length,
+        postGcHeapUsedBytes: range(
+          values.map((sample) => sample.afterGc.heapUsed),
+        ),
+        baselineRssBytes: range(
+          values.map((sample) => sample.baselineRssBytes),
+        ),
+        peakRssBytes: range(values.map((sample) => sample.peakRssBytes)),
+        peakRssDeltaBytes: range(
+          values.map((sample) => sample.peakRssDeltaBytes),
+        ),
+        retainedHeapDeltaBytes: range(
+          values.map((sample) => sample.retainedHeapDeltaBytes),
+        ),
+        elapsedMs: range(values.map((sample) => sample.request.elapsedMs)),
+      };
+    });
+    console.log(
+      JSON.stringify(
+        {
+          runId,
+          startedAtUtc,
+          capturedAtUtc: new Date().toISOString(),
+          gitHead: execFileSync('git', ['rev-parse', 'HEAD'], {
+            encoding: 'utf8',
+          }).trim(),
+          nodeArguments: process.execArgv,
+          database: DATABASE,
+          databaseHost: new URL(urls.owner).hostname,
+          databasePort: new URL(urls.owner).port,
+          databaseProfile: databaseProfile && {
+            id: databaseProfile.id,
+            serverVersion: databaseProfile.serverVersion,
+            repositoryMigrationJournalSha256:
+              databaseProfile.repositoryMigrationJournalSha256,
+            appliedMigrations: databaseProfile.appliedMigrations,
+            cdrIndexDefinitionsSha256:
+              databaseProfile.cdrIndexDefinitionsSha256,
+          },
+          connectionIdentities,
+          fixtureCounts,
+          dateRange: { from: FROM, to: TO },
+          host,
+          rounds: ROUNDS,
+          sourceHashes,
+          sourceHashesAfter,
+          sourceUnchanged,
+          apiPid: child?.pid,
+          method:
+            'One real API child; no warmup exports; six cases alternate forward/reverse each round then portal/admin 200k repeats. Each export consumes/counts the complete CSV with bounded client buffers, verifies same-request server completion and clean database activity, and records three forced full GCs on separate event-loop turns before/after. RSS is sampled with ps every 50ms plus request start/end; sub-50ms peaks can be missed. Heap telemetry comes from that API child, not the load generator. GC is diagnostic and differs from normal production collection. No numeric memory pass threshold is imposed.',
+          evidenceCaptureCommand: `cd apps/api && PERF_TARGET_DATABASE=${DATABASE} PERF_DATABASE_PORT=${new URL(urls.owner).port || '5432'} PERF_MEMORY=1 PERF_GC_ON_SIGUSR2=1 PERF_ROUNDS=${ROUNDS} node ${process.execArgv.map((value) => `'${value.replaceAll("'", "'\\''")}'`).join(' ')} scripts/portal-export-perf.ts`,
+          cleanup,
+          cleanupErrors,
+          createdRows: created,
+          failures: [
+            ...(failure ? [failure] : []),
+            ...(!sourceUnchanged ? ['Source changed during measurement'] : []),
+          ],
+          summaries,
+          repeated200k: ['admin-EXPORT200K', 'portal-EXPORT200K'].map(
+            (scenario) => {
+              const values = memoryMeasurements.filter(
+                (sample) => sample.scenario === scenario && sample.repeated200k,
+              );
+              return {
+                scenario,
+                samples: values.length,
+                peakRssDeltaBytes: range(
+                  values.map((sample) => sample.peakRssDeltaBytes),
+                ),
+                postGcHeapUsedBytes: range(
+                  values.map((sample) => sample.afterGc.heapUsed),
+                ),
+              };
+            },
+          ),
+          samples: memoryMeasurements,
+        },
+        null,
+        2,
+      ),
+    );
+    if (failure || cleanupErrors.length || !sourceUnchanged)
+      process.exitCode = 1;
+    return;
   }
 
   const groups = [...new Set(results.map((result) => result.scenario))].map(

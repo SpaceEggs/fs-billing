@@ -1,0 +1,93 @@
+{
+  "method": "Real PostgreSQL behind a TCP proxy drops replies on the established data connection after FETCH while a direct cancellation connection remains healthy. The HTTP reply is a lightweight EventEmitter test adapter. Only the five-minute export timer is shortened to 500 ms; production cleanup bounds are unchanged.",
+  "before": [
+    {
+      "head": "14ca0120210bb4bb32f3271729878091df01b64c",
+      "method": "Real PostgreSQL behind a TCP proxy drops data-connection replies after FETCH. Cancellation uses a separate direct connection. Only the five-minute export timer is shortened to 500ms.",
+      "elapsedObservationMs": 1600,
+      "simulatedDeadlineMs": 500,
+      "phase": "before-start",
+      "fetchObserved": true,
+      "fetchCount": 1,
+      "cancellationReturned": true,
+      "exportSettled": false,
+      "sameTenantSlotStillHeld": true,
+      "completedLogs": 0,
+      "httpDestroyed": false,
+      "httpHeadersSent": false
+    },
+    {
+      "head": "14ca0120210bb4bb32f3271729878091df01b64c",
+      "method": "Real PostgreSQL behind a TCP proxy drops data-connection replies after FETCH. Cancellation uses a separate direct connection. Only the five-minute export timer is shortened to 500ms.",
+      "elapsedObservationMs": 1600,
+      "simulatedDeadlineMs": 500,
+      "phase": "after-start",
+      "fetchObserved": true,
+      "fetchCount": 2,
+      "cancellationReturned": true,
+      "exportSettled": false,
+      "sameTenantSlotStillHeld": true,
+      "completedLogs": 0,
+      "httpDestroyed": false,
+      "httpHeadersSent": true
+    }
+  ],
+  "after": [
+    {
+      "head": "74f27a9d1da540898443f1ca55c68675bd83333f",
+      "sourceHashes": {
+        "apps/api/src/export/stream-csv.ts": "6ea159093916f79d4f2cfe0824b548f60e3b3ed6100b00b4f174725859cf1566",
+        "packages/db/src/bounded-export-client.ts": "a383b85b67eb2f2784c9a9a0c73bf54cb0a478c10143b4feef6778222bf92734"
+      },
+      "method": "Real PostgreSQL behind a TCP proxy drops data-connection replies after FETCH. Cancellation uses a separate direct connection. Only the five-minute export timer is shortened to 500ms.",
+      "elapsedObservationMs": 3500,
+      "expectedFixed": true,
+      "simulatedDeadlineMs": 500,
+      "phase": "before-start",
+      "fetchObserved": true,
+      "fetchCount": 1,
+      "cancellationReturned": true,
+      "exportSettled": true,
+      "sameTenantSlotStillHeld": false,
+      "completedLogs": 1,
+      "httpDestroyed": false,
+      "httpHeadersSent": false
+    },
+    {
+      "head": "74f27a9d1da540898443f1ca55c68675bd83333f",
+      "sourceHashes": {
+        "apps/api/src/export/stream-csv.ts": "6ea159093916f79d4f2cfe0824b548f60e3b3ed6100b00b4f174725859cf1566",
+        "packages/db/src/bounded-export-client.ts": "a383b85b67eb2f2784c9a9a0c73bf54cb0a478c10143b4feef6778222bf92734"
+      },
+      "method": "Real PostgreSQL behind a TCP proxy drops data-connection replies after FETCH. Cancellation uses a separate direct connection. Only the five-minute export timer is shortened to 500ms.",
+      "elapsedObservationMs": 3500,
+      "expectedFixed": true,
+      "simulatedDeadlineMs": 500,
+      "phase": "after-start",
+      "fetchObserved": true,
+      "fetchCount": 2,
+      "cancellationReturned": true,
+      "exportSettled": true,
+      "sameTenantSlotStillHeld": false,
+      "completedLogs": 1,
+      "httpDestroyed": true,
+      "httpHeadersSent": true
+    }
+  ],
+  "regressionCommand": "pnpm exec vitest run apps/api/src/export/stream-csv.test.ts packages/db/src/bounded-export-client.test.ts packages/db/src/cancel-postgres.test.ts",
+  "regressionResults": {
+    "beforeOriginalFix": {
+      "passed": 21,
+      "failedAsExpected": 4
+    },
+    "beforeReviewCorrections": {
+      "passed": 12,
+      "failedAsExpected": 2
+    },
+    "final": {
+      "passed": 42,
+      "failed": 0
+    }
+  },
+  "reproLimitations": "The local proxy script was an investigation fixture. Permanent regression tests exercise the cleanup/admission and Drizzle boundaries. Existing HTTP/PostgreSQL integration tests separately cover JSON errors, incomplete response interruption, lock-wait cancellation and retries."
+}

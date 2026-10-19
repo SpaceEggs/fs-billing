@@ -60,6 +60,17 @@ export type ExportCompletedEvent = {
   elapsedMs: number;
   result: string;
 };
+const memoryGcEventSchema = z.object({
+  event: z.literal('perf.memory.gc'),
+  sequence: z.number().int().positive(),
+  pid: z.number().int().positive(),
+  rss: z.number().nonnegative(),
+  heapUsed: z.number().nonnegative(),
+  heapTotal: z.number().nonnegative(),
+  external: z.number().nonnegative(),
+  arrayBuffers: z.number().nonnegative(),
+});
+export type MemoryGcEvent = z.infer<typeof memoryGcEventSchema>;
 export class ApiStartupError extends Error {
   constructor(
     readonly startupError: string,
@@ -383,6 +394,15 @@ export function databaseUrl(value: string | undefined, role: string | null) {
     'expected local development URL template',
   );
   if (role) assert.equal(decodeURIComponent(url.username), role);
+  if (process.env.PERF_DATABASE_PORT)
+    url.port = String(
+      z.coerce
+        .number()
+        .int()
+        .positive()
+        .max(65535)
+        .parse(process.env.PERF_DATABASE_PORT),
+    );
   url.pathname = `/${PERF_DATABASE}`;
   return url.toString();
 }
@@ -494,13 +514,14 @@ export async function startApi(port: number) {
   let stdoutPending = '';
   const exportEvents: ExportCompletedEvent[] = [];
   const gcOnSignal = process.env.PERF_GC_ON_SIGUSR2 === '1';
-  const gcHook = process.env.PERF_GC_HOOK;
-  if (gcOnSignal)
-    assert(gcHook, 'PERF_GC_HOOK is required with PERF_GC_ON_SIGUSR2');
+  const memoryEvents: MemoryGcEvent[] = [];
+  const gcHook = fileURLToPath(
+    new URL('./portal-memory-gc.mjs', import.meta.url),
+  );
   const child = spawn(
     process.execPath,
     [
-      ...(gcOnSignal ? ['--expose-gc', '--require', gcHook ?? ''] : []),
+      ...(gcOnSignal ? ['--expose-gc', '--import', gcHook] : []),
       '--env-file-if-exists=../../.env',
       '--import',
       'tsx',
@@ -532,6 +553,11 @@ export async function startApi(port: number) {
     for (const line of lines) {
       try {
         const entry: unknown = JSON.parse(line);
+        const memory = memoryGcEventSchema.safeParse(entry);
+        if (memory.success) {
+          memoryEvents.push(memory.data);
+          if (memoryEvents.length > 1000) memoryEvents.shift();
+        }
         if (
           typeof entry === 'object' &&
           entry !== null &&
@@ -601,6 +627,7 @@ export async function startApi(port: number) {
     origin,
     diagnostics,
     exportEvents: () => [...exportEvents],
+    memoryEvents: () => [...memoryEvents],
   };
 }
 

@@ -22,6 +22,7 @@ import {
 import { writeAudit } from './audit.js';
 import * as schema from '../schema.js';
 import { cancelPostgresBackend } from '../cancel-postgres.js';
+import { withBoundedExportClient } from '../bounded-export-client.js';
 
 export function listAdminCdrs({
   db,
@@ -160,115 +161,64 @@ export async function acceptAdminCdrExport({
 }) {
   const input = adminCdrExportRequestSchema.parse(query);
   if (signal.aborted) throw abortError(signal);
-  const client = await db.$client.connect();
-  let releaseError: Error | undefined;
-  let backendPid: number | undefined;
-  let abortPromise: Promise<void> | undefined;
-  let abortStarted = false;
-  const onClientError = (error: Error) => {
-    releaseError ??= error;
-  };
-  const onClientEnd = () => {
-    releaseError ??= new Error('CDR export acceptance connection ended');
-  };
-  const onAbort = () => {
-    if (abortStarted) return;
-    abortStarted = true;
-    releaseError = abortError(signal);
-    const cancellation =
-      backendPid === undefined
-        ? Promise.resolve(false)
-        : cancelPostgresBackend(db.$client, backendPid);
-    abortPromise = cancellation
-      .then((cancelled) => {
-        if (!cancelled) {
-          client.connection.stream.destroy(releaseError);
-        }
-      })
-      .catch(() => {
-        client.connection.stream.destroy(releaseError);
-      });
-  };
-  client.on('error', onClientError);
-  client.on('end', onClientEnd);
-  signal.addEventListener('abort', onAbort, { once: true });
-  try {
-    if (signal.aborted) {
-      onAbort();
-      throw abortError(signal);
-    }
-    const backend = await client.query<{ pid: number }>(
-      'select pg_backend_pid() as pid',
-    );
-    backendPid = backend.rows[0]?.pid;
-    if (backendPid === undefined)
-      throw new Error('Could not identify export session');
-    if (signal.aborted) {
-      onAbort();
-      throw abortError(signal);
-    }
-    const auditDb = drizzle(client, { schema });
-    return await auditDb.transaction(async (tx) => {
-      ensureActive(signal);
-      await tx.execute(sql`select set_config('app.scope', 'admin', true)`);
-      ensureActive(signal);
-      await tx.execute(sql`set local statement_timeout = '30s'`);
-      ensureActive(signal);
-      await tx.execute(
-        sql`set local idle_in_transaction_session_timeout = '30s'`,
-      );
-      ensureActive(signal);
-      const tenant = await tx.execute<{ code: string }>(
-        sql`select code from tenants where id = ${tenantId}::uuid`,
-      );
-      ensureActive(signal);
-      const code = tenant.rows[0]?.code;
-      if (!code) throw new NotFoundError('租户不存在');
-      const { rows } = await tx.execute<{ total: number }>(sql`
+  return withBoundedExportClient(
+    {
+      pool: { connect: () => db.$client.connect() },
+      signal,
+      cancelBackend: (pid) => cancelPostgresBackend(db.$client, pid),
+    },
+    async (client) => {
+      const auditDb = drizzle(client, { schema });
+      return await auditDb.transaction(async (tx) => {
+        ensureActive(signal);
+        await tx.execute(sql`select set_config('app.scope', 'admin', true)`);
+        ensureActive(signal);
+        await tx.execute(sql`set local statement_timeout = '30s'`);
+        ensureActive(signal);
+        await tx.execute(
+          sql`set local idle_in_transaction_session_timeout = '30s'`,
+        );
+        ensureActive(signal);
+        const tenant = await tx.execute<{ code: string }>(
+          sql`select code from tenants where id = ${tenantId}::uuid`,
+        );
+        ensureActive(signal);
+        const code = tenant.rows[0]?.code;
+        if (!code) throw new NotFoundError('租户不存在');
+        const { rows } = await tx.execute<{ total: number }>(sql`
         with ${cdrBounds(input)}
         select count(*)::int as total from cdrs c
         where ${adminCdrFilters({ tenantId, query: input })}
       `);
-      ensureActive(signal);
-      const rowCount = rows[0]?.total ?? 0;
-      const event: AuditPayload = {
-        id: randomUUID(),
-        actor,
-        occurredAt: new Date().toISOString(),
-        tenantId,
-        target: { kind: 'tenant', id: tenantId },
-        action: 'cdr_export',
-        content: {
-          summary: `导出话单，共 ${rowCount} 条`,
-          changes: [],
-          rowCount,
-          filters: {
-            from: input.from,
-            to: input.to,
-            status: input.status,
-            ...(input.callee ? { callee: input.callee } : {}),
-            ...(input.country ? { country: input.country } : {}),
-            unverifiedOnly: input.unverifiedOnly,
+        ensureActive(signal);
+        const rowCount = rows[0]?.total ?? 0;
+        const event: AuditPayload = {
+          id: randomUUID(),
+          actor,
+          occurredAt: new Date().toISOString(),
+          tenantId,
+          target: { kind: 'tenant', id: tenantId },
+          action: 'cdr_export',
+          content: {
+            summary: `导出话单，共 ${rowCount} 条`,
+            changes: [],
+            rowCount,
+            filters: {
+              from: input.from,
+              to: input.to,
+              status: input.status,
+              ...(input.callee ? { callee: input.callee } : {}),
+              ...(input.country ? { country: input.country } : {}),
+              unverifiedOnly: input.unverifiedOnly,
+            },
           },
-        },
-      };
-      await writeAudit(tx, event);
-      ensureActive(signal);
-      return { code, rowCount };
-    });
-  } catch (error) {
-    releaseError ??=
-      error instanceof Error
-        ? error
-        : new Error('CDR export acceptance failed');
-    throw signal.aborted ? abortError(signal) : error;
-  } finally {
-    if (abortPromise) await abortPromise;
-    signal.removeEventListener('abort', onAbort);
-    client.removeListener('error', onClientError);
-    client.removeListener('end', onClientEnd);
-    client.release(releaseError);
-  }
+        };
+        await writeAudit(tx, event);
+        ensureActive(signal);
+        return { code, rowCount };
+      });
+    },
+  );
 }
 
 function abortError(signal: AbortSignal): Error {

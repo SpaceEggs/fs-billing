@@ -508,7 +508,7 @@ describe('streamCsv', () => {
       expect(response.ended).toBe(false);
       expect(
         test.client.queries.filter((query) => query.text === 'ROLLBACK'),
-      ).toHaveLength(1);
+      ).toHaveLength(0);
       expect(test.client.releaseCount).toBe(1);
       expect(test.client.releaseError).toBeInstanceOf(Error);
       expect(test.request.logs.at(-1)).toMatchObject({
@@ -744,6 +744,42 @@ describe('streamCsv', () => {
     },
   );
 
+  it('destroys a started CSV at deadline while pending control still owns admission', async () => {
+    vi.useFakeTimers();
+    const slots = new ExportSlots();
+    const client = new FakeClient({
+      firstRows: [{ call_uuid: 'uuid-1' }],
+      pendingSecondFetch: true,
+    });
+    const test = makeInput({
+      client,
+      cancelBackend: () => new Promise(() => undefined),
+    });
+    const pending = streamCsv(test.input, slots);
+    try {
+      await spinUntil(() => client.pendingQueryCount === 1);
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+      expect(test.response.destroyed).toBe(true);
+      expect(test.response.ended).toBe(false);
+      expect(client.releaseCount).toBe(0);
+      expect(slots.acquire('tenant-a')).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(8_000);
+      await pending;
+      expect(client.releaseCount).toBe(1);
+      expect(test.request.logs.at(-1)).toMatchObject({ result: 'deadline' });
+      const release = slots.acquire('tenant-a');
+      expect(release).toBeTypeOf('function');
+      release?.();
+      expectClean(test.response, client);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      client.connection.stream.destroy();
+      await vi.advanceTimersByTimeAsync(8_000);
+      await pending;
+      vi.useRealTimers();
+    }
+  });
+
   it('bounds a silent rollback and releases admission without reusing the connection', async () => {
     vi.useFakeTimers();
     const slots = new ExportSlots();
@@ -802,7 +838,7 @@ describe('streamCsv', () => {
     expect(client.pendingQueryCount).toBe(0);
     expect(
       client.queries.filter((query) => query.text === 'ROLLBACK'),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
     expect(client.releaseError).toBeInstanceOf(Error);
     expect(client.releaseCount).toBe(1);
     expect(test.response.destroyed).toBe(true);
