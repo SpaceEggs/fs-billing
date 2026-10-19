@@ -1,0 +1,45 @@
+
+> fs-billing@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/worker perf:authorize
+
+
+> @fs-billing/worker@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/worker
+> tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts
+
+{"entries":500,"requests":1000,"p95Ms":9.665583999999399,"maxMs":25.811374999999998,"passed":true}
+
+> fs-billing@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/worker perf:authorize
+
+
+> @fs-billing/worker@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/worker
+> tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts
+
+{"entries":500,"requests":1000,"p95Ms":16.605749999999716,"maxMs":54.80670800000007,"passed":true}
+
+> fs-billing@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/worker perf:authorize
+
+
+> @fs-billing/worker@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/worker
+> tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts
+
+{"entries":500,"requests":1000,"p95Ms":19.642374999999447,"maxMs":68.00262500000008,"passed":true}
+
+> fs-billing@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/worker perf:authorize
+
+
+> @fs-billing/worker@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/worker
+> tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts
+
+{"entries":500,"requests":1000,"p95Ms":8.273459000000003,"maxMs":27.43104100000005,"passed":true}
+
+> fs-billing@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/worker perf:authorize
+
+
+> @fs-billing/worker@ perf:authorize /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/worker
+> tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts
+
+{"entries":500,"requests":1000,"p95Ms":11.675124999999753,"maxMs":70.92316699999992,"passed":true}

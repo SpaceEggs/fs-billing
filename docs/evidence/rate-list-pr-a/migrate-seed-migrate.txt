@@ -1,0 +1,40 @@
+
+> fs-billing@ db:migrate /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/db migrate
+
+
+> @fs-billing/db@ migrate /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/packages/db
+> tsx --env-file-if-exists=../../.env src/bin/migrate.ts
+
+迁移完成
+
+> fs-billing@ db:seed /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/db seed
+
+
+> @fs-billing/db@ seed /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/packages/db
+> tsx --env-file-if-exists=../../.env src/bin/seed.ts
+
+┌─────────┬──────────┬──────────┬───────────┐
+│ (index) │ code     │ currency │ balance   │
+├─────────┼──────────┼──────────┼───────────┤
+│ 0       │ 'ABC001' │ 'CNY'    │ '-35.20'  │
+│ 1       │ 'BJH003' │ 'CNY'    │ '1286.40' │
+│ 2       │ 'CDT018' │ 'CNY'    │ '0.00'    │
+│ 3       │ 'GLB009' │ 'USD'    │ '-15.02'  │
+│ 4       │ 'GZT007' │ 'CNY'    │ '86.50'   │
+│ 5       │ 'HZX014' │ 'CNY'    │ '-100.36' │
+│ 6       │ 'NYC021' │ 'USD'    │ '2140.00' │
+│ 7       │ 'SGN011' │ 'USD'    │ '12.30'   │
+│ 8       │ 'SHC005' │ 'CNY'    │ '8950.00' │
+│ 9       │ 'XYZ002' │ 'USD'    │ '-4.82'   │
+└─────────┴──────────┴──────────┴───────────┘
+
+> fs-billing@ db:migrate /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/db migrate
+
+
+> @fs-billing/db@ migrate /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/packages/db
+> tsx --env-file-if-exists=../../.env src/bin/migrate.ts
+
+迁移完成

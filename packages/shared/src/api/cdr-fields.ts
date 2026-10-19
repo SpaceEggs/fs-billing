@@ -74,6 +74,11 @@ export const cdrFields = {
   caller: z.string(),
   callee: z.string(),
   country: z.string().nullable(),
+  iso: z
+    .string()
+    .regex(/^[A-Z]{2}$/)
+    .nullable(),
+  description: z.string().nullable(),
   matchedPrefix: z.string().nullable(),
   durationSeconds: z.int().nonnegative(),
   billedMinutes: decimalText,
@@ -143,3 +148,11 @@ export const cdrCountriesResponseSchema = z.strictObject({
   countries: z.array(z.string().min(1)),
 });
 export type CdrCountriesResponse = z.infer<typeof cdrCountriesResponseSchema>;
+
+/** 国家与客户可见的说明，空说明只显示国家。 */
+export function formatCountryLabel(
+  country: string,
+  description: string | null | undefined,
+): string {
+  return description?.trim() ? `${country} · ${description.trim()}` : country;
+}

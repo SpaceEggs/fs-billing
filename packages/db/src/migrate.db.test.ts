@@ -133,7 +133,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 16 }]);
+    expect(rows).toEqual([{ applied: 17 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {
@@ -204,4 +204,88 @@ describe('迁移', () => {
     }
     expect(tables).toHaveLength(20);
   });
+});
+
+it('adds ISO and description defaults to rates and nullable columns to CDR partitions with validated checks', async () => {
+  const { rows } = await owner.pool.query<{
+    table_name: string;
+    column_name: string;
+    is_nullable: string;
+    column_default: string | null;
+  }>(
+    `select table_name, column_name, is_nullable, column_default from information_schema.columns where table_schema='public' and (table_name='rate_entries' or table_name='cdrs' or table_name like 'cdrs_2026_%') and column_name in ('iso','description')`,
+  );
+  expect(rows.filter((row) => row.table_name === 'rate_entries')).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        column_name: 'iso',
+        is_nullable: 'NO',
+        column_default: "''::text",
+      }),
+      expect.objectContaining({
+        column_name: 'description',
+        is_nullable: 'NO',
+        column_default: "''::text",
+      }),
+    ]),
+  );
+  const cdrColumns = rows.filter((row) => row.table_name !== 'rate_entries');
+  expect(cdrColumns.length).toBeGreaterThan(2);
+  for (const column of cdrColumns)
+    expect(column).toMatchObject({ is_nullable: 'YES', column_default: null });
+  const checks = await owner.pool.query<{
+    conname: string;
+    convalidated: boolean;
+  }>(
+    `select conname, convalidated from pg_constraint where conname in ('rate_entries_iso_check', 'cdrs_iso_check')`,
+  );
+  expect(checks.rows.length).toBeGreaterThanOrEqual(2);
+  for (const check of checks.rows) expect(check.convalidated).toBe(true);
+});
+
+it('migration preserves old country text and adds empty metadata without rewriting rows', async () => {
+  const migration = await readFile(
+    new URL(
+      '../migrations/0016_rate_list_iso_description.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  const client = await owner.pool.connect();
+  try {
+    await client.query('begin');
+    await client.query(`create temporary table rate_entries (country text not null);
+      create temporary table cdrs (country text, started_at date) partition by range (started_at);
+      create temporary table old_cdr_partition partition of cdrs for values from ('2026-10-01') to ('2026-11-01');
+      insert into rate_entries values ('英国手机');
+      insert into cdrs values ('英国手机', '2026-10-01')`);
+    const before = await client.query(
+      `select oid, relfilenode from pg_class where oid in ('pg_temp.rate_entries'::regclass,'pg_temp.old_cdr_partition'::regclass) order by oid`,
+    );
+    await client.query(migration);
+    expect(
+      (
+        await client.query(
+          'select iso, country, description from pg_temp.rate_entries',
+        )
+      ).rows,
+    ).toEqual([{ iso: '', country: '英国手机', description: '' }]);
+    expect(
+      (await client.query('select iso, country, description from pg_temp.cdrs'))
+        .rows,
+    ).toEqual([{ iso: null, country: '英国手机', description: null }]);
+    expect(
+      (
+        await client.query(
+          `select oid, relfilenode from pg_class where oid in ('pg_temp.rate_entries'::regclass,'pg_temp.old_cdr_partition'::regclass) order by oid`,
+        )
+      ).rows,
+    ).toEqual(before.rows);
+    await expect(
+      client.query("update pg_temp.cdrs set iso='gb'"),
+    ).rejects.toMatchObject({ code: '23514', constraint: 'cdrs_iso_check' });
+  } finally {
+    await client.query('rollback');
+    client.release();
+  }
 });

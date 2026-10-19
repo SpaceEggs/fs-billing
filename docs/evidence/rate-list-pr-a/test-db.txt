@@ -1,0 +1,15 @@
+
+> fs-billing@ test:db /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+
+
+PR3_PREPARE_ABORT {"backendPid":1087,"before":{"state":"active","waitEventType":"Lock","waitEvent":"relation"},"after":{"state":"idle","waitEventType":"Client","waitEvent":"ClientRead"},"elapsedMs":11}
+
+ Test Files  32 passed (32)
+      Tests  467 passed (467)
+   Start at  05:31:12
+   Duration  84.59s (tests 84%, import 16%)
+

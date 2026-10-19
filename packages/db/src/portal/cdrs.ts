@@ -23,6 +23,8 @@ export function portalCdrProjection(alias: 'c' | 'p') {
     'caller', ${column('caller')},
     'callee', ${column('callee')},
     'country', ${column('country')},
+    'iso', ${column('iso')},
+    'description', ${column('description')},
     'matchedPrefix', ${column('matched_prefix')},
     'durationSeconds', ${column('duration_seconds')},
     'billedMinutes', ${column('billed_minutes')}::text,
@@ -48,7 +50,7 @@ export async function queryCdrs({
       with ${cdrBounds(input)},
       filtered as (
         select c.call_uuid, c.started_at, c.answered_at, c.ended_at,
-          c.caller, c.callee, c.country, c.matched_prefix, c.duration_seconds,
+          c.caller, c.callee, c.country, c.iso, c.description, c.matched_prefix, c.duration_seconds,
           c.billed_minutes, c.rate, c.charge, c.hangup_cause
         from cdrs c where ${filters}
       ),
@@ -75,7 +77,7 @@ export async function queryCdrs({
       ),
       page as (
         select c.call_uuid, c.started_at, c.answered_at, c.ended_at,
-          c.caller, c.callee, c.country, c.matched_prefix, c.duration_seconds,
+          c.caller, c.callee, c.country, c.iso, c.description, c.matched_prefix, c.duration_seconds,
           c.billed_minutes, c.rate, c.charge, c.hangup_cause
         from filtered c
         order by ${
@@ -184,7 +186,7 @@ export function portalCdrExportCursorQuery({
     to_char(c.started_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as "startedAt",
     case when c.answered_at is null then null else to_char(c.answered_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') end as "answeredAt",
     to_char(c.ended_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as "endedAt",
-    c.caller as "caller", c.callee as "callee", c.country as "country",
+    c.caller as "caller", c.callee as "callee", c.country as "country", c.iso as "iso", c.description as "description",
     c.duration_seconds as "durationSeconds", c.billed_minutes::text as "billedMinutes",
     case when c.rate is null then null else round(c.rate, 4)::text end as "rate",
     c.charge::text as "charge", c.hangup_cause as "hangupCause",

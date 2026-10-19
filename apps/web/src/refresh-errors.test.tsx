@@ -67,7 +67,9 @@ const rates = {
   current: {
     id: '00000000-0000-4000-8000-0000000000aa',
     effectiveFrom: '2026-10-01T00:00:00.000Z',
-    entries: [{ prefix: '86', country: '中国', rate: '0.1' }],
+    entries: [
+      { iso: '', description: '', prefix: '86', country: '中国', rate: '0.1' },
+    ],
   },
   scheduled: [],
 };

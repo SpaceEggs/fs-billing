@@ -1,0 +1,50 @@
+BEGIN
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+INSERT 0 1
+INSERT 0 1
+      relname      | relfilenode 
+-------------------+-------------
+ old_cdr_partition |       26912
+ rate_entries      |       26904
+(2 rows)
+
+SET
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ prefix | iso | country  | description 
+--------+-----+----------+-------------
+ 447    |     | 英国手机 | 
+(1 row)
+
+ iso  | country  | description 
+------+----------+-------------
+ NULL | 英国手机 | NULL
+(1 row)
+
+      relname      | relfilenode 
+-------------------+-------------
+ old_cdr_partition |       26912
+ rate_entries      |       26904
+(2 rows)
+
+ROLLBACK
+    callee     | iso | country | description 
+---------------+-----+---------+-------------
+ +447700900123 | GB  | 英国    | 手机
+(1 row)
+
+ prefix | iso |   country   | description | rate  
+--------+-----+-------------+-------------+-------
+ 1      |     | 美国/加拿大 |             |  0.01
+ 44     | GB  | 英国        |             |  0.02
+ 447    | GB  | 英国        | 手机        | 0.048
+ 1      |     | 美国/加拿大 |             |  0.01
+ 44     | GB  | 英国        |             |  0.02
+ 447    | GB  | 英国        | 手机        | 0.045
+(6 rows)
+

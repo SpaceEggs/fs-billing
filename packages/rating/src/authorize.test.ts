@@ -18,7 +18,13 @@ const rates = (value: string): RateTable<'CNY'> => ({
     {
       effectiveFrom: beijingTime('2026-01-01 00:00'),
       entries: [
-        { prefix: '447', country: '英国手机', perMinute: rate('CNY', value) },
+        {
+          iso: '',
+          description: '',
+          prefix: '447',
+          country: '英国手机',
+          perMinute: rate('CNY', value),
+        },
       ],
     },
   ],
@@ -131,8 +137,16 @@ describe('dialed number boundary', () => {
           {
             effectiveFrom: at,
             entries: [
-              { prefix: '1', country: 'NANP', perMinute: rate('CNY', '1') },
               {
+                iso: '',
+                description: '',
+                prefix: '1',
+                country: 'NANP',
+                perMinute: rate('CNY', '1'),
+              },
+              {
+                iso: '',
+                description: '',
                 prefix: '86',
                 country: '中国',
                 perMinute: rate('CNY', '0.1'),

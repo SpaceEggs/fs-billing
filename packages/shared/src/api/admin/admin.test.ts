@@ -184,7 +184,13 @@ describe('admin rate contract', () => {
     ).toBe(false);
   });
   it('rate entries reject duplicate prefixes, international crown and excess decimals', () => {
-    const entry = { prefix: '447', country: '英国手机', rate: '0.0450' };
+    const entry = {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0450',
+    };
     expect(adminRateEntriesSchema.parse([entry])).toEqual([entry]);
     expect(adminRateEntriesSchema.safeParse([entry, entry]).success).toBe(
       false,
@@ -392,12 +398,14 @@ it('tenant creation validates resolved copy ownership and currency', () => {
 it('CSV countries obey the response limit when validating parsed entries', () => {
   for (const length of [200, 201]) {
     const parsed = parseRateCsv(
-      `prefix,country,rate\n44,${'国'.repeat(length)},0.04`,
+      `ISO,Country,Destination Prefix,Description,Rate\nGB,${'国'.repeat(length)},44,,0.04`,
       'CNY',
     );
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) throw new Error('CSV fixture failed to parse');
     const wireEntries = parsed.entries.map((entry) => ({
+      iso: '',
+      description: '',
       prefix: entry.prefix,
       country: entry.country,
       rate: entry.perMinute.perMinute.toFixed(4),
@@ -409,7 +417,13 @@ it('CSV countries obey the response limit when validating parsed entries', () =>
 });
 
 it('successful preview counts match each change kind', () => {
-  const entry = { prefix: '44', country: '英国', rate: '0.04' };
+  const entry = {
+    iso: '',
+    description: '',
+    prefix: '44',
+    country: '英国',
+    rate: '0.04',
+  };
   const preview = {
     ok: true,
     previewId: id,
@@ -495,7 +509,7 @@ it('export requires POST and returns an audit ID', () => {
     filename: 'rates.csv',
     encoding: 'UTF-8',
     contentType: 'text/csv',
-    csv: 'prefix,country,rate\n',
+    csv: 'ISO,Country,Destination Prefix,Description,Rate\n',
   };
   expect(
     adminApiContract.adminRateExport.responses[200].parse(response),
@@ -638,7 +652,7 @@ it('no-op mutations may return a null audit id and real writes require one', () 
         filename: 'rates.csv',
         encoding: 'UTF-8',
         contentType: 'text/csv',
-        csv: 'prefix,country,rate\n',
+        csv: 'ISO,Country,Destination Prefix,Description,Rate\n',
       },
     ],
     [
@@ -1052,7 +1066,13 @@ describe('final Phase 5 decisions', () => {
   it('raised row limits remain readable and cancellable with a complete audit', () => {
     const entries = Array.from(
       { length: DEFAULT_ADMIN_RATE_MAX_ROWS + 1 },
-      (_, i) => ({ prefix: String(i + 1), country: '测试', rate: '0.01' }),
+      (_, i) => ({
+        iso: '',
+        description: '',
+        prefix: String(i + 1),
+        country: '测试',
+        rate: '0.01',
+      }),
     );
     expect(createAdminRateEntriesSchema(entries.length).parse(entries)).toEqual(
       entries,
@@ -1114,13 +1134,25 @@ describe('final Phase 5 decisions', () => {
   it('rate row caps are named defaults and configurable', () => {
     const entries = Array.from(
       { length: DEFAULT_ADMIN_RATE_MAX_ROWS },
-      (_, i) => ({ prefix: String(i + 1), country: '测试', rate: '0.01' }),
+      (_, i) => ({
+        iso: '',
+        description: '',
+        prefix: String(i + 1),
+        country: '测试',
+        rate: '0.01',
+      }),
     );
     expect(adminRateEntriesSchema.parse(entries)).toEqual(entries);
     expect(
       adminRateEntriesSchema.safeParse([
         ...entries,
-        { prefix: '99999', country: '测试', rate: '0.01' },
+        {
+          iso: '',
+          description: '',
+          prefix: '99999',
+          country: '测试',
+          rate: '0.01',
+        },
       ]).success,
     ).toBe(false);
     const configured = createAdminRateEntriesSchema(1);
@@ -1153,7 +1185,15 @@ describe('final Phase 5 decisions', () => {
       summary: '取消排期',
       changes: [],
       cancelledVersionId: id,
-      entries: [{ prefix: '86', country: '中国', rate: '0.01' }],
+      entries: [
+        {
+          iso: '',
+          description: '',
+          prefix: '86',
+          country: '中国',
+          rate: '0.01',
+        },
+      ],
     };
     expect(
       auditContentSchema.parse({ action: 'rate_schedule_cancel', content }),
@@ -1211,4 +1251,19 @@ describe('final Phase 5 decisions', () => {
       expect(auditPayloadSchema.parse(payload)).toEqual(payload);
     },
   );
+});
+
+it('rate_schedule_cancel audit parses entries written before ISO and description existed', () => {
+  const parsed = auditContentSchema.parse({
+    action: 'rate_schedule_cancel',
+    content: {
+      summary: '取消排定费率',
+      changes: [],
+      cancelledVersionId: '550e8400-e29b-41d4-a716-446655440000',
+      entries: [{ prefix: '44', country: '英国', rate: '0.02' }],
+    },
+  });
+  expect(parsed).toMatchObject({
+    content: { entries: [{ iso: '', description: '', country: '英国' }] },
+  });
 });

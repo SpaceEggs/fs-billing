@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { cdrStatusSchema } from '../cdr-fields.js';
 import { currencySchema } from '../identity.js';
-import { adminRateEntriesResponseSchema } from './rates.js';
+import { adminRateEntrySchema } from './rates.js';
 import {
   adminNonzeroAmountSchema,
   adminPositiveAmountSchema,
@@ -127,7 +127,12 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
   }),
   auditVariant('rate_schedule_cancel', {
     cancelledVersionId: z.uuid(),
-    entries: adminRateEntriesResponseSchema,
+    entries: z.array(
+      adminRateEntrySchema.extend({
+        iso: adminRateEntrySchema.shape.iso.default(''),
+        description: adminRateEntrySchema.shape.description.default(''),
+      }),
+    ),
   }),
   auditVariant('receivable_confirm', {
     ...balanceFields,

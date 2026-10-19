@@ -1,0 +1,13 @@
+
+> fs-billing@ test:idor /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> vitest run --config vitest.db.config.ts apps/api/src/idor.db.test.ts
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+
+
+ Test Files  1 passed (1)
+      Tests  27 passed (27)
+   Start at  05:32:59
+   Duration  6.31s (tests 89%, import 9%, transform 1%)
+

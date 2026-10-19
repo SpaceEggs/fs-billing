@@ -37,7 +37,15 @@ async function create(currency: 'CNY' | 'USD' = 'CNY') {
       settings: { lowBalanceThreshold: '0' },
       initialRates: {
         kind: 'entries',
-        entries: [{ prefix: '1', country: '美国', rate: '0.0001' }],
+        entries: [
+          {
+            iso: '',
+            description: '',
+            prefix: '1',
+            country: '美国',
+            rate: '0.0001',
+          },
+        ],
       },
     },
   });
@@ -88,7 +96,9 @@ describe('admin rates HTTP', () => {
     const created = await create();
     const tenantId = created.tenant.id;
     const preview = await post(tenantId, 'import/preview', {
-      file: csv('前缀,国家,费率\r\n1,美国,0.1234\r\n86,中国,0.0001'),
+      file: csv(
+        'ISO,国家,号码前缀,说明,费率\r\n,美国,1,,0.1234\r\n,中国,86,,0.0001',
+      ),
       baseVersionId: created.initialRateVersionId,
       schedule: { kind: 'immediate' },
     });
@@ -108,8 +118,20 @@ describe('admin rates HTTP', () => {
     expect(commit.statusCode, commit.body).toBe(200);
     const saved = adminRateVersionResponseSchema.parse(commit.json());
     expect(saved.version.entries).toEqual([
-      { prefix: '1', country: '美国', rate: '0.1234' },
-      { prefix: '86', country: '中国', rate: '0.0001' },
+      {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.1234',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.0001',
+      },
     ]);
     expect(await audit(saved.auditId)).toMatchObject({
       tenant_id: tenantId,
@@ -122,7 +144,7 @@ describe('admin rates HTTP', () => {
     expect(exported.statusCode, exported.body).toBe(200);
     const output = adminRateExportResponseSchema.parse(exported.json());
     expect(output.csv.replaceAll('\r\n', '\n').trim()).toBe(
-      'prefix,country,rate\n1,美国,0.1234\n86,中国,0.0001',
+      'ISO,Country,Destination Prefix,Description,Rate\n,美国,1,,0.1234\n,中国,86,,0.0001',
     );
     expect(await audit(output.auditId)).toMatchObject({
       tenant_id: tenantId,
@@ -139,7 +161,7 @@ describe('admin rates HTTP', () => {
     );
     const response = await post(tenantId, 'import/preview', {
       file: csv(
-        '前缀,国家,费率\n86,中国,0.001\n00,无效,1\n2,负数,-1\n3,超精度,0.00001',
+        'ISO,国家,号码前缀,说明,费率\n,中国,86,,0.001\n,无效,00,,1\n,负数,2,,-1\n,超精度,3,,0.00001',
       ),
       baseVersionId: created.initialRateVersionId,
       schedule: { kind: 'immediate' },
@@ -151,7 +173,13 @@ describe('admin rates HTTP', () => {
     expect(preview.errors.map((error) => error.line)).toEqual([3, 4, 5]);
     expect(response.json()).not.toHaveProperty('previewId');
     expect((await rates(tenantId)).current.entries).toEqual([
-      { prefix: '1', country: '美国', rate: '0.0001' },
+      {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.0001',
+      },
     ]);
     expect(
       (
@@ -187,7 +215,13 @@ describe('admin rates HTTP', () => {
     expect(stale.json()).toMatchObject({ error: { code: 'PREVIEW_STALE' } });
     const precision = await post(tenantId, 'edit-entry', {
       baseVersionId: first.initialRateVersionId,
-      entry: { prefix: '1', country: '美国', rate: '0.00001' },
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.00001',
+      },
       schedule: { kind: 'immediate' },
     });
     expect(precision.statusCode, precision.body).toBe(400);
@@ -217,7 +251,13 @@ describe('admin rates HTTP', () => {
     });
     const edit = await post(tenantId, 'edit-entry', {
       baseVersionId: created.initialRateVersionId,
-      entry: { prefix: '1', country: '美国', rate: '0.5678' },
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.5678',
+      },
       schedule: {
         kind: 'scheduled',
         effectiveFrom: new Date(Date.now() + 300_000).toISOString(),
@@ -245,7 +285,15 @@ describe('admin rates HTTP', () => {
       details: {
         content: {
           cancelledVersionId: scheduled.version.id,
-          entries: [{ prefix: '1', country: '美国', rate: '0.5678' }],
+          entries: [
+            {
+              iso: '',
+              description: '',
+              prefix: '1',
+              country: '美国',
+              rate: '0.5678',
+            },
+          ],
         },
       },
     });
@@ -255,7 +303,13 @@ describe('admin rates HTTP', () => {
     );
     const near = await post(tenantId, 'edit-entry', {
       baseVersionId: created.initialRateVersionId,
-      entry: { prefix: '1', country: '美国', rate: '0.4321' },
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.4321',
+      },
       schedule: {
         kind: 'scheduled',
         effectiveFrom: new Date(Date.now() + 30_000).toISOString(),
@@ -331,7 +385,13 @@ describe('admin rates HTTP', () => {
     const path = `/api/admin/tenants/${created.tenant.id}/rates`;
     const validEdit = {
       baseVersionId: created.initialRateVersionId,
-      entry: { prefix: '1', country: '美国', rate: '0.1234' },
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.1234',
+      },
       schedule: { kind: 'immediate' },
     };
     for (const [method, suffix, payload] of [
@@ -342,7 +402,7 @@ describe('admin rates HTTP', () => {
         '/import/preview',
         {
           baseVersionId: created.initialRateVersionId,
-          file: csv('前缀,国家,费率\n1,美国,0.1234'),
+          file: csv('ISO,国家,号码前缀,说明,费率\n,美国,1,,0.1234'),
           schedule: { kind: 'immediate' },
         },
       ],

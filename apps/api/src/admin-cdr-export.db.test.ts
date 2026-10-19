@@ -82,3 +82,34 @@ describe('admin CDR export endpoint', () => {
     });
   });
 });
+
+it('exports ISO, country and description separately, neutralizes formulas, and labels unanswered only in country', async () => {
+  const tenantId = fixture.a.tenantId;
+  const at = new Date();
+  await connections.owner.pool.query(
+    `insert into public.cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee, billing_number, duration_seconds, billed_minutes, matched_prefix, iso, country, description, rate, charge, hangup_cause) values
+    ($1,gen_random_uuid(),$2,$2,$2,'1001','447700900123','447700900123',0,0,'447','GB','英国','=1+1',0.045,0,'NORMAL_CLEARING'),
+    ($1,gen_random_uuid(),$2,null,$2,'1001','447700900123','447700900123',0,0,null,null,null,null,null,0,'NO_ANSWER')`,
+    [tenantId, at],
+  );
+  const day = new Date(at.getTime() + 8 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  for (const [user, path] of [
+    [fixture.a, '/api/portal/cdrs/export'],
+    [fixture.admin, `/api/admin/tenants/${tenantId}/cdrs/export`],
+  ] as const) {
+    const session = await login(api, user);
+    const response = await api.inject({
+      method: 'POST',
+      url: path,
+      headers: requestHeaders(session.cookie),
+      payload: { from: day, to: day, status: 'all' },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.body.split('\r\n')[0]).toContain('被叫号码,ISO,国家,说明,');
+    expect(response.body).not.toContain('国家/备注');
+    expect(response.body).toContain(",GB,英国,'=1+1,");
+    expect(response.body).toContain(',447700900123,,未接通,,');
+  }
+});

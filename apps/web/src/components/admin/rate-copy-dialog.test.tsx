@@ -32,8 +32,8 @@ const scheduledId = '00000000-0000-4000-8000-0000000000b9';
 const previewId = '00000000-0000-4000-8000-0000000000cc';
 
 const entries = [
-  { prefix: '86', country: '中国', rate: '0.045' },
-  { prefix: '44', country: '英国', rate: '0.05' },
+  { iso: '', description: '', prefix: '86', country: '中国', rate: '0.045' },
+  { iso: '', description: '', prefix: '44', country: '英国', rate: '0.05' },
 ];
 
 type RatesReply = { id: string; entries: typeof entries; scheduled?: boolean };
@@ -77,10 +77,25 @@ const okPreview = {
   encoding: 'UTF-8',
   counts: { added: 1, modified: 0, deleted: 1 },
   changes: [
-    { kind: 'added', after: { prefix: '33', country: '法国', rate: '0.06' } },
+    {
+      kind: 'added',
+      after: {
+        iso: '',
+        description: '',
+        prefix: '33',
+        country: '法国',
+        rate: '0.06',
+      },
+    },
     {
       kind: 'deleted',
-      before: { prefix: '64', country: '新西兰', rate: '0.2' },
+      before: {
+        iso: '',
+        description: '',
+        prefix: '64',
+        country: '新西兰',
+        rate: '0.2',
+      },
     },
   ],
 };

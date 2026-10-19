@@ -6,12 +6,12 @@ const utf8 = (text: string) => new TextEncoder().encode(text);
 describe('decodeCsvLines', () => {
   it('numbers lines like the server: header is line 1, BOM dropped, CRLF and LF split', () => {
     const lines = decodeCsvLines(
-      utf8('\uFEFF前缀,国家,费率\r\n86,中国,0.05\n\n1,美国,-1\r\n'),
+      utf8('﻿ISO,国家,号码前缀,说明,费率\r\n,中国,86,,0.05\n\n,美国,1,,-1\r\n'),
     );
-    expect(csvRawLine(lines, 1)).toBe('前缀,国家,费率');
-    expect(csvRawLine(lines, 2)).toBe('86,中国,0.05');
+    expect(csvRawLine(lines, 1)).toBe('ISO,国家,号码前缀,说明,费率');
+    expect(csvRawLine(lines, 2)).toBe(',中国,86,,0.05');
     expect(csvRawLine(lines, 3)).toBe('—');
-    expect(csvRawLine(lines, 4)).toBe('1,美国,-1');
+    expect(csvRawLine(lines, 4)).toBe(',美国,1,,-1');
     expect(csvRawLine(lines, 6)).toBe('—');
     expect(csvRawLine(lines, 99)).toBe('—');
   });

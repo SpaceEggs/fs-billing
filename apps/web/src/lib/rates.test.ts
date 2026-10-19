@@ -18,41 +18,119 @@ const failure = (status: number, code: string, extra: object = {}) =>
     error: { code, message: '服务端消息', requestId: 'req', ...extra },
   } as never);
 
-const uk = { prefix: '447', country: '英国手机', rate: '0.0450' };
+const uk = {
+  iso: '',
+  description: '',
+  prefix: '447',
+  country: '英国手机',
+  rate: '0.0450',
+};
 
 describe('diffRateTables', () => {
   it('derives added, modified and deleted rows from two full tables', () => {
     const current = [
-      { prefix: '1', country: '美国/加拿大', rate: '0.0100' },
-      { prefix: '44', country: '英国', rate: '0.0200' },
+      {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国/加拿大',
+        rate: '0.0100',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '44',
+        country: '英国',
+        rate: '0.0200',
+      },
       uk,
-      { prefix: '91', country: '印度', rate: '0.0520' },
+      {
+        iso: '',
+        description: '',
+        prefix: '91',
+        country: '印度',
+        rate: '0.0520',
+      },
     ];
     const scheduled = [
-      { prefix: '1', country: '美国/加拿大', rate: '0.01' },
-      { prefix: '44', country: '英国固话', rate: '0.0200' },
-      { prefix: '447', country: '英国手机', rate: '0.0480' },
-      { prefix: '1876', country: '牙买加', rate: '0.2500' },
+      {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国/加拿大',
+        rate: '0.01',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '44',
+        country: '英国固话',
+        rate: '0.0200',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '447',
+        country: '英国手机',
+        rate: '0.0480',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '1876',
+        country: '牙买加',
+        rate: '0.2500',
+      },
     ];
     const changes = diffRateTables(current, scheduled);
     expect(changes).toEqual([
       {
         kind: 'modified',
-        before: { prefix: '44', country: '英国', rate: '0.0200' },
-        after: { prefix: '44', country: '英国固话', rate: '0.0200' },
+        before: {
+          iso: '',
+          description: '',
+          prefix: '44',
+          country: '英国',
+          rate: '0.0200',
+        },
+        after: {
+          iso: '',
+          description: '',
+          prefix: '44',
+          country: '英国固话',
+          rate: '0.0200',
+        },
       },
       {
         kind: 'modified',
         before: uk,
-        after: { prefix: '447', country: '英国手机', rate: '0.0480' },
+        after: {
+          iso: '',
+          description: '',
+          prefix: '447',
+          country: '英国手机',
+          rate: '0.0480',
+        },
       },
       {
         kind: 'added',
-        after: { prefix: '1876', country: '牙买加', rate: '0.2500' },
+        after: {
+          iso: '',
+          description: '',
+          prefix: '1876',
+          country: '牙买加',
+          rate: '0.2500',
+        },
       },
       {
         kind: 'deleted',
-        before: { prefix: '91', country: '印度', rate: '0.0520' },
+        before: {
+          iso: '',
+          description: '',
+          prefix: '91',
+          country: '印度',
+          rate: '0.0520',
+        },
       },
     ]);
     expect(countChanges(changes)).toEqual({
@@ -171,7 +249,15 @@ describe('validateRateEdit', () => {
   it('returns the full entry with trimmed values', () => {
     expect(
       validateRateEdit(uk, { country: ' 英国手机 ', rate: '0.048' }),
-    ).toEqual({ entry: { prefix: '447', country: '英国手机', rate: '0.048' } });
+    ).toEqual({
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '447',
+        country: '英国手机',
+        rate: '0.048',
+      },
+    });
   });
 
   it('uses the draft copy for rate errors', () => {
@@ -188,7 +274,13 @@ describe('validateRateEdit', () => {
     expect(
       validateRateEdit(uk, { country: '英国移动', rate: '0.0450' }),
     ).toEqual({
-      entry: { prefix: '447', country: '英国移动', rate: '0.0450' },
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '447',
+        country: '英国移动',
+        rate: '0.0450',
+      },
     });
     expect(validateRateEdit(uk, { country: ' ', rate: '0.05' })).toEqual({
       errors: { country: '请输入国家/备注' },
@@ -252,5 +344,24 @@ describe('cancelFailureMessage', () => {
       cancelFailureMessage(failure(503, 'SERVICE_UNAVAILABLE')),
     ).toBeNull();
     expect(cancelFailureMessage(new ApiRequestError(0, null))).toBeNull();
+  });
+});
+
+it('diffRateTables includes ISO and description changes and edits preserve current metadata', () => {
+  const current = {
+    prefix: '44',
+    iso: 'GB',
+    country: '英国',
+    description: '本土',
+    rate: '0.02',
+  };
+  expect(diffRateTables([current], [{ ...current, iso: 'ZZ' }])).toMatchObject([
+    { kind: 'modified' },
+  ]);
+  expect(
+    diffRateTables([current], [{ ...current, description: '手机' }]),
+  ).toMatchObject([{ kind: 'modified' }]);
+  expect(validateRateEdit(current, { country: '英国', rate: '0.03' })).toEqual({
+    entry: { ...current, rate: '0.03' },
   });
 });

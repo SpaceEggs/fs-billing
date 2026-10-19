@@ -43,6 +43,8 @@ describe('admin CDR export acceptance audit', () => {
     const startedAt = new Date(answeredAt.getTime() - 60_000);
     await withAdmin(app.db, (tx) =>
       tx.insert(cdrs).values({
+        iso: null,
+        description: null,
         tenantId: tenant.id,
         callUuid: randomUUID(),
         startedAt,

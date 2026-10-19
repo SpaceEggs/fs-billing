@@ -148,15 +148,21 @@ const TENANTS: readonly SeedTenant[] = [
   },
 ];
 
-const RATES_CSV = `prefix,country,rate
-86,中国,0.0500
-1,美国/加拿大,0.0100
-1876,牙买加,0.2500
-44,英国,0.0200
-447,英国手机,0.0450
-81,日本,0.0350
-65,新加坡,0.0280
-852,中国香港,0.0300`;
+const RATES_CSV = `ISO,Country,Destination Prefix,Description,Rate
+CN,中国,86,,0.0500
+,美国/加拿大,1,,0.0100
+JM,牙买加,1876,,0.2500
+GB,英国,44,,0.0200
+GB,英国,447,手机,0.0450
+JP,日本,81,,0.0350
+SG,新加坡,65,,0.0280
+HK,中国香港,852,,0.0300`;
+
+const OCTOBER_RATES_CSV = RATES_CSV.replace(
+  'GB,英国,447,手机,0.0450',
+  'GB,英国,447,手机,0.0480',
+);
+if (OCTOBER_RATES_CSV === RATES_CSV) throw new Error('种子 447 调价未生效');
 
 const FIRST_VERSION_AT = '2026-09-01 00:00:00';
 // 阶段 1 的调价示例：447 自 2026-10-01 00:00（北京时间）起 0.0480。
@@ -456,10 +462,7 @@ export async function seedDatabase(
           await createRateVersion(
             tx,
             tenantId,
-            sampleRates(
-              t.currency,
-              RATES_CSV.replace('447,英国手机,0.0450', '447,英国手机,0.0480'),
-            ),
+            sampleRates(t.currency, OCTOBER_RATES_CSV),
             {
               effectiveFrom: beijingTime(ABC001_OCTOBER_AT),
               adminId: adminIds.wang,
@@ -665,6 +668,8 @@ async function seedCdrs(
       billedMinutes: priced.billedMinutes.toFixed(),
       matchedPrefix: entry.prefix,
       country: entry.country,
+      iso: entry.iso || null,
+      description: entry.description || null,
       rate: entry.perMinute.perMinute.toFixed(4),
       charge: priced.charge.value.toFixed(),
     });

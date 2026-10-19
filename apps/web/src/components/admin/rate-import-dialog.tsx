@@ -503,7 +503,7 @@ function Upload({
           <span>
             格式：
             <span className="font-mono text-foreground">
-              prefix,country,rate
+              ISO,Country,Destination Prefix,Description,Rate
             </span>
             <span className="ml-3">每行一个前缀，覆盖整张费率表</span>
           </span>

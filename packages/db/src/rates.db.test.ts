@@ -23,13 +23,16 @@ import { createRateVersion, loadRatingTenant } from './rates.js';
 const { app, owner } = connections();
 
 function entries(csv: string): readonly RateEntry<Currency>[] {
-  const parsed = parseRateCsv(`prefix,country,rate\n${csv}`, 'CNY');
+  const parsed = parseRateCsv(
+    `ISO,Country,Destination Prefix,Description,Rate\n${csv}`,
+    'CNY',
+  );
   if (!parsed.ok) throw new Error(JSON.stringify(parsed.errors));
   return parsed.entries;
 }
 
-const CHINA = entries('86,中国,0.0500');
-const CHINA_RAISED = entries('86,中国,0.0550');
+const CHINA = entries(',中国,86,,0.0500');
+const CHINA_RAISED = entries(',中国,86,,0.0550');
 
 const dbNow = async (tx: Tx) => {
   const { rows } = await tx.execute<{ ms: string }>(
@@ -273,7 +276,7 @@ describe('费率版本', () => {
       createRateVersion(
         tx,
         tenant.id,
-        entries('86,中国,0.0500\n44,英国,0.0200'),
+        entries(',中国,86,,0.0500\n,英国,44,,0.0200'),
         { effectiveFrom: new Date('2031-06-01T00:00:00Z') },
       ),
     );
@@ -444,7 +447,7 @@ describe('开户后立即授权', () => {
     expect(result.rows).toEqual([{ effective: true }]);
     expect(result.decision).toMatchObject({
       allowed: true,
-      entry: { prefix: '86', country: '中国' },
+      entry: { iso: '', description: '', prefix: '86', country: '中国' },
       callableMinutes: 2000,
       maxSeconds: 14400,
     });
@@ -484,4 +487,61 @@ describe('开户后立即授权', () => {
       await decide('2026-10-01T00:00:00+08:00'),
     ]).toEqual(['0.0450', '0.0480']);
   });
+});
+
+it('stores ISO and description and returns each matched entry intact', async () => {
+  const tenant = await createTenant(app, 'CNY');
+  const rows = entries(
+    'GB,英国,44,,0.0200\nGB,英国,447,手机,0.0450\n,国际网络,882,,0.1',
+  );
+  await withAdmin(app.db, (tx) => createRateVersion(tx, tenant.id, rows));
+  const loaded = await withAdmin(app.db, (tx) =>
+    loadRatingTenant(tx, tenant.code),
+  );
+  expect(loaded?.rates.versions[0]?.entries).toEqual(
+    expect.arrayContaining([...rows]),
+  );
+});
+
+it('rows inserted without ISO and description read back as empty strings and rejects invalid ISO', async () => {
+  const tenant = await createTenant(app, 'CNY');
+  const version = await withAdmin(app.db, (tx) =>
+    createRateVersion(tx, tenant.id, [], { effectiveFrom: later(30) }),
+  );
+  const inserted = await withAdmin(owner.db, async (tx) => {
+    await lockTenants(tx, [tenant.id]);
+    return tx.execute(
+      sql`insert into rate_entries (tenant_id, rate_version_id, prefix, country, rate) values (${tenant.id},${version.id},'44','英国',0.02) returning iso, description`,
+    );
+  });
+  expect(inserted.rows).toEqual([{ iso: '', description: '' }]);
+  for (const iso of ['gb', 'GBR']) {
+    expect(
+      await pgError(
+        withAdmin(owner.db, async (tx) => {
+          await lockTenants(tx, [tenant.id]);
+          return tx.execute(
+            sql`insert into rate_entries (tenant_id, rate_version_id, prefix, country, rate, iso) values (${tenant.id},${version.id},'447','英国',0.04,${iso})`,
+          );
+        }),
+      ),
+    ).toMatchObject({ code: '23514', constraint: 'rate_entries_iso_check' });
+  }
+});
+
+it('seed rates have GB/英国/empty for 44, GB/英国/手机 for 447 and empty ISO for 1', async () => {
+  const tenant = await withAdmin(app.db, (tx) =>
+    loadRatingTenant(tx, 'ABC001'),
+  );
+  for (const version of tenant!.rates.versions) {
+    expect(
+      version.entries.find((entry) => entry.prefix === '44'),
+    ).toMatchObject({ iso: 'GB', country: '英国', description: '' });
+    expect(
+      version.entries.find((entry) => entry.prefix === '447'),
+    ).toMatchObject({ iso: 'GB', country: '英国', description: '手机' });
+    expect(version.entries.find((entry) => entry.prefix === '1')).toMatchObject(
+      { iso: '' },
+    );
+  }
 });

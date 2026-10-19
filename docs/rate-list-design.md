@@ -597,19 +597,21 @@ OpenAPI 由 Zod 生成（`pnpm --filter @fs-billing/api openapi`），仓库里�
 
 ## 10. 验收标准
 
+PR A 已在 2026-10-20 完成本地验收，包含 CI 同款 `prove:idor`；详见 [PR A 验收证据](evidence/rate-list-pr-a/README.md)。测试服部署与整体项仍单独验收。
+
 PR A：
 
-- [ ] `pnpm check` 通过；`pnpm test:db`、`pnpm test:idor` 通过；CI 的 `prove:idor` 通过
-- [ ] `pnpm db:migrate && pnpm db:seed && pnpm db:migrate` 在空库上成功且第二次迁移无变化；迁移 0016 之后，旧行读出 `iso = ''`、`description = ''`（费率）和 `NULL`（话单）
-- [ ] `parseRateCsv` 的表头必填；新旧表头、别名、中文表头、旧格式专门提示、逐列规则全部有测试；导出再导入逐字段一致
-- [ ] 契约：`adminRateEntrySchema` 要求 `iso`、`description`；`rate_schedule_cancel` 旧审计内容仍能被 `auditContentSchema` 解析；迁移前的预览按失效处理
-- [ ] 版本差异、搜索、复制、开户初始费率、导出都带 ISO 和说明；只改 ISO 或只改说明在预览里是「修改」
-- [ ] Worker 把 ISO、国家、说明快照进话单，空值写 `NULL`；种子 447 话单为 GB / 英国 / 手机，44 话单说明为 NULL
-- [ ] 话单列表、首页最近话单、后台话单的响应带 `iso`、`description`；原始 JSON 里门户仍没有 `unverified`；国家筛选和国家选项只按国家
-- [ ] 话单 CSV 导出是 `ISO`、`国家`、`说明` 三列，没有「国家/备注」；说明里的 `=` 开头被中和
-- [ ] `pnpm perf:authorize` 重跑 p95 < 50 ms，输出入证据
-- [ ] 种子按 4.5 映射，阶段 1 至 5 的验收数字不变；`phase-6-design.md` 与 7.3 列出的文档已更新
-- [ ] 完整 `pnpm test:e2e` 通过（夹具已转新格式）
+- [x] `pnpm check` 通过；`pnpm test:db`、`pnpm test:idor` 通过；CI 的 `prove:idor` 通过
+- [x] `pnpm db:migrate && pnpm db:seed && pnpm db:migrate` 在空库上成功且第二次迁移无变化；迁移 0016 之后，旧行读出 `iso = ''`、`description = ''`（费率）和 `NULL`（话单）
+- [x] `parseRateCsv` 的表头必填；新旧表头、别名、中文表头、旧格式专门提示、逐列规则全部有测试；导出再导入逐字段一致
+- [x] 契约：`adminRateEntrySchema` 要求 `iso`、`description`；`rate_schedule_cancel` 旧审计内容仍能被 `auditContentSchema` 解析；迁移前的预览按失效处理
+- [x] 版本差异、搜索、复制、开户初始费率、导出都带 ISO 和说明；只改 ISO 或只改说明在预览里是「修改」
+- [x] Worker 把 ISO、国家、说明快照进话单，空值写 `NULL`；种子 447 话单为 GB / 英国 / 手机，44 话单说明为 NULL
+- [x] 话单列表、首页最近话单、后台话单的响应带 `iso`、`description`；原始 JSON 里门户仍没有 `unverified`；国家筛选和国家选项只按国家
+- [x] 话单 CSV 导出是 `ISO`、`国家`、`说明` 三列，没有「国家/备注」；说明里的 `=` 开头被中和
+- [x] `pnpm perf:authorize` 重跑 p95 < 50 ms，输出入证据
+- [x] 种子按 4.5 映射，阶段 1 至 5 的验收数字不变；`phase-6-design.md` 与 7.3 列出的文档已更新
+- [x] 完整 `pnpm test:e2e` 通过（夹具已转新格式）
 
 PR B：
 

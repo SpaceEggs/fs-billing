@@ -89,6 +89,8 @@ async function readVersion(
     .select({
       prefix: rateEntries.prefix,
       country: rateEntries.country,
+      iso: rateEntries.iso,
+      description: rateEntries.description,
       rate: rateEntries.rate,
     })
     .from(rateEntries)
@@ -127,7 +129,12 @@ function differences(
   for (const entry of after) {
     const old = previous.get(entry.prefix);
     if (!old) changes.push({ kind: 'added', after: entry });
-    else if (old.country !== entry.country || !decimal(old.rate).eq(entry.rate))
+    else if (
+      old.iso !== entry.iso ||
+      old.description !== entry.description ||
+      old.country !== entry.country ||
+      !decimal(old.rate).eq(entry.rate)
+    )
       changes.push({ kind: 'modified', before: old, after: entry });
     previous.delete(entry.prefix);
   }
@@ -224,6 +231,8 @@ export function createAdminRatesService(
       input.entries.map((entry) => ({
         prefix: entry.prefix,
         country: entry.country,
+        iso: entry.iso,
+        description: entry.description,
         perMinute: rate(tenant.currency, entry.rate),
       })),
       {
@@ -292,7 +301,9 @@ export function createAdminRatesService(
               entries: version.entries.filter(
                 (entry) =>
                   entry.prefix.includes(search) ||
-                  entry.country.toLocaleLowerCase().includes(search),
+                  entry.country.toLocaleLowerCase().includes(search) ||
+                  entry.iso.toLocaleLowerCase().includes(search) ||
+                  entry.description.toLocaleLowerCase().includes(search),
               ),
             }
           : version;
@@ -374,29 +385,19 @@ export function createAdminRatesService(
         base: await readVersion(tx, tenant.id, input.baseVersionId),
       };
     });
-    const result = parseRateCsv(text, data.tenant.currency);
+    const result = parseRateCsv(text, data.tenant.currency, {
+      validateEntry: (entry) => {
+        const parsed = adminRateEntrySchema.safeParse({
+          prefix: entry.prefix,
+          iso: entry.iso,
+          country: entry.country,
+          description: entry.description,
+          rate: entry.perMinute.perMinute.toFixed(),
+        });
+        return parsed.success ? undefined : parsed.error.issues[0]?.message;
+      },
+    });
     const errors = result.ok ? [] : [...result.errors];
-    text
-      .replace(/^\uFEFF/, '')
-      .split(/\r?\n/)
-      .forEach((line, index) => {
-        const row = parseRateCsv(line, data.tenant.currency);
-        if (!row.ok) return;
-        for (const entry of row.entries) {
-          const parsed = adminRateEntrySchema.safeParse({
-            prefix: entry.prefix,
-            country: entry.country,
-            rate: entry.perMinute.perMinute.toFixed(),
-          });
-          if (!parsed.success)
-            errors.push(
-              ...parsed.error.issues.map((issue) => ({
-                line: index + 1,
-                reason: issue.message,
-              })),
-            );
-        }
-      });
     if (errors.length)
       return { ok: false, errors: errors.sort((a, b) => a.line - b.line) };
     if (!result.ok) throw new Error('CSV 校验失败但未返回错误行');
@@ -406,6 +407,8 @@ export function createAdminRatesService(
       result.entries.map((entry) => ({
         prefix: entry.prefix,
         country: entry.country,
+        iso: entry.iso,
+        description: entry.description,
         rate: entry.perMinute.perMinute.toFixed(),
       })),
     );
@@ -593,6 +596,8 @@ export function createAdminRatesService(
           version.entries.map((entry) => ({
             prefix: entry.prefix,
             country: entry.country,
+            iso: entry.iso,
+            description: entry.description,
             perMinute: rate(tenant.currency, entry.rate),
           })),
         ),

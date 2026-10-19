@@ -42,7 +42,13 @@ it('rates require authenticated admin access before any business reads', async (
       '/edit-entry',
       {
         baseVersionId: versionId,
-        entry: { prefix: '1', country: '美国', rate: '0.0001' },
+        entry: {
+          iso: '',
+          description: '',
+          prefix: '1',
+          country: '美国',
+          rate: '0.0001',
+        },
         schedule: { kind: 'immediate' },
       },
     ],
@@ -53,8 +59,9 @@ it('rates require authenticated admin access before any business reads', async (
         baseVersionId: versionId,
         file: {
           filename: 'rates.csv',
-          contentBase64:
-            Buffer.from('前缀,国家,费率\n1,美国,0.1').toString('base64'),
+          contentBase64: Buffer.from(
+            'ISO,国家,号码前缀,说明,费率\n,美国,1,,0.1',
+          ).toString('base64'),
         },
         schedule: { kind: 'immediate' },
       },
@@ -104,7 +111,7 @@ it('rates reject untrusted export origins and invalid edit precision using contr
       url: path + '/edit-entry',
       payload: {
         baseVersionId: versionId,
-        entry: { prefix: '1', country: '美国', rate },
+        entry: { iso: '', description: '', prefix: '1', country: '美国', rate },
         schedule: { kind: 'immediate' },
       },
     });
@@ -180,7 +187,13 @@ it('configured horizon governs edit, import and copy at the HTTP boundary', asyn
         '/edit-entry',
         {
           baseVersionId: versionId,
-          entry: { prefix: '1', country: '美国', rate: '0.0001' },
+          entry: {
+            iso: '',
+            description: '',
+            prefix: '1',
+            country: '美国',
+            rate: '0.0001',
+          },
           schedule,
         },
       ],
@@ -190,7 +203,7 @@ it('configured horizon governs edit, import and copy at the HTTP boundary', asyn
           baseVersionId: versionId,
           file: {
             filename: 'rates.csv',
-            contentBase64: Buffer.from('1,美国,0.1').toString('base64'),
+            contentBase64: Buffer.from(',美国,1,,0.1').toString('base64'),
           },
           schedule,
         },
@@ -225,7 +238,13 @@ it('an edit schedule that expires after initial validation stays a validation er
   const rateRequests = createAdminRateRequestSchemas();
   const payload = rateRequests.editRequest.parse({
     baseVersionId: versionId,
-    entry: { prefix: '1', country: '美国', rate: '0.0001' },
+    entry: {
+      iso: '',
+      description: '',
+      prefix: '1',
+      country: '美国',
+      rate: '0.0001',
+    },
     schedule: {
       kind: 'scheduled',
       effectiveFrom: new Date(initialTime + 60_000).toISOString(),

@@ -174,6 +174,8 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         charge: priced?.charge.value.toFixed() ?? '0',
         matchedPrefix: entry ? entry.prefix : null,
         country: entry ? entry.country : null,
+        iso: entry?.iso || null,
+        description: entry?.description || null,
         rate: entry ? entry.perMinute.perMinute.toFixed() : null,
       });
       await queue.enqueue(tx, { tenantId: tenant.id, callUuid: cdr.callUuid });

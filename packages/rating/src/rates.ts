@@ -4,6 +4,8 @@ import type { Currency, Rate } from './money.js';
 export interface RateEntry<C extends Currency> {
   readonly prefix: string;
   readonly country: string;
+  readonly iso: string;
+  readonly description: string;
   readonly perMinute: Rate<C>;
 }
 

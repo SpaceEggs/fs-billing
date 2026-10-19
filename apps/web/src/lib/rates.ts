@@ -9,7 +9,7 @@ import { ApiRequestError } from './api';
 import { apiProblem } from './api-problem';
 import { formatDate, formatDateTime, formatRate } from './format';
 
-/** 与服务端预览相同的比较：前缀相同而国家或费率（按数值）不同算修改。 */
+/** 与服务端预览相同的比较：前缀相同而 ISO、国家、说明或费率（按数值）不同算修改。 */
 export function diffRateTables(
   before: readonly AdminRateEntry[],
   after: readonly AdminRateEntry[],
@@ -20,6 +20,8 @@ export function diffRateTables(
     const old = previous.get(entry.prefix);
     if (!old) changes.push({ kind: 'added', after: entry });
     else if (
+      old.iso !== entry.iso ||
+      old.description !== entry.description ||
       old.country !== entry.country ||
       !new Decimal(old.rate).eq(entry.rate)
     )
@@ -145,9 +147,16 @@ export function validateRateEdit(
   else if (!adminRateAmountSchema.safeParse(rate).success)
     errors.rate = '请输入有效的费率';
   if (errors.country || errors.rate) return { errors };
-  if (country === current.country && new Decimal(rate).eq(current.rate))
+  const entry = {
+    prefix: current.prefix,
+    iso: current.iso,
+    description: current.description,
+    country,
+    rate,
+  };
+  if (diffRateTables([current], [entry]).length === 0)
     return { errors: { rate: '新费率与当前费率相同' } };
-  return { entry: { prefix: current.prefix, country, rate } };
+  return { entry };
 }
 
 const issueFields: Record<string, RateEditField> = {

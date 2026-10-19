@@ -116,6 +116,8 @@ async function fixture(storedCase = 'uppercase') {
       tenant.id,
       [
         {
+          iso: '',
+          description: '',
           prefix: '447',
           country: '英国手机',
           perMinute: rate('CNY', '0.0480'),
@@ -633,14 +635,22 @@ describe('Worker HTTP 与真实数据库', () => {
   it.each([
     {
       kind: 'entries' as const,
-      entries: [{ prefix: '447', country: '英国手机', rate: '0.048' }],
+      entries: [
+        {
+          iso: '',
+          description: '',
+          prefix: '447',
+          country: '英国手机',
+          rate: '0.048',
+        },
+      ],
     },
     {
       kind: 'csv' as const,
       file: {
         filename: 'rates.csv',
         contentBase64: Buffer.from(
-          'prefix,country,rate\n447,英国手机,0.048',
+          'ISO,Country,Destination Prefix,Description,Rate\n,英国手机,447,,0.048',
         ).toString('base64'),
       },
     },
@@ -834,6 +844,8 @@ describe('Worker HTTP 与真实数据库', () => {
         tenant.id,
         [
           {
+            iso: '',
+            description: '',
             prefix: '447',
             country: '英国手机',
             perMinute: rate('CNY', '0.1000'),
@@ -1142,19 +1154,37 @@ describe('Worker HTTP 与真实数据库', () => {
           tx,
           tenant.id,
           [
-            { prefix: '447', country: 'UK', perMinute: rate('CNY', '0.01') },
-            { prefix: '1', country: 'NANP', perMinute: rate('CNY', '0.03') },
             {
+              iso: '',
+              description: '',
+              prefix: '447',
+              country: 'UK',
+              perMinute: rate('CNY', '0.01'),
+            },
+            {
+              iso: '',
+              description: '',
+              prefix: '1',
+              country: 'NANP',
+              perMinute: rate('CNY', '0.03'),
+            },
+            {
+              iso: '',
+              description: '',
               prefix: '86138',
               country: '中国手机',
               perMinute: rate('CNY', '0.02'),
             },
             {
+              iso: '',
+              description: '',
               prefix: '86755',
               country: '深圳',
               perMinute: rate('CNY', '0.04'),
             },
             {
+              iso: '',
+              description: '',
               prefix: '861305',
               country: '中国',
               perMinute: rate('CNY', '0.05'),
@@ -1345,4 +1375,77 @@ describe('Worker HTTP 与真实数据库', () => {
       ).rows,
     ).toEqual([{ kind: 'cdr_failed' }]);
   });
+});
+
+it('snapshots ISO, country and description; blank labels and unanswered calls write NULL', async () => {
+  const tenant = await createTenant(connection, 'CNY');
+  await withSystem(connection.db, (tx) =>
+    createRateVersion(
+      tx,
+      tenant.id,
+      [
+        {
+          prefix: '44',
+          iso: 'GB',
+          country: '英国',
+          description: '',
+          perMinute: rate('CNY', '0.02'),
+        },
+        {
+          prefix: '447',
+          iso: 'GB',
+          country: '英国',
+          description: '手机',
+          perMinute: rate('CNY', '0.045'),
+        },
+        {
+          prefix: '1',
+          iso: '',
+          country: '美国/加拿大',
+          description: '',
+          perMinute: rate('CNY', '0.01'),
+        },
+      ],
+      { effectiveFrom: new Date('2026-09-01T00:00:00Z') },
+    ),
+  );
+  for (const [number, iso, description] of [
+    ['447700900123', 'GB', '手机'],
+    ['442071234567', 'GB', null],
+    ['12125551234', null, null],
+  ] as const) {
+    const uuid = randomUUID();
+    expect(
+      (
+        await post(
+          body(tenant.code, uuid, {
+            billing_dialed_number: `+${number}`,
+            billing_number: number,
+            destination_number: number,
+          }),
+        )
+      ).statusCode,
+    ).toBe(200);
+    const result = await owner.pool.query(
+      'select iso, country, description from cdrs where call_uuid=$1',
+      [uuid],
+    );
+    expect(result.rows).toEqual([
+      {
+        iso,
+        country: number.startsWith('1') ? '美国/加拿大' : '英国',
+        description,
+      },
+    ]);
+  }
+  const uuid = randomUUID();
+  await post(body(tenant.code, uuid, { answer_epoch: '0', billsec: '0' }));
+  expect(
+    (
+      await owner.pool.query(
+        'select iso, description from cdrs where call_uuid=$1',
+        [uuid],
+      )
+    ).rows,
+  ).toEqual([{ iso: null, description: null }]);
 });

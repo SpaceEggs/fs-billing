@@ -32,7 +32,15 @@ it('stores the newer rate and uses the .900 answer timestamp for the ledger char
       createRateVersion(
         tx,
         tenant.id,
-        [{ prefix: '447', country: 'UK', perMinute: rate('CNY', amount) }],
+        [
+          {
+            iso: '',
+            description: '',
+            prefix: '447',
+            country: 'UK',
+            perMinute: rate('CNY', amount),
+          },
+        ],
         { effectiveFrom: new Date(second * 1000 + offset) },
       ),
     );

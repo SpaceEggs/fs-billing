@@ -101,9 +101,9 @@ async function insertIsolatedCdrs(fixture: Fixture) {
       `insert into public.cdrs
         (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
          billing_number, duration_seconds, billed_minutes, matched_prefix, country,
-         rate, charge, hangup_cause, unverified)
+         rate, charge, hangup_cause, unverified, iso, description)
        values ($1,$2,$3,$4,$5,'1001',$6,$6,60,1,'86',$7,
-         123456789012345678901234567890.1234,0.25,'NORMAL_CLEARING',$8)`,
+         123456789012345678901234567890.1234,0.25,'NORMAL_CLEARING',$8,$9,$10)`,
       [
         tenantId,
         randomUUID(),
@@ -113,6 +113,8 @@ async function insertIsolatedCdrs(fixture: Fixture) {
         callee,
         country,
         unverified,
+        country === '中国' ? 'CN' : country === '日本' ? 'JP' : 'GB',
+        `${country}说明`,
       ],
     );
   }
@@ -149,6 +151,10 @@ const cases = {
       const body = portalCdrsResponseSchema.parse(response.json());
       expect(body.pagination.total).toBe(1);
       expect(body.items[0]?.country).toBe(country);
+      expect(body.items[0]?.iso).toBe(
+        country === '中国' ? 'CN' : country === '日本' ? 'JP' : 'GB',
+      );
+      expect(body.items[0]?.description).toBe(`${country}说明`);
       expect(body.items[0]?.callee).toBe(amount);
       expect(JSON.stringify(body)).not.toContain('unverified');
     }
@@ -555,7 +561,13 @@ const caseKinds = new Map([
 const adminProbeBodies: Partial<Record<string, object>> = {
   adminRateEdit: {
     baseVersionId: '11111111-1111-4111-8111-111111111111',
-    entry: { prefix: '1', country: '美国', rate: '0.01' },
+    entry: {
+      iso: '',
+      description: '',
+      prefix: '1',
+      country: '美国',
+      rate: '0.01',
+    },
     schedule: { kind: 'immediate' },
   },
   adminRateCancelFutureVersion: {
@@ -565,9 +577,9 @@ const adminProbeBodies: Partial<Record<string, object>> = {
     baseVersionId: '11111111-1111-4111-8111-111111111111',
     file: {
       filename: 'rates.csv',
-      contentBase64: Buffer.from('前缀,国家,费率\n1,美国,0.01').toString(
-        'base64',
-      ),
+      contentBase64: Buffer.from(
+        'ISO,国家,号码前缀,说明,费率\n,美国,1,,0.01',
+      ).toString('base64'),
     },
     schedule: { kind: 'immediate' },
   },

@@ -1,0 +1,194 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 2,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 14,
+  "numPassedTests": 14,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1792441999468,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
+          "status": "passed",
+          "title": "covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case",
+          "duration": 1.6662919999998849,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation logs in one portal account for each of three distinct fixture tenants",
+          "status": "passed",
+          "title": "logs in one portal account for each of three distinct fixture tenants",
+          "duration": 507.22924999999987,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation rejects unauthenticated protected operations and customer access to all live admin operations",
+          "status": "passed",
+          "title": "rejects unauthenticated protected operations and customer access to all live admin operations",
+          "duration": 182.950875,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation logout positive behavior and A to B attack",
+          "status": "passed",
+          "title": "logout positive behavior and A to B attack",
+          "duration": 161.12983299999996,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation session positive behavior and A to B attack",
+          "status": "passed",
+          "title": "session positive behavior and A to B attack",
+          "duration": 162.98245899999984,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation changePassword positive behavior and A to B attack",
+          "status": "passed",
+          "title": "changePassword positive behavior and A to B attack",
+          "duration": 727.265292,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation revokeOtherSessions positive behavior and A to B attack",
+          "status": "passed",
+          "title": "revokeOtherSessions positive behavior and A to B attack",
+          "duration": 279.5069159999998,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation portalContext positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalContext positive behavior and A to B attack",
+          "duration": 287.5947500000002,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation portalCdrs positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalCdrs positive behavior and A to B attack",
+          "duration": 306.37533299999996,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation portalCdrCountries positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalCdrCountries positive behavior and A to B attack",
+          "duration": 186.04808300000013,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation portalCdrsExport positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalCdrsExport positive behavior and A to B attack",
+          "duration": 123.45395800000006,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation portalLedger positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalLedger positive behavior and A to B attack",
+          "duration": 269.4769160000001,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation portalLedgerExport positive behavior and A to B attack",
+          "status": "passed",
+          "title": "portalLedgerExport positive behavior and A to B attack",
+          "duration": 187.23004200000014,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["[app] live OpenAPI customer isolation"],
+          "fullName": "[app] live OpenAPI customer isolation unfiltered SQL proves the owner bypass and the app RLS boundary",
+          "status": "passed",
+          "title": "unfiltered SQL proves the owner bypass and the app RLS boundary",
+          "duration": 1.930540999999721,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1792442001324,
+      "endTime": 1792442004709.9304,
+      "status": "passed",
+      "message": "",
+      "name": "/private/var/folders/jr/kfy2kz791zv4qqdwk_5ccn380000gn/T/fs-billing-idor-checkout-sgi134/apps/api/src/idor.db.test.ts"
+    }
+  ]
+}

@@ -677,7 +677,7 @@ describe('admin tenant and balance API', () => {
   it('independently decodes CSV, maps row and encoding errors, and accepts valid uploads above one MiB', async () => {
     const headers = requestHeaders(cookie);
     for (const [bytes, code] of [
-      [Buffer.from('1,美国,-1'), 'CSV_INVALID'],
+      [Buffer.from(',美国,1,,-1'), 'CSV_INVALID'],
       [Buffer.from([0xff]), 'CSV_ENCODING_UNSUPPORTED'],
     ] as const) {
       const response = await api.inject({
@@ -701,7 +701,9 @@ describe('admin tenant and balance API', () => {
         expect(response.json()).toHaveProperty('error.rows.0.line', 1);
     }
     const content = Buffer.from(
-      'prefix,country,rate\n' + '\n'.repeat(1024 * 1024) + '1,美国,0.01',
+      'ISO,Country,Destination Prefix,Description,Rate\n' +
+        '\n'.repeat(1024 * 1024) +
+        ',美国,1,,0.01',
     );
     const response = await api.inject({
       method: 'POST',

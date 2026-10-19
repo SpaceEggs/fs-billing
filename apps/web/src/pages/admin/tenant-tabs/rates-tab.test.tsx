@@ -36,7 +36,9 @@ function rates(id: string, rate: string) {
     current: {
       id,
       effectiveFrom: '2026-10-01T00:00:00.000Z',
-      entries: [{ prefix: '86', country: '中国', rate }],
+      entries: [
+        { iso: '', description: '', prefix: '86', country: '中国', rate },
+      ],
     },
     scheduled: [],
   };
@@ -107,7 +109,13 @@ describe('rates tab edit dialog', () => {
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toEqual({
       baseVersionId: versionA,
-      entry: { prefix: '86', country: '中国大陆', rate: '0.045' },
+      entry: {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国大陆',
+        rate: '0.045',
+      },
       schedule: { kind: 'immediate' },
     });
 
@@ -125,7 +133,15 @@ describe('rates tab edit dialog', () => {
     const scheduledVersion = {
       id: versionB,
       effectiveFrom: effectiveFrom.toISOString(),
-      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+      entries: [
+        {
+          iso: '',
+          description: '',
+          prefix: '86',
+          country: '中国',
+          rate: '0.05',
+        },
+      ],
     };
     vi.stubGlobal(
       'fetch',
@@ -185,7 +201,15 @@ describe('rates tab export', () => {
     const scheduledVersion = {
       id: versionB,
       effectiveFrom: '2099-01-01T00:00:00.000Z',
-      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+      entries: [
+        {
+          iso: '',
+          description: '',
+          prefix: '86',
+          country: '中国',
+          rate: '0.05',
+        },
+      ],
     };
     const exports: unknown[] = [];
     vi.stubGlobal(
@@ -201,7 +225,7 @@ describe('rates tab export', () => {
               filename: `ABC001-${body.versionId === versionB ? 'scheduled' : 'current'}.csv`,
               encoding: 'UTF-8',
               contentType: 'text/csv',
-              csv: `prefix,country,rate\n86,中国,${rate}\n`,
+              csv: `ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,${rate}\n`,
             }),
           );
         }
@@ -246,7 +270,7 @@ describe('rates tab export', () => {
     await waitFor(() => expect(downloads).toEqual(['ABC001-scheduled.csv']));
     expect(exports).toEqual([{ versionId: versionB }]);
     expect(await blobs[0]!.text()).toBe(
-      'prefix,country,rate\n86,中国,0.0500\n',
+      'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.0500\n',
     );
   });
 });
@@ -261,7 +285,15 @@ describe('rates tab scheduled activation', () => {
     const scheduledVersion = {
       id: versionB,
       effectiveFrom: new Date(effectiveFrom).toISOString(),
-      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+      entries: [
+        {
+          iso: '',
+          description: '',
+          prefix: '86',
+          country: '中国',
+          rate: '0.05',
+        },
+      ],
     };
     // 服务端按当前时间决定哪个版本生效。
     const fetchMock = vi.fn(() =>
@@ -322,7 +354,15 @@ describe('rates tab scheduled activation', () => {
     const scheduledVersion = {
       id: versionB,
       effectiveFrom: new Date(effectiveFrom).toISOString(),
-      entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+      entries: [
+        {
+          iso: '',
+          description: '',
+          prefix: '86',
+          country: '中国',
+          rate: '0.05',
+        },
+      ],
     };
     let failing = false;
     const fetchMock = vi.fn(() => {
@@ -389,7 +429,9 @@ describe('rates tab scheduled activation after unmount', () => {
   const scheduledVersion = {
     id: versionB,
     effectiveFrom: new Date(effectiveFrom).toISOString(),
-    entries: [{ prefix: '86', country: '中国', rate: '0.05' }],
+    entries: [
+      { iso: '', description: '', prefix: '86', country: '中国', rate: '0.05' },
+    ],
   };
 
   /**

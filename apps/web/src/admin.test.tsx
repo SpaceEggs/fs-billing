@@ -1033,9 +1033,15 @@ describe('tenant create', () => {
     await user.click(screen.getByRole('radio', { name: /从 CSV 导入/ }));
     await user.upload(
       screen.getByLabelText('CSV 文件'),
-      new File(['prefix,country,rate\n44-7,英国手机,0.0480\n'], 'rates.csv', {
-        type: 'text/csv',
-      }),
+      new File(
+        [
+          'ISO,Country,Destination Prefix,Description,Rate\n,英国手机,44-7,,0.0480\n',
+        ],
+        'rates.csv',
+        {
+          type: 'text/csv',
+        },
+      ),
     );
     expect(await screen.findByText('已选择 rates.csv')).toBeVisible();
     await user.click(screen.getByRole('button', { name: '创建租户' }));
@@ -1068,8 +1074,14 @@ describe('tenant create', () => {
     const user = userEvent.setup();
     await fillRequired(user);
     await user.click(screen.getByRole('radio', { name: /从 CSV 导入/ }));
-    const first = slowCsv('a.csv', 'prefix,country,rate\n86,中国,0.05\n');
-    const second = slowCsv('b.csv', 'prefix,country,rate\n1,美国,0.01\n');
+    const first = slowCsv(
+      'a.csv',
+      'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.05\n',
+    );
+    const second = slowCsv(
+      'b.csv',
+      'ISO,Country,Destination Prefix,Description,Rate\n,美国,1,,0.01\n',
+    );
     await user.upload(screen.getByLabelText('CSV 文件'), first.file);
     await user.upload(screen.getByLabelText('CSV 文件'), second.file);
     expect(screen.getByText('正在读取 b.csv…')).toBeVisible();
@@ -1091,7 +1103,9 @@ describe('tenant create', () => {
           filename: 'b.csv',
           contentBase64: btoa(
             String.fromCharCode(
-              ...new TextEncoder().encode('prefix,country,rate\n1,美国,0.01\n'),
+              ...new TextEncoder().encode(
+                'ISO,Country,Destination Prefix,Description,Rate\n,美国,1,,0.01\n',
+              ),
             ),
           ),
         },
@@ -1110,7 +1124,10 @@ describe('tenant create', () => {
     const user = userEvent.setup();
     await fillRequired(user);
     await user.click(screen.getByRole('radio', { name: /从 CSV 导入/ }));
-    const pending = slowCsv('a.csv', 'prefix,country,rate\n86,中国,0.05\n');
+    const pending = slowCsv(
+      'a.csv',
+      'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.05\n',
+    );
     await user.upload(screen.getByLabelText('CSV 文件'), pending.file);
     await user.click(screen.getByRole('radio', { name: /空白费率表/ }));
     await pending.finish();

@@ -45,7 +45,15 @@ async function fixture(currency: 'CNY' | 'USD' = 'CNY') {
       settings: { lowBalanceThreshold: '10' },
       initialRates: {
         kind: 'entries',
-        entries: [{ prefix: '86', country: '中国', rate: '0.1234' }],
+        entries: [
+          {
+            iso: '',
+            description: '',
+            prefix: '86',
+            country: '中国',
+            rate: '0.1234',
+          },
+        ],
       },
     },
   });
@@ -58,9 +66,15 @@ async function fixture(currency: 'CNY' | 'USD' = 'CNY') {
 }
 const file = (text: string) => ({
   filename: 'rates.csv',
-  contentBase64: Buffer.from(text).toString('base64'),
+  contentBase64: Buffer.from(
+    text.startsWith(',')
+      ? `ISO,Country,Destination Prefix,Description,Rate\n${text}`
+      : text,
+  ).toString('base64'),
 });
 const entry = {
+  iso: '',
+  description: '',
   prefix: '1',
   country: '美国',
   rate: '999999999999999999999999.0001',
@@ -86,7 +100,7 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file('1,美国,0.1'),
+        file: file(',美国,1,,0.1'),
         schedule: { kind: 'immediate' },
       },
     });
@@ -136,7 +150,7 @@ describe('admin rates service', () => {
         ...context,
         request: {
           baseVersionId: context.baseVersionId,
-          file: file('1,美国,0.1'),
+          file: file(',美国,1,,0.1'),
           schedule: { kind: 'immediate' },
         },
       });
@@ -196,7 +210,7 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file('1,美国,0.1'),
+        file: file(',美国,1,,0.1'),
         schedule: { kind: 'immediate' },
       },
     });
@@ -212,7 +226,7 @@ describe('admin rates service', () => {
       request: { previewId: preview.previewId },
     });
     expect(result.version.entries).toEqual([
-      { prefix: '1', country: '美国', rate: '0.1' },
+      { iso: '', description: '', prefix: '1', country: '美国', rate: '0.1' },
     ]);
   });
 
@@ -223,7 +237,7 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file('1,美国,0.1'),
+        file: file(',美国,1,,0.1'),
         schedule: { kind: 'immediate' },
       },
     });
@@ -261,7 +275,7 @@ describe('admin rates service', () => {
               ...source,
               request: {
                 baseVersionId: source.baseVersionId,
-                file: file('1,美国,0.1'),
+                file: file(',美国,1,,0.1'),
                 schedule: { kind: 'immediate' },
               },
             })
@@ -315,7 +329,7 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file('1,美国,0.1'),
+        file: file(',美国,1,,0.1'),
         schedule: { kind: 'immediate' },
       },
     });
@@ -342,7 +356,7 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file('1,美国,0.1'),
+        file: file(',美国,1,,0.1'),
         schedule: { kind: 'immediate' },
       },
     });
@@ -388,7 +402,7 @@ describe('admin rates service', () => {
         ...context,
         request: {
           baseVersionId: context.baseVersionId,
-          file: file('1,美国,0.1'),
+          file: file(',美国,1,,0.1'),
           schedule: { kind: 'immediate' },
         },
       });
@@ -426,13 +440,15 @@ describe('admin rates service', () => {
     const service = createAdminRatesService();
     const rows = Array.from(
       { length: DEFAULT_ADMIN_RATE_MAX_ROWS },
-      (_, index) => `${index + 10000},测试,0.1`,
+      (_, index) => `,测试,${index + 10000},,0.1`,
     );
     const preview = await service.importPreview({
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file(rows.join('\n')),
+        file: file(
+          'ISO,Country,Destination Prefix,Description,Rate\n' + rows.join('\n'),
+        ),
         schedule: { kind: 'immediate' },
       },
     });
@@ -440,13 +456,16 @@ describe('admin rates service', () => {
       ok: true,
       counts: { added: DEFAULT_ADMIN_RATE_MAX_ROWS },
     });
-    rows.push('99999,额外,0.1');
+    rows.push(',额外,99999,,0.1');
     await expect(
       service.importPreview({
         ...context,
         request: {
           baseVersionId: context.baseVersionId,
-          file: file(rows.join('\n')),
+          file: file(
+            'ISO,Country,Destination Prefix,Description,Rate\n' +
+              rows.join('\n'),
+          ),
           schedule: { kind: 'immediate' },
         },
       }),
@@ -470,7 +489,13 @@ describe('admin rates service', () => {
           ...context,
           request: {
             baseVersionId: context.baseVersionId,
-            entry: { prefix: '44', country, rate: '0.0400' },
+            entry: {
+              iso: '',
+              description: '',
+              prefix: '44',
+              country,
+              rate: '0.0400',
+            },
             schedule: { kind: 'immediate' },
           },
         }),
@@ -481,7 +506,13 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        entry: { prefix: '44', country: '英国,"手机"', rate: '0.0400' },
+        entry: {
+          iso: '',
+          description: '',
+          prefix: '44',
+          country: '英国,"手机"',
+          rate: '0.0400',
+        },
         schedule: { kind: 'immediate' },
       },
     });
@@ -489,7 +520,7 @@ describe('admin rates service', () => {
       ...context,
       request: { versionId: edited.version.id },
     });
-    expect(exported.csv).toContain('44,"英国,""手机""",0.0400');
+    expect(exported.csv).toContain(',"英国,""手机""",44,,0.0400');
     const preview = await service.importPreview({
       ...context,
       request: {
@@ -525,7 +556,13 @@ describe('admin rates service', () => {
     );
     expect(result.version.entries).toEqual([
       entry,
-      { prefix: '86', country: '中国', rate: '0.1234' },
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.1234',
+      },
     ]);
     const [instant] = await withAdmin(app.db, (tx) =>
       tx
@@ -570,7 +607,7 @@ describe('admin rates service', () => {
         request: {
           baseVersionId: context.baseVersionId,
           file: file(
-            `前缀,国家,费率\n86,中国,0.0001\n001,坏,1\n2,坏,-1\n3,${'国'.repeat(201)},0.1\n86,重复,0.2`,
+            `ISO,国家,号码前缀,说明,费率\nCN,中国,86,,0.0001\n,坏,001,,1\n,坏,2,,-1\n,${'国'.repeat(201)},3,,0.1\n,重复,86,,0.2`,
           ),
           schedule: { kind: 'immediate' },
         },
@@ -592,7 +629,7 @@ describe('admin rates service', () => {
       request: {
         baseVersionId: context.baseVersionId,
         file: file(
-          '\ufeff前缀,国家,费率\r\n86,中国,0.2345\r\n1,美国,0.0001\r\n',
+          '﻿ISO,国家,号码前缀,说明,费率\r\n,中国,86,,0.2345\r\n,美国,1,,0.0001\r\n',
         ),
         schedule: { kind: 'immediate' },
       },
@@ -620,8 +657,20 @@ describe('admin rates service', () => {
     ).rejects.toMatchObject({ code: 'PREVIEW_STALE' });
     const result = await service.importCommit({ ...context, request });
     expect(result.version.entries).toEqual([
-      { prefix: '1', country: '美国', rate: '0.0001' },
-      { prefix: '86', country: '中国', rate: '0.2345' },
+      {
+        iso: '',
+        description: '',
+        prefix: '1',
+        country: '美国',
+        rate: '0.0001',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.2345',
+      },
     ]);
     expect(
       (await snapshot(context.tenantId)).logs.find(
@@ -641,7 +690,7 @@ describe('admin rates service', () => {
       ...context,
       request: {
         baseVersionId: context.baseVersionId,
-        file: file('1,美国,0.1'),
+        file: file(',美国,1,,0.1'),
         schedule: { kind: 'immediate' },
       },
     });
@@ -674,7 +723,7 @@ describe('admin rates service', () => {
         ...context,
         request: {
           baseVersionId: context.baseVersionId,
-          file: file('1,美国,0.1'),
+          file: file(',美国,1,,0.1'),
           schedule: expiresBySchedule
             ? {
                 kind: 'scheduled',
@@ -721,7 +770,7 @@ describe('admin rates service', () => {
         ...context,
         request: {
           baseVersionId: context.baseVersionId,
-          file: file('1,美国,0.1'),
+          file: file(',美国,1,,0.1'),
           schedule,
         },
       }),
@@ -744,7 +793,7 @@ describe('admin rates service', () => {
     const context = await fixture();
     const request = {
       baseVersionId: context.baseVersionId,
-      file: file('1,美国,0.1\n86,中国,0.2'),
+      file: file(',美国,1,,0.1\n,中国,86,,0.2'),
       schedule: { kind: 'immediate' } as const,
     };
     await expect(
@@ -767,6 +816,21 @@ describe('admin rates service', () => {
     const target = await fixture();
     const usd = await fixture('USD');
     const service = createAdminRatesService();
+    const revised = await service.editRate({
+      ...source,
+      request: {
+        baseVersionId: source.baseVersionId,
+        entry: {
+          prefix: '86',
+          iso: 'CN',
+          country: '中国',
+          description: 'Mobile',
+          rate: '0.1234',
+        },
+        schedule: { kind: 'immediate' },
+      },
+    });
+    source.baseVersionId = revised.version.id;
     const request = {
       sourceVersionId: source.baseVersionId,
       targetTenantId: target.tenantId,
@@ -805,6 +869,7 @@ describe('admin rates service', () => {
       ...source,
       request: { previewId: preview.previewId },
     });
+    expect(result.version.entries).toEqual(revised.version.entries);
     expect(await snapshot(source.tenantId)).toEqual(before);
     expect(
       (await snapshot(target.tenantId)).logs.find(
@@ -832,7 +897,9 @@ describe('admin rates service', () => {
         request: { versionId: context.baseVersionId },
       }),
     );
-    expect(result.csv).toBe('prefix,country,rate\n86,中国,0.1234\n');
+    expect(result.csv).toBe(
+      'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.1234\n',
+    );
     expect(
       (await snapshot(context.tenantId)).logs.find(
         (log) => log.id === result.auditId,
@@ -994,4 +1061,156 @@ describe('admin rates service', () => {
       after.logs.filter((log) => log.action === 'rate_schedule_cancel'),
     ).toEqual([]);
   });
+});
+
+it('ISO-only and description-only edits are modified rows, search all labels, export/reimport unchanged and audit cancellation', async () => {
+  const context = await fixture();
+  const service = createAdminRatesService();
+  const first = await service.editRate({
+    ...context,
+    request: {
+      baseVersionId: context.baseVersionId,
+      entry: {
+        prefix: '86',
+        iso: 'CN',
+        country: '中国',
+        description: 'Mobile',
+        rate: '0.1234',
+      },
+      schedule: { kind: 'immediate' },
+    },
+  });
+  for (const search of ['86', 'cn', '中国', 'mobile']) {
+    const rates = await service.getRates({ ...context, query: { search } });
+    expect(rates.current.entries).toEqual([
+      {
+        prefix: '86',
+        iso: 'CN',
+        country: '中国',
+        description: 'Mobile',
+        rate: '0.1234',
+      },
+    ]);
+  }
+  const exported = await service.exportRates({
+    ...context,
+    request: { versionId: first.version.id },
+  });
+  expect(exported.csv).toBe(
+    'ISO,Country,Destination Prefix,Description,Rate\nCN,中国,86,Mobile,0.1234\n',
+  );
+  const unchanged = await service.importPreview({
+    ...context,
+    request: {
+      baseVersionId: first.version.id,
+      file: file(exported.csv),
+      schedule: { kind: 'immediate' },
+    },
+  });
+  expect(unchanged).toMatchObject({
+    ok: true,
+    counts: { added: 0, modified: 0, deleted: 0 },
+  });
+  for (const row of ['US,中国,86,Mobile,0.1234', 'CN,中国,86,Fixed,0.1234']) {
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: first.version.id,
+        file: file(`ISO,Country,Destination Prefix,Description,Rate\n${row}`),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    expect(preview).toMatchObject({
+      ok: true,
+      counts: { added: 0, modified: 1, deleted: 0 },
+    });
+  }
+  const future = await service.editRate({
+    ...context,
+    request: {
+      baseVersionId: first.version.id,
+      entry: {
+        prefix: '86',
+        iso: 'CN',
+        country: '中国',
+        description: 'Fixed',
+        rate: '0.1234',
+      },
+      schedule: {
+        kind: 'scheduled',
+        effectiveFrom: new Date(Date.now() + 86_400_000).toISOString(),
+      },
+    },
+  });
+  await service.cancelFutureVersion({
+    ...context,
+    request: { versionId: future.version.id },
+  });
+  const logs = await owner.pool.query<{ details: unknown }>(
+    `select details from operation_logs where tenant_id=$1 and action='rate_schedule_cancel'`,
+    [context.tenantId],
+  );
+  expect(logs.rows[0]?.details).toMatchObject({
+    content: {
+      entries: [{ iso: 'CN', country: '中国', description: 'Fixed' }],
+    },
+  });
+});
+
+it('old three-column CSV is rejected with a dedicated error and no writes', async () => {
+  const context = await fixture();
+  const before = await snapshot(context.tenantId);
+  const result = await createAdminRatesService().importPreview({
+    ...context,
+    request: {
+      baseVersionId: context.baseVersionId,
+      file: file('prefix,country,rate\n44,英国,0.02'),
+      schedule: { kind: 'immediate' },
+    },
+  });
+  expect(result).toEqual({
+    ok: false,
+    errors: [
+      expect.objectContaining({
+        line: 1,
+        reason:
+          '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板',
+      }),
+    ],
+  });
+  expect(await snapshot(context.tenantId)).toEqual(before);
+});
+
+it('pre-migration previews without metadata are stale and remain unconsumed', async () => {
+  const context = await fixture();
+  const service = createAdminRatesService();
+  const preview = await service.importPreview({
+    ...context,
+    request: {
+      baseVersionId: context.baseVersionId,
+      file: file(',英国,44,,0.02'),
+      schedule: { kind: 'immediate' },
+    },
+  });
+  if (!preview.ok) throw new Error('Expected preview');
+  const before = await snapshot(context.tenantId);
+  await owner.pool.query(
+    `update admin_rate_previews set payload=jsonb_set(payload, '{entries}', '[{"prefix":"44","country":"英国","rate":"0.02"}]'::jsonb) where id=$1`,
+    [preview.previewId],
+  );
+  await expect(
+    service.importCommit({
+      ...context,
+      request: { previewId: preview.previewId },
+    }),
+  ).rejects.toMatchObject({ code: 'PREVIEW_STALE' });
+  expect(await snapshot(context.tenantId)).toEqual(before);
+  expect(
+    (
+      await owner.pool.query(
+        'select consumed_at from admin_rate_previews where id=$1',
+        [preview.previewId],
+      )
+    ).rows,
+  ).toEqual([{ consumed_at: null }]);
 });
