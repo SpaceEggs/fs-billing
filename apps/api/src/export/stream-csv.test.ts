@@ -677,6 +677,107 @@ describe('streamCsv', () => {
     expectClean(response, client);
   });
 
+  it.each([
+    {
+      stage: 'first FETCH',
+      options: { pendingQuery: 'FETCH FORWARD 5000 FROM cdr_export' },
+      responseStarted: false,
+    },
+    {
+      stage: 'later FETCH',
+      options: {
+        firstRows: [{ call_uuid: 'uuid-1' }],
+        pendingSecondFetch: true,
+      },
+      responseStarted: true,
+    },
+    {
+      stage: 'COMMIT',
+      options: { firstRows: [], pendingCommit: true },
+      responseStarted: true,
+    },
+  ] satisfies {
+    stage: string;
+    options: FakeClientOptions;
+    responseStarted: boolean;
+  }[])(
+    'releases admission when cancellation succeeds but $stage never responds',
+    async ({ options, responseStarted }) => {
+      vi.useFakeTimers();
+      const slots = new ExportSlots();
+      const client = new FakeClient(options);
+      const test = makeInput({
+        client,
+        cancelBackend: () => Promise.resolve(true),
+      });
+      let settled = false;
+      const pending = streamCsv(test.input, slots).then(
+        () => {
+          settled = true;
+          return 'completed';
+        },
+        (error: unknown) => {
+          settled = true;
+          return error;
+        },
+      );
+      try {
+        await spinUntil(() => client.pendingQueryCount === 1);
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 10_000);
+
+        expect(settled).toBe(true);
+        expect(client.releaseCount).toBe(1);
+        expect(client.pendingQueryCount).toBe(0);
+        expect(client.connection.stream.destroyed).toBe(true);
+        expect(test.response.destroyed).toBe(responseStarted);
+        expect(test.request.logs.at(-1)).toMatchObject({ result: 'deadline' });
+        const releaseRetry = slots.acquire('tenant-a');
+        expect(releaseRetry).toBeTypeOf('function');
+        releaseRetry?.();
+        expectClean(test.response, client);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        client.connection.stream.destroy();
+        await pending;
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it('bounds a silent rollback and releases admission without reusing the connection', async () => {
+    vi.useFakeTimers();
+    const slots = new ExportSlots();
+    const client = new FakeClient({
+      firstRows: [{ call_uuid: 'uuid-1' }],
+      failAt: 'second_fetch',
+      pendingQuery: 'ROLLBACK',
+    });
+    const test = makeInput({ client });
+    let settled = false;
+    const pending = streamCsv(test.input, slots).then(() => {
+      settled = true;
+    });
+    try {
+      await spinUntil(() => client.pendingQueryCount === 1);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(settled).toBe(true);
+      expect(test.response.destroyed).toBe(true);
+      expect(client.releaseCount).toBe(1);
+      expect(client.connection.stream.destroyed).toBe(true);
+      expect(client.releaseError).toBeTruthy();
+      const releaseRetry = slots.acquire('tenant-a');
+      expect(releaseRetry).toBeTypeOf('function');
+      releaseRetry?.();
+      expectClean(test.response, client);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      client.connection.stream.destroy();
+      await pending;
+      vi.useRealTimers();
+    }
+  });
+
   it('destroys the cursor connection if backend cancellation fails and still cleans up', async () => {
     const slots = new ExportSlots();
     const client = new FakeClient({
