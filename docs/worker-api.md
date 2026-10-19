@@ -36,7 +36,7 @@ pnpm --filter @fs-billing/worker start
 }
 ```
 
-`tenant` 是非空字母数字编码，精确匹配（不补零、不改大小写）。`uuid` 必须为 UUID；授权不登记 UUID、不冻结余额、不产生扣费。`callee` 传规范化计费号码，`dialedNumber` 传原始拨号。`dialedNumber` 是必填的归一化输入，`billingNumber` 是可选投影。Worker 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber` 重新计算；投影必须与结果完全一致。
+`tenant` 是非空字母数字编码，不补零、不区分大小写：Worker 转大写后按 `upper(tenants.code)` 匹配，`abc001` 与 `ABC001` 等价（见 design.md §4.1）。`uuid` 必须为 UUID；授权不登记 UUID、不冻结余额、不产生扣费。`callee` 传规范化计费号码，`dialedNumber` 传原始拨号。`dialedNumber` 是必填的归一化输入，`billingNumber` 是可选投影。Worker 调用 `packages/rating/src/dialed.ts` 的 `resolveBillingNumber` 重新计算；投影必须与结果完全一致。
 
 `dialedNumber` 只允许一个可选的开头 `+` 和 1–17 位 ASCII 数字。`+` 或 `00` 开头表示国际号码，去掉该冠字；没有冠字表示国内号码，先去掉一个开头的 `0`，再加 `86`。最终计费号码必须以 1–9 开头、长度为 6–15 位。`+13055551234` 得到 `13055551234`，裸拨 `13055551234` 得到 `8613055551234`。非法字符或长度超限返回 HTTP 400、SIP 484。`callee` 或投影不一致返回 HTTP 400 `{"error":"授权计费号码不一致"}`，日志包含 UUID、租户、原始拨号、callee、Lua 投影与 Worker 计算的号码。此路径不访问数据库、不写入、不加锁。Lua 返回 SIP 503（CDR `hangup_cause=NORMAL_TEMPORARY_FAILURE`），不降级、不桥接、不设置 `billing_unverified=true`。
 
