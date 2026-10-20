@@ -44,7 +44,13 @@ describe('rate CSV text validation', () => {
   it.each(['英\n国', '英\r国', '英\r\n国', '\n英国', '英国\r'])(
     'rejects CR/LF in country before trimming: %j',
     (country) => {
-      const entry = { prefix: '44', country, rate: '0.0400' };
+      const entry = {
+        iso: '',
+        description: '',
+        prefix: '44',
+        country,
+        rate: '0.0400',
+      };
       expect(adminRateEntriesSchema.safeParse([entry]).success).toBe(false);
       expect(
         adminRateEditRequestSchema.safeParse({
@@ -69,9 +75,45 @@ describe('rate CSV text validation', () => {
   );
 
   it('accepts CSV quoting characters and trims ordinary whitespace', () => {
-    const entry = { prefix: '44', country: ' 英国,"手机" ', rate: '0.0400' };
+    const entry = {
+      iso: '',
+      description: '',
+      prefix: '44',
+      country: ' 英国,"手机" ',
+      rate: '0.0400',
+    };
     expect(adminRateEntriesSchema.parse([entry])).toEqual([
       { ...entry, country: '英国,"手机"' },
     ]);
   });
+});
+
+it('rate entry ISO is trimmed, uppercased, required, and reparses to itself', () => {
+  const entry = {
+    prefix: '44',
+    iso: ' gb ',
+    country: '英国',
+    description: '',
+    rate: '0.02',
+  };
+  const [parsed] = adminRateEntriesSchema.parse([entry]);
+  expect(parsed?.iso).toBe('GB');
+  expect(adminRateEntriesSchema.parse([parsed])).toEqual([parsed]);
+  expect(
+    adminRateEntriesSchema.safeParse([
+      { prefix: '44', country: '英国', rate: '0.02' },
+    ]).success,
+  ).toBe(false);
+});
+it.each([
+  { iso: 'ß', description: '' },
+  { iso: 'GBR', description: '' },
+  { iso: 'GB', description: '手机\n' },
+  { iso: 'GB', description: '字'.repeat(201) },
+])('rate entry rejects malformed ISO or description %j', (fields) => {
+  expect(
+    adminRateEntriesSchema.safeParse([
+      { prefix: '44', country: '英国', rate: '0.02', ...fields },
+    ]).success,
+  ).toBe(false);
 });

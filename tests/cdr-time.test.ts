@@ -55,13 +55,25 @@ describe('CDR timestamp precision', () => {
           {
             effectiveFrom: new Date(second * 1000),
             entries: [
-              { prefix: '447', country: 'UK', perMinute: rate('CNY', '0.1') },
+              {
+                iso: '',
+                description: '',
+                prefix: '447',
+                country: 'UK',
+                perMinute: rate('CNY', '0.1'),
+              },
             ],
           },
           {
             effectiveFrom: new Date(second * 1000 + 500),
             entries: [
-              { prefix: '447', country: 'UK', perMinute: rate('CNY', '0.2') },
+              {
+                iso: '',
+                description: '',
+                prefix: '447',
+                country: 'UK',
+                perMinute: rate('CNY', '0.2'),
+              },
             ],
           },
         ],

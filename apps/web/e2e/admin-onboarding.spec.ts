@@ -1,11 +1,8 @@
 import { expect } from '@playwright/test';
 import { fillBalance, openTenants, test, uniqueCode } from './admin';
 
-const ratesCsv = `prefix,country,rate
-86,中国,0.0500
-1,美国/加拿大,0.0100
-44,英国,0.0200
-`;
+const ratesCsv =
+  'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.0500\n,美国/加拿大,1,,0.0100\n,英国,44,,0.0200\n';
 
 /** 验收表原为固定编码 ABC001（种子已占用）；按 Q7 改为每次运行唯一的 CNY 租户。 */
 test('creates a run-unique tenant, imports rates, credits 500 and opens portal account', async ({

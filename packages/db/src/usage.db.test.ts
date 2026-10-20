@@ -56,6 +56,8 @@ async function call(
   const answer = answeredAt ? new Date(answeredAt) : null;
   await withAdmin(app.db, (tx) =>
     tx.insert(cdrs).values({
+      iso: null,
+      description: null,
       tenantId,
       callUuid: randomUUID(),
       startedAt: start,

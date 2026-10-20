@@ -39,6 +39,8 @@ async function addCall({
   const startedAt = new Date(Date.parse(at) - 60_000);
   return withAdmin(app.db, (tx) =>
     tx.insert(cdrs).values({
+      iso: null,
+      description: null,
       tenantId,
       callUuid,
       startedAt,
@@ -194,5 +196,73 @@ describe('portal CDR queries', () => {
       ...range,
     });
     expect(adminCountries.countries).toEqual(['英国']);
+  });
+});
+
+it('returns ISO, country and description separately and groups country options across descriptions', async () => {
+  const tenant = await createTenant(app, 'CNY');
+  for (const [index, description] of ['', '手机'].entries()) {
+    await withAdmin(app.db, (tx) =>
+      tx.insert(cdrs).values({
+        tenantId: tenant.id,
+        callUuid: randomUUID(),
+        startedAt: new Date(`2026-09-28T00:0${index}:00Z`),
+        answeredAt: new Date(`2026-09-28T00:0${index}:01Z`),
+        endedAt: new Date(`2026-09-28T00:0${index}:31Z`),
+        caller: '1001',
+        callee: index ? '447700900123' : '442071234567',
+        billingNumber: index ? '447700900123' : '442071234567',
+        matchedPrefix: index ? '447' : '44',
+        durationSeconds: 30,
+        billedMinutes: '1',
+        iso: 'GB',
+        country: '英国',
+        description: description || null,
+        rate: '0.02',
+        charge: '0.02',
+        hangupCause: 'NORMAL_CLEARING',
+      }),
+    );
+  }
+  await addCall({
+    tenantId: tenant.id,
+    at: '2026-09-28T00:03:00Z',
+    answered: false,
+  });
+  const query = portalCdrsQuerySchema.parse({ ...range, country: '英国' });
+  for (const result of [
+    await listPortalCdrs({ db: app.db, tenantId: tenant.id, query }),
+    await listAdminCdrs({
+      db: app.db,
+      tenantId: tenant.id,
+      query: adminCdrsQuerySchema.parse(query),
+    }),
+  ]) {
+    expect(result.pagination.total).toBe(2);
+    expect(
+      result.items.map(({ iso, country, description }) => ({
+        iso,
+        country,
+        description,
+      })),
+    ).toEqual([
+      { iso: 'GB', country: '英国', description: '手机' },
+      { iso: 'GB', country: '英国', description: null },
+    ]);
+  }
+  expect(
+    await listPortalCdrCountries({ db: app.db, tenantId: tenant.id, ...range }),
+  ).toEqual({ countries: ['英国'] });
+  expect(
+    await listAdminCdrCountries({ db: app.db, tenantId: tenant.id, ...range }),
+  ).toEqual({ countries: ['英国'] });
+  const all = await listPortalCdrs({
+    db: app.db,
+    tenantId: tenant.id,
+    query: portalCdrsQuerySchema.parse({ ...range, status: 'all' }),
+  });
+  expect(all.items.find((row) => row.answeredAt === null)).toMatchObject({
+    iso: null,
+    description: null,
   });
 });

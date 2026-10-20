@@ -4,8 +4,14 @@ import { createTenant, test, uniqueCode } from './admin';
 import { operationLogs } from './db';
 
 const rates = [
-  { prefix: '86', country: '中国', rate: '0.0500' },
-  { prefix: '447', country: '英国手机', rate: '0.0450' },
+  { iso: '', description: '', prefix: '86', country: '中国', rate: '0.0500' },
+  {
+    iso: '',
+    description: '',
+    prefix: '447',
+    country: '英国手机',
+    rate: '0.0450',
+  },
 ];
 
 const dayMs = 24 * 60 * 60 * 1000;
@@ -85,7 +91,13 @@ test('cancels selected scheduled version', async ({ page }) => {
   const versionId = await scheduleEdit(
     page,
     tenant.id,
-    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0480',
+    },
     slot.iso,
   );
   await openRates(page, tenant.id);
@@ -127,7 +139,13 @@ test('cancel inside the clock skew margin is refused with refresh', async ({
   await scheduleEdit(
     page,
     tenant.id,
-    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0480',
+    },
     new Date(Date.now() + 50_000).toISOString(),
   );
   await openRates(page, tenant.id);
@@ -163,7 +181,13 @@ test('minute picker submits Beijing schedule', async ({ page }) => {
   );
   await confirm.getByRole('button', { name: '确认修改' }).click();
   expect((await request).postDataJSON()).toMatchObject({
-    entry: { prefix: '447', country: '英国手机', rate: '0.048' },
+    entry: {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.048',
+    },
     schedule: { kind: 'scheduled', effectiveFrom: slot.iso },
   });
   await expect(
@@ -190,7 +214,13 @@ test('cancel edit reschedule audits each step', async ({ page }) => {
   const firstId = await scheduleEdit(
     page,
     tenant.id,
-    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0480',
+    },
     slot.iso,
   );
   await confirm.getByRole('button', { name: '确认修改' }).click();
@@ -234,6 +264,8 @@ test('cancel edit reschedule audits each step', async ({ page }) => {
 
   const after = await readRates(page, tenant.id);
   expect(after.current.entries).toContainEqual({
+    iso: '',
+    description: '',
     prefix: '86',
     country: '中国',
     rate: '0.055',
@@ -241,8 +273,20 @@ test('cancel edit reschedule audits each step', async ({ page }) => {
   expect(after.scheduled).toHaveLength(1);
   expect(after.scheduled[0]!.entries).toEqual(
     expect.arrayContaining([
-      { prefix: '86', country: '中国', rate: '0.055' },
-      { prefix: '447', country: '英国手机', rate: '0.048' },
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.055',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '447',
+        country: '英国手机',
+        rate: '0.048',
+      },
     ]),
   );
   const logs = await operationLogs(tenant.id);
@@ -268,9 +312,9 @@ test('exports the current version as CSV', async ({ page }) => {
   const file = await download;
   expect(file.suggestedFilename()).toBe(`${tenant.code}-${current.id}.csv`);
   const lines = (await readFile(await file.path(), 'utf8')).split('\n');
-  expect(lines[0]).toBe('prefix,country,rate');
+  expect(lines[0]).toBe('ISO,Country,Destination Prefix,Description,Rate');
   expect(lines).toEqual(
-    expect.arrayContaining(['86,中国,0.0500', '447,英国手机,0.0450']),
+    expect.arrayContaining([',中国,86,,0.0500', ',英国手机,447,,0.0450']),
   );
   const exported = (await operationLogs(tenant.id)).at(-1);
   expect(exported?.action).toBe('rate_export');
@@ -284,7 +328,13 @@ test('exports a scheduled version as CSV from its card (G11)', async ({
   await scheduleEdit(
     page,
     tenant.id,
-    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0480',
+    },
     beijingSlot(2, '09:00').iso,
   );
   await openRates(page, tenant.id);
@@ -298,9 +348,9 @@ test('exports a scheduled version as CSV from its card (G11)', async ({
   const file = await download;
   expect(file.suggestedFilename()).toBe(`${tenant.code}-${version.id}.csv`);
   const lines = (await readFile(await file.path(), 'utf8')).split('\n');
-  expect(lines[0]).toBe('prefix,country,rate');
+  expect(lines[0]).toBe('ISO,Country,Destination Prefix,Description,Rate');
   expect(lines).toEqual(
-    expect.arrayContaining(['86,中国,0.0500', '447,英国手机,0.0480']),
+    expect.arrayContaining([',中国,86,,0.0500', ',英国手机,447,,0.0480']),
   );
   const exported = (await operationLogs(tenant.id)).at(-1);
   expect(exported?.action).toBe('rate_export');
@@ -314,11 +364,11 @@ test('shows every CSV error line', async ({ page }) => {
   const dialog = await openImport(
     page,
     [
-      '前缀,国家,费率',
-      '8a6,中国,0.05',
-      '447,英国手机,-0.1',
-      '33,法国,0.06',
-      '1,美国,0.12345',
+      'ISO,国家,号码前缀,说明,费率',
+      ',中国,8a6,,0.05',
+      ',英国手机,447,,-0.1',
+      ',法国,33,,0.06',
+      ',美国,1,,0.12345',
       '',
     ].join('\r\n'),
   );
@@ -328,11 +378,11 @@ test('shows every CSV error line', async ({ page }) => {
   const rows = dialog.getByRole('row');
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(1)).toContainText('第 2 行');
-  await expect(rows.nth(1)).toContainText('8a6,中国,0.05');
+  await expect(rows.nth(1)).toContainText(',中国,8a6,,0.05');
   await expect(rows.nth(2)).toContainText('第 3 行');
-  await expect(rows.nth(2)).toContainText('447,英国手机,-0.1');
+  await expect(rows.nth(2)).toContainText(',英国手机,447,,-0.1');
   await expect(rows.nth(3)).toContainText('第 5 行');
-  await expect(rows.nth(3)).toContainText('1,美国,0.12345');
+  await expect(rows.nth(3)).toContainText(',美国,1,,0.12345');
   await expect(dialog.getByRole('button', { name: '确认导入' })).toHaveCount(0);
 
   expect(await readRates(page, tenant.id)).toEqual(before);
@@ -346,7 +396,7 @@ test('imports a CSV immediately and updates the table', async ({ page }) => {
   await openRates(page, tenant.id);
   const dialog = await openImport(
     page,
-    '\uFEFFprefix,country,rate\n86,中国,0.0550\n33,法国,0.0600\n',
+    '﻿ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.0550\n,法国,33,,0.0600\n',
   );
   await expect(dialog).toContainText('费率_修订版.csv · UTF-8 · 2 条');
   await expect(dialog).toContainText(
@@ -370,8 +420,8 @@ test('imports a CSV immediately and updates the table', async ({ page }) => {
   const after = await readRates(page, tenant.id);
   expect(after.scheduled).toEqual([]);
   expect(after.current.entries).toEqual([
-    { prefix: '33', country: '法国', rate: '0.06' },
-    { prefix: '86', country: '中国', rate: '0.055' },
+    { iso: '', description: '', prefix: '33', country: '法国', rate: '0.06' },
+    { iso: '', description: '', prefix: '86', country: '中国', rate: '0.055' },
   ]);
   const imported = (await operationLogs(tenant.id)).at(-1);
   expect(imported?.action).toBe('rate_import');
@@ -384,7 +434,13 @@ test('mobile only views and searches rates', async ({ page }) => {
   await scheduleEdit(
     page,
     tenant.id,
-    { prefix: '447', country: '英国手机', rate: '0.0480' },
+    {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0480',
+    },
     beijingSlot(2, '09:00').iso,
   );
   await openRates(page, tenant.id);
@@ -415,13 +471,34 @@ async function pickCopyTenant(dialog: Locator, code: string) {
 test('pushes a full rate table to a same-currency tenant', async ({ page }) => {
   const source = await createTenant(page, {
     code: uniqueCode('CPS'),
-    rates: [...rates, { prefix: '33', country: '法国', rate: '0.0600' }],
+    rates: [
+      ...rates,
+      {
+        iso: '',
+        description: '',
+        prefix: '33',
+        country: '法国',
+        rate: '0.0600',
+      },
+    ],
   });
   const target = await createTenant(page, {
     code: uniqueCode('CPT'),
     rates: [
-      { prefix: '86', country: '中国', rate: '0.0400' },
-      { prefix: '64', country: '新西兰', rate: '0.2000' },
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.0400',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '64',
+        country: '新西兰',
+        rate: '0.2000',
+      },
     ],
   });
   const usd = await createTenant(page, {

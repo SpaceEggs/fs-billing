@@ -79,6 +79,8 @@ export const rateEntries = pgTable('rate_entries', {
   rateVersionId: uuid('rate_version_id').notNull(),
   prefix: text('prefix').notNull(),
   country: text('country').notNull(),
+  iso: text('iso').notNull().default(''),
+  description: text('description').notNull().default(''),
   rate: numeric('rate').notNull(),
 });
 
@@ -222,6 +224,8 @@ export const cdrs = pgTable(
     billedMinutes: numeric('billed_minutes').notNull().default('0'),
     matchedPrefix: text('matched_prefix'),
     country: text('country'),
+    iso: text('iso'),
+    description: text('description'),
     rate: numeric('rate'),
     charge: numeric('charge').notNull().default('0'),
     hangupCause: text('hangup_cause').notNull().default(''),

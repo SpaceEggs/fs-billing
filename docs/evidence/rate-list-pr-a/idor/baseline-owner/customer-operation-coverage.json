@@ -1,0 +1,129 @@
+{
+  "source": "live Fastify OpenAPI",
+  "denominator": 10,
+  "operations": [
+    {
+      "operationId": "logout",
+      "access": "session",
+      "isolationCase": "self-session-mutation"
+    },
+    {
+      "operationId": "session",
+      "access": "authenticated",
+      "isolationCase": "self-session"
+    },
+    {
+      "operationId": "changePassword",
+      "access": "authenticated",
+      "isolationCase": "self-credential"
+    },
+    {
+      "operationId": "revokeOtherSessions",
+      "access": "authenticated",
+      "isolationCase": "self-session-mutation"
+    },
+    {
+      "operationId": "portalContext",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    },
+    {
+      "operationId": "portalCdrs",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    },
+    {
+      "operationId": "portalCdrCountries",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    },
+    {
+      "operationId": "portalCdrsExport",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    },
+    {
+      "operationId": "portalLedger",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    },
+    {
+      "operationId": "portalLedgerExport",
+      "access": "customer",
+      "isolationCase": "tenant-read"
+    }
+  ],
+  "difference": {
+    "missing": [],
+    "extra": []
+  },
+  "coverage": [
+    {
+      "lane": "owner",
+      "numerator": 10,
+      "denominator": 10
+    }
+  ],
+  "results": [
+    {
+      "lane": "owner",
+      "operationId": "logout",
+      "isolationCase": "self-session-mutation",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "session",
+      "isolationCase": "self-session",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "changePassword",
+      "isolationCase": "self-credential",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "revokeOtherSessions",
+      "isolationCase": "self-session-mutation",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "portalContext",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "portalCdrs",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "portalCdrCountries",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "portalCdrsExport",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "portalLedger",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    },
+    {
+      "lane": "owner",
+      "operationId": "portalLedgerExport",
+      "isolationCase": "tenant-read",
+      "status": "passed"
+    }
+  ]
+}

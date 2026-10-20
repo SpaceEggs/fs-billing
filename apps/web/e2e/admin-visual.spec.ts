@@ -47,14 +47,38 @@ const frame = (file: string, section: string, label: string): DesignFrame => ({
 });
 
 const rates = [
-  { prefix: '86', country: '中国', rate: '0.0500' },
-  { prefix: '1', country: '美国/加拿大', rate: '0.0100' },
-  { prefix: '447', country: '英国手机', rate: '0.0450' },
-  { prefix: '44', country: '英国', rate: '0.0200' },
-  { prefix: '65', country: '新加坡', rate: '0.0280' },
-  { prefix: '81', country: '日本', rate: '0.0350' },
-  { prefix: '852', country: '中国香港', rate: '0.0300' },
-  { prefix: '1876', country: '牙买加', rate: '0.2500' },
+  { iso: '', description: '', prefix: '86', country: '中国', rate: '0.0500' },
+  {
+    iso: '',
+    description: '',
+    prefix: '1',
+    country: '美国/加拿大',
+    rate: '0.0100',
+  },
+  {
+    iso: '',
+    description: '',
+    prefix: '447',
+    country: '英国手机',
+    rate: '0.0450',
+  },
+  { iso: '', description: '', prefix: '44', country: '英国', rate: '0.0200' },
+  { iso: '', description: '', prefix: '65', country: '新加坡', rate: '0.0280' },
+  { iso: '', description: '', prefix: '81', country: '日本', rate: '0.0350' },
+  {
+    iso: '',
+    description: '',
+    prefix: '852',
+    country: '中国香港',
+    rate: '0.0300',
+  },
+  {
+    iso: '',
+    description: '',
+    prefix: '1876',
+    country: '牙买加',
+    rate: '0.2500',
+  },
 ];
 
 type Tenant = { id: string; code: string };
@@ -165,8 +189,20 @@ async function seed(page: Page): Promise<Seed> {
     overdraftLimit: '0',
     lowBalanceThreshold: '200',
     rates: [
-      { prefix: '86', country: '中国', rate: '0.0400' },
-      { prefix: '64', country: '新西兰', rate: '0.2000' },
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.0400',
+      },
+      {
+        iso: '',
+        description: '',
+        prefix: '64',
+        country: '新西兰',
+        rate: '0.2000',
+      },
     ],
   });
 
@@ -229,7 +265,13 @@ async function seed(page: Page): Promise<Seed> {
   ).json()) as { current: { id: string } };
   await post(page, `/api/admin/tenants/${cny.id}/rates/edit-entry`, {
     baseVersionId: ratesBody.current.id,
-    entry: { prefix: '447', country: '英国手机', rate: '0.0480' },
+    entry: {
+      iso: '',
+      description: '',
+      prefix: '447',
+      country: '英国手机',
+      rate: '0.0480',
+    },
     schedule: {
       kind: 'scheduled',
       effectiveFrom: `${beijingDate(2)}T09:00:00+08:00`,
@@ -293,13 +335,13 @@ async function openTab(page: Page, tenant: Tenant, tab: string) {
 }
 
 const importCsv = {
-  ok: '﻿前缀,国家,费率\n86,中国,0.0550\n33,法国,0.0600\n1,美国/加拿大,0.0100\n447,英国手机,0.0450\n44,英国,0.0200\n65,新加坡,0.0280\n81,日本,0.0350\n852,中国香港,0.0300\n',
+  ok: '﻿ISO,国家,号码前缀,说明,费率\n,中国,86,,0.0550\n,法国,33,,0.0600\n,美国/加拿大,1,,0.0100\n,英国手机,447,,0.0450\n,英国,44,,0.0200\n,新加坡,65,,0.0280\n,日本,81,,0.0350\n,中国香港,852,,0.0300\n',
   errors: [
-    '前缀,国家,费率',
-    '8a6,中国,0.05',
-    '447,英国手机,-0.1',
-    '33,法国,0.06',
-    '1,美国,0.12345',
+    'ISO,国家,号码前缀,说明,费率',
+    ',中国,8a6,,0.05',
+    ',英国手机,447,,-0.1',
+    ',法国,33,,0.06',
+    ',美国,1,,0.12345',
     '',
   ].join('\r\n'),
 };
@@ -561,6 +603,9 @@ const shots: Shot[] = [
     open: async (page, seed) => {
       const dialog = await openImport(page, seed, importCsv.errors);
       await expect(dialog.getByRole('alert')).toContainText('发现 3 处错误');
+      await expect(dialog.getByRole('row').nth(1)).toContainText(
+        '前缀只能是数字：8a6',
+      );
     },
   },
   {

@@ -1,0 +1,110 @@
+
+> fs-billing@ check /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm --filter @fs-billing/web build
+
+
+> fs-billing@ lint /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> eslint . --max-warnings 0
+
+
+> fs-billing@ format:check /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> fs-billing@ typecheck /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm -r typecheck && tsc -p tsconfig.json
+
+Scope: 6 of 7 workspace projects
+packages/shared typecheck$ tsc -p tsconfig.json
+packages/rating typecheck$ tsc -p tsconfig.json
+packages/rating typecheck: Done
+packages/shared typecheck: Done
+apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
+packages/db typecheck: Done
+apps/web typecheck: Done
+apps/worker typecheck$ tsc -p tsconfig.json
+apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck: Done
+apps/api typecheck: Done
+
+> fs-billing@ test /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> vitest run && pnpm --filter @fs-billing/web test
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+
+
+ Test Files  37 passed (37)
+      Tests  730 passed | 1 skipped (731)
+   Start at  10:17:39
+   Duration  3.26s (import 53%, tests 40%, transform 6%, worker 1%)
+
+    Isolate  37 workers spawned · ~104ms startup each (spawn + environment, per file)
+             at least ~324ms faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @fs-billing/web@ test /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/web
+> vitest run
+
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/web
+
+
+ Test Files  31 passed (31)
+      Tests  391 passed (391)
+   Start at  10:17:42
+   Duration  24.34s (tests 77%, environment 15%, import 4%, setup 3%, transform 1%)
+
+    Isolate  31 workers spawned · ~608ms startup each (spawn + environment, per file)
+             at least ~1.49s faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @fs-billing/web@ build /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/web
+> vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 436 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                   1.52 kB │ gzip:  0.76 kB
+dist/assets/index-cKfMMSdq.css                   44.78 kB │ gzip:  8.88 kB
+dist/assets/duration--1gSbKB4.js                  0.12 kB │ gzip:  0.13 kB
+dist/assets/input-B0iLjkoT.js                     0.42 kB │ gzip:  0.29 kB
+dist/assets/rolldown-runtime-CbXtAM7H.js          0.58 kB │ gzip:  0.36 kB
+dist/assets/select-DybUDzeS.js                    0.63 kB │ gzip:  0.41 kB
+dist/assets/pagination-43UmAKpn.js                0.65 kB │ gzip:  0.43 kB
+dist/assets/segmented-B4gN3lEk.js                 0.67 kB │ gzip:  0.43 kB
+dist/assets/search-box-Y-sBZOTX.js                0.76 kB │ gzip:  0.47 kB
+dist/assets/alert-CFTLKpmS.js                     0.93 kB │ gzip:  0.48 kB
+dist/assets/admin-api-CjZrYGJ4.js                 1.10 kB │ gzip:  0.59 kB
+dist/assets/rate-csv-template-link-CY5AHtsx.js    1.18 kB │ gzip:  0.81 kB
+dist/assets/problem-alert-DaaxfdIz.js             1.34 kB │ gzip:  0.61 kB
+dist/assets/query-error-Dt9zP425.js               1.50 kB │ gzip:  0.91 kB
+dist/assets/data-format-D32x2an1.js               1.79 kB │ gzip:  0.82 kB
+dist/assets/dialog-C4qf6d4U.js                    2.03 kB │ gzip:  1.12 kB
+dist/assets/copy-field-BuWKSLvz.js                2.73 kB │ gzip:  1.14 kB
+dist/assets/home-BqUw-tdQ.js                      3.19 kB │ gzip:  1.48 kB
+dist/assets/api-problem-EVmwMO5W.js               3.61 kB │ gzip:  1.72 kB
+dist/assets/filter-sheet-BeFnVjjd.js              3.93 kB │ gzip:  1.59 kB
+dist/assets/change-password-zgIiAfZl.js           5.32 kB │ gzip:  2.52 kB
+dist/assets/tenant-edit-uYb0NQby.js               6.15 kB │ gzip:  2.72 kB
+dist/assets/login-D7FbtAxC.js                     6.21 kB │ gzip:  2.46 kB
+dist/assets/accounts-Zu5UfQ8e.js                  8.53 kB │ gzip:  3.35 kB
+dist/assets/tenant-list-CJAFhFAK.js               9.58 kB │ gzip:  3.19 kB
+dist/assets/form-fields-CBwnxLnF.js              10.53 kB │ gzip:  4.23 kB
+dist/assets/admin-accounts-0i1OsZuu.js           12.94 kB │ gzip:  4.31 kB
+dist/assets/balance-dialog-uSYcaabS.js           14.13 kB │ gzip:  5.41 kB
+dist/assets/tenant-create-uhrrkX1-.js            18.58 kB │ gzip:  6.80 kB
+dist/assets/decimal-i_D9dVJK.js                  31.94 kB │ gzip: 12.93 kB
+dist/assets/receivables-BWWgSAdJ.js              35.48 kB │ gzip: 10.29 kB
+dist/assets/tenant-detail-_RF2coTg.js            95.35 kB │ gzip: 25.31 kB
+dist/assets/session-expired-dialog-BJ18fv4M.js  100.62 kB │ gzip: 35.14 kB
+dist/assets/index-Bo7rZUyc.js                   113.81 kB │ gzip: 38.11 kB
+dist/assets/return-to-C2x_QggM.js               169.43 kB │ gzip: 51.04 kB
+dist/assets/react-BPWasKn7.js                   218.76 kB │ gzip: 68.27 kB
+
+✓ built in 140ms

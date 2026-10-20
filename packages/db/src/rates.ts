@@ -45,6 +45,8 @@ export async function createRateVersion<C extends Currency>(
         rateVersionId: version!.id,
         prefix: entry.prefix,
         country: entry.country,
+        iso: entry.iso,
+        description: entry.description,
         rate: entry.perMinute.perMinute.toFixed(),
       })),
     );
@@ -77,6 +79,8 @@ export async function loadRatingTenant(
       effectiveFrom: rateVersions.effectiveFrom,
       prefix: rateEntries.prefix,
       country: rateEntries.country,
+      iso: rateEntries.iso,
+      description: rateEntries.description,
       rate: rateEntries.rate,
     })
     .from(rateVersions)
@@ -98,6 +102,8 @@ export async function loadRatingTenant(
       version.entries.push({
         prefix: r.prefix,
         country: r.country,
+        iso: r.iso ?? '',
+        description: r.description ?? '',
         perMinute: rate(row.currency, r.rate),
       });
     }

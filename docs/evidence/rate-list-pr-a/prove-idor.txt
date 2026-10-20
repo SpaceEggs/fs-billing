@@ -1,0 +1,9 @@
+
+> @fs-billing/api@ prove:idor /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/api
+> node --import tsx scripts/prove-idor.ts /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/docs/evidence/rate-list-pr-a/idor
+
+baseline-app: all isolation assertions passed
+baseline-owner: all isolation assertions passed
+mutation-owner: detected tenant balance leak
+mutation-app: all isolation assertions passed
+IDOR double-defense proof passed. Evidence in /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/docs/evidence/rate-list-pr-a/idor

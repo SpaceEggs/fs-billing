@@ -58,7 +58,13 @@ export async function createTenant(
     code?: string;
     currency?: 'CNY' | 'USD';
     emails?: string[];
-    rates?: { prefix: string; country: string; rate: string }[];
+    rates?: {
+      prefix: string;
+      iso: string;
+      country: string;
+      description: string;
+      rate: string;
+    }[];
   } = {},
 ) {
   const code = options.code ?? uniqueCode();

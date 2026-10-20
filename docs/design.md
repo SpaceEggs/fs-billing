@@ -219,7 +219,7 @@ Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBi
 ### 6.1 结构
 
 - **每个租户一张独立的费率表**
-- 每张表包含若干条：前缀、国家/备注、每分钟费率
+- 每张表包含若干条：ISO、国家、号码前缀、说明、每分钟费率
 - 规模：每张表约几百条
 - 费率精度：**4 位小数**
 
@@ -228,7 +228,7 @@ Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBi
 | 被叫号码 | 候选前缀 | 使用 |
 |---|---|---|
 | 1876xxxxxxx | `1`、`1876` | `1876`（牙买加） |
-| 447xxxxxxxx | `44`、`447` | `447`（英国手机） |
+| 447xxxxxxxx | `44`、`447` | `447`（英国 · 手机） |
 
 匹配不到任何前缀 → 呼叫前授权直接拒绝。
 
@@ -243,7 +243,7 @@ Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBi
 
 ### 6.4 管理操作
 
-- **CSV 导入**：表头为 `prefix,country,rate` 或 `前缀,国家,费率`，文件编码为 UTF-8 或 GBK。有任何一行出错，整个文件不导入，并提示所有出错的行号和原因
+- **CSV 导入**：表头必填，为 `ISO,Country,Destination Prefix,Description,Rate`（也接受 `Destination Prefixes`）或 `ISO,国家,号码前缀,说明,费率`，大小写不敏感。ISO 可空，有值时为两位字母并存大写；国家必填，说明可空且对客户可见。旧三列文件不再接受。国家和说明各最多 200 字，不含换行，文件编码为 UTF-8 或 GBK。有任何一行出错，整个文件不导入，并提示所有出错的行号和原因
 - 导入限制：文件不超过 2 MiB，不超过 10000 行（行数上限可配置）。超出时整表不变
 - 导入先预览再提交。预览 60 分钟内有效（可配置），提交时重新检查费率版本和生效时间，期间费率表被别人改过就要重新预览
 - **CSV 导出**：当前版本和排定的版本都可以导出，导出也记入操作日志
@@ -441,3 +441,5 @@ Worker 是号码归一化的权威。授权与 CDR 都调用同一个 `resolveBi
 - **会话身份**：应用连接角色 `fs_billing_app` 没有 BYPASSRLS。业务事务必须经 `withTenant` / `withAdmin` / `withSystem` 声明 `app.scope`，未声明时任何业务行都读不到（§11）。登录相关的表放在独立的 `auth` schema，用 `fs_billing_auth` 角色连接。
 - **金额类型**：`Money<Currency>` / `Rate<Currency>` 品牌类型由 `packages/rating` 提供，不同币种相加在类型检查阶段报错。ESLint 规则 `money/no-number-money` 覆盖 `packages/rating`、`packages/db`、`apps/worker` 与 `apps/web/src`，禁止对金额做原生算术、自增自减、复合赋值，以及把小数或金额变量交给 `Math` / `Number` / `parseFloat` / `parseInt`。
 - **话单分区**：`cdrs` 与 `raw_cdrs` 按月分区，只在维护路径创建（迁移、种子、Worker 启动与每日任务）。持有租户锁的事务里不能建分区。
+
+费率条目独立保存 `iso`、`country`、`prefix`、`description`、`rate`。话单快照分开保存 ISO、国家、说明，国家筛选和汇总只按国家。历史数据不回填。见 [费率表五列设计](rate-list-design.md)。

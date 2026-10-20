@@ -25,9 +25,9 @@ const versionB = '00000000-0000-4000-8000-0000000000bb';
 const previewId = '00000000-0000-4000-8000-0000000000cc';
 
 const entries = [
-  { prefix: '86', country: '中国', rate: '0.045' },
-  { prefix: '1876', country: '牙买加', rate: '0.3' },
-  { prefix: '44', country: '英国', rate: '0.05' },
+  { iso: '', description: '', prefix: '86', country: '中国', rate: '0.045' },
+  { iso: '', description: '', prefix: '1876', country: '牙买加', rate: '0.3' },
+  { iso: '', description: '', prefix: '44', country: '英国', rate: '0.05' },
 ];
 
 function rates(id: string, scheduled: unknown[] = []) {
@@ -46,15 +46,42 @@ const okPreview = {
   encoding: 'GBK',
   counts: { added: 1, modified: 1, deleted: 1 },
   changes: [
-    { kind: 'added', after: { prefix: '33', country: '法国', rate: '0.06' } },
+    {
+      kind: 'added',
+      after: {
+        iso: '',
+        description: '',
+        prefix: '33',
+        country: '法国',
+        rate: '0.06',
+      },
+    },
     {
       kind: 'modified',
-      before: { prefix: '86', country: '中国', rate: '0.045' },
-      after: { prefix: '86', country: '中国', rate: '0.05' },
+      before: {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.045',
+      },
+      after: {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.05',
+      },
     },
     {
       kind: 'deleted',
-      before: { prefix: '1876', country: '牙买加', rate: '0.3' },
+      before: {
+        iso: '',
+        description: '',
+        prefix: '1876',
+        country: '牙买加',
+        rate: '0.3',
+      },
     },
   ],
 };
@@ -121,7 +148,9 @@ const scheduledVersion = {
 };
 
 async function openAndUpload(
-  file = csv('prefix,country,rate\n86,中国,0.05\n'),
+  file = csv(
+    'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.05\n',
+  ),
 ) {
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: '导入 CSV' }));
@@ -154,7 +183,7 @@ describe('rate import dialog', () => {
 
     await user.upload(
       within(dialog).getByLabelText('选择 CSV 文件'),
-      csv('prefix,country,rate\n86,中国,0.05\n'),
+      csv('ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.05\n'),
     );
     expect(next).toBeEnabled();
   });
@@ -175,7 +204,7 @@ describe('rate import dialog', () => {
     renderTab();
     const { user, dialog } = await openAndUpload(
       csv(
-        '前缀,国家,费率\r\n8a6,中国,0.05\r\n44,英国,-0.1\r\n33,法国,0.06\r\n1,美国,0.12345\r\n',
+        'ISO,国家,号码前缀,说明,费率\r\n,中国,8a6,,0.05\r\n,英国,44,,-0.1\r\n,法国,33,,0.06\r\n,美国,1,,0.12345\r\n',
       ),
     );
     await user.click(
@@ -190,9 +219,9 @@ describe('rate import dialog', () => {
       .slice(1)
       .map((row) => row.textContent);
     expect(rows).toEqual([
-      '第 2 行前缀只能是数字：8a68a6,中国,0.05',
-      '第 3 行费率不能为负：-0.144,英国,-0.1',
-      '第 5 行费率最多 4 位小数：0.123451,美国,0.12345',
+      '第 2 行前缀只能是数字：8a6,中国,8a6,,0.05',
+      '第 3 行费率不能为负：-0.1,英国,44,,-0.1',
+      '第 5 行费率最多 4 位小数：0.12345,美国,1,,0.12345',
       '第 9 行文件没有费率行—',
     ]);
     expect(
@@ -249,7 +278,9 @@ describe('rate import dialog', () => {
         filename: '费率_修订版.csv',
         contentBase64: btoa(
           String.fromCharCode(
-            ...new TextEncoder().encode('prefix,country,rate\n86,中国,0.05\n'),
+            ...new TextEncoder().encode(
+              'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.05\n',
+            ),
           ),
         ),
       },
@@ -507,8 +538,20 @@ describe('rate import dialog', () => {
             // 北京时间 2026-11-01 08:00。
             effectiveFrom: '2026-11-01T00:00:00.000Z',
             entries: [
-              { prefix: '86', country: '中国', rate: '0.048' },
-              { prefix: '44', country: '英国', rate: '0.05' },
+              {
+                iso: '',
+                description: '',
+                prefix: '86',
+                country: '中国',
+                rate: '0.048',
+              },
+              {
+                iso: '',
+                description: '',
+                prefix: '44',
+                country: '英国',
+                rate: '0.05',
+              },
             ],
           },
         ]),
@@ -558,7 +601,7 @@ describe('rate import dialog', () => {
     expect(posts).toEqual([]);
   });
 
-  it('downloads the template as UTF-8 with BOM, header and one example row', async () => {
+  it('downloads the template as UTF-8 with BOM, header and two example rows', async () => {
     stubApi(() => ({ status: 500 }));
     let blob: Blob | undefined;
     vi.stubGlobal('URL', {
@@ -584,7 +627,9 @@ describe('rate import dialog', () => {
       0xef,
       0xbb,
       0xbf,
-      ...new TextEncoder().encode('前缀,国家,费率\r\n1,美国,0.0500\r\n'),
+      ...new TextEncoder().encode(
+        'ISO,国家,号码前缀,说明,费率\r\nGB,英国,44,,0.0200\r\nGB,英国,447,手机,0.0450\r\n',
+      ),
     ]);
     expect(blob!.type).toBe('text/csv;charset=utf-8');
   });

@@ -28,7 +28,7 @@ SQL
 
 - Require exact raw text and NULL payload for the invalid JSON. Fresh seed has a pending `ABC01` call with reason `找不到租户`. Rollback removes the raw example.
 - Acceptance reads raw whitespace/key order/duplicate keys unchanged while JSONB is canonicalized; malformed and numeric-overflow JSON still store raw text with NULL payload. Formal UUID duplication fails `23505` across months.
-- Formal unanswered rows require duration/minutes/charge 0. Answered rows require answer within start/end and non-NULL matched prefix/country/rate. End must not precede start; duration and charges are nonnegative. Save summary and independent SQL output.
+- ISO and Description are nullable, including on partitions. Old rows retain NULL; new answered calls snapshot nonempty ISO/Description from the matched rate, and blank strings become NULL. ISO must be two uppercase letters or NULL. Formal unanswered rows require duration/minutes/charge 0. Answered rows require answer within start/end and non-NULL matched prefix/country/rate. End must not precede start; duration and charges are nonnegative. Save summary and independent SQL output.
 
 ## Gotchas
 

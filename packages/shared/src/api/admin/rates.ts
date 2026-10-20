@@ -16,10 +16,19 @@ export const adminRateEntrySchema = z.strictObject({
     .refine((value) => !value.startsWith('00'), {
       message: '前缀不能包含国际冠字 00',
     }),
+  iso: z
+    .string()
+    .trim()
+    .regex(/^(?:[A-Za-z]{2})?$/, 'ISO 必须是两位字母，或留空')
+    .toUpperCase(),
+  description: z
+    .string()
+    .refine((value) => !/[\r\n]/.test(value), { message: '说明不能包含换行' })
+    .pipe(z.string().trim().max(200)),
   country: z
     .string()
     .refine((value) => !/[\r\n]/.test(value), {
-      message: '国家/备注不能包含换行',
+      message: '国家不能包含换行',
     })
     .pipe(z.string().trim().min(1).max(200)),
   rate: adminRateAmountSchema,

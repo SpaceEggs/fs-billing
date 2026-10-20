@@ -97,7 +97,15 @@ async function fixture() {
     createRateVersion(
       tx,
       tenant.id,
-      [{ prefix: '447', country: '英国', perMinute: rate('CNY', '0.0480') }],
+      [
+        {
+          iso: '',
+          description: '',
+          prefix: '447',
+          country: '英国',
+          perMinute: rate('CNY', '0.0480'),
+        },
+      ],
       { effectiveFrom: new Date('2026-09-01T00:00:00Z') },
     ),
   );

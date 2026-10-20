@@ -36,6 +36,8 @@ try {
       tx,
       id,
       Array.from({ length: 500 }, (_, index) => ({
+        iso: 'ZZ',
+        description: '压测',
         prefix: String(1000 + index),
         country: `压测 ${index}`,
         perMinute: rate('CNY', '0.1000'),

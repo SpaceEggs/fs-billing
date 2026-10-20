@@ -1,0 +1,92 @@
+
+> fs-billing@ test:e2e /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+> pnpm --filter @fs-billing/web test:e2e
+
+
+> @fs-billing/web@ test:e2e /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/web
+> playwright test
+
+[WebServer] (node:20570) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:20587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:20617) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:20649) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:20655) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:20672) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+> @fs-billing/api@ auth:seed /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing/apps/api
+> node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts
+
+开发种子凭据已初始化，已有凭据保持不变。
+
+Running 50 tests using 1 worker
+
+(node:20734) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › e2e/admin-accounts.spec.ts:51:1 › shows temporary password once (1.2s)
+  ✓   2 [chromium] › e2e/admin-accounts.spec.ts:88:1 › blocks self disable (205ms)
+  ✓   3 [chromium] › e2e/admin-accounts.spec.ts:99:1 › resets, disables and enables another admin (1.1s)
+  ✓   4 [chromium] › e2e/admin-accounts.spec.ts:147:1 › opens a missing portal account from the portal tab (766ms)
+  ✓   5 [chromium] › e2e/admin-accounts.spec.ts:169:1 › portal reset and disable (1.1s)
+  ✓   6 [chromium] › e2e/admin-balance.spec.ts:10:1 › blocks blank adjustment reason (522ms)
+  ✓   7 [chromium] › e2e/admin-balance.spec.ts:41:1 › disabled tenant confirmation explains unchanged status (488ms)
+  ✓   8 [chromium] › e2e/admin-balance.spec.ts:72:1 › gift and credit require second confirmation only above configured currency threshold (1.1s)
+  ✓   9 [chromium] › e2e/admin-balance.spec.ts:123:1 › ledger range defaults to this Beijing month and filters by a picked range (864ms)
+  ✓  10 [chromium] › e2e/admin-onboarding.spec.ts:8:1 › creates a run-unique tenant, imports rates, credits 500 and opens portal account (1.1s)
+  ✓  11 [chromium] › e2e/admin-rates.spec.ts:88:1 › cancels selected scheduled version (401ms)
+  ✓  12 [chromium] › e2e/admin-rates.spec.ts:135:1 › cancel inside the clock skew margin is refused with refresh (358ms)
+  ✓  13 [chromium] › e2e/admin-rates.spec.ts:165:1 › minute picker submits Beijing schedule (488ms)
+  ✓  14 [chromium] › e2e/admin-rates.spec.ts:207:1 › cancel edit reschedule audits each step (954ms)
+  ✓  15 [chromium] › e2e/admin-rates.spec.ts:306:1 › exports the current version as CSV (242ms)
+  ✓  16 [chromium] › e2e/admin-rates.spec.ts:324:1 › exports a scheduled version as CSV from its card (G11) (268ms)
+  ✓  17 [chromium] › e2e/admin-rates.spec.ts:360:1 › shows every CSV error line (421ms)
+  ✓  18 [chromium] › e2e/admin-rates.spec.ts:394:1 › imports a CSV immediately and updates the table (548ms)
+  ✓  19 [chromium] › e2e/admin-rates.spec.ts:431:1 › mobile only views and searches rates (264ms)
+  ✓  20 [chromium] › e2e/admin-rates.spec.ts:471:1 › pushes a full rate table to a same-currency tenant (595ms)
+  ✓  21 [chromium] › e2e/admin-rates.spec.ts:557:1 › pulls a rate table into an empty tenant (481ms)
+  ✓  22 [chromium] › e2e/admin-receivables.spec.ts:44:1 › renders CNY and USD totals separately (455ms)
+  ✓  23 [chromium] › e2e/admin-receivables.spec.ts:73:1 › confirms full payment without changing balance (465ms)
+  ✓  24 [chromium] › e2e/admin-receivables.spec.ts:111:1 › refreshes after settlement conflict (614ms)
+  ✓  25 [chromium] › e2e/admin-receivables.spec.ts:181:1 › reverses then reconfirms with fresh token (918ms)
+  ✓  26 [chromium] › e2e/admin-receivables.spec.ts:243:1 › voids with linked adjustment (845ms)
+  ✓  27 [chromium] › e2e/admin-receivables.spec.ts:294:1 › mobile cards keep full-height row actions (370ms)
+  ✓  28 [chromium] › e2e/admin-settings.spec.ts:6:1 › warns for empty recipients after load and save (629ms)
+  ✓  29 [chromium] › e2e/admin-tenants.spec.ts:6:1 › tenant list shows seeded tenants with status and per-currency balances (320ms)
+  ✓  30 [chromium] › e2e/admin-tenants.spec.ts:27:1 › onboarding shows the generated portal password once and the new account must change it (1.2s)
+  ✓  31 [chromium] › e2e/admin-tenants.spec.ts:87:1 › a duplicate tenant code is reported on the code field (358ms)
+  ✓  32 [chromium] › e2e/admin-tenants.spec.ts:101:1 › overview tab shows this month, call counts and the 30-day chart from the API (281ms)
+  ✓  33 [chromium] › e2e/admin-tenants.spec.ts:153:1 › disable confirmation explains live call behavior (387ms)
+  -  34 [chromium] › e2e/admin-visual.spec.ts:801:1 › matches seeded admin pages in light dark and mobile
+(node:20995) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  35 [chromium] › e2e/auth.spec.ts:12:1 › customer login enters the portal and shows the CNY balance (360ms)
+  ✓  36 [chromium] › e2e/auth.spec.ts:24:1 › USD customer balance uses the dollar sign (256ms)
+  ✓  37 [chromium] › e2e/auth.spec.ts:31:1 › admin login enters the admin shell (340ms)
+  ✓  38 [chromium] › e2e/auth.spec.ts:41:1 › the login response kind decides the zone, not the login page used (695ms)
+  ✓  39 [chromium] › e2e/auth.spec.ts:56:1 › an expired cookie redirects to login and returns to the original page (705ms)
+  ✓  40 [chromium] › e2e/auth.spec.ts:70:1 › a session revoked in the database prompts re-login and returns to the page (655ms)
+  ✓  41 [chromium] › e2e/auth.spec.ts:96:1 › a return path from the other zone falls back to the identity home (418ms)
+  ✓  42 [chromium] › e2e/auth.spec.ts:105:1 › unknown pages show the 404 page and link home (506ms)
+[WebServer] 2026-10-19T20:35:24.407Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-19T20:35:24.507Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-19T20:35:24.611Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-19T20:35:24.703Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-19T20:35:24.788Z WARN [Better Auth]: Invalid password
+  ✓  43 [chromium] › e2e/auth.spec.ts:126:1 › wrong passwords lock the account and show the retry countdown (626ms)
+[WebServer] 2026-10-19T20:35:25.022Z WARN [Better Auth]: User not found
+[WebServer] 2026-10-19T20:35:25.124Z WARN [Better Auth]: Invalid password
+  ✓  44 [chromium] › e2e/auth.spec.ts:160:1 › unknown email and wrong password show the same message (344ms)
+  ✓  45 [chromium] › e2e/auth.spec.ts:192:1 › a disabled account sees the disabled message (228ms)
+  ✓  46 [chromium] › e2e/auth.spec.ts:200:1 › logout from the account menu returns to the login page (536ms)
+  ✓  47 [chromium] › e2e/auth.spec.ts:214:1 › a failed logout keeps the session and offers a retry (779ms)
+  ✓  48 [chromium] › e2e/auth.spec.ts:246:1 › a forbidden home context shows an explicit error, not a skeleton (354ms)
+  ✓  49 [chromium] › e2e/auth.spec.ts:265:1 › theme choice is applied and persisted (528ms)
+  ✓  50 [chromium] › e2e/auth.spec.ts:299:3 › mobile 375px › mobile login, account sheet theme switch and logout (544ms)
+
+  1 skipped
+  49 passed (33.1s)

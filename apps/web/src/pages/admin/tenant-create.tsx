@@ -155,7 +155,7 @@ function CsvPicker({
           ? `正在读取 ${reading}…`
           : file
             ? `已选择 ${file.filename}`
-            : '整表导入；首行可为表头 prefix,country,rate 或 前缀,国家,费率；支持 UTF-8 与 GBK'}
+            : '整表导入；首行必须为表头 ISO,Country,Destination Prefix,Description,Rate 或 ISO,国家,号码前缀,说明,费率；支持 UTF-8 与 GBK'}
       </span>
     </div>
   );

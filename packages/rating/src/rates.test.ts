@@ -12,7 +12,13 @@ import {
 
 const num = (raw: string): DialedNumber => parseDialedNumber(raw)!;
 const entry = (prefix: string, country: string, value: string) =>
-  ({ prefix, country, perMinute: rate('CNY', value) }) as RateEntry<'CNY'>;
+  ({
+    iso: '',
+    description: '',
+    prefix,
+    country,
+    perMinute: rate('CNY', value),
+  }) as RateEntry<'CNY'>;
 
 describe('design.md §6.2 最长前缀', () => {
   const entries = [
@@ -61,4 +67,25 @@ describe('design.md §6.3 生效时间', () => {
       findRate(table, num('44712345678'), beijingTime('2025-12-31 23:59:59')),
     ).toBeUndefined();
   });
+});
+
+test('longest prefix returns the matched entry own ISO and description', () => {
+  const rows = [
+    {
+      prefix: '44',
+      iso: 'GB',
+      country: '英国',
+      description: '',
+      perMinute: rate('CNY', '0.02'),
+    },
+    {
+      prefix: '447',
+      iso: 'GB',
+      country: '英国',
+      description: '手机',
+      perMinute: rate('CNY', '0.045'),
+    },
+  ];
+  expect(longestPrefix(rows, num('447700900123'))).toBe(rows[1]);
+  expect(longestPrefix(rows, num('442071234567'))).toBe(rows[0]);
 });

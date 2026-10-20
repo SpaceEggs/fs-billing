@@ -29,29 +29,19 @@ export function parseInitialRateCsv<C extends Currency>(
       );
     }
   }
-  const result = parseRateCsv(text, currency);
+  const result = parseRateCsv(text, currency, {
+    validateEntry: (entry) => {
+      const parsed = adminRateEntrySchema.safeParse({
+        prefix: entry.prefix,
+        iso: entry.iso,
+        country: entry.country,
+        description: entry.description,
+        rate: entry.perMinute.perMinute.toFixed(),
+      });
+      return parsed.success ? undefined : parsed.error.issues[0]?.message;
+    },
+  });
   const errors = result.ok ? [] : [...result.errors];
-  text
-    .replace(/^\uFEFF/, '')
-    .split(/\r?\n/)
-    .forEach((line, index) => {
-      const parsed = parseRateCsv(line, currency);
-      if (!parsed.ok) return;
-      for (const entry of parsed.entries) {
-        const validated = adminRateEntrySchema.safeParse({
-          prefix: entry.prefix,
-          country: entry.country,
-          rate: entry.perMinute.perMinute.toFixed(),
-        });
-        if (!validated.success)
-          errors.push(
-            ...validated.error.issues.map((issue) => ({
-              line: index + 1,
-              reason: issue.message,
-            })),
-          );
-      }
-    });
   if (errors.length > 0)
     throw new AdminServiceError(
       'CSV_INVALID',

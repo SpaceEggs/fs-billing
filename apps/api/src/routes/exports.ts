@@ -28,7 +28,9 @@ const cdrHeaders = [
   '接通时间',
   '主叫号码',
   '被叫号码',
-  '国家/备注',
+  'ISO',
+  '国家',
+  '说明',
   '通话时长(秒)',
   '计费时长(分钟)',
   '费率',
@@ -49,6 +51,8 @@ type CdrExportRow = QueryResultRow & {
   caller: string;
   callee: string;
   country: string | null;
+  iso: string | null;
+  description: string | null;
   durationSeconds: number;
   billedMinutes: string;
   rate: string | null;
@@ -145,7 +149,9 @@ export function exportHandlers({
           row.calledAt,
           row.caller,
           row.callee,
+          row.iso ?? '',
           row.country ?? '未接通',
+          row.description ?? '',
           String(row.durationSeconds),
           row.billedMinutes,
           row.rate ?? '',
@@ -186,7 +192,9 @@ export function exportHandlers({
           row.calledAt,
           row.caller,
           row.callee,
+          row.iso ?? '',
           row.country ?? '未接通',
+          row.description ?? '',
           String(row.durationSeconds),
           row.billedMinutes,
           row.rate ?? '',

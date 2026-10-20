@@ -175,7 +175,15 @@ describe('admin tenant and balance services', () => {
         ...request,
         initialRates: {
           kind: 'entries',
-          entries: [{ prefix: '1', country: '美国', rate: '0.01' }],
+          entries: [
+            {
+              iso: 'US',
+              description: '共享',
+              prefix: '1',
+              country: '美国',
+              rate: '0.01',
+            },
+          ],
         },
       },
     });
@@ -193,11 +201,19 @@ describe('admin tenant and balance services', () => {
     expect(
       (
         await owner.pool.query(
-          'select prefix,country,rate::text from rate_entries where tenant_id=$1',
+          'select prefix,iso,country,description,rate::text from rate_entries where tenant_id=$1',
           [copied.tenant.id],
         )
       ).rows,
-    ).toEqual([{ prefix: '1', country: '美国', rate: '0.01' }]);
+    ).toEqual([
+      {
+        iso: 'US',
+        description: '共享',
+        prefix: '1',
+        country: '美国',
+        rate: '0.01',
+      },
+    ]);
     const csv = await createTenant({
       db: app.db,
       actor,
@@ -209,7 +225,7 @@ describe('admin tenant and balance services', () => {
           file: {
             filename: 'rates.csv',
             contentBase64: Buffer.from(
-              'prefix,country,rate\n44,英国,0.04',
+              'ISO,Country,Destination Prefix,Description,Rate\nGB,英国,44,本土,0.04',
             ).toString('base64'),
           },
         },
@@ -218,11 +234,13 @@ describe('admin tenant and balance services', () => {
     expect(
       (
         await owner.pool.query(
-          'select prefix from rate_entries where tenant_id=$1',
+          'select prefix, iso, country, description from rate_entries where tenant_id=$1',
           [csv.tenant.id],
         )
       ).rows,
-    ).toEqual([{ prefix: '44' }]);
+    ).toEqual([
+      { prefix: '44', iso: 'GB', country: '英国', description: '本土' },
+    ]);
     for (const [currency, sourceTenantId, code] of [
       ['USD', source.tenant.id, 'CURRENCY_MISMATCH'],
       ['CNY', randomUUID(), 'NOT_FOUND'],
@@ -248,7 +266,7 @@ describe('admin tenant and balance services', () => {
       ).toEqual([]);
     }
     for (const [content, code] of [
-      [Buffer.from('44,英国,-1'), 'CSV_INVALID'],
+      [Buffer.from(',英国,44,,-1'), 'CSV_INVALID'],
       [Buffer.from([0xff]), 'CSV_ENCODING_UNSUPPORTED'],
     ] as const) {
       const req = {
@@ -287,7 +305,7 @@ describe('admin tenant and balance services', () => {
         file: {
           filename: 'gbk.csv',
           contentBase64: Buffer.from(
-            '7072656669782c636f756e7472792c726174650a312cd6d0b9fa2c302e3031',
+            '49534f2c436f756e7472792c44657374696e6174696f6e205072656669782c4465736372697074696f6e2c526174650a434e2cd6d0b9fa2c312c2c302e3031',
             'hex',
           ).toString('base64'),
         },
@@ -320,7 +338,7 @@ describe('admin tenant and balance services', () => {
             file: {
               filename: 'long.csv',
               contentBase64: Buffer.from(
-                `prefix,country,rate\n\n1,${long},0.01\n44,${long},0.02`,
+                `ISO,Country,Destination Prefix,Description,Rate\n\n,${long},1,,0.01\nGB,${long},44,,0.02`,
               ).toString('base64'),
             },
           },
@@ -332,7 +350,7 @@ describe('admin tenant and balance services', () => {
     });
     const many = Array.from(
       { length: 10001 },
-      (_, index) => `${index + 1},国家,0.01`,
+      (_, index) => `,国家,${index + 1},,0.01`,
     ).join('\n');
     await expect(
       createTenant({
@@ -345,7 +363,9 @@ describe('admin tenant and balance services', () => {
             kind: 'csv',
             file: {
               filename: 'many.csv',
-              contentBase64: Buffer.from(many).toString('base64'),
+              contentBase64: Buffer.from(
+                'ISO,Country,Destination Prefix,Description,Rate\n' + many,
+              ).toString('base64'),
             },
           },
         },

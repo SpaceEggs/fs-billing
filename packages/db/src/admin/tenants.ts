@@ -218,6 +218,8 @@ export async function createTenant({
           entries = input.initialRates.entries.map((entry) => ({
             prefix: entry.prefix,
             country: entry.country,
+            iso: entry.iso,
+            description: entry.description,
             perMinute: rate(input.currency, entry.rate),
           }));
           break;
@@ -262,6 +264,8 @@ export async function createTenant({
           ).map((entry) => ({
             prefix: entry.prefix,
             country: entry.country,
+            iso: entry.iso,
+            description: entry.description,
             perMinute: rate(input.currency, entry.rate),
           }));
           break;

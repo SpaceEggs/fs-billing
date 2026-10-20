@@ -388,3 +388,44 @@ describe('计费号码约束', () => {
     },
   );
 });
+
+it('cdrs_iso_check rejects lowercase ISO and accepts NULL on the real partitioned table', async () => {
+  const startedAt = '2026-10-12T10:00:00+08:00';
+  await ensureCdrPartitions(app.db, { moment: new Date(startedAt) });
+  const tenant = await createTenant(app, 'CNY');
+  const row = (iso: string | null) => ({
+    ...unanswered(tenant.id, randomUUID(), startedAt),
+    answeredAt: new Date(startedAt),
+    durationSeconds: 30,
+    billedMinutes: '1',
+    matchedPrefix: '44',
+    callee: '442071234567',
+    billingNumber: '442071234567',
+    hangupCause: 'NORMAL_CLEARING',
+    country: '英国',
+    rate: '0.02',
+    charge: '0.02',
+    iso,
+  });
+  for (const iso of [null, 'GB']) {
+    const stored = await withAdmin(app.db, (tx) =>
+      tx
+        .insert(cdrs)
+        .values(row(iso))
+        .returning({ callUuid: cdrs.callUuid, iso: cdrs.iso }),
+    );
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.iso).toBe(iso);
+    const partition = await withAdmin(app.db, (tx) =>
+      partitionOf(tx, stored[0]!.callUuid),
+    );
+    expect(partition.rows).toEqual([{ partition: 'cdrs_2026_10' }]);
+  }
+  for (const iso of ['gb', 'GBR']) {
+    expect(
+      await pgError(
+        withAdmin(app.db, (tx) => tx.insert(cdrs).values(row(iso))),
+      ),
+    ).toMatchObject({ code: '23514', constraint: 'cdrs_iso_check' });
+  }
+});

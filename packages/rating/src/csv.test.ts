@@ -10,182 +10,177 @@ import {
   rate,
 } from './index.js';
 
-test('valid file with header, BOM and CRLF', () => {
-  const result = parseRateCsv(
-    '\uFEFFprefix,country,rate\r\n1876,牙买加,0.2000\r\n447,英国手机,0.0450\r\n',
+const header = 'ISO,Country,Destination Prefix,Description,Rate';
+const parse = (rows: string) => parseRateCsv(`${header}\n${rows}`, 'CNY');
+
+test('valid five-column file with header, BOM and CRLF', () => {
+  const parsed = parseRateCsv(
+    `\uFEFF${header}\r\nGB,英国,44,,0.0200\r\nGB,英国,447,手机,0.0450\r\n,美国/加拿大,1,,0.0100`,
     'CNY',
   );
-  expect(result.ok).toBe(true);
-  if (!result.ok) return;
+  expect(parsed.ok).toBe(true);
+  if (!parsed.ok) return;
   expect(
-    result.entries.map((e) => [
-      e.prefix,
-      e.country,
-      e.perMinute.perMinute.toString(),
-    ]),
+    parsed.entries.map(({ iso, country, prefix, description }) => ({
+      iso,
+      country,
+      prefix,
+      description,
+    })),
   ).toEqual([
-    ['1876', '牙买加', '0.2'],
-    ['447', '英国手机', '0.045'],
+    { iso: 'GB', country: '英国', prefix: '44', description: '' },
+    { iso: 'GB', country: '英国', prefix: '447', description: '手机' },
+    { iso: '', country: '美国/加拿大', prefix: '1', description: '' },
   ]);
 });
 
-test('3 bad rows → 3 errors with line numbers, nothing imported', () => {
-  const result = parseRateCsv(
-    [
-      'prefix,country,rate',
-      '1876,牙买加,0.2000',
-      '44a,英国,0.0400',
-      '1876,重复,0.1000',
-      '447,英国手机,-0.0450',
-      '86,中国,0.0100',
-    ].join('\n'),
-    'CNY',
+test.each([
+  'iso,COUNTRY,destination prefix,Description,RATE',
+  'ISO,Country,Destination Prefixes,Description,Rate',
+  'ISO,国家,号码前缀,说明,费率',
+])('accepts header %s and trailing empty columns', (heading) => {
+  expect(parseRateCsv(`${heading},,\nkr,韩国,82,,0.05,,`, 'CNY')).toMatchObject(
+    { ok: true, entries: [{ iso: 'KR', description: '' }] },
   );
-  expect(result).toEqual({
+});
+
+test.each([
+  ['ß,英国,44,,0.02', 'ISO 必须是两位字母，或留空：ß'],
+  ['GBR,英国,44,,0.02', 'ISO 必须是两位字母，或留空：GBR'],
+  ['G1,英国,44,,0.02', 'ISO 必须是两位字母，或留空：G1'],
+  ['英国,英国,44,,0.02', 'ISO 必须是两位字母，或留空：英国'],
+  ['GB,,44,,0.02', '国家不能为空'],
+  ['GB,英国,447,0.0450', '应为 5 列，实际 4 列'],
+  ['GB,英国,44,,0.02,x', '应为 5 列，实际 6 列'],
+  ['GB,英国,44a,,0.02', '前缀只能是数字：44a'],
+  ['GB,英国,,,0.02', '前缀只能是数字：'],
+  ['GB,英国,0044,,0.02', '前缀不能以 00 开头（国际冠字应去掉）：0044'],
+  ['GB,英国,44,,abc', '费率不是数字：abc'],
+  ['GB,英国,44,,-1', '费率不能为负：-1'],
+  ['GB,英国,44,,0.12345', '费率最多 4 位小数：0.12345'],
+  ['GB,"英国"x,44,,0.02', '引号后只能是逗号'],
+  ['GB,英"国,44,,0.02', '未加引号的字段中不能有引号'],
+  ['GB,"英国,44,,0.02', '引号未闭合（引号内不能换行）'],
+])('row errors keep their physical line numbers: %s', (row, reason) => {
+  expect(parseRateCsv(`\n${header}\n\n${row}`, 'CNY')).toEqual({
+    ok: false,
+    errors: [{ line: 4, reason }],
+  });
+});
+
+test.each(['prefix,country,rate', '前缀,国家,费率', '44,英国,0.02'])(
+  'old three-column format %s gets only the dedicated error',
+  (old) => {
+    const result = parseRateCsv(`\n${old}\n44,英国,bad`, 'CNY');
+    expect(result).toEqual({
+      ok: false,
+      errors: [
+        {
+          line: 2,
+          reason:
+            '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板',
+        },
+      ],
+    });
+  },
+);
+
+test.each([
+  'GB,英国,447,手机,0.0450',
+  'ISO,Country,Prefix,Description,Rate',
+  'ISO，Country，Destination Prefix，Description，Rate',
+  'prefix,country,price',
+])(
+  'header is mandatory and near-miss %s reports its physical line',
+  (first) => {
+    expect(parseRateCsv(`\uFEFF\n\n${first}\nGB,英国,44,,bad`, 'CNY')).toEqual({
+      ok: false,
+      errors: [
+        expect.objectContaining({
+          line: 3,
+          reason:
+            '表头无法识别，第一行必须是：ISO,Country,Destination Prefix,Description,Rate（也可用中文表头 ISO,国家,号码前缀,说明,费率）',
+        }),
+      ],
+    });
+  },
+);
+
+test.each(['', header, `${header}\n\n`])(
+  'empty file is rejected: %s',
+  (text) => {
+    expect(parseRateCsv(text, 'CNY')).toEqual({
+      ok: false,
+      errors: [{ line: 1, reason: '文件没有费率行' }],
+    });
+  },
+);
+
+test('duplicate prefixes across descriptions are rejected, including prefixes on invalid rows', () => {
+  expect(parse('GB,,44,,0.02\nGB,英国,44,手机,0.05')).toEqual({
     ok: false,
     errors: [
-      { line: 3, reason: '前缀只能是数字：44a' },
-      { line: 4, reason: '前缀 1876 与第 2 行重复' },
-      { line: 5, reason: '费率不能为负：-0.0450' },
+      { line: 2, reason: '国家不能为空' },
+      { line: 3, reason: '前缀 44 与第 2 行重复' },
     ],
   });
 });
 
-test.each([
-  ['1,美国,0.12345', '费率最多 4 位小数：0.12345'],
-  ['1,美国,abc', '费率不是数字：abc'],
-  ['1,美国', '应为 3 列，实际 2 列'],
-  [',美国,0.1', '前缀只能是数字：'],
-])('%s → %s', (row, reason) => {
-  expect(parseRateCsv(row, 'USD')).toEqual({
+test('validateEntry errors are merged with parser errors by physical line', () => {
+  expect(
+    parseRateCsv(
+      `${header}\nGB,英国,44,,0.02\nGB,英国,0044,,0.02\nGB,英国,447,手机,0.05`,
+      'CNY',
+      {
+        validateEntry: (entry) => (entry.description ? '说明错误' : '国家错误'),
+      },
+    ),
+  ).toEqual({
     ok: false,
-    errors: [{ line: 1, reason }],
+    errors: [
+      { line: 2, reason: '国家错误' },
+      { line: 3, reason: '前缀不能以 00 开头（国际冠字应去掉）：0044' },
+      { line: 4, reason: '说明错误' },
+    ],
   });
 });
 
-test('empty file is rejected', () => {
-  expect(parseRateCsv('prefix,country,rate\n', 'USD')).toEqual({
-    ok: false,
-    errors: [{ line: 1, reason: '文件没有费率行' }],
-  });
-});
-
-test('quoted country with comma round-trips', () => {
-  const text = 'prefix,country,rate\n447,"Korea, Republic of",0.0450\n';
-  const parsed = parseRateCsv(text, 'USD');
-  expect(parsed.ok && parsed.entries[0]?.country).toBe('Korea, Republic of');
-  if (!parsed.ok) return;
-  expect(formatRateCsv(parsed.entries)).toBe(text);
-});
-
-test('"" escapes a quote and round-trips', () => {
-  const text = 'prefix,country,rate\n1,"美国 ""本土""",0.0100\n';
-  const parsed = parseRateCsv(text, 'USD');
-  expect(parsed.ok && parsed.entries[0]?.country).toBe('美国 "本土"');
-  if (!parsed.ok) return;
-  expect(formatRateCsv(parsed.entries)).toBe(text);
-});
-
-test('quoted prefix and rate are accepted', () => {
-  const parsed = parseRateCsv('"1876","牙买加","0.2000"', 'USD');
-  expect(parsed.ok && parsed.entries[0]?.prefix).toBe('1876');
-});
-
-test('trailing empty columns are tolerated', () => {
-  const parsed = parseRateCsv('1876,牙买加,0.2000,,', 'CNY');
-  expect(parsed.ok && parsed.entries.length).toBe(1);
-});
-
-test('header is detected on the first non-empty line only', () => {
-  expect(parseRateCsv('\n\nprefix,country,rate\n1,美国,0.01', 'USD').ok).toBe(
-    true,
+test('export writes five columns, LF, no BOM, four decimals and round-trips quotes without formula neutralization', () => {
+  const entries = [
+    {
+      iso: '',
+      country: '=shared',
+      prefix: '1',
+      description: 'a, "quote"',
+      perMinute: rate('CNY', '0.01'),
+    },
+    {
+      iso: 'GB',
+      country: '英国',
+      prefix: '44',
+      description: '',
+      perMinute: rate('CNY', '0.02'),
+    },
+  ];
+  const text = formatRateCsv(entries);
+  expect(text).toBe(
+    `${header}\n,=shared,1,"a, ""quote""",0.0100\nGB,英国,44,,0.0200\n`,
   );
-  expect(parseRateCsv('1,美国,0.01\nprefix,country,rate', 'USD')).toEqual({
-    ok: false,
-    errors: [{ line: 2, reason: '前缀只能是数字：prefix' }],
-  });
-});
-
-test('newline inside quotes is an error with line number', () => {
-  const result = parseRateCsv(
-    'prefix,country,rate\n1,美国,0.01\n44,"英国\n本土",0.04\n',
-    'USD',
-  );
-  expect(result.ok).toBe(false);
-  if (result.ok) return;
-  expect(result.errors[0]).toEqual({
-    line: 3,
-    reason: '引号未闭合（引号内不能换行）',
-  });
-});
-
-test.each([
-  ['1,"美国"x,0.01', '引号后只能是逗号'],
-  ['1,美"国,0.01', '未加引号的字段中不能有引号'],
-  ['1,,0.01', '国家/备注不能为空'],
-  ['1,"",0.01', '国家/备注不能为空'],
-  ['1,美国,0.01,x', '应为 3 列，实际 4 列'],
-])('%s → %s', (row, reason) => {
-  expect(parseRateCsv(row, 'USD')).toEqual({
-    ok: false,
-    errors: [{ line: 1, reason }],
-  });
+  expect(parseRateCsv(text, 'CNY')).toEqual({ ok: true, entries });
 });
 
 test('export quotes newlines', () => {
   expect(
     formatRateCsv([
-      { prefix: '1', country: 'A\nB', perMinute: rate('USD', '0.01') },
+      {
+        iso: '',
+        prefix: '1',
+        country: 'A\nB',
+        description: '',
+        perMinute: rate('USD', '0.01'),
+      },
     ]),
-  ).toBe('prefix,country,rate\n1,"A\nB",0.0100\n');
-});
-
-test('prefix starting with 00 is rejected with line number', () => {
-  expect(
-    parseRateCsv('prefix,country,rate\n44,英国,0.04\n0044,英国,0.04', 'USD'),
-  ).toEqual({
-    ok: false,
-    errors: [{ line: 3, reason: '前缀不能以 00 开头（国际冠字应去掉）：0044' }],
-  });
-});
-
-test('Chinese header preserves the rating dialect and physical error lines', () => {
-  const text = '\uFEFF\n 前缀,国家,费率,,\r\n44,"英国,本土",0.0400,,\r\n';
-  const parsed = parseRateCsv(text, 'CNY');
-  expect(parsed.ok).toBe(true);
-  if (!parsed.ok) return;
-  expect(formatRateCsv(parsed.entries)).toBe(
-    'prefix,country,rate\n44,"英国,本土",0.0400\n',
-  );
-  expect(parseRateCsv(text + '44,重复,0.01\n', 'CNY')).toEqual({
-    ok: false,
-    errors: [{ line: 4, reason: '前缀 44 与第 3 行重复' }],
-  });
-  expect(parseRateCsv('44,英国,0.04\n前缀,国家,费率', 'CNY')).toEqual({
-    ok: false,
-    errors: [{ line: 2, reason: '前缀只能是数字：前缀' }],
-  });
-});
-
-test.each([
-  '前缀,国家/地区,费率',
-  '前缀,国家,费率(元/分钟)',
-  '前缀，国家，费率',
-  'prefix，country，rate',
-  'prefix,country,price',
-  '前缀编号,国家,费率',
-])('near-miss header %s reports its physical line', (header) => {
-  expect(parseRateCsv(`\uFEFF\n\n${header}\n44,英国,0.04`, 'CNY')).toEqual({
-    ok: false,
-    errors: [{ line: 3, reason: '表头无法识别' }],
-  });
-});
-
-test('malformed numeric prefixes remain data errors on the first row', () => {
-  expect(parseRateCsv('44a,英国,0.04', 'CNY')).toEqual({
-    ok: false,
-    errors: [{ line: 1, reason: '前缀只能是数字：44a' }],
-  });
+  ).toBe(`${header}\n,"A\nB",1,,0.0100\n`);
 });
 
 test.each([

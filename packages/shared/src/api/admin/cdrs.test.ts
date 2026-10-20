@@ -17,6 +17,8 @@ import {
 
 const id = '550e8400-e29b-41d4-a716-446655440000';
 const answered = {
+  iso: null,
+  description: null,
   callUuid: id,
   startedAt: '2026-09-27T03:09:40.000Z',
   answeredAt: '2026-09-27T03:10:05.000Z',

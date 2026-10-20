@@ -354,7 +354,13 @@ it.each([1000, DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS + 1000])(
         schema: contract.adminRateEdit.request.body,
         body: {
           baseVersionId: id,
-          entry: { prefix: '1', country: '美国', rate: '0.1' },
+          entry: {
+            iso: '',
+            description: '',
+            prefix: '1',
+            country: '美国',
+            rate: '0.1',
+          },
         },
       },
       {
