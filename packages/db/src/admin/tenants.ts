@@ -26,6 +26,11 @@ import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
 import { readTenantUsageOverview, tenantMonthSpendSql } from '../usage.js';
 import { NotFoundError } from '../errors.js';
+import {
+  tenantAvailableText,
+  tenantBalanceText,
+  tenantHealth,
+} from '../tenant-health.js';
 import { createRateVersion } from '../rates.js';
 import { likeContains } from './like.js';
 import {
@@ -45,24 +50,16 @@ type TenantInput = {
   tenantId: string;
 };
 
-const balance = sql<string>`coalesce(${tenantBalances.balance}, 0)::text`;
-const available = sql<string>`(coalesce(${tenantBalances.balance}, 0) + ${tenants.overdraftLimit})::text`;
 const threshold = sql<string>`coalesce(${balanceAlertSettings.threshold}, 0)::text`;
-const health = sql<AdminTenantDetailResponse['health']>`case
- when ${tenants.status} = 'disabled' then 'disabled'
- when coalesce(${tenantBalances.balance},0) + ${tenants.overdraftLimit} <= 0 then 'suspended'
- when coalesce(${tenantBalances.balance},0) < 0 then 'overdraft'
- when ${balanceAlertSettings.tenantId} is not null and coalesce(${tenantBalances.balance},0) < ${balanceAlertSettings.threshold} then 'low_balance'
- else 'normal' end`;
 const monthConsumption = tenantMonthSpendSql(tenants.id);
 const pendingReceivable = sql<string>`coalesce((select sum(amount) from receivables r where r.tenant_id = ${tenants.id} and r.status = 'pending'),0)::text`;
 function tenantRows(tx: Tx) {
   return tx
     .select({
       ...getTableColumns(tenants),
-      balance,
-      availableBalance: available,
-      health,
+      balance: tenantBalanceText,
+      availableBalance: tenantAvailableText,
+      health: tenantHealth,
       monthConsumption,
       pendingReceivable,
       settingsId: balanceAlertSettings.tenantId,
@@ -154,7 +151,7 @@ export function listTenants({
           )
         : undefined,
       input.currency ? eq(tenants.currency, input.currency) : undefined,
-      input.status ? sql`${health} = ${input.status}` : undefined,
+      input.status ? sql`${tenantHealth} = ${input.status}` : undefined,
     );
     const [count] = await tx
       .select({ total: sql<number>`count(*)::int` })
@@ -168,7 +165,7 @@ export function listTenants({
     const rows = await tenantRows(tx)
       .where(filter)
       .orderBy(
-        sql`case ${health} when 'suspended' then 0 when 'overdraft' then 1 when 'low_balance' then 2 when 'normal' then 3 else 4 end`,
+        sql`case ${tenantHealth} when 'suspended' then 0 when 'overdraft' then 1 when 'low_balance' then 2 when 'normal' then 3 else 4 end`,
         tenants.currency,
         sql`coalesce(${tenantBalances.balance},0)`,
         tenants.code,
