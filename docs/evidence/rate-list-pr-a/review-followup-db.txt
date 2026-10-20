@@ -1,0 +1,9 @@
+
+ RUN  v5.0.4 /Users/lqzone/.codex/worktrees/rate-list-pr-a/FS-Billing
+
+
+ Test Files  2 passed (2)
+      Tests  46 passed (46)
+   Start at  10:16:46
+   Duration  3.39s (tests 69%, import 27%, transform 4%)
+

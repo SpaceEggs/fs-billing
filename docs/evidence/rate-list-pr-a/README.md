@@ -41,3 +41,18 @@ PERF_TARGET_DATABASE=fs_billing_perf_pr3_uuid_v4 PERF_DATABASE_PORT=55434 PERF_R
 ## 后续工作
 
 本地未执行测试服重建、部署和 Windows Excel 人工核对。PR B 实现后台五列布局、ISO/说明编辑和可见性提示；阶段 6 PR 4、5 用 `formatCountryLabel` 展示最近话单和话单列表。PR A 没有改这些页面的布局。
+
+## 2026-10-20 审阅补验
+
+补齐审阅指出的四处遗漏：
+
+- 阶段 6 设计的 `components/data-format.tsx` 行补上 `formatCountryLabel` 的共用位置和用途；决定 7 的来源补为「用户 2026-10-19 确认（费率表五列）」。
+- 开户 API 的负费率 CSV 补上五列表头，并断言第 2 行的具体原因「费率不能为负：-1」，防止表头错误也让测试通过。
+- 视觉用例的非法前缀行改成五列，并断言首条原因「前缀只能是数字：8a6」。显式启用视觉测试后脚本通过，浅色截图人工核对了对应文字；保存[浅色](review-import-errors-light.png)和[深色](review-import-errors-dark.png)截图。这次仅核对夹具和错误文案，不表示 PR B 五列界面的视觉验收已完成。
+- 增加真实 `public.cdrs` 分区表的 ISO 行为测试。向父表插入接通话单，确认 `NULL` 和 `GB` 成功并落入 `cdrs_2026_10`；`gb`、`GBR` 均报 SQLSTATE `23514` 且约束名为 `cdrs_iso_check`。不依赖临时表重放迁移。
+
+验证结果：
+
+- `pnpm check` 通过，见 [review-followup-check.txt](review-followup-check.txt)。
+- 开户 API 与 CDR 存储两个文件共 46 项通过，见 [review-followup-db.txt](review-followup-db.txt)；最终 CDR 文件复跑 28 项通过，见 [review-followup-cdrs.txt](review-followup-cdrs.txt)。
+- `FSB_VISUAL=1 FSB_EVIDENCE_DIR=/tmp/rate-list-pr-a-followup-visual pnpm --filter @fs-billing/web exec playwright test e2e/admin-visual.spec.ts` 通过，完整运行浅色、深色和手机场景，见 [review-followup-visual.txt](review-followup-visual.txt)。其余生成截图留在该临时目录，没有覆盖阶段 5 的历史对照证据。

@@ -400,25 +400,25 @@ ORDER BY p.at DESC NULLS LAST, p.sort_id DESC;
 
 页面细节以设计稿为准，下表只列要复用或要改的现有文件。
 
-| 文件                                                       | 复用或改动                                                                                                                                                                 | PR   |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| `lib/api.ts`                                               | `webApiContract` 并入 `adminCdrApiContract` 与 `portalApiContract`。新增 `callDownload`：POST、`blob()`、读 `Content-Disposition`，错误走同一个 `ApiRequestError`          | 3–5  |
-| `lib/download.ts`                                          | 现有 `downloadText` 只接字符串，新增 `downloadBlob(filename, blob)`                                                                                                        | 5    |
-| `lib/day-range.ts`                                         | 复用 `rangeOrMonthToDate` 作默认值（当月 1 日到今天）。结束日上限用共享的 `latestRangeEnd`                                                                                 | 5    |
-| `components/date-range-field.tsx`                          | 新增上限参数，月历把超出开始日加一个月的日期置灰，并显示设计稿 2f 的「最长一个月」。现在只有 `max` 一个上限                                                                | 5    |
-| `components/filter-sheet.tsx`                              | 手机筛选面板，话单（2e）和流水（5e）共用，已有                                                                                                                             | 5, 6 |
-| `components/pagination.tsx`                                | 现有组件是前端分页（`pageSlice`）。服务端分页复用 `Pagination`，`rowCount` 传 `pagination.total`，页码来自地址；另加「第 1–50 条，共 N 条」文字                            | 5, 6 |
-| `components/data-format.tsx`                               | `Money`、`Rate`、`DateTime` 已有。合并行的备注由 `formatMergedChargeNote` 生成                                                                                             | 5, 6 |
-| `components/status-tag.tsx`                                | `answered`、`unanswered`、`unverified` 标签已有。`unverified` 只在后台话单组件里引用，门户组件不 import                                                                    | 5    |
-| `components/admin/tenant-status.tsx`                       | 其中 `healthStatus` 门户首页也要用，PR 4 移到 `components/tenant-health.tsx`，后台与门户从那里取                                                                           | 4    |
-| `components/cdr/*`（新）                                   | 话单表格、手机卡片、详情对话框、汇总栏，电脑与手机一套组件。组件按 `PortalCdr` 写，后台版本包一层传入 `unverified` 渲染插槽，门户不传                                      | 5    |
-| `lib/admin-search.ts`                                      | `LedgerSearch` 的 `kind` 沿用，新增话单标签页的地址状态（范围、被叫、国家、状态、仅看未经验证、页码）；门户另有 `lib/portal-search.ts`，筛选写入地址，刷新与登录过期后保留 | 5, 6 |
-| `pages/admin/tenant-tabs/ledger-tab.tsx`                   | 删除 `beijingDayRange`，按判别联合渲染人工流水与合并行，合并行不显示收款状态与操作人                                                                                       | 2    |
-| `pages/admin/tenant-tabs/cdrs-tab.tsx`（新）、`tenantTabs` | 后台话单标签页。「删除话单」与「查看告警」不显示                                                                                                                           | 5    |
-| `pages/home.tsx`                                           | `PortalHome` 换成 `pages/portal/home.tsx`；`AdminHome` 不动                                                                                                                | 4    |
-| `components/app-shell.tsx`                                 | 门户导航加「话单」「余额流水」「账号设置」，各随自己的 PR，不加「月账单」                                                                                                  | 4–6  |
-| `router.tsx`                                               | 加 `/portal/cdrs`、`/portal/ledger`、`/portal/settings` 和后台租户详情的 `cdrs` 标签                                                                                       | 4–6  |
-| `pages/change-password.tsx`                                | 抽出 `ChangePasswordForm`，强制改密页与账号设置页共用                                                                                                                      | 6    |
+| 文件                                                       | 复用或改动                                                                                                                                                                   | PR   |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| `lib/api.ts`                                               | `webApiContract` 并入 `adminCdrApiContract` 与 `portalApiContract`。新增 `callDownload`：POST、`blob()`、读 `Content-Disposition`，错误走同一个 `ApiRequestError`            | 3–5  |
+| `lib/download.ts`                                          | 现有 `downloadText` 只接字符串，新增 `downloadBlob(filename, blob)`                                                                                                          | 5    |
+| `lib/day-range.ts`                                         | 复用 `rangeOrMonthToDate` 作默认值（当月 1 日到今天）。结束日上限用共享的 `latestRangeEnd`                                                                                   | 5    |
+| `components/date-range-field.tsx`                          | 新增上限参数，月历把超出开始日加一个月的日期置灰，并显示设计稿 2f 的「最长一个月」。现在只有 `max` 一个上限                                                                  | 5    |
+| `components/filter-sheet.tsx`                              | 手机筛选面板，话单（2e）和流水（5e）共用，已有                                                                                                                               | 5, 6 |
+| `components/pagination.tsx`                                | 现有组件是前端分页（`pageSlice`）。服务端分页复用 `Pagination`，`rowCount` 传 `pagination.total`，页码来自地址；另加「第 1–50 条，共 N 条」文字                              | 5, 6 |
+| `components/data-format.tsx`                               | `Money`、`Rate`、`DateTime` 已有。合并行的备注由 `formatMergedChargeNote` 生成。国家显示共用 `packages/shared` 的 `formatCountryLabel`，话单列表、详情和首页最近话单均使用它 | 5, 6 |
+| `components/status-tag.tsx`                                | `answered`、`unanswered`、`unverified` 标签已有。`unverified` 只在后台话单组件里引用，门户组件不 import                                                                      | 5    |
+| `components/admin/tenant-status.tsx`                       | 其中 `healthStatus` 门户首页也要用，PR 4 移到 `components/tenant-health.tsx`，后台与门户从那里取                                                                             | 4    |
+| `components/cdr/*`（新）                                   | 话单表格、手机卡片、详情对话框、汇总栏，电脑与手机一套组件。组件按 `PortalCdr` 写，后台版本包一层传入 `unverified` 渲染插槽，门户不传                                        | 5    |
+| `lib/admin-search.ts`                                      | `LedgerSearch` 的 `kind` 沿用，新增话单标签页的地址状态（范围、被叫、国家、状态、仅看未经验证、页码）；门户另有 `lib/portal-search.ts`，筛选写入地址，刷新与登录过期后保留   | 5, 6 |
+| `pages/admin/tenant-tabs/ledger-tab.tsx`                   | 删除 `beijingDayRange`，按判别联合渲染人工流水与合并行，合并行不显示收款状态与操作人                                                                                         | 2    |
+| `pages/admin/tenant-tabs/cdrs-tab.tsx`（新）、`tenantTabs` | 后台话单标签页。「删除话单」与「查看告警」不显示                                                                                                                             | 5    |
+| `pages/home.tsx`                                           | `PortalHome` 换成 `pages/portal/home.tsx`；`AdminHome` 不动                                                                                                                  | 4    |
+| `components/app-shell.tsx`                                 | 门户导航加「话单」「余额流水」「账号设置」，各随自己的 PR，不加「月账单」                                                                                                    | 4–6  |
+| `router.tsx`                                               | 加 `/portal/cdrs`、`/portal/ledger`、`/portal/settings` 和后台租户详情的 `cdrs` 标签                                                                                         | 4–6  |
+| `pages/change-password.tsx`                                | 抽出 `ChangePasswordForm`，强制改密页与账号设置页共用                                                                                                                        | 6    |
 
 ### 挂断原因表（决定 8）
 
@@ -527,7 +527,7 @@ ALTER POLICY tenant_read ON <表> USING (
 | 4   | 余额流水 CSV 与页面一致：通话扣费按天合并（含通数），其他类型逐笔                                                                                                                            | 用户确认                                    | [余额流水](#余额流水)；PR 3                                  |
 | 5   | 管理员导出话单写操作日志 `cdr_export`（租户、筛选条件、条数），客户导出不写                                                                                                                  | 用户确认                                    | `cdr_export` 审计变体；PR 3                                  |
 | 6   | 验收截图：电脑透支 1a、手机透支 1b、手机停机 1c、手机无话单 1d，各含浅色与深色；电脑端停机、无话单只存档，按手机稿核对                                                                       | 用户确认                                    | PR 7                                                         |
-| 7   | 国家筛选选项为所选日期范围内该租户话单中出现过的国家（不含说明）                                                                                                                             | 用户确认                                    | `cdrCountriesResponseSchema`；PR 3                           |
+| 7   | 国家筛选选项为所选日期范围内该租户话单中出现过的国家（不含说明）                                                                                                                             | 用户 2026-10-19 确认（费率表五列）          | `cdrCountriesResponseSchema`；PR 3                           |
 | 8   | 挂断原因中文对照表放在 `packages/shared`，写进设计文档供审，未收录显示英文原文，形如 `NORMAL_CLEARING（正常挂断）`                                                                           | 用户确认                                    | `hangup-cause.ts`；[挂断原因表](#挂断原因表决定-8)           |
 | 9   | RLS 策略改写为 InitPlan，单独一个 PR，在话单接口之前，跑 `pnpm test:db` 与 `pnpm test:idor`，Codex 审查                                                                                      | 用户确认（第二批）                          | [RLS InitPlan 改写](#rls-initplan-改写)；PR 1                |
 | 10  | CSV 公式注入只中和危险内容，纯号码原样，话单与流水共用一个转义函数                                                                                                                           | 用户确认（第二批）                          | `csvCell`；解读见[话单导出](#话单导出)                       |
