@@ -1,0 +1,13 @@
+[WebServer] ../../.env not found. Continuing without it.
+
+> @fs-billing/api@ auth:seed <repo>/apps/api
+> node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts
+
+../../.env not found. Continuing without it.
+开发种子凭据已初始化，已有凭据保持不变。
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › e2e/admin-visual.spec.ts:855:1 › matches seeded admin pages in light dark and mobile (1.2m)
+
+  1 passed (1.3m)
