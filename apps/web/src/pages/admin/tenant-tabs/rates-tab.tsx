@@ -4,10 +4,11 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type {
-  AdminRateEntry,
-  AdminRateVersion,
-  AdminTenantDetailResponse,
+import {
+  formatCountryLabel,
+  type AdminRateEntry,
+  type AdminRateVersion,
+  type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
 import {
   RateEditDialog,
@@ -41,13 +42,16 @@ import { cn } from '../../../lib/utils';
 
 const entriesPerPage = 100;
 
+const rowName = (entry: AdminRateEntry) =>
+  `${entry.prefix} ${formatCountryLabel(entry.country, entry.description)}`;
+
 type Notice = { changed: boolean; text: string };
 
 function editNotice(
   { before, after, scheduled, response }: RateEditResult,
   unit: string,
 ): Notice {
-  const name = `${after.prefix} ${after.country}`;
+  const name = rowName(after);
   if (response.auditId === null)
     return { changed: false, text: `${name} 没有变更` };
   const rate = `${formatRate(after.rate)} ${unit}`;
@@ -288,8 +292,8 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-[13px] text-muted-foreground">
         <input
           type="search"
-          aria-label="搜索前缀或国家"
-          placeholder="搜索前缀或国家"
+          aria-label="搜索前缀、ISO、国家或说明"
+          placeholder="搜索前缀、ISO、国家或说明"
           maxLength={200}
           value={search}
           onChange={(event) => {
@@ -348,7 +352,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           </span>
           <span className="text-[13px] text-muted-foreground">
             {deferred
-              ? '请换一个前缀或国家名称'
+              ? '请换一个前缀、ISO、国家或说明'
               : `导入 CSV，或复制一个同币种（${data.currency}）租户的费率表作为起点`}
           </span>
           {emptyTable ? (
@@ -375,10 +379,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             <table className="w-full border-collapse text-[13px]">
               <thead className="hidden md:table-header-group">
                 <tr className="bg-muted text-xs whitespace-nowrap text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left font-medium">前缀</th>
+                  <th className="px-4 py-2.5 text-left font-medium">ISO</th>
+                  <th className="px-3 py-2.5 text-left font-medium">国家</th>
                   <th className="px-3 py-2.5 text-left font-medium">
-                    国家/备注
+                    号码前缀
                   </th>
+                  <th className="px-3 py-2.5 text-left font-medium">说明</th>
                   <th className="px-4 py-2.5 text-right font-medium">
                     费率（{unit}）
                   </th>
@@ -398,11 +404,20 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                         hint && 'bg-brand-soft',
                       )}
                     >
-                      <td className="min-w-10 font-mono font-semibold md:px-4 md:py-2.5 md:font-normal">
+                      <td className="hidden font-mono md:table-cell md:px-4 md:py-2.5">
+                        {entry.iso}
+                      </td>
+                      <td className="hidden md:table-cell md:px-3 md:py-2.5">
+                        {entry.country}
+                      </td>
+                      <td className="min-w-10 font-mono font-semibold md:px-3 md:py-2.5 md:font-normal">
                         {entry.prefix}
                       </td>
-                      <td className="flex-1 text-sm md:px-3 md:py-2.5 md:text-[13px]">
-                        {entry.country}
+                      <td className="hidden md:table-cell md:px-3 md:py-2.5">
+                        {entry.description}
+                      </td>
+                      <td className="flex-1 text-sm md:hidden">
+                        {formatCountryLabel(entry.country, entry.description)}
                       </td>
                       <td className="text-right md:px-4 md:py-2.5">
                         <span className="text-sm font-medium md:text-[13px] md:font-normal">
@@ -421,7 +436,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                         {/* G4：已有排定版本时不能单条编辑，提示与导入按钮共用。 */}
                         <button
                           type="button"
-                          aria-label={`编辑 ${entry.prefix} ${entry.country}`}
+                          aria-label={`编辑 ${rowName(entry)}`}
                           disabled={hasScheduled}
                           aria-describedby={
                             hasScheduled ? importBlockedId : undefined

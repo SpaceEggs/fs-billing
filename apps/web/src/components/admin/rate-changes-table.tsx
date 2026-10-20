@@ -1,6 +1,14 @@
-import type { AdminRateChange, Currency } from '@fs-billing/shared';
+import type {
+  AdminRateChange,
+  AdminRateEntry,
+  Currency,
+} from '@fs-billing/shared';
 import { formatRate } from '../../lib/format';
-import { rateChangePercent } from '../../lib/rates';
+import {
+  blankAsDash,
+  rateChangePercent,
+  rateEntryFields,
+} from '../../lib/rates';
 import { cn } from '../../lib/utils';
 import { rateUnit } from './rate-edit-dialog';
 
@@ -18,6 +26,12 @@ const changeTags = {
   AdminRateChange['kind'],
   { label: string; className: string }
 >;
+
+const cellClass: Partial<Record<keyof AdminRateEntry, string>> = {
+  iso: 'font-mono',
+  prefix: 'font-mono font-semibold',
+  description: 'w-full',
+};
 
 /** 费率变动明细（排定的新版本、导入与复制的预览共用）。 */
 export function RateChangesTable({
@@ -43,8 +57,11 @@ export function RateChangesTable({
       >
         <tr>
           <th className="py-2 pr-2 pl-3.5 text-left font-medium">变动</th>
-          <th className="px-2 py-2 text-left font-medium">前缀</th>
-          <th className="px-2 py-2 text-left font-medium">国家/备注</th>
+          {rateEntryFields.map(({ key, label }) => (
+            <th key={key} className="px-2 py-2 text-left font-medium">
+              {label}
+            </th>
+          ))}
           <th className="px-2 py-2 text-right font-medium">
             {columns.before}（{unit}）
           </th>
@@ -68,7 +85,6 @@ export function RateChangesTable({
 
 function ChangeRow({ change }: { change: AdminRateChange }) {
   const tag = changeTags[change.kind];
-  const entry = change.kind === 'added' ? change.after : change.before;
   const before = change.kind === 'added' ? null : change.before;
   const after = change.kind === 'deleted' ? null : change.after;
   const percent =
@@ -85,8 +101,14 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
           {tag.label}
         </span>
       </td>
-      <td className="px-2 py-2 font-mono font-semibold">{entry.prefix}</td>
-      <td className="w-full px-2 py-2">{(after ?? entry).country}</td>
+      {rateEntryFields.map(({ key }) => (
+        <FieldCell
+          key={key}
+          change={change}
+          field={key}
+          className={cellClass[key]}
+        />
+      ))}
       <td
         className={cn(
           'px-2 py-2 text-right text-muted-foreground',
@@ -112,5 +134,38 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
         {percent?.text ?? ''}
       </td>
     </tr>
+  );
+}
+
+/** 修改行里值有变化的单元格显示「旧 → 新」（旧值划线），其余显示当前值。 */
+function FieldCell({
+  change,
+  field,
+  className,
+}: {
+  change: AdminRateChange;
+  field: keyof AdminRateEntry;
+  className?: string | undefined;
+}) {
+  const shown = (change.kind === 'deleted' ? change.before : change.after)[
+    field
+  ];
+  const changed = change.kind === 'modified' && change.before[field] !== shown;
+  return (
+    <td className={cn('px-2 py-2', className)}>
+      {changed ? (
+        <>
+          <span className="text-muted-foreground line-through">
+            {blankAsDash(change.before[field])}
+          </span>
+          <span aria-hidden className="px-1.5">
+            →
+          </span>
+          {blankAsDash(shown)}
+        </>
+      ) : (
+        shown
+      )}
+    </td>
   );
 }

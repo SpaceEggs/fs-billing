@@ -47,7 +47,7 @@ const frame = (file: string, section: string, label: string): DesignFrame => ({
 });
 
 const rates = [
-  { iso: '', description: '', prefix: '86', country: '中国', rate: '0.0500' },
+  { iso: 'CN', description: '', prefix: '86', country: '中国', rate: '0.0500' },
   {
     iso: '',
     description: '',
@@ -56,24 +56,30 @@ const rates = [
     rate: '0.0100',
   },
   {
-    iso: '',
-    description: '',
+    iso: 'GB',
+    description: '手机',
     prefix: '447',
-    country: '英国手机',
+    country: '英国',
     rate: '0.0450',
   },
-  { iso: '', description: '', prefix: '44', country: '英国', rate: '0.0200' },
-  { iso: '', description: '', prefix: '65', country: '新加坡', rate: '0.0280' },
-  { iso: '', description: '', prefix: '81', country: '日本', rate: '0.0350' },
+  { iso: 'GB', description: '', prefix: '44', country: '英国', rate: '0.0200' },
   {
-    iso: '',
+    iso: 'SG',
+    description: '',
+    prefix: '65',
+    country: '新加坡',
+    rate: '0.0280',
+  },
+  { iso: 'JP', description: '', prefix: '81', country: '日本', rate: '0.0350' },
+  {
+    iso: 'HK',
     description: '',
     prefix: '852',
     country: '中国香港',
     rate: '0.0300',
   },
   {
-    iso: '',
+    iso: 'JM',
     description: '',
     prefix: '1876',
     country: '牙买加',
@@ -266,10 +272,10 @@ async function seed(page: Page): Promise<Seed> {
   await post(page, `/api/admin/tenants/${cny.id}/rates/edit-entry`, {
     baseVersionId: ratesBody.current.id,
     entry: {
-      iso: '',
-      description: '',
+      iso: 'GB',
+      description: '手机',
       prefix: '447',
-      country: '英国手机',
+      country: '英国',
       rate: '0.0480',
     },
     schedule: {
@@ -335,13 +341,13 @@ async function openTab(page: Page, tenant: Tenant, tab: string) {
 }
 
 const importCsv = {
-  ok: '﻿ISO,国家,号码前缀,说明,费率\n,中国,86,,0.0550\n,法国,33,,0.0600\n,美国/加拿大,1,,0.0100\n,英国手机,447,,0.0450\n,英国,44,,0.0200\n,新加坡,65,,0.0280\n,日本,81,,0.0350\n,中国香港,852,,0.0300\n',
+  ok: '﻿ISO,国家,号码前缀,说明,费率\nCN,中国,86,,0.0550\nFR,法国,33,,0.0600\n,美国/加拿大,1,,0.0100\nGB,英国,447,手机,0.0450\nGB,英国,44,,0.0200\n,新加坡,65,,0.0280\nJP,日本,81,,0.0350\nHK,中国香港,852,港澳,0.0300\n',
   errors: [
     'ISO,国家,号码前缀,说明,费率',
-    ',中国,8a6,,0.05',
-    ',英国手机,447,,-0.1',
-    ',法国,33,,0.06',
-    ',美国,1,,0.12345',
+    'CN,中国,8a6,,0.05',
+    'GB,英国,447,手机,-0.1',
+    'FR,法国,33,,0.06',
+    'US,美国,1,,0.12345',
     '',
   ].join('\r\n'),
 };
@@ -371,6 +377,23 @@ async function openCopy(page: Page, seed: Seed) {
     .check();
   await expect(dialog.getByText(/已选：.*· \d+ 条/)).toBeVisible();
   return dialog;
+}
+
+/** 前缀 1 的 ISO、国家名和说明都从空白或旧值改成新值，确认页逐项显示「旧 → 新」。 */
+async function openEdit(page: Page, seed: Seed, step: 'form' | 'confirm') {
+  await openTab(page, seed.source, 'rates');
+  await page.getByRole('button', { name: '编辑 1 美国/加拿大' }).click();
+  const form = page.getByRole('dialog', { name: '编辑费率' });
+  await expect(form).toBeVisible();
+  if (step === 'form') return form;
+  await form.getByLabel('ISO').fill('us');
+  await form.getByLabel('国家').fill('美国');
+  await form.getByLabel('说明').fill('含加拿大');
+  await form.getByLabel(/费率（/).fill('0.0120');
+  await form.getByRole('button', { name: '下一步：确认' }).click();
+  const confirm = page.getByRole('dialog', { name: '确认修改费率' });
+  await expect(confirm).toContainText('ISO：— → US');
+  return confirm;
 }
 
 /** 手机端不提供导入与复制，费率标签页提示「请在电脑上操作」。 */
@@ -562,6 +585,34 @@ const shots: Shot[] = [
         dialog.getByRole('button', { name: '确认充值' }),
       ).toBeVisible();
     },
+  },
+  {
+    name: 'rates-edit-form',
+    desktop: frame(batch2, '单条编辑费率', '8a 电脑 · 修改费率'),
+    mobile: frame(batch2, '费率标签页', '7c 手机 · 查看与搜索（含排定版本）'),
+    viewport: dialogViewport,
+    fullPage: false,
+    note: '手机端只能查看和搜索，手机变体截费率标签页的「请在电脑上操作」提示。',
+    open: (page, seed, variant) =>
+      variant === 'mobile'
+        ? openMobileRates(page, seed)
+        : openEdit(page, seed, 'form'),
+  },
+  {
+    name: 'rates-edit-confirm',
+    desktop: frame(
+      batch2,
+      '单条编辑费率',
+      '8b 电脑 · 确认修改（指定时间生效）',
+    ),
+    mobile: frame(batch2, '费率标签页', '7c 手机 · 查看与搜索（含排定版本）'),
+    viewport: dialogViewport,
+    fullPage: false,
+    note: '手机端只能查看和搜索，手机变体截费率标签页的「请在电脑上操作」提示。',
+    open: (page, seed, variant) =>
+      variant === 'mobile'
+        ? openMobileRates(page, seed)
+        : openEdit(page, seed, 'confirm'),
   },
   {
     name: 'rates-import-upload',
