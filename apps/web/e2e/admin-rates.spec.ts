@@ -415,8 +415,14 @@ test('imports a CSV immediately and updates the table', async ({ page }) => {
   await expect(dialog).toHaveCount(0);
 
   await expect(page.getByRole('row')).toHaveCount(3);
-  await expect(page.getByRole('row').nth(1)).toContainText('33法国0.0600');
-  await expect(page.getByRole('row').nth(2)).toContainText('86中国0.0550');
+  await expect(page.getByRole('row').nth(1).getByRole('cell')).toHaveText(
+    ['', '法国', '33', '', '0.0600', '编辑'],
+    { useInnerText: true },
+  );
+  await expect(page.getByRole('row').nth(2).getByRole('cell')).toHaveText(
+    ['', '中国', '86', '', '0.0550', '编辑'],
+    { useInnerText: true },
+  );
   const after = await readRates(page, tenant.id);
   expect(after.scheduled).toEqual([]);
   expect(after.current.entries).toEqual([
@@ -452,13 +458,213 @@ test('mobile only views and searches rates', async ({ page }) => {
   await expect(page.getByText('请在电脑上操作')).toBeVisible();
   await expect(page.getByRole('button', { name: /^编辑 / })).toHaveCount(0);
   await expect(card.getByRole('row').nth(1)).toContainText('447英国手机');
-  await page.getByRole('searchbox', { name: '搜索前缀或国家' }).fill('英国');
+  await page
+    .getByRole('searchbox', { name: '搜索前缀、ISO、国家或说明' })
+    .fill('英国');
   // 手机费率表不显示表头，每行带单位。
   const table = page.getByRole('table').last();
   await expect(table.getByRole('row')).toHaveCount(1);
-  await expect(table.getByRole('row')).toContainText(
-    '447英国手机0.0450元/分钟',
+  await expect(table.getByRole('row').getByRole('cell')).toHaveText(
+    ['447', '英国手机', /^0\.0450元\/分钟/],
+    { useInnerText: true },
   );
+});
+
+const labelledRates = [
+  {
+    iso: 'GB',
+    description: '',
+    prefix: '44',
+    country: '英国',
+    rate: '0.0200',
+  },
+  {
+    iso: 'GB',
+    description: '手机',
+    prefix: '447',
+    country: '英国',
+    rate: '0.0450',
+  },
+  {
+    iso: '',
+    description: '',
+    prefix: '1',
+    country: '美国/加拿大',
+    rate: '0.0100',
+  },
+];
+
+test('shows ISO, country, prefix, description and rate columns', async ({
+  page,
+}) => {
+  const tenant = await createTenant(page, { rates: labelledRates });
+  await openRates(page, tenant.id);
+  const table = page.getByRole('table').last();
+  await expect(table.getByRole('columnheader')).toHaveText([
+    'ISO',
+    '国家',
+    '号码前缀',
+    '说明',
+    '费率（元/分钟）',
+    '操作',
+  ]);
+  const rows = table.getByRole('row');
+  await expect(rows).toHaveCount(4);
+  const cells = (row: Locator) => row.getByRole('cell');
+  await expect(cells(rows.nth(1))).toHaveText(
+    ['', '美国/加拿大', '1', '', '0.0100', '编辑'],
+    { useInnerText: true },
+  );
+  await expect(cells(rows.nth(2))).toHaveText(
+    ['GB', '英国', '44', '', '0.0200', '编辑'],
+    { useInnerText: true },
+  );
+  await expect(cells(rows.nth(3))).toHaveText(
+    ['GB', '英国', '447', '手机', '0.0450', '编辑'],
+    { useInnerText: true },
+  );
+
+  const search = page.getByRole('searchbox', {
+    name: '搜索前缀、ISO、国家或说明',
+  });
+  await search.fill('gb');
+  await expect(rows).toHaveCount(3);
+  await search.fill('手机');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText('447');
+});
+
+test('mobile rows show prefix, country · description and rate only', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const tenant = await createTenant(page, { rates: labelledRates });
+  await openRates(page, tenant.id);
+  const table = page.getByRole('table').last();
+  const rows = table.getByRole('row');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(1).getByRole('cell')).toHaveText(
+    ['44', '英国', '0.0200元/分钟'],
+    { useInnerText: true },
+  );
+  await expect(rows.nth(2).getByRole('cell')).toHaveText(
+    ['447', '英国 · 手机', '0.0450元/分钟'],
+    { useInnerText: true },
+  );
+  await expect(table.getByRole('columnheader')).toHaveCount(0);
+});
+
+test('edits ISO and description and audits the change', async ({ page }) => {
+  const tenant = await createTenant(page, { rates: labelledRates });
+  await openRates(page, tenant.id);
+  await page.getByRole('button', { name: '编辑 447 英国 · 手机' }).click();
+  const form = page.getByRole('dialog', { name: '编辑费率' });
+  await expect(form.getByLabel('前缀')).toHaveAttribute('readonly', '');
+  await expect(form.getByLabel('说明')).toHaveAccessibleDescription(
+    '说明会显示在客户的话单里，请勿填写内部备注',
+  );
+  await form.getByLabel('ISO').fill('gbr');
+  await form.getByRole('button', { name: '下一步：确认' }).click();
+  await expect(form.getByText('ISO 必须是两位字母，或留空')).toBeVisible();
+
+  await form.getByLabel('ISO').fill(' jm ');
+  await form.getByLabel('国家').fill('牙买加');
+  await form.getByLabel('说明').fill('移动网络');
+  await form.getByRole('button', { name: '下一步：确认' }).click();
+  const confirm = page.getByRole('dialog', { name: '确认修改费率' });
+  await expect(confirm).toContainText('ISO：GB → JM');
+  await expect(confirm).toContainText('国家：英国 → 牙买加');
+  await expect(confirm).toContainText('说明：手机 → 移动网络');
+  await confirm.getByRole('button', { name: '确认修改' }).click();
+  await expect(
+    page.getByText('447 牙买加 · 移动网络 费率已改为 0.0450 元/分钟'),
+  ).toBeVisible();
+
+  const after = await readRates(page, tenant.id);
+  expect(after.current.entries).toContainEqual({
+    iso: 'JM',
+    description: '移动网络',
+    prefix: '447',
+    country: '牙买加',
+    rate: '0.045',
+  });
+  const row = page.getByRole('row').filter({ hasText: '447' });
+  await expect(row.getByRole('cell')).toHaveText(
+    ['JM', '牙买加', '447', '移动网络', '0.0450', '编辑'],
+    { useInnerText: true },
+  );
+  const edit = (await operationLogs(tenant.id)).at(-1);
+  expect(edit?.action).toBe('rate_entry_edit');
+  expect(edit?.content).toMatchObject({ rateVersionId: after.current.id });
+});
+
+test('a scheduled label-only change says rename and shows old → new', async ({
+  page,
+}) => {
+  const tenant = await createTenant(page, { rates: labelledRates });
+  const slot = beijingSlot(2, '09:00');
+  await scheduleEdit(
+    page,
+    tenant.id,
+    { ...labelledRates[0]!, iso: 'UK', description: '本土' },
+    slot.iso,
+  );
+  await openRates(page, tenant.id);
+  const day = slot.shown.slice(5, 10);
+  const card = page.getByRole('region', { name: '排定的新版本' });
+  await expect(card).toContainText('修改 1');
+  await expect(
+    card.getByRole('row').filter({ hasText: '本土' }).getByRole('cell'),
+  ).toHaveText(
+    ['修改', 'GB→UK', '44', '英国', '—→本土', '0.0200→', '0.0200', ''],
+    {
+      useInnerText: true,
+    },
+  );
+  const table = page.getByRole('table').last();
+  await expect(
+    table
+      .getByRole('row')
+      .filter({ has: page.getByRole('cell', { name: '44', exact: true }) }),
+  ).toContainText(`${day} 起更新名称`);
+});
+
+test('rejects an old three-column CSV with the format hint', async ({
+  page,
+}) => {
+  const tenant = await createTenant(page, { rates: labelledRates });
+  const before = await readRates(page, tenant.id);
+  await openRates(page, tenant.id);
+  await page.getByRole('button', { name: '导入 CSV' }).click();
+  const dialog = page.getByRole('dialog', { name: '导入费率表' });
+  await expect(dialog).toContainText(
+    '格式：ISO,Country,Destination Prefix,Description,Rate',
+  );
+  await expect(dialog).toContainText('说明会显示给客户，请勿填写内部备注');
+  await expect(
+    dialog.getByRole('button', { name: '下载 CSV 模板' }),
+  ).toBeVisible();
+  await dialog.getByLabel('选择 CSV 文件').setInputFiles({
+    name: '旧格式.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('prefix,country,rate\r\n44,英国,0.0200\r\n', 'utf8'),
+  });
+  await dialog.getByRole('button', { name: '下一步：预览' }).click();
+
+  await expect(dialog.getByRole('alert')).toContainText(
+    '发现 1 处错误，文件未导入',
+  );
+  const rows = dialog.getByRole('row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText('第 1 行');
+  await expect(rows.nth(1)).toContainText(
+    '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate',
+  );
+  await expect(dialog.getByRole('button', { name: '确认导入' })).toHaveCount(0);
+  expect(await readRates(page, tenant.id)).toEqual(before);
+  expect((await operationLogs(tenant.id)).map((log) => log.action)).toEqual([
+    'tenant_create',
+  ]);
 });
 
 /** 在复制对话框里按编码搜索并选中租户，等待其费率表快照读完。 */
