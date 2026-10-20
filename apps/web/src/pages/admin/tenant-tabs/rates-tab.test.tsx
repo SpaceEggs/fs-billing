@@ -54,6 +54,130 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const labelled = [
+  {
+    prefix: '1',
+    iso: '',
+    country: '美国/加拿大',
+    description: '',
+    rate: '0.01',
+  },
+  { prefix: '44', iso: 'GB', country: '英国', description: '', rate: '0.02' },
+  {
+    prefix: '447',
+    iso: 'GB',
+    country: '英国',
+    description: '手机',
+    rate: '0.045',
+  },
+];
+
+function stubLabelled(onPost?: (body: unknown) => void) {
+  const gets: string[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((path: string, init: RequestInit) => {
+      if (init.method === 'POST') {
+        const body = JSON.parse(init.body as string) as {
+          entry: (typeof labelled)[number];
+        };
+        onPost?.(body);
+        return Promise.resolve(
+          json(200, {
+            auditId: '00000000-0000-4000-8000-00000000b201',
+            version: {
+              id: versionB,
+              effectiveFrom: '2026-10-02T00:00:00.000Z',
+              entries: labelled.map((e) =>
+                e.prefix === body.entry.prefix ? body.entry : e,
+              ),
+            },
+          }),
+        );
+      }
+      gets.push(path);
+      return Promise.resolve(
+        json(200, {
+          currency: 'CNY',
+          current: {
+            id: versionA,
+            effectiveFrom: '2026-10-01T00:00:00.000Z',
+            entries: labelled,
+          },
+          scheduled: [],
+        }),
+      );
+    }),
+  );
+  return { gets };
+}
+
+function renderTab() {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <RatesTab tenant={tenant} />
+    </QueryClientProvider>,
+  );
+}
+
+/** jsdom 不加载样式：电脑版单元格 = 没有 md:hidden 的 td。手机版合并标签另行断言。 */
+const desktopCells = (row: Element) =>
+  [...row.querySelectorAll('td:not(.md\\:hidden)')].map(
+    (cell) => cell.textContent,
+  );
+
+describe('rates tab columns and search', () => {
+  it('shows ISO, 国家, 号码前缀, 说明 and 费率 columns', async () => {
+    stubLabelled();
+    renderTab();
+    await screen.findByRole('button', { name: '编辑 447 英国 · 手机' });
+    const table = within(screen.getByRole('region', { name: '费率表' }));
+    expect(
+      table.getAllByRole('columnheader').map((cell) => cell.textContent),
+    ).toEqual(['ISO', '国家', '号码前缀', '说明', '费率（元/分钟）', '操作']);
+    const rows = table.getAllByRole('row').slice(1);
+    expect(rows.map(desktopCells)).toEqual([
+      ['', '美国/加拿大', '1', '', '0.0100元/分钟', '编辑'],
+      ['GB', '英国', '44', '', '0.0200元/分钟', '编辑'],
+      ['GB', '英国', '447', '手机', '0.0450元/分钟', '编辑'],
+    ]);
+    expect(
+      rows.map((row) => row.querySelector('td.md\\:hidden')?.textContent),
+    ).toEqual(['美国/加拿大', '英国', '英国 · 手机']);
+    expect(
+      screen.getByRole('button', { name: '编辑 44 英国' }),
+    ).toBeInTheDocument();
+  });
+
+  it('search finds a row by ISO or description', async () => {
+    const { gets } = stubLabelled();
+    renderTab();
+    await screen.findByRole('button', { name: '编辑 44 英国' });
+    const user = userEvent.setup();
+    const box = screen.getByRole('searchbox', {
+      name: '搜索前缀、ISO、国家或说明',
+    });
+    expect(box).toHaveAttribute('placeholder', '搜索前缀、ISO、国家或说明');
+    await user.type(box, 'gb');
+    await waitFor(() =>
+      expect(gets.some((path) => path.includes('search=gb'))).toBe(true),
+    );
+    await user.clear(box);
+    await user.type(box, '手机');
+    await waitFor(() =>
+      expect(
+        gets.some((path) =>
+          path.includes(`search=${encodeURIComponent('手机')}`),
+        ),
+      ).toBe(true),
+    );
+  });
+});
+
 describe('rates tab edit dialog', () => {
   it('a refetch while confirming keeps the base version the edit started from, and the 409 offers a refresh', async () => {
     let current = rates(versionA, '0.045');
@@ -88,7 +212,7 @@ describe('rates tab edit dialog', () => {
       await screen.findByRole('button', { name: '编辑 86 中国' }),
     );
     const dialog = screen.getByRole('dialog', { name: '编辑费率' });
-    const country = within(dialog).getByLabelText(/国家\/备注/);
+    const country = within(dialog).getByLabelText(/^国家/);
     await user.clear(country);
     await user.type(country, '中国大陆');
     await user.click(
@@ -124,6 +248,63 @@ describe('rates tab edit dialog', () => {
     await user.click(within(alert).getByRole('button', { name: '刷新' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(await screen.findByText('0.0600')).toBeInTheDocument();
+  });
+
+  it('edit dialog edits iso, country, description and rate and warns about customer visibility', async () => {
+    const posts: unknown[] = [];
+    stubLabelled((body) => posts.push(body));
+    renderTab();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: '编辑 447 英国 · 手机' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: '编辑费率' });
+    expect(within(dialog).getByLabelText('前缀')).toHaveAttribute('readonly');
+    const description = within(dialog).getByLabelText('说明');
+    expect(description).toHaveAccessibleDescription(
+      '说明会显示在客户的话单里，请勿填写内部备注',
+    );
+    const type = async (label: RegExp, value: string) => {
+      const input = within(dialog).getByLabelText(label);
+      await user.clear(input);
+      if (value) await user.type(input, value);
+    };
+    await type(/^ISO/, 'GBR');
+    await type(/^国家/, '');
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：确认' }),
+    );
+    expect(within(dialog).getByLabelText(/^ISO/)).toBeInvalid();
+    expect(
+      within(dialog).getByText('ISO 必须是两位字母，或留空'),
+    ).toBeVisible();
+    expect(within(dialog).getByText('请输入国家')).toBeVisible();
+
+    await type(/^ISO/, ' jm ');
+    await type(/^国家/, '牙买加');
+    await type(/^说明/, '');
+    await type(/^费率/, '0.05');
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：确认' }),
+    );
+    const confirm = screen.getByRole('dialog', { name: '确认修改费率' });
+    expect(confirm).toHaveTextContent('447 英国 · 手机');
+    expect(confirm).toHaveTextContent('ISO：GB → JM');
+    expect(confirm).toHaveTextContent('国家：英国 → 牙买加');
+    expect(confirm).toHaveTextContent('说明：手机 → —');
+    await user.click(within(confirm).getByRole('button', { name: '确认修改' }));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({
+      entry: {
+        prefix: '447',
+        iso: 'JM',
+        country: '牙买加',
+        description: '',
+        rate: '0.05',
+      },
+    });
+    expect(await screen.findByText(/^447 牙买加 费率已改为/)).toBeVisible();
   });
 
   it('scheduling an edit disables its opener, so focus returns to the rate table', async () => {

@@ -35,7 +35,8 @@ export function diffRateTables(
 
 /**
  * 当前表中被排定版本修改或删除的行的提示（稿 7b「10-01 起 0.0480」，删除为「10-01 起删除」），
- * 以前缀为键；日期为生效时间的北京时间月-日。
+ * 以前缀为键；日期为生效时间的北京时间月-日。费率没变、只有 ISO、国家或说明变化时写「起更新名称」，
+ * 否则会让人误以为费率也会变。
  */
 export function scheduledRowHints(
   current: readonly AdminRateEntry[],
@@ -47,7 +48,9 @@ export function scheduledRowHints(
     if (change.kind === 'modified')
       hints.set(
         change.before.prefix,
-        `${day} 起 ${formatRate(change.after.rate)}`,
+        new Decimal(change.before.rate).eq(change.after.rate)
+          ? `${day} 起更新名称`
+          : `${day} 起 ${formatRate(change.after.rate)}`,
       );
     else if (change.kind === 'deleted')
       hints.set(change.before.prefix, `${day} 起删除`);
@@ -126,32 +129,60 @@ export function resolveSchedule(
   return { schedule: { kind: 'scheduled', effectiveFrom } };
 }
 
-export type RateEditDraft = { country: string; rate: string };
-export type RateEditField = 'country' | 'rate' | 'effectiveFrom';
+/** 费率行的文字字段，按表头顺序。变动表逐列、编辑确认页逐项显示「旧 → 新」；前缀是行的键，不会变。 */
+export const rateEntryFields = [
+  { key: 'iso', label: 'ISO' },
+  { key: 'prefix', label: '号码前缀' },
+  { key: 'country', label: '国家' },
+  { key: 'description', label: '说明' },
+] as const satisfies readonly {
+  key: keyof AdminRateEntry;
+  label: string;
+}[];
+
+export const blankAsDash = (value: string) => value || '—';
+
+export type RateEditDraft = {
+  iso: string;
+  country: string;
+  description: string;
+  rate: string;
+};
+export type RateEditField = keyof RateEditDraft | 'effectiveFrom';
 export type RateEditErrors = Partial<Record<RateEditField, string>>;
 
-/** 第一步校验，通过时返回提交用的完整条目。 */
+const isoPattern = /^(?:[A-Za-z]{2})?$/;
+const maxLabelLength = 200;
+
+/** 与 `adminRateEntrySchema` 的 ISO、国家、说明、费率规则一致；换行先于去空白检查。 */
 export function validateRateEdit(
   current: AdminRateEntry,
   draft: RateEditDraft,
 ): { entry: AdminRateEntry } | { errors: RateEditErrors } {
   const errors: RateEditErrors = {};
+  const iso = draft.iso.trim();
+  if (!isoPattern.test(iso)) errors.iso = 'ISO 必须是两位字母，或留空';
   const country = draft.country.trim();
-  if (!country) errors.country = '请输入国家/备注';
-  else if (country.length > 200) errors.country = '国家/备注不能超过 200 字';
-  else if (/[\r\n]/.test(country)) errors.country = '国家/备注不能包含换行';
+  if (/[\r\n]/.test(draft.country)) errors.country = '国家不能包含换行';
+  else if (!country) errors.country = '请输入国家';
+  else if (country.length > maxLabelLength)
+    errors.country = `国家不能超过 ${maxLabelLength} 字`;
+  const description = draft.description.trim();
+  if (/[\r\n]/.test(draft.description)) errors.description = '说明不能包含换行';
+  else if (description.length > maxLabelLength)
+    errors.description = `说明不能超过 ${maxLabelLength} 字`;
   const rate = draft.rate.trim();
   if (!rate) errors.rate = '请输入费率';
   else if (rate.startsWith('-')) errors.rate = '费率不能为负数';
   else if (/^\d+\.\d{5,}$/.test(rate)) errors.rate = '小数不超过 4 位';
   else if (!adminRateAmountSchema.safeParse(rate).success)
     errors.rate = '请输入有效的费率';
-  if (errors.country || errors.rate) return { errors };
+  if (Object.keys(errors).length > 0) return { errors };
   const entry = {
     prefix: current.prefix,
-    iso: current.iso,
-    description: current.description,
+    iso: iso.toUpperCase(),
     country,
+    description,
     rate,
   };
   if (diffRateTables([current], [entry]).length === 0)
@@ -160,7 +191,9 @@ export function validateRateEdit(
 }
 
 const issueFields: Record<string, RateEditField> = {
+  'entry.iso': 'iso',
   'entry.country': 'country',
+  'entry.description': 'description',
   'entry.rate': 'rate',
   'schedule.effectiveFrom': 'effectiveFrom',
 };
@@ -185,7 +218,9 @@ export function rateEditFailure(error: unknown): {
     else fields[field] ??= issue.message;
   }
   return {
-    step: fields.country || fields.rate ? 'form' : 'confirm',
+    step: Object.keys(fields).some((field) => field !== 'effectiveFrom')
+      ? 'form'
+      : 'confirm',
     fields,
     general,
   };

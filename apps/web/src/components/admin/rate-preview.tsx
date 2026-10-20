@@ -1,6 +1,7 @@
-import type {
-  AdminRatePreviewResponse,
-  AdminRateSchedule,
+import {
+  formatCountryLabel,
+  type AdminRatePreviewResponse,
+  type AdminRateSchedule,
 } from '@fs-billing/shared';
 import { formatDateTime } from '../../lib/format';
 import { cn } from '../../lib/utils';
@@ -154,7 +155,10 @@ export function PreviewChanges({
   const deletedList = deleted.length
     ? deleted
         .slice(0, deleteListLimit)
-        .map((entry) => `${entry.prefix} ${entry.country}`)
+        .map(
+          (entry) =>
+            `${entry.prefix} ${formatCountryLabel(entry.country, entry.description)}`,
+        )
         .join('、') +
       (deleted.length > deleteListLimit ? ` 等 ${deleted.length} 个前缀` : '')
     : null;

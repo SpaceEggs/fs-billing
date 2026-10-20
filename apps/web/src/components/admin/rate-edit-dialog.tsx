@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
+  formatCountryLabel,
   type AdminRateEntry,
   type AdminRateVersionResponse,
   type Currency,
@@ -10,11 +11,14 @@ import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatRate } from '../../lib/format';
 import {
+  blankAsDash,
   rateChangePercent,
   rateEditFailure,
+  rateEntryFields,
   resolveSchedule,
   scheduleBounds,
   validateRateEdit,
+  type RateEditDraft,
   type RateEditErrors,
   type ScheduleChoice,
 } from '../../lib/rates';
@@ -38,7 +42,7 @@ export type RateEditResult = {
 };
 
 /**
- * 单条编辑（设计稿第二批 8a/8b）：先改国家/备注与费率，再确认涨跌与生效时间。
+ * 单条编辑（设计稿第二批 8a/8b）：先改 ISO、国家、说明与费率，再确认涨跌与生效时间。
  * 指定时间为北京时间分钟（决定 g），秒固定 00，范围 [now, now + horizon]。
  */
 export function RateEditDialog({
@@ -66,8 +70,10 @@ export function RateEditDialog({
       invalidateTenant(client, input.params.tenantId),
   });
   const [step, setStep] = useState<'form' | 'confirm'>('form');
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState<RateEditDraft>({
+    iso: entry.iso,
     country: entry.country,
+    description: entry.description,
     rate: entry.rate,
   });
   const [choice, setChoice] = useState<ScheduleChoice>({ kind: 'immediate' });
@@ -119,6 +125,12 @@ export function RateEditDialog({
     }
   }
 
+  const bind = (field: keyof RateEditDraft) => ({
+    value: draft[field],
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+      setDraft({ ...draft, [field]: event.target.value }),
+  });
+
   const problem = generalError ? apiProblem(generalError) : null;
   const versionConflict =
     problem?.kind === 'conflict' && problem.code === 'RATE_VERSION_CONFLICT';
@@ -141,7 +153,7 @@ export function RateEditDialog({
               {tenant.code} · {tenant.currency}
             </span>
           </div>
-          <div className="grid grid-cols-[1fr_2fr] gap-3">
+          <div className="grid grid-cols-[1fr_1fr] gap-3">
             <Field label="前缀" error={undefined}>
               {(props) => (
                 <Input
@@ -152,20 +164,41 @@ export function RateEditDialog({
                 />
               )}
             </Field>
-            <Field label="国家/备注" required error={errors.country}>
+            <Field label="ISO" error={errors.iso} hint="两位字母，可留空">
               {(props) => (
                 <Input
                   {...props}
-                  maxLength={200}
-                  value={draft.country}
-                  onChange={(event) =>
-                    setDraft({ ...draft, country: event.target.value })
-                  }
-                  className={invalidClass(errors.country)}
+                  autoCapitalize="characters"
+                  {...bind('iso')}
+                  className={cn('font-mono', invalidClass(errors.iso))}
                 />
               )}
             </Field>
           </div>
+          <Field label="国家" required error={errors.country}>
+            {(props) => (
+              <Input
+                {...props}
+                maxLength={200}
+                {...bind('country')}
+                className={invalidClass(errors.country)}
+              />
+            )}
+          </Field>
+          <Field
+            label="说明"
+            error={errors.description}
+            hint="说明会显示在客户的话单里，请勿填写内部备注"
+          >
+            {(props) => (
+              <Input
+                {...props}
+                maxLength={200}
+                {...bind('description')}
+                className={invalidClass(errors.description)}
+              />
+            )}
+          </Field>
           <Field
             label={`费率（${unit}）`}
             required
@@ -183,10 +216,7 @@ export function RateEditDialog({
                   {...props}
                   inputMode="decimal"
                   autoComplete="off"
-                  value={draft.rate}
-                  onChange={(event) =>
-                    setDraft({ ...draft, rate: event.target.value })
-                  }
+                  {...bind('rate')}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') toConfirm();
                   }}
@@ -215,7 +245,8 @@ export function RateEditDialog({
           <div className="flex flex-col gap-1">
             <h2 className="m-0 text-[17px] font-semibold">确认修改费率</h2>
             <span className="text-[13px] text-muted-foreground">
-              {tenant.code} · {entry.prefix} {entry.country}
+              {tenant.code} · {entry.prefix}{' '}
+              {formatCountryLabel(entry.country, entry.description)}
             </span>
           </div>
           <RateComparison before={entry} after={next} unit={unit} />
@@ -320,15 +351,17 @@ function RateComparison({
       <span className="text-center text-xs text-muted-foreground">
         单位：{unit}
       </span>
-      {after.country !== before.country ? (
-        <span className="text-[13px]">
-          国家/备注：
-          <span className="text-muted-foreground line-through">
-            {before.country}
-          </span>{' '}
-          → <span className="font-semibold">{after.country}</span>
-        </span>
-      ) : null}
+      {rateEntryFields.map(({ key, label }) =>
+        after[key] !== before[key] ? (
+          <span key={key} className="text-[13px]">
+            {label}：
+            <span className="text-muted-foreground line-through">
+              {blankAsDash(before[key])}
+            </span>{' '}
+            → <span className="font-semibold">{blankAsDash(after[key])}</span>
+          </span>
+        ) : null,
+      )}
     </div>
   );
 }

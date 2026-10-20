@@ -76,8 +76,8 @@ const okPreview = {
     {
       kind: 'deleted',
       before: {
-        iso: '',
-        description: '',
+        iso: 'JM',
+        description: '加勒比',
         prefix: '1876',
         country: '牙买加',
         rate: '0.3',
@@ -234,6 +234,49 @@ describe('rate import dialog', () => {
     expect(within(dialog).getByText('费率_修订版.csv')).toBeInTheDocument();
   });
 
+  it('shows the dedicated message for an old three-column file', async () => {
+    const reason =
+      '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板';
+    stubApi(() => ({
+      status: 200,
+      body: { ok: false, errors: [{ line: 1, reason }] },
+    }));
+    renderTab();
+    const { user, dialog } = await openAndUpload(
+      csv('前缀,国家,费率\r\n44,英国,0.02\r\n'),
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '下一步：预览' }),
+    );
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '发现 1 处错误，文件未导入',
+    );
+    expect(
+      within(dialog)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.textContent),
+    ).toEqual([`第 1 行${reason}前缀,国家,费率`]);
+    expect(dialog).toHaveTextContent('国家必填');
+  });
+
+  it('import hint names the five columns and warns that descriptions are visible to customers', async () => {
+    stubApi(() => ({ status: 200, body: okPreview }));
+    renderTab();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '导入 CSV' }));
+    const dialog = screen.getByRole('dialog', { name: '导入费率表' });
+    expect(dialog).toHaveTextContent(
+      '格式：ISO,Country,Destination Prefix,Description,Rate',
+    );
+    expect(dialog).toHaveTextContent('每行一个前缀，覆盖整张费率表');
+    expect(dialog).toHaveTextContent('说明会显示给客户，请勿填写内部备注');
+    expect(
+      within(dialog).getByRole('button', { name: '下载 CSV 模板' }),
+    ).toBeInTheDocument();
+  });
+
   it('previews counts, changes and the delete warning, then commits once and shows the result', async () => {
     const { posts } = stubApi((path) =>
       isPreview(path)
@@ -262,7 +305,7 @@ describe('rate import dialog', () => {
     );
     expect(dialog).toHaveTextContent('费率_修订版.csv · GBK · 3 条');
     expect(dialog).toHaveTextContent(
-      '删除后，拨打这些前缀的呼叫将被拒绝：1876 牙买加',
+      '删除后，拨打这些前缀的呼叫将被拒绝：1876 牙买加 · 加勒比',
     );
     const rows = within(dialog)
       .getAllByRole('row')
@@ -271,7 +314,7 @@ describe('rate import dialog', () => {
     expect(rows).toEqual([
       '新增33法国—0.0600',
       '修改86中国0.0450→0.0500+11.1%',
-      '删除1876牙买加0.3000—',
+      '删除JM1876牙买加加勒比0.3000—',
     ]);
     expect(posts[0]!.body).toEqual({
       file: {
@@ -546,11 +589,11 @@ describe('rate import dialog', () => {
                 rate: '0.048',
               },
               {
-                iso: '',
-                description: '',
+                iso: 'GB',
+                description: '本土',
                 prefix: '44',
                 country: '英国',
-                rate: '0.05',
+                rate: '0.0500',
               },
             ],
           },
@@ -563,19 +606,48 @@ describe('rate import dialog', () => {
         .getAllByRole('row')
         .map((row) => row.textContent),
     ).toEqual([
-      '变动前缀国家/备注当前费率（元/分钟）新费率（元/分钟）涨跌',
+      '变动ISO号码前缀国家说明当前费率（元/分钟）新费率（元/分钟）涨跌',
       '修改86中国0.0450→0.0480+6.7%',
+      '修改—→GB44英国—→本土0.0500→0.0500',
       '删除1876牙买加0.3000—',
     ]);
 
     const table = screen.getByRole('region', { name: '费率表' });
-    const rowText = (prefix: string) =>
-      within(table)
+    // jsdom 不加载样式：只读电脑版的单元格，手机版的合并标签（md:hidden）另行断言。
+    const rowText = (prefix: string) => {
+      const row = within(table)
         .getAllByRole('row')
-        .find((row) => row.textContent?.startsWith(prefix))?.textContent;
-    expect(rowText('86')).toBe('86中国0.0450元/分钟11-01 起 0.0480编辑');
-    expect(rowText('1876')).toBe('1876牙买加0.3000元/分钟11-01 起删除编辑');
-    expect(rowText('44')).toBe('44英国0.0500元/分钟编辑');
+        .filter((row) => within(row).queryByRole('button', { name: /^编辑/ }))
+        .find((row) => row.children[2]?.textContent === prefix);
+      return Array.from(
+        row?.querySelectorAll('td:not(.md\\:hidden)') ?? [],
+        (cell) => cell.textContent,
+      );
+    };
+    expect(rowText('86')).toEqual([
+      '',
+      '中国',
+      '86',
+      '',
+      '0.0450元/分钟11-01 起 0.0480',
+      '编辑',
+    ]);
+    expect(rowText('1876')).toEqual([
+      '',
+      '牙买加',
+      '1876',
+      '',
+      '0.3000元/分钟11-01 起删除',
+      '编辑',
+    ]);
+    expect(rowText('44')).toEqual([
+      '',
+      '英国',
+      '44',
+      '',
+      '0.0500元/分钟11-01 起更新名称',
+      '编辑',
+    ]);
     for (const name of ['编辑 86 中国', '编辑 44 英国']) {
       const edit = screen.getByRole('button', { name });
       expect(edit).toBeDisabled();

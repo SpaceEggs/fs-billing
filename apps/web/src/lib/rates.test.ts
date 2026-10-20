@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS } from '@fs-billing/shared';
+import {
+  adminRateEntrySchema,
+  DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
+} from '@fs-billing/shared';
 import { ApiRequestError } from './api';
 import {
   beijingMinuteToIso,
@@ -10,6 +13,7 @@ import {
   rateEditFailure,
   resolveSchedule,
   scheduleBounds,
+  scheduledRowHints,
   validateRateEdit,
 } from './rates';
 
@@ -245,16 +249,41 @@ describe('resolveSchedule horizon', () => {
   });
 });
 
+const ukDraft = {
+  iso: '',
+  country: '英国手机',
+  description: '',
+  rate: '0.0450',
+};
+const gb = {
+  prefix: '447',
+  iso: 'GB',
+  country: '英国',
+  description: '手机',
+  rate: '0.0450',
+};
+const gbDraft = {
+  iso: 'GB',
+  country: '英国',
+  description: '手机',
+  rate: '0.0450',
+};
+
 describe('validateRateEdit', () => {
-  it('returns the full entry with trimmed values', () => {
+  it('returns the full entry with trimmed values and an uppercased ISO', () => {
     expect(
-      validateRateEdit(uk, { country: ' 英国手机 ', rate: '0.048' }),
+      validateRateEdit(uk, {
+        iso: ' gb ',
+        country: ' 英国 ',
+        description: ' 手机 ',
+        rate: '0.048',
+      }),
     ).toEqual({
       entry: {
-        iso: '',
-        description: '',
         prefix: '447',
-        country: '英国手机',
+        iso: 'GB',
+        country: '英国',
+        description: '手机',
         rate: '0.048',
       },
     });
@@ -262,7 +291,7 @@ describe('validateRateEdit', () => {
 
   it('uses the draft copy for rate errors', () => {
     const rate = (value: string) =>
-      validateRateEdit(uk, { country: '英国手机', rate: value });
+      validateRateEdit(uk, { ...ukDraft, rate: value });
     expect(rate('')).toEqual({ errors: { rate: '请输入费率' } });
     expect(rate('-0.01')).toEqual({ errors: { rate: '费率不能为负数' } });
     expect(rate('0.04801')).toEqual({ errors: { rate: '小数不超过 4 位' } });
@@ -270,21 +299,132 @@ describe('validateRateEdit', () => {
     expect(rate('0.045')).toEqual({ errors: { rate: '新费率与当前费率相同' } });
   });
 
-  it('allows a country-only change', () => {
+  it('requires a country and allows a country-only change', () => {
     expect(
-      validateRateEdit(uk, { country: '英国移动', rate: '0.0450' }),
+      validateRateEdit(uk, { ...ukDraft, country: '英国移动' }),
+    ).toMatchObject({ entry: { country: '英国移动', rate: '0.0450' } });
+    expect(validateRateEdit(uk, { ...ukDraft, country: ' ' })).toEqual({
+      errors: { country: '请输入国家' },
+    });
+  });
+
+  it('treats an ISO-only or description-only change as a change', () => {
+    expect(validateRateEdit(gb, { ...gbDraft, iso: 'jm' })).toMatchObject({
+      entry: { iso: 'JM' },
+    });
+    expect(validateRateEdit(gb, { ...gbDraft, iso: ' ' })).toMatchObject({
+      entry: { iso: '' },
+    });
+    expect(
+      validateRateEdit(gb, { ...gbDraft, description: '移动' }),
+    ).toMatchObject({ entry: { description: '移动' } });
+    expect(validateRateEdit(gb, { ...gbDraft, iso: ' gb ' })).toEqual({
+      errors: { rate: '新费率与当前费率相同' },
+    });
+  });
+
+  it('reports ISO, country and description errors together', () => {
+    expect(
+      validateRateEdit(gb, {
+        iso: 'GBR',
+        country: '',
+        description: 'x'.repeat(201),
+        rate: '0.05',
+      }),
     ).toEqual({
-      entry: {
-        iso: '',
-        description: '',
-        prefix: '447',
-        country: '英国移动',
-        rate: '0.0450',
+      errors: {
+        iso: 'ISO 必须是两位字母，或留空',
+        country: '请输入国家',
+        description: '说明不能超过 200 字',
       },
     });
-    expect(validateRateEdit(uk, { country: ' ', rate: '0.05' })).toEqual({
-      errors: { country: '请输入国家/备注' },
+    expect(validateRateEdit(gb, { ...gbDraft, country: '英\n国' })).toEqual({
+      errors: { country: '国家不能包含换行' },
     });
+    expect(validateRateEdit(gb, { ...gbDraft, description: '手\r机' })).toEqual(
+      { errors: { description: '说明不能包含换行' } },
+    );
+  });
+
+  it.each([
+    ['G1', false],
+    ['英国', false],
+    ['ß', false],
+    ['G', false],
+    ['gb', true],
+    [' GB ', true],
+    ['', true],
+  ])('ISO %j is accepted like the server schema: %s', (iso, accepted) => {
+    const result = validateRateEdit(gb, { ...gbDraft, iso, rate: '0.05' });
+    expect('entry' in result).toBe(accepted);
+    expect(adminRateEntrySchema.safeParse({ ...gb, iso }).success).toBe(
+      accepted,
+    );
+  });
+
+  it.each([
+    ['country', '英'.repeat(200), true],
+    ['country', '英'.repeat(201), false],
+    ['description', '手'.repeat(200), true],
+    ['description', '手'.repeat(201), false],
+    ['description', '手\n机', false],
+    ['description', '', true],
+    ['country', '  ', false],
+  ] as const)(
+    '%s %j is accepted like the server schema: %s',
+    (field, value, accepted) => {
+      const result = validateRateEdit(gb, {
+        ...gbDraft,
+        rate: '0.05',
+        [field]: value,
+      });
+      expect('entry' in result).toBe(accepted);
+      expect(
+        adminRateEntrySchema.safeParse({ ...gb, [field]: value }).success,
+      ).toBe(accepted);
+    },
+  );
+
+  it('returns an entry the server schema parses to itself', () => {
+    const result = validateRateEdit(gb, {
+      ...gbDraft,
+      iso: ' jm ',
+      description: ' 移动 ',
+    });
+    if (!('entry' in result)) throw new Error('expected an entry');
+    expect(adminRateEntrySchema.parse(result.entry)).toEqual(result.entry);
+  });
+});
+
+describe('scheduledRowHints', () => {
+  const effectiveFrom = '2026-10-01T00:00:00+08:00';
+  const hints = (after: Partial<typeof gb>) =>
+    scheduledRowHints([gb], {
+      effectiveFrom,
+      entries: [{ ...gb, ...after }],
+    }).get('447');
+
+  it('shows the new rate when the rate changes', () => {
+    expect(hints({ rate: '0.0480' })).toBe('10-01 起 0.0480');
+    expect(hints({ rate: '0.0480', country: '大不列颠' })).toBe(
+      '10-01 起 0.0480',
+    );
+  });
+
+  it('says rename when only labels change, including a numerically equal rate', () => {
+    expect(hints({ iso: 'JM' })).toBe('10-01 起更新名称');
+    expect(hints({ country: '大不列颠' })).toBe('10-01 起更新名称');
+    expect(hints({ description: '移动' })).toBe('10-01 起更新名称');
+    expect(hints({ rate: '0.045', description: '移动' })).toBe(
+      '10-01 起更新名称',
+    );
+  });
+
+  it('marks deleted rows and leaves unchanged rows alone', () => {
+    expect(
+      scheduledRowHints([gb], { effectiveFrom, entries: [] }).get('447'),
+    ).toBe('10-01 起删除');
+    expect(hints({})).toBeUndefined();
   });
 });
 
@@ -296,6 +436,23 @@ describe('rateEditFailure', () => {
     expect(rateEditFailure(error)).toEqual({
       step: 'form',
       fields: { rate: '请求字段格式错误' },
+      general: false,
+    });
+  });
+
+  it('sends ISO and description issues back to the form step', () => {
+    const error = failure(400, 'VALIDATION_ERROR', {
+      issues: [
+        { path: ['entry', 'iso'], message: 'ISO 必须是两位字母，或留空' },
+        { path: ['entry', 'description'], message: '说明不能包含换行' },
+      ],
+    });
+    expect(rateEditFailure(error)).toEqual({
+      step: 'form',
+      fields: {
+        iso: 'ISO 必须是两位字母，或留空',
+        description: '说明不能包含换行',
+      },
       general: false,
     });
   });
@@ -347,7 +504,7 @@ describe('cancelFailureMessage', () => {
   });
 });
 
-it('diffRateTables includes ISO and description changes and edits preserve current metadata', () => {
+it('diffRateTables marks iso and description changes as modified', () => {
   const current = {
     prefix: '44',
     iso: 'GB',
@@ -361,7 +518,7 @@ it('diffRateTables includes ISO and description changes and edits preserve curre
   expect(
     diffRateTables([current], [{ ...current, description: '手机' }]),
   ).toMatchObject([{ kind: 'modified' }]);
-  expect(validateRateEdit(current, { country: '英国', rate: '0.03' })).toEqual({
-    entry: { ...current, rate: '0.03' },
-  });
+  expect(diffRateTables([current], [{ ...current, rate: '0.0200' }])).toEqual(
+    [],
+  );
 });

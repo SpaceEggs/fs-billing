@@ -506,6 +506,9 @@ function Upload({
               ISO,Country,Destination Prefix,Description,Rate
             </span>
             <span className="ml-3">每行一个前缀，覆盖整张费率表</span>
+            <span className="mt-1 block">
+              说明会显示给客户，请勿填写内部备注
+            </span>
           </span>
           <span className="flex-1" />
           <RateCsvTemplateLink />
@@ -605,7 +608,8 @@ function RowErrors({
         </table>
       </div>
       <span className="text-xs text-muted-foreground">
-        校验规则：前缀只能是数字、不能重复；费率不能为负；小数不超过 4 位。
+        校验规则：前缀只能是数字、不能重复；ISO
+        为两位字母或留空；国家必填；费率不能为负；小数不超过 4 位。
       </span>
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
         <Button variant="outline" className="h-12 md:h-9" onClick={onCancel}>
