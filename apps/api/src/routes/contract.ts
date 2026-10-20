@@ -1,5 +1,6 @@
 import {
   apiContract,
+  portalHomeApiContract,
   portalLedgerApiContract,
   portalLedgerExportApiContract,
   portalCdrApiContract,
@@ -18,6 +19,7 @@ export function createLiveApiContract(
     ...apiContract,
     ...admin,
     ...adminCdrApiContract,
+    ...portalHomeApiContract,
     ...portalCdrApiContract,
     ...portalLedgerApiContract,
     ...portalLedgerExportApiContract,

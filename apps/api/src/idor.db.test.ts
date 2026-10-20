@@ -16,6 +16,7 @@ import {
   apiErrorSchema,
   portalContextResponseSchema,
   portalCdrsResponseSchema,
+  portalHomeResponseSchema,
   cdrCountriesResponseSchema,
   portalLedgerResponseSchema,
   sessionResponseSchema,
@@ -299,6 +300,57 @@ const cases = {
       expect(response.statusCode).toBe(400);
     }
   },
+  portalHome: async ({ api, fixture, operation }: CaseContext) => {
+    const a = await login(api, fixture.a);
+    await insertIsolatedCdrs(fixture);
+    for (const { user, balance, currency, callee } of [
+      {
+        user: fixture.a,
+        balance: '111.25',
+        currency: 'CNY',
+        callee: '8613800138001',
+      },
+      {
+        user: fixture.a2,
+        balance: '222.5',
+        currency: 'CNY',
+        callee: '8613800138002',
+      },
+      {
+        user: fixture.b,
+        balance: '999.75',
+        currency: 'USD',
+        callee: '447700900123',
+      },
+    ] as const) {
+      const session = user === fixture.a ? a : await login(api, user);
+      const response = await api.inject({
+        url: operation.path,
+        headers: forgedHeaders(session.cookie, fixture),
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      const body = portalHomeResponseSchema.parse(response.json());
+      expect(body.currency, 'TENANT_FILTER_LEAK: portalHome currency').toBe(
+        currency,
+      );
+      expect(body.balance, 'TENANT_FILTER_LEAK: portalHome balance').toBe(
+        balance,
+      );
+      expect(
+        body.recentCalls.map((call) => call.callee),
+        'TENANT_FILTER_LEAK: portalHome recent calls',
+      ).toEqual([callee]);
+      expect(body.usage.answeredCalls).toBe(1);
+      expect(response.body).not.toMatch(/unverified/i);
+    }
+    for (const key of ['tenantId', 'tenant_id']) {
+      const response = await api.inject({
+        url: `${operation.path}?${key}=${fixture.b.tenantId}`,
+        headers: forgedHeaders(a.cookie, fixture),
+      });
+      expect(response.statusCode).toBe(400);
+    }
+  },
   portalContext: async ({ api, fixture, operation }: CaseContext) => {
     const a = await login(api, fixture.a);
     const b = await login(api, fixture.b);
@@ -553,6 +605,7 @@ const caseKinds = new Map([
   ['portalCdrsExport', 'tenant-read'],
   ['portalLedgerExport', 'tenant-read'],
   ['portalLedger', 'tenant-read'],
+  ['portalHome', 'tenant-read'],
   ['session', 'self-session'],
   ['logout', 'self-session-mutation'],
   ['revokeOtherSessions', 'self-session-mutation'],
