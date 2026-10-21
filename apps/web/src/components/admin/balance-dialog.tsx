@@ -31,11 +31,11 @@ import { cn } from '../../lib/utils';
 import { webConfig } from '../../config';
 import { Money } from '../data-format';
 import { statusTags } from '../status-tag';
+import { healthStatus } from '../tenant-health';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
 import { Field, invalidClass, MoneyInput } from './form-fields';
 import { ProblemAlert } from './problem-alert';
-import { healthStatus } from './tenant-status';
 
 type Step =
   | { name: 'form' }

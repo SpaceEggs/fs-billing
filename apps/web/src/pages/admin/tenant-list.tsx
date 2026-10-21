@@ -14,9 +14,9 @@ import {
 } from '../../components/app-shell';
 import {
   healthOptions,
-  healthStatus,
   TenantStatus,
 } from '../../components/admin/tenant-status';
+import { healthStatus } from '../../components/tenant-health';
 import { Money } from '../../components/data-format';
 import {
   ChoiceGrid,
