@@ -26,6 +26,7 @@ import {
 } from './lib/admin-search';
 import { clearBalanceAttempts } from './lib/balance-attempts';
 import { validatePortalCdrsSearch } from './lib/cdr-search';
+import { validatePortalLedgerSearch } from './lib/portal-ledger';
 import { rememberReturnPath } from './lib/return-to';
 import {
   loadSession,
@@ -74,6 +75,14 @@ const PortalHome = lazyRouteComponent(
 const PortalCdrsPage = lazyRouteComponent(
   () => import('./pages/portal/cdrs'),
   'PortalCdrsPage',
+);
+const PortalLedgerPage = lazyRouteComponent(
+  () => import('./pages/portal/ledger'),
+  'PortalLedgerPage',
+);
+const PortalSettingsPage = lazyRouteComponent(
+  () => import('./pages/portal/settings'),
+  'PortalSettingsPage',
 );
 const LoginPage = lazyRouteComponent(
   () => import('./pages/login'),
@@ -206,6 +215,22 @@ const portalChangePassword = createRoute({
   component: lazyRoute(
     () => <ZoneChangePassword zone="portal" />,
     ChangePasswordPage,
+  ),
+});
+
+const portalLedger = createRoute({
+  getParentRoute: () => portalLayout,
+  path: 'portal/ledger',
+  validateSearch: validatePortalLedgerSearch,
+  component: lazyRoute(PortalLedgerRoute, PortalLedgerPage),
+});
+
+const portalSettings = createRoute({
+  getParentRoute: () => portalLayout,
+  path: 'portal/settings',
+  component: lazyRoute(
+    () => <PortalSettingsPage identity={useZoneSession('portal').identity} />,
+    PortalSettingsPage,
   ),
 });
 
@@ -347,6 +372,22 @@ function ZoneChangePassword({ zone }: { zone: Zone }): React.JSX.Element {
   return <ChangePasswordPage zone={zone} forced={forced} />;
 }
 
+function PortalLedgerRoute(): React.JSX.Element {
+  const navigate = portalLedger.useNavigate();
+  return (
+    <PortalLedgerPage
+      identity={useZoneSession('portal').identity}
+      search={portalLedger.useSearch()}
+      onSearch={(patch) =>
+        void navigate({
+          search: (current) => ({ ...current, ...patch }),
+          replace: true,
+        })
+      }
+    />
+  );
+}
+
 function PortalIndex(): React.JSX.Element {
   return <PortalHome identity={useZoneSession('portal').identity} />;
 }
@@ -354,7 +395,13 @@ function PortalIndex(): React.JSX.Element {
 const routeTree = rootRoute.addChildren([
   portalLogin,
   adminLogin,
-  portalLayout.addChildren([portalHome, portalCdrs, portalChangePassword]),
+  portalLayout.addChildren([
+    portalHome,
+    portalCdrs,
+    portalChangePassword,
+    portalLedger,
+    portalSettings,
+  ]),
   adminLayout.addChildren([
     adminHome,
     adminChangePassword,

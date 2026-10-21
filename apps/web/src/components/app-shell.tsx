@@ -14,6 +14,8 @@ const navigation = {
   portal: [
     { label: '首页', to: zones.portal.home },
     { label: '话单', to: '/portal/cdrs' },
+    { label: '余额流水', to: '/portal/ledger' },
+    { label: '账号设置', to: '/portal/settings' },
   ],
   admin: [
     { label: '概览', to: zones.admin.home },
