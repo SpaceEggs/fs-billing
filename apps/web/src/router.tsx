@@ -67,7 +67,7 @@ const ChangePasswordPage = lazyRouteComponent(
 );
 const AdminHome = lazyRouteComponent(() => import('./pages/home'), 'AdminHome');
 const PortalHome = lazyRouteComponent(
-  () => import('./pages/home'),
+  () => import('./pages/portal/home'),
   'PortalHome',
 );
 const LoginPage = lazyRouteComponent(

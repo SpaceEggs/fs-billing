@@ -376,7 +376,7 @@ ORDER BY p.at DESC NULLS LAST, p.sort_id DESC;
 - `availableBalance` 是余额加透支额度，`health` 由 `tenantHealthSchema` 定义。已停机（`suspended`）时页面顶部显示设计稿 1c 的横幅「余额不足，已暂停呼叫」和「请联系客服充值，到账后自动恢复呼叫。」。
 - 消费、分钟、30 天口径沿用 [阶段 5 设计](phase-5-design.md#已决定概况与门户首页2026-10-15-0156-pt)：消费只算 `call_charge`，分钟是计费分钟，已接通按接通时间归属，最近 30 天含今天、缺失补零，所有租户按北京时间。门户不显示未接通通数，`unansweredCalls` 在 schema 里不存在。
 - 最近话单（`portalRecentCallSchema`，`answeredAt` 不可为空）：`WHERE tenant_id = $1 AND answered_at IS NOT NULL ORDER BY answered_at DESC, call_uuid DESC LIMIT 10`，不加日期下界。补测在 14 个分区上用 Merge Append 取前 10 条，热态 0.2 ms，没有任何话单的租户 26.8 ms。只含已接通（决定 29）。
-- 空状态（设计稿 1d）：`recentCalls` 为空时显示「还没有通话记录」。
+- 空状态（设计稿 1d）：`recentCalls` 为空时显示「没有通话记录」（决定 29；设计稿 1d 的文案「还没有通话记录」已被该决定取代）。
 - `health = 'disabled'`（管理员停用租户）的显示见决定 28。
 - 概况查询还会为后台统计未接通通数，门户用不到，多约 5 至 8 ms，不为此改查询。概况的接通月份 CTE 没有 `started_at` 下界，会扫描到 `month_end` 为止的所有分区的索引，这里可以顺手加上同一个 31 天下界，PR 4 实测后再决定，本步不改。
 
