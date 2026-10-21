@@ -187,14 +187,16 @@ describe('portal home', () => {
             emails: [],
           }),
         );
-      if (Number(row.balance) > 0)
+      const negative = row.balance.startsWith('-');
+      const positive = !negative && /[1-9]/.test(row.balance);
+      if (positive)
         await ledger(
           tenant.id,
           'recharge',
           row.balance,
           '2026-09-10T10:00:00Z',
         );
-      if (Number(row.balance) < 0)
+      if (negative)
         await ledger(
           tenant.id,
           'call_charge',
