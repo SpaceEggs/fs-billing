@@ -243,10 +243,10 @@ test('a failed logout keeps the session and offers a retry', async ({
   await expectPath(page, '/login');
 });
 
-test('a forbidden home context shows an explicit error, not a skeleton', async ({
+test('a forbidden home shows an explicit error, not a skeleton', async ({
   page,
 }) => {
-  await page.route('/api/portal/context', (route) =>
+  await page.route('/api/portal/home', (route) =>
     route.fulfill({
       status: 403,
       contentType: 'application/json',
