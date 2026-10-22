@@ -17,7 +17,7 @@ function countryLabel(call: RecentCall) {
 
 /**
  * 首页「最近话单」的最小行组件（设计稿 1a、1b）：电脑为表格，手机为卡片。
- * 话单页（PR 5）的共享话单组件会取代它。
+ * 首页是六列、不能点开详情，与话单页的共用表格（八列、点击出详情）不同，所以没有换成共用组件。
  */
 export function RecentCalls({
   currency,
