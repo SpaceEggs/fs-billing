@@ -96,7 +96,14 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
 
   const nav = page.getByRole('navigation', { name: '主导航' });
   await expect(nav.getByRole('link', { name: '首页' })).toBeVisible();
-  await expect(nav.getByRole('link', { name: '月账单' })).toHaveCount(0);
+  // 阶段 7 PR 4 起门户导航有「月账单」，在「话单」与「余额流水」之间。
+  await expect(nav.getByRole('link')).toHaveText([
+    '首页',
+    '话单',
+    '月账单',
+    '余额流水',
+    '账号设置',
+  ]);
 });
 
 test('a suspended customer sees the banner from design 1c', async ({
@@ -140,7 +147,7 @@ test('the recent calls link to the full call list', async ({ page }) => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('recent calls are cards and the drawer has no monthly statement', async ({
+  test('recent calls are cards and the drawer lists the monthly statement', async ({
     page,
   }) => {
     await loginAs(page, '/login', accounts.customer);
@@ -157,7 +164,7 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: '打开导航' }).click();
     const drawer = page.getByRole('dialog', { name: '导航' });
     await expect(drawer.getByRole('link', { name: '首页' })).toBeVisible();
-    await expect(drawer.getByRole('link', { name: '月账单' })).toHaveCount(0);
+    await expect(drawer.getByRole('link', { name: '月账单' })).toBeVisible();
   });
 
   test('the phone top bar has the ◐ theme button and the status tag has its dot', async ({

@@ -14,6 +14,7 @@ const navigation = {
   portal: [
     { label: '首页', to: zones.portal.home },
     { label: '话单', to: '/portal/cdrs' },
+    { label: '月账单', to: '/portal/statements' },
     { label: '余额流水', to: '/portal/ledger' },
     { label: '账号设置', to: '/portal/settings' },
   ],
@@ -103,19 +104,19 @@ export function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   return (
     <div className="flex min-h-dvh bg-background text-foreground">
-      <aside className="hidden w-[232px] shrink-0 flex-col gap-5 border-r border-border bg-side px-3 py-4 md:flex">
+      <aside className="hidden w-[232px] shrink-0 flex-col gap-5 border-r border-border bg-side px-3 py-4 md:flex print:hidden">
         <SidebarBrand zone={zone} />
         <NavItems zone={zone} active={activeNav} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="hidden h-14 items-center justify-between border-b border-border px-7 md:flex">
+        <header className="hidden h-14 items-center justify-between border-b border-border px-7 md:flex print:hidden">
           <span className="text-sm text-muted-foreground">{crumb}</span>
           <div className="flex items-center gap-2">
             <ThemeMenu />
             <AccountMenu identity={identity} />
           </div>
         </header>
-        <header className="grid h-[52px] grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 md:hidden">
+        <header className="grid h-[52px] grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-border px-4 md:hidden print:hidden">
           <div className="flex justify-start">
             {mobileNav ?? (
               <Sheet

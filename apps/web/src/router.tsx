@@ -14,6 +14,7 @@ import {
   type RouteComponent,
 } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
+import { statementMonthSchema } from '@fs-billing/shared';
 import { BlockedPage } from './pages/blocked';
 import { ErrorPage } from './pages/error';
 import { NotFoundPage } from './pages/not-found';
@@ -75,6 +76,14 @@ const PortalHome = lazyRouteComponent(
 const PortalCdrsPage = lazyRouteComponent(
   () => import('./pages/portal/cdrs'),
   'PortalCdrsPage',
+);
+const PortalStatementsPage = lazyRouteComponent(
+  () => import('./pages/portal/statements'),
+  'PortalStatementsPage',
+);
+const PortalStatementDetailPage = lazyRouteComponent(
+  () => import('./pages/portal/statement-detail'),
+  'PortalStatementDetailPage',
 );
 const PortalLedgerPage = lazyRouteComponent(
   () => import('./pages/portal/ledger'),
@@ -207,6 +216,21 @@ const portalCdrs = createRoute({
     () => <PortalCdrsPage identity={useZoneSession('portal').identity} />,
     PortalCdrsPage,
   ),
+});
+
+const portalStatements = createRoute({
+  getParentRoute: () => portalLayout,
+  path: 'portal/statements',
+  component: lazyRoute(
+    () => <PortalStatementsPage identity={useZoneSession('portal').identity} />,
+    PortalStatementsPage,
+  ),
+});
+
+const portalStatementDetail = createRoute({
+  getParentRoute: () => portalLayout,
+  path: 'portal/statements/$month',
+  component: lazyRoute(PortalStatementDetailRoute, PortalStatementDetailPage),
 });
 
 const portalChangePassword = createRoute({
@@ -388,6 +412,14 @@ function PortalLedgerRoute(): React.JSX.Element {
   );
 }
 
+function PortalStatementDetailRoute(): React.JSX.Element {
+  const { month } = portalStatementDetail.useParams();
+  const { identity } = useZoneSession('portal');
+  // 月份写法不对的地址是找不到的页面，不发请求。
+  if (!statementMonthSchema.safeParse(month).success) return <NotFoundPage />;
+  return <PortalStatementDetailPage identity={identity} month={month} />;
+}
+
 function PortalIndex(): React.JSX.Element {
   return <PortalHome identity={useZoneSession('portal').identity} />;
 }
@@ -398,6 +430,8 @@ const routeTree = rootRoute.addChildren([
   portalLayout.addChildren([
     portalHome,
     portalCdrs,
+    portalStatements,
+    portalStatementDetail,
     portalChangePassword,
     portalLedger,
     portalSettings,
