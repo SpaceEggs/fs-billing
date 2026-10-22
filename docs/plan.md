@@ -355,7 +355,7 @@
 
 **范围**
 
-- 生产 Docker Compose：Caddy（自动 HTTPS）、Web、API、Workers、PostgreSQL
+- 服务器原生部署（Debian 13，不用 Docker；2026-10-22 用户确认，生产与测试服务器相同）：API、Workers 为 systemd 服务；nginx 托管 Web 静态文件并代理 `/api`；certbot 申请并自动续期证书；PostgreSQL 用 Debian 官方包 `postgresql-17`
 - 防火墙：Workers 端口只对服务器 A 开放
 - 每日自动备份，保留 30 天，存到另一台机器或对象存储；恢复脚本
 - 用 SIPp 在 FreeSWITCH 测试机上做压测和故障演练
