@@ -86,7 +86,36 @@ export function isStatementsEmpty(
   );
 }
 
-/** 某国家占通话扣费的百分比，一位小数；总额为 0 时没有占比。 */
+/** 明细行的合计（十进制字符串精确相加，不经浮点）。 */
+export function sumRows(
+  rows: readonly { calls: number; minutes: string; charge: string }[],
+) {
+  return {
+    calls: rows.reduce((sum, row) => sum + row.calls, 0),
+    minutes: rows
+      .reduce((sum, row) => sum.plus(row.minutes), new Decimal(0))
+      .toFixed(),
+    charge: rows
+      .reduce((sum, row) => sum.plus(row.charge), new Decimal(0))
+      .toFixed(),
+  };
+}
+
+export const unmatchedChargeNote = '部分扣费没有对应的话单明细';
+
+/**
+ * 头部的通话扣费来自流水，国家与日明细来自话单，二者可能不等（话单缺失、延迟入账等）。
+ * 门户拿不到后台的差额字段，由页面用头部与明细合计的差在本地判断。
+ */
+export function hasUnmatchedCharge(
+  callCharges: string,
+  rows: readonly { charge: string }[],
+) {
+  const total = rows.reduce((sum, row) => sum.plus(row.charge), new Decimal(0));
+  return !new Decimal(callCharges).eq(total);
+}
+
+/** 某国家占明细费用合计的百分比，一位小数；总额为 0 时没有占比。 */
 export function chargeShare(charge: string, total: string) {
   const whole = new Decimal(total);
   if (whole.isZero()) return '—';

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   chargeShare,
   fillDays,
+  hasUnmatchedCharge,
+  sumRows,
   hasNoActivity,
   isStatementsEmpty,
   minutesCount,
@@ -97,5 +99,21 @@ describe('statement helpers', () => {
       isStatementsEmpty([{ ...live, figures: { ...live.figures, calls: 1 } }]),
     ).toBe(false);
     expect(hasNoActivity(augustFigures)).toBe(false);
+  });
+
+  it('sums rows and compares charges as exact decimals', () => {
+    expect(
+      sumRows([
+        { calls: 1, minutes: '1', charge: '0.1' },
+        { calls: 2, minutes: '2', charge: '0.2' },
+      ]),
+    ).toEqual({ calls: 3, minutes: '3', charge: '0.3' });
+    expect(sumRows([])).toEqual({ calls: 0, minutes: '0', charge: '0' });
+    expect(
+      hasUnmatchedCharge('0.3', [{ charge: '0.1' }, { charge: '0.2' }]),
+    ).toBe(false);
+    expect(hasUnmatchedCharge('0.30', [{ charge: '0.3' }])).toBe(false);
+    expect(hasUnmatchedCharge('1240.98', [{ charge: '0.23' }])).toBe(true);
+    expect(hasUnmatchedCharge('0.1', [])).toBe(true);
   });
 });

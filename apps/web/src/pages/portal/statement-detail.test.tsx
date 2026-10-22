@@ -140,7 +140,7 @@ describe('portal statement detail', () => {
     expect(rows.map((row) => row.firstChild?.textContent)).toEqual(
       Array.from({ length: 20 }, (_, index) => `2026-08-${12 + index}`),
     );
-    expect(rows.at(-1)).toHaveTextContent('2026-08-31500');
+    expect(rows.at(-1)).toHaveTextContent('2026-08-319,042');
     expect(within(table).getAllByRole('row').at(-1)).toHaveTextContent(
       '合计9,64237,468分钟¥1,873.40',
     );
@@ -161,6 +161,76 @@ describe('portal statement detail', () => {
     const today = within(table).getAllByRole('row').at(-2);
     expect(today).toHaveTextContent('2026-09-29今日 · 截至当前');
     expect(within(table).getAllByText('今日 · 截至当前')).toHaveLength(1);
+  });
+
+  describe('when the ledger charge differs from the CDR breakdown', () => {
+    // 头部通话扣费来自流水 1,000.00；国家与日明细来自话单，各行合计 1,873.40。
+    const gap = {
+      ...augustDetail,
+      figures: {
+        ...augustDetail.figures,
+        callCharges: '1000',
+        closingBalance: '2050',
+      },
+    };
+
+    it('sums the rows in the totals and shares, and notes the gap under each table', async () => {
+      renderDetail('2026-08', gap);
+      const countries = await desktopTable('按国家汇总');
+      const rows = within(countries).getAllByRole('row');
+      // 合计是各行之和，占比以各行之和为分母。
+      expect(rows.at(-1)).toHaveTextContent('合计9,64237,468分钟¥1,873.40');
+      expect(rows[1]).toHaveTextContent('76.9%');
+      const shares = rows
+        .slice(1, -1)
+        .map((row) =>
+          Number.parseFloat(within(row).getAllByRole('cell')[3]!.textContent),
+        );
+      expect(shares.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 0);
+      const days = await desktopTable('按日汇总');
+      expect(within(days).getAllByRole('row').at(-1)).toHaveTextContent(
+        '合计9,64237,468分钟¥1,873.40',
+      );
+      expect(screen.getAllByText('部分扣费没有对应的话单明细')).toHaveLength(2);
+      // 头部算式仍来自流水。
+      const equation = screen.getByRole('region', { name: '账单汇总' });
+      expect(equation.firstElementChild).toHaveTextContent('通话扣费¥1,000.00');
+    });
+
+    it('notes a month whose breakdown is empty and sums to zero', async () => {
+      renderDetail('2026-08', { ...gap, countries: [], days: [] });
+      const countries = await desktopTable('按国家汇总');
+      expect(within(countries).getAllByRole('row').at(-1)).toHaveTextContent(
+        '合计00分钟¥0.00',
+      );
+      expect(screen.getAllByText('部分扣费没有对应的话单明细')).toHaveLength(2);
+    });
+
+    it('shows no note when the breakdown adds up to the header', async () => {
+      renderDetail('2026-08', augustDetail);
+      await desktopTable('按国家汇总');
+      expect(screen.queryByText('部分扣费没有对应的话单明细')).toBeNull();
+    });
+
+    it('compares decimal strings exactly', async () => {
+      // 0.1 + 0.2 = 0.3：浮点相加会误报差额。
+      const exact = {
+        ...augustDetail,
+        figures: {
+          ...augustDetail.figures,
+          callCharges: '0.3',
+          closingBalance: '3049.7',
+        },
+        countries: [
+          { country: '中国', calls: 1, minutes: '1', charge: '0.1' },
+          { country: '日本', calls: 1, minutes: '1', charge: '0.2' },
+        ],
+        days: [{ day: '2026-08-12', calls: 2, minutes: '2', charge: '0.3' }],
+      };
+      renderDetail('2026-08', exact);
+      await desktopTable('按国家汇总');
+      expect(screen.queryByText('部分扣费没有对应的话单明细')).toBeNull();
+    });
   });
 
   it('exports the summary CSV for the month and saves the file', async () => {

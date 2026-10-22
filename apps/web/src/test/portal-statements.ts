@@ -48,7 +48,7 @@ export const augustCountries = [
 
 const tenant = { code: 'ABC001', name: '深圳市某某科技有限公司' };
 
-/** 2026年9月（进行中）：1 日至 29 日，只有 3 天有通话，其余由页面补零。 */
+/** 2026年9月（进行中）：1 日至 29 日，只有 3 天有通话，其余由页面补零；三天之和等于头部。 */
 export const septemberDetail: PortalStatementResponse = {
   currency: 'CNY',
   tenant,
@@ -63,7 +63,7 @@ export const septemberDetail: PortalStatementResponse = {
   days: [
     { day: '2026-09-01', calls: 410, minutes: '1650', charge: '82.5' },
     { day: '2026-09-28', calls: 454, minutes: '1776', charge: '88.64' },
-    { day: '2026-09-29', calls: 210, minutes: '842', charge: '42.1' },
+    { day: '2026-09-29', calls: 11940, minutes: '46300', charge: '2315.16' },
   ],
 };
 
@@ -82,7 +82,7 @@ export const augustDetail: PortalStatementResponse = {
   days: [
     { day: '2026-08-12', calls: 120, minutes: '630', charge: '31.5' },
     { day: '2026-08-20', calls: 480, minutes: '1870', charge: '93.5' },
-    { day: '2026-08-31', calls: 500, minutes: '1950', charge: '97.5' },
+    { day: '2026-08-31', calls: 9042, minutes: '34968', charge: '1748.4' },
   ],
 };
 

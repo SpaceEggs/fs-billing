@@ -1,6 +1,9 @@
 import type { Currency } from '@fs-billing/shared';
 import {
   chargeShare,
+  hasUnmatchedCharge,
+  sumRows,
+  unmatchedChargeNote,
   type StatementCountry,
   type StatementFigures,
 } from '../../lib/statement';
@@ -9,8 +12,8 @@ import { Money } from '../data-format';
 
 /**
  * 按国家汇总（设计稿 2a、2b，决定 21）：只按国家分组，列头「国家」，按费用从高到低。
- * 「占比」是该国费用占通话扣费的百分比，由费用算出、不入库；合计行取账单头部的数字。
- * 电脑用表，手机用卡片。
+ * 合计行与「占比」都以国家行为准：占比是该国费用占各行费用之和的百分比（合计 100%），由费用算出、不入库。
+ * 头部的通话扣费（来自流水）与各行之和不等时，表下写一行说明。电脑用表，手机用卡片。
  */
 export function StatementCountries({
   currency,
@@ -22,7 +25,9 @@ export function StatementCountries({
   figures: StatementFigures;
 }) {
   const money = (amount: string) => ({ currency, amount });
-  const totalMinutes = formatMinutes(figures.callMinutes);
+  const total = sumRows(countries);
+  const totalMinutes = formatMinutes(total.minutes);
+  const unmatched = hasUnmatchedCharge(figures.callCharges, countries);
   return (
     <section
       aria-label="按国家汇总"
@@ -34,7 +39,7 @@ export function StatementCountries({
         </h2>
         <span className="text-xs text-muted-foreground">
           <span className="md:hidden">
-            {formatCount(figures.calls)} 通 · {totalMinutes}
+            {formatCount(total.calls)} 通 · {totalMinutes}
           </span>
           <span className="hidden md:inline">按费用从高到低</span>
         </span>
@@ -70,7 +75,7 @@ export function StatementCountries({
                 {formatMinutes(row.minutes)}
               </td>
               <td className="px-3 py-2.5 text-right text-muted-foreground">
-                {chargeShare(row.charge, figures.callCharges)}
+                {chargeShare(row.charge, total.charge)}
               </td>
               <td className="px-5 py-2.5 text-right font-medium">
                 <Money value={money(row.charge)} tone="plain" />
@@ -82,12 +87,12 @@ export function StatementCountries({
           <tr className="border-t border-border bg-muted font-semibold tabular-nums">
             <td className="px-5 py-2.5">合计</td>
             <td className="px-3 py-2.5 text-right">
-              {formatCount(figures.calls)}
+              {formatCount(total.calls)}
             </td>
             <td className="px-3 py-2.5 text-right">{totalMinutes}</td>
             <td className="px-3 py-2.5" />
             <td className="px-5 py-2.5 text-right">
-              <Money value={money(figures.callCharges)} tone="plain" />
+              <Money value={money(total.charge)} tone="plain" />
             </td>
           </tr>
         </tfoot>
@@ -115,6 +120,11 @@ export function StatementCountries({
           </li>
         ))}
       </ul>
+      {unmatched ? (
+        <p className="m-0 text-xs text-muted-foreground md:border-t md:border-border md:px-5 md:py-2.5">
+          {unmatchedChargeNote}
+        </p>
+      ) : null}
     </section>
   );
 }

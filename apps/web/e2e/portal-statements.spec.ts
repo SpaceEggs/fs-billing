@@ -140,6 +140,11 @@ base.describe('ABC001 的月账单', () => {
       await expect(september.last()).toHaveText(
         /合计\s*12,804\s*49,726分钟\s*¥2,486\.30/,
       );
+      // 明细之和等于头部，国家表与日表下都没有说明。
+      await expect(page.getByText('部分扣费没有对应的话单明细')).toHaveCount(0);
+      await page.goto('/portal/statements/2026-08');
+      await expect(table(page, '按国家汇总')).toBeVisible();
+      await expect(page.getByText('部分扣费没有对应的话单明细')).toHaveCount(0);
     },
   );
 
@@ -406,5 +411,50 @@ adminTest(
     ).toBeVisible();
     await expect(customer.page.getByRole('table')).toHaveCount(0);
     await customer.context.close();
+  },
+);
+
+base(
+  'notes the charges without CDR details and sums the rows when the breakdown does not match the ledger',
+  async ({ page }) => {
+    // GZT007 的 9 月：流水通话扣费 ¥1,240.98，话单明细只有 2 通共 ¥0.23（种子里的汇总流水没有话单）。
+    await loginAs(page, '/login', accounts.gapCustomer);
+    await expectPath(page, '/');
+    await page.goto('/portal/statements/2026-09');
+    // 头部算式仍来自流水。
+    await expect(equation(page)).toContainText('通话扣费');
+    await expect(equation(page)).toContainText('¥1,240.98');
+
+    const note = page.getByText('部分扣费没有对应的话单明细').filter({
+      visible: true,
+    });
+    await expect(note).toHaveCount(2);
+    const countries = table(page, '按国家汇总').getByRole('row');
+    await expect(countries).toHaveCount(4);
+    await expect(countries.last()).toHaveText(/合计\s*2\s*5分钟\s*¥0\.23/);
+    // 占比以各行费用之和为分母，合计 100%。
+    const shares = await countries
+      .filter({ hasText: /%/ })
+      .locator('td:nth-child(4)')
+      .allTextContents();
+    expect(shares).toHaveLength(2);
+    expect(
+      shares.reduce((sum, share) => sum + Number.parseFloat(share), 0),
+    ).toBeCloseTo(100, 5);
+    const days = table(page, '按日汇总').getByRole('row').last();
+    await expect(days).toHaveText(/合计\s*2\s*5分钟\s*¥0\.23/);
+    // 说明紧跟在各自的表下面。
+    await expect(
+      page
+        .getByRole('region', { name: '按国家汇总' })
+        .getByText('部分扣费没有对应的话单明细')
+        .filter({ visible: true }),
+    ).toHaveCount(1);
+    await expect(
+      page
+        .getByRole('region', { name: '按日汇总' })
+        .getByText('部分扣费没有对应的话单明细')
+        .filter({ visible: true }),
+    ).toHaveCount(1);
   },
 );
