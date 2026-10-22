@@ -19,6 +19,11 @@ import {
   portalLedgerQuerySchema,
   portalLedgerResponseSchema,
 } from './ledger.js';
+import {
+  portalStatementResponseSchema,
+  portalStatementsResponseSchema,
+} from './statements.js';
+import { statementMonthParamsSchema } from '../statement-fields.js';
 
 const noBody = emptyRequestSchema.optional();
 
@@ -124,11 +129,49 @@ export const portalLedgerExportApiContract = {
   ),
 } as const satisfies Record<string, ApiOperation>;
 
+const monthRequest = {
+  params: statementMonthParamsSchema,
+  query: emptyRequestSchema,
+  body: noBody,
+};
+
+/**
+ * 阶段 7 月账单。租户只来自会话，路径里的 month 不是租户选择器；别的租户独有的月份与不存在的月份
+ * 都是 404，响应无法区分。汇总 CSV 不写操作日志（话单明细 CSV 复用 portalCdrsExport）。
+ */
+export const portalStatementApiContract = {
+  portalStatements: customerOperation(
+    'portalStatements',
+    'GET',
+    '/api/portal/statements',
+    get(emptyRequestSchema),
+    portalStatementsResponseSchema,
+    { 404: apiErrorSchemas.NOT_FOUND },
+  ),
+  portalStatement: customerOperation(
+    'portalStatement',
+    'GET',
+    '/api/portal/statements/{month}',
+    monthRequest,
+    portalStatementResponseSchema,
+    { 404: apiErrorSchemas.NOT_FOUND },
+  ),
+  portalStatementExport: customerOperation(
+    'portalStatementExport',
+    'POST',
+    '/api/portal/statements/{month}/export',
+    monthRequest,
+    csvExportResponseSchema,
+    { 404: apiErrorSchemas.NOT_FOUND },
+  ),
+} as const satisfies Record<string, ApiOperation>;
+
 export const portalApiContract = {
   ...portalHomeApiContract,
   ...portalCdrApiContract,
   ...portalLedgerApiContract,
   ...portalLedgerExportApiContract,
+  ...portalStatementApiContract,
 } as const;
 
 export type PortalApiOperationId = keyof typeof portalApiContract;

@@ -9,6 +9,7 @@ export * from './day-range.js';
 export * from './beijing-time.js';
 export * from './cdr-fields.js';
 export * from './ledger-merge.js';
+export * from './statement-fields.js';
 export * from './export.js';
 export * from './admin/index.js';
 export * from './portal/index.js';

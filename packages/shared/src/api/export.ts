@@ -8,7 +8,7 @@ export const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
  */
 export const csvExportResponseSchema = z.string();
 
-type ExportKind = 'cdrs' | 'ledger';
+type ExportKind = 'cdrs' | 'ledger' | 'statement';
 
 /** 租户编码只含字母和数字，文件名全是 ASCII，Content-Disposition 不需要 filename*。 */
 export function exportFilename(

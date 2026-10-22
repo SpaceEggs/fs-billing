@@ -14,6 +14,8 @@ import * as balance from './balance.js';
 import * as ledger from './ledger.js';
 import * as rates from './rates.js';
 import * as receivables from './receivables.js';
+import * as statements from './statements.js';
+import { statementMonthParamsSchema } from '../statement-fields.js';
 import * as tenants from './tenants.js';
 import {
   adminIdParamsSchema,
@@ -415,3 +417,66 @@ export const adminCdrApiContract = {
   ),
 } satisfies Record<string, ApiOperation>;
 export type AdminCdrApiOperationId = keyof typeof adminCdrApiContract;
+
+const statementRequest = {
+  params: adminTenantParamsSchema.extend(statementMonthParamsSchema.shape),
+  query: emptyRequestSchema,
+  body: noBody,
+};
+
+/**
+ * 阶段 7 后台月账单，登记方式同 adminCdrApiContract：后端 PR 把它并入 liveApiContract。
+ * 汇总 CSV 导出是 POST（响应是流式 CSV），不写操作日志（决定 16）；重新生成写 statement_regenerate。
+ * 账单只由 (租户, 月份) 定位，请求里没有账单 id。
+ */
+export const adminStatementApiContract = {
+  adminStatements: operation(
+    'adminStatements',
+    'GET',
+    '/api/admin/statements',
+    { ...globalRequest, query: statements.adminStatementsQuerySchema },
+    statements.adminStatementsResponseSchema,
+    {},
+  ),
+  adminTenantStatements: operation(
+    'adminTenantStatements',
+    'GET',
+    '/api/admin/tenants/{tenantId}/statements',
+    tenantRequest,
+    statements.adminTenantStatementsResponseSchema,
+    {},
+  ),
+  adminTenantStatement: operation(
+    'adminTenantStatement',
+    'GET',
+    '/api/admin/tenants/{tenantId}/statements/{month}',
+    statementRequest,
+    statements.adminTenantStatementResponseSchema,
+    {},
+  ),
+  adminTenantStatementExport: operation(
+    'adminTenantStatementExport',
+    'POST',
+    '/api/admin/tenants/{tenantId}/statements/{month}/export',
+    statementRequest,
+    csvExportResponseSchema,
+    {},
+  ),
+  adminTenantStatementRegenerate: operation(
+    'adminTenantStatementRegenerate',
+    'POST',
+    '/api/admin/tenants/{tenantId}/statements/{month}/regenerate',
+    {
+      ...statementRequest,
+      body: statements.adminStatementRegenerateRequestSchema,
+    },
+    statements.adminStatementRegenerateResponseSchema,
+    conflicts([
+      'STATEMENT_DETAILS_DELETED',
+      'STATEMENT_NOT_FINAL',
+      'STATEMENT_VERSION_CONFLICT',
+    ]),
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminStatementApiOperationId =
+  keyof typeof adminStatementApiContract;

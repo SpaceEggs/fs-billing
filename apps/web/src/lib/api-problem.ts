@@ -40,6 +40,9 @@ export const conflictMessages = {
   RECEIVABLE_REVERSAL_MISMATCH: '冲正流水与该笔赊账不匹配',
   SELF_DISABLE: '不能停用自己的账号',
   LAST_ADMIN: '至少保留一个启用的管理员',
+  STATEMENT_DETAILS_DELETED: '该月话单已删除，无法重新生成账单',
+  STATEMENT_NOT_FINAL: '该月尚未结束，月结后才能重新生成账单',
+  STATEMENT_VERSION_CONFLICT: '账单已被重新生成，请刷新后重试',
 } as const satisfies Record<ConflictCode, string>;
 
 /** 冲突说明页面数据已过时，刷新后可重新操作。 */
@@ -52,6 +55,7 @@ const staleConflicts: ReadonlySet<ConflictCode> = new Set([
   'ALREADY_RECEIVED',
   'RECEIVABLE_VOIDED',
   'SETTLEMENT_CONFLICT',
+  'STATEMENT_VERSION_CONFLICT',
 ]);
 
 export function apiProblem(error: unknown): ApiProblem {
@@ -103,6 +107,9 @@ export function apiProblem(error: unknown): ApiProblem {
     case 'RECEIVABLE_REVERSAL_MISMATCH':
     case 'SELF_DISABLE':
     case 'LAST_ADMIN':
+    case 'STATEMENT_DETAILS_DELETED':
+    case 'STATEMENT_NOT_FINAL':
+    case 'STATEMENT_VERSION_CONFLICT':
       return {
         kind: 'conflict',
         code: detail.code,
