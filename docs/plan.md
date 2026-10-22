@@ -265,11 +265,11 @@
 
 **验收标准**
 
-- [ ] 用客户账号查看话单和流水，接口响应中不包含 `billing_unverified` 字段和赊账内部备注（检查接口原始 JSON，不只看页面）
+- [x] 用客户账号查看话单和流水，接口响应中不包含 `billing_unverified` 字段和赊账内部备注（检查接口原始 JSON，不只看页面）。流水接口测试对未解析的响应体断言不含赊账类型、付款状态、操作人和内部备注哨兵值，话单接口由真实浏览器的网络响应原文（夹具含未经验证话单）、CSV 原文和越权测试覆盖，首页同理；2026-10-22 `pnpm test:db`、`pnpm test:idor`、`pnpm test:e2e` 全部通过。见[PR 7 验收记录](evidence/phase-6-web/README.md#plan-勾选)（`apps/api/src/portal-ledger.db.test.ts`、`apps/web/e2e/portal-cdrs.spec.ts`）。
 - [ ] 话单 CSV 导出：10 万条话单的导出在 30 秒内完成，内存占用不随条数线性增长（流式输出）
-- [ ] 话单列表：在 300 万条话单（约一年数据量）的数据库上，按月翻页每页响应 < 500 毫秒
+- [x] 话单列表：在 300 万条话单（约一年数据量）的数据库上，按月翻页每页响应 < 500 毫秒。经真实 HTTP 在 300 万条的 PORTALBIG 上测量：PR 3 最大 227.6 ms，费率表五列后与 PR 7 在已迁移到当前结构的库副本上重测，80 个测量请求最大 239.1 ms，含 warmups 最大 281.8 ms；见[PR 7 重测](evidence/phase-6-web/list-latency.txt)与[PR 3 记录](evidence/phase-6/list-latency.txt)。
 - [ ] 透支中、已停机、无话单三种状态的截图与设计稿一致
-- [ ] 时间全部显示为北京时间：UTC 2026-09-28 16:30 接通的电话显示为 2026-09-29 00:30，并归入 29 日
+- [x] 时间全部显示为北京时间：UTC 2026-09-28 16:30 接通的电话显示为 2026-09-29 00:30，并归入 29 日。DB 测试验证北京日归属与 `0001-01-01` 边界，e2e 验证话单页显示 `2026-09-29 00:30:05` 且在 9 月 28 日范围内查不到；见[PR 7 验收记录](evidence/phase-6-web/README.md#plan-勾选)（`apps/web/e2e/portal-cdrs.spec.ts` / `shows 00:30 on the 29th for the 16:30 UTC call`）。
 - [x] 余额流水中通话扣费“按天合并”按 `occurred_at` 的北京日期分组（不是写入时间）（来自阶段 2）。PR 2 的数据库服务测试验证北京日分组、迟到写入和同日排序；见[PR 2 验收记录](evidence/phase-6-pr2/README.md#behavior-covered)（`packages/db/src/ledger-merge.db.test.ts`）。
 
 ---

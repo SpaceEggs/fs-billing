@@ -4,13 +4,13 @@ FreeSWITCH 话单计费系统：呼叫前授权、话单入库与扣费、余额
 
 ## 当前进度
 
-| 阶段 | 内容                                              | 状态                                                                      |
-| ---- | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| 0–3  | 工程骨架、计费核心、数据库与账本、FreeSWITCH 接口 | 已完成；FreeSWITCH 实机通话待阶段 10 验收                                 |
-| 4    | API、登录与网页外壳                               | 已完成                                                                    |
-| 5    | 管理后台：开户与资金                              | 代码验收已完成；2 条运维项待阶段 10                                       |
-| 6    | 客户门户                                          | 进行中；PR #40、PR #41 已合并，阶段验收未完成。见[阶段计划](docs/plan.md) |
-| 7–10 | 月账单、话单运维、通知、部署上线                  | 未开始                                                                    |
+| 阶段 | 内容                                              | 状态                                                                    |
+| ---- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| 0–3  | 工程骨架、计费核心、数据库与账本、FreeSWITCH 接口 | 已完成；FreeSWITCH 实机通话待阶段 10 验收                               |
+| 4    | API、登录与网页外壳                               | 已完成                                                                  |
+| 5    | 管理后台：开户与资金                              | 代码验收已完成；2 条运维项待阶段 10                                     |
+| 6    | 客户门户                                          | 进行中；验收 6 项已勾选 4 项，余 2 项待判断。见[阶段计划](docs/plan.md) |
+| 7–10 | 月账单、话单运维、通知、部署上线                  | 未开始                                                                  |
 
 各阶段的验收证据和未完成项以 [docs/plan.md](docs/plan.md) 的阶段表为准。
 
@@ -63,6 +63,8 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 | `pnpm db:migrate`  | 以 `DATABASE_URL`（owner）执行未应用的迁移，设置应用角色密码，建当月与下月话单分区。可重复执行          |
 | `pnpm db:seed`     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20）。可重复执行               |
 | `pnpm screenshots` | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                      |
+
+客户门户首页的视觉对照用 `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/portal-visual.spec.ts` 生成（环境同上），对照图写入 `docs/evidence/phase-6-web/visual/`，差异清单见 `docs/evidence/phase-6-web/visual-diff.md`。
 
 管理后台的视觉对照用 `FSB_VISUAL=1 FSB_EVIDENCE_DIR=$PWD/docs/evidence/phase-5-web pnpm --filter @fs-billing/web exec playwright test e2e/admin-visual.spec.ts` 生成，需要与 `pnpm test:e2e` 相同的库和 `SEED_AUTH_PASSWORD`。对照图写入 `docs/evidence/phase-5-web/visual/`，差异清单见 `visual-diff.md`。
 
