@@ -66,3 +66,15 @@ Claude Code 只读评审（`claude -p … --permission-mode plan`）：无 BLOCK
 新增 `tests/cdr-time.test.ts` 覆盖微秒优先、缺失回退、同秒一致性、毫秒截断、未接通与同秒费率切换；`apps/worker/src/cdr-time.db.test.ts` 验证真实入库费率和账本接通时间。`apps/worker/src/app.test.ts` 对故障仅断言 HTTP 状态和正文，不绑定事务调用次数。
 
 `tests/billing-authorize.test.ts` 读取实际拨号计划，覆盖号码与桥接分隔符校验以及两个号码条件的 484/挂断分支，并执行 `lua5.3 freeswitch/tests/billing_authorize_test.lua`。CI 安装 `lua5.3`，缺少解释器时测试失败；Lua harness 覆盖合法号码故障降级与非法号码在请求前拒绝。真实 HTTP/DB 复现步骤见 [live-repro-pstack.sh](evidence/phase-3/live-repro-pstack.sh)。
+
+## 月账单任务（阶段 7 PR 2）
+
+实现在 `apps/worker/src/statements.ts`，取数、生成、核对和告警都在 `packages/db/src/statements/*`，Worker 只做调度与扇出。三个队列由 `queue:migrate` 预建（`generate-statements`、`generate-statement`、`reconcile-statements`，`retryLimit` 3），部署后需要重新执行它。
+
+- **生成**：`generate-statements` 每天 02:00（`Asia/Shanghai`，`missed: 'once'`）运行；`startStatementJobs` 之外，Worker 启动时再入队一次补缺。父任务在一个事务里用 `listMissingStatements` 列出所有租户（含停用、零活动）应有而缺失的已结束月份，最多回看 `STATEMENT_BACKFILL_MONTHS`（默认 24）个月，逐个入队 `generate-statement`。只补缺、不覆盖已有账单；Worker 停机多日后下一次运行一次补出全部缺口。
+- **子任务**：每个 (租户, 月份) 一个，`localConcurrency` 为 `WORKER_STATEMENT_CONCURRENCY`（默认 2）。`withSystem` 的 `repeatable read` 事务调用 `generateStatement`；已有账单（含并发抢先，经 40001 重试）得到 `exists`，什么都不写。失败抛出，pg-boss 退避重试 3 次，仍失败则进入 failed，次日父任务再入队。
+- **去重**：子任务 ID 由租户、月份与父任务运行的北京日确定性算出，`singletonKey` 为 `<租户>:<月份>`；同一天重复触发的父任务因主键冲突不产生第二个子任务，上一轮仍在排队、重试或执行的月份也跳过。
+- **核对**：`reconcile-statements` 每天 03:00 运行，逐租户一个 `repeatable read` 事务调用 `reconcileTenantStatements`（状态写回头部，`statement_mismatch` 告警每 (租户, 月份) 一条，恢复后置 `recovered_at`）。单个租户失败记录日志并继续，末尾抛出汇总错误让 pg-boss 重试整个任务。
+- **手动触发**：`boss.send('generate-statements', { tenantId })` / `boss.send('reconcile-statements', { tenantId })` 只处理一个租户；定时触发没有数据。
+
+测试：`apps/worker/src/statements.test.ts`（纯逻辑）、`apps/worker/src/statements.db.test.ts`（调度注册、补缺、幂等、并发、核对、端到端）。真正的 cron 触发测试仍是阶段 9 的遗留项。
