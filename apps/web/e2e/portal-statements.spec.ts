@@ -363,6 +363,23 @@ base.describe('ABC001 的月账单', () => {
   );
 
   base(
+    'keeps each day of the phone day table on one line at 375 px',
+    async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 812 });
+      await page.goto('/portal/statements/2026-08');
+      const days = page
+        .getByRole('region', { name: '按日汇总' })
+        .locator('li:visible');
+      await expect(days).toHaveCount(20);
+      // 视觉对照（阶段 7 PR 6）发现 375 px 下「1,994分钟」会在「分」与「钟」之间折行。
+      const heights = await days.evaluateAll((items) =>
+        items.map((item) => item.getBoundingClientRect().height),
+      );
+      expect(Math.max(...heights)).toBeLessThan(40);
+    },
+  );
+
+  base(
     'lays the list and the detail out as cards on a phone',
     async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
