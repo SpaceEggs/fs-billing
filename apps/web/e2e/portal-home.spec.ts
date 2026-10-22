@@ -147,7 +147,7 @@ test('the recent calls link to the full call list', async ({ page }) => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('recent calls are cards and the drawer has no monthly statement', async ({
+  test('recent calls are cards and the drawer lists the monthly statement', async ({
     page,
   }) => {
     await loginAs(page, '/login', accounts.customer);
@@ -164,7 +164,7 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: '打开导航' }).click();
     const drawer = page.getByRole('dialog', { name: '导航' });
     await expect(drawer.getByRole('link', { name: '首页' })).toBeVisible();
-    await expect(drawer.getByRole('link', { name: '月账单' })).toHaveCount(0);
+    await expect(drawer.getByRole('link', { name: '月账单' })).toBeVisible();
   });
 
   test('the phone top bar has the ◐ theme button and the status tag has its dot', async ({
