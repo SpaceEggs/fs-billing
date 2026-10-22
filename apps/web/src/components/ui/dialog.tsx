@@ -28,6 +28,7 @@ export function ModalDialog({
   className,
   returnFocus,
   fallbackFocus,
+  plainOnDesktop = false,
 }: {
   open: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -37,6 +38,11 @@ export function ModalDialog({
   className?: string;
   returnFocus?: React.RefObject<HTMLElement | null>;
   fallbackFocus?: React.RefObject<HTMLElement | null>;
+  /**
+   * 电脑上不加遮罩、不显示标题栏 ×（运营稿 5b 的重新生成确认）：仍是模态，焦点圈定、Esc 与点击对话框外都照常关闭，
+   * 关闭靠「取消」。手机底部面板保留遮罩与 ×。默认关闭，其他对话框不变。
+   */
+  plainOnDesktop?: boolean;
 }) {
   const dismissible = onOpenChange !== undefined;
   // 每次打开时（首次挂载即打开，或 open 由 false 变 true）在渲染中记下打开者，此时焦点尚未移入对话框。
@@ -49,7 +55,12 @@ export function ModalDialog({
   return (
     <Dialog.Root open={open} {...(onOpenChange ? { onOpenChange } : {})}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-scrim" />
+        <Dialog.Overlay
+          className={cn(
+            'fixed inset-0 z-50 bg-scrim',
+            plainOnDesktop && 'md:bg-transparent',
+          )}
+        />
         <Dialog.Content
           ref={(node) => {
             if (node && opener) openers.set(node, opener);
@@ -95,7 +106,10 @@ export function ModalDialog({
             // 放在内容之后：打开时焦点仍落在第一个字段或按钮上。
             <Dialog.Close
               aria-label="关闭对话框"
-              className="absolute top-6 right-3 flex size-8 items-center justify-center rounded-md text-lg leading-none text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring md:top-5 md:right-5"
+              className={cn(
+                'absolute top-6 right-3 flex size-8 items-center justify-center rounded-md text-lg leading-none text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring md:top-5 md:right-5',
+                plainOnDesktop && 'md:hidden',
+              )}
             >
               ✕
             </Dialog.Close>

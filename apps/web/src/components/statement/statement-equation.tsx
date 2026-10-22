@@ -70,7 +70,7 @@ export function StatementEquation({
     <section aria-label="账单汇总">
       <div className="hidden items-stretch gap-2.5 rounded-xl border border-border p-6 tabular-nums md:flex print:break-inside-avoid">
         <Term label="期初余额">
-          <Money value={money(figures.openingBalance)} tone="plain" />
+          <Money value={money(figures.openingBalance)} />
         </Term>
         <span aria-hidden className={operatorClass}>
           +
@@ -108,7 +108,7 @@ export function StatementEquation({
       </div>
       <div className="flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums md:hidden">
         <Row label="期初余额">
-          <Money value={money(figures.openingBalance)} tone="plain" />
+          <Money value={money(figures.openingBalance)} />
         </Row>
         <Row operator="+" label="充值">
           <Money value={money(figures.recharge)} tone="plain" />

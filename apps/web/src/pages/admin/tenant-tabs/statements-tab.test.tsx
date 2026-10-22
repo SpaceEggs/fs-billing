@@ -185,10 +185,46 @@ describe('admin tenant statements list', () => {
     ).toBeDisabled();
     const september = within(table).getByText('2026年9月').closest('tr')!;
     expect(september).toHaveTextContent('-¥35.20');
-    expect(september).toHaveTextContent('49,726');
+    // 通话分钟数列带单位（租户详情稿 1f）。
+    expect(september).toHaveTextContent('49,726分钟');
+    // 期初为负也标红，与期末一致（上月期末为负的 10 月）。
+    expect(within(october).getAllByText('-¥35.20')[0]).toHaveClass('text-neg');
     expect(
       within(september).getByRole('button', { name: '重新生成 2026年9月' }),
     ).toBeEnabled();
+  });
+
+  it('shows the compact phone card of the mockup: title row, one charge and minutes line, only the regenerate button', async () => {
+    tabApp(listPath);
+    await screen.findByRole('table');
+    const cards = screen.getAllByRole('listitem');
+    expect(cards).toHaveLength(3);
+    const september = cards[1]!;
+    expect(september).toHaveTextContent('2026年9月-¥35.20');
+    expect(september).toHaveTextContent('通话扣费 ¥2,486.3049,726分钟');
+    // 稿里没有「查看」按钮：月份本身是进入详情的链接，按钮只有「重新生成」。
+    expect(within(september).getAllByRole('button')).toHaveLength(1);
+    expect(
+      within(september).getByRole('link', { name: '查看 2026年9月' }),
+    ).toHaveAttribute(
+      'href',
+      expect.stringContaining('statementMonth=2026-09'),
+    );
+    // 进行中用小标签「进行中」，不可用的原因写在按钮旁。
+    expect(cards[0]).toHaveTextContent('2026年10月进行中');
+    expect(cards[0]).toHaveTextContent('进行中，月结后可重新生成');
+    // 话单已删除：稿的手机卡片只写原因，没有标签。
+    expect(cards[2]).toHaveTextContent('话单已删除，无法重新计算');
+    expect(within(cards[2]!).queryByText('话单已删除')).not.toBeInTheDocument();
+  });
+
+  it('puts the 话单已删除 tag on the month line of the desktop table', async () => {
+    tabApp(listPath);
+    const table = await screen.findByRole('table');
+    const monthLine = within(table)
+      .getByText('2026年8月')
+      .closest('div') as HTMLElement;
+    expect(within(monthLine).getByText('话单已删除')).toBeVisible();
   });
 
   it('greys a month whose CDRs were deleted and says why', async () => {

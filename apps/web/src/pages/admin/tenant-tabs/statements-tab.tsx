@@ -23,7 +23,8 @@ import {
   reconcileNote,
   regenerateReasons,
 } from '../../../lib/admin-statements';
-import { statementMonthTitle } from '../../../lib/statement';
+import { minutesCount, statementMonthTitle } from '../../../lib/statement';
+import { Money } from '../../../components/data-format';
 import { cn } from '../../../lib/utils';
 import { StatementDetailView } from './statement-detail';
 
@@ -130,57 +131,41 @@ function Statements({
         currency={data.currency}
         rows={data.items}
         actionLabel="操作"
+        minutesUnit
+        renderMonthTag={(row) => (row.detailsDeleted ? <DeletedTag /> : null)}
         renderMonthNote={(row) => <MonthNotes row={row} />}
-        renderAction={(row, layout) => {
+        renderAction={(row) => {
           const reason = row.regenerable.reason
             ? regenerateReasons[row.regenerable.reason]
             : null;
-          const card = layout === 'card';
           return (
-            <span
-              className={cn(
-                'flex items-center gap-3',
-                card ? 'gap-2.5' : 'justify-end',
-              )}
-            >
-              {card ? null : (
-                <span className="text-xs text-muted-foreground">{reason}</span>
-              )}
-              {card ? (
-                <RegenerateButton
-                  allowed={row.regenerable.allowed}
-                  reason={row.regenerable.reason}
-                  label={`重新生成 ${statementMonthTitle(row.month)}`}
-                  mobile
-                  onClick={() => onRegenerate(targetOfRow(tenant, data, row))}
-                />
-              ) : null}
+            <span className="flex items-center justify-end gap-3">
+              <span className="text-xs text-muted-foreground">{reason}</span>
               <Link
                 to="/admin/tenants/$tenantId"
                 params={{ tenantId: tenant.id }}
                 search={{ tab: 'statements', statementMonth: row.month }}
                 aria-label={`查看 ${statementMonthTitle(row.month)}`}
-                className={
-                  card
-                    ? 'flex h-10 items-center rounded-lg border border-input px-4 text-[15px]'
-                    : 'text-primary'
-                }
+                className="text-primary"
               >
                 查看
               </Link>
-              {card ? (
-                <span className="text-xs text-muted-foreground">{reason}</span>
-              ) : (
-                <RegenerateButton
-                  allowed={row.regenerable.allowed}
-                  reason={row.regenerable.reason}
-                  label={`重新生成 ${statementMonthTitle(row.month)}`}
-                  onClick={() => onRegenerate(targetOfRow(tenant, data, row))}
-                />
-              )}
+              <RegenerateButton
+                allowed={row.regenerable.allowed}
+                reason={row.regenerable.reason}
+                label={`重新生成 ${statementMonthTitle(row.month)}`}
+                onClick={() => onRegenerate(targetOfRow(tenant, data, row))}
+              />
             </span>
           );
         }}
+        renderCard={(row) => (
+          <CompactCard
+            tenant={tenant}
+            row={row}
+            onRegenerate={() => onRegenerate(targetOfRow(tenant, data, row))}
+          />
+        )}
       />
       <p className="m-0 text-xs text-muted-foreground">
         {deleted.length > 0
@@ -194,24 +179,94 @@ function Statements({
 const tag =
   'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium';
 
-/** 月份下方的小字与标签：话单已删除、账单已过期 / 账单与流水不一致、已重新生成（决定 27）。 */
+function DeletedTag() {
+  return (
+    <span className={cn(tag, 'border-off-border bg-off-soft text-off')}>
+      话单已删除
+    </span>
+  );
+}
+
+/** 月份下方的小字：账单已过期 / 账单与流水不一致、已重新生成（决定 27）。话单已删除的标签在月份同一行。 */
 function MonthNotes({ row }: { row: AdminTenantStatementRow }) {
   const mismatch = reconcileNote(row.reconcileStatus);
-  if (!mismatch && row.version <= 1 && !row.detailsDeleted) return null;
+  if (!mismatch && row.version <= 1) return null;
   return (
-    <span className="flex flex-col items-start gap-0.5">
-      {row.detailsDeleted ? (
-        <span className={cn(tag, 'border-off-border bg-off-soft text-off')}>
-          话单已删除
+    <GenerationNotes
+      reconcileStatus={row.reconcileStatus}
+      version={row.version}
+      generatedAt={row.generatedAt}
+      firstGeneratedAt={row.firstGeneratedAt}
+      detailsDeleted={false}
+    />
+  );
+}
+
+/**
+ * 手机的紧凑卡片（租户详情稿 3f、3g）：月份、状态标签与期末一行，通话扣费与分钟一行，
+ * 「重新生成」按钮与不可用原因一行；没有「查看」按钮，稿里也没有，所以月份本身是进入详情的链接。
+ */
+function CompactCard({
+  tenant,
+  row,
+  onRegenerate,
+}: {
+  tenant: AdminTenantDetailResponse;
+  row: AdminTenantStatementRow;
+  onRegenerate: () => void;
+}) {
+  const money = (amount: string) => ({ currency: tenant.currency, amount });
+  const reason = row.regenerable.reason
+    ? regenerateReasons[row.regenerable.reason]
+    : null;
+  const stateLabel =
+    row.state === 'in_progress'
+      ? '进行中'
+      : row.state === 'pending'
+        ? '待生成'
+        : null;
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl border border-border p-3.5 tabular-nums">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin/tenants/$tenantId"
+            params={{ tenantId: tenant.id }}
+            search={{ tab: 'statements', statementMonth: row.month }}
+            aria-label={`查看 ${statementMonthTitle(row.month)}`}
+            className="text-[15px] font-semibold no-underline outline-none focus-visible:underline"
+          >
+            {statementMonthTitle(row.month)}
+          </Link>
+          {stateLabel ? (
+            <span className="inline-flex h-5 items-center rounded-[5px] border border-border px-[7px] text-[11px]">
+              {stateLabel}
+            </span>
+          ) : null}
+        </div>
+        <span className="text-[15px] font-semibold">
+          <Money value={money(row.figures.closingBalance)} />
         </span>
-      ) : null}
-      <GenerationNotes
-        reconcileStatus={row.reconcileStatus}
-        version={row.version}
-        generatedAt={row.generatedAt}
-        firstGeneratedAt={row.firstGeneratedAt}
-        detailsDeleted={false}
-      />
-    </span>
+      </div>
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>
+          通话扣费 <Money value={money(row.figures.callCharges)} tone="plain" />
+        </span>
+        <span>{minutesCount(row.figures.callMinutes)}分钟</span>
+      </div>
+      <MonthNotes row={row} />
+      <div className="flex items-center gap-2.5">
+        <RegenerateButton
+          allowed={row.regenerable.allowed}
+          reason={row.regenerable.reason}
+          label={`重新生成 ${statementMonthTitle(row.month)}`}
+          className="h-11 px-4 text-[15px]"
+          onClick={onRegenerate}
+        />
+        {reason ? (
+          <span className="text-xs text-muted-foreground">{reason}</span>
+        ) : null}
+      </div>
+    </div>
   );
 }

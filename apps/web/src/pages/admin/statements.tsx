@@ -83,9 +83,10 @@ export function AdminStatementsPage({ identity }: { identity: Identity }) {
   });
   const [target, setTarget] = useState<RegenerateTarget | null>(null);
   const [outcome, setOutcome] = useState<RegenerateOutcome | null>(null);
-  const field = (className?: string) => (
+  const field = (className?: string, showLabel = false) => (
     <MonthField
       label="月份"
+      showLabel={showLabel}
       value={month}
       min={earliestMonth}
       max={latest}
@@ -98,7 +99,7 @@ export function AdminStatementsPage({ identity }: { identity: Identity }) {
       <PageBody
         title="账单"
         meta="每月 1 日凌晨生成上月账单 · CNY 与 USD 分开合计"
-        actions={field()}
+        actions={field(undefined, true)}
       >
         <div className="md:hidden">{field('w-full')}</div>
         {outcome ? (
@@ -128,8 +129,11 @@ export function AdminStatementsPage({ identity }: { identity: Identity }) {
             className="h-[160px] animate-pulse rounded-xl bg-skeleton"
           />
         )}
-        <p className="m-0 text-xs text-muted-foreground">
+        <p className="m-0 text-xs text-muted-foreground max-md:hidden">
           「重新生成」按当前话单重新计算该月账单，用于补推话单后更正；话单已删除的月份不可用。每次重新生成记入操作日志。
+        </p>
+        <p className="m-0 text-xs text-muted-foreground md:hidden">
+          点 ⋯ 查看或重新生成
         </p>
       </PageBody>
       <RegenerateDialog
@@ -199,11 +203,23 @@ function GroupSection({
   const money = (amount: string) => ({ currency, amount });
   return (
     <section aria-label={`${currency} 账单`} className="flex flex-col gap-2">
-      <div className="flex items-baseline gap-2">
-        <h2 className="m-0 text-[15px] font-semibold">{currency}</h2>
-        <span className="text-[13px] text-muted-foreground">
-          {group.tenantCount} 个租户
-          {unissued > 0 ? ` · ${unissued} 个未生成，不计入合计` : ''}
+      <div className="flex items-baseline justify-between gap-2 max-md:px-0.5 max-md:pt-2">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <h2 className="m-0 text-[15px] font-semibold">{currency}</h2>
+          <span aria-hidden className="text-[15px] font-semibold md:hidden">
+            ·
+          </span>
+          <span className="text-[13px] text-muted-foreground max-md:text-[15px] max-md:font-semibold max-md:text-foreground">
+            {`${group.tenantCount} 个租户${unissued > 0 ? ` · ${unissued} 个未生成，不计入合计` : ''}`}
+          </span>
+        </div>
+        <span className="text-xs whitespace-nowrap text-muted-foreground tabular-nums md:hidden">
+          扣费合计{' '}
+          <Money
+            value={money(group.totals.callCharges)}
+            tone="plain"
+            className="font-semibold text-foreground"
+          />
         </span>
       </div>
       <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
@@ -239,10 +255,7 @@ function GroupSection({
                 {row.figures ? (
                   <>
                     <td className="px-3 py-[11px] text-right">
-                      <Money
-                        value={money(row.figures.openingBalance)}
-                        tone="plain"
-                      />
+                      <Money value={money(row.figures.openingBalance)} />
                     </td>
                     <td className="px-3 py-[11px] text-right">
                       <Money value={money(row.figures.recharge)} tone="plain" />
@@ -338,14 +351,6 @@ function GroupSection({
         </table>
       </div>
       <div className="flex flex-col gap-2 md:hidden">
-        <div className="flex items-baseline justify-between px-0.5 text-xs text-muted-foreground tabular-nums">
-          <span>通话扣费合计</span>
-          <Money
-            value={money(group.totals.callCharges)}
-            tone="plain"
-            className="font-semibold text-foreground"
-          />
-        </div>
         {group.items.map((row) => (
           <div
             key={row.tenant.id}

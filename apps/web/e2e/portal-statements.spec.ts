@@ -197,6 +197,8 @@ base.describe('ABC001 的月账单', () => {
       // 20 通话单 ¥3.51，被等额预存抵平：期初与期末都是 −¥35.20。
       await expect(live).toContainText('¥3.51');
       await expect(live).toContainText('-¥35.20');
+      // 期初为负也标红，与期末一致。
+      await expect(live.getByText('-¥35.20').first()).toHaveClass(/text-neg/);
       await expect(live).toContainText('81');
       await expect(page.getByText(/本月数据实时更新，截至/)).toBeVisible();
 
@@ -210,6 +212,9 @@ base.describe('ABC001 的月账单', () => {
           /本月尚未结束，以下数据截至今日并实时更新；.*凌晨生成正式账单/,
         ),
       ).toBeVisible();
+      await expect(equation(page).getByText('-¥35.20').first()).toHaveClass(
+        /text-neg/,
+      );
       await expect(equation(page)).toHaveText(
         /期初余额\s*-¥35\.20\s*\+\s*充值\s*¥3\.51\s*\+\s*赠送\s*¥0\.00\s*±\s*调账\s*¥0\.00\s*−\s*通话扣费\s*¥3\.51\s*20 通 · 81分钟\s*=\s*期末余额\s*-¥35\.20/,
       );
@@ -359,6 +364,49 @@ base.describe('ABC001 的月账单', () => {
       await expect(
         page.getByRole('heading', { name: '找不到这个页面' }),
       ).toBeVisible();
+    },
+  );
+
+  base(
+    'trims the topbar and the title to the narrow mockup below 1280 px and keeps them at 1280 px',
+    async ({ page }) => {
+      const tenant = page.getByText('ABC001 · 深圳市某某科技有限公司');
+      const email = page.getByText('abc001@example.com', { exact: true });
+      await page.setViewportSize({ width: 1024, height: 800 });
+      await page.goto('/portal/statements');
+      await expect(
+        page.getByRole('heading', { name: '月账单', level: 1 }),
+      ).toBeVisible();
+      // 稿 1b：顶栏只有 ◐ 与头像，标题旁没有币种。
+      await expect(tenant).toBeHidden();
+      await expect(email).toBeHidden();
+      await expect(page.getByText('CNY', { exact: true })).toBeHidden();
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await expect(tenant).toBeVisible();
+      await expect(email).toBeVisible();
+      await expect(page.getByText('CNY')).toBeVisible();
+    },
+  );
+
+  base(
+    'centres the title of the phone detail topbar on the screen',
+    async ({ page }) => {
+      await page.setViewportSize({ width: 375, height: 812 });
+      for (const [path, title] of [
+        ['/portal/statements/2026-08', '2026年8月'],
+        [`/portal/statements/${month}`, monthTitle],
+      ] as const) {
+        await page.goto(path);
+        const box = await page
+          .locator('header:visible')
+          .getByText(title, { exact: true })
+          .boundingBox();
+        expect(box).not.toBeNull();
+        expect(
+          Math.abs(box!.x + box!.width / 2 - 375 / 2),
+          title,
+        ).toBeLessThanOrEqual(2);
+      }
     },
   );
 
