@@ -1,4 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Link } from '@tanstack/react-router';
 import type { Identity } from '@fs-billing/shared';
 import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import { cn } from '../lib/utils';
@@ -86,6 +87,11 @@ export function AccountMenu({ identity }: { identity: Identity }) {
               {logoutFailedMessage}
             </p>
           ) : null}
+          {identity.kind === 'customer' ? (
+            <DropdownMenu.Item asChild className={menuItemClass}>
+              <Link to="/portal/settings">账号设置</Link>
+            </DropdownMenu.Item>
+          ) : null}
           <DropdownMenu.Item
             className={cn(menuItemClass, 'text-neg')}
             disabled={logout.isPending}
@@ -137,6 +143,17 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
         <p role="alert" className="m-0 pt-3 text-sm text-neg">
           {logoutFailedMessage}
         </p>
+      ) : null}
+      {identity.kind === 'customer' ? (
+        <Link
+          to="/portal/settings"
+          className="flex h-12 items-center justify-between border-b border-border text-base"
+        >
+          账号设置
+          <span aria-hidden className="text-muted-foreground">
+            ›
+          </span>
+        </Link>
       ) : null}
       <button
         type="button"

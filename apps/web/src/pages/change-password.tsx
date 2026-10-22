@@ -121,31 +121,23 @@ function PasswordInput({
 }
 
 /**
- * 修改密码。`forced` 时为首次登录或重置后的强制改密：
- * 只能改密或退出，其他业务请求都会被服务端以 PASSWORD_CHANGE_REQUIRED 拒绝。
+ * 修改密码表单，强制改密页与账号设置页共用（同一个 changePassword：撤销其他会话并签发新会话）。
+ * `forced` 时成功后回到进入前的页面，否则留在原页并显示成功提示。
  */
-export function ChangePasswordPage({
-  zone,
-  forced,
-}: {
-  zone: Zone;
-  forced: boolean;
-}) {
+export function ChangePasswordForm({ forced }: { forced: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const logout = useLogout(zone);
   const ids = { current: useId(), next: useId(), confirm: useId() };
-  const [values, setValues] = useState<Record<Field, string>>({
-    current: '',
-    next: '',
-    confirm: '',
-  });
+  const empty: Record<Field, string> = { current: '', next: '', confirm: '' };
+  const [values, setValues] = useState(empty);
   const [problem, setProblem] = useState<Problem | null>(null);
+  const [changed, setChanged] = useState(false);
 
   // 当前密码（可能是临时密码）与新密码不进 MutationCache。
   const change = useCredentialMutation('changePassword');
   async function submit(currentPassword: string, newPassword: string) {
     setProblem(null);
+    setChanged(false);
     let session;
     try {
       session = await change.submit({
@@ -159,15 +151,102 @@ export function ChangePasswordPage({
     passwordGate.clear();
     const state: SessionState = { status: 'active', session };
     queryClient.setQueryData(sessionQueryKey, state);
-    router.history.replace(
-      resolveReturnPath(takeReturnPath(), session.identity, router),
-    );
+    if (forced) {
+      router.history.replace(
+        resolveReturnPath(takeReturnPath(), session.identity, router),
+      );
+      return;
+    }
+    setValues(empty);
+    setChanged(true);
   }
 
   const errors = problem?.kind === 'fields' ? problem.errors : {};
   const set = (field: Field) => (value: string) =>
     setValues((current) => ({ ...current, [field]: value }));
 
+  return (
+    <form
+      aria-label="修改密码"
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        const local = checkNewPassword(values);
+        if (Object.keys(local).length) {
+          setProblem({ kind: 'fields', errors: local });
+          return;
+        }
+        void submit(values.current, values.next);
+      }}
+      className="flex flex-col gap-5"
+    >
+      {changed ? (
+        <Alert tone="ok" title="✓ 密码已修改">
+          其他设备上的登录将失效
+        </Alert>
+      ) : null}
+      {problem?.kind === 'wait' ? (
+        <Alert tone="warn" title="尝试次数过多，已暂时锁定">
+          {`请在 ${formatDuration(problem.seconds)} 后重试`}
+        </Alert>
+      ) : null}
+      {problem?.kind === 'unavailable' ? (
+        <Alert tone="neg" title="暂时无法修改密码">
+          服务暂时不可用，请稍后重试
+        </Alert>
+      ) : null}
+      <div className="flex flex-col gap-3.5">
+        <PasswordInput
+          id={ids.current}
+          label="当前密码"
+          hint={forced ? '管理员提供的临时密码' : undefined}
+          error={errors.current}
+          value={values.current}
+          autoComplete="current-password"
+          onChange={set('current')}
+        />
+        <PasswordInput
+          id={ids.next}
+          label="新密码"
+          hint="至少 8 位"
+          error={errors.next}
+          value={values.next}
+          autoComplete="new-password"
+          onChange={set('next')}
+        />
+        <PasswordInput
+          id={ids.confirm}
+          label="确认新密码"
+          error={errors.confirm}
+          value={values.confirm}
+          autoComplete="new-password"
+          onChange={set('confirm')}
+        />
+      </div>
+      <Button
+        type="submit"
+        size="field"
+        disabled={change.isPending}
+        className={forced ? undefined : 'sm:h-9 sm:self-start'}
+      >
+        修改密码
+      </Button>
+    </form>
+  );
+}
+
+/**
+ * 强制改密页。`forced` 时为首次登录或重置后的强制改密：
+ * 只能改密或退出，其他业务请求都会被服务端以 PASSWORD_CHANGE_REQUIRED 拒绝。
+ */
+export function ChangePasswordPage({
+  zone,
+  forced,
+}: {
+  zone: Zone;
+  forced: boolean;
+}) {
+  const logout = useLogout(zone);
   return (
     <div
       className={cn(
@@ -177,19 +256,7 @@ export function ChangePasswordPage({
     >
       <main className="flex flex-1 flex-col justify-center gap-6 px-6 py-10 sm:items-center sm:px-0">
         <BrandRow zone={zone} />
-        <form
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            const local = checkNewPassword(values);
-            if (Object.keys(local).length) {
-              setProblem({ kind: 'fields', errors: local });
-              return;
-            }
-            void submit(values.current, values.next);
-          }}
-          className="flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]"
-        >
+        <div className="flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]">
           <div className="flex flex-col gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
               {forced ? '请修改初始密码' : '修改密码'}
@@ -200,47 +267,7 @@ export function ChangePasswordPage({
                 : '修改后，其他设备上的登录将失效'}
             </span>
           </div>
-          {problem?.kind === 'wait' ? (
-            <Alert tone="warn" title="尝试次数过多，已暂时锁定">
-              {`请在 ${formatDuration(problem.seconds)} 后重试`}
-            </Alert>
-          ) : null}
-          {problem?.kind === 'unavailable' ? (
-            <Alert tone="neg" title="暂时无法修改密码">
-              服务暂时不可用，请稍后重试
-            </Alert>
-          ) : null}
-          <div className="flex flex-col gap-3.5">
-            <PasswordInput
-              id={ids.current}
-              label="当前密码"
-              hint={forced ? '管理员提供的临时密码' : undefined}
-              error={errors.current}
-              value={values.current}
-              autoComplete="current-password"
-              onChange={set('current')}
-            />
-            <PasswordInput
-              id={ids.next}
-              label="新密码"
-              hint="至少 8 位"
-              error={errors.next}
-              value={values.next}
-              autoComplete="new-password"
-              onChange={set('next')}
-            />
-            <PasswordInput
-              id={ids.confirm}
-              label="确认新密码"
-              error={errors.confirm}
-              value={values.confirm}
-              autoComplete="new-password"
-              onChange={set('confirm')}
-            />
-          </div>
-          <Button type="submit" size="field" disabled={change.isPending}>
-            修改密码
-          </Button>
+          <ChangePasswordForm forced={forced} />
           <div className="flex items-center justify-center gap-4 text-sm">
             {forced ? null : (
               <Link to={zones[zone].home} className="text-muted-foreground">
@@ -261,7 +288,7 @@ export function ChangePasswordPage({
               {logoutFailedMessage}
             </p>
           ) : null}
-        </form>
+        </div>
       </main>
       <SessionExpiredDialog zone={zone} />
     </div>

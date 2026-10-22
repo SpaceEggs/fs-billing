@@ -320,6 +320,8 @@ test.describe('mobile 375px', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.keyboard.press('Tab');
+    await expect(sheet.getByRole('link', { name: '账号设置' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(sheet.getByRole('button', { name: '退出登录' })).toBeFocused();
     await sheet.getByRole('button', { name: '退出登录' }).click();
     await expectPath(page, '/login');
