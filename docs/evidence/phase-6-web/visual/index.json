@@ -17,6 +17,22 @@
       }
     },
     {
+      "page": "home-overdrawn-desktop-bubble",
+      "theme": "light",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1a 电脑 · 透支中"
+      },
+      "note": "稿 1a 的气泡是静态画在今日柱上；种子里今日无消费，这里悬浮在 09-28 的柱子上，只对照气泡样式。",
+      "files": {
+        "design": "design-home-overdrawn-desktop-bubble-light.png",
+        "app": "app-home-overdrawn-desktop-bubble-light.png",
+        "compare": "compare-home-overdrawn-desktop-bubble-light.png"
+      }
+    },
+    {
       "page": "home-overdrawn-phone",
       "theme": "light",
       "account": "abc001@example.com",
@@ -102,6 +118,22 @@
         "design": "design-home-overdrawn-desktop-dark.png",
         "app": "app-home-overdrawn-desktop-dark.png",
         "compare": "compare-home-overdrawn-desktop-dark.png"
+      }
+    },
+    {
+      "page": "home-overdrawn-desktop-bubble",
+      "theme": "dark",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1a 电脑 · 透支中"
+      },
+      "note": "稿 1a 的气泡是静态画在今日柱上；种子里今日无消费，这里悬浮在 09-28 的柱子上，只对照气泡样式。",
+      "files": {
+        "design": "design-home-overdrawn-desktop-bubble-dark.png",
+        "app": "app-home-overdrawn-desktop-bubble-dark.png",
+        "compare": "compare-home-overdrawn-desktop-bubble-dark.png"
       }
     },
     {
