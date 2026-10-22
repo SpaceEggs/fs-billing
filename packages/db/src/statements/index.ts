@@ -10,6 +10,7 @@ export {
   type MissingStatementsOptions,
 } from './first-month.js';
 export {
+  listStatementHeadersForMonth,
   listStatementMonths,
   listStatements,
   readStatement,
@@ -23,7 +24,15 @@ export {
   type RegenerateResult,
   type StatementVersionFigures,
 } from './regenerate.js';
-export { readLiveStatement } from './live.js';
+export { databaseInstant, readLiveStatement } from './live.js';
+export {
+  readStatementMonthList,
+  readStatementView,
+  type StatementListItem,
+  type StatementMonthList,
+  type StatementView,
+  type StatementViewTenant,
+} from './view.js';
 export {
   reconcileTenantStatements,
   type StatementReconcileOutcome,

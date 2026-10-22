@@ -23,4 +23,6 @@ export * from './errors.js';
 export * from './portal/ledger.js';
 export * from './portal/cdrs.js';
 export * from './portal/home.js';
+export * from './portal/statements.js';
+export * from './admin/statements.js';
 export * from './statements/index.js';

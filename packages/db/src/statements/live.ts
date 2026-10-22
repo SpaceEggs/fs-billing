@@ -42,7 +42,7 @@ export async function readLiveStatement(
   };
 }
 
-async function databaseInstant(tx: Tx): Promise<Date> {
+export async function databaseInstant(tx: Tx): Promise<Date> {
   const { rows } = await tx.execute<{ at: string }>(
     sql`select to_char(statement_timestamp() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as at`,
   );

@@ -136,6 +136,18 @@ export async function listStatements(
   return rows.map(toHeader);
 }
 
+/** 某个月份全部租户的账单头部（后台账单页），不含明细。 */
+export async function listStatementHeadersForMonth(
+  tx: Tx,
+  monthInput: string,
+): Promise<StatementHeader[]> {
+  const rows = await tx
+    .select()
+    .from(monthlyStatements)
+    .where(eq(monthlyStatements.month, parseStatementMonth(monthInput)));
+  return rows.map(toHeader);
+}
+
 /**
  * 已出账的月份（有账单行），月份降序，附话单是否已删除。
  * 阶段 8 删除话单的月份选择器据此只放行已出账月份。
