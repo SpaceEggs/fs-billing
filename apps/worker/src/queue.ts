@@ -14,6 +14,25 @@ import type { ChargeJob } from '@fs-billing/shared';
 export const CHARGE_QUEUE = 'charge-cdr';
 export const RECONCILE_QUEUE = 'reconcile-cdr-charges';
 export const PARTITION_QUEUE = 'maintain-cdr-partitions';
+// 月账单：每日父任务扇出成每个 (租户, 月份) 一个子任务；核对任务每日一次。
+export const GENERATE_STATEMENTS_QUEUE = 'generate-statements';
+export const GENERATE_STATEMENT_QUEUE = 'generate-statement';
+export const RECONCILE_STATEMENTS_QUEUE = 'reconcile-statements';
+// 子任务失败抛出，由 pg-boss 退避重试；仍失败则进入 failed，次日父任务再补一次。
+export const STATEMENT_QUEUES = {
+  [GENERATE_STATEMENTS_QUEUE]: { retryLimit: 3, retryDelay: 60 },
+  [GENERATE_STATEMENT_QUEUE]: {
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+  },
+  // 全库核对随流水总量增长，给比默认 15 分钟更长的执行期限。
+  [RECONCILE_STATEMENTS_QUEUE]: {
+    retryLimit: 3,
+    retryDelay: 60,
+    expireInSeconds: 3600,
+  },
+} as const;
 export interface ChargeQueue {
   enqueue(tx: Tx, job: ChargeJob, attempt?: number): Promise<void>;
 }
@@ -92,6 +111,11 @@ export async function installQueue({ pool }: Connection): Promise<void> {
     });
     await boss.createQueue(RECONCILE_QUEUE, { retryLimit: 3 });
     await boss.createQueue(PARTITION_QUEUE, { retryLimit: 3 });
+    // 账单队列选项变化时重复执行本脚本即可生效（createQueue 对已有队列不改选项）。
+    for (const [name, options] of Object.entries(STATEMENT_QUEUES)) {
+      await boss.createQueue(name, options);
+      await boss.updateQueue(name, options);
+    }
     await boss.createQueue('__pgboss__send-it');
   } finally {
     await boss.stop();
