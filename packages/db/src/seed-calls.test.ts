@@ -4,11 +4,13 @@ import {
   AUGUST_DAYS,
   SEPTEMBER_DAYS,
   allocateMonth,
+  currentMonthSeedMonth,
   planAbc001Calls,
+  planCurrentMonthCalls,
   type FixedCall,
   type PlannedCall,
 } from './seed-calls.js';
-import { RATES_CSV } from './seed.js';
+import { OCTOBER_RATES_CSV, RATES_CSV } from './seed.js';
 
 const parsed = parseRateCsv(RATES_CSV, 'CNY');
 if (!parsed.ok) throw new Error('测试费率表无效');
@@ -229,5 +231,82 @@ describe('ABC001 逐通话单种子', () => {
         US: [113, 465],
       }),
     ).toThrow();
+  });
+});
+
+describe('当前月通话（播种月 1 日凌晨）', () => {
+  const october = parseRateCsv(OCTOBER_RATES_CSV, 'CNY');
+  if (!october.ok) throw new Error('测试 10 月费率表无效');
+  const planFor = (month: string, entries = october.entries) =>
+    planCurrentMonthCalls({
+      month,
+      tenantCode: 'ABC001',
+      entries,
+      caller: '075586001234',
+    });
+
+  it('is 20 calls, 81 minutes, 3.51 in the early hours of the 1st, with an equal recharge just before the first call', () => {
+    const result = planFor('2026-10-01');
+    expect(result.calls).toHaveLength(20);
+    expect(result.calls.reduce((sum, c) => sum + c.billedMinutes, 0)).toBe(81);
+    const charges = result.calls.reduce(
+      (sum, c) => sum.plus(c.charge),
+      decimal('0'),
+    );
+    expect(charges.toFixed()).toBe('3.51');
+    expect(result.rechargeAmount).toBe('3.51');
+    expect(result.rechargeAt).toBe('2026-10-01 00:03:00');
+    expect(beijingTime(result.rechargeAt).getTime()).toBeLessThan(
+      Math.min(...result.calls.map((c) => c.startedAt.getTime())),
+    );
+    for (const call of result.calls) {
+      expect(call.day).toBe('2026-10-01');
+      expect(call.startedAt.getTime()).toBeGreaterThanOrEqual(
+        beijingTime('2026-10-01 00:05:00').getTime(),
+      );
+      // 最晚的一通 01:59:18 开始，挂机不晚于 02:10。
+      expect(call.endedAt.getTime()).toBeLessThan(
+        beijingTime('2026-10-01 02:10:00').getTime(),
+      );
+    }
+  });
+
+  it('has the same shape every month with its own UUIDs, and never touches August or September', () => {
+    const a = planFor('2026-10-01');
+    const b = planFor('2026-11-01');
+    const shape = (calls: readonly PlannedCall[]) =>
+      calls.map((c) => [
+        c.country,
+        c.billedMinutes,
+        c.durationSeconds,
+        c.charge,
+        c.callee,
+      ]);
+    expect(shape(b.calls)).toEqual(shape(a.calls));
+    expect(b.rechargeAmount).toBe(a.rechargeAmount);
+    const uuids = new Set([...a.calls, ...b.calls].map((c) => c.callUuid));
+    expect(uuids.size).toBe(40);
+    const mockup = new Set(plan().map((c) => c.callUuid));
+    for (const call of [...a.calls, ...b.calls])
+      expect(mockup.has(call.callUuid)).toBe(false);
+    expect(JSON.stringify(planFor('2026-10-01'))).toBe(JSON.stringify(a));
+  });
+
+  it('gives the same result on the September card: no price that changed on 10-01 is used', () => {
+    const base = planFor('2026-10-01', entries);
+    expect(base.rechargeAmount).toBe('3.51');
+  });
+
+  it('is only planned once the early-hours window has passed and after the mockup months', () => {
+    const at = (text: string) => beijingTime(text);
+    expect(currentMonthSeedMonth(at('2026-10-22 15:00:00'))).toBe('2026-10-01');
+    expect(currentMonthSeedMonth(at('2026-11-01 03:00:00'))).toBe('2026-11-01');
+    expect(currentMonthSeedMonth(at('2026-12-31 23:59:59'))).toBe('2026-12-01');
+    // 当月 1 日 03:00 之前通话还没发生，不播种。
+    expect(currentMonthSeedMonth(at('2026-10-01 02:59:59'))).toBeNull();
+    expect(currentMonthSeedMonth(at('2026-11-01 00:00:00'))).toBeNull();
+    // 8、9 月是设计稿的月账单，数字不能变。
+    expect(currentMonthSeedMonth(at('2026-09-15 12:00:00'))).toBeNull();
+    expect(currentMonthSeedMonth(at('2026-08-01 12:00:00'))).toBeNull();
   });
 });

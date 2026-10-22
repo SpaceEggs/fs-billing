@@ -18,11 +18,14 @@ import {
   type PoolDb,
   type Tx,
 } from './client.js';
+import { databaseNow } from './clock.js';
 import { ensureCdrPartitions } from './partitions.js';
 import { callChargeKey } from './ledger.js';
 import { createRateVersion } from './rates.js';
 import {
+  currentMonthSeedMonth,
   planAbc001Calls,
+  planCurrentMonthCalls,
   type FixedCall,
   type PlannedCall,
 } from './seed-calls.js';
@@ -176,7 +179,7 @@ JP,日本,81,,0.0350
 SG,新加坡,65,,0.0280
 HK,中国香港,852,,0.0300`;
 
-const OCTOBER_RATES_CSV = RATES_CSV.replace(
+export const OCTOBER_RATES_CSV = RATES_CSV.replace(
   'GB,英国,447,手机,0.0450',
   'GB,英国,447,手机,0.0480',
 );
@@ -221,9 +224,13 @@ const callCharge = (
  * ABC001 的人工流水，取自客户门户第二批的月账单（`客户门户 第二批.dc.html:629-633`）：
  * 8 月充值 3,000.00、赠送 50.00；9 月充值 800.00、赊账 500.00、调账 −25.50，没有赠送。
  * 通话扣费不在这里：每通一笔，由 seed-calls.ts 生成。
+ * 播种月（2026-10 起）另有一笔与当月通话等额的预存。
  */
-function abc001Ledger(): SeedEntry[] {
-  return [
+function abc001Ledger(currentMonthRecharge?: {
+  at: string;
+  amount: string;
+}): SeedEntry[] {
+  const entries: SeedEntry[] = [
     {
       at: '2026-08-12 10:15:00',
       kind: 'recharge',
@@ -260,6 +267,17 @@ function abc001Ledger(): SeedEntry[] {
       admin: 'wang',
     },
   ];
+  // 当前月的预存：恰为当月 20 通扣费的合计，播种前后余额不变（见 seed-calls.ts）。
+  if (currentMonthRecharge) {
+    entries.push({
+      at: currentMonthRecharge.at,
+      kind: 'recharge',
+      amount: currentMonthRecharge.amount,
+      note: '银行转账预存',
+      admin: 'li',
+    });
+  }
+  return entries;
 }
 
 /** 其他租户：预存 + 赊账 − 本月消费 = 设计稿中的余额。 */
@@ -388,7 +406,11 @@ const seconds = (at: Date, n: number) => new Date(at.getTime() + n * 1000);
  */
 export async function seedDatabase(
   db: PoolDb,
-  options: { passwordHash?: string } = {},
+  options: {
+    passwordHash?: string;
+    /** 测试用的“现在”，默认数据库时钟。 */
+    now?: Date;
+  } = {},
 ): Promise<void> {
   const { adminIds, tenantIds } = await withAdmin(db, seedTenants);
   if (options.passwordHash !== undefined) {
@@ -424,6 +446,22 @@ export async function seedDatabase(
     moment: beijingTime('2026-08-01 00:00:00'),
     monthsAhead: 2,
   });
+  // 当前月 1 日凌晨的 20 通话单（以数据库时钟决定是哪个月，播种时它们一定已经发生）。
+  const now = options.now ?? (await withAdmin(db, databaseNow));
+  const currentMonth = currentMonthSeedMonth(now);
+  const currentPlan = currentMonth
+    ? planCurrentMonthCalls({
+        month: currentMonth,
+        tenantCode: 'ABC001',
+        entries: sampleRates('CNY', OCTOBER_RATES_CSV),
+        caller: '075586001234',
+      })
+    : null;
+  if (currentMonth)
+    await ensureCdrPartitions(db, {
+      moment: beijingTime(`${currentMonth} 00:00:00`),
+      monthsAhead: 0,
+    });
   await withAdmin(db, async (tx) => {
     await lockTenants(tx, [...tenantIds.values()]);
     const seeded = new Set(
@@ -455,7 +493,17 @@ export async function seedDatabase(
         }
       }
 
-      const ledger = t.code === 'ABC001' ? abc001Ledger() : summaryLedger(t);
+      const ledger =
+        t.code === 'ABC001'
+          ? abc001Ledger(
+              currentPlan
+                ? {
+                    at: currentPlan.rechargeAt,
+                    amount: currentPlan.rechargeAmount,
+                  }
+                : undefined,
+            )
+          : summaryLedger(t);
       // 历史时间只有 owner 连接能写。应用角色没有 created_at 的 INSERT 权限。
       for (const e of ledger) {
         const createdAt = beijingTime(e.at);
@@ -480,8 +528,20 @@ export async function seedDatabase(
     }
 
     const registered = await registeredCallUuids(tx);
-    await seedAbc001Calls(tx, idOf('ABC001'), sampleRates('CNY'));
+    await seedAbc001Calls(
+      tx,
+      idOf('ABC001'),
+      planAbc001Calls({
+        tenantCode: 'ABC001',
+        entries: sampleRates('CNY'),
+        fixedCalls: ABC001_FIXED_CALLS,
+        caller: '075586001234',
+      }),
+    );
+    if (currentPlan)
+      await seedAbc001Calls(tx, idOf('ABC001'), [...currentPlan.calls]);
     await seedCdrs(tx, idOf, registered);
+    await chargeSampleCdrs(tx, idOf);
     if (!registered.has(UNASSIGNED_CALL_UUID)) {
       const callee = '+6591234567';
       const billingNumber = normalizeDialedNumber(callee);
@@ -661,14 +721,8 @@ const BULK_NOTE = (callUuid: string, billingNumber: string) =>
 async function seedAbc001Calls(
   tx: Tx,
   tenantId: string,
-  entries: readonly RateEntry<'CNY'>[],
+  planned: readonly PlannedCall[],
 ): Promise<void> {
-  const planned = planAbc001Calls({
-    tenantCode: 'ABC001',
-    entries,
-    fixedCalls: ABC001_FIXED_CALLS,
-    caller: '075586001234',
-  });
   const uuids = JSON.stringify(planned.map((c) => c.callUuid));
   const registered = new Set(
     (
@@ -792,5 +846,37 @@ async function seedCdrs(
       rate: entry.perMinute.perMinute.toFixed(4),
       charge: priced.charge.value.toFixed(),
     });
+  }
+}
+
+/**
+ * 已接通的示例话单（目前是 GZT007 的两条，ABC001 的两条已并入逐通分配）也要有扣费流水，
+ * 用生产的幂等键 `call:<UUID>`：否则 Worker 的补扣对账会把近 30 天内有费用而无该键的话单再扣一次。
+ * 流水不是按“余额 + 本月消费 − 赊账”算出的汇总流水的一部分，所以 GZT007 的余额是 86.50 − 0.23 = 86.27。
+ * 已有的流水按幂等键跳过，重复播种不增行。
+ */
+async function chargeSampleCdrs(
+  tx: Tx,
+  idOf: (code: string) => string,
+): Promise<void> {
+  const entries = sampleRates('CNY');
+  for (const c of CDRS.filter((c) => c.ringSeconds !== undefined)) {
+    const dialed = normalizeDialedNumber(c.callee);
+    const entry = dialed && longestPrefix(entries, dialed);
+    if (!dialed || !entry) throw new Error(`种子话单 ${c.callUuid} 无费率`);
+    const priced = priceCall(c.talkSeconds, entry.perMinute);
+    if (priced.charge.value.isZero()) continue;
+    const answeredAt = seconds(beijingTime(c.startedAt), c.ringSeconds!);
+    const endedAt = seconds(answeredAt, c.talkSeconds);
+    await tx.execute(sql`
+      insert into ledger_entries (
+        tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at
+      ) values (
+        ${idOf(c.code)}, 'call_charge', ${priced.charge.value.neg().toFixed()},
+        ${BULK_NOTE(c.callUuid, dialed)}, null, ${callChargeKey(c.callUuid)},
+        ${answeredAt}, ${seconds(endedAt, 3)}
+      )
+      on conflict (tenant_id, idempotency_key) do nothing
+    `);
   }
 }

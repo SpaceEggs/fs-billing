@@ -9,8 +9,12 @@ import {
   tenantId,
 } from '../test/support.js';
 import { lockTenants, withAdmin, withSystem, withTenant } from './client.js';
+import { currentMonthSeedMonth } from './seed-calls.js';
 
 const { app, owner } = connections();
+
+// 播种月 1 日凌晨的 20 通话单（时钟太靠近 1 日凌晨时不播种）。
+const currentMonthCalls = currentMonthSeedMonth(new Date()) ? 20 : 0;
 
 const tenantsOf = (rows: Record<string, unknown>[]) =>
   [...new Set(rows.map((r) => r.code))].sort();
@@ -23,8 +27,8 @@ describe('RLS 租户隔离', () => {
         sql`select cdrs.*, tenants.code from cdrs join tenants on tenants.id = cdrs.tenant_id order by started_at`,
       ),
     );
-    // 8、9 月逐通话单 22,446 条已接通，加上 1 条未接通示例话单（阶段 7 决定 20）。
-    expect(rows).toHaveLength(22447);
+    // 8、9 月逐通话单 22,446 条已接通，加上 1 条未接通示例话单（阶段 7 决定 20），以及播种月的 20 通。
+    expect(rows).toHaveLength(22447 + currentMonthCalls);
     expect(tenantsOf(rows)).toEqual(['ABC001']);
     expect(
       rows
@@ -75,7 +79,7 @@ describe('RLS 租户隔离', () => {
       ),
     );
     expect([rows.length, tenantsOf(rows)]).toEqual([
-      22449,
+      22449 + currentMonthCalls,
       ['ABC001', 'GZT007'],
     ]);
   });

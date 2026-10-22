@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import {
+  beijingMonth,
   beijingTime,
+  decimal,
   longestPrefix,
   normalizeDialedNumber,
   priceCall,
@@ -440,8 +442,9 @@ const MONTHS = [
 /** 核对分配算法里写死的整数单价与真实费率表一致。 */
 export function assertRateCard<C extends Currency>(
   entries: readonly RateEntry<C>[],
+  keys: readonly CountryKey[] = KEYS,
 ): void {
-  for (const spec of COUNTRIES) {
+  for (const spec of COUNTRIES.filter((c) => keys.includes(c.key))) {
     const entry = entries.find((e) => e.prefix === spec.prefix);
     if (
       !entry ||
@@ -452,6 +455,50 @@ export function assertRateCard<C extends Currency>(
         `种子费率表缺少 ${spec.country}（${spec.prefix}）或单价不符`,
       );
   }
+}
+
+function buildCall<C extends Currency>(
+  entries: readonly RateEntry<C>[],
+  day: string,
+  key: CountryKey,
+  callUuid: string,
+  startedAt: Date,
+  ringSeconds: number,
+  talkSeconds: number,
+  callee: string,
+  hangupCause: string,
+  caller: string,
+): PlannedCall {
+  const billing = normalizeDialedNumber(callee);
+  if (!billing) throw new Error(`种子号码格式错误：${callee}`);
+  const entry = longestPrefix(entries, billing);
+  const spec = specOf(key);
+  if (!entry || entry.prefix !== spec.prefix)
+    throw new Error(
+      `种子号码 ${callee} 没有匹配到 ${spec.country}（${spec.prefix}）`,
+    );
+  const answeredAt = new Date(startedAt.getTime() + ringSeconds * 1000);
+  const priced = priceCall(talkSeconds, entry.perMinute);
+  return {
+    callUuid,
+    day,
+    startedAt,
+    answeredAt,
+    endedAt: new Date(answeredAt.getTime() + talkSeconds * 1000),
+    caller,
+    callee,
+    billingNumber: billing,
+    durationSeconds: talkSeconds,
+    billedMinutes: priced.billedMinutes.toNumber(),
+    key,
+    matchedPrefix: entry.prefix,
+    country: entry.country,
+    iso: entry.iso,
+    description: entry.description,
+    perMinute: entry.perMinute.perMinute.toFixed(4),
+    charge: priced.charge.value.toFixed(),
+    hangupCause,
+  };
 }
 
 /**
@@ -468,49 +515,6 @@ export function planAbc001Calls<C extends Currency>(
     const cell = `${fixed.startedAt.slice(0, 10)}:${fixed.key}`;
     fixedByCell.set(cell, [...(fixedByCell.get(cell) ?? []), fixed]);
   }
-
-  const build = (
-    day: string,
-    key: CountryKey,
-    callUuid: string,
-    startedAt: Date,
-    ringSeconds: number,
-    talkSeconds: number,
-    callee: string,
-    hangupCause: string,
-    caller: string,
-  ): PlannedCall => {
-    const billing = normalizeDialedNumber(callee);
-    if (!billing) throw new Error(`种子号码格式错误：${callee}`);
-    const entry = longestPrefix(input.entries, billing);
-    const spec = specOf(key);
-    if (!entry || entry.prefix !== spec.prefix)
-      throw new Error(
-        `种子号码 ${callee} 没有匹配到 ${spec.country}（${spec.prefix}）`,
-      );
-    const answeredAt = new Date(startedAt.getTime() + ringSeconds * 1000);
-    const priced = priceCall(talkSeconds, entry.perMinute);
-    return {
-      callUuid,
-      day,
-      startedAt,
-      answeredAt,
-      endedAt: new Date(answeredAt.getTime() + talkSeconds * 1000),
-      caller,
-      callee,
-      billingNumber: billing,
-      durationSeconds: talkSeconds,
-      billedMinutes: priced.billedMinutes.toNumber(),
-      key,
-      matchedPrefix: entry.prefix,
-      country: entry.country,
-      iso: entry.iso,
-      description: entry.description,
-      perMinute: entry.perMinute.perMinute.toFixed(4),
-      charge: priced.charge.value.toFixed(),
-      hangupCause,
-    };
-  };
 
   for (const month of MONTHS) {
     const cells = allocateMonth(month.days, month.countries);
@@ -549,7 +553,8 @@ export function planAbc001Calls<C extends Currency>(
           (slot.billed - 1) * 60 + 1 + (mix(row[0], k, 17) % 60);
         const callee = specOf(slot.key).callee(mix(row[0], k, 19));
         planned.push(
-          build(
+          buildCall(
+            input.entries,
             day,
             slot.key,
             seededUuid(`fs-billing:seed:${input.tenantCode}:cdr:${day}:${k}`),
@@ -565,7 +570,8 @@ export function planAbc001Calls<C extends Currency>(
       for (const key of KEYS) {
         for (const fixed of fixedByCell.get(`${day}:${key}`) ?? []) {
           planned.push(
-            build(
+            buildCall(
+              input.entries,
               day,
               key,
               fixed.callUuid,
@@ -582,4 +588,100 @@ export function planAbc001Calls<C extends Currency>(
     });
   }
   return planned;
+}
+
+// ---------------------------------------------------------------------------------------------
+// 当前月的少量通话（阶段 7 PR 1 追加）
+
+/** 第一个可以带“本月通话”的月份之后的月份：2026-08、09 是设计稿的月账单，不能再加通话。 */
+const LAST_MOCKUP_MONTH = '2026-09-01';
+
+/**
+ * 当前月通话的种子月份（YYYY-MM-01），没有则 null。
+ * 通话都在该月 1 日凌晨（北京时间 00:05 至 02:00 之间开始），所以必须等到该月 03:00 之后才播种，
+ * 保证播种时它们全都已经发生；晚于设计稿的 9 月才有（8、9 月的数字不能变）。
+ */
+export function currentMonthSeedMonth(now: Date): string | null {
+  const month = `${beijingMonth(now)}-01`;
+  if (month <= LAST_MOCKUP_MONTH) return null;
+  if (now.getTime() < beijingTime(`${month} 03:00:00`).getTime()) return null;
+  return month;
+}
+
+/** [开始时间（北京时间，当月 1 日）, 国家, 计费分钟]：固定 20 通，每个月都一样。 */
+const CURRENT_MONTH_CALLS: readonly (readonly [string, CountryKey, number])[] =
+  [
+    ['00:05:12', 'CN', 3],
+    ['00:11:40', 'CN', 5],
+    ['00:18:03', 'JM', 2],
+    ['00:24:55', 'CN', 4],
+    ['00:31:20', 'UK', 6],
+    ['00:38:47', 'CN', 2],
+    ['00:44:09', 'JP', 3],
+    ['00:52:31', 'CN', 7],
+    ['00:58:16', 'HK', 4],
+    ['01:03:42', 'CN', 3],
+    ['01:09:58', 'SG', 5],
+    ['01:15:21', 'CN', 6],
+    ['01:21:07', 'UK', 4],
+    ['01:27:33', 'CN', 2],
+    ['01:33:50', 'US', 8],
+    ['01:40:14', 'CN', 5],
+    ['01:46:29', 'JP', 3],
+    ['01:51:45', 'CN', 3],
+    ['01:56:02', 'HK', 2],
+    ['01:59:18', 'CN', 4],
+  ];
+
+/** 当前月预存的时刻：早于第一通话。 */
+const CURRENT_MONTH_RECHARGE_TIME = '00:03:00';
+
+export interface CurrentMonthPlan {
+  readonly month: string;
+  readonly calls: readonly PlannedCall[];
+  /** 北京时间，早于第一通话。 */
+  readonly rechargeAt: string;
+  /** 恰为当月通话扣费合计，所以播种前后余额不变。 */
+  readonly rechargeAmount: string;
+}
+
+/**
+ * 某月 1 日凌晨的 20 通已接通话单加一笔等额预存。国家、计费分钟、通话秒数、费用逐月相同，
+ * UUID 由租户与日期确定地算出，同一个月重复播种不增行；换一个月是另一组行，每组都自己抵平，
+ * 余额因此永远不受播种次数影响。只用费率没有随版本变过的国家（不含 447），所以 8 月卡与 10 月卡结果一样。
+ */
+export function planCurrentMonthCalls<C extends Currency>(input: {
+  readonly month: string;
+  readonly tenantCode: string;
+  readonly entries: readonly RateEntry<C>[];
+  readonly caller: string;
+}): CurrentMonthPlan {
+  const used = [...new Set(CURRENT_MONTH_CALLS.map((c) => c[1]))];
+  assertRateCard(input.entries, used);
+  const day = input.month;
+  const calls = CURRENT_MONTH_CALLS.map(([time, key, billed], k) => {
+    const ringSeconds = 2 + (mix(k, 13) % 11);
+    const talkSeconds = (billed - 1) * 60 + 1 + (mix(k, 17) % 60);
+    return buildCall(
+      input.entries,
+      day,
+      key,
+      seededUuid(`fs-billing:seed:${input.tenantCode}:cdr:${day}:${k}`),
+      beijingTime(`${day} ${time}`),
+      ringSeconds,
+      talkSeconds,
+      specOf(key).callee(mix(k, 19)),
+      'NORMAL_CLEARING',
+      input.caller,
+    );
+  });
+  const rechargeAmount = calls
+    .reduce((sum, call) => sum.plus(call.charge), decimal('0'))
+    .toFixed();
+  return {
+    month: day,
+    calls,
+    rechargeAt: `${day} ${CURRENT_MONTH_RECHARGE_TIME}`,
+    rechargeAmount,
+  };
 }
