@@ -96,7 +96,14 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
 
   const nav = page.getByRole('navigation', { name: '主导航' });
   await expect(nav.getByRole('link', { name: '首页' })).toBeVisible();
-  await expect(nav.getByRole('link', { name: '月账单' })).toHaveCount(0);
+  // 阶段 7 PR 4 起门户导航有「月账单」，在「话单」与「余额流水」之间。
+  await expect(nav.getByRole('link')).toHaveText([
+    '首页',
+    '话单',
+    '月账单',
+    '余额流水',
+    '账号设置',
+  ]);
 });
 
 test('a suspended customer sees the banner from design 1c', async ({
