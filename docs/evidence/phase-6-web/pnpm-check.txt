@@ -1,0 +1,124 @@
+
+> fs-billing@ check /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm --filter @fs-billing/web build
+
+
+> fs-billing@ lint /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+> eslint . --max-warnings 0
+
+
+> fs-billing@ format:check /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> fs-billing@ typecheck /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+> pnpm -r typecheck && tsc -p tsconfig.json
+
+Scope: 6 of 7 workspace projects
+packages/rating typecheck$ tsc -p tsconfig.json
+packages/shared typecheck$ tsc -p tsconfig.json
+packages/rating typecheck: Done
+packages/shared typecheck: Done
+apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
+packages/db typecheck: Done
+apps/web typecheck: Done
+apps/worker typecheck$ tsc -p tsconfig.json
+apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck: Done
+apps/api typecheck: Done
+
+> fs-billing@ test /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+> vitest run && pnpm --filter @fs-billing/web test
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+
+
+ Test Files  37 passed (37)
+      Tests  730 passed | 1 skipped (731)
+   Start at  11:58:11
+   Duration  2.83s (import 54%, tests 41%, transform 4%, worker 1%)
+
+    Isolate  37 workers spawned · ~92ms startup each (spawn + environment, per file)
+             at least ~287ms faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @fs-billing/web@ test /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7/apps/web
+> vitest run
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7/apps/web
+
+
+ Test Files  39 passed (39)
+      Tests  521 passed (521)
+   Start at  11:58:14
+   Duration  24.42s (tests 75%, environment 15%, import 5%, setup 3%, transform 1%)
+
+    Isolate  39 workers spawned · ~546ms startup each (spawn + environment, per file)
+             at least ~1.82s faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @fs-billing/web@ build /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7/apps/web
+> vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 454 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                   1.76 kB │ gzip:  0.81 kB
+dist/assets/index-CVcpTCks.css                   48.20 kB │ gzip:  9.37 kB
+dist/assets/duration--1gSbKB4.js                  0.12 kB │ gzip:  0.13 kB
+dist/assets/input-p57Q2gwt.js                     0.42 kB │ gzip:  0.29 kB
+dist/assets/tenant-status-B9VhDAc4.js             0.43 kB │ gzip:  0.30 kB
+dist/assets/rolldown-runtime-CbXtAM7H.js          0.58 kB │ gzip:  0.36 kB
+dist/assets/select-CYTHqf8u.js                    0.63 kB │ gzip:  0.40 kB
+dist/assets/pagination-DTjog065.js                0.65 kB │ gzip:  0.43 kB
+dist/assets/segmented-QpqRbiDs.js                 0.67 kB │ gzip:  0.43 kB
+dist/assets/search-box-L1HxjYxe.js                0.78 kB │ gzip:  0.48 kB
+dist/assets/alert-CllQBwf2.js                     0.93 kB │ gzip:  0.48 kB
+dist/assets/rate-csv-template-link-CpeyNJDD.js    0.98 kB │ gzip:  0.68 kB
+dist/assets/cdr-search-C3SdjGmE.js                0.99 kB │ gzip:  0.52 kB
+dist/assets/load-error-BTKDWNIC.js                1.00 kB │ gzip:  0.64 kB
+dist/assets/admin-api-lC2tU4nW.js                 1.10 kB │ gzip:  0.59 kB
+dist/assets/home-DgQgcVzw.js                      1.20 kB │ gzip:  0.72 kB
+dist/assets/problem-alert-xuisnA7w.js             1.34 kB │ gzip:  0.61 kB
+dist/assets/tenant-health-NdQM7tEm.js             1.47 kB │ gzip:  0.75 kB
+dist/assets/query-error-C3OwfFBm.js               1.50 kB │ gzip:  0.91 kB
+dist/assets/login-errors-DMIbRag0.js              1.54 kB │ gzip:  0.84 kB
+dist/assets/cdrs-Cf3mcVpS.js                      1.80 kB │ gzip:  1.03 kB
+dist/assets/data-format-BSl4gHFm.js               1.89 kB │ gzip:  0.85 kB
+dist/assets/dialog-CToa4g6B.js                    2.03 kB │ gzip:  1.12 kB
+dist/assets/filter-sheet-v7dg_rju.js              2.25 kB │ gzip:  0.99 kB
+dist/assets/useMatch-CPtUAWXM.js                  2.39 kB │ gzip:  1.08 kB
+dist/assets/settings-HxWX3cma.js                  2.55 kB │ gzip:  1.13 kB
+dist/assets/copy-field-7pBYit6F.js                2.73 kB │ gzip:  1.13 kB
+dist/assets/api-problem-AE_6-05S.js               3.61 kB │ gzip:  1.72 kB
+dist/assets/daily-spend-chart-BtmjFJPd.js         3.63 kB │ gzip:  1.76 kB
+dist/assets/date-range-field-B9PXdaS7.js          5.10 kB │ gzip:  2.12 kB
+dist/assets/change-password-By3pNb1m.js           5.69 kB │ gzip:  2.62 kB
+dist/assets/tenant-edit-CNkdrhCL.js               6.15 kB │ gzip:  2.71 kB
+dist/assets/login-Baik871E.js                     6.21 kB │ gzip:  2.47 kB
+dist/assets/accounts-Bn6qG4dx.js                  8.53 kB │ gzip:  3.34 kB
+dist/assets/ledger-C_Xnf4nN.js                    8.95 kB │ gzip:  3.25 kB
+dist/assets/home-CrQ0eHzR.js                      9.29 kB │ gzip:  2.95 kB
+dist/assets/tenant-list-CnN4D1wp.js               9.66 kB │ gzip:  3.21 kB
+dist/assets/form-fields-jNrlQtbR.js              10.53 kB │ gzip:  4.23 kB
+dist/assets/admin-accounts-0zk1EzKV.js           12.94 kB │ gzip:  4.31 kB
+dist/assets/balance-dialog-BwwEJkdO.js           14.13 kB │ gzip:  5.40 kB
+dist/assets/tenant-create-DRJa53BP.js            18.58 kB │ gzip:  6.81 kB
+dist/assets/cdr-export-D3k61SR5.js               18.63 kB │ gzip:  6.47 kB
+dist/assets/decimal-i_D9dVJK.js                  31.94 kB │ gzip: 12.93 kB
+dist/assets/receivables-D13xRF49.js              35.49 kB │ gzip: 10.31 kB
+dist/assets/tenant-detail-B2zv80hB.js            94.99 kB │ gzip: 25.28 kB
+dist/assets/session-expired-dialog-DNDDApjm.js  100.62 kB │ gzip: 35.13 kB
+dist/assets/index-BihX9aqp.js                   112.83 kB │ gzip: 37.46 kB
+dist/assets/return-to-lom_AnkN.js               170.73 kB │ gzip: 51.49 kB
+dist/assets/react-BPWasKn7.js                   218.76 kB │ gzip: 68.27 kB
+
+✓ built in 164ms
+exit=0

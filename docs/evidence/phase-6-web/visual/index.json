@@ -1,0 +1,212 @@
+{
+  "entries": [
+    {
+      "page": "home-overdrawn-desktop",
+      "theme": "light",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1a 电脑 · 透支中"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-overdrawn-desktop-light.png",
+        "app": "app-home-overdrawn-desktop-light.png",
+        "compare": "compare-home-overdrawn-desktop-light.png"
+      }
+    },
+    {
+      "page": "home-overdrawn-desktop-bubble",
+      "theme": "light",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1a 电脑 · 透支中"
+      },
+      "note": "稿 1a 的气泡是静态画在今日柱上；种子里今日无消费，这里悬浮在 09-28 的柱子上，只对照气泡样式。",
+      "files": {
+        "design": "design-home-overdrawn-desktop-bubble-light.png",
+        "app": "app-home-overdrawn-desktop-bubble-light.png",
+        "compare": "compare-home-overdrawn-desktop-bubble-light.png"
+      }
+    },
+    {
+      "page": "home-overdrawn-phone",
+      "theme": "light",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1b 手机 · 透支中"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-overdrawn-phone-light.png",
+        "app": "app-home-overdrawn-phone-light.png",
+        "compare": "compare-home-overdrawn-phone-light.png"
+      }
+    },
+    {
+      "page": "home-suspended-phone",
+      "theme": "light",
+      "account": "hzx014@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1c 手机 · 已停机"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-suspended-phone-light.png",
+        "app": "app-home-suspended-phone-light.png",
+        "compare": "compare-home-suspended-phone-light.png"
+      }
+    },
+    {
+      "page": "home-no-calls-phone",
+      "theme": "light",
+      "account": "xyz002@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1d 手机 · 新客户（无话单）"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-no-calls-phone-light.png",
+        "app": "app-home-no-calls-phone-light.png",
+        "compare": "compare-home-no-calls-phone-light.png"
+      }
+    },
+    {
+      "page": "home-suspended-desktop",
+      "theme": "light",
+      "account": "hzx014@example.com",
+      "designFrame": null,
+      "note": "稿中没有电脑端已停机画框，只存档；按手机稿 1c 人工核对。",
+      "files": {
+        "design": null,
+        "app": "app-home-suspended-desktop-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "home-no-calls-desktop",
+      "theme": "light",
+      "account": "xyz002@example.com",
+      "designFrame": null,
+      "note": "稿中没有电脑端无话单画框，只存档；按手机稿 1d 人工核对。",
+      "files": {
+        "design": null,
+        "app": "app-home-no-calls-desktop-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "home-overdrawn-desktop",
+      "theme": "dark",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1a 电脑 · 透支中"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-overdrawn-desktop-dark.png",
+        "app": "app-home-overdrawn-desktop-dark.png",
+        "compare": "compare-home-overdrawn-desktop-dark.png"
+      }
+    },
+    {
+      "page": "home-overdrawn-desktop-bubble",
+      "theme": "dark",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1a 电脑 · 透支中"
+      },
+      "note": "稿 1a 的气泡是静态画在今日柱上；种子里今日无消费，这里悬浮在 09-28 的柱子上，只对照气泡样式。",
+      "files": {
+        "design": "design-home-overdrawn-desktop-bubble-dark.png",
+        "app": "app-home-overdrawn-desktop-bubble-dark.png",
+        "compare": "compare-home-overdrawn-desktop-bubble-dark.png"
+      }
+    },
+    {
+      "page": "home-overdrawn-phone",
+      "theme": "dark",
+      "account": "abc001@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1b 手机 · 透支中"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-overdrawn-phone-dark.png",
+        "app": "app-home-overdrawn-phone-dark.png",
+        "compare": "compare-home-overdrawn-phone-dark.png"
+      }
+    },
+    {
+      "page": "home-suspended-phone",
+      "theme": "dark",
+      "account": "hzx014@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1c 手机 · 已停机"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-suspended-phone-dark.png",
+        "app": "app-home-suspended-phone-dark.png",
+        "compare": "compare-home-suspended-phone-dark.png"
+      }
+    },
+    {
+      "page": "home-no-calls-phone",
+      "theme": "dark",
+      "account": "xyz002@example.com",
+      "designFrame": {
+        "file": "客户门户 第一批.dc.html",
+        "section": "首页",
+        "label": "1d 手机 · 新客户（无话单）"
+      },
+      "note": null,
+      "files": {
+        "design": "design-home-no-calls-phone-dark.png",
+        "app": "app-home-no-calls-phone-dark.png",
+        "compare": "compare-home-no-calls-phone-dark.png"
+      }
+    },
+    {
+      "page": "home-suspended-desktop",
+      "theme": "dark",
+      "account": "hzx014@example.com",
+      "designFrame": null,
+      "note": "稿中没有电脑端已停机画框，只存档；按手机稿 1c 人工核对。",
+      "files": {
+        "design": null,
+        "app": "app-home-suspended-desktop-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "home-no-calls-desktop",
+      "theme": "dark",
+      "account": "xyz002@example.com",
+      "designFrame": null,
+      "note": "稿中没有电脑端无话单画框，只存档；按手机稿 1d 人工核对。",
+      "files": {
+        "design": null,
+        "app": "app-home-no-calls-desktop-dark.png",
+        "compare": null
+      }
+    }
+  ]
+}

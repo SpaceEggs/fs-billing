@@ -1,0 +1,754 @@
+{
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "tenant": "PORTALBIG",
+  "asOf": "2026-10-17T04:00:00Z",
+  "rounds": 8,
+  "summary": [
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "n": 8,
+      "executionMs": {
+        "median": 13.587,
+        "min": 13.351,
+        "max": 13.781
+      },
+      "planningMedianMs": 0.4295
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "n": 8,
+      "executionMs": {
+        "median": 20.714,
+        "min": 20.51,
+        "max": 22.228
+      },
+      "planningMedianMs": 0.46599999999999997
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "n": 8,
+      "executionMs": {
+        "median": 96.7885,
+        "min": 94.29,
+        "max": 100.389
+      },
+      "planningMedianMs": 0.63
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "n": 8,
+      "executionMs": {
+        "median": 128.041,
+        "min": 126.042,
+        "max": 130.241
+      },
+      "planningMedianMs": 0.7175
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "n": 8,
+      "executionMs": {
+        "median": 102.16499999999999,
+        "min": 99.415,
+        "max": 103.177
+      },
+      "planningMedianMs": 1.0725
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "n": 8,
+      "executionMs": {
+        "median": 107.6995,
+        "min": 105.394,
+        "max": 112.332
+      },
+      "planningMedianMs": 1.0979999999999999
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "n": 8,
+      "executionMs": {
+        "median": 88.46199999999999,
+        "min": 87.599,
+        "max": 89.205
+      },
+      "planningMedianMs": 1.064
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "n": 8,
+      "executionMs": {
+        "median": 96.2405,
+        "min": 95.005,
+        "max": 99.261
+      },
+      "planningMedianMs": 1.0739999999999998
+    }
+  ],
+  "runs": [
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 14.964,
+      "planningMs": 0.508
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 20.702,
+      "planningMs": 0.512
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 20.918,
+      "planningMs": 0.515
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 13.781,
+      "planningMs": 0.432
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 13.662,
+      "planningMs": 0.408
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 20.607,
+      "planningMs": 0.495
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 20.61,
+      "planningMs": 0.492
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 13.629,
+      "planningMs": 0.425
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 13.351,
+      "planningMs": 0.464
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 20.51,
+      "planningMs": 0.443
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 20.739,
+      "planningMs": 0.455
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 13.598,
+      "planningMs": 0.443
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 13.433,
+      "planningMs": 0.428
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 20.689,
+      "planningMs": 0.476
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 20.747,
+      "planningMs": 0.454
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 13.491,
+      "planningMs": 0.431
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 13.576,
+      "planningMs": 0.418
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 22.228,
+      "planningMs": 0.456
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 98.299,
+      "planningMs": 0.63
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 127.692,
+      "planningMs": 0.698
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 130.241,
+      "planningMs": 0.736
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 100.389,
+      "planningMs": 0.64
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 94.29,
+      "planningMs": 0.662
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 128,
+      "planningMs": 0.705
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 127,
+      "planningMs": 0.725
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 96.018,
+      "planningMs": 0.62
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 97.559,
+      "planningMs": 0.579
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 130.217,
+      "planningMs": 0.749
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 128.281,
+      "planningMs": 0.744
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 99.727,
+      "planningMs": 0.618
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 95.558,
+      "planningMs": 0.606
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 128.082,
+      "planningMs": 0.71
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 126.042,
+      "planningMs": 0.682
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 95.947,
+      "planningMs": 0.649
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "baseline",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 97.913,
+      "planningMs": 0.648
+    },
+    {
+      "shape": "answered",
+      "form": "production",
+      "variant": "bounded",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 127.917,
+      "planningMs": 0.705
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 101.05,
+      "planningMs": 1.154
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 106.423,
+      "planningMs": 1.132
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 107.229,
+      "planningMs": 1.042
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 102.106,
+      "planningMs": 1.078
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 102.836,
+      "planningMs": 1.056
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 108.598,
+      "planningMs": 1.108
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 107.24,
+      "planningMs": 1.132
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 101.822,
+      "planningMs": 1.078
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 103.177,
+      "planningMs": 1.082
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 107.805,
+      "planningMs": 1.091
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 112.332,
+      "planningMs": 1.107
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 102.387,
+      "planningMs": 1.128
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 102.224,
+      "planningMs": 1.067
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 107.594,
+      "planningMs": 1.051
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 105.394,
+      "planningMs": 1.105
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 99.415,
+      "planningMs": 1.032
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 101.042,
+      "planningMs": 1.016
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 109.438,
+      "planningMs": 1.087
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 88.114,
+      "planningMs": 1.097
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 96.149,
+      "planningMs": 1.083
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 96.248,
+      "planningMs": 1.128
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 88.277,
+      "planningMs": 1.051
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 88.479,
+      "planningMs": 1.054
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 99.261,
+      "planningMs": 1.079
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 95.005,
+      "planningMs": 1.042
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 88.907,
+      "planningMs": 1.067
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 87.599,
+      "planningMs": 1.062
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 97.123,
+      "planningMs": 1.128
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 96.233,
+      "planningMs": 1.06
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 88.445,
+      "planningMs": 1.075
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 88.875,
+      "planningMs": 1.05
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 95.406,
+      "planningMs": 1.062
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 96.892,
+      "planningMs": 1.069
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 89.205,
+      "planningMs": 1.117
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "baseline",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 87.637,
+      "planningMs": 1.066
+    },
+    {
+      "shape": "overview",
+      "form": "production",
+      "variant": "bounded",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 95.02,
+      "planningMs": 1.125
+    }
+  ]
+}

@@ -9,14 +9,20 @@ import { cn } from '../lib/utils';
 import { buttonVariants } from './ui/button';
 import { menuContentClass, menuItemClass } from './menu';
 
-/** 顶部 ◐ 按钮：浅色 / 深色 / 跟随系统。 */
-export function ThemeMenu() {
+/**
+ * 顶部 ◐ 按钮：浅色 / 深色 / 跟随系统。`mobile` 是门户手机顶栏的无边框 40 px 按钮（设计稿 1b）。
+ */
+export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
   const preference = useThemePreference();
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger
         aria-label="主题"
-        className={cn(buttonVariants({ variant: 'outline', size: 'icon' }))}
+        className={
+          mobile
+            ? 'flex size-10 shrink-0 items-center justify-center rounded-lg text-[15px] outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring'
+            : cn(buttonVariants({ variant: 'outline', size: 'icon' }))
+        }
       >
         ◐
       </DropdownMenu.Trigger>

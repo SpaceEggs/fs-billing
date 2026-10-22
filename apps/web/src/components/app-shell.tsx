@@ -162,6 +162,7 @@ export function AppShell({
           )}
           <div className="flex items-center justify-end gap-1.5">
             {mobileActions}
+            {zone === 'portal' ? <ThemeMenu mobile /> : null}
             <MobileAccountMenu identity={identity} />
           </div>
         </header>

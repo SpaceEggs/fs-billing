@@ -1,0 +1,266 @@
+Nested Loop  (cost=223124.12..228361.89 rows=1 width=32) (actual rows=1 loops=1)
+  Buffers: shared hit=18096
+  CTE bounds
+    ->  Result  (cost=0.00..0.04 rows=1 width=28) (actual rows=1 loops=1)
+  CTE days
+    ->  Hash Right Join  (cost=23182.90..23481.77 rows=1071 width=36) (actual rows=30 loops=1)
+          Hash Cond: ((((l.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date) = (b_3.today - n.n))
+          Buffers: shared hit=6320
+          ->  HashAggregate  (cost=23181.90..23324.64 rows=7137 width=36) (actual rows=25 loops=1)
+                Group Key: ((l.occurred_at AT TIME ZONE 'Asia/Shanghai'::text))::date
+                Batches: 1  Memory Usage: 225kB
+                Buffers: shared hit=6320
+                InitPlan 2
+                  ->  CTE Scan on bounds  (cost=0.00..0.03 rows=1 width=8) (actual rows=1 loops=1)
+                InitPlan 3
+                  ->  CTE Scan on bounds bounds_1  (cost=0.00..0.03 rows=1 width=8) (actual rows=1 loops=1)
+                InitPlan 4
+                  ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+                InitPlan 5
+                  ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+                InitPlan 6
+                  ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries l  (cost=0.43..23146.11 rows=7137 width=9) (actual rows=191298 loops=1)
+                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= (InitPlan 2).col1) AND (occurred_at < (InitPlan 3).col1))
+                      Filter: ((kind = 'call_charge'::text) AND ((InitPlan 4).col1 OR (((InitPlan 5).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 6).col1))))
+                      Rows Removed by Filter: 2
+                      Buffers: shared hit=6320
+          ->  Hash  (cost=0.62..0.62 rows=30 width=8) (actual rows=30 loops=1)
+                Buckets: 1024  Batches: 1  Memory Usage: 10kB
+                ->  Nested Loop  (cost=0.00..0.62 rows=30 width=8) (actual rows=30 loops=1)
+                      ->  CTE Scan on bounds b_3  (cost=0.00..0.02 rows=1 width=4) (actual rows=1 loops=1)
+                      ->  Function Scan on generate_series n  (cost=0.00..0.30 rows=30 width=4) (actual rows=30 loops=1)
+  InitPlan 12
+    ->  Aggregate  (cost=88.71..88.72 rows=1 width=32) (actual rows=1 loops=1)
+          Buffers: shared hit=6320
+          ->  Sort  (cost=75.32..77.99 rows=1071 width=36) (actual rows=30 loops=1)
+                Sort Key: days.day
+                Sort Method: quicksort  Memory: 25kB
+                Buffers: shared hit=6320
+                ->  CTE Scan on days  (cost=0.00..21.42 rows=1071 width=36) (actual rows=30 loops=1)
+                      Buffers: shared hit=6320
+  InitPlan 13
+    ->  Aggregate  (cost=24.10..24.12 rows=1 width=32) (actual rows=1 loops=1)
+          ->  CTE Scan on days days_1  (cost=0.00..21.42 rows=1071 width=32) (actual rows=30 loops=1)
+  InitPlan 14
+    ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+  InitPlan 15
+    ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+  InitPlan 16
+    ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+  ->  Nested Loop  (cost=110915.24..110916.59 rows=1 width=64) (actual rows=1 loops=1)
+        Buffers: shared hit=4551
+        ->  Nested Loop  (cost=0.00..1.33 rows=1 width=28) (actual rows=1 loops=1)
+              Buffers: shared hit=1
+              ->  Seq Scan on tenants t  (cost=0.00..1.30 rows=1 width=20) (actual rows=1 loops=1)
+                    Filter: ((id = '00000000-0000-4000-8000-000000000001'::uuid) AND ((InitPlan 14).col1 OR (((InitPlan 15).col1 = 'tenant'::text) AND (id = (InitPlan 16).col1))))
+                    Rows Removed by Filter: 16
+                    Buffers: shared hit=1
+              ->  CTE Scan on bounds b  (cost=0.00..0.02 rows=1 width=8) (actual rows=1 loops=1)
+        ->  Aggregate  (cost=110915.24..110915.25 rows=1 width=36) (actual rows=1 loops=1)
+              Buffers: shared hit=4550
+              InitPlan 17
+                ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+              InitPlan 18
+                ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+              InitPlan 19
+                ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+              ->  Nested Loop  (cost=610.61..110636.89 rows=55659 width=4) (actual rows=128795 loops=1)
+                    Buffers: shared hit=4550
+                    ->  CTE Scan on bounds b_1  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+                    ->  Append  (cost=610.61..110080.27 rows=55660 width=20) (actual rows=128795 loops=1)
+                          Buffers: shared hit=4550
+                          ->  Bitmap Heap Scan on cdrs_2025_10 c_1  (cost=610.61..4000.88 rows=2211 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2025_10_tenant_id_answered_at_idx  (cost=0.00..610.06 rows=13251 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2025_11 c_2  (cost=1264.08..8279.10 rows=4573 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2025_11_tenant_id_answered_at_idx  (cost=0.00..1262.93 rows=27401 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2025_12 c_3  (cost=1307.77..8556.09 rows=4728 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2025_12_tenant_id_answered_at_idx  (cost=0.00..1306.58 rows=28333 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_01 c_4  (cost=1303.22..8549.44 rows=4721 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_01_tenant_id_answered_at_idx  (cost=0.00..1302.03 rows=28289 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_02 c_5  (cost=1181.27..7728.85 rows=4269 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_02_tenant_id_answered_at_idx  (cost=0.00..1180.21 rows=25583 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_03 c_6  (cost=1302.84..8549.31 rows=4716 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_03_tenant_id_answered_at_idx  (cost=0.00..1301.66 rows=28259 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_04 c_7  (cost=1264.01..8277.91 rows=4572 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_04_tenant_id_answered_at_idx  (cost=0.00..1262.87 rows=27396 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_05 c_8  (cost=1303.83..8553.28 rows=4729 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_05_tenant_id_answered_at_idx  (cost=0.00..1302.65 rows=28338 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_06 c_9  (cost=1259.89..8274.54 rows=4570 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_06_tenant_id_answered_at_idx  (cost=0.00..1258.75 rows=27386 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_07 c_10  (cost=1303.93..8552.58 rows=4730 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_07_tenant_id_answered_at_idx  (cost=0.00..1302.75 rows=28346 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_08 c_11  (cost=1302.76..8549.09 rows=4715 width=20) (actual rows=0 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Buffers: shared hit=3
+                                ->  Bitmap Index Scan on cdrs_2026_08_tenant_id_answered_at_idx  (cost=0.00..1301.58 rows=28253 width=0) (actual rows=0 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_09 c_12  (cost=1315.24..17380.02 rows=4612 width=20) (actual rows=2 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Heap Blocks: exact=1
+                                Buffers: shared hit=4
+                                ->  Bitmap Index Scan on cdrs_2026_09_tenant_id_answered_at_idx  (cost=0.00..1314.09 rows=27653 width=0) (actual rows=2 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=3
+                          ->  Bitmap Heap Scan on cdrs_2026_10 c_13  (cost=693.32..4550.87 rows=2513 width=20) (actual rows=128793 loops=1)
+                                Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                Filter: ((started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+                                Heap Blocks: exact=3380
+                                Buffers: shared hit=4513
+                                ->  Bitmap Index Scan on cdrs_2026_10_tenant_id_answered_at_idx  (cost=0.00..692.69 rows=15062 width=0) (actual rows=128793 loops=1)
+                                      Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end))
+                                      Buffers: shared hit=1133
+                          ->  Seq Scan on cdrs_2026_11 c_14  (cost=0.00..0.00 rows=1 width=48) (never executed)
+                                Filter: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at >= b_1.month_start) AND (answered_at < b_1.month_end) AND (started_at < b_1.month_end) AND ((InitPlan 17).col1 OR (((InitPlan 18).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 19).col1))))
+  ->  Aggregate  (cost=88614.20..88614.21 rows=1 width=4) (actual rows=1 loops=1)
+        Buffers: shared hit=2949
+        InitPlan 20
+          ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+        InitPlan 21
+          ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+        InitPlan 22
+          ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+        ->  Nested Loop  (cost=261.08..88594.30 rows=7939 width=0) (actual rows=6823 loops=1)
+              Buffers: shared hit=2949
+              ->  CTE Scan on bounds b_2  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+              ->  Append  (cost=261.08..88514.88 rows=7940 width=8) (actual rows=6823 loops=1)
+                    Buffers: shared hit=2949
+                    ->  Bitmap Heap Scan on cdrs_2025_10 c_16  (cost=261.08..3470.50 rows=333 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2025_10_tenant_id_answered_at_idx  (cost=0.00..260.33 rows=5991 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2025_11 c_17  (cost=531.02..7200.40 rows=674 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2025_11_tenant_id_answered_at_idx  (cost=0.00..529.50 rows=12108 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2025_12 c_18  (cost=536.87..7447.79 rows=684 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2025_12_tenant_id_answered_at_idx  (cost=0.00..535.33 rows=12291 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_01 c_19  (cost=568.41..7405.71 rows=725 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_01_tenant_id_answered_at_idx  (cost=0.00..566.78 rows=13036 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_02 c_20  (cost=484.79..6728.44 rows=617 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_02_tenant_id_answered_at_idx  (cost=0.00..483.40 rows=11098 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_03 c_21  (cost=567.76..7412.98 rows=721 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_03_tenant_id_answered_at_idx  (cost=0.00..566.13 rows=12971 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_04 c_22  (cost=531.42..7195.74 rows=676 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_04_tenant_id_answered_at_idx  (cost=0.00..529.90 rows=12148 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_05 c_23  (cost=583.05..7423.21 rows=740 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_05_tenant_id_answered_at_idx  (cost=0.00..581.38 rows=13296 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_06 c_24  (cost=516.29..7210.64 rows=659 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_06_tenant_id_answered_at_idx  (cost=0.00..514.81 rows=11839 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_07 c_25  (cost=567.55..7414.77 rows=720 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_07_tenant_id_answered_at_idx  (cost=0.00..565.93 rows=12951 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Bitmap Heap Scan on cdrs_2026_08 c_26  (cost=568.07..7410.05 rows=723 width=8) (never executed)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          ->  Bitmap Index Scan on cdrs_2026_08_tenant_id_answered_at_idx  (cost=0.00..566.44 rows=13002 width=0) (never executed)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                    ->  Index Scan using cdrs_2026_09_tenant_id_answered_at_idx on cdrs_2026_09 c_27  (cost=0.42..8202.09 rows=290 width=8) (never executed)
+                          Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                    ->  Bitmap Heap Scan on cdrs_2026_10 c_28  (cost=297.05..3952.87 rows=377 width=8) (actual rows=6823 loops=1)
+                          Recheck Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                          Filter: ((started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+                          Heap Blocks: exact=2941
+                          Buffers: shared hit=2949
+                          ->  Bitmap Index Scan on cdrs_2026_10_tenant_id_answered_at_idx  (cost=0.00..296.20 rows=6778 width=0) (actual rows=6823 loops=1)
+                                Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (answered_at IS NULL))
+                                Buffers: shared hit=8
+                    ->  Seq Scan on cdrs_2026_11 c_29  (cost=0.00..0.00 rows=1 width=8) (never executed)
+                          Filter: ((answered_at IS NULL) AND (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= b_2.month_start) AND (started_at < b_2.month_end) AND ((InitPlan 20).col1 OR (((InitPlan 21).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 22).col1))))
+  SubPlan 11
+    ->  Aggregate  (cost=5236.37..5236.38 rows=1 width=32) (actual rows=1 loops=1)
+          Buffers: shared hit=4276
+          InitPlan 8
+            ->  Result  (cost=0.00..0.01 rows=1 width=1) (actual rows=1 loops=1)
+          InitPlan 9
+            ->  Result  (cost=0.00..0.01 rows=1 width=32) (actual rows=1 loops=1)
+          InitPlan 10
+            ->  Result  (cost=0.00..0.02 rows=1 width=16) (actual rows=1 loops=1)
+          ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries l_1  (cost=0.45..5232.65 rows=1469 width=5) (actual rows=128795 loops=1)
+                Index Cond: ((tenant_id = t.id) AND (occurred_at >= (date_trunc('month'::text, (b.as_of AT TIME ZONE 'Asia/Shanghai'::text)) AT TIME ZONE 'Asia/Shanghai'::text)) AND (occurred_at < ((date_trunc('month'::text, (b.as_of AT TIME ZONE 'Asia/Shanghai'::text)) + '1 mon'::interval) AT TIME ZONE 'Asia/Shanghai'::text)))
+                Filter: ((kind = 'call_charge'::text) AND ((InitPlan 8).col1 OR (((InitPlan 9).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 10).col1))))
+                Rows Removed by Filter: 2
+                Buffers: shared hit=4276
+Planning:
+  Buffers: shared hit=6
+Planning Time: 1.066 ms
+Execution Time: 87.637 ms

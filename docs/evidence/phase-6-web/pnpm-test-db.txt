@@ -1,0 +1,16 @@
+
+> fs-billing@ test:db /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing/.claude/worktrees/phase-6-pr7
+
+
+PR3_PREPARE_ABORT {"backendPid":13896,"before":{"state":"active","waitEventType":"Lock","waitEvent":"relation"},"after":{"state":"idle","waitEventType":"Client","waitEvent":"ClientRead"},"elapsedMs":14}
+
+ Test Files  34 passed (34)
+      Tests  484 passed (484)
+   Start at  11:28:23
+   Duration  65.54s (tests 85%, import 14%, transform 1%)
+
+exit=0
