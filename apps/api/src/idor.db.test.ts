@@ -19,6 +19,8 @@ import {
   portalHomeResponseSchema,
   cdrCountriesResponseSchema,
   portalLedgerResponseSchema,
+  portalStatementResponseSchema,
+  portalStatementsResponseSchema,
   sessionResponseSchema,
 } from '@fs-billing/shared';
 import { generateOpenApi } from './openapi.js';
@@ -31,6 +33,13 @@ import {
   requestHeaders,
   type Fixture,
 } from '../test/support.js';
+import {
+  backdateTenant,
+  currentBeijingMonth,
+  ensureStatementPartitions,
+  generateMonth,
+  statementLedger,
+} from '../test/statements.js';
 
 const connections = apiConnections();
 const laneSchema = z.enum(['app', 'owner']);
@@ -119,6 +128,29 @@ async function insertIsolatedCdrs(fixture: Fixture) {
       ],
     );
   }
+}
+let statementFixtureCache: Promise<Fixture> | undefined;
+/** 月账单用例共用的夹具：B 的第一个账单月份是 2026-06，A 的是 2026-08，A 没有 6 月。 */
+function statementFixture(): Promise<Fixture> {
+  statementFixtureCache ??= (async () => {
+    const sf = await createFixture(connections);
+    await ensureStatementPartitions(connections);
+    const [a, b] = [sf.a.tenantId, sf.b.tenantId];
+    if (!a || !b) throw new Error('Expected statement fixture tenants');
+    await backdateTenant(connections, a, '2026-08-01 08:00:00');
+    await backdateTenant(connections, b, '2026-06-05 08:00:00');
+    await statementLedger(
+      connections.owner,
+      b,
+      'recharge',
+      '10',
+      '2026-06-06 09:00:00',
+      { adminId: sf.admin.profileId },
+    );
+    await generateMonth(connections, b, '2026-06-01');
+    return sf;
+  })();
+  return statementFixtureCache;
 }
 const cases = {
   portalCdrs: async ({ api, fixture, operation }: CaseContext) => {
@@ -259,6 +291,139 @@ const cases = {
     expect(response.body).toContain('账户充值');
     expect(response.body).not.toContain('999.75');
     expect(response.body).not.toContain('private receivable note');
+  },
+  portalStatements: async ({ api, operation }: CaseContext) => {
+    const sf = await statementFixture();
+    for (const [user, currency, recharge, firstMonth] of [
+      [sf.a, 'CNY', '111.25', '2026-08'],
+      [sf.a2, 'CNY', '222.5', undefined],
+      [sf.b, 'USD', '999.75', '2026-06'],
+    ] as const) {
+      const session = await login(api, user);
+      const response = await api.inject({
+        url: operation.path,
+        headers: forgedHeaders(session.cookie, sf),
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      const body = portalStatementsResponseSchema.parse(response.json());
+      expect(
+        body.currency,
+        'TENANT_FILTER_LEAK: portalStatements currency',
+      ).toBe(currency);
+      const now = body.items.find((item) => item.state === 'in_progress');
+      expect(
+        now?.figures.recharge,
+        'TENANT_FILTER_LEAK: statements recharge',
+      ).toBe(recharge);
+      expect(body.items.at(-1)?.month).toBe(
+        firstMonth ?? currentBeijingMonth(),
+      );
+      for (const other of ['111.25', '222.5', '999.75'])
+        if (other !== recharge)
+          expect(response.body, `TENANT_FILTER_LEAK: ${other}`).not.toContain(
+            `"${other}"`,
+          );
+      expect(response.body).not.toMatch(
+        /"(version|generatedBy|reconcile\w*|breakdownGap|tenantId)"/,
+      );
+    }
+    const a = await login(api, sf.a);
+    for (const key of ['tenantId', 'tenant_id']) {
+      const attack = await api.inject({
+        url: `${operation.path}?${key}=${sf.b.tenantId}`,
+        headers: forgedHeaders(a.cookie, sf),
+      });
+      expect(attack.statusCode).toBe(400);
+    }
+  },
+  portalStatement: async ({ api, operation }: CaseContext) => {
+    const sf = await statementFixture();
+    const url = (month: string) => operation.path.replace('{month}', month);
+    const a = await login(api, sf.a);
+    const b = await login(api, sf.b);
+    const own = await api.inject({
+      url: url(currentBeijingMonth()),
+      headers: forgedHeaders(a.cookie, sf),
+    });
+    expect(own.statusCode, own.body).toBe(200);
+    expect(
+      portalStatementResponseSchema.parse(own.json()).figures.closingBalance,
+      'TENANT_FILTER_LEAK: portalStatement',
+    ).toBe('111.25');
+    // B 独有的月份：A 得到 404，与从不存在的月份无法区分；B 自己能读。
+    const bOnly = await api.inject({
+      url: url('2026-06'),
+      headers: forgedHeaders(a.cookie, sf),
+    });
+    const never = await api.inject({
+      url: url('2001-01'),
+      headers: forgedHeaders(a.cookie, sf),
+    });
+    expect(bOnly.statusCode, bOnly.body).toBe(404);
+    expect(never.statusCode).toBe(404);
+    const strip = (body: string) =>
+      Object.entries(apiErrorSchema.parse(JSON.parse(body)).error).filter(
+        ([key]) => key !== 'requestId',
+      );
+    expect(strip(bOnly.body)).toEqual(strip(never.body));
+    expect(bOnly.body).not.toContain(sf.b.tenantId ?? '');
+    const mine = await api.inject({
+      url: url('2026-06'),
+      headers: forgedHeaders(b.cookie, sf),
+    });
+    expect(mine.statusCode, mine.body).toBe(200);
+    const detail = portalStatementResponseSchema.parse(mine.json());
+    expect(detail.currency).toBe('USD');
+    expect(detail.figures.closingBalance).toBe('10');
+    expect(mine.body).not.toMatch(
+      /"(version|generatedBy|reconcile\w*|breakdownGap|tenantId)"/,
+    );
+    for (const key of ['tenantId', 'tenant_id']) {
+      const attack = await api.inject({
+        url: `${url('2026-06')}?${key}=${sf.b.tenantId}`,
+        headers: forgedHeaders(a.cookie, sf),
+      });
+      expect(attack.statusCode).toBe(400);
+    }
+  },
+  portalStatementExport: async ({ api, operation }: CaseContext) => {
+    const sf = await statementFixture();
+    const url = (month: string) => operation.path.replace('{month}', month);
+    const a = await login(api, sf.a);
+    const b = await login(api, sf.b);
+    const own = await api.inject({
+      method: 'POST',
+      url: url(currentBeijingMonth()),
+      headers: forgedHeaders(a.cookie, sf),
+    });
+    expect(own.statusCode, own.body).toBe(200);
+    expect(own.headers['content-type']).toContain('text/csv');
+    const code = (
+      await connections.owner.pool.query<{ code: string }>(
+        'select code from public.tenants where id = $1',
+        [sf.a.tenantId],
+      )
+    ).rows[0]?.code;
+    expect(own.headers['content-disposition']).toContain(`statement_${code}_`);
+    expect(own.body).toContain(',111.25');
+    expect(own.body).not.toContain('999.75');
+    expect(own.body).not.toContain('222.5');
+    const bOnly = await api.inject({
+      method: 'POST',
+      url: url('2026-06'),
+      headers: forgedHeaders(a.cookie, sf),
+    });
+    expect(bOnly.statusCode).toBe(404);
+    expect(bOnly.headers['content-type']).toContain('application/json');
+    expect(bOnly.body).not.toContain(',10');
+    const mine = await api.inject({
+      method: 'POST',
+      url: url('2026-06'),
+      headers: forgedHeaders(b.cookie, sf),
+    });
+    expect(mine.statusCode, mine.body).toBe(200);
+    expect(mine.body).toContain('金额（USD）');
+    expect(mine.body).not.toContain('111.25');
   },
   portalLedger: async ({ api, fixture, operation }: CaseContext) => {
     const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
@@ -606,6 +771,9 @@ const caseKinds = new Map([
   ['portalLedgerExport', 'tenant-read'],
   ['portalLedger', 'tenant-read'],
   ['portalHome', 'tenant-read'],
+  ['portalStatements', 'tenant-read'],
+  ['portalStatement', 'tenant-read'],
+  ['portalStatementExport', 'tenant-read'],
   ['session', 'self-session'],
   ['logout', 'self-session-mutation'],
   ['revokeOtherSessions', 'self-session-mutation'],
@@ -657,6 +825,7 @@ const adminProbeBodies: Partial<Record<string, object>> = {
     adjustmentLedgerEntryId: '11111111-1111-4111-8111-111111111111',
     reason: 'probe',
   },
+  adminTenantStatementRegenerate: { expectedVersion: 1 },
   adminAccountCreate: { name: 'probe', email: 'probe@example.com' },
   adminPortalAccountCreate: { email: 'probe@example.com' },
 };
@@ -734,7 +903,8 @@ for (const lane of lanes) {
       )) {
         let url = operation.path
           .replace('{id}', fixture.b.profileId)
-          .replace('{tenantId}', fixture.b.tenantId ?? '');
+          .replace('{tenantId}', fixture.b.tenantId ?? '')
+          .replace('{month}', '2026-09');
         if (
           [
             'portalLedger',
