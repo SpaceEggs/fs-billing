@@ -15,10 +15,11 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '余额流水' })).toBeVisible();
   await expect(page.getByText('当前余额').first()).toBeVisible();
 
+  // 阶段 7 PR 1 起种子是月账单设计稿：9 月 1 至 29 日每天一组合并的通话扣费，加 3 笔人工流水，共 32 行，每页 25 行。
   const table = page.getByRole('table');
   await expect(table.getByRole('row')).toHaveCount(26);
   const merged = table.getByRole('link', {
-    name: /2026-09-28 通话扣费，共 1 通/,
+    name: /2026-09-28 通话扣费，共 454 通/,
   });
   await expect(merged).toBeVisible();
   const credit = table.getByRole('row').filter({ hasText: '账户充值' });
@@ -27,15 +28,37 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
 
   await merged.click();
   await expectPath(page, '/portal/cdrs?from=2026-09-28&to=2026-09-28');
-  // 话单页确实按这一天取数：日期范围是当天，列表是种子里当天的两通已接通话单。
+  // 话单页确实按这一天取数：日期范围是当天，默认只看已接通：454 通、1,776 分钟、¥88.64（设计稿 9 月 28 日），另有 1 通未接通的示例话单，每页 50 行。
   await expect(page.getByRole('heading', { name: '话单' })).toBeVisible();
   await expect(
     page.getByRole('button', { name: /日期范围.*2026-09-28 至 2026-09-28/ }),
   ).toBeVisible();
-  const calls = page.getByRole('table').getByRole('row');
-  await expect(calls).toHaveCount(3);
-  await expect(calls.nth(1)).toContainText('2026-09-28 14:10:05');
-  await expect(calls.nth(2)).toContainText('2026-09-28 14:03:22');
+  const summary = page.getByRole('region', { name: '汇总' });
+  await expect(summary).toContainText('通话数454');
+  await expect(summary).toContainText('另有未接通 1 通');
+  await expect(summary).toContainText('总计费1,776分钟');
+  await expect(summary).toContainText('总费用¥88.64');
+  await expect(page.getByRole('table').getByRole('row')).toHaveCount(51);
+});
+
+test('shows the seeded first day of this month: 20 merged calls and the recharge that offsets them', async ({
+  page,
+}) => {
+  // 种子在播种月 1 日凌晨写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
+  const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
+  await page.goto(`/portal/ledger?from=${month}-01&to=${month}-01`);
+  const rows = page.getByRole('table').getByRole('row');
+  await expect(rows).toHaveCount(3);
+  await expect(
+    page.getByRole('link', { name: `${month}-01 通话扣费，共 20 通` }),
+  ).toBeVisible();
+  const recharge = rows.filter({ hasText: '银行转账预存' });
+  await expect(recharge).toHaveCount(1);
+  await expect(recharge).toContainText('+¥3.51');
+  await expect(rows.filter({ hasText: '通话扣费' })).toContainText('-¥3.51');
+  // 抵平之后余额仍是 −¥35.20。
+  await expect(page.getByText('当前余额').first()).toBeVisible();
+  await expect(page.getByText('-¥35.20').first()).toBeVisible();
 });
 
 test('filters by type and keeps the range and page in the address', async ({
@@ -46,21 +69,26 @@ test('filters by type and keeps the range and page in the address', async ({
   await expectPath(page, `${septemberPath}&kind=recharge`);
   const table = page.getByRole('table');
   await expect(table.getByRole('row')).toHaveCount(3);
-  await expect(page.getByText('共 2 条 · 合计 +¥2,431.10')).toBeVisible();
+  await expect(page.getByText('共 2 条 · 合计 +¥1,300.00')).toBeVisible();
 
   await page.reload();
   await expect(table.getByRole('row')).toHaveCount(3);
 
+  // 9 月没有赠送（月账单设计稿：赠送 0.00）。
   await page.getByRole('combobox', { name: '类型' }).selectOption('gift');
-  await expect(page.getByText('共 2 条 · 合计 +¥40.00')).toBeVisible();
+  await expect(page.getByText('没有符合条件的流水')).toBeVisible();
+
+  await page.goto('/portal/ledger?from=2026-08-01&to=2026-08-31&kind=gift');
+  await expect(page.getByText('共 1 条 · 合计 +¥50.00')).toBeVisible();
 
   await page.goto(`${septemberPath}&page=2`);
   await expectPath(page, `${septemberPath}&page=2`);
-  await expect(page.getByText(/^第 26–/)).toBeVisible();
+  await expect(page.getByText('第 26–32 条，共 32 条')).toBeVisible();
 });
 
 test('shows the empty state of a filtered range', async ({ page }) => {
-  await page.goto('/portal/ledger?from=2026-08-01&to=2026-08-31&kind=gift');
+  // ABC001 8 月 12 日开户，7 月没有任何流水。
+  await page.goto('/portal/ledger?from=2026-07-01&to=2026-07-31&kind=gift');
   await expect(page.getByText('没有符合条件的流水')).toBeVisible();
   await page.getByRole('button', { name: '清除筛选' }).click();
   await expect(page).not.toHaveURL(/kind=/);
@@ -81,6 +109,6 @@ test('exports the filtered ledger as a CSV with the customer view of a credit re
   const text = await readFile((await file.path()) ?? '', 'utf8');
   expect(text.charCodeAt(0)).toBe(0xfeff);
   expect(text).toContain('账户充值');
-  expect(text).toContain('银行转账预存');
+  expect(text).toContain('银行转账 · 招行尾号 6621');
   expect(text).not.toContain('月结，10月5日前付款');
 });

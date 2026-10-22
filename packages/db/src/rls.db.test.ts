@@ -9,8 +9,12 @@ import {
   tenantId,
 } from '../test/support.js';
 import { lockTenants, withAdmin, withSystem, withTenant } from './client.js';
+import { currentMonthSeedMonth } from './seed-calls.js';
 
 const { app, owner } = connections();
+
+// 播种月 1 日凌晨的 20 通话单（时钟太靠近 1 日凌晨时不播种）。
+const currentMonthCalls = currentMonthSeedMonth(new Date()) ? 20 : 0;
 
 const tenantsOf = (rows: Record<string, unknown>[]) =>
   [...new Set(rows.map((r) => r.code))].sort();
@@ -23,8 +27,13 @@ describe('RLS 租户隔离', () => {
         sql`select cdrs.*, tenants.code from cdrs join tenants on tenants.id = cdrs.tenant_id order by started_at`,
       ),
     );
+    // 8、9 月逐通话单 22,446 条已接通，加上 1 条未接通示例话单（阶段 7 决定 20），以及播种月的 20 通。
+    expect(rows).toHaveLength(22447 + currentMonthCalls);
+    expect(tenantsOf(rows)).toEqual(['ABC001']);
     expect(
-      rows.map((r) => [r.code, r.callee, r.billing_number, r.charge]),
+      rows
+        .filter((r) => String(r.call_uuid).startsWith('a0000001-'))
+        .map((r) => [r.code, r.callee, r.billing_number, r.charge]),
     ).toEqual([
       ['ABC001', '+447700900123', '447700900123', '0.18'],
       ['ABC001', '+18765550100', '18765550100', '0.25'],
@@ -69,7 +78,10 @@ describe('RLS 租户隔离', () => {
         sql`select code from cdrs join tenants on tenants.id = cdrs.tenant_id where code in ('ABC001', 'GZT007')`,
       ),
     );
-    expect([rows.length, tenantsOf(rows)]).toEqual([5, ['ABC001', 'GZT007']]);
+    expect([rows.length, tenantsOf(rows)]).toEqual([
+      22449 + currentMonthCalls,
+      ['ABC001', 'GZT007'],
+    ]);
   });
 
   it('未声明身份时什么都看不到', async () => {
@@ -205,6 +217,147 @@ describe('RLS 租户隔离', () => {
     expect(error).toMatchObject({
       code: '42501',
       message: 'permission denied for table cdrs_2026_09',
+    });
+  });
+});
+
+describe('月账单明细表（阶段 7）', () => {
+  const detailTables = [
+    'monthly_statement_countries',
+    'monthly_statement_days',
+  ] as const;
+
+  it('statement detail tables show a tenant only its own rows and reject writes', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const gzt007 = await tenantId(app, 'GZT007');
+    for (const [self, other] of [
+      [abc001, gzt007],
+      [gzt007, abc001],
+    ] as const) {
+      const visible = await withTenant(app.db, self, async (tx) => ({
+        headers: (
+          await tx.execute(
+            sql`select distinct tenant_id from monthly_statements`,
+          )
+        ).rows,
+        countries: (
+          await tx.execute(
+            sql`select distinct tenant_id from monthly_statement_countries`,
+          )
+        ).rows,
+        days: (
+          await tx.execute(
+            sql`select distinct tenant_id from monthly_statement_days`,
+          )
+        ).rows,
+      }));
+      expect(visible).toEqual({
+        headers: [{ tenant_id: self }],
+        countries: [{ tenant_id: self }],
+        days: [{ tenant_id: self }],
+      });
+      // 即使点名对方的账单也读不到。
+      const peeking = await withTenant(app.db, self, (tx) =>
+        tx.execute(
+          sql`select count(*)::int as n from monthly_statement_days where tenant_id = ${other}::uuid`,
+        ),
+      );
+      expect(peeking.rows).toEqual([{ n: 0 }]);
+    }
+
+    const tenantWrites: Record<
+      string,
+      { sql: ReturnType<typeof sql>; code: string }
+    > = {
+      'insert into countries': {
+        sql: sql`insert into monthly_statement_countries (statement_id, tenant_id, version, country, calls, minutes, charge)
+                 select id, tenant_id, 9, 'x', 0, 0, 0 from monthly_statements where tenant_id = ${abc001}::uuid limit 1`,
+        code: '42501',
+      },
+      'insert into days': {
+        sql: sql`insert into monthly_statement_days (statement_id, tenant_id, version, day, calls, minutes, charge)
+                 select id, tenant_id, 9, '2026-09-01', 0, 0, 0 from monthly_statements where tenant_id = ${abc001}::uuid limit 1`,
+        code: '42501',
+      },
+      'update countries': {
+        sql: sql`update monthly_statement_countries set calls = 0`,
+        code: '42501',
+      },
+      'delete days': {
+        sql: sql`delete from monthly_statement_days`,
+        code: '42501',
+      },
+      'update header': {
+        sql: sql`update monthly_statements set reconcile_status = 'ok'`,
+        code: '42501',
+      },
+      'insert header': {
+        sql: sql`insert into monthly_statements (tenant_id, month, opening_balance, recharge, gift, adjustment, call_charges, closing_balance, call_minutes)
+                 values (${abc001}::uuid, '2030-01-01', 0, 0, 0, 0, 0, 0, 0)`,
+        code: '42501',
+      },
+    };
+    for (const [label, write] of Object.entries(tenantWrites)) {
+      const error = await pgError(
+        withTenant(app.db, abc001, (tx) => tx.execute(write.sql)),
+      );
+      expect({ label, code: error.code }).toEqual({ label, code: write.code });
+    }
+    const { rows } = await app.pool.query(
+      `SELECT (SELECT count(*) FROM monthly_statements)::int AS headers,
+              (SELECT count(*) FROM monthly_statement_countries)::int AS countries,
+              (SELECT count(*) FROM monthly_statement_days)::int AS days`,
+    );
+    expect(rows).toEqual([{ headers: 0, countries: 0, days: 0 }]);
+  });
+
+  it('statement detail rows cannot be updated or deleted', async () => {
+    for (const table of detailTables) {
+      const messages = [];
+      for (const statement of [
+        `UPDATE ${table} SET calls = calls`,
+        `DELETE FROM ${table}`,
+        `TRUNCATE ${table}`,
+      ]) {
+        messages.push((await pgError(owner.pool.query(statement))).message);
+      }
+      expect(messages).toEqual([
+        `${table} 只能新增，禁止 UPDATE`,
+        `${table} 只能新增，禁止 DELETE`,
+        `${table} 只能新增，禁止 TRUNCATE`,
+      ]);
+      // 应用角色根本没有这些权限。
+      for (const statement of [
+        sql.raw(`update ${table} set calls = calls`),
+        sql.raw(`delete from ${table}`),
+      ]) {
+        expect(
+          await pgError(withAdmin(app.db, (tx) => tx.execute(statement))),
+        ).toMatchObject({
+          code: '42501',
+          message: `permission denied for table ${table}`,
+        });
+      }
+    }
+    const { rows } = await owner.pool.query(
+      `SELECT count(*)::int AS n FROM monthly_statement_days d JOIN tenants t ON t.id = d.tenant_id WHERE t.code = 'ABC001'`,
+    );
+    expect(rows).toEqual([{ n: 49 }]);
+  });
+
+  it('the operator roles can append detail rows but the version must match a statement of the same tenant', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const gzt007 = await tenantId(app, 'GZT007');
+    // 复合外键：明细的租户必须与账单一致。
+    const error = await pgError(
+      withSystem(app.db, (tx) =>
+        tx.execute(sql`insert into monthly_statement_countries (statement_id, tenant_id, version, country, calls, minutes, charge)
+          select id, ${gzt007}::uuid, 9, 'x', 0, 0, 0 from monthly_statements where tenant_id = ${abc001}::uuid limit 1`),
+      ),
+    );
+    expect(error).toMatchObject({
+      code: '23503',
+      constraint: 'monthly_statement_countries_statement_id_tenant_id_fkey',
     });
   });
 });

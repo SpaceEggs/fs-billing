@@ -253,6 +253,16 @@ async function insertSupplementalFixturesWithAppScopeUnset(
          ON CONFLICT (tenant_id, month) DO NOTHING`,
         [tenantId],
       );
+      // 明细表只增，夹具行随外层事务回滚。
+      for (const table of ['countries', 'days']) {
+        await client.query(
+          `INSERT INTO monthly_statement_${table} (statement_id, tenant_id, version, ${table === 'days' ? 'day' : 'country'}, calls, minutes, charge)
+           SELECT id, tenant_id, 1, ${table === 'days' ? "date_trunc('month', current_date)::date" : "'RLS fixture'"}, 0, 0, 0
+           FROM monthly_statements
+           WHERE tenant_id = $1 AND month = date_trunc('month', current_date)::date`,
+          [tenantId],
+        );
+      }
       await client.query(
         `INSERT INTO balance_alert_deliveries (tenant_id, kind, balance, recipients)
          VALUES ($1, 'low_balance', 0, ARRAY['pr1@example.invalid'])`,
@@ -600,7 +610,7 @@ describe('RLS InitPlan tenant_read', () => {
               .filter((relation) => relation.kind === 'admin-previews')
               .map((relation) => relation.name)
               .sort();
-            expect(tenantReads).toHaveLength(13);
+            expect(tenantReads).toHaveLength(15);
             expect(adminPreviewTables).toEqual(['admin_rate_previews']);
             expect(tenantReads.every((relation) => relation.appCanSelect)).toBe(
               true,
@@ -620,11 +630,24 @@ describe('RLS InitPlan tenant_read', () => {
                   .regex(/^[a-z_][a-z0-9_]*$/)
                   .parse(match[1]),
             );
+            // 0015 改写了当时存在的 13 张表；阶段 7 的两张明细表在 0017 里直接按 InitPlan 形式建策略。
             expect(targets).toHaveLength(13);
             expect(new Set(targets).size).toBe(13);
-            expect([...targets].sort()).toEqual(
-              tenantReads.map((relation) => relation.name).sort(),
-            );
+            expect(
+              tenantReads
+                .map((relation) => relation.name)
+                .filter((name) => !targets.includes(name))
+                .sort(),
+            ).toEqual([
+              'monthly_statement_countries',
+              'monthly_statement_days',
+            ]);
+            expect(
+              tenantReads
+                .map((relation) => relation.name)
+                .filter((name) => targets.includes(name))
+                .sort(),
+            ).toEqual([...targets].sort());
             expect(
               tenantReads.find((relation) => relation.name === 'tenants')
                 ?.tenantColumn,

@@ -109,10 +109,10 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 数据库测试（`pnpm test:db`）每次运行先删除并重建 `fs_billing_test`，用与 `pnpm db:migrate`、`pnpm db:seed` 相同的代码迁移与写种子，测试以应用角色 `fs_billing_app` 连接。下面的 psql 输出来自 [`evidence/phase-2/acceptance.sql`](evidence/phase-2/acceptance.sql)，在开发库上以应用角色执行，完整输出见 [`acceptance.txt`](evidence/phase-2/acceptance.txt)；脚本中的写操作全部在回滚的事务里。
 
-- [x] **空库上 `pnpm db:migrate && pnpm db:seed` 成功，再迁移一次不报错。** 先 `DROP DATABASE fs_billing` 并重建，`\dt` 输出 `Did not find any relations.`，然后依次执行 `pnpm db:migrate`、`pnpm db:seed`、`pnpm db:seed`、`pnpm db:migrate`，四条命令都以 0 退出（输出见下）。`migrate.db.test.ts` 在已迁移的库上再次调用 `migrateDatabase`，`drizzle.__drizzle_migrations` 仍为 1 行。种子重复执行不新增任何行（流水 50、话单 5、未归属话单 1、UUID 登记 6、费率版本 11、条目 88，前后一致）。
-- [x] **余额流水 `UPDATE`、`DELETE` 被数据库拒绝。** 应用角色：`ERROR:  permission denied for table ledger_entries`（UPDATE 与 DELETE 各一次）。owner（超级用户）：`ERROR:  ledger_entries 只能新增，禁止 UPDATE`、`… 禁止 DELETE`；测试另覆盖 `TRUNCATE ledger_entries CASCADE` → `… 禁止 TRUNCATE`，以及之后种子流水仍为 50 行。
-- [x] **以租户 A 身份 `SELECT * FROM cdrs` 只返回 A 的数据。** 以 ABC001 身份执行 `SELECT * FROM cdrs`（无租户条件）返回 3 行，`tenant_id` 全部为 ABC001；`count(DISTINCT tenant_id)` = 1。GZT007 身份只看到自己的 2 条话单、自己的流水和自己的租户行；未声明身份时 `cdrs`、`ledger_entries` 均为 0 行；租户身份写入他人流水报 `new row violates row-level security policy for table "ledger_entries"`；直接读分区 `cdrs_2026_09` 报 `permission denied`。
-- [x] **ABC001 余额由流水合计算出为 −35.20。** 以 ABC001 身份 `SELECT sum(amount) FROM ledger_entries` → `-35.20`（33 条流水），缓存 `tenant_balances.balance` → `-35.20`，`formatMoney(loadRatingTenant(...).balance)` → `'-35.20'`；`balance_discrepancies` 为空。
+- [x] **空库上 `pnpm db:migrate && pnpm db:seed` 成功，再迁移一次不报错。** 先 `DROP DATABASE fs_billing` 并重建，`\dt` 输出 `Did not find any relations.`，然后依次执行 `pnpm db:migrate`、`pnpm db:seed`、`pnpm db:seed`、`pnpm db:migrate`，四条命令都以 0 退出（输出见下）。`migrate.db.test.ts` 在已迁移的库上再次调用 `migrateDatabase`，`drizzle.__drizzle_migrations` 仍为 1 行。种子重复执行不新增任何行（流水 50、话单 5、未归属话单 1、UUID 登记 6、费率版本 11、条目 88，前后一致）。（阶段 7 PR 1 起种子改为 ABC001 逐通话单与逐通流水，重复执行仍不新增任何行：流水 22,491、话单 22,469、未归属话单 1、UUID 登记 22,470、费率版本 11、条目 88、月账单 10，前后一致，由 `seed.db.test.ts` 验证。）
+- [x] **余额流水 `UPDATE`、`DELETE` 被数据库拒绝。** 应用角色：`ERROR:  permission denied for table ledger_entries`（UPDATE 与 DELETE 各一次）。owner（超级用户）：`ERROR:  ledger_entries 只能新增，禁止 UPDATE`、`… 禁止 DELETE`；测试另覆盖 `TRUNCATE ledger_entries CASCADE` → `… 禁止 TRUNCATE`，以及之后种子流水仍为 50 行。（阶段 7 PR 1 起以 `seed:` 键写入的种子流水为 23 行（含播种月那笔预存），ABC001 的逐通扣费用生产的 `call:<UUID>` 键。）
+- [x] **以租户 A 身份 `SELECT * FROM cdrs` 只返回 A 的数据。** 以 ABC001 身份执行 `SELECT * FROM cdrs`（无租户条件）返回 3 行，`tenant_id` 全部为 ABC001；`count(DISTINCT tenant_id)` = 1。（阶段 7 PR 1 起 ABC001 有 22,467 条话单（含播种月的 20 通），其中 3 条是原示例话单；断言改为只有 ABC001 一个租户、总数 22,467，并按 UUID 取回那 3 条。）GZT007 身份只看到自己的 2 条话单、自己的流水和自己的租户行；未声明身份时 `cdrs`、`ledger_entries` 均为 0 行；租户身份写入他人流水报 `new row violates row-level security policy for table "ledger_entries"`；直接读分区 `cdrs_2026_09` 报 `permission denied`。
+- [x] **ABC001 余额由流水合计算出为 −35.20。** 以 ABC001 身份 `SELECT sum(amount) FROM ledger_entries` → `-35.20`（33 条流水；阶段 7 PR 1 起是 22,472 条：5 笔人工流水、逐通扣费，加播种月的 20 笔扣费与 1 笔等额预存，合计不变），缓存 `tenant_balances.balance` → `-35.20`，`formatMoney(loadRatingTenant(...).balance)` → `'-35.20'`；`balance_discrepancies` 为空。
 - [x] **同一 UUID 的话单插入两次，第二次被唯一约束挡住。** `ERROR:  duplicate key value violates unique constraint "call_uuids_pkey"`；开始时间不同（落在不同分区）的同一 UUID 同样被挡住。
 - [x] **建分区只允许管理员或系统身份。** 应用角色可以执行 `cdr_ensure_partitions`，不能执行 `ensure_month_partition`。租户身份与未声明身份调用前者报 `42501` `建分区只允许管理员或系统身份`。系统身份调用返回 4 个分区名。
 - [x] **插入下个月的话单前自动建分区，`\d+` 能看到对应分区。** 迁移已建出 `cdrs_2026_10`、`cdrs_2026_11`（以及 `raw_cdrs` 的同月分区）；北京时间 `2026-11-01 01:00` 的话单直接落入 `cdrs_2026_11`；模拟下月的每日任务 `cdr_ensure_partitions(now() + interval '1 month')` 返回 `cdrs_2026_11`、`cdrs_2026_12`、`raw_cdrs_2026_11`、`raw_cdrs_2026_12`，`\d+ cdrs` 列出 4 个分区（见下）。测试用固定时间验证边界：`2027-01-31 23:59:59+08` 落入 `cdrs_2027_01`，`2027-02-01 00:00:00+08` 落入 `cdrs_2027_02`；无分区月份插入报 `no partition of relation "cdrs" found for row`。
@@ -123,7 +123,7 @@ TS 入口：`withTenant(db, tenantId, fn)`、`withAdmin(db, fn)`、`withSystem(d
 
 评审后追加的结构决定（见“已决定事项”），同样由 `pnpm test:db` 与上面的 psql 脚本验证：
 
-- [x] **流水按发生时间归属月份。** owner 写入北京时间 9-30 23:59 接通、10-01 00:00:30 入账的扣费：`statement_month = 2026-09`，`written_month = 2026-10`。种子中 ABC001 的 28 笔通话扣费全部归属 2026-09，合计 `-2486.30`（设计稿本月消费）。人工充值只倒填 `occurred_at` 时报 `violates check constraint "ledger_entries_kind_shape"`。应用角色把人工调账的 `occurred_at` 和 `created_at` 一起写成 `2026-09-01` 时报 `42501` `created_at 由数据库生成`。不写这两列的调账成功，且 `occurred_at = created_at = transaction_timestamp()`。
+- [x] **流水按发生时间归属月份。** owner 写入北京时间 9-30 23:59 接通、10-01 00:00:30 入账的扣费：`statement_month = 2026-09`，`written_month = 2026-10`。种子中 ABC001 的 28 笔通话扣费全部归属 2026-09，合计 `-2486.30`（设计稿本月消费）。（阶段 7 PR 1 起种子是 8、9 月逐通扣费：2026-08 共 9,642 笔合计 `-1873.40`，2026-09 共 12,804 笔合计 `-2486.30`。）人工充值只倒填 `occurred_at` 时报 `violates check constraint "ledger_entries_kind_shape"`。应用角色把人工调账的 `occurred_at` 和 `created_at` 一起写成 `2026-09-01` 时报 `42501` `created_at 由数据库生成`。不写这两列的调账成功，且 `occurred_at = created_at = transaction_timestamp()`。
 - [x] **未归属与正式话单共用 UUID 登记表。** 先进未归属话单的 UUID 登记为 `tenant_id = NULL`，之后写入 ABC001 的正式话单时认领成功（测试读回登记表为该租户）；同一 UUID 再给 GZT007：`duplicate key value violates unique constraint "call_uuids_pkey"`；已在正式话单中的 UUID 再进未归属话单：同样报 `call_uuids_pkey`。
 - [x] **原始话单按 UTF-8 文本原样保存，按收到时间分区。** 数据库编码是 UTF-8，`body` 是 `text`。含换行、制表符、多余空格、非字母序键和重复键 `"billsec"` 的 124 字节原文：读回 `body` 与写入的字面量完全相同，`payload` 为规范化副本 `{"a": [1, 2], "z": 1, "variables": {…, "billsec": "231"}}`；北京时间 `2026-10-31 23:59:59` 收到的落入 `raw_cdrs_2026_10`。截断的原文、含 `\u0000` 的原文，以及数值 `{"n":1e1000000}` 照样保存，`payload` 为空。
 - [x] **持有租户锁时建分区被拒绝，不再死锁。** A 持租户锁，B 读过 `cdrs` 后在 `lock_tenants` 上排队，A 再调用 `cdr_ensure_partitions('2032-05-15')`（分区不存在）：A 报 `55000 建分区要在单独的事务里进行，不能在持有租户锁的事务里`，A 回滚后 B 拿到锁。旧实现里 B 收到 `40P01 deadlock detected`。分区已存在时持锁调用同样报 `55000`。
@@ -168,7 +168,7 @@ $ pnpm db:migrate
 迁移完成
 ```
 
-余额与设计稿（管理后台第一批租户列表）逐一相同。
+余额与设计稿（管理后台第一批租户列表）逐一相同。（阶段 7 PR 1 起 GZT007 的两条示例话单各有一笔扣费流水，余额为 86.27；上面的输出是当时的运行结果，不重写。）
 
 ### psql 输出摘录（应用角色）
 
@@ -228,6 +228,10 @@ DETAIL:  Key (call_uuid)=(a0000001-0000-4000-8000-000000000001) already exists.
   month  | call_charges | entries
 ---------+--------------+---------
  2026-09 |     -2486.30 |      28
+-- 阶段 7 PR 1 起的种子（逐通扣费）：
+ 2026-08 |     -1873.40 |    9642
+ 2026-09 |     -2486.30 |   12804
+ 2026-10 |       -3.51 |      20   -- 播种月，另有一笔 3.51 预存
 
 -- 应用角色回填 created_at 的人工调账被拒绝
 ERROR:  created_at 由数据库生成
@@ -370,6 +374,7 @@ CI 在 PostgreSQL 启动后增加两步：空库上 `pnpm db:migrate && pnpm db:
 - **币种一致在类型层保证。** `appendLedgerEntry(tx, tenant: TenantRef<C>, entry: LedgerEntryInput<NoInfer<C>>)`，CNY 金额记入 USD 租户是类型错误（测试中的 `@ts-expect-error`）。数据库的金额列不带币种，由租户币种决定。
 - **金额按 `Decimal.toFixed()` 原样写入。** 不补零也不舍入，例如 `100.00` 存为 `100`；显示时用阶段 1 的 `formatMoney`。
 - **种子中的通话扣费是按日汇总的流水**（与设计稿余额流水一致），`occurred_at` 取通话当日北京时间 23:59:59，`created_at` 是次日 00:05 左右的扣费时间；未逐通生成话单；种子另含 5 条示例话单（ABC001 3 条、GZT007 2 条），其费用由阶段 1 的 `priceCall` 计算，用于演示 RLS，不计入流水。
+  - **阶段 7 PR 1 更新（2026-10-22）：** ABC001 的种子改成客户门户第二批的月账单（决定 20）。8 月（12 日开户）9,642 通、9 月 12,804 通，每通一条话单加一笔流水，流水用生产的幂等键 `call:<UUID>`（`callChargeKey`），`occurred_at` 是接通时间，`created_at` 是挂机后数秒，所以 Worker 的补扣对账不会再扣一次；原来的 3 条示例话单并入 9 月分配（两条已接通的补写了扣费流水，未接通的那条不计入通话数）。其他租户仍是上面的按日汇总流水，GZT007 的 2 条示例话单（0.20、0.03）自此也各有一笔 `call:<UUID>` 扣费流水，余额由 86.50 变为 86.27。ABC001 另在播种当月（数据库时钟的北京月，2026-10 起，且该月 1 日 03:00 之后）的 1 日凌晨 00:05 至 02:00 有固定的 20 通已接通话单（81 分钟、3.51）和一笔 00:03:00 的等额预存，余额仍是 −35.20。种子最后调用月账单的生成函数，产出 ABC001 的 8、9 月账单和其他租户的 9 月账单（`packages/db/src/seed.ts`、`seed-calls.ts`）。
 
 ## 已决定事项
 

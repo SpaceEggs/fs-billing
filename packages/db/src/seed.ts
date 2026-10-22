@@ -11,9 +11,28 @@ import {
   type Currency,
   type RateEntry,
 } from '@fs-billing/rating';
-import { lockTenants, withAdmin, type PoolDb, type Tx } from './client.js';
+import {
+  lockTenants,
+  withAdmin,
+  withSystem,
+  type PoolDb,
+  type Tx,
+} from './client.js';
+import { databaseNow } from './clock.js';
 import { ensureCdrPartitions } from './partitions.js';
+import { callChargeKey } from './ledger.js';
 import { createRateVersion } from './rates.js';
+import {
+  currentMonthSeedMonth,
+  planAbc001Calls,
+  planCurrentMonthCalls,
+  type FixedCall,
+  type PlannedCall,
+} from './seed-calls.js';
+import {
+  generateStatement,
+  listMissingStatements,
+} from './statements/index.js';
 import {
   admins,
   balanceAlertSettings,
@@ -26,7 +45,9 @@ import {
   type LedgerKind,
 } from './schema.js';
 
-// 示例数据取自设计稿（管理后台第一批：租户列表与 ABC001 余额流水）和 pages.md §1.6。
+// 示例数据取自设计稿（管理后台第一批：租户列表）和 pages.md §1.6。
+// ABC001 的流水与话单取自客户门户第二批的月账单（阶段 7 决定 20）：8 月（12 日开户）与 9 月，
+// 逐通话单 + 逐通扣费流水，由 seed-calls.ts 确定性地生成。
 
 const ADMINS = {
   wang: { email: 'wangmin@example.com', name: '王敏' },
@@ -148,7 +169,7 @@ const TENANTS: readonly SeedTenant[] = [
   },
 ];
 
-const RATES_CSV = `ISO,Country,Destination Prefix,Description,Rate
+export const RATES_CSV = `ISO,Country,Destination Prefix,Description,Rate
 CN,中国,86,,0.0500
 ,美国/加拿大,1,,0.0100
 JM,牙买加,1876,,0.2500
@@ -158,13 +179,17 @@ JP,日本,81,,0.0350
 SG,新加坡,65,,0.0280
 HK,中国香港,852,,0.0300`;
 
-const OCTOBER_RATES_CSV = RATES_CSV.replace(
+export const OCTOBER_RATES_CSV = RATES_CSV.replace(
   'GB,英国,447,手机,0.0450',
   'GB,英国,447,手机,0.0480',
 );
 if (OCTOBER_RATES_CSV === RATES_CSV) throw new Error('种子 447 调价未生效');
 
 const FIRST_VERSION_AT = '2026-09-01 00:00:00';
+// ABC001 在设计稿里 2026-08-12 开户，费率表自开户起生效。
+const ABC001_OPENED_AT = '2026-08-12 09:30:00';
+// 种子播种后生成的账单月份上界（含）：账单只生成已结束的月份，之后的月份由每日任务补建。
+const LAST_SEED_STATEMENT_MONTH = '2026-09-01';
 // 阶段 1 的调价示例：447 自 2026-10-01 00:00（北京时间）起 0.0480。
 const ABC001_OCTOBER_AT = '2026-10-01 00:00:00';
 
@@ -195,32 +220,38 @@ const callCharge = (
   note,
 });
 
-/** 设计稿中 ABC001 的 10 条流水，以及在其之前、使 9 月 23 日赊账前余额为 −39.74 的历史。 */
-function abc001Ledger(): SeedEntry[] {
-  const history: SeedEntry[] = [
+/**
+ * ABC001 的人工流水，取自客户门户第二批的月账单（`客户门户 第二批.dc.html:629-633`）：
+ * 8 月充值 3,000.00、赠送 50.00；9 月充值 800.00、赊账 500.00、调账 −25.50，没有赠送。
+ * 通话扣费不在这里：每通一笔，由 seed-calls.ts 生成。
+ * 播种月（2026-10 起）另有一笔与当月通话等额的预存。
+ */
+function abc001Ledger(currentMonthRecharge?: {
+  at: string;
+  amount: string;
+}): SeedEntry[] {
+  const entries: SeedEntry[] = [
     {
-      at: '2026-09-01 10:00:00',
+      at: '2026-08-12 10:15:00',
       kind: 'recharge',
-      amount: '1931.10',
+      amount: '3000.00',
       note: '银行转账预存',
       admin: 'li',
     },
-  ];
-  // 9 月 1 日至 22 日的通话，次日 00:05 扣费；合计 1970.84，与设计稿本月消费 2486.30 一致。
-  for (let day = 1; day <= 22; day++) {
-    const callDay = `2026-09-${String(day).padStart(2, '0')}`;
-    const postedAt = `2026-09-${String(day + 1).padStart(2, '0')} 00:05:00`;
-    history.push(
-      callCharge(
-        callDay,
-        postedAt,
-        day === 22 ? '-89.66' : '-89.58',
-        `${callDay} 通话扣费（种子汇总）`,
-      ),
-    );
-  }
-  return [
-    ...history,
+    {
+      at: '2026-08-12 10:20:00',
+      kind: 'gift',
+      amount: '50.00',
+      note: '开户赠送',
+      admin: 'wang',
+    },
+    {
+      at: '2026-09-10 14:20:08',
+      kind: 'recharge',
+      amount: '800.00',
+      note: '银行转账 · 招行尾号 6621',
+      admin: 'li',
+    },
     {
       at: '2026-09-23 10:15:36',
       kind: 'credit_recharge',
@@ -228,64 +259,25 @@ function abc001Ledger(): SeedEntry[] {
       note: '月结，10月5日前付款',
       admin: 'li',
     },
-    callCharge(
-      '2026-09-23',
-      '2026-09-24 00:05:12',
-      '-86.05',
-      '2026-09-23 通话扣费，共 1,692 通',
-    ),
-    callCharge(
-      '2026-09-24',
-      '2026-09-25 00:05:08',
-      '-83.48',
-      '2026-09-24 通话扣费，共 1,610 通',
-    ),
     {
-      at: '2026-09-25 15:10:27',
-      kind: 'gift',
-      amount: '20.00',
-      note: '9月24日线路故障补偿',
-      admin: 'wang',
-    },
-    {
-      at: '2026-09-25 15:12:03',
-      kind: 'gift',
-      amount: '20.00',
-      note: '9月24日线路故障补偿',
-      admin: 'wang',
-    },
-    callCharge(
-      '2026-09-25',
-      '2026-09-26 00:05:10',
-      '-90.12',
-      '2026-09-25 通话扣费，共 1,731 通',
-    ),
-    callCharge(
-      '2026-09-26',
-      '2026-09-27 00:05:11',
-      '-85.90',
-      '2026-09-26 通话扣费，共 1,655 通',
-    ),
-    {
-      at: '2026-09-27 16:20:41',
+      at: '2026-09-26 16:20:41',
       kind: 'adjustment',
-      amount: '-20.00',
-      note: '冲正 9月25日重复赠送',
+      amount: '-25.50',
+      note: '9月25日重复扣费冲正',
       admin: 'wang',
     },
-    callCharge(
-      '2026-09-27',
-      '2026-09-28 00:05:09',
-      '-81.27',
-      '2026-09-27 通话扣费，共 1,588 通',
-    ),
-    callCharge(
-      '2026-09-28',
-      '2026-09-29 00:05:12',
-      '-88.64',
-      '2026-09-28 通话扣费，共 1,702 通',
-    ),
   ];
+  // 当前月的预存：恰为当月 20 通扣费的合计，播种前后余额不变（见 seed-calls.ts）。
+  if (currentMonthRecharge) {
+    entries.push({
+      at: currentMonthRecharge.at,
+      kind: 'recharge',
+      amount: currentMonthRecharge.amount,
+      note: '银行转账预存',
+      admin: 'li',
+    });
+  }
+  return entries;
 }
 
 /** 其他租户：预存 + 赊账 − 本月消费 = 设计稿中的余额。 */
@@ -340,26 +332,6 @@ interface SeedCdr {
 const CDRS: readonly SeedCdr[] = [
   {
     code: 'ABC001',
-    callUuid: 'a0000001-0000-4000-8000-000000000001',
-    startedAt: '2026-09-28 14:03:10',
-    ringSeconds: 12,
-    talkSeconds: 230,
-    caller: '075586001234',
-    callee: '+447700900123',
-    hangupCause: 'NORMAL_CLEARING',
-  },
-  {
-    code: 'ABC001',
-    callUuid: 'a0000001-0000-4000-8000-000000000002',
-    startedAt: '2026-09-28 14:10:00',
-    ringSeconds: 5,
-    talkSeconds: 1,
-    caller: '075586001234',
-    callee: '+18765550100',
-    hangupCause: 'NORMAL_CLEARING',
-  },
-  {
-    code: 'ABC001',
     callUuid: 'a0000001-0000-4000-8000-000000000003',
     startedAt: '2026-09-28 14:20:00',
     talkSeconds: 30,
@@ -389,6 +361,33 @@ const CDRS: readonly SeedCdr[] = [
   },
 ];
 
+/**
+ * ABC001 原有的两条已接通示例话单（9-28）并入 9 月的逐通分配，同时补写它们缺的扣费流水。
+ * 第三条未接通的示例话单仍在 CDRS 里，不计入通话数。
+ */
+const ABC001_FIXED_CALLS: readonly FixedCall[] = [
+  {
+    callUuid: 'a0000001-0000-4000-8000-000000000001',
+    key: 'UKM',
+    startedAt: '2026-09-28 14:03:10',
+    ringSeconds: 12,
+    talkSeconds: 230,
+    caller: '075586001234',
+    callee: '+447700900123',
+    hangupCause: 'NORMAL_CLEARING',
+  },
+  {
+    callUuid: 'a0000001-0000-4000-8000-000000000002',
+    key: 'JM',
+    startedAt: '2026-09-28 14:10:00',
+    ringSeconds: 5,
+    talkSeconds: 1,
+    caller: '075586001234',
+    callee: '+18765550100',
+    hangupCause: 'NORMAL_CLEARING',
+  },
+];
+
 function sampleRates<C extends Currency>(
   currency: C,
   csv = RATES_CSV,
@@ -407,7 +406,11 @@ const seconds = (at: Date, n: number) => new Date(at.getTime() + n * 1000);
  */
 export async function seedDatabase(
   db: PoolDb,
-  options: { passwordHash?: string } = {},
+  options: {
+    passwordHash?: string;
+    /** 测试用的“现在”，默认数据库时钟。 */
+    now?: Date;
+  } = {},
 ): Promise<void> {
   const { adminIds, tenantIds } = await withAdmin(db, seedTenants);
   if (options.passwordHash !== undefined) {
@@ -438,10 +441,27 @@ export async function seedDatabase(
     });
   }
   const idOf = (code: string) => tenantIds.get(code)!;
-  // 样例话单落在 2026 年 9、10 月。建分区不能放进下面持租户锁的事务。
+  // 样例话单落在 2026 年 8、9、10 月。建分区不能放进下面持租户锁的事务。
   await ensureCdrPartitions(db, {
-    moment: beijingTime('2026-09-01 00:00:00'),
+    moment: beijingTime('2026-08-01 00:00:00'),
+    monthsAhead: 2,
   });
+  // 当前月 1 日凌晨的 20 通话单（以数据库时钟决定是哪个月，播种时它们一定已经发生）。
+  const now = options.now ?? (await withAdmin(db, databaseNow));
+  const currentMonth = currentMonthSeedMonth(now);
+  const currentPlan = currentMonth
+    ? planCurrentMonthCalls({
+        month: currentMonth,
+        tenantCode: 'ABC001',
+        entries: sampleRates('CNY', OCTOBER_RATES_CSV),
+        caller: '075586001234',
+      })
+    : null;
+  if (currentMonth)
+    await ensureCdrPartitions(db, {
+      moment: beijingTime(`${currentMonth} 00:00:00`),
+      monthsAhead: 0,
+    });
   await withAdmin(db, async (tx) => {
     await lockTenants(tx, [...tenantIds.values()]);
     const seeded = new Set(
@@ -455,7 +475,9 @@ export async function seedDatabase(
       const tenantId = idOf(t.code);
       if (!seeded.has(tenantId)) {
         await createRateVersion(tx, tenantId, sampleRates(t.currency), {
-          effectiveFrom: beijingTime(FIRST_VERSION_AT),
+          effectiveFrom: beijingTime(
+            t.code === 'ABC001' ? ABC001_OPENED_AT : FIRST_VERSION_AT,
+          ),
           adminId: adminIds.li,
         });
         if (t.code === 'ABC001') {
@@ -471,7 +493,17 @@ export async function seedDatabase(
         }
       }
 
-      const ledger = t.code === 'ABC001' ? abc001Ledger() : summaryLedger(t);
+      const ledger =
+        t.code === 'ABC001'
+          ? abc001Ledger(
+              currentPlan
+                ? {
+                    at: currentPlan.rechargeAt,
+                    amount: currentPlan.rechargeAmount,
+                  }
+                : undefined,
+            )
+          : summaryLedger(t);
       // 历史时间只有 owner 连接能写。应用角色没有 created_at 的 INSERT 权限。
       for (const e of ledger) {
         const createdAt = beijingTime(e.at);
@@ -496,7 +528,20 @@ export async function seedDatabase(
     }
 
     const registered = await registeredCallUuids(tx);
+    await seedAbc001Calls(
+      tx,
+      idOf('ABC001'),
+      planAbc001Calls({
+        tenantCode: 'ABC001',
+        entries: sampleRates('CNY'),
+        fixedCalls: ABC001_FIXED_CALLS,
+        caller: '075586001234',
+      }),
+    );
+    if (currentPlan)
+      await seedAbc001Calls(tx, idOf('ABC001'), [...currentPlan.calls]);
     await seedCdrs(tx, idOf, registered);
+    await chargeSampleCdrs(tx, idOf);
     if (!registered.has(UNASSIGNED_CALL_UUID)) {
       const callee = '+6591234567';
       const billingNumber = normalizeDialedNumber(callee);
@@ -515,6 +560,31 @@ export async function seedDatabase(
       });
     }
   });
+  await seedStatements(db, tenantIds);
+}
+
+/**
+ * 与每日生成任务相同的取数与写入函数：只为种子租户补齐从第一个应有月份到 2026-09 的账单
+ * （ABC001 是 8、9 月，其余租户只有 9 月；只生成已结束的月份）。幂等：已有的账单不动；
+ * 库里别的租户（例如测试建的）不在种子范围内，不会被生成。
+ */
+async function seedStatements(
+  db: PoolDb,
+  tenantIds: ReadonlyMap<string, string>,
+): Promise<void> {
+  for (const tenantId of tenantIds.values()) {
+    const missing = await withSystem(db, (tx) =>
+      listMissingStatements(tx, { tenantId }),
+    );
+    for (const entry of missing) {
+      if (entry.month > LAST_SEED_STATEMENT_MONTH) continue;
+      await withSystem(
+        db,
+        (tx) => generateStatement(tx, entry.tenantId, entry.month),
+        { isolationLevel: 'repeatable read' },
+      );
+    }
+  }
 }
 
 async function seedTenants(tx: Tx): Promise<{
@@ -531,9 +601,17 @@ async function seedTenants(tx: Tx): Promise<{
         currency: t.currency,
         status: t.status,
         overdraftLimit: t.overdraft,
+        ...(t.code === 'ABC001' && {
+          createdAt: beijingTime(ABC001_OPENED_AT),
+        }),
       })),
     )
     .onConflictDoNothing({ target: tenants.code });
+  // 设计稿写 ABC001「创建于 2026-08-12」；已存在的行也回填（owner 连接，触发器不限制 created_at）。
+  await tx
+    .update(tenants)
+    .set({ createdAt: beijingTime(ABC001_OPENED_AT) })
+    .where(eq(tenants.code, 'ABC001'));
   const rows = await tx
     .select({ id: tenants.id, code: tenants.code })
     .from(tenants)
@@ -631,6 +709,101 @@ async function seedAdmins(tx: Tx): Promise<Record<AdminKey, string>> {
   };
 }
 
+const BULK_NOTE = (callUuid: string, billingNumber: string) =>
+  `通话扣费 ${callUuid} ${billingNumber}`;
+
+/**
+ * ABC001 8、9 月的逐通话单与逐通扣费流水（决定 20）。流水用生产的幂等键 `call:<uuid>`（callChargeKey），
+ * 所以 Worker 的补扣对账认为这些话单已扣过费，不会再扣一次；occurred_at 是接通时间，created_at 是挂机后数秒。
+ * 两张表各用一条 INSERT ... SELECT jsonb_to_recordset 批量写入；已有的话单与流水按 UUID / 幂等键跳过，重复播种不增行
+ * （话单的插入触发器在唯一冲突前就写登记表，ON CONFLICT 挡不住，所以必须先查）。
+ */
+async function seedAbc001Calls(
+  tx: Tx,
+  tenantId: string,
+  planned: readonly PlannedCall[],
+): Promise<void> {
+  const uuids = JSON.stringify(planned.map((c) => c.callUuid));
+  const registered = new Set(
+    (
+      await tx.execute<{ call_uuid: string }>(sql`
+        select c.call_uuid::text as call_uuid from call_uuids c
+        where c.call_uuid in (select jsonb_array_elements_text(${uuids}::jsonb)::uuid)`)
+    ).rows.map((r) => r.call_uuid),
+  );
+  const unchargedRows = await tx.execute<{ call_uuid: string }>(sql`
+    select u as call_uuid from jsonb_array_elements_text(${uuids}::jsonb) as u
+    where not exists (
+      select 1 from ledger_entries l
+      where l.tenant_id = ${tenantId}::uuid and l.idempotency_key = 'call:' || u)`);
+  const uncharged = new Set(unchargedRows.rows.map((r) => r.call_uuid));
+
+  const cdrRows = planned.filter((c) => !registered.has(c.callUuid));
+  if (cdrRows.length > 0) {
+    await tx.execute(sql`
+      insert into cdrs (
+        tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee, billing_number,
+        duration_seconds, billed_minutes, matched_prefix, country, iso, description, rate, charge,
+        hangup_cause, received_at
+      )
+      select ${tenantId}::uuid, r.call_uuid, r.started_at, r.answered_at, r.ended_at, r.caller, r.callee,
+        r.billing_number, r.duration_seconds, r.billed_minutes, r.matched_prefix, r.country,
+        nullif(r.iso, ''), nullif(r.description, ''), r.rate, r.charge, r.hangup_cause, r.received_at
+      from jsonb_to_recordset(${JSON.stringify(cdrRows.map(cdrJson))}::jsonb) as r(
+        call_uuid uuid, started_at timestamptz, answered_at timestamptz, ended_at timestamptz,
+        caller text, callee text, billing_number text, duration_seconds int, billed_minutes numeric,
+        matched_prefix text, country text, iso text, description text, rate numeric, charge numeric,
+        hangup_cause text, received_at timestamptz)`);
+  }
+  const ledgerRows = planned.filter((c) => uncharged.has(c.callUuid));
+  if (ledgerRows.length > 0) {
+    await tx.execute(sql`
+      insert into ledger_entries (
+        tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at
+      )
+      select ${tenantId}::uuid, 'call_charge', r.amount, r.note, null, r.idempotency_key, r.occurred_at, r.created_at
+      from jsonb_to_recordset(${JSON.stringify(ledgerRows.map(ledgerJson))}::jsonb) as r(
+        amount numeric, note text, idempotency_key text, occurred_at timestamptz, created_at timestamptz)
+      on conflict (tenant_id, idempotency_key) do nothing`);
+  }
+}
+
+/** 挂机后 2 秒话单入库，3 秒扣费入账。 */
+const afterHangup = (call: PlannedCall, secondsLater: number) =>
+  new Date(call.endedAt.getTime() + secondsLater * 1000).toISOString();
+
+function cdrJson(call: PlannedCall) {
+  return {
+    call_uuid: call.callUuid,
+    started_at: call.startedAt.toISOString(),
+    answered_at: call.answeredAt.toISOString(),
+    ended_at: call.endedAt.toISOString(),
+    caller: call.caller,
+    callee: call.callee,
+    billing_number: call.billingNumber,
+    duration_seconds: call.durationSeconds,
+    billed_minutes: call.billedMinutes.toString(),
+    matched_prefix: call.matchedPrefix,
+    country: call.country,
+    iso: call.iso,
+    description: call.description,
+    rate: call.perMinute,
+    charge: call.charge,
+    hangup_cause: call.hangupCause,
+    received_at: afterHangup(call, 2),
+  };
+}
+
+function ledgerJson(call: PlannedCall) {
+  return {
+    amount: decimal(call.charge).neg().toFixed(),
+    note: BULK_NOTE(call.callUuid, call.billingNumber),
+    idempotency_key: callChargeKey(call.callUuid),
+    occurred_at: call.answeredAt.toISOString(),
+    created_at: afterHangup(call, 3),
+  };
+}
+
 async function seedCdrs(
   tx: Tx,
   idOf: (code: string) => string,
@@ -673,5 +846,37 @@ async function seedCdrs(
       rate: entry.perMinute.perMinute.toFixed(4),
       charge: priced.charge.value.toFixed(),
     });
+  }
+}
+
+/**
+ * 已接通的示例话单（目前是 GZT007 的两条，ABC001 的两条已并入逐通分配）也要有扣费流水，
+ * 用生产的幂等键 `call:<UUID>`：否则 Worker 的补扣对账会把近 30 天内有费用而无该键的话单再扣一次。
+ * 流水不是按“余额 + 本月消费 − 赊账”算出的汇总流水的一部分，所以 GZT007 的余额是 86.50 − 0.23 = 86.27。
+ * 已有的流水按幂等键跳过，重复播种不增行。
+ */
+async function chargeSampleCdrs(
+  tx: Tx,
+  idOf: (code: string) => string,
+): Promise<void> {
+  const entries = sampleRates('CNY');
+  for (const c of CDRS.filter((c) => c.ringSeconds !== undefined)) {
+    const dialed = normalizeDialedNumber(c.callee);
+    const entry = dialed && longestPrefix(entries, dialed);
+    if (!dialed || !entry) throw new Error(`种子话单 ${c.callUuid} 无费率`);
+    const priced = priceCall(c.talkSeconds, entry.perMinute);
+    if (priced.charge.value.isZero()) continue;
+    const answeredAt = seconds(beijingTime(c.startedAt), c.ringSeconds!);
+    const endedAt = seconds(answeredAt, c.talkSeconds);
+    await tx.execute(sql`
+      insert into ledger_entries (
+        tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at
+      ) values (
+        ${idOf(c.code)}, 'call_charge', ${priced.charge.value.neg().toFixed()},
+        ${BULK_NOTE(c.callUuid, dialed)}, null, ${callChargeKey(c.callUuid)},
+        ${answeredAt}, ${seconds(endedAt, 3)}
+      )
+      on conflict (tenant_id, idempotency_key) do nothing
+    `);
   }
 }
