@@ -61,12 +61,16 @@ export function StatementList<Row extends StatementListRow>({
   hrefFor,
   actionLabel = '操作',
   renderAction,
+  renderMonthNote,
 }: {
   currency: Currency;
   rows: readonly Row[];
   hrefFor?: (row: Row) => string;
   actionLabel?: string;
-  renderAction?: (row: Row) => React.ReactNode;
+  /** 行末操作；`layout` 区分电脑表格与手机卡片（卡片里放在底部一行）。 */
+  renderAction?: (row: Row, layout: 'table' | 'card') => React.ReactNode;
+  /** 月份旁与月份下方的附加标签与备注（如后台的「话单已删除」「账单已过期」）。 */
+  renderMonthNote?: (row: Row, layout: 'table' | 'card') => React.ReactNode;
 }) {
   const router = useRouter();
   const money = (amount: string) => ({ currency, amount });
@@ -129,20 +133,23 @@ export function StatementList<Row extends StatementListRow>({
                   )}
                 >
                   <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2">
-                      {href ? (
-                        <InternalLink
-                          href={href}
-                          className="text-sm font-medium no-underline outline-none focus-visible:underline"
-                        >
-                          {statementMonthTitle(row.month)}
-                        </InternalLink>
-                      ) : (
-                        <span className="text-sm font-medium">
-                          {statementMonthTitle(row.month)}
-                        </span>
-                      )}
-                      <StatementStateTag state={row.state} />
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        {href ? (
+                          <InternalLink
+                            href={href}
+                            className="text-sm font-medium no-underline outline-none focus-visible:underline"
+                          >
+                            {statementMonthTitle(row.month)}
+                          </InternalLink>
+                        ) : (
+                          <span className="text-sm font-medium">
+                            {statementMonthTitle(row.month)}
+                          </span>
+                        )}
+                        <StatementStateTag state={row.state} />
+                      </div>
+                      {renderMonthNote?.(row, 'table')}
                     </div>
                   </td>
                   <td className="px-3 py-3.5 text-right">
@@ -174,7 +181,7 @@ export function StatementList<Row extends StatementListRow>({
                   </td>
                   {renderAction ? (
                     <td className="px-4 py-3.5 text-right">
-                      {renderAction(row)}
+                      {renderAction(row, 'table')}
                     </td>
                   ) : null}
                   {hrefFor ? (
@@ -209,6 +216,7 @@ export function StatementList<Row extends StatementListRow>({
                   </span>
                 ) : null}
               </div>
+              {renderMonthNote?.(row, 'card')}
               <div className="grid grid-cols-3 gap-2">
                 <div className="flex flex-col gap-[3px]">
                   <span className="text-xs text-muted-foreground">期初</span>
@@ -237,6 +245,7 @@ export function StatementList<Row extends StatementListRow>({
                   </span>
                 </div>
               </div>
+              {renderAction?.(row, 'card')}
             </>
           );
           const cardClass =

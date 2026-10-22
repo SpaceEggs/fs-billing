@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { shiftStatementMonth, statementMonthLabel } from '../lib/statements';
+import { shiftStatementMonth } from '../lib/admin-statements';
+import { statementMonthTitle } from '../lib/statement';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { ModalDialog } from './ui/dialog';
@@ -41,11 +42,11 @@ export function MonthField({
       <button
         type="button"
         aria-haspopup="dialog"
-        aria-label={`${label}：${statementMonthLabel(value)}`}
+        aria-label={`${label}：${statementMonthTitle(value)}`}
         onClick={() => setOpen(true)}
         className="flex h-9 min-w-0 items-center justify-between gap-6 rounded-lg border border-input px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 max-md:h-11 max-md:flex-1 max-md:justify-center max-md:text-[15px]"
       >
-        {statementMonthLabel(value)}
+        {statementMonthTitle(value)}
         <span aria-hidden className="text-xs text-muted-foreground">
           ▾
         </span>
@@ -130,7 +131,7 @@ function MonthGrid({
             <button
               key={month}
               type="button"
-              aria-label={statementMonthLabel(key(month))}
+              aria-label={statementMonthTitle(key(month))}
               aria-pressed={selected}
               disabled={key(month) < min || key(month) > max}
               onClick={() => onPick(key(month))}

@@ -7,11 +7,9 @@ import type {
 import { useApiMutation } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
-import {
-  formatStatementMinutes,
-  statementMonthLabel,
-} from '../../lib/statements';
+import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
+import { formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
 import { Alert } from '../ui/alert';
 import { Button } from '../ui/button';
@@ -99,7 +97,7 @@ export function RegenerateDialog({
   }
 
   const title = target
-    ? `重新生成 ${target.tenantCode} ${statementMonthLabel(target.month)} 账单？`
+    ? `重新生成 ${target.tenantCode} ${statementMonthTitle(target.month)} 账单？`
     : '重新生成账单';
   const money = (amount: string) =>
     target ? { currency: target.currency, amount } : null;
@@ -124,7 +122,7 @@ export function RegenerateDialog({
         <dl className="m-0 grid grid-cols-[120px_1fr] border-t border-border text-sm tabular-nums">
           <Row label="当前通话扣费">
             <Money value={money(target.current.callCharges)!} tone="plain" /> ·{' '}
-            {formatStatementMinutes(target.current.callMinutes)}分钟
+            {formatMinutes(target.current.callMinutes)}
           </Row>
           <Row label="当前期末余额">
             <Money value={money(target.current.closingBalance)!} />
@@ -194,7 +192,7 @@ export function RegenerateNotice({
   className?: string;
 }) {
   const { result, tenantCode, tenantId, currency } = outcome;
-  const month = statementMonthLabel(result.month);
+  const month = statementMonthTitle(result.month);
   const money = (amount: string) => ({ currency, amount });
   const summary = result.created ? (
     <>
@@ -250,7 +248,7 @@ export function RegenerateNotice({
                 search={{ tab: 'statements', statementMonth: stale }}
                 className="underline"
               >
-                {statementMonthLabel(stale)}
+                {statementMonthTitle(stale)}
               </Link>
             </span>
           ))}{' '}

@@ -185,7 +185,7 @@ describe('admin tenant statements list', () => {
     ).toBeDisabled();
     const september = within(table).getByText('2026年9月').closest('tr')!;
     expect(september).toHaveTextContent('-¥35.20');
-    expect(september).toHaveTextContent('49,726分钟');
+    expect(september).toHaveTextContent('49,726');
     expect(
       within(september).getByRole('button', { name: '重新生成 2026年9月' }),
     ).toBeEnabled();
@@ -377,14 +377,16 @@ describe('admin statement detail', () => {
 
   it('notes a breakdown gap between the header and the call detail', async () => {
     tabApp(detailUrl, { detail: { breakdownGap: '1240.75' } });
-    const note = await screen.findByRole('note');
-    expect(note).toHaveTextContent('相差 ¥1,240.75');
+    const facts = await screen.findByLabelText('账单信息');
+    expect(facts).toHaveTextContent('话单明细与通话扣费相差 ¥1,240.75');
+    // 国家表与日表的共用说明（部分扣费没有对应的话单明细）。
+    expect(screen.getAllByText('部分扣费没有对应的话单明细')).toHaveLength(2);
   });
 
-  it('has no gap note when the breakdown matches', async () => {
+  it('has no gap line in the info block when breakdownGap is zero', async () => {
     tabApp(detailUrl);
     await screen.findByRole('heading', { name: '2026年8月' });
-    expect(screen.queryByRole('note')).toBeNull();
+    expect(screen.queryByText(/话单明细与通话扣费相差/)).toBeNull();
   });
 
   it('exports the summary and the month CDRs', async () => {
@@ -459,7 +461,7 @@ describe('admin statement detail', () => {
     tabApp(detailUrl, { detail: inProgress });
     expect(
       await screen.findByText(
-        '本月尚未结束，以下数据截至今日并实时更新；下月 1 日凌晨生成正式账单。',
+        '本月尚未结束，以下数据截至今日并实时更新；2026-09-01 凌晨生成正式账单。',
       ),
     ).toBeVisible();
     expect(

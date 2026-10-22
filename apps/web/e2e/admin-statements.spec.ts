@@ -487,10 +487,10 @@ test('opens the ABC001 September statement from the tab with the mockup figures 
   );
   const august = page.locator('tbody tr').filter({ hasText: '2026年8月' });
   await expect(august).toContainText('¥1,176.60');
-  await expect(august).toContainText('37,468分钟');
+  await expect(august).toContainText('37,468');
   const september = page.locator('tbody tr').filter({ hasText: '2026年9月' });
   await expect(september).toContainText('-¥35.20');
-  await expect(september).toContainText('49,726分钟');
+  await expect(september).toContainText('49,726');
 
   await august.getByRole('link', { name: '查看 2026年8月' }).click();
   await expect(page).toHaveURL(tenantTab(id, '&statementMonth=2026-08'));
@@ -512,8 +512,9 @@ test('opens the ABC001 September statement from the tab with the mockup figures 
   await expect(days.locator('tbody tr')).toHaveCount(20);
   await expect(days.locator('tbody tr').first()).toContainText('2026-08-12');
   await expect(page.getByLabel('账单信息')).toContainText('v1');
-  // 种子数据的话单与流水一致，没有差额提示。
-  await expect(page.getByRole('note')).toHaveCount(0);
+  // 种子数据的话单与流水一致：没有共用的「部分扣费没有对应的话单明细」，信息块里也没有差额一行。
+  await expect(page.getByText('部分扣费没有对应的话单明细')).toHaveCount(0);
+  await expect(page.getByText(/话单明细与通话扣费相差/)).toHaveCount(0);
 
   await nav.getByRole('link', { name: '账单' }).click();
   await expect(page).toHaveURL(tenantTab(id));
@@ -633,4 +634,17 @@ test('shows the month cards and the actions sheet on a phone', async ({
       name: `重新生成 ${tenant.code} 2026年9月 账单？`,
     }),
   ).toBeVisible();
+});
+
+test('explains a seeded statement whose call charges have no CDR detail', async ({
+  page,
+}) => {
+  // GZT007 的种子 9 月扣费是按日汇总的流水，没有对应话单（breakdownGap 1,240.75）。
+  const id = await tenantByCode(page, 'GZT007');
+  await page.goto(tenantTab(id, '&statementMonth=2026-09'));
+  await expect(page.getByRole('heading', { name: '2026年9月' })).toBeVisible();
+  await expect(page.getByLabel('账单信息')).toContainText(
+    '话单明细与通话扣费相差 ¥1,240.75',
+  );
+  await expect(page.getByText('部分扣费没有对应的话单明细')).toHaveCount(2);
 });

@@ -24,10 +24,8 @@ import { QueryError, RefreshError } from '../../components/query-error';
 import { Sheet } from '../../components/ui/sheet';
 import { apiQuery } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
-import {
-  previousBeijingMonth,
-  statementMonthLabel,
-} from '../../lib/statements';
+import { previousBeijingMonth } from '../../lib/admin-statements';
+import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 
 type Group = AdminStatementsResponse['groups'][number];
@@ -163,7 +161,7 @@ function Groups({
         className="flex flex-col items-center gap-2 rounded-xl border border-border px-4 py-12 text-center"
       >
         <span className="text-[15px] font-semibold">
-          {statementMonthLabel(data.month)}没有账单
+          {statementMonthTitle(data.month)}没有账单
         </span>
         <span className="text-[13px] text-muted-foreground">
           租户从开户月起才有账单
@@ -289,7 +287,7 @@ function GroupSection({
                       to="/admin/tenants/$tenantId"
                       params={{ tenantId: row.tenant.id }}
                       search={viewSearch(row)}
-                      aria-label={`查看 ${row.tenant.code} ${statementMonthLabel(row.month)}`}
+                      aria-label={`查看 ${row.tenant.code} ${statementMonthTitle(row.month)}`}
                       className="text-primary"
                     >
                       查看
@@ -297,7 +295,7 @@ function GroupSection({
                     <RegenerateButton
                       allowed={row.regenerable.allowed}
                       reason={row.regenerable.reason}
-                      label={`重新生成 ${row.tenant.code} ${statementMonthLabel(row.month)}`}
+                      label={`重新生成 ${row.tenant.code} ${statementMonthTitle(row.month)}`}
                       onClick={() => onRegenerate(targetOf(row, currency))}
                     />
                   </span>
@@ -407,7 +405,7 @@ function GroupSection({
         {menu ? (
           <>
             <span className="pb-1 text-[15px] font-semibold">
-              {menu.tenant.code} {statementMonthLabel(menu.month)}
+              {menu.tenant.code} {statementMonthTitle(menu.month)}
               {menu.generatedAt
                 ? ` · 生成于 ${formatDateTime(menu.generatedAt)}`
                 : ''}

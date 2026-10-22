@@ -4,7 +4,7 @@ import {
   reconcileNote,
   regenerateReasons,
   type ReconcileStatus,
-} from '../../lib/statements';
+} from '../../lib/admin-statements';
 import { formatDateTime } from '../../lib/format';
 
 /** 「重新生成」按钮；不可用时置灰，原因写在 title 里（运营稿 5a：话单已删除的行）。 */
