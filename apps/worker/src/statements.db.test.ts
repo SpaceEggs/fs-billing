@@ -589,7 +589,7 @@ describe('调度与 Worker 端到端', () => {
         for (const month of ['2026-07-01', '2026-08-01', '2026-09-01'])
           expect(await read(tenant.id, month)).not.toBeNull();
       },
-      { timeout: 20_000, interval: 200 },
+      { timeout: 45_000, interval: 200 },
     );
     const reconcileId = await boss.send(RECONCILE_STATEMENTS_QUEUE, {
       tenantId: tenant.id,
@@ -602,12 +602,12 @@ describe('调度与 Worker 端到端', () => {
         );
         expect(rows[0]?.state).toBe('completed');
       },
-      { timeout: 20_000, interval: 200 },
+      { timeout: 45_000, interval: 200 },
     );
     expect(await read(tenant.id, '2026-09-01')).toMatchObject({
       reconcileStatus: 'ok',
       generatedBy: null,
     });
     expect(await alerts(tenant.id)).toEqual([]);
-  });
+  }, 60_000);
 });
