@@ -275,9 +275,19 @@ export const unassignedCdrs = pgTable('unassigned_cdrs', {
   receivedAt: at('received_at').notNull().defaultNow(),
 });
 
+export const statementReconcileStatuses = [
+  'unchecked',
+  'ok',
+  'stale',
+  'inconsistent',
+] as const;
+export type StatementReconcileStatus =
+  (typeof statementReconcileStatuses)[number];
+
 export const monthlyStatements = pgTable('monthly_statements', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull(),
+  /** 该月 1 日。 */
   month: date('month').notNull(),
   openingBalance: numeric('opening_balance').notNull(),
   recharge: numeric('recharge').notNull(),
@@ -288,7 +298,52 @@ export const monthlyStatements = pgTable('monthly_statements', {
   callMinutes: numeric('call_minutes').notNull(),
   detailsDeleted: boolean('details_deleted').notNull().default(false),
   generatedAt: at('generated_at').notNull().defaultNow(),
+  calls: integer('calls').notNull().default(0),
+  version: integer('version').notNull().default(1),
+  firstGeneratedAt: at('first_generated_at').notNull().defaultNow(),
+  /** 空表示定时任务。 */
+  generatedBy: uuid('generated_by'),
+  breakdownGap: numeric('breakdown_gap').notNull().default('0'),
+  reconcileStatus: text('reconcile_status', {
+    enum: statementReconcileStatuses,
+  })
+    .notNull()
+    .default('unchecked'),
+  reconciledAt: at('reconciled_at'),
+  reconcileDiff: numeric('reconcile_diff'),
 });
+
+export const monthlyStatementCountries = pgTable(
+  'monthly_statement_countries',
+  {
+    statementId: uuid('statement_id').notNull(),
+    tenantId: uuid('tenant_id').notNull(),
+    version: integer('version').notNull(),
+    country: text('country').notNull(),
+    calls: integer('calls').notNull(),
+    minutes: numeric('minutes').notNull(),
+    charge: numeric('charge').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.statementId, table.version, table.country] }),
+  ],
+);
+
+export const monthlyStatementDays = pgTable(
+  'monthly_statement_days',
+  {
+    statementId: uuid('statement_id').notNull(),
+    tenantId: uuid('tenant_id').notNull(),
+    version: integer('version').notNull(),
+    day: date('day').notNull(),
+    calls: integer('calls').notNull(),
+    minutes: numeric('minutes').notNull(),
+    charge: numeric('charge').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.statementId, table.version, table.day] }),
+  ],
+);
 
 export const operationLogs = pgTable('operation_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -300,12 +355,19 @@ export const operationLogs = pgTable('operation_logs', {
   createdAt: at('created_at').notNull().defaultNow(),
 });
 
+export const systemAlertKinds = [
+  'auth_timeout',
+  'cdr_failed',
+  'email_failed',
+  'partition_failed',
+  'statement_mismatch',
+] as const;
+export type SystemAlertKind = (typeof systemAlertKinds)[number];
+
 export const systemAlerts = pgTable('system_alerts', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id'),
-  kind: text('kind', {
-    enum: ['auth_timeout', 'cdr_failed', 'email_failed', 'partition_failed'],
-  }).notNull(),
+  kind: text('kind', { enum: systemAlertKinds }).notNull(),
   description: text('description').notNull(),
   startedAt: at('started_at').notNull().defaultNow(),
   recoveredAt: at('recovered_at'),
