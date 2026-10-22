@@ -81,6 +81,79 @@ describe('withAdmin / withSystem 重试', () => {
     expect(result.rows).toEqual([{ isolation: 'serializable' }]);
   });
 
+  it('withSystem and withAdmin run a repeatable read snapshot transaction on request', async () => {
+    for (const run of [withSystem, withAdmin] as const) {
+      const result = await run(
+        app.db,
+        (tx) =>
+          tx.execute<{ isolation: string; scope: string }>(
+            sql`select current_setting('transaction_isolation') as isolation, current_setting('app.scope') as scope`,
+          ),
+        { isolationLevel: 'repeatable read' },
+      );
+      expect(result.rows).toEqual([
+        {
+          isolation: 'repeatable read',
+          scope: run === withSystem ? 'system' : 'admin',
+        },
+      ]);
+    }
+    const plain = await withSystem(app.db, (tx) =>
+      tx.execute<{ isolation: string }>(
+        sql`select current_setting('transaction_isolation') as isolation`,
+      ),
+    );
+    expect(plain.rows).toEqual([{ isolation: 'read committed' }]);
+  });
+
+  it('rejects a nested repeatable read request on withSystem', async () => {
+    let calls = 0;
+    await expect(
+      app.db.transaction((tx) =>
+        withSystem(
+          tx,
+          () => {
+            calls += 1;
+            return Promise.resolve();
+          },
+          { isolationLevel: 'repeatable read' },
+        ),
+      ),
+    ).rejects.toThrow(
+      'Transaction isolation must be requested at the outermost layer',
+    );
+    expect(calls).toBe(0);
+  });
+
+  it('retries a 40001 under repeatable read up to 8 attempts', async () => {
+    let attempts = 0;
+    const result = await withSystem(
+      app.db,
+      async (tx) => {
+        attempts += 1;
+        if (attempts < 8) await tx.execute(raise('40001'));
+        return attempts;
+      },
+      { isolationLevel: 'repeatable read' },
+    );
+    expect(result).toBe(8);
+    attempts = 0;
+    const exhausted = await pgError(
+      withSystem(
+        app.db,
+        async (tx) => {
+          attempts += 1;
+          await tx.execute(raise('40001'));
+        },
+        { isolationLevel: 'repeatable read' },
+      ),
+    );
+    expect({ code: exhausted.code, attempts }).toEqual({
+      code: '40001',
+      attempts: 8,
+    });
+  });
+
   it('40P01 与 40001 回滚后重跑整个事务', async () => {
     for (const [run, code] of [
       [withAdmin, '40P01'],

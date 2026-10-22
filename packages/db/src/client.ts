@@ -155,29 +155,40 @@ export function withTenant<T>(
 export function withAdmin<T>(
   db: Db | Tx,
   fn: (tx: Tx) => Promise<T>,
-  config?: { isolationLevel: 'serializable' },
+  config?: OperatorTransactionConfig,
 ): Promise<T> {
   return withOperator(db, 'admin', fn, config);
 }
 
-/** 以系统身份执行（Worker：入库、扣费、建分区）：可见并可写全部租户。重试规则同 withAdmin。 */
+/**
+ * 以系统身份执行（Worker：入库、扣费、建分区、生成账单）：可见并可写全部租户。重试规则同 withAdmin。
+ * 月账单用 `repeatable read` 取一致快照；SET TRANSACTION ISOLATION LEVEL 必须是事务的第一条语句，
+ * 所以隔离级别只能在这里请求，不能在 fn 里设置。
+ */
 export function withSystem<T>(
   db: Db | Tx,
   fn: (tx: Tx) => Promise<T>,
+  config?: OperatorTransactionConfig,
 ): Promise<T> {
-  return withOperator(db, 'system', fn);
+  return withOperator(db, 'system', fn, config);
+}
+
+/** 只能在最外层事务请求；`repeatable read` 用于一致快照读取，不使用 SSI 的 `serializable` 以免误伤并发扣费。 */
+export interface OperatorTransactionConfig {
+  isolationLevel: 'serializable' | 'repeatable read';
 }
 
 // 死锁（40P01）与序列化失败（40001）回滚整个事务，重跑 fn 是安全的。
 // 嵌套时出错的只是保存点，外层事务里先前的语句和锁还在，重跑保存点不等于重跑事务，所以只在最外层重试。
 const MAX_ATTEMPTS = 3;
-const SERIALIZABLE_MAX_ATTEMPTS = 8;
+// 快照类隔离级别遇到并发提交的冲突行会收到 40001，多给几次重试机会。
+const SNAPSHOT_MAX_ATTEMPTS = 8;
 
 async function withOperator<T>(
   db: Db | Tx,
   scope: 'admin' | 'system',
   fn: (tx: Tx) => Promise<T>,
-  config?: { isolationLevel: 'serializable' },
+  config?: OperatorTransactionConfig,
 ): Promise<T> {
   // All mutations of admins.status must request SERIALIZABLE through the outermost wrapper.
   // Drizzle ignores isolation config on savepoints, so nested requests must fail.
@@ -188,8 +199,8 @@ async function withOperator<T>(
   const attempts =
     db instanceof PgTransaction
       ? 1
-      : config?.isolationLevel === 'serializable'
-        ? SERIALIZABLE_MAX_ATTEMPTS
+      : config?.isolationLevel
+        ? SNAPSHOT_MAX_ATTEMPTS
         : MAX_ATTEMPTS;
   return retryTransaction({
     attempts,
