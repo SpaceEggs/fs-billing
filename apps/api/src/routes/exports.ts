@@ -5,6 +5,9 @@ import {
   cancelPostgresBackend,
   mergedLedgerExportQuery,
   portalCdrExportCursorQuery,
+  readAdminTenantStatement,
+  readPortalStatement,
+  type Db,
   type PoolDb,
 } from '@fs-billing/db';
 import {
@@ -12,7 +15,10 @@ import {
   exportFilename,
   formatHangupCause,
   formatMergedChargeNote,
+  adminStatementApiContract,
   adminTenantParamsSchema,
+  latestRangeEnd,
+  statementMonthParamsSchema,
   portalCdrExportRequestSchema,
   portalLedgerExportRequestSchema,
   type PortalLedgerRow,
@@ -23,6 +29,11 @@ import { ApiFailure } from '../errors.js';
 import type { RouteHandlers } from './register.js';
 import { adminActor } from './admin/tenants.js';
 import { streamCsv } from '../export/stream-csv.js';
+import {
+  type StatementSummarySource,
+  statementSummaryHeaders,
+  statementSummaryRows,
+} from '../export/statement-csv.js';
 
 const cdrHeaders = [
   '接通时间',
@@ -110,17 +121,112 @@ function ledgerCells(row: LedgerExportRow): readonly string[] {
   return [row.occurredAt, kind, row.amount, row.balanceAfter, note];
 }
 
+type SummaryRow = QueryResultRow & { cells: string[] };
+
+/**
+ * 账单汇总只有几十行，算好之后仍走同一个流式响应通道（槽位、超时、断开处理一致）：
+ * 游标只是把算好的行按序展开，不读任何表，所以租户或后台的会话范围照常设置。
+ */
+const summaryCursor = `select t.cells as cells
+  from jsonb_array_elements($1::jsonb) with ordinality as t(cells, ord)
+  order by t.ord`;
+
+function streamStatementSummary({
+  request,
+  reply,
+  pool,
+  scope,
+  tenantId,
+  statement,
+}: {
+  request: Parameters<typeof streamCsv>[0]['request'];
+  reply: Parameters<typeof streamCsv>[0]['reply'];
+  pool: Pool;
+  scope: Parameters<typeof streamCsv>[0]['scope'];
+  tenantId: string;
+  statement: StatementSummarySource & {
+    tenantCode: string;
+    month: string;
+    currency: string;
+  };
+}) {
+  const first = `${statement.month}-01`;
+  return streamCsv<SummaryRow>({
+    request,
+    reply,
+    pool,
+    cancelBackend: (backendPid) => cancelPostgresBackend(pool, backendPid),
+    admissionTenantId: tenantId,
+    scope,
+    cursor: {
+      text: summaryCursor,
+      values: [JSON.stringify(statementSummaryRows(statement))],
+    },
+    headers: statementSummaryHeaders(statement.currency),
+    prepare: (signal) => {
+      signal.throwIfAborted();
+      return Promise.resolve({
+        filename: exportFilename('statement', statement.tenantCode, {
+          from: first,
+          to: latestRangeEnd(first),
+        }),
+      });
+    },
+    rowToCells: (row) => row.cells,
+  });
+}
+
 export function exportHandlers({
+  db,
   auditDb,
   pool,
 }: {
+  db: Db;
   auditDb: PoolDb;
   pool: Pool;
 }): Pick<
   RouteHandlers,
-  'portalCdrsExport' | 'adminTenantCdrsExport' | 'portalLedgerExport'
+  | 'portalCdrsExport'
+  | 'adminTenantCdrsExport'
+  | 'portalLedgerExport'
+  | 'portalStatementExport'
+  | 'adminTenantStatementExport'
 > {
   return {
+    portalStatementExport: async (context, request, reply) => {
+      const tenantId = customerTenant(context);
+      if (context.kind !== 'customer') throw new ApiFailure('FORBIDDEN');
+      const statement = await readPortalStatement({
+        db,
+        tenantId,
+        month: statementMonthParamsSchema.parse(request.params).month,
+      });
+      return streamStatementSummary({
+        request,
+        reply,
+        pool,
+        scope: { kind: 'tenant', tenantId },
+        tenantId,
+        statement: { ...statement, tenantCode: context.identity.tenant.code },
+      });
+    },
+    adminTenantStatementExport: async (context, request, reply) => {
+      adminActor(context);
+      const statement = await readAdminTenantStatement({
+        db,
+        ...adminStatementApiContract.adminTenantStatementExport.request.params.parse(
+          request.params,
+        ),
+      });
+      return streamStatementSummary({
+        request,
+        reply,
+        pool,
+        scope: { kind: 'admin' },
+        tenantId: statement.tenant.id,
+        statement: { ...statement, tenantCode: statement.tenant.code },
+      });
+    },
     portalCdrsExport: (context, request, reply) => {
       const tenantId = customerTenant(context);
       if (context.kind !== 'customer') throw new ApiFailure('FORBIDDEN');

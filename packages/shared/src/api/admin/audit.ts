@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { cdrStatusSchema } from '../cdr-fields.js';
 import { currencySchema } from '../identity.js';
 import { adminRateEntrySchema } from './rates.js';
+import { adminStatementVersionFiguresSchema } from './statements.js';
+import { statementMonthSchema } from '../statement-fields.js';
 import {
   adminNonzeroAmountSchema,
   adminPositiveAmountSchema,
@@ -34,6 +36,7 @@ export const auditActionSchema = z.enum([
   'admin_disable',
   'admin_enable',
   'cdr_export',
+  'statement_regenerate',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 export const auditChangeSchema = z.strictObject({
@@ -75,6 +78,7 @@ const envelopeFields = {
       'rate_version',
       'receivable',
       'admin',
+      'statement',
     ]),
     id: z.uuid(),
   }),
@@ -167,6 +171,14 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
       country: z.string().min(1).max(200).optional(),
       unverifiedOnly: z.boolean(),
     }),
+  }),
+  /** target 是账单头部的 id；补建（created）时 before 为 null，无变化（changed 为假）时仍记录这次操作。 */
+  auditVariant('statement_regenerate', {
+    month: statementMonthSchema,
+    created: z.boolean(),
+    changed: z.boolean(),
+    before: adminStatementVersionFiguresSchema.nullable(),
+    after: adminStatementVersionFiguresSchema,
   }),
 ]);
 export const auditContentSchema = z.discriminatedUnion('action', [

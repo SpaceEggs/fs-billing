@@ -3,8 +3,10 @@ import {
   portalHomeApiContract,
   portalLedgerApiContract,
   portalLedgerExportApiContract,
+  portalStatementApiContract,
   portalCdrApiContract,
   adminCdrApiContract,
+  adminStatementApiContract,
   createAdminApiContract,
   adminRateRequestSchemas,
   adminAmountRequestSchemas,
@@ -19,10 +21,12 @@ export function createLiveApiContract(
     ...apiContract,
     ...admin,
     ...adminCdrApiContract,
+    ...adminStatementApiContract,
     ...portalHomeApiContract,
     ...portalCdrApiContract,
     ...portalLedgerApiContract,
     ...portalLedgerExportApiContract,
+    ...portalStatementApiContract,
   };
 }
 export const liveApiContract = createLiveApiContract();

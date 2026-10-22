@@ -475,6 +475,9 @@ describe('portal operations', () => {
       'POST /api/portal/cdrs/export',
       'GET /api/portal/ledger',
       'POST /api/portal/ledger/export',
+      'GET /api/portal/statements',
+      'GET /api/portal/statements/{month}',
+      'POST /api/portal/statements/{month}/export',
     ]);
     for (const op of operations) {
       expect(op.access).toBe('customer');
@@ -498,7 +501,8 @@ describe('portal operations', () => {
 
   it('never accept a tenant id from the request', () => {
     for (const op of operations) {
-      expect(op.path).not.toContain('{');
+      expect(op.path.replaceAll('{month}', '')).not.toContain('{');
+      expect(wireNames(op.request.params)).not.toContain('tenantId');
       expect(wireNames(op.request.query)).not.toContain('tenantId');
     }
     for (const op of [

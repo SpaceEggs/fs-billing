@@ -10,3 +10,4 @@ export * from './audit.js';
 export * from './errors.js';
 export * from './contract.js';
 export * from './amount-requests.js';
+export * from './statements.js';

@@ -3,6 +3,7 @@ import {
   adminApiContract,
   adminApiErrorSchema,
   adminCdrApiContract,
+  adminStatementApiContract,
   apiContract,
   portalApiContract,
   type AdminApiError,
@@ -11,24 +12,33 @@ import {
 import { downloadBlob } from './download';
 
 const { adminTenantCdrsExport, ...adminCdrQueries } = adminCdrApiContract;
-const { portalCdrsExport, portalLedgerExport, ...portalQueries } =
-  portalApiContract;
+const { adminTenantStatementExport, ...adminStatementQueries } =
+  adminStatementApiContract;
+const {
+  portalCdrsExport,
+  portalLedgerExport,
+  portalStatementExport,
+  ...portalQueries
+} = portalApiContract;
 
 /**
- * 浏览器经 callApi 调用的 JSON 操作：阶段 4 认证与上下文，阶段 5 后台契约，阶段 6 门户与后台话单查询。
+ * 浏览器经 callApi 调用的 JSON 操作：阶段 4 认证与上下文，阶段 5 后台契约，阶段 6 门户与后台话单查询，阶段 7 月账单。
  * 导出的响应是 CSV 文本，不能按 JSON 解析，只放在 downloadApiContract 里，类型上无法交给 callApi。
  */
 export const webApiContract = {
   ...apiContract,
   ...adminApiContract,
   ...adminCdrQueries,
+  ...adminStatementQueries,
   ...portalQueries,
 };
 /** 响应为文件的操作，经 callDownload 调用。 */
 export const downloadApiContract = {
   adminTenantCdrsExport,
+  adminTenantStatementExport,
   portalCdrsExport,
   portalLedgerExport,
+  portalStatementExport,
 };
 export type DownloadOperationId = keyof typeof downloadApiContract;
 export type OperationId = keyof typeof webApiContract;

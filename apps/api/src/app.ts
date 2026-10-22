@@ -51,6 +51,7 @@ import { createApiLogger } from './logging.js';
 import { cdrHandlers } from './routes/cdrs.js';
 import { homeHandlers } from './routes/home.js';
 import { exportHandlers } from './routes/exports.js';
+import { statementHandlers } from './routes/statements.js';
 
 export type ApiDependencies = {
   businessDb: PoolDb;
@@ -164,7 +165,9 @@ export function createApi(deps: ApiDependencies) {
     ...accountHandlers(deps.accountService),
     ...cdrHandlers(deps.businessDb),
     ...homeHandlers(deps.businessDb),
+    ...statementHandlers(deps.businessDb),
     ...exportHandlers({
+      db: deps.businessDb,
       auditDb: exportConnection.db,
       pool: exportConnection.pool,
     }),
