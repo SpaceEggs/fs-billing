@@ -3,16 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sessionExpiry } from './lib/session';
 import { adminSession, apiError, customerSession, renderApp } from './test/app';
+import { homeResponse } from './test/portal-home';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   sessionExpiry.clear();
 });
 
-const balance = {
-  identity: customerSession.identity,
-  balance: { currency: 'CNY', amount: '-35.2' },
-};
+const balance = homeResponse;
 
 async function signIn(email: string, password: string) {
   const user = userEvent.setup();
@@ -28,7 +26,7 @@ describe('session expiry', () => {
     const { location } = renderApp('/?tab=ledger', (path) => {
       if (path === '/api/auth/session')
         return { status: 200, body: customerSession };
-      if (path === '/api/portal/context') {
+      if (path === '/api/portal/home') {
         contextCalls += 1;
         return contextCalls > 1
           ? { status: 200, body: balance }
@@ -127,8 +125,7 @@ describe('unavailable sessionStorage', () => {
         }
         if (path === '/api/auth/login')
           return { status: 200, body: customerSession };
-        if (path === '/api/portal/context')
-          return { status: 200, body: balance };
+        if (path === '/api/portal/home') return { status: 200, body: balance };
         throw new Error(`unexpected ${path}`);
       });
       await waitFor(() => expect(location()).toBe('/login?reason=expired'));
@@ -144,7 +141,7 @@ describe('unavailable sessionStorage', () => {
     const { location } = renderApp('/login', (path) => {
       if (path === '/api/auth/login' || path === '/api/auth/session')
         return { status: 200, body: customerSession };
-      if (path === '/api/portal/context') return { status: 200, body: balance };
+      if (path === '/api/portal/home') return { status: 200, body: balance };
       throw new Error(`unexpected ${path}`);
     });
     const getItem = vi
@@ -175,7 +172,7 @@ describe('logout', () => {
     const { location } = renderApp('/', (path) => {
       if (path === '/api/auth/session')
         return { status: 200, body: customerSession };
-      if (path === '/api/portal/context') return { status: 200, body: balance };
+      if (path === '/api/portal/home') return { status: 200, body: balance };
       if (path === '/api/auth/logout') {
         logoutCalls += 1;
         return logoutCalls === 1
@@ -207,7 +204,7 @@ describe('logout', () => {
     const { location } = renderApp('/', (path) => {
       if (path === '/api/auth/session')
         return { status: 200, body: customerSession };
-      if (path === '/api/portal/context') return { status: 200, body: balance };
+      if (path === '/api/portal/home') return { status: 200, body: balance };
       if (path === '/api/auth/logout') throw new TypeError('network down');
       throw new Error(`unexpected ${path}`);
     });
@@ -271,7 +268,7 @@ describe('home load errors', () => {
     renderApp('/', (path) => {
       if (path === '/api/auth/session')
         return { status: 200, body: customerSession };
-      if (path === '/api/portal/context') {
+      if (path === '/api/portal/home') {
         contextCalls += 1;
         return contextCalls <= 3
           ? { status: 503, body: apiError('SERVICE_UNAVAILABLE') }
@@ -374,7 +371,7 @@ describe('login errors', () => {
     const { location } = renderApp('/admin/login', (path) => {
       if (path === '/api/auth/login' || path === '/api/auth/session')
         return { status: 200, body: customerSession };
-      if (path === '/api/portal/context') return { status: 200, body: balance };
+      if (path === '/api/portal/home') return { status: 200, body: balance };
       throw new Error(`unexpected ${path}`);
     });
     await signIn('abc001@example.com', 'correct-password');

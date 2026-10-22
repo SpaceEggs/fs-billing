@@ -3,12 +3,17 @@ import {
   adminApiContract,
   adminApiErrorSchema,
   apiContract,
+  portalHomeApiContract,
   type AdminApiError,
   type ApiOperation,
 } from '@fs-billing/shared';
 
-/** 浏览器可调用的全部操作：阶段 4 认证与上下文，加阶段 5 后台契约。 */
-export const webApiContract = { ...apiContract, ...adminApiContract };
+/** 浏览器可调用的全部操作：阶段 4 认证与上下文，加阶段 5 后台契约与阶段 6 已实现的门户操作。 */
+export const webApiContract = {
+  ...apiContract,
+  ...adminApiContract,
+  ...portalHomeApiContract,
+};
 export type OperationId = keyof typeof webApiContract;
 type Operation<Id extends OperationId> = (typeof webApiContract)[Id];
 type Request<Id extends OperationId> = Operation<Id>['request'];

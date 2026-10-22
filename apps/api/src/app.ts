@@ -49,6 +49,7 @@ import { accountHandlers } from './routes/admin/accounts.js';
 import type { AdminAccountService } from './auth/admin-accounts.js';
 import { createApiLogger } from './logging.js';
 import { cdrHandlers } from './routes/cdrs.js';
+import { homeHandlers } from './routes/home.js';
 import { exportHandlers } from './routes/exports.js';
 
 export type ApiDependencies = {
@@ -162,6 +163,7 @@ export function createApi(deps: ApiDependencies) {
     ...rateHandlers(deps.businessDb, { ...deps.adminRates, rateRequests }),
     ...accountHandlers(deps.accountService),
     ...cdrHandlers(deps.businessDb),
+    ...homeHandlers(deps.businessDb),
     ...exportHandlers({
       auditDb: exportConnection.db,
       pool: exportConnection.pool,

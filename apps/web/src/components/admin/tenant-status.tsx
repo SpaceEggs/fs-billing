@@ -1,13 +1,6 @@
 import type { TenantHealth } from '@fs-billing/shared';
-import { StatusTag, statusTags, type StatusKey } from '../status-tag';
-
-export const healthStatus = {
-  suspended: 'suspended',
-  overdraft: 'overdrawn',
-  low_balance: 'lowBalance',
-  normal: 'normal',
-  disabled: 'disabled',
-} as const satisfies Record<TenantHealth, StatusKey>;
+import { StatusTag, statusTags } from '../status-tag';
+import { healthStatus } from '../tenant-health';
 
 export const healthOptions = (Object.keys(healthStatus) as TenantHealth[]).map(
   (health) => ({

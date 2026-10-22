@@ -376,7 +376,7 @@ ORDER BY p.at DESC NULLS LAST, p.sort_id DESC;
 - `availableBalance` 是余额加透支额度，`health` 由 `tenantHealthSchema` 定义。已停机（`suspended`）时页面顶部显示设计稿 1c 的横幅「余额不足，已暂停呼叫」和「请联系客服充值，到账后自动恢复呼叫。」。
 - 消费、分钟、30 天口径沿用 [阶段 5 设计](phase-5-design.md#已决定概况与门户首页2026-10-15-0156-pt)：消费只算 `call_charge`，分钟是计费分钟，已接通按接通时间归属，最近 30 天含今天、缺失补零，所有租户按北京时间。门户不显示未接通通数，`unansweredCalls` 在 schema 里不存在。
 - 最近话单（`portalRecentCallSchema`，`answeredAt` 不可为空）：`WHERE tenant_id = $1 AND answered_at IS NOT NULL ORDER BY answered_at DESC, call_uuid DESC LIMIT 10`，不加日期下界。补测在 14 个分区上用 Merge Append 取前 10 条，热态 0.2 ms，没有任何话单的租户 26.8 ms。只含已接通（决定 29）。
-- 空状态（设计稿 1d）：`recentCalls` 为空时显示「还没有通话记录」。
+- 空状态（设计稿 1d）：`recentCalls` 为空时显示「没有通话记录」（决定 29；设计稿 1d 的文案「还没有通话记录」已被该决定取代）。
 - `health = 'disabled'`（管理员停用租户）的显示见决定 28。
 - 概况查询还会为后台统计未接通通数，门户用不到，多约 5 至 8 ms，不为此改查询。概况的接通月份 CTE 没有 `started_at` 下界，会扫描到 `month_end` 为止的所有分区的索引，这里可以顺手加上同一个 31 天下界，PR 4 实测后再决定，本步不改。
 
@@ -560,6 +560,7 @@ ALTER POLICY tenant_read ON <表> USING (
 | 37  | 余额流水每页 25 条；国家下拉按通话数降序；已接通视图的汇总写「另有未接通 N 通」                                                                                                              | 用户 2026-10-18 确认                        | PR 2、PR 3、PR 5                                             |
 | 38  | 挂断原因表 46 条批准。PR 3 必须对照 FreeSWITCH 1.11.3 源码（`switch_types.h`、`switch_channel.c` 原因表）核对 `packages/shared/src/hangup-cause.ts` 的每个原因名，有出入先报告用户，再改译法 | 用户 2026-10-18 确认                        | [挂断原因表](#挂断原因表决定-8)；PR 3                        |
 | 39  | 话单分开保存 ISO、国家、说明；国家筛选和汇总只按国家；列表显示「国家 · 说明」                                                                                                                | 用户 2026-10-19 确认（费率表五列）          | [rate-list-design.md](rate-list-design.md)；PR A、PR 4、PR 5 |
+| 40  | 空状态用「没有通话记录」；后台话单详情对已验证通话不显示状态行；余额说明只在透支时显示；概况 31 天下界推迟到 PR 7；后台租户详情的流水与话单标签页各用独立日期范围                            | 用户 2026-10-22 确认                        | [门户首页](#门户首页)；PR 4、5、7                            |
 
 本设计自行定的取值没有用户确认，已写明理由，其中涉及产品行为的已由用户在 2026-10-18 确认（决定 26 至 38）。仍属本设计自定的是：`started_at` 下界 31 天（有实测，无产品含义）、被叫搜索词的归一化规则、导出的超时、并发和连接池数值（初始值，PR 3 实测后定）、锚点按时间距离选择、PR 拆分。
 
