@@ -28,15 +28,13 @@ import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
-import { ApiRequestError } from '../../lib/api';
+import { apiQuery } from '../../lib/admin-api';
+import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
 import { formatDate, formatDateTime } from '../../lib/format';
 import {
   cdrDayHref,
-  exportPortalLedger,
-  fetchPortalLedger,
-  portalLedgerKey,
   portalLedgerKindLabels,
   type PortalLedgerFilter,
   type PortalLedgerSearch,
@@ -57,7 +55,7 @@ const rowKey = (row: PortalLedgerRow) =>
 /** 人工流水按输入精度显示（调账可到 4 位小数）；合并的通话扣费按 2 位舍入。 */
 const exactAmount = (row: PortalLedgerRow) => row.kind !== 'call_charge';
 
-/** 合并行的备注，点击进入当天话单（门户话单页由 PR 5 提供）。 */
+/** 合并行的备注，点击进入当天话单。 */
 function CdrDayLink({
   day,
   partial,
@@ -235,13 +233,15 @@ export function PortalLedgerPage({
   const setFilter = (patch: Omit<PortalLedgerSearch, 'page'>) =>
     onSearch({ ...patch, page: undefined });
   const ledger = useQuery({
-    queryKey: portalLedgerKey(filter, page),
-    queryFn: () => fetchPortalLedger(filter, page),
+    ...apiQuery('portalLedger', { query: { ...filter, page } }),
     enabled: !rangeIsOverlong,
     placeholderData: keepPreviousData,
   });
   const data = rangeIsOverlong ? undefined : ledger.data;
-  const download = useMutation({ mutationFn: exportPortalLedger });
+  const download = useMutation({
+    mutationFn: (current: PortalLedgerFilter) =>
+      callDownload('portalLedgerExport', { body: current }),
+  });
   const canExport = !rangeIsOverlong && !download.isPending;
   const exportLabel = download.isPending ? '导出中…' : '导出 CSV';
   const crumb =

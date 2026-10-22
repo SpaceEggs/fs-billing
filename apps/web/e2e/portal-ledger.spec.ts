@@ -18,7 +18,7 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
   const table = page.getByRole('table');
   await expect(table.getByRole('row')).toHaveCount(26);
   const merged = table.getByRole('link', {
-    name: /2026-09-28 通话扣费，共 3 通/,
+    name: /2026-09-28 通话扣费，共 1 通/,
   });
   await expect(merged).toBeVisible();
   const credit = table.getByRole('row').filter({ hasText: '账户充值' });
@@ -27,6 +27,15 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
 
   await merged.click();
   await expectPath(page, '/portal/cdrs?from=2026-09-28&to=2026-09-28');
+  // 话单页确实按这一天取数：日期范围是当天，列表是种子里当天的两通已接通话单。
+  await expect(page.getByRole('heading', { name: '话单' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: /日期范围.*2026-09-28 至 2026-09-28/ }),
+  ).toBeVisible();
+  const calls = page.getByRole('table').getByRole('row');
+  await expect(calls).toHaveCount(3);
+  await expect(calls.nth(1)).toContainText('2026-09-28 14:10:05');
+  await expect(calls.nth(2)).toContainText('2026-09-28 14:03:22');
 });
 
 test('filters by type and keeps the range and page in the address', async ({
