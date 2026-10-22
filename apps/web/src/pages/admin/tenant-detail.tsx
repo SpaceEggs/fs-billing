@@ -29,7 +29,12 @@ import { Button, buttonVariants } from '../../components/ui/button';
 import { ModalDialog } from '../../components/ui/dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
-import { tenantTabs, type TenantTab } from '../../lib/admin-search';
+import {
+  tenantTabs,
+  type TenantDetailSearch,
+  type TenantTab,
+} from '../../lib/admin-search';
+import { CdrsTab } from './tenant-tabs/cdrs-tab';
 import { LedgerTab } from './tenant-tabs/ledger-tab';
 import { OverviewTab } from './tenant-tabs/overview-tab';
 import { PortalTab } from './tenant-tabs/portal-tab';
@@ -247,6 +252,8 @@ function TabContent({
       return <LedgerTab tenantId={tenant.id} />;
     case 'rates':
       return <RatesTab tenant={tenant} />;
+    case 'cdrs':
+      return <CdrsTab tenant={tenant} />;
     case 'settings':
       return <SettingsTab tenant={tenant} />;
     case 'portal':
@@ -257,6 +264,22 @@ function TabContent({
         />
       );
   }
+}
+
+/**
+ * 标签页链接：日期范围等筛选随切换保留；余额流水（每页 25 条）与话单（每页 50 条）共用页码键，
+ * 进出话单标签页时回到第一页。
+ */
+function tabSearch(
+  search: Omit<TenantDetailSearch, 'tab'>,
+  current: TenantTab,
+  target: TenantTab,
+): TenantDetailSearch {
+  const next =
+    target === current || (target !== 'cdrs' && current !== 'cdrs')
+      ? search
+      : { ...search, page: undefined };
+  return target === 'overview' ? next : { ...next, tab: target };
 }
 
 const statusNotices = {
@@ -423,7 +446,7 @@ function TenantDetail({
                   key={key}
                   to="/admin/tenants/$tenantId"
                   params={{ tenantId }}
-                  search={key === 'overview' ? ledger : { ...ledger, tab: key }}
+                  search={tabSearch(ledger, tab, key)}
                   aria-current={key === tab ? 'page' : undefined}
                   className={cn(
                     '-mb-px border-b-2 px-3 py-2.5 whitespace-nowrap',

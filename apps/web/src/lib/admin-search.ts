@@ -6,6 +6,7 @@ import {
   adminTenantsQuerySchema,
   dayRangeFields,
 } from '@fs-billing/shared';
+import { validateCdrFilters, type CdrFilters } from './cdr-search';
 
 const listShape = adminTenantsQuerySchema.shape;
 
@@ -79,6 +80,7 @@ export const tenantTabs = [
   { key: 'overview', label: '概况' },
   { key: 'ledger', label: '余额流水' },
   { key: 'rates', label: '费率' },
+  { key: 'cdrs', label: '话单' },
   { key: 'settings', label: '设置' },
   { key: 'portal', label: '门户账号' },
 ] as const;
@@ -92,9 +94,14 @@ export type LedgerSearch = {
   page?: number | undefined;
 };
 
-export type TenantDetailSearch = LedgerSearch & {
-  tab?: TenantTab | undefined;
-};
+/**
+ * 租户详情的地址状态：日期范围在余额流水与话单标签页之间共用，其余键各属一页。
+ * 话单标签页的筛选见 CdrFilters；页码与余额流水共用同一个键，切换标签页时由标签链接清除。
+ */
+export type TenantDetailSearch = LedgerSearch &
+  CdrFilters & {
+    tab?: TenantTab | undefined;
+  };
 
 export function validateTenantDetailSearch(
   raw: Record<string, unknown>,
@@ -105,6 +112,7 @@ export function validateTenantDetailSearch(
     from: dayRangeFields.from.safeParse(raw['from']).data,
     to: dayRangeFields.to.safeParse(raw['to']).data,
     kind: adminLedgerKindSchema.safeParse(raw['kind']).data,
+    ...validateCdrFilters(raw),
     page: pageOf(raw['page']),
   };
 }
