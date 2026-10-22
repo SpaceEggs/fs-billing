@@ -107,14 +107,14 @@ afterEach(() => {
 const path = `/admin/tenants/${tenantId}?tab=cdrs`;
 
 describe('admin tenant CDR tab', () => {
-  it('is a tab of the tenant detail between rates and settings', async () => {
+  it('is a tab of the tenant detail between rates and statements', async () => {
     cdrApp(`/admin/tenants/${tenantId}`);
     const nav = await screen.findByRole('navigation', { name: '租户详情' });
     expect(
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['概况', '余额流水', '费率', '话单', '设置', '门户账号']);
+    ).toEqual(['概况', '余额流水', '费率', '话单', '账单', '设置', '门户账号']);
     await userEvent.click(within(nav).getByRole('link', { name: '话单' }));
     expect(await screen.findByRole('table')).toBeVisible();
   });

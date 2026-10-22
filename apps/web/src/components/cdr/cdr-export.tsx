@@ -30,6 +30,7 @@ export function CdrExportButton({
   label,
   exporting,
   disabled = false,
+  title,
   onExport,
   className,
 }: {
@@ -37,6 +38,8 @@ export function CdrExportButton({
   exporting: boolean;
   /** 筛选条件不合规时不能导出。 */
   disabled?: boolean;
+  /** 置灰时的原因，如「该月话单明细已删除」。 */
+  title?: string;
   onExport: () => void;
   className?: string;
 }) {
@@ -45,6 +48,7 @@ export function CdrExportButton({
       variant="outline"
       disabled={exporting || disabled}
       onClick={onExport}
+      {...(title ? { title } : {})}
       className={className}
     >
       {exporting ? '正在导出…' : label}

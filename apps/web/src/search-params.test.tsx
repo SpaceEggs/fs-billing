@@ -1,6 +1,9 @@
 import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { validateTenantDetailSearch } from './lib/admin-search';
+import {
+  validateAdminStatementsSearch,
+  validateTenantDetailSearch,
+} from './lib/admin-search';
 import { passwordGate, sessionExpiry } from './lib/session';
 import { adminApi, page, renderApp } from './test/app';
 
@@ -102,6 +105,48 @@ describe('tenant detail search', () => {
       unverifiedOnly: undefined,
       country: undefined,
       page: undefined,
+    });
+  });
+});
+
+describe('statement search', () => {
+  it('keeps the statements tab month apart from the ledger and CDR ranges', () => {
+    expect(
+      validateTenantDetailSearch({
+        tab: 'statements',
+        statementMonth: '2026-08',
+        from: '2026-10-01',
+        cdrFrom: '2026-09-01',
+      }),
+    ).toMatchObject({
+      tab: 'statements',
+      statementMonth: '2026-08',
+      from: '2026-10-01',
+      cdrFrom: '2026-09-01',
+    });
+    expect(
+      validateTenantDetailSearch({
+        tab: 'statements',
+        statementMonth: '2026-13',
+      }).statementMonth,
+    ).toBeUndefined();
+    expect(
+      validateTenantDetailSearch({
+        tab: 'statements',
+        statementMonth: '2026-8',
+      }).statementMonth,
+    ).toBeUndefined();
+  });
+
+  it('accepts only YYYY-MM as the statements page month', () => {
+    expect(validateAdminStatementsSearch({ month: '2026-08' })).toEqual({
+      month: '2026-08',
+    });
+    expect(validateAdminStatementsSearch({ month: '2026-08-01' })).toEqual({
+      month: undefined,
+    });
+    expect(validateAdminStatementsSearch({ month: 202608 })).toEqual({
+      month: undefined,
     });
   });
 });

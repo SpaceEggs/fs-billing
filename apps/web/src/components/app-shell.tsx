@@ -9,7 +9,7 @@ import { SessionExpiredDialog } from './session-expired-dialog';
 import { ThemeMenu } from './theme-controls';
 import { Sheet } from './ui/sheet';
 
-/** 后台导航按设计稿顺序；未归属话单、账单、系统告警、操作日志随各自阶段加入。 */
+/** 后台导航按设计稿顺序；未归属话单、系统告警、操作日志随各自阶段加入。 */
 const navigation = {
   portal: [
     { label: '首页', to: zones.portal.home },
@@ -22,6 +22,7 @@ const navigation = {
     { label: '概览', to: zones.admin.home },
     { label: '租户', to: '/admin/tenants' },
     { label: '待收款', to: '/admin/receivables' },
+    { label: '账单', to: '/admin/statements' },
     { label: '管理员', to: '/admin/admins' },
   ],
 } as const satisfies Record<Zone, readonly { label: string; to: string }[]>;

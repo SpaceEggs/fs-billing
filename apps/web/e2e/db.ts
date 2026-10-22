@@ -250,3 +250,133 @@ export function operationLogs(tenantId: string) {
     return rows;
   });
 }
+
+/** 把租户的创建时间改到过去（owner 连接），使更早的月份也有应有的账单。 */
+export function backdateTenant(tenantId: string, createdAt: string) {
+  return withOwner((client) =>
+    client.query(
+      'UPDATE tenants SET created_at = $2::timestamptz WHERE id = $1',
+      [tenantId, createdAt],
+    ),
+  );
+}
+
+/** 一笔 `at` 时刻（带时区的时间文本）发生的人工流水，操作人为管理员 `adminEmail`。 */
+export function recordLedgerEntry(
+  tenantId: string,
+  {
+    kind,
+    amount,
+    at,
+    adminEmail,
+  }: {
+    kind: 'recharge' | 'gift' | 'adjustment';
+    amount: string;
+    at: string;
+    adminEmail: string;
+  },
+) {
+  return withOwner(async (client) => {
+    await client.query('BEGIN');
+    try {
+      await client.query("SELECT set_config('app.scope', 'system', true)");
+      await client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenantId]);
+      await client.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, note, created_by, idempotency_key,
+           occurred_at, created_at)
+         SELECT $1, $2, $3::numeric, '端到端', admins.id, $4, $5::timestamptz, $5::timestamptz
+         FROM admins JOIN auth.user u ON u.id = admins.auth_user_id WHERE u.email = lower($6)`,
+        [tenantId, kind, amount, randomUUID(), at, adminEmail],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  });
+}
+
+/**
+ * 一通 `answeredAt`（带时区的时间文本）接通的电话：话单加对应的 `call:<uuid>` 扣费流水，
+ * 与 Worker 入账后的形状一致。用于账单页的 e2e：账单头部来自流水、国家与日明细来自话单。
+ */
+export function recordStatementCall(
+  tenantId: string,
+  {
+    answeredAt,
+    minutes,
+    charge,
+    country = '中国',
+  }: { answeredAt: string; minutes: string; charge: string; country?: string },
+) {
+  return withOwner(async (client) => {
+    await client.query('BEGIN');
+    try {
+      await client.query("SELECT set_config('app.scope', 'system', true)");
+      await client.query('SELECT cdr_ensure_partitions($1::timestamptz, 0)', [
+        answeredAt,
+      ]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+    await client.query('BEGIN');
+    try {
+      await client.query("SELECT set_config('app.scope', 'system', true)");
+      await client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenantId]);
+      const callUuid = randomUUID();
+      await client.query(
+        `INSERT INTO cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
+           billing_number, duration_seconds, billed_minutes, matched_prefix, country, iso, rate, charge,
+           hangup_cause)
+         VALUES ($1, $2, $3::timestamptz - interval '3 seconds', $3::timestamptz,
+           $3::timestamptz + interval '61 seconds', '1000', '8613800138000', '8613800138000', 61, $4,
+           '86', $5, 'CN', '0.5', $6, 'NORMAL_CLEARING')`,
+        [tenantId, callUuid, answeredAt, minutes, country, charge],
+      );
+      await client.query(
+        `INSERT INTO ledger_entries (tenant_id, kind, amount, idempotency_key, occurred_at)
+         VALUES ($1, 'call_charge', -$2::numeric, $3, $4::timestamptz)`,
+        [tenantId, charge, `call:${callUuid}`, answeredAt],
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  });
+}
+
+/**
+ * 直接设置某月账单的核对结果或话单已删除标志（owner 连接）。
+ * 核对任务由 Worker 运行，e2e 不启动 Worker；阶段 8 的删除话单尚未开发。
+ */
+export function setStatementFlags(
+  tenantId: string,
+  month: string,
+  flags: {
+    reconcileStatus?: 'ok' | 'stale' | 'inconsistent';
+    reconcileDiff?: string;
+    detailsDeleted?: true;
+  },
+) {
+  return withOwner(async (client) => {
+    const { rowCount } = await client.query(
+      `UPDATE monthly_statements SET
+         reconcile_status = coalesce($3, reconcile_status),
+         reconcile_diff = coalesce($4::numeric, reconcile_diff),
+         reconciled_at = CASE WHEN $3::text IS NULL THEN reconciled_at ELSE now() END,
+         details_deleted = details_deleted OR $5
+       WHERE tenant_id = $1 AND month = $2::date`,
+      [
+        tenantId,
+        `${month}-01`,
+        flags.reconcileStatus ?? null,
+        flags.reconcileDiff ?? null,
+        flags.detailsDeleted ?? false,
+      ],
+    );
+    if (rowCount !== 1) throw new Error(`no statement ${tenantId} ${month}`);
+  });
+}

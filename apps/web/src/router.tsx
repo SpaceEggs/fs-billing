@@ -21,6 +21,7 @@ import { NotFoundPage } from './pages/not-found';
 import { PendingPage } from './pages/pending';
 import {
   validateAdminAccountsSearch,
+  validateAdminStatementsSearch,
   validateReceivablesSearch,
   validateTenantDetailSearch,
   validateTenantListSearch,
@@ -47,6 +48,10 @@ const AdminAccountsPage = lazyRouteComponent(
 const ReceivablesPage = lazyRouteComponent(
   () => import('./pages/admin/receivables'),
   'ReceivablesPage',
+);
+const AdminStatementsPage = lazyRouteComponent(
+  () => import('./pages/admin/statements'),
+  'AdminStatementsPage',
 );
 const TenantCreatePage = lazyRouteComponent(
   () => import('./pages/admin/tenant-create'),
@@ -332,6 +337,16 @@ const adminReceivables = createRoute({
   ),
 });
 
+const adminStatements = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'statements',
+  validateSearch: validateAdminStatementsSearch,
+  component: lazyRoute(
+    () => <AdminStatementsPage identity={useZoneIdentity()} />,
+    AdminStatementsPage,
+  ),
+});
+
 const adminAccounts = createRoute({
   getParentRoute: () => adminLayout,
   path: 'admins',
@@ -444,6 +459,7 @@ const routeTree = rootRoute.addChildren([
     adminTenantDetail,
     adminTenantEdit,
     adminReceivables,
+    adminStatements,
     adminAccounts,
   ]),
 ]);

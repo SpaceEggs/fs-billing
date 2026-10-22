@@ -5,6 +5,7 @@ import {
   adminReceivablesQuerySchema,
   adminTenantsQuerySchema,
   dayRangeFields,
+  statementMonthSchema,
 } from '@fs-billing/shared';
 import { validateCdrFilters, type CdrFilters } from './cdr-search';
 
@@ -81,6 +82,7 @@ export const tenantTabs = [
   { key: 'ledger', label: '余额流水' },
   { key: 'rates', label: '费率' },
   { key: 'cdrs', label: '话单' },
+  { key: 'statements', label: '账单' },
   { key: 'settings', label: '设置' },
   { key: 'portal', label: '门户账号' },
 ] as const;
@@ -100,14 +102,20 @@ export type CdrTabRange = {
   cdrTo?: string | undefined;
 };
 
+/** 账单标签页自己的参数：打开某个月账单详情时是 YYYY-MM，没有则显示账单列表；与流水、话单的日期范围无关。 */
+export type StatementTabSearch = {
+  statementMonth?: string | undefined;
+};
+
 /**
  * 租户详情的地址状态：余额流水的日期范围是 from / to，话单标签页的是 cdrFrom / cdrTo，
- * 各用各的范围（决定 40）。话单标签页的其他筛选见 CdrFilters；
+ * 各用各的范围（决定 40）；账单标签页用自己的 statementMonth。话单标签页的其他筛选见 CdrFilters；
  * 页码与余额流水共用同一个键，切换标签页时由标签链接清除。
  */
 export type TenantDetailSearch = LedgerSearch &
   CdrFilters &
-  CdrTabRange & {
+  CdrTabRange &
+  StatementTabSearch & {
     tab?: TenantTab | undefined;
   };
 
@@ -121,8 +129,20 @@ export function validateTenantDetailSearch(
     to: dayRangeFields.to.safeParse(raw['to']).data,
     cdrFrom: dayRangeFields.from.safeParse(raw['cdrFrom']).data,
     cdrTo: dayRangeFields.to.safeParse(raw['cdrTo']).data,
+    statementMonth: statementMonthSchema.safeParse(raw['statementMonth']).data,
     kind: adminLedgerKindSchema.safeParse(raw['kind']).data,
     ...validateCdrFilters(raw),
     page: pageOf(raw['page']),
   };
+}
+
+/** 后台账单页的月份；缺省（上一个北京月）不写入地址，晚于上月的值由页面收回到上月。 */
+export type AdminStatementsSearch = {
+  month?: string | undefined;
+};
+
+export function validateAdminStatementsSearch(
+  raw: Record<string, unknown>,
+): AdminStatementsSearch {
+  return { month: statementMonthSchema.safeParse(raw['month']).data };
 }

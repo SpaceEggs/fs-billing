@@ -40,6 +40,7 @@ import { OverviewTab } from './tenant-tabs/overview-tab';
 import { PortalTab } from './tenant-tabs/portal-tab';
 import { RatesTab } from './tenant-tabs/rates-tab';
 import { SettingsTab } from './tenant-tabs/settings-tab';
+import { StatementsTab } from './tenant-tabs/statements-tab';
 import { formatDate } from '../../lib/format';
 import { cn } from '../../lib/utils';
 
@@ -153,7 +154,7 @@ function MobileActions({
 function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   return (
-    <div className="hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <div className="hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-[1.4fr_1fr_1fr_1fr] print:hidden">
       <section
         aria-label="当前余额"
         className="flex flex-col gap-1.5 border-r border-border px-6 py-5"
@@ -254,6 +255,8 @@ function TabContent({
       return <RatesTab tenant={tenant} />;
     case 'cdrs':
       return <CdrsTab tenant={tenant} />;
+    case 'statements':
+      return <StatementsTab tenant={tenant} />;
     case 'settings':
       return <SettingsTab tenant={tenant} />;
     case 'portal':
@@ -268,17 +271,22 @@ function TabContent({
 
 /**
  * 标签页链接：余额流水与话单各自的日期范围和筛选随切换保留；余额流水（每页 25 条）与话单（每页 50 条）共用页码键，
- * 进出话单标签页时回到第一页。
+ * 进出话单标签页时回到第一页。账单标签页打开的月份（statementMonth）只属于账单标签页，换标签页时清除。
  */
 function tabSearch(
   search: Omit<TenantDetailSearch, 'tab'>,
   current: TenantTab,
   target: TenantTab,
 ): TenantDetailSearch {
-  const next =
+  const paged =
     target === current || (target !== 'cdrs' && current !== 'cdrs')
       ? search
       : { ...search, page: undefined };
+  // 点当前的账单标签页回到账单列表。
+  const next =
+    target === current && target !== 'statements'
+      ? paged
+      : { ...paged, statementMonth: undefined };
   return target === 'overview' ? next : { ...next, tab: target };
 }
 
@@ -367,7 +375,7 @@ function TenantDetail({
                 />
               ),
               actions: (
-                <div className="flex gap-2">
+                <div className="flex gap-2 print:hidden">
                   <Button variant="outline" onClick={openStatus}>
                     {disabled ? '启用' : '停用'}
                   </Button>
@@ -439,7 +447,7 @@ function TenantDetail({
             />
             <nav
               aria-label="租户详情"
-              className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 text-sm md:mx-0 md:px-0"
+              className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 text-sm md:mx-0 md:px-0 print:hidden"
             >
               {tenantTabs.map(({ key, label }) => (
                 <Link
@@ -462,7 +470,7 @@ function TenantDetail({
             <TabContent tab={tab} tenant={tenant} />
             {tab === 'settings' || tab === 'portal' ? null : (
               // 设置标签页底部是自己的保存按钮；门户账号标签页按第三批 3j 稿不放余额操作。
-              <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-border bg-background px-4 pt-3 pb-4 md:hidden">
+              <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-border bg-background px-4 pt-3 pb-4 md:hidden print:hidden">
                 <Button
                   size="lg"
                   className="w-full"
