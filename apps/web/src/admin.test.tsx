@@ -217,6 +217,7 @@ describe('admin navigation', () => {
       ['概览', '/admin'],
       ['租户', '/admin/tenants'],
       ['待收款', '/admin/receivables'],
+      ['账单', '/admin/statements'],
       ['管理员', '/admin/admins'],
     ]);
     expect(within(nav).getByRole('link', { name: '租户' })).toHaveAttribute(
