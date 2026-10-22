@@ -642,6 +642,14 @@ PR 3 的后端列表、导出及审计已实现。导出使用独立的四连接
 
 首次 HTTP 预检发现旧性能库中的部分合成 PostgreSQL UUID 不满足当前 `z.uuid()` 契约。用户决定保留契约，因此最终测量使用隔离的 `fs_billing_perf_pr3_uuid_v4` 数据库。旧库曾经历可回滚的原地 repair 尝试，事务已 rollback，之后复核逻辑内容未变；隔离数据集的 setup 没有对旧库留下永久写入。新旧 CDR 的业务字段相同，但 `call_uuid` 与 `received_at` 不同；新库的流水 `actor` 为 `li`、旧库为 `wang`，因为新 seed 从管理员表按 id 排序选取首个账号，不能认为 actor 相同。隔离库按固定 `asOf=2026-10-17T04:00Z` 生成 7 个租户、共 344 万条记录，其中 `PORTALBIG` 有 300 万条；来源记录见[隔离数据集 provenance](evidence/phase-6/isolated-db-provenance.json)。整请求列表 HTTP 测量已完成，导出时间、期限和并发行为已完成首轮验收；SQL prototype 作为独立的诊断类别报告，不替代真实 HTTP 结果。导出 RSS 与 financial-only 结果已写入[PR 3 验收记录](evidence/phase-6/README.md)。峰值 RSS 不按行数成比例上升。请求期间的 RSS 增量仍接近按行数上升。阶段 6 总体验收仍不勾选，Web PR 4、5、6 也未包含在 PR 3。
 
+### PR 5 实现与验收进度（2026-10-22）
+
+PR 5 已实现门户话单页 `pages/portal/cdrs.tsx`（路由 `/portal/cdrs`）和后台租户详情的话单标签页 `tenant-tabs/cdrs-tab.tsx`（`?tab=cdrs`，在费率与设置之间），两处共用 `components/cdr/*`：筛选条、汇总栏、电脑表格与手机卡片、详情对话框、分页文字、导出按钮与失败提示。「未经验证」的标签、筛选、横幅、详情行只在 `components/admin/cdr-unverified.tsx`，门户组件不引用。国家列用 `formatCountryLabel(country, description)`，表头「国家」，国家下拉只列国家，详情沿用合并显示，ISO 只出现在 CSV；未接通话单没有国家，列里写「未接通」，与 CSV 一致。
+
+筛选（日期范围、被叫号码、国家、接通状态，后台另有仅看未经验证）和页码写入地址，刷新与登录过期后保留，默认值不写入。被叫号码不合规、日期范围超过一个月时不发请求，页面说明原因，导出按钮禁用。导出经 `callDownload` POST 当前筛选，读完整个响应后才保存，网络中断提示「导出中断，请重试」并不保存；进行中按钮禁用。后台横幅文字按决定 32 去掉故障开始时间、关联告警与「查看告警」，没有「删除话单」。日期选择器的范围上限与「最长一个月」提示沿用 `DateRangeField` 的 `maxRangeEndForStart`。
+
+测试：Web 单元测试 `pages/portal/cdrs.test.tsx`、`pages/admin/tenant-tabs/cdrs-tab.test.tsx`、`lib/cdr-search.test.ts`、`components/cdr/cdr-format.test.ts`、`lib/api.test.ts` 的 `callDownload`；e2e `apps/web/e2e/portal-cdrs.spec.ts`（含 `shows 00:30 on the 29th for the 16:30 UTC call`、447 显示「英国 · 手机」与 44 显示「英国」、`network responses omit unverified`、导出 CSV 列与登录过期）和 `admin-cdrs.spec.ts`（未经验证标签与筛选、详情、导出审计）。e2e 夹具 `e2e/db.ts` 的 `recordCdrs` 写入 ISO 与说明。视觉对照与计划勾选仍属 PR 7。
+
 ## 风险
 
 - **阶段 6 的流水锚点在 RLS 改写之前会超预算。** PORTALBIG 历史中段月份整条查询约 0.8 至 1.1 s，改写后约 0.3 s（这两个数都是修正排序键之前的聚合的实测，PR 2 重测新查询）。更大的租户线性外推会再翻倍，没有实测。阶段 7 的月账单锚点把它降到 0.12 至 0.16 s。这是 PR 1 排在 PR 2 前面的原因。
