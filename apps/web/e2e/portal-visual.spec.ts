@@ -50,6 +50,8 @@ type Shot = {
   note: string | null;
   /** 页面读完后应出现的内容，用来确认截的是目标状态。 */
   ready: (page: Page) => Promise<void>;
+  /** 截图前再做的操作（如悬浮在柱子上显示气泡）。 */
+  prepare?: (page: Page) => Promise<void>;
 };
 
 const shots: Shot[] = [
@@ -66,6 +68,22 @@ const shots: Shot[] = [
       await expect(
         page.getByRole('region', { name: '最近 30 天每日消费' }),
       ).toBeVisible();
+    },
+  },
+  {
+    name: 'home-overdrawn-desktop-bubble',
+    email: accounts.customer,
+    viewport: desktopViewport,
+    frame: frame('1a 电脑 · 透支中'),
+    note: '稿 1a 的气泡是静态画在今日柱上；种子里今日无消费，这里悬浮在 09-28 的柱子上，只对照气泡样式。',
+    ready: async (page) => {
+      await expect(
+        page.getByRole('region', { name: '最近 30 天每日消费' }),
+      ).toBeVisible();
+    },
+    prepare: async (page) => {
+      await page.getByRole('listitem', { name: /^2026-09-28 / }).hover();
+      await expect(page.getByTestId('chart-bubble')).toBeVisible();
     },
   },
   {
@@ -222,6 +240,7 @@ test('matches home frames 1a 1b 1c 1d in light and dark', async ({
             await page.goto('/');
             await shot.ready(page);
             await settle(page);
+            await shot.prepare?.(page);
             const app = join(outDir, `app-${name}.png`);
             await page.screenshot({
               path: app,

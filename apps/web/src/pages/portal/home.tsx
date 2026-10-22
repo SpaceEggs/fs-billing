@@ -149,37 +149,42 @@ function DailySpend({ home }: { home: PortalHomeResponse }) {
             {daily[0]?.date} 至 {daily.at(-1)?.date}
           </span>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className="hidden text-xs text-muted-foreground md:inline">
-            合计
-          </span>
+        <div className="hidden flex-col items-end gap-1 md:flex">
+          <span className="text-xs text-muted-foreground">合计</span>
           <span
             aria-label={`合计 ${total}`}
-            className="text-sm font-semibold tabular-nums md:text-lg"
+            className="text-lg font-semibold tabular-nums"
           >
             {total}
           </span>
         </div>
+        <span className="text-xs text-muted-foreground md:hidden">
+          ← 左右滑动
+        </span>
       </div>
-      <p className="m-0 px-3.5 text-xs text-muted-foreground md:hidden">
-        ← 左右滑动
-      </p>
       <div className="overflow-x-auto px-3.5 md:overflow-visible md:px-0">
         <div className="min-w-[620px] md:min-w-0">
-          <DailyChart currency={home.currency} days={daily} />
+          <DailyChart currency={home.currency} days={daily} variant="portal" />
         </div>
       </div>
     </section>
   );
 }
 
-/** 空状态（设计稿 1d）：从未有过已接通话单，图表与列表都不显示（决定 29）。 */
+/**
+ * 空状态（设计稿 1d）：从未有过已接通话单，图表与列表都不显示（决定 29）。
+ * 稿中的插图是标着「空状态插图」的斜纹占位框，这里照样画斜纹框，不写占位说明文字。
+ */
 function NoCalls() {
   return (
     <section
       aria-label="没有通话记录"
       className="flex flex-col items-center gap-2.5 rounded-xl border border-dashed border-border px-4 py-7 text-center"
     >
+      <div
+        aria-hidden
+        className="h-[68px] w-24 rounded-lg border border-border bg-[repeating-linear-gradient(135deg,var(--muted)_0_6px,transparent_6px_12px)]"
+      />
       <span className="text-[15px] font-semibold">没有通话记录</span>
       <span className="text-[13px] leading-relaxed text-muted-foreground">
         开始外呼后，消费图表和最近话单会显示在这里
@@ -203,7 +208,11 @@ function HomeContent({
         <span className="text-[13px] text-muted-foreground">
           {code} · {home.currency}
         </span>
-        <StatusTag status={healthStatus[home.health]} className="h-[22px]" />
+        <StatusTag
+          status={healthStatus[home.health]}
+          className="h-[22px]"
+          alwaysDot
+        />
       </div>
       <Stats home={home} />
       {hasCalls ? (
@@ -220,7 +229,7 @@ function HomeContent({
               </h2>
               <Link
                 to="/portal/cdrs"
-                className="text-sm font-medium text-primary"
+                className="text-sm font-medium text-primary underline underline-offset-[3px]"
               >
                 查看全部
                 <span aria-hidden className="hidden md:inline">
@@ -254,7 +263,7 @@ export function PortalHome({ identity }: { identity: Identity }) {
         badge={
           data ? (
             <span className="flex items-center gap-3">
-              <StatusTag status={healthStatus[data.health]} />
+              <StatusTag status={healthStatus[data.health]} alwaysDot />
               <HealthNote home={data} />
             </span>
           ) : undefined

@@ -10,7 +10,10 @@ const tones = {
   muted: 'border-border text-muted-foreground',
 } as const;
 
-/** 设计系统 · 状态标签：租户状态在电脑上带圆点（手机稿不带），其余为纯文字标签。 */
+/**
+ * 设计系统 · 状态标签：租户状态带圆点，其余为纯文字标签。后台手机稿的租户状态不带圆点，
+ * 门户首页手机稿（1b、1c、1d）带，所以圆点默认只在电脑上显示，门户首页传 `alwaysDot`。
+ */
 export const statusTags = {
   normal: { label: '正常', tone: 'ok', dot: true },
   lowBalance: { label: '余额不足', tone: 'warn', dot: true },
@@ -34,9 +37,12 @@ export type StatusKey = keyof typeof statusTags;
 export function StatusTag({
   status,
   className,
+  alwaysDot = false,
 }: {
   status: StatusKey;
   className?: string | undefined;
+  /** 手机上也显示圆点（门户首页）。 */
+  alwaysDot?: boolean;
 }) {
   const tag = statusTags[status];
   return (
@@ -50,7 +56,10 @@ export function StatusTag({
       {tag.dot ? (
         <span
           aria-hidden
-          className="hidden size-1.5 rounded-full bg-current md:block"
+          className={cn(
+            'size-1.5 rounded-full bg-current',
+            !alwaysDot && 'hidden md:block',
+          )}
         />
       ) : null}
       {tag.label}

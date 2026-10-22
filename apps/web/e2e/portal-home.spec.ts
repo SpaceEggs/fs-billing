@@ -38,13 +38,23 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
   const bars = chart.getByRole('listitem');
   await expect(bars).toHaveCount(30);
   await expect(bars.last()).toHaveAttribute(
-    'title',
+    'aria-label',
     /^\d{4}-\d\d-\d\d（今日） ¥/,
   );
-  for (const title of await bars.evaluateAll((items) =>
-    items.map((item) => item.getAttribute('title') ?? ''),
+  for (const label of await bars.evaluateAll((items) =>
+    items.map((item) => item.getAttribute('aria-label') ?? ''),
   ))
-    expect(title).not.toMatch(/通/);
+    expect(label).not.toMatch(/通/);
+  // 设计稿 1a：横轴每 5 天一个日期，共 7 个。
+  await expect(page.getByTestId('chart-dates').locator('span')).toHaveCount(7);
+  // 悬浮气泡是自绘的深色块，只有日期和金额。
+  await expect(page.getByTestId('chart-bubble')).toHaveCount(0);
+  await bars.first().hover();
+  const bubble = page.getByTestId('chart-bubble');
+  await expect(bubble).toBeVisible();
+  await expect(bubble).toContainText(/^\d{4}-\d\d-\d\d¥[\d,.]+$/);
+  await page.mouse.move(0, 0);
+  await expect(bubble).toHaveCount(0);
 
   const calls = page
     .getByRole('region', { name: '最近话单' })
@@ -126,6 +136,19 @@ test.describe('on a phone', () => {
     const drawer = page.getByRole('dialog', { name: '导航' });
     await expect(drawer.getByRole('link', { name: '首页' })).toBeVisible();
     await expect(drawer.getByRole('link', { name: '月账单' })).toHaveCount(0);
+  });
+
+  test('the phone top bar has the ◐ theme button and the status tag has its dot', async ({
+    page,
+  }) => {
+    await loginAs(page, '/login', accounts.customer);
+    const theme = page.getByRole('button', { name: '主题' });
+    await expect(theme).toBeVisible();
+    await theme.click();
+    await page.getByRole('menuitemradio', { name: '深色' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    const tag = page.getByText('透支中').filter({ visible: true }).first();
+    await expect(tag.locator('[aria-hidden]')).toBeVisible();
   });
 
   test('a suspended customer sees the banner above the figures', async ({

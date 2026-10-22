@@ -75,18 +75,29 @@ describe('portal home', () => {
     expect(screen.queryByText('余额不足，已暂停呼叫')).toBeNull();
   });
 
-  it('draws 30 bars whose tooltips carry the date and amount only', async () => {
+  it('draws 30 bars whose labels carry the date and amount only, with the 7 date marks of design 1a', async () => {
     renderHome();
     const chart = await screen.findByRole('region', {
       name: '最近 30 天每日消费',
     });
     const bars = within(chart).getAllByRole('listitem');
     expect(bars).toHaveLength(30);
-    expect(within(chart).getByLabelText('合计 ¥168.64')).toBeVisible();
-    const today = bars.at(-1)!;
-    expect(today).toHaveAttribute('title', '2026-09-29（今日） ¥88.64');
-    expect(bars.at(-2)).toHaveAttribute('title', '2026-09-28 ¥80.00');
-    for (const bar of bars) expect(bar.getAttribute('title')).not.toMatch(/通/);
+    expect(within(chart).getByLabelText('合计 ¥168.64')).toBeInTheDocument();
+    expect(bars.at(-1)).toHaveAttribute(
+      'aria-label',
+      '2026-09-29（今日） ¥88.64',
+    );
+    expect(bars.at(-2)).toHaveAttribute('aria-label', '2026-09-28 ¥80.00');
+    for (const bar of bars) {
+      expect(bar.getAttribute('aria-label')).not.toMatch(/通/);
+      // 悬浮提示是自绘气泡，不再用浏览器原生 title。
+      expect(bar).not.toHaveAttribute('title');
+    }
+    expect(
+      [...within(chart).getByTestId('chart-dates').children].map(
+        (mark) => mark.textContent,
+      ),
+    ).toEqual(['08-31', '09-05', '09-10', '09-15', '09-20', '09-25', '09-29']);
   });
 
   it('lists the recent answered calls with country and description', async () => {
@@ -139,12 +150,36 @@ describe('portal home', () => {
     expect(empty).toHaveTextContent(
       '没有通话记录开始外呼后，消费图表和最近话单会显示在这里',
     );
+    // 稿 1d 的斜纹插图：装饰性，屏幕阅读器不读。
+    expect(empty.querySelector('[aria-hidden]')).not.toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
     expect(
       screen.queryByRole('region', { name: '最近 30 天每日消费' }),
     ).toBeNull();
     expect(screen.getByRole('region', { name: '当前余额' })).toHaveTextContent(
       '¥200.00',
+    );
+  });
+
+  it('has the ◐ theme button in the desktop top bar and in the phone top bar', async () => {
+    renderHome();
+    await screen.findByRole('region', { name: '当前余额' });
+    expect(screen.getAllByRole('button', { name: '主题' })).toHaveLength(2);
+  });
+
+  it('puts a status dot before the tenant status on a phone too, and underlines the link to all calls', async () => {
+    renderHome();
+    await screen.findByRole('region', { name: '当前余额' });
+    // 手机行与电脑标题旁各一个标签，圆点都不带 hidden（设计稿 1b 至 1d 手机也有圆点）。
+    const tags = screen.getAllByText('透支中');
+    expect(tags.length).toBeGreaterThan(0);
+    for (const tag of tags) {
+      const dot = tag.querySelector('[aria-hidden]');
+      expect(dot).not.toBeNull();
+      expect(dot).not.toHaveClass('hidden');
+    }
+    expect(screen.getByRole('link', { name: /^查看全部/ })).toHaveClass(
+      'underline',
     );
   });
 

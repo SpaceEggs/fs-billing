@@ -74,6 +74,13 @@ describe('mobile tenant detail header', () => {
     );
   });
 
+  it('keeps the admin phone top bar free of the ◐ button that only the portal phone has', async () => {
+    openDetail();
+    await screen.findByRole('region', { name: '余额概要' });
+    // 后台手机稿只有头像，主题在头像面板里；门户手机稿 1b 另有 ◐（见 portal/home.test.tsx）。
+    expect(screen.getAllByRole('button', { name: '主题' })).toHaveLength(1);
+  });
+
   it('the ⋯ sheet opens the status dialog and focus returns to ⋯ afterwards', async () => {
     const { user } = openDetail();
     const more = await screen.findByRole('button', { name: '租户操作' });
