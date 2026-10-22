@@ -25,6 +25,7 @@ import {
   validateTenantListSearch,
 } from './lib/admin-search';
 import { clearBalanceAttempts } from './lib/balance-attempts';
+import { validatePortalCdrsSearch } from './lib/cdr-search';
 import { rememberReturnPath } from './lib/return-to';
 import {
   loadSession,
@@ -69,6 +70,10 @@ const AdminHome = lazyRouteComponent(() => import('./pages/home'), 'AdminHome');
 const PortalHome = lazyRouteComponent(
   () => import('./pages/portal/home'),
   'PortalHome',
+);
+const PortalCdrsPage = lazyRouteComponent(
+  () => import('./pages/portal/cdrs'),
+  'PortalCdrsPage',
 );
 const LoginPage = lazyRouteComponent(
   () => import('./pages/login'),
@@ -183,6 +188,16 @@ const portalHome = createRoute({
   getParentRoute: () => portalLayout,
   path: '/',
   component: lazyRoute(PortalIndex, PortalHome),
+});
+
+const portalCdrs = createRoute({
+  getParentRoute: () => portalLayout,
+  path: 'portal/cdrs',
+  validateSearch: validatePortalCdrsSearch,
+  component: lazyRoute(
+    () => <PortalCdrsPage identity={useZoneSession('portal').identity} />,
+    PortalCdrsPage,
+  ),
 });
 
 const portalChangePassword = createRoute({
@@ -339,7 +354,7 @@ function PortalIndex(): React.JSX.Element {
 const routeTree = rootRoute.addChildren([
   portalLogin,
   adminLogin,
-  portalLayout.addChildren([portalHome, portalChangePassword]),
+  portalLayout.addChildren([portalHome, portalCdrs, portalChangePassword]),
   adminLayout.addChildren([
     adminHome,
     adminChangePassword,

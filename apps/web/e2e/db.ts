@@ -139,6 +139,94 @@ export function recordPastCredit(
   });
 }
 
+export type CdrFixture = {
+  startedAt: string;
+  /** 未接通为 null；此时国家、前缀、费率也须为 null，时长与费用为 0。 */
+  answeredAt: string | null;
+  endedAt: string;
+  caller: string;
+  /** 客户拨出的原始号码。 */
+  callee: string;
+  /** 归一化后的计费号码（首位 1-9，不含 + 和 00）。 */
+  billingNumber: string;
+  country: string | null;
+  iso: string | null;
+  description: string | null;
+  prefix: string | null;
+  rate: string | null;
+  durationSeconds: number;
+  minutes: string;
+  charge: string;
+  hangupCause: string;
+  unverified: boolean;
+};
+
+/**
+ * 以 Worker 入账后的形状直接写入话单（含 ISO 与说明），用于话单页的 e2e。
+ * 只写 cdrs，不写流水：话单页不读余额。每次调用用新的 call_uuid，返回它们（与入参同序）。
+ */
+export function recordCdrs(tenantId: string, cdrRows: readonly CdrFixture[]) {
+  return withOwner(async (client) => {
+    // 建分区不能和持租户锁的写入同一事务，见 recordCalls。
+    for (const month of new Set(
+      cdrRows.map((cdr) => cdr.startedAt.slice(0, 7)),
+    )) {
+      await client.query('BEGIN');
+      try {
+        await client.query("SELECT set_config('app.scope', 'system', true)");
+        await client.query('SELECT cdr_ensure_partitions($1::timestamptz, 0)', [
+          `${month}-15T00:00:00Z`,
+        ]);
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      }
+    }
+    await client.query('BEGIN');
+    try {
+      await client.query("SELECT set_config('app.scope', 'system', true)");
+      await client.query('SELECT lock_tenants(ARRAY[$1]::uuid[])', [tenantId]);
+      const uuids: string[] = [];
+      for (const cdr of cdrRows) {
+        const callUuid = randomUUID();
+        uuids.push(callUuid);
+        await client.query(
+          `INSERT INTO cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
+             billing_number, duration_seconds, billed_minutes, matched_prefix, country, iso, description,
+             rate, charge, hangup_cause, unverified)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+          [
+            tenantId,
+            callUuid,
+            cdr.startedAt,
+            cdr.answeredAt,
+            cdr.endedAt,
+            cdr.caller,
+            cdr.callee,
+            cdr.billingNumber,
+            cdr.durationSeconds,
+            cdr.minutes,
+            cdr.prefix,
+            cdr.country,
+            cdr.iso,
+            cdr.description,
+            cdr.rate,
+            cdr.charge,
+            cdr.hangupCause,
+            cdr.unverified,
+          ],
+        );
+      }
+      await client.query('COMMIT');
+      return uuids;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  });
+}
+
 export function clearLoginFailures(email: string) {
   return withOwner((client) =>
     client.query('DELETE FROM auth.login_failures WHERE email_key = $1', [

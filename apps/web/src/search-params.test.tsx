@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { validateTenantDetailSearch } from './lib/admin-search';
 import { passwordGate, sessionExpiry } from './lib/session';
 import { adminApi, page, renderApp } from './test/app';
 
@@ -60,5 +61,47 @@ describe('malformed list search params never reach the API', () => {
       '/api/admin/admins?page=1&pageSize=1&status=active',
       '/api/admin/admins?page=1&pageSize=25',
     ]);
+  });
+});
+
+describe('tenant detail search', () => {
+  it('knows the CDR tab and its filters, dropping each bad one on its own', () => {
+    expect(
+      validateTenantDetailSearch({
+        tab: 'cdrs',
+        from: '2026-10-01',
+        to: '2026-10-09',
+        callee: 447,
+        country: '英国',
+        status: 'all',
+        unverifiedOnly: true,
+        page: 2,
+      }),
+    ).toEqual({
+      tab: 'cdrs',
+      from: '2026-10-01',
+      to: '2026-10-09',
+      kind: undefined,
+      callee: '447',
+      country: '英国',
+      status: 'all',
+      unverifiedOnly: true,
+      page: 2,
+    });
+    expect(
+      validateTenantDetailSearch({
+        tab: 'cdrs',
+        status: 'bogus',
+        unverifiedOnly: 'yes',
+        country: '',
+        page: 0,
+      }),
+    ).toMatchObject({
+      tab: 'cdrs',
+      status: undefined,
+      unverifiedOnly: undefined,
+      country: undefined,
+      page: undefined,
+    });
   });
 });

@@ -2,18 +2,35 @@ import type { z } from 'zod';
 import {
   adminApiContract,
   adminApiErrorSchema,
+  adminCdrApiContract,
   apiContract,
-  portalHomeApiContract,
+  portalApiContract,
   type AdminApiError,
   type ApiOperation,
 } from '@fs-billing/shared';
+import { downloadBlob } from './download';
 
-/** 浏览器可调用的全部操作：阶段 4 认证与上下文，加阶段 5 后台契约与阶段 6 已实现的门户操作。 */
+const { adminTenantCdrsExport, ...adminCdrQueries } = adminCdrApiContract;
+const { portalCdrsExport, portalLedgerExport, ...portalQueries } =
+  portalApiContract;
+
+/**
+ * 浏览器经 callApi 调用的 JSON 操作：阶段 4 认证与上下文，阶段 5 后台契约，阶段 6 门户与后台话单查询。
+ * 导出的响应是 CSV 文本，不能按 JSON 解析，只放在 downloadApiContract 里，类型上无法交给 callApi。
+ */
 export const webApiContract = {
   ...apiContract,
   ...adminApiContract,
-  ...portalHomeApiContract,
+  ...adminCdrQueries,
+  ...portalQueries,
 };
+/** 响应为文件的操作，经 callDownload 调用。 */
+export const downloadApiContract = {
+  adminTenantCdrsExport,
+  portalCdrsExport,
+  portalLedgerExport,
+};
+export type DownloadOperationId = keyof typeof downloadApiContract;
 export type OperationId = keyof typeof webApiContract;
 type Operation<Id extends OperationId> = (typeof webApiContract)[Id];
 type Request<Id extends OperationId> = Operation<Id>['request'];
@@ -158,7 +175,73 @@ export async function callOperation(
       });
     return parsed.data;
   }
+  throw await failedResponse(response);
+}
+
+async function failedResponse(response: Response) {
   const payload: unknown = await response.json().catch(() => undefined);
   const error = adminApiErrorSchema.safeParse(payload);
-  throw new ApiRequestError(response.status, error.success ? error.data : null);
+  return new ApiRequestError(
+    response.status,
+    error.success ? error.data : null,
+  );
+}
+
+type DownloadRequest<Id extends DownloadOperationId> =
+  (typeof downloadApiContract)[Id]['request'];
+export type DownloadInput<Id extends DownloadOperationId> = Part<
+  'params',
+  z.input<DownloadRequest<Id>['params']>
+> & { body: z.input<DownloadRequest<Id>['body']> };
+
+const fallbackFilename = 'export.csv';
+
+/** 取 Content-Disposition 里的文件名；服务端文件名只含 ASCII 字母数字与 `._-`，其余一律不信任。 */
+export function downloadFilename(disposition: string | null) {
+  const name = /filename="([^"\\]+)"/.exec(disposition ?? '')?.[1];
+  return name && /^[A-Za-z0-9._-]+$/.test(name) ? name : fallbackFilename;
+}
+
+/**
+ * 导出文件：POST 当前筛选，整个响应读完（blob）后才保存。服务端在开始写出后失败会销毁连接，
+ * fetch 或 blob() 因此拒绝，抛 `ApiRequestError(0)`，不保存任何内容。
+ * 失败的响应与 callApi 一样解析为 `ApiRequestError`。
+ */
+export async function callDownload<Id extends DownloadOperationId>(
+  operationId: Id,
+  input: DownloadInput<Id>,
+): Promise<{ filename: string }> {
+  const operation: ApiOperation = downloadApiContract[operationId];
+  const body = operation.request.body.parse(input.body);
+  const url = apiPath(operation, {
+    params: (input as { params?: unknown }).params,
+  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: operation.method,
+      headers: {
+        accept: 'text/csv, application/json',
+        'content-type': 'application/json',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiRequestError(0, null);
+  }
+  if (!response.ok) throw await failedResponse(response);
+  if (!response.headers.get('content-type')?.startsWith('text/csv'))
+    throw new ApiRequestError(response.status, null);
+  const filename = downloadFilename(
+    response.headers.get('content-disposition'),
+  );
+  let blob: Blob;
+  try {
+    blob = await response.blob();
+  } catch {
+    throw new ApiRequestError(0, null);
+  }
+  downloadBlob(filename, blob);
+  return { filename };
 }

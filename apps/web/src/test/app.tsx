@@ -5,7 +5,12 @@ import { vi } from 'vitest';
 import { createQueryClient } from '../query-client';
 import { createAppRouter } from '../router';
 
-type Reply = { status: number; body?: unknown };
+type Reply = {
+  status: number;
+  body?: unknown;
+  /** 文件下载等非 JSON 响应：给出文本与媒体类型，body 被忽略。 */
+  file?: { text: string; type: string; disposition?: string };
+};
 export type ApiHandler = (
   path: string,
   init: RequestInit,
@@ -102,6 +107,16 @@ export function adminApi(
 export function renderApp(path: string, handler: ApiHandler) {
   const fetchMock = vi.fn(async (input: string, init: RequestInit = {}) => {
     const reply = await handler(input, init);
+    if (reply.file)
+      return new Response(reply.file.text, {
+        status: reply.status,
+        headers: {
+          'content-type': reply.file.type,
+          ...(reply.file.disposition
+            ? { 'content-disposition': reply.file.disposition }
+            : {}),
+        },
+      });
     return new Response(
       reply.body === undefined ? null : JSON.stringify(reply.body),
       {

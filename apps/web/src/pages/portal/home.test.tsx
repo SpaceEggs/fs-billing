@@ -108,6 +108,14 @@ describe('portal home', () => {
     );
   });
 
+  it('links the recent calls to the full call list', async () => {
+    renderHome();
+    const section = await screen.findByRole('region', { name: '最近话单' });
+    expect(
+      within(section).getByRole('link', { name: /^查看全部/ }),
+    ).toHaveAttribute('href', '/portal/cdrs');
+  });
+
   it('shows the empty state instead of the chart and list when there are no calls', async () => {
     renderHome({
       ...homeResponse,
