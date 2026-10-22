@@ -109,7 +109,7 @@ PR 1 的取数耗时在 [statement-fetch-timings.txt](statement-fetch-timings.tx
 
 ## 视觉对照
 
-见 [visual-diff.md](../phase-7-web/visual-diff.md)：38 张对照图，1 处明确缺陷已修正，9 项未经决定的差异等用户决定，其余记为接受。
+见 [visual-diff.md](../phase-7-web/visual-diff.md)：38 张对照图，1 处明确缺陷已修正，U1 至 U9 按用户 2026-10-23 的决定全部按稿修，U10、U11 用户决定接受，没有未决项。
 
 ## 仍需人工处理
 
