@@ -62,17 +62,18 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
   await expect(
     calls.getByRole('columnheader', { name: '国家', exact: true }),
   ).toBeVisible();
-  // 只有已接通：种子里 ABC001 另有一通未接通（13800138000），不会出现。
-  await expect(calls.getByRole('row')).toHaveCount(3);
-  await expect(calls.getByRole('row').nth(1)).toContainText(
-    '2026-09-28 14:10:05',
-  );
-  await expect(calls.getByRole('row').nth(1)).toContainText('牙买加');
-  await expect(calls.getByRole('row').nth(2)).toContainText(
-    '2026-09-28 14:03:22',
-  );
-  await expect(calls.getByRole('row').nth(2)).toContainText('英国 · 手机');
-  await expect(calls.getByRole('row').nth(2)).toContainText('3分50秒');
+  // 只有已接通的最近 10 通（表头加 10 行）：种子里 ABC001 另有一通未接通（13800138000），不会出现。
+  // 阶段 7 PR 1 起种子是月账单设计稿的逐通话单，最近的 10 通都在 9 月 29 日 13:30 之前。
+  const rows = calls.getByRole('row');
+  await expect(rows).toHaveCount(11);
+  await expect(rows.nth(1)).toContainText('2026-09-29 13:26:25');
+  await expect(rows.nth(1)).toContainText('中国');
+  await expect(rows.nth(4)).toContainText('2026-09-29 13:16:50');
+  await expect(rows.nth(4)).toContainText('日本');
+  await expect(rows.nth(9)).toContainText('2026-09-29 12:59:26');
+  await expect(rows.nth(9)).toContainText('新加坡');
+  for (const row of (await rows.all()).slice(1))
+    await expect(row).toContainText('2026-09-29');
   await expect(calls.getByText('13800138000')).toHaveCount(0);
 
   const nav = page.getByRole('navigation', { name: '主导航' });
@@ -128,8 +129,10 @@ test.describe('on a phone', () => {
     const recent = page.getByRole('region', { name: '最近话单' });
     await expect(recent.getByRole('table')).toBeHidden();
     const cards = recent.getByRole('listitem');
-    await expect(cards).toHaveCount(2);
-    await expect(cards.last()).toContainText('英国 · 手机 · 3分50秒');
+    await expect(cards).toHaveCount(10);
+    await expect(cards.first()).toContainText('中国 · 4分11秒');
+    await expect(cards.first()).toContainText('09-29 13:26:25');
+    await expect(cards.last()).toContainText('09-29 12:54:09');
     await expect(page.getByText('ABC001 · CNY')).toBeVisible();
 
     await page.getByRole('button', { name: '打开导航' }).click();

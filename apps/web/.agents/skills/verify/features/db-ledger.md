@@ -34,7 +34,7 @@ ROLLBACK;
 SQL
 ```
 
-- Require one negative charge, historical occurrence time, current transaction write time, delta `-0.18`, and zero discrepancies. Rollback leaves the original rows/balance intact. On fresh seed ABC001 has 33 entries totaling `-35.20`.
+- Require one negative charge, historical occurrence time, current transaction write time, delta `-0.18`, and zero discrepancies. Rollback leaves the original rows/balance intact. On fresh seed ABC001 has 22,451 entries (5 manual plus one per answered call, since phase 7 PR 1) totaling `-35.20`.
 - Acceptance requires app and owner mutation attempts to fail `42501`. Preserve SQL results and test summary.
 
 ## Gotchas
