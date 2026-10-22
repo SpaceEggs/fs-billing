@@ -1,0 +1,308 @@
+{
+  "entries": [
+    {
+      "page": "statements-default-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5a 电脑 · 2026年8月（默认上月）· HZX014 话单已删除，不可重新生成"
+      },
+      "note": "默认上月是 2026-09（稿中是 8 月）；对照稿 5a 的版式。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-default-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-default-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-default-desktop-light.png"
+      }
+    },
+    {
+      "page": "statements-august-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5a 电脑 · 2026年8月（默认上月）· HZX014 话单已删除，不可重新生成"
+      },
+      "note": "2026-08：ABC001 加一个话单已删除的夹具租户（稿中是 HZX014）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-august-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-august-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-august-desktop-light.png"
+      }
+    },
+    {
+      "page": "statements-regenerate-dialog",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5b 电脑 · 重新生成确认"
+      },
+      "note": "只打开对话框，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-regenerate-dialog-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-regenerate-dialog-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-regenerate-dialog-light.png"
+      }
+    },
+    {
+      "page": "statements-default-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5c 手机"
+      },
+      "note": "稿中「手机端仅显示前 3 个租户示意」，实现显示全部租户。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-default-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-default-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-default-phone-light.png"
+      }
+    },
+    {
+      "page": "tenant-statements-abc001-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1f 账单 · 本月进行中不可重新生成"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-abc001-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-abc001-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-abc001-desktop-light.png"
+      }
+    },
+    {
+      "page": "tenant-statements-abc001-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3f 账单"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-abc001-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-abc001-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-abc001-phone-light.png"
+      }
+    },
+    {
+      "page": "tenant-statements-deleted-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1g 账单 · 该月话单已删除，不可重新生成"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-deleted-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-deleted-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-deleted-desktop-light.png"
+      }
+    },
+    {
+      "page": "tenant-statements-deleted-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3g 账单 · 话单已删除"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-deleted-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-deleted-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-deleted-phone-light.png"
+      }
+    },
+    {
+      "page": "tenant-statement-abc001-august-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台账单详情没有设计稿（决定：沿用门户第二批版式加管理员信息块），只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statement-abc001-august-desktop-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "tenant-statement-abc001-august-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台账单详情没有设计稿，只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statement-abc001-august-phone-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "statements-default-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5a 电脑 · 2026年8月（默认上月）· HZX014 话单已删除，不可重新生成"
+      },
+      "note": "默认上月是 2026-09（稿中是 8 月）；对照稿 5a 的版式。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-default-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-default-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-default-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statements-august-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5a 电脑 · 2026年8月（默认上月）· HZX014 话单已删除，不可重新生成"
+      },
+      "note": "2026-08：ABC001 加一个话单已删除的夹具租户（稿中是 HZX014）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-august-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-august-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-august-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statements-regenerate-dialog",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5b 电脑 · 重新生成确认"
+      },
+      "note": "只打开对话框，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-regenerate-dialog-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-regenerate-dialog-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-regenerate-dialog-dark.png"
+      }
+    },
+    {
+      "page": "statements-default-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "账单",
+        "label": "5c 手机"
+      },
+      "note": "稿中「手机端仅显示前 3 个租户示意」，实现显示全部租户。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-default-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-default-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-default-phone-dark.png"
+      }
+    },
+    {
+      "page": "tenant-statements-abc001-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1f 账单 · 本月进行中不可重新生成"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-abc001-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-abc001-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-abc001-desktop-dark.png"
+      }
+    },
+    {
+      "page": "tenant-statements-abc001-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3f 账单"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-abc001-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-abc001-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-abc001-phone-dark.png"
+      }
+    },
+    {
+      "page": "tenant-statements-deleted-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 电脑",
+        "label": "1g 账单 · 该月话单已删除，不可重新生成"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-deleted-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-deleted-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-deleted-desktop-dark.png"
+      }
+    },
+    {
+      "page": "tenant-statements-deleted-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "租户详情 手机",
+        "label": "3g 账单 · 话单已删除"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-tenant-statements-deleted-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statements-deleted-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-tenant-statements-deleted-phone-dark.png"
+      }
+    },
+    {
+      "page": "tenant-statement-abc001-august-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台账单详情没有设计稿（决定：沿用门户第二批版式加管理员信息块），只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statement-abc001-august-desktop-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "tenant-statement-abc001-august-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台账单详情没有设计稿，只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-tenant-statement-abc001-august-phone-dark.png",
+        "compare": null
+      }
+    }
+  ]
+}

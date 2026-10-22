@@ -1,0 +1,380 @@
+{
+  "entries": [
+    {
+      "page": "statements-list-desktop",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单列表",
+        "label": "1a 电脑 · 全部列"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-list-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-list-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-list-desktop-light.png"
+      }
+    },
+    {
+      "page": "statements-list-1024",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单列表",
+        "label": "1b 窄屏 1024 · 精简列"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-list-1024-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-list-1024-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-list-1024-light.png"
+      }
+    },
+    {
+      "page": "statements-list-phone",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单列表",
+        "label": "1c 手机"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-list-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-list-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-list-phone-light.png"
+      }
+    },
+    {
+      "page": "statement-current-desktop",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2a 电脑 · 本月（进行中）"
+      },
+      "note": "播种月的进行中账单（20 通、81 分钟、¥3.51）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-current-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-current-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-current-desktop-light.png"
+      }
+    },
+    {
+      "page": "statement-current-phone",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2b 手机 · 本月（进行中）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-current-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-current-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-current-phone-light.png"
+      }
+    },
+    {
+      "page": "statement-august-desktop",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-august-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-august-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-august-desktop-light.png"
+      }
+    },
+    {
+      "page": "statement-august-phone",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2d 手机 · 已结束（2026年8月）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-august-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-august-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-august-phone-light.png"
+      }
+    },
+    {
+      "page": "statement-september-desktop",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": null,
+      "note": "9 月（设计稿的列表有 9 月，详情只画了进行中与 8 月），只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-september-desktop-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "statement-deleted-desktop",
+      "theme": "light",
+      "session": "deleted",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "3a 电脑 · 该月话单明细已删除"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-deleted-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-deleted-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-deleted-desktop-light.png"
+      }
+    },
+    {
+      "page": "statement-deleted-phone",
+      "theme": "light",
+      "session": "deleted",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "3b 手机 · 该月话单明细已删除"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-deleted-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-deleted-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-deleted-phone-light.png"
+      }
+    },
+    {
+      "page": "statements-empty-desktop",
+      "theme": "light",
+      "session": "empty",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单空状态",
+        "label": "4a 电脑 · 空状态"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-empty-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-empty-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-empty-desktop-light.png"
+      }
+    },
+    {
+      "page": "statements-empty-phone",
+      "theme": "light",
+      "session": "empty",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单空状态",
+        "label": "4b 手机 · 空状态"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-empty-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-empty-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-empty-phone-light.png"
+      }
+    },
+    {
+      "page": "statements-list-desktop",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单列表",
+        "label": "1a 电脑 · 全部列"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-list-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-list-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-list-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statements-list-1024",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单列表",
+        "label": "1b 窄屏 1024 · 精简列"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-list-1024-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-list-1024-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-list-1024-dark.png"
+      }
+    },
+    {
+      "page": "statements-list-phone",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单列表",
+        "label": "1c 手机"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-list-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-list-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-list-phone-dark.png"
+      }
+    },
+    {
+      "page": "statement-current-desktop",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2a 电脑 · 本月（进行中）"
+      },
+      "note": "播种月的进行中账单（20 通、81 分钟、¥3.51）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-current-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-current-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-current-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statement-current-phone",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2b 手机 · 本月（进行中）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-current-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-current-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-current-phone-dark.png"
+      }
+    },
+    {
+      "page": "statement-august-desktop",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-august-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-august-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-august-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statement-august-phone",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2d 手机 · 已结束（2026年8月）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-august-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-august-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-august-phone-dark.png"
+      }
+    },
+    {
+      "page": "statement-september-desktop",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": null,
+      "note": "9 月（设计稿的列表有 9 月，详情只画了进行中与 8 月），只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-september-desktop-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "statement-deleted-desktop",
+      "theme": "dark",
+      "session": "deleted",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "3a 电脑 · 该月话单明细已删除"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-deleted-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-deleted-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-deleted-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statement-deleted-phone",
+      "theme": "dark",
+      "session": "deleted",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "3b 手机 · 该月话单明细已删除"
+      },
+      "note": "夹具租户，数据不是设计稿数字。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statement-deleted-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statement-deleted-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statement-deleted-phone-dark.png"
+      }
+    },
+    {
+      "page": "statements-empty-desktop",
+      "theme": "dark",
+      "session": "empty",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单空状态",
+        "label": "4a 电脑 · 空状态"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-empty-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-empty-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-empty-desktop-dark.png"
+      }
+    },
+    {
+      "page": "statements-empty-phone",
+      "theme": "dark",
+      "session": "empty",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单空状态",
+        "label": "4b 手机 · 空状态"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/design-statements-empty-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/app-statements-empty-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/docs/evidence/phase-7-web/visual/compare-statements-empty-phone-dark.png"
+      }
+    }
+  ]
+}

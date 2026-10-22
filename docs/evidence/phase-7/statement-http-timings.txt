@@ -1,0 +1,56 @@
+# Phase 7 PR 6: statement endpoints over real loopback HTTP on the perf database copy
+# 2026-10-22T14:26:18.737Z database fs_billing_perf_p7 (copy of fs_billing_perf_pr3_uuid_v4 migrated to 0017, migrations applied: 18), PORTALBIG cdrs: 3000000
+# PostgreSQL 17.9 on aarch64-unknown-linux-musl
+# transport: in-process Fastify app (createApi) on 127.0.0.1, node fetch, real cookie gateway, fs_billing_app business role, response body fully read and parsed; 2 warmups + 7 measured rounds
+# removed 48 legacy fixture statements from the copy
+# missing statements before generation: 57 (tenants with a first month through the previous Beijing month)
+
+## Worker path (generateStatement in a repeatable read withSystem transaction), PORTALBIG, run order oldest month first, cold start
+worker generate 2025-10: 1209.7 ms (created)
+worker generate 2025-11: 513.2 ms (created)
+worker generate 2025-12: 534.6 ms (created)
+worker generate 2026-01: 541.3 ms (created)
+worker generate 2026-02: 523.4 ms (created)
+worker generate 2026-03: 558.1 ms (created)
+worker generate 2026-04: 567 ms (created)
+worker generate 2026-05: 587.1 ms (created)
+worker generate 2026-06: 621.3 ms (created)
+worker generate 2026-07: 687.8 ms (created)
+worker generate 2026-08: 662.1 ms (created)
+worker generate other tenants: 45 statements, total 503.9 ms
+
+## Before the 2026-09 statement of PORTALBIG exists (that month is pending and computed live)
+portal list, pending month computed live, run 1: 1216.8 ms, 13 rows (in_progress/pending/final/final/final/final/final/final/final/final/final/final/final)
+portal list, pending month computed live, run 2: 1032.8 ms, 13 rows (in_progress/pending/final/final/final/final/final/final/final/final/final/final/final)
+portal list, pending month computed live, run 3: 1022.2 ms, 13 rows (in_progress/pending/final/final/final/final/final/final/final/final/final/final/final)
+portal detail 2026-09 pending (live), run 1: 642.8 ms, state pending, 20 countries, 30 days
+portal detail 2026-09 pending (live), run 2: 642.6 ms, state pending, 20 countries, 30 days
+portal detail 2026-09 pending (live), run 3: 646.6 ms, state pending, 20 countries, 30 days
+
+## Statement generation for PORTALBIG (3000000 cdrs) over HTTP: POST /api/admin/tenants/{id}/statements/2026-09/regenerate
+create (expectedVersion 0): 573.9 ms, created true, changed true, version 1, response 335 bytes
+regenerate unchanged (expectedVersion 1, 3M-row month recomputed, no new version), 5 runs ms: 563.4, 566.1, 555.9, 561, 556.4
+
+## Reads
+portal list GET /api/portal/statements: n=7 min 363.9 median 368.7 max 371.5 ms, response 3771 bytes, 13 rows (in_progress/final/final/final/final/final/final/final/final/final/final/final/final)
+  samples ms: 364, 367.6, 363.9, 369.6, 371.5, 371.3, 368.7
+portal detail stored 2026-09 (3M tenant, 2026-09 has 234,277 answered calls): n=7 min 3.5 median 4.6 max 5.6 ms, response 4060 bytes, state final, 20 countries, 30 days
+  samples ms: 5.1, 4.6, 4.3, 5.6, 5, 3.5, 4.6
+portal detail stored 2026-08: n=7 min 3.6 median 4.6 max 6 ms, response 4129 bytes, state final, 20 countries, 31 days
+  samples ms: 4.5, 4.6, 5, 4.5, 4.8, 6, 3.6
+portal detail in-progress 2026-10 (live aggregation): n=7 min 364.2 median 367.4 max 450.4 ms, response 3126 bytes, state in_progress, 20 countries, 17 days
+  samples ms: 365.6, 364.2, 366.5, 367.4, 419.5, 450.4, 369.6
+portal summary CSV export POST /api/portal/statements/2026-09/export: n=7 min 5.3 median 5.7 max 7.6 ms, response 2098 bytes, 57 CSV lines
+  samples ms: 5.5, 5.5, 5.7, 5.3, 7.6, 5.8, 6.4
+admin month list GET /api/admin/statements?month=2026-09 (all tenants): n=7 min 4.9 median 5.2 max 6.4 ms, response 7075 bytes, 13 tenant rows in 2 currency groups
+  samples ms: 6.4, 5.2, 5, 5.7, 5.2, 4.9, 5
+admin month list GET /api/admin/statements?month=2026-08: n=7 min 4.5 median 4.7 max 10.5 ms, response 2364 bytes, 4 tenant rows
+  samples ms: 4.5, 5.3, 10.5, 4.6, 4.8, 4.6, 4.7
+admin tenant statements tab GET /api/admin/tenants/{id}/statements (PORTALBIG): n=7 min 355.6 median 360.4 max 383.2 ms, response 5587 bytes, 13 rows
+  samples ms: 369.2, 360.4, 383.2, 363.7, 355.6, 356.8, 358.6
+admin tenant statement detail 2026-09 (PORTALBIG): n=7 min 3.8 median 4.3 max 5.3 ms, response 4369 bytes, 20 countries, 30 days
+  samples ms: 5.3, 4.7, 4.5, 3.8, 4.3, 4.3, 4.3
+admin summary CSV export POST /api/admin/tenants/{id}/statements/2026-09/export: n=7 min 4.8 median 5.1 max 5.5 ms, response 2098 bytes, 57 CSV lines
+  samples ms: 5.5, 5.1, 4.8, 5, 5.2, 5.2, 4.9
+
+done: 0 errors
