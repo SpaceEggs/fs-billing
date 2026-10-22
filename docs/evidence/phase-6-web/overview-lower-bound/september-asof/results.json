@@ -1,0 +1,382 @@
+{
+  "database": "fs_billing_perf_pr3_uuid_v4",
+  "tenant": "PORTALBIG",
+  "asOf": "2026-09-20T04:00:00Z",
+  "rounds": 8,
+  "summary": [
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "n": 8,
+      "executionMs": {
+        "median": 29.7915,
+        "min": 29.085,
+        "max": 30.611
+      },
+      "planningMedianMs": 0.4415
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "n": 8,
+      "executionMs": {
+        "median": 29.585500000000003,
+        "min": 29.337,
+        "max": 31.291
+      },
+      "planningMedianMs": 0.477
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "n": 8,
+      "executionMs": {
+        "median": 136.33100000000002,
+        "min": 132.236,
+        "max": 139.801
+      },
+      "planningMedianMs": 1.086
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "n": 8,
+      "executionMs": {
+        "median": 148.9255,
+        "min": 146.35,
+        "max": 153.501
+      },
+      "planningMedianMs": 1.0865
+    }
+  ],
+  "runs": [
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 34.421,
+      "planningMs": 0.512
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 29.37,
+      "planningMs": 0.504
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 29.562,
+      "planningMs": 0.511
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 29.893,
+      "planningMs": 0.471
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 29.535,
+      "planningMs": 0.439
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 30.16,
+      "planningMs": 0.507
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 29.434,
+      "planningMs": 0.517
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 30.611,
+      "planningMs": 0.453
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 29.085,
+      "planningMs": 0.447
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 29.337,
+      "planningMs": 0.454
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 29.535,
+      "planningMs": 0.477
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 30.04,
+      "planningMs": 0.444
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 29.93,
+      "planningMs": 0.435
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 31.291,
+      "planningMs": 0.477
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 29.609,
+      "planningMs": 0.461
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 29.69,
+      "planningMs": 0.438
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 29.504,
+      "planningMs": 0.43
+    },
+    {
+      "shape": "answered",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 30.031,
+      "planningMs": 0.471
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 135.781,
+      "planningMs": 1.202
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 0,
+      "warmup": true,
+      "executionMs": 149.156,
+      "planningMs": 1.063
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 148.782,
+      "planningMs": 1.074
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 1,
+      "warmup": false,
+      "executionMs": 132.569,
+      "planningMs": 1.106
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 135.536,
+      "planningMs": 1.047
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 2,
+      "warmup": false,
+      "executionMs": 148.016,
+      "planningMs": 1.062
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 150.724,
+      "planningMs": 1.094
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 3,
+      "warmup": false,
+      "executionMs": 139.801,
+      "planningMs": 1.096
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 137.651,
+      "planningMs": 1.135
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 4,
+      "warmup": false,
+      "executionMs": 146.35,
+      "planningMs": 1.088
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 149.069,
+      "planningMs": 1.125
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 5,
+      "warmup": false,
+      "executionMs": 137.083,
+      "planningMs": 1.076
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 137.314,
+      "planningMs": 1.066
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 6,
+      "warmup": false,
+      "executionMs": 147.583,
+      "planningMs": 1.132
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 152.469,
+      "planningMs": 1.083
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 7,
+      "warmup": false,
+      "executionMs": 135.579,
+      "planningMs": 1.058
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "baseline",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 132.236,
+      "planningMs": 1.112
+    },
+    {
+      "shape": "overview",
+      "form": "fixed",
+      "variant": "bounded",
+      "round": 8,
+      "warmup": false,
+      "executionMs": 153.501,
+      "planningMs": 1.085
+    }
+  ]
+}
