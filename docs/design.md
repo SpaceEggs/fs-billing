@@ -46,7 +46,7 @@
 | 服务器 | 运行内容 | 理由 |
 |---|---|---|
 | 服务器 A | FreeSWITCH | 语音质量不受计费系统负载影响 |
-| 服务器 B | 计费系统（Docker Compose） | 网站对公网开放，被攻破也无法控制交换机 |
+| 服务器 B | 计费系统（Debian 13 原生部署，systemd，不用 Docker） | 网站对公网开放，被攻破也无法控制交换机 |
 
 计费系统服务器初期配置：2 核 4G 起步。
 
@@ -55,7 +55,7 @@
 ```
                         ┌─────────────────────────── 服务器 B ───────────────────────────┐
                         │                                                                 │
-  客户/管理员浏览器 ─HTTPS─▶ 反向代理 (Caddy) ──┬─▶ Web（网页）                           │
+  客户/管理员浏览器 ─HTTPS─▶ 反向代理 (nginx) ──┬─▶ Web（网页）                           │
                         │                       └─▶ API（/api）──┐                       │
                         │                                         ▼                       │
                         │                                    PostgreSQL                   │
@@ -90,7 +90,7 @@
 | 登录认证 | Better Auth |
 | 金额计算 | decimal.js（禁止使用浮点数） |
 | 测试 | Vitest（单元）、Playwright（网页）、SIPp（呼叫模拟） |
-| 部署 | Docker Compose + Caddy（自动 HTTPS） |
+| 部署 | Debian 13 原生 + systemd；nginx + certbot（Let's Encrypt 自动续期）；PostgreSQL 用 Debian 官方包 `postgresql-17`。本地开发与 CI 仍用 Docker |
 
 ### 3.4 代码目录
 
