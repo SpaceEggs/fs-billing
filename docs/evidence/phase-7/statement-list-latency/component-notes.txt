@@ -1,0 +1,10 @@
+# (see hot-timings.txt for the raw numbers; medians of the 10 hot executions per row, ms)
+#
+# component (fs_billing_app, RLS)        median   | same query as owner (no RLS)
+# opening anchor, as written (seq scan)   112.6   | 41.9   (Parallel Seq Scan with 2 workers)
+# opening anchor, literal bound            11.0   | not measured
+# flows (4 sums over the month)            18.0   | 14.8
+# by_country (sort + group)                56.9   | 53.5
+# by_day (sort + group)                    57.6   | 55.1
+# totals only (count, sum minutes)         34.2   | 32.4
+# 2 x opening + flows + by_country + by_day = 2*112.6 + 18.0 + 56.9 + 57.6 = 357.7 ms   -> matches the 358 ms median of the whole statement (base: 356 to 362)

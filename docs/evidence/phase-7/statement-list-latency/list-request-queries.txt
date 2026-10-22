@@ -1,0 +1,19 @@
+# Statements of one GET /api/portal/statements request (listPortalStatements -> readStatementMonthList) on PORTALBIG, fs_billing_perf_inv.
+# Source: PostgreSQL server log with log_min_duration_statement = 0, third of three consecutive calls, 2026-10-22 23:24:13 UTC. Server-side execute durations.
+#   0.006 ms  begin
+#   0.005 ms  select set_config('app.scope','tenant',true), set_config('app.tenant_id',$1,true)        (withTenant)
+#   0.012 ms  select ... from tenants where id = $1                                                      (readTenant)
+#   0.026 ms  select to_char(statement_timestamp() ...)                                                  (databaseInstant)
+#   0.001 ms  select to_char(date_trunc('month', ...))                                                   (currentStatementMonth)
+#   0.025 ms  tenants left join lateral (ledger_entries order by occurred_at limit 1)                    (firstStatementMonth)
+#   0.025 ms  select ... from monthly_statements where tenant_id = $1 order by month desc               (listStatements, 12 headers)
+#   0.012 ms  set local jit = off
+# 362.347 ms  with bounds as (...) opening, flows, by_country, by_day ... select ...                     (computeStatement, month 2026-10, in_progress)
+#   0.435 ms  commit
+# All 22 log lines of the request (including parse and bind messages) add up to 365.1 ms; the largest single line is the 362.3 ms execute above.
+# So 99.2% of the database time is the one live-row statement; the other nine statements together take 2.8 ms including parse/bind. There is no N+1:
+# the 12 stored months come from one header query, and exactly one month (the in-progress one) is computed live.
+# First run of the same script (cold backend) logged 388.2 ms for the same statement; second run 361.8 ms.
+#
+# Server-side auto_explain of the same request from the real application path (drizzle + node-postgres bind parameters, not psql), duration 409.4 ms in that run, shows the same plan as the
+# psql EXPLAIN in current-statement-explain.txt: Seq Scan on ledger_entries twice (actual rows=128797 each, 119.3 ms and 121.5 ms) and an Index Scan on ledger_entries_tenant_occurred_at for flows (11.7 ms).

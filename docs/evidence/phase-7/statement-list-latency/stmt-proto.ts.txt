@@ -1,0 +1,148 @@
+import assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
+import pg from 'pg';
+
+// Scratch prototype for the statement-list-latency investigation. Target: fs_billing_perf_inv only.
+const TARGET = 'fs_billing_perf_inv';
+const url = new URL(process.env['APP_DATABASE_URL']!);
+assert(['127.0.0.1', 'localhost'].includes(url.hostname));
+url.pathname = `/${TARGET}`;
+const tenant = '00000000-0000-4000-8000-000000000001';
+const month = process.env['MONTH'] ?? '2026-10-01';
+const asOf = process.env['ASOF'] ?? new Date().toISOString();
+
+const LO = `(($1::date)::timestamp at time zone 'Asia/Shanghai')`;
+const HI = `least((($1::date + interval '1 month'))::timestamp at time zone 'Asia/Shanghai', $2::timestamptz)`;
+
+// V0: today's compute.ts statement (balance anchor), params in drizzle order flattened to $1 month, $2 asOf, $3 tenant.
+const V0 = `
+with bounds as (
+  select ($1::date)::timestamp at time zone 'Asia/Shanghai' as lo, least((($1::date + interval '1 month'))::timestamp at time zone 'Asia/Shanghai', $2::timestamptz) as hi
+),
+opening as (select (select balance from tenant_balances where tenant_id = $3::uuid)
+      - (select coalesce(sum(amount), 0) from ledger_entries
+         where tenant_id = $3::uuid and occurred_at >= (select lo from bounds)) as amount),
+flows as (
+  select
+    coalesce(sum(amount) filter (where kind in ('recharge', 'credit_recharge')), 0) as recharge,
+    coalesce(sum(amount) filter (where kind = 'gift'), 0) as gift,
+    coalesce(sum(amount) filter (where kind = 'adjustment'), 0) as adjustment,
+    coalesce(-sum(amount) filter (where kind = 'call_charge'), 0) as call_charges
+  from ledger_entries
+  where tenant_id = $3::uuid
+    and occurred_at >= (select lo from bounds) and occurred_at < (select hi from bounds)
+),
+by_country as (
+  select c.country, count(*)::int as calls, sum(c.billed_minutes) as minutes, sum(c.charge) as charge
+  from cdrs c
+  where c.tenant_id = $3::uuid
+    and c.answered_at >= (select lo from bounds) and c.answered_at < (select hi from bounds)
+    and c.started_at >= (select lo - interval '31 days' from bounds) and c.started_at < (select hi from bounds)
+  group by c.country
+),
+by_day as (
+  select (c.answered_at at time zone 'Asia/Shanghai')::date as day,
+    count(*)::int as calls, sum(c.billed_minutes) as minutes, sum(c.charge) as charge
+  from cdrs c
+  where c.tenant_id = $3::uuid
+    and c.answered_at >= (select lo from bounds) and c.answered_at < (select hi from bounds)
+    and c.started_at >= (select lo - interval '31 days' from bounds) and c.started_at < (select hi from bounds)
+  group by 1
+)
+select
+  o.amount::text as opening_balance, f.recharge::text as recharge, f.gift::text as gift,
+  f.adjustment::text as adjustment, f.call_charges::text as call_charges,
+  (o.amount + f.recharge + f.gift + f.adjustment - f.call_charges)::text as closing_balance,
+  (select coalesce(sum(calls), 0)::int from by_country) as calls,
+  (select coalesce(sum(minutes), 0)::text from by_country) as call_minutes,
+  (f.call_charges - (select coalesce(sum(charge), 0) from by_country))::text as breakdown_gap,
+  (select coalesce(jsonb_agg(jsonb_build_object(
+      'country', country, 'calls', calls, 'minutes', minutes::text, 'charge', charge::text)
+      order by charge desc, country), '[]'::jsonb) from by_country) as countries,
+  (select coalesce(jsonb_agg(jsonb_build_object(
+      'day', day::text, 'calls', calls, 'minutes', minutes::text, 'charge', charge::text)
+      order by day), '[]'::jsonb) from by_day) as days
+from opening o cross join flows f`;
+
+// V1: minimal diff of V0: bounds inlined as bind-param expressions (planner sees constants), opening materialized (evaluated once).
+const V1 = V0.replace(/with bounds as \([\s\S]*?\),\nopening as/, 'with opening as materialized')
+  .replaceAll("(select lo - interval '31 days' from bounds)", `(${LO} - interval '31 days')`)
+  .replaceAll('(select lo from bounds)', LO)
+  .replaceAll('(select hi from bounds)', HI);
+
+// V2: list-only figures (no countries, days, breakdown gap), balance anchor, one ledger scan.
+const V2 = `
+with ledger as (
+  select
+    coalesce(sum(amount), 0) as tail_total,
+    coalesce(sum(amount) filter (where kind in ('recharge', 'credit_recharge') and occurred_at < ${HI}), 0) as recharge,
+    coalesce(sum(amount) filter (where kind = 'gift' and occurred_at < ${HI}), 0) as gift,
+    coalesce(sum(amount) filter (where kind = 'adjustment' and occurred_at < ${HI}), 0) as adjustment,
+    coalesce(-sum(amount) filter (where kind = 'call_charge' and occurred_at < ${HI}), 0) as call_charges
+  from ledger_entries
+  where tenant_id = $3::uuid and occurred_at >= ${LO}
+),
+totals as (
+  select count(*)::int as calls, coalesce(sum(c.billed_minutes), 0) as minutes
+  from cdrs c
+  where c.tenant_id = $3::uuid
+    and c.answered_at >= ${LO} and c.answered_at < ${HI}
+    and c.started_at >= (${LO} - interval '31 days') and c.started_at < ${HI}
+),
+bal as (select balance from tenant_balances where tenant_id = $3::uuid)
+select
+  (bal.balance - l.tail_total)::text as opening_balance, l.recharge::text as recharge, l.gift::text as gift,
+  l.adjustment::text as adjustment, l.call_charges::text as call_charges,
+  (bal.balance - l.tail_total + l.recharge + l.gift + l.adjustment - l.call_charges)::text as closing_balance,
+  t.calls as calls, t.minutes::text as call_minutes
+from ledger l cross join totals t cross join bal`;
+
+const variants = { V0, V1, V2 } as const;
+const pool = new pg.Pool({ connectionString: url.toString(), max: 1 });
+const client = await pool.connect();
+const params = [month, asOf, tenant];
+const usedParams = (sql: string) => params.slice(0, Math.max(...[...sql.matchAll(/\$(\d)/g)].map((m) => Number(m[1]))));
+async function inTx<T>(fn: () => Promise<T>): Promise<T> {
+  await client.query('begin');
+  try {
+    await client.query("select set_config('app.scope', 'tenant', true), set_config('app.tenant_id', $1, true)", [tenant]);
+    await client.query('set local jit = off');
+    return await fn();
+  } finally {
+    await client.query('rollback');
+  }
+}
+try {
+  const rounds = Number(process.env['ROUNDS'] ?? 8);
+  const results: Record<string, unknown> = {};
+  for (const [name, sql] of Object.entries(variants)) {
+    const p = usedParams(sql);
+    const plan = await inTx(async () => (await client.query(`explain (analyze, buffers) ${sql}`, p)).rows.map((r) => r['QUERY PLAN'] as string));
+    const keys = plan.filter((l) => /Seq Scan on (ledger|cdrs)|Index Scan using ledger|Bitmap Heap Scan on ledger|Subplans Removed|Execution Time|Sort Method|HashAggregate|GroupAggregate/.test(l)).map((l) => l.replace(/\(cost=[^)]*\) /, '').trim());
+    console.log(`\n== ${name} plan highlights`);
+    for (const line of keys) console.log('  ' + line.slice(0, 170));
+  }
+  for (let round = 0; round < rounds; round++) {
+    for (const [name, sql] of Object.entries(variants)) {
+      const started = performance.now();
+      const row = await inTx(async () => (await client.query(sql, usedParams(sql))).rows[0] as Record<string, unknown>);
+      const elapsed = performance.now() - started;
+      (results[`${name}_ms`] ??= [] as number[]);
+      (results[`${name}_ms`] as number[]).push(Number(elapsed.toFixed(1)));
+      if (round === 0) results[`${name}_row`] = ['opening_balance', 'recharge', 'gift', 'adjustment', 'call_charges', 'closing_balance', 'calls', 'call_minutes'].map((k) => String(row[k]));
+    }
+  }
+  const median = (a: number[]) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)]!;
+  console.log('');
+  for (const name of Object.keys(variants)) {
+    const t = results[`${name}_ms`] as number[];
+    console.log(`${name}: median ${median(t)} ms (min ${Math.min(...t)}, max ${Math.max(...t)}) samples ${t.join(', ')}`);
+    console.log(`  figures: ${(results[`${name}_row`] as string[]).join(' | ')}`);
+  }
+  assert.deepEqual(results['V1_row'], results['V0_row']);
+  assert.deepEqual(results['V2_row'], results['V0_row']);
+  console.log('\nfigures identical across V0, V1, V2');
+} finally {
+  client.release();
+  await pool.end();
+}

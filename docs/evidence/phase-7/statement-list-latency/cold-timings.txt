@@ -1,0 +1,21 @@
+# Cold timings (ms): before each cell the container page cache is flushed by writing and reading a 7 GB throwaway file inside the postgres container;
+# then 3 executions in one rolled-back transaction (first = cold). shared_buffers is 128MB so Postgres buffers are cold too. Role fs_billing_app with RLS.
+cold base     495.562 367.085 354.839 
+cold lml1     108.167 48.647 45.693 
+cold litmat   139.512 106.901 104.174 
+cold lmb      772.855 242.599 180.179 
+cold base     507.323 359.317 374.811 
+cold lml1     93.796 51.843 45.198 
+cold litmat   137.831 106.757 104.890 
+cold lmb      276.815 191.228 172.532 
+# Stronger flush (7 GB file written, then read twice), same procedure otherwise:
+cold2 base     533.283 363.054 358.381 
+cold2 lml1     84.326 46.883 47.002 
+cold2 litmat   135.218 103.109 103.697 
+cold2 base     1095.627  363.143 357.108 
+cold2 lml1     77.961 41.644 40.921 
+cold2 litmat   132.159 103.899 103.824 
+# Earlier single-pass runs (same procedure, outputs not saved to a file; first execution after a flush, then the warm ones):
+#   base:  1027.0 (then 369.9 364.9 369.1 372.1), 1069.5 (then 369.9 382.7), 1170.7 (then 375.5 359.1)
+#   lml1:  97.1, 109.7 (then 45-46)       lml: 93.9       lmb: 899.7 (then 180.0 164.0)       litmat: 130.5, 123.6 (then 106-111)
+# How cold the first execution is depends on how much of the ledger heap and the cdrs partitions the flush evicted; the range for today's statement is 0.5 s to 1.2 s.
