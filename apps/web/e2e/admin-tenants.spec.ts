@@ -98,6 +98,25 @@ test('a duplicate tenant code is reported on the code field', async ({
   await expect(page.getByText('编码 ABC001 已存在，请换一个')).toBeVisible();
 });
 
+test('overview of the seeded ABC001 shows the first-day calls of this month', async ({
+  page,
+}) => {
+  await openTenants(page);
+  await page
+    .getByRole('row')
+    .filter({ hasText: 'ABC001' })
+    .getByRole('link', { name: /ABC001/ })
+    .first()
+    .click();
+  // 种子在播种月 1 日凌晨写了 20 通话单：本月消费 ¥3.51、81 分钟，没有未接通。
+  await expect(page.getByRole('region', { name: '本月消费' })).toContainText(
+    '¥3.51',
+  );
+  const calls = page.getByRole('region', { name: '本月通话' });
+  await expect(calls).toContainText('81分钟');
+  await expect(calls).toContainText('20 通 · 含未接通 0');
+});
+
 test('overview tab shows this month, call counts and the 30-day chart from the API', async ({
   page,
 }) => {

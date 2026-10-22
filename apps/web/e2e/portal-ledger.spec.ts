@@ -41,6 +41,26 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(51);
 });
 
+test('shows the seeded first day of this month: 20 merged calls and the recharge that offsets them', async ({
+  page,
+}) => {
+  // 种子在播种月 1 日凌晨写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
+  const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
+  await page.goto(`/portal/ledger?from=${month}-01&to=${month}-01`);
+  const rows = page.getByRole('table').getByRole('row');
+  await expect(rows).toHaveCount(3);
+  await expect(
+    page.getByRole('link', { name: `${month}-01 通话扣费，共 20 通` }),
+  ).toBeVisible();
+  const recharge = rows.filter({ hasText: '银行转账预存' });
+  await expect(recharge).toHaveCount(1);
+  await expect(recharge).toContainText('+¥3.51');
+  await expect(rows.filter({ hasText: '通话扣费' })).toContainText('-¥3.51');
+  // 抵平之后余额仍是 −¥35.20。
+  await expect(page.getByText('当前余额').first()).toBeVisible();
+  await expect(page.getByText('-¥35.20').first()).toBeVisible();
+});
+
 test('filters by type and keeps the range and page in the address', async ({
   page,
 }) => {
