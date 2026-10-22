@@ -1,0 +1,14 @@
+# Phase 7 PR 1: statement fetch timings on PORTALBIG (fs_billing_perf)
+# 2026-10-22T07:12:24Z local PostgreSQL 17 (Docker), single connection, fs_billing_app, read only repeatable read transactions, nothing written
+# PERF_APP_DATABASE_URL=postgresql://fs_billing_app:***@127.0.0.1:5432/fs_billing_perf pnpm --filter @fs-billing/db exec tsx scripts/statements-perf.ts
+closed 2026-09 (opening from ledger) run 1: 637.1 ms calls=234277 charges=23864.427 gap=0 countries=20 days=30
+closed 2026-09 (opening from ledger) run 2: 522.5 ms calls=234277 charges=23864.427 gap=0 countries=20 days=30
+closed 2026-09 (opening from ledger) run 3: 526.2 ms calls=234277 charges=23864.427 gap=0 countries=20 days=30
+closed 2026-08 (opening from ledger) run 1: 520.5 ms calls=241988 charges=24595.434 gap=0 countries=20 days=31
+closed 2026-08 (opening from ledger) run 2: 505.4 ms calls=241988 charges=24595.434 gap=0 countries=20 days=31
+in-progress 2026-10 as of 2026-10-17T04:00:00.000Z (opening from balance anchor) run 1: 328.1 ms calls=128795 charges=13169.464 gap=0 countries=20 days=17
+in-progress 2026-10 as of 2026-10-17T04:00:00.000Z (opening from balance anchor) run 2: 321.2 ms calls=128795 charges=13169.464 gap=0 countries=20 days=17
+in-progress 2026-10 as of 2026-10-17T04:00:00.000Z (opening from balance anchor) run 3: 318.6 ms calls=128795 charges=13169.464 gap=0 countries=20 days=17
+opening of 2026-10 from ledger = 89020.783, from balance anchor = 89020.783, equal = true
+reconcile monthly scan run 1: 737.8 ms months=13
+reconcile monthly scan run 2: 734.6 ms months=13
