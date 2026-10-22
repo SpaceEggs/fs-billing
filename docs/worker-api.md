@@ -10,7 +10,7 @@ pnpm --filter @fs-billing/worker queue:migrate
 pnpm --filter @fs-billing/worker start
 ```
 
-`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions` 与内部调度队列并授权。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
+`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions`、月账单的 `generate-statements`、`generate-statement`、`reconcile-statements` 与内部调度队列并授权。**新增队列后必须重新执行**：运行时应用角色不能建队列，漏掉会让 Worker 在 `boss.work` 时失败。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
 
 | 环境变量             | 要求                                               |
 | -------------------- | -------------------------------------------------- |
@@ -19,6 +19,8 @@ pnpm --filter @fs-billing/worker start
 | `WORKER_PORT`        | 默认 `3001`，整数 1–65535                          |
 | `WORKER_SHARED_KEY`  | 至少 16 字符                                       |
 | `WORKER_ALLOWED_IPS` | 逗号分隔的非空 IP 列表，例如 `127.0.0.1,10.0.0.10` |
+
+可选：`STATEMENT_BACKFILL_MONTHS`（每日账单生成最多补多少个月，默认 24，1–120）、`WORKER_STATEMENT_CONCURRENCY`（账单子任务并发，默认 2，1–10）。
 
 `POST /authorize` 与 `POST /cdr` 必须带 `X-Billing-Key`，缺失或错误返回 401（固定长度 SHA-256 摘要经 `timingSafeEqual` 比较），来源 IP 不在白名单返回 403。使用连接的实际 IP，不信任代理头。`GET /health` 返回 `{"status":"ok","service":"worker"}`，不检查数据库。
 

@@ -6,6 +6,7 @@ import { workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeCdr } from './charge.js';
 import { startPartitionMaintenance } from './maintenance.js';
+import { requestStatementCatchUp, startStatementJobs } from './statements.js';
 
 const config = workerEnvironmentSchema.parse(process.env);
 const logger = pino();
@@ -69,6 +70,16 @@ try {
     },
     app.log,
   );
+  await startStatementJobs(
+    boss,
+    connection.db,
+    {
+      backfillMonths: config.STATEMENT_BACKFILL_MONTHS,
+      concurrency: config.WORKER_STATEMENT_CONCURRENCY,
+    },
+    app.log,
+  );
+  await requestStatementCatchUp(boss);
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,
   );
