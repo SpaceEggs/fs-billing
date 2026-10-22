@@ -1,10 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminApiContract } from '@fs-billing/shared';
-import { ApiRequestError, apiPath, callApi } from './api';
+import {
+  ApiRequestError,
+  apiPath,
+  callApi,
+  callDownload,
+  downloadFilename,
+} from './api';
+
+const saved = vi.hoisted(() => [] as [string, Blob][]);
+vi.mock('./download', () => ({
+  downloadBlob: (filename: string, blob: Blob) =>
+    void saved.push([filename, blob]),
+}));
 
 const tenantId = '00000000-0000-4000-8000-0000000000aa';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  saved.length = 0;
+});
 
 function stubFetch(status: number, body: unknown) {
   const fetchMock = vi.fn<
@@ -155,5 +170,157 @@ describe('callApi', () => {
       status: 503,
       outcomeUnknown: false,
     });
+  });
+});
+
+describe('callDownload', () => {
+  const csvResponse = (init?: ResponseInit) =>
+    new Response('\uFEFFcsv', {
+      status: 200,
+      headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition':
+          'attachment; filename="cdrs_ABC001_2026-09-01_2026-09-29.csv"',
+      },
+      ...init,
+    });
+
+  it('posts the normalized filters with the cookie and saves the blob under the server filename', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(csvResponse()));
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await callDownload('portalCdrsExport', {
+      body: { from: '2026-09-01', to: '2026-09-29', callee: '+44 7700 900123' },
+    });
+    expect(result).toEqual({
+      filename: 'cdrs_ABC001_2026-09-01_2026-09-29.csv',
+    });
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe('/api/portal/cdrs/export');
+    expect(init).toMatchObject({
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+    expect(JSON.parse(init.body as string)).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-29',
+      callee: '447700900123',
+      status: 'answered',
+    });
+    expect(saved).toHaveLength(1);
+    expect(saved[0]![0]).toBe('cdrs_ABC001_2026-09-01_2026-09-29.csv');
+    // BOM 随内容原样保存（Blob.text() 会去掉 BOM，所以比较字节）。
+    expect([...new Uint8Array(await saved[0]![1].arrayBuffer())]).toEqual([
+      0xef, 0xbb, 0xbf, 0x63, 0x73, 0x76,
+    ]);
+  });
+
+  it('puts the tenant in the admin path', async () => {
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(() =>
+      Promise.resolve(csvResponse()),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await callDownload('adminTenantCdrsExport', {
+      params: { tenantId },
+      body: { from: '2026-09-01', to: '2026-09-29', unverifiedOnly: true },
+    });
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      `/api/admin/tenants/${tenantId}/cdrs/export`,
+    );
+  });
+
+  it('refuses an invalid range before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(
+      callDownload('portalCdrsExport', {
+        body: { from: '2026-09-01', to: '2026-10-01' },
+      }),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saved).toHaveLength(0);
+  });
+
+  it('parses a failed response like callApi and saves nothing', async () => {
+    stubFetch(429, {
+      error: {
+        code: 'RATE_LIMITED',
+        message: '导出人数过多',
+        requestId: 'req-1',
+        retryAfterSeconds: 5,
+      },
+    });
+    const error = await callDownload('portalCdrsExport', {
+      body: { from: '2026-09-01', to: '2026-09-29' },
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiRequestError);
+    expect(error).toMatchObject({ status: 429, code: 'RATE_LIMITED' });
+    expect(saved).toHaveLength(0);
+  });
+
+  it('treats a lost connection before the response as an unknown outcome', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new TypeError('network'))),
+    );
+    const error = await callDownload('portalCdrsExport', {
+      body: { from: '2026-09-01', to: '2026-09-29' },
+    }).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ status: 0, outcomeUnknown: true });
+    expect(saved).toHaveLength(0);
+  });
+
+  it('does not save a truncated file when the body stream breaks', async () => {
+    const broken = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('partial'));
+        controller.error(new TypeError('terminated'));
+      },
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(broken, {
+            status: 200,
+            headers: { 'content-type': 'text/csv; charset=utf-8' },
+          }),
+        ),
+      ),
+    );
+    const error = await callDownload('portalCdrsExport', {
+      body: { from: '2026-09-01', to: '2026-09-29' },
+    }).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ status: 0, outcomeUnknown: true });
+    expect(saved).toHaveLength(0);
+  });
+
+  it('does not save a success that is not CSV', async () => {
+    stubFetch(200, { hello: 'world' });
+    const error = await callDownload('portalCdrsExport', {
+      body: { from: '2026-09-01', to: '2026-09-29' },
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ApiRequestError);
+    expect(saved).toHaveLength(0);
+  });
+});
+
+describe('downloadFilename', () => {
+  it('takes the quoted ASCII filename', () => {
+    expect(
+      downloadFilename('attachment; filename="cdrs_ABC001_2026-09-01.csv"'),
+    ).toBe('cdrs_ABC001_2026-09-01.csv');
+  });
+
+  it.each([
+    null,
+    'attachment',
+    'attachment; filename="../etc/passwd"',
+    'attachment; filename="a b.csv"',
+    'attachment; filename="报表.csv"',
+  ])('falls back to export.csv for %j', (header) => {
+    expect(downloadFilename(header)).toBe('export.csv');
   });
 });

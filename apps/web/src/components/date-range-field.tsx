@@ -193,7 +193,11 @@ function RangeCalendar({
             {rangeLabel(completeRange ?? { from: draft.from, to }, false)}
           </span>
         )}
-        <span>北京时间</span>
+        <span>
+          {maxRangeEndForStart === undefined
+            ? '北京时间'
+            : '北京时间 · 最长一个月'}
+        </span>
       </div>
       {maxRangeEndForStart !== undefined &&
       endLimit !== undefined &&
