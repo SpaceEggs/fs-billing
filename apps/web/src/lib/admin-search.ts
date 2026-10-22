@@ -94,12 +94,20 @@ export type LedgerSearch = {
   page?: number | undefined;
 };
 
+/** 话单标签页自己的日期范围；余额流水用 from / to，两页的范围互不影响。 */
+export type CdrTabRange = {
+  cdrFrom?: string | undefined;
+  cdrTo?: string | undefined;
+};
+
 /**
- * 租户详情的地址状态：日期范围在余额流水与话单标签页之间共用，其余键各属一页。
- * 话单标签页的筛选见 CdrFilters；页码与余额流水共用同一个键，切换标签页时由标签链接清除。
+ * 租户详情的地址状态：余额流水的日期范围是 from / to，话单标签页的是 cdrFrom / cdrTo，
+ * 各用各的范围（决定 40）。话单标签页的其他筛选见 CdrFilters；
+ * 页码与余额流水共用同一个键，切换标签页时由标签链接清除。
  */
 export type TenantDetailSearch = LedgerSearch &
-  CdrFilters & {
+  CdrFilters &
+  CdrTabRange & {
     tab?: TenantTab | undefined;
   };
 
@@ -111,6 +119,8 @@ export function validateTenantDetailSearch(
     tab: tab === 'overview' ? undefined : tab,
     from: dayRangeFields.from.safeParse(raw['from']).data,
     to: dayRangeFields.to.safeParse(raw['to']).data,
+    cdrFrom: dayRangeFields.from.safeParse(raw['cdrFrom']).data,
+    cdrTo: dayRangeFields.to.safeParse(raw['cdrTo']).data,
     kind: adminLedgerKindSchema.safeParse(raw['kind']).data,
     ...validateCdrFilters(raw),
     page: pageOf(raw['page']),

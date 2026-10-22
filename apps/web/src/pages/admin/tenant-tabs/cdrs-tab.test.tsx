@@ -266,16 +266,38 @@ describe('admin tenant CDR tab', () => {
     );
   });
 
-  it('keeps the date range but returns to page one when switching between the ledger and the calls', async () => {
+  it('keeps the ledger range out of the calls and returns to page one when switching tabs', async () => {
     const user = userEvent.setup();
-    const { location } = cdrApp(
+    const { location, lists } = cdrApp(
       `/admin/tenants/${tenantId}?tab=ledger&from=2026-10-02&to=2026-10-09&page=3`,
     );
     const nav = await screen.findByRole('navigation', { name: '租户详情' });
     await user.click(within(nav).getByRole('link', { name: '话单' }));
     await screen.findByRole('table');
+    // 流水的 from / to 原样保留在地址里，但话单没有用它：请求的是本月默认范围，页码已清除。
     expect(location()).toBe(
       `/admin/tenants/${tenantId}?from=2026-10-02&to=2026-10-09&tab=cdrs`,
+    );
+    expect(Object.fromEntries(lists.at(-1)!)).toMatchObject({
+      from: '2026-10-01',
+      to: '2026-10-17',
+    });
+  });
+
+  it('reads the calls range from cdrFrom and cdrTo and leaves the ledger range alone', async () => {
+    const user = userEvent.setup();
+    const { location, lists } = cdrApp(
+      `/admin/tenants/${tenantId}?tab=cdrs&from=2026-10-02&to=2026-10-09&cdrFrom=2026-10-05&cdrTo=2026-10-06`,
+    );
+    await screen.findByRole('table');
+    expect(Object.fromEntries(lists.at(-1)!)).toMatchObject({
+      from: '2026-10-05',
+      to: '2026-10-06',
+    });
+    const nav = screen.getByRole('navigation', { name: '租户详情' });
+    await user.click(within(nav).getByRole('link', { name: '余额流水' }));
+    expect(location()).toBe(
+      `/admin/tenants/${tenantId}?from=2026-10-02&to=2026-10-09&cdrFrom=2026-10-05&cdrTo=2026-10-06&tab=ledger`,
     );
   });
 });

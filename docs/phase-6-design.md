@@ -646,7 +646,7 @@ PR 3 的后端列表、导出及审计已实现。导出使用独立的四连接
 
 PR 5 已实现门户话单页 `pages/portal/cdrs.tsx`（路由 `/portal/cdrs`）和后台租户详情的话单标签页 `tenant-tabs/cdrs-tab.tsx`（`?tab=cdrs`，在费率与设置之间），两处共用 `components/cdr/*`：筛选条、汇总栏、电脑表格与手机卡片、详情对话框、分页文字、导出按钮与失败提示。「未经验证」的标签、筛选、横幅、详情行只在 `components/admin/cdr-unverified.tsx`，门户组件不引用。国家列用 `formatCountryLabel(country, description)`，表头「国家」，国家下拉只列国家，详情沿用合并显示，ISO 只出现在 CSV；未接通话单没有国家，列里写「未接通」，与 CSV 一致。
 
-筛选（日期范围、被叫号码、国家、接通状态，后台另有仅看未经验证）和页码写入地址，刷新与登录过期后保留，默认值不写入。被叫号码不合规、日期范围超过一个月时不发请求，页面说明原因，导出按钮禁用。导出经 `callDownload` POST 当前筛选，读完整个响应后才保存，网络中断提示「导出中断，请重试」并不保存；进行中按钮禁用。后台横幅文字按决定 32 去掉故障开始时间、关联告警与「查看告警」，没有「删除话单」。日期选择器的范围上限与「最长一个月」提示沿用 `DateRangeField` 的 `maxRangeEndForStart`。
+筛选（日期范围、被叫号码、国家、接通状态，后台另有仅看未经验证）和页码写入地址，刷新与登录过期后保留，默认值不写入。被叫号码不合规、日期范围超过一个月时不发请求，页面说明原因，导出按钮禁用。导出经 `callDownload` POST 当前筛选，读完整个响应后才保存，网络中断提示「导出中断，请重试」并不保存；进行中按钮禁用。后台横幅文字按决定 32 去掉故障开始时间、关联告警与「查看告警」，没有「删除话单」。日期选择器的范围上限与「最长一个月」提示沿用 `DateRangeField` 的 `maxRangeEndForStart`。后台租户详情的余额流水与话单两个标签页各用独立的日期范围（决定 40）：流水是地址里的 `from`、`to`，话单是 `cdrFrom`、`cdrTo`，切换标签页时各自保留。门户首页「最近话单」的「查看全部」链接到 `/portal/cdrs`；首页的最小行组件保留，没有换成共用话单表，因为首页设计稿 1a 的六列与话单页的八列、点击出详情不一致。
 
 测试：Web 单元测试 `pages/portal/cdrs.test.tsx`、`pages/admin/tenant-tabs/cdrs-tab.test.tsx`、`lib/cdr-search.test.ts`、`components/cdr/cdr-format.test.ts`、`lib/api.test.ts` 的 `callDownload`；e2e `apps/web/e2e/portal-cdrs.spec.ts`（含 `shows 00:30 on the 29th for the 16:30 UTC call`、447 显示「英国 · 手机」与 44 显示「英国」、`network responses omit unverified`、导出 CSV 列与登录过期）和 `admin-cdrs.spec.ts`（未经验证标签与筛选、详情、导出审计）。e2e 夹具 `e2e/db.ts` 的 `recordCdrs` 写入 ISO 与说明。视觉对照与计划勾选仍属 PR 7。
 

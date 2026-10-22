@@ -20,7 +20,7 @@ import {
 } from '../../../components/cdr/cdr-export';
 import { apiQuery } from '../../../lib/admin-api';
 import { callDownload } from '../../../lib/api';
-import type { LedgerSearch } from '../../../lib/admin-search';
+import type { TenantDetailSearch } from '../../../lib/admin-search';
 import {
   calleeProblem,
   cdrListQuery,
@@ -29,7 +29,10 @@ import {
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../../lib/day-range';
 import { formatDate } from '../../../lib/format';
 
-type CdrsSearch = LedgerSearch & CdrFilters;
+type CdrsSearch = Pick<
+  TenantDetailSearch,
+  keyof CdrFilters | 'cdrFrom' | 'cdrTo' | 'page'
+>;
 
 /**
  * 租户话单（设计稿管理后台第三批 1b 至 1e、3b 至 3e）：与客户门户同一套话单组件，另有「未经验证」
@@ -42,7 +45,11 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const { callee, country, status, unverifiedOnly, page = 1 } = search;
   const filters: CdrFilters = { callee, country, status, unverifiedOnly };
   const now = new Date();
-  const range = rangeOrMonthToDate(search, now);
+  // 话单标签页的日期范围与余额流水分开：地址里是 cdrFrom / cdrTo。
+  const range = rangeOrMonthToDate(
+    { from: search.cdrFrom, to: search.cdrTo },
+    now,
+  );
   const monthToDate = beijingMonthToDate(now);
   const rangeIsOverlong = !isDayRangeWithinOneMonth(range.from, range.to);
   const inputError = rangeIsOverlong
@@ -125,7 +132,7 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         rowBadge={(cdr) => <UnverifiedBadge cdr={cdr} />}
         detailExtra={unverifiedDetail}
         emptyHint={`该租户创建于 ${formatDate(tenant.createdAt)}，请调整日期范围`}
-        onRange={(next) => setFilter(next)}
+        onRange={(next) => setFilter({ cdrFrom: next.from, cdrTo: next.to })}
         onFilters={setFilter}
         onPage={(next) => update({ page: next > 1 ? next : undefined })}
       />

@@ -98,6 +98,16 @@ test('a customer without calls sees the empty state and no chart', async ({
   );
 });
 
+test('the recent calls link to the full call list', async ({ page }) => {
+  await loginAs(page, '/login', accounts.customer);
+  await page
+    .getByRole('region', { name: '最近话单' })
+    .getByRole('link', { name: /^查看全部/ })
+    .click();
+  await expect(page).toHaveURL(/\/portal\/cdrs/);
+  await expect(page.getByRole('heading', { name: '话单' })).toBeVisible();
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

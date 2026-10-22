@@ -5,7 +5,7 @@ import {
   answeredCount,
   cdrFixture,
   cdrRates,
-  septemberRange,
+  septemberCdrTabRange,
 } from './cdr-fixtures';
 import { operationLogs, recordCdrs } from './db';
 
@@ -16,7 +16,7 @@ async function tenantWithCdrs(page: Page) {
 }
 
 const tabUrl = (id: string, extra = '') =>
-  `/admin/tenants/${id}?tab=cdrs&${septemberRange}${extra}`;
+  `/admin/tenants/${id}?tab=cdrs&${septemberCdrTabRange}${extra}`;
 const rows = (page: Page) => page.getByRole('table').getByRole('row');
 const summary = (page: Page) =>
   page.getByRole('region', { name: '汇总' }).first();
@@ -136,4 +136,30 @@ test('exports CSV with the verification column and writes one cdr_export audit',
         },
       },
     ]);
+});
+
+test('keeps separate date ranges for the ledger and the calls', async ({
+  page,
+}) => {
+  const tenant = await tenantWithCdrs(page);
+  await page.goto(tabUrl(tenant.id, '&from=2026-10-01&to=2026-10-02'));
+  // 话单用自己的 9 月范围，不受地址里流水的 10 月范围影响。
+  await expect(rows(page)).toHaveCount(51);
+  await page.getByRole('link', { name: '余额流水', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: /日期范围.*2026-10-01 至 2026-10-02/ }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: '话单', exact: true }).click();
+  await expect(rows(page)).toHaveCount(51);
+  await expect(
+    page.getByRole('button', { name: /日期范围.*2026-09-01 至 2026-09-30/ }),
+  ).toBeVisible();
+  const url = new URL(page.url());
+  expect(Object.fromEntries(url.searchParams)).toMatchObject({
+    tab: 'cdrs',
+    from: '2026-10-01',
+    to: '2026-10-02',
+    cdrFrom: '2026-09-01',
+    cdrTo: '2026-09-30',
+  });
 });

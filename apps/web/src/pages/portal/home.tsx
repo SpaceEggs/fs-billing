@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
 import type { Identity, PortalHomeResponse } from '@fs-billing/shared';
 import { AppShell, PageBody } from '../../components/app-shell';
@@ -212,10 +213,21 @@ function HomeContent({
             aria-label="最近话单"
             className="flex flex-col gap-2 md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border md:bg-card"
           >
-            <h2 className="m-0 text-[15px] font-semibold md:px-6 md:py-4 md:text-base">
-              <span className="md:hidden">最近话单</span>
-              <span className="hidden md:inline">最近 10 通话单</span>
-            </h2>
+            <div className="flex items-center justify-between md:px-6 md:py-4">
+              <h2 className="m-0 text-[15px] font-semibold md:text-base">
+                <span className="md:hidden">最近话单</span>
+                <span className="hidden md:inline">最近 10 通话单</span>
+              </h2>
+              <Link
+                to="/portal/cdrs"
+                className="text-sm font-medium text-primary"
+              >
+                查看全部
+                <span aria-hidden className="hidden md:inline">
+                  {' →'}
+                </span>
+              </Link>
+            </div>
             <RecentCalls currency={home.currency} calls={home.recentCalls} />
           </section>
         </>

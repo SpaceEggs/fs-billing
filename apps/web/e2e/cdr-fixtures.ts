@@ -147,3 +147,5 @@ export const cdrFixture = [
 export const answeredCount = cdrFixture.filter((cdr) => cdr.answeredAt).length;
 
 export const septemberRange = 'from=2026-09-01&to=2026-09-30';
+/** 后台租户详情的话单标签页用 cdrFrom / cdrTo，与余额流水的 from / to 分开。 */
+export const septemberCdrTabRange = 'cdrFrom=2026-09-01&cdrTo=2026-09-30';
