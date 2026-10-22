@@ -46,7 +46,14 @@ function Avatar({
 }
 
 /** 电脑版：右上角头像下拉菜单（第三批 3a）。 */
-export function AccountMenu({ identity }: { identity: Identity }) {
+export function AccountMenu({
+  identity,
+  condensedBelowXl = false,
+}: {
+  identity: Identity;
+  /** 1280 px 以下只显示头像（门户月账单列表稿 1b），其余页面不传。 */
+  condensedBelowXl?: boolean;
+}) {
   const logout = useLogout(zoneOfIdentity(identity));
   const summary = accountSummary(identity);
   return (
@@ -59,11 +66,25 @@ export function AccountMenu({ identity }: { identity: Identity }) {
           identity={identity}
           className={identity.kind === 'customer' ? 'bg-background' : ''}
         />
-        {identity.kind === 'admin' ? identity.name : identity.email}
-        <span aria-hidden className="group-data-[state=open]:hidden">
+        <span className={cn(condensedBelowXl && 'max-xl:hidden')}>
+          {identity.kind === 'admin' ? identity.name : identity.email}
+        </span>
+        <span
+          aria-hidden
+          className={cn(
+            'group-data-[state=open]:hidden',
+            condensedBelowXl && 'max-xl:hidden',
+          )}
+        >
           ▾
         </span>
-        <span aria-hidden className="hidden group-data-[state=open]:inline">
+        <span
+          aria-hidden
+          className={cn(
+            'hidden group-data-[state=open]:inline',
+            condensedBelowXl && 'max-xl:group-data-[state=open]:hidden',
+          )}
+        >
           ▴
         </span>
       </DropdownMenu.Trigger>

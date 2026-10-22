@@ -300,6 +300,7 @@ export function PortalStatementDetailPage({
         </>
       }
       activeNav="月账单"
+      centerTitle
       mobileNav={
         <Link
           to="/portal/statements"

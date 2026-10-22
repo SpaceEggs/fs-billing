@@ -91,7 +91,7 @@ export function StatementDays({
       <div className="overflow-hidden rounded-xl border border-border tabular-nums md:hidden">
         <div className="grid grid-cols-[1fr_1fr_1.1fr] gap-2 bg-muted px-3.5 py-2 text-xs text-muted-foreground">
           <span>日期</span>
-          <span className="text-right">通话 / 分钟</span>
+          <span className="whitespace-nowrap text-right">通话 / 分钟</span>
           <span className="text-right">费用</span>
         </div>
         <ul className="m-0 list-none p-0">
@@ -108,7 +108,7 @@ export function StatementDays({
                   </span>
                 ) : null}
               </span>
-              <span className="text-right text-muted-foreground">
+              <span className="whitespace-nowrap text-right text-muted-foreground">
                 {formatCount(row.calls)} / {formatMinutes(row.minutes)}
               </span>
               <span className="text-right font-medium">

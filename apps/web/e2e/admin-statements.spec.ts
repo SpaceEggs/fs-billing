@@ -636,6 +636,52 @@ test('shows the month cards and the actions sheet on a phone', async ({
   ).toBeVisible();
 });
 
+test('labels the month picker, opens the regenerate dialog without scrim or ×, and shows the compact tab card on a phone', async ({
+  page,
+}) => {
+  const tenant = await fixtureTenant(page);
+  await generate(page, tenant.id, '2026-09');
+  // 电脑：控件上方的小标签「月份」（运营稿 5a）。
+  await page.goto('/admin/statements?month=2026-09');
+  await expect(
+    page.getByText('月份', { exact: true }).filter({ visible: true }),
+  ).toHaveCount(1);
+  // 重新生成确认（稿 5b）：电脑上没有遮罩与标题栏 ×，Esc 仍可关闭，焦点回到按钮。
+  const trigger = listRow(page, tenant.code).getByRole('button', {
+    name: /^重新生成/,
+  });
+  await trigger.click();
+  const dialog = page.getByRole('dialog', { name: /^重新生成 .+ 账单？$/ });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '关闭对话框' })).toBeHidden();
+  await expect(page.locator('.bg-scrim')).toHaveCSS(
+    'background-color',
+    'rgba(0, 0, 0, 0)',
+  );
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  // 手机：组头一行「CNY · N 个租户」加「扣费合计」，页脚提示（稿 5c）。
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page
+      .getByText('扣费合计', { exact: false })
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await expect(page.getByText('点 ⋯ 查看或重新生成')).toBeVisible();
+  // 手机的租户账单标签页：稿 3f 的紧凑卡片，按钮只有「重新生成」。
+  await page.goto(tenantTab(tenant.id));
+  const september = page.getByRole('listitem').filter({ hasText: '2026年9月' });
+  await expect(september.getByRole('button')).toHaveCount(1);
+  await expect(
+    september.getByRole('button', { name: '重新生成 2026年9月' }),
+  ).toBeEnabled();
+  await expect(
+    september.getByRole('link', { name: '查看 2026年9月' }),
+  ).toBeVisible();
+});
+
 test('explains a seeded statement whose call charges have no CDR detail', async ({
   page,
 }) => {

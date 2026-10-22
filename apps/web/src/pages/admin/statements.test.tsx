@@ -164,6 +164,19 @@ describe('admin statements page', () => {
     );
   });
 
+  it('labels the month picker on desktop and puts each phone group header on one line with the call charge total', async () => {
+    statementsApp();
+    const cny = await screen.findByRole('region', { name: 'CNY 账单' });
+    // 电脑：控件上方的小标签「月份」（运营稿 5a）；手机的选择器没有标签（5c）。
+    expect(screen.getAllByText('月份', { selector: 'span' })).toHaveLength(1);
+    // 手机：组头「CNY · N 个租户」与「扣费合计 ¥…」同一行，页脚只有一句提示（运营稿 5c）。
+    expect(
+      within(cny).getByText('扣费合计', { exact: false }),
+    ).toHaveTextContent('扣费合计 ¥2,686.30');
+    expect(within(cny).queryByText('通话扣费合计')).not.toBeInTheDocument();
+    expect(screen.getByText('点 ⋯ 查看或重新生成')).toBeInTheDocument();
+  });
+
   it('shows 未生成 for a tenant without a statement and the note slot for mismatches', async () => {
     statementsApp();
     const cny = await screen.findByRole('region', { name: 'CNY 账单' });

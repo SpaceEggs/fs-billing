@@ -19,6 +19,7 @@ export function MonthField({
   max,
   onChange,
   className,
+  showLabel = false,
 }: {
   label: string;
   value: string;
@@ -26,9 +27,11 @@ export function MonthField({
   max: string;
   onChange: (month: string) => void;
   className?: string;
+  /** 在控件上方显示小标签（运营稿 5a 电脑）；手机稿 5c 没有标签。读屏名称不受影响。 */
+  showLabel?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  return (
+  const row = (
     <div className={cn('flex items-center gap-1', className)}>
       <button
         type="button"
@@ -74,6 +77,16 @@ export function MonthField({
         />
       ) : null}
     </div>
+  );
+  return showLabel ? (
+    <div className="flex flex-col gap-1.5">
+      <span aria-hidden className="text-xs text-muted-foreground">
+        {label}
+      </span>
+      {row}
+    </div>
+  ) : (
+    row
   );
 }
 

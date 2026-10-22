@@ -1,0 +1,150 @@
+
+> fs-billing@ test:e2e /Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6
+> pnpm --filter @fs-billing/web test:e2e
+
+
+> @fs-billing/web@ test:e2e /Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/apps/web
+> playwright test
+
+
+> @fs-billing/api@ auth:seed /Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6/apps/api
+> node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts
+
+开发种子凭据已初始化，已有凭据保持不变。
+
+Running 123 tests using 1 worker
+
+  ✓    1 [chromium] › e2e/admin-accounts.spec.ts:51:1 › shows temporary password once (1.1s)
+  ✓    2 [chromium] › e2e/admin-accounts.spec.ts:88:1 › blocks self disable (230ms)
+  ✓    3 [chromium] › e2e/admin-accounts.spec.ts:99:1 › resets, disables and enables another admin (1.2s)
+  ✓    4 [chromium] › e2e/admin-accounts.spec.ts:147:1 › opens a missing portal account from the portal tab (712ms)
+  ✓    5 [chromium] › e2e/admin-accounts.spec.ts:169:1 › portal reset and disable (1.1s)
+  ✓    6 [chromium] › e2e/admin-balance.spec.ts:10:1 › blocks blank adjustment reason (492ms)
+  ✓    7 [chromium] › e2e/admin-balance.spec.ts:41:1 › disabled tenant confirmation explains unchanged status (464ms)
+  ✓    8 [chromium] › e2e/admin-balance.spec.ts:72:1 › gift and credit require second confirmation only above configured currency threshold (1.1s)
+  ✓    9 [chromium] › e2e/admin-balance.spec.ts:123:1 › ledger range defaults to this Beijing month and filters by a picked range (833ms)
+  ✓   10 [chromium] › e2e/admin-cdrs.spec.ts:24:1 › tags the unverified call and counts it in the summary, without delete or alert links (311ms)
+  ✓   11 [chromium] › e2e/admin-cdrs.spec.ts:45:1 › shows 英国 · 手机 and 英国 for the merged country column (232ms)
+  ✓   12 [chromium] › e2e/admin-cdrs.spec.ts:63:1 › filters to the unverified calls and explains them without the fault time or alerts (302ms)
+  ✓   13 [chromium] › e2e/admin-cdrs.spec.ts:83:1 › shows the verification status in the detail of the unverified call (277ms)
+  ✓   14 [chromium] › e2e/admin-cdrs.spec.ts:98:1 › exports CSV with the verification column and writes one cdr_export audit (357ms)
+  ✓   15 [chromium] › e2e/admin-cdrs.spec.ts:141:1 › keeps separate date ranges for the ledger and the calls (347ms)
+  ✓   16 [chromium] › e2e/admin-onboarding.spec.ts:8:1 › creates a run-unique tenant, imports rates, credits 500 and opens portal account (1.1s)
+  ✓   17 [chromium] › e2e/admin-rates.spec.ts:88:1 › cancels selected scheduled version (379ms)
+  ✓   18 [chromium] › e2e/admin-rates.spec.ts:135:1 › cancel inside the clock skew margin is refused with refresh (332ms)
+  ✓   19 [chromium] › e2e/admin-rates.spec.ts:165:1 › minute picker submits Beijing schedule (468ms)
+  ✓   20 [chromium] › e2e/admin-rates.spec.ts:207:1 › cancel edit reschedule audits each step (910ms)
+  ✓   21 [chromium] › e2e/admin-rates.spec.ts:306:1 › exports the current version as CSV (231ms)
+  ✓   22 [chromium] › e2e/admin-rates.spec.ts:324:1 › exports a scheduled version as CSV from its card (G11) (254ms)
+  ✓   23 [chromium] › e2e/admin-rates.spec.ts:360:1 › shows every CSV error line (397ms)
+  ✓   24 [chromium] › e2e/admin-rates.spec.ts:394:1 › imports a CSV immediately and updates the table (531ms)
+  ✓   25 [chromium] › e2e/admin-rates.spec.ts:437:1 › mobile only views and searches rates (261ms)
+  ✓   26 [chromium] › e2e/admin-rates.spec.ts:497:1 › shows ISO, country, prefix, description and rate columns (254ms)
+  ✓   27 [chromium] › e2e/admin-rates.spec.ts:537:1 › mobile rows show prefix, country · description and rate only (245ms)
+  ✓   28 [chromium] › e2e/admin-rates.spec.ts:557:1 › edits ISO and description and audits the change (469ms)
+  ✓   29 [chromium] › e2e/admin-rates.spec.ts:601:1 › a scheduled label-only change says rename and shows old → new (196ms)
+  ✓   30 [chromium] › e2e/admin-rates.spec.ts:632:1 › rejects an old three-column CSV with the format hint (356ms)
+  ✓   31 [chromium] › e2e/admin-rates.spec.ts:677:1 › pushes a full rate table to a same-currency tenant (558ms)
+  ✓   32 [chromium] › e2e/admin-rates.spec.ts:763:1 › pulls a rate table into an empty tenant (472ms)
+  ✓   33 [chromium] › e2e/admin-receivables.spec.ts:44:1 › renders CNY and USD totals separately (400ms)
+  ✓   34 [chromium] › e2e/admin-receivables.spec.ts:73:1 › confirms full payment without changing balance (424ms)
+  ✓   35 [chromium] › e2e/admin-receivables.spec.ts:111:1 › refreshes after settlement conflict (513ms)
+  ✓   36 [chromium] › e2e/admin-receivables.spec.ts:181:1 › reverses then reconfirms with fresh token (843ms)
+  ✓   37 [chromium] › e2e/admin-receivables.spec.ts:243:1 › voids with linked adjustment (811ms)
+  ✓   38 [chromium] › e2e/admin-receivables.spec.ts:294:1 › mobile cards keep full-height row actions (351ms)
+  ✓   39 [chromium] › e2e/admin-settings.spec.ts:6:1 › warns for empty recipients after load and save (623ms)
+  -   40 [chromium] › e2e/admin-statements-visual.spec.ts:34:1 › matches admin statement frames in light and dark
+  ✓   41 [chromium] › e2e/admin-statements.spec.ts:124:1 › adds 账单 to the admin navigation after 待收款 and defaults to the previous month (205ms)
+  ✓   42 [chromium] › e2e/admin-statements.spec.ts:156:1 › shows the ABC001 August and September statements of the mockup (221ms)
+  ✓   43 [chromium] › e2e/admin-statements.spec.ts:180:1 › groups by currency and the footer total equals the sum of the generated rows (319ms)
+  ✓   44 [chromium] › e2e/admin-statements.spec.ts:221:1 › lists a tenant without a statement as 未生成 and regenerating creates it (401ms)
+  ✓   45 [chromium] › e2e/admin-statements.spec.ts:256:1 › regenerating after a late call updates the figures, bumps the version and audits before and after (452ms)
+  ✓   46 [chromium] › e2e/admin-statements.spec.ts:292:1 › regenerating an unchanged month keeps the version and says nothing changed (459ms)
+  ✓   47 [chromium] › e2e/admin-statements.spec.ts:317:1 › lists the later months that went stale and does not regenerate them (568ms)
+  ✓   48 [chromium] › e2e/admin-statements.spec.ts:350:1 › a second tab that regenerated first makes the first tab fail with a version conflict (789ms)
+  ✓   49 [chromium] › e2e/admin-statements.spec.ts:401:1 › greys the current month and a month with deleted CDRs, each with its reason (391ms)
+  ✓   50 [chromium] › e2e/admin-statements.spec.ts:436:1 › shows the reconcile state in the generation-time note slot, the tab and the detail (536ms)
+  ✓   51 [chromium] › e2e/admin-statements.spec.ts:469:1 › opens the ABC001 September statement from the tab with the mockup figures and zero-filled days (394ms)
+  ✓   52 [chromium] › e2e/admin-statements.spec.ts:523:1 › exports the summary CSV and the month CDR CSV, and prints (454ms)
+  ✓   53 [chromium] › e2e/admin-statements.spec.ts:587:1 › disables the CDR detail export once the month CDRs are deleted but keeps the summary export (285ms)
+  ✓   54 [chromium] › e2e/admin-statements.spec.ts:606:1 › hides the navigation and buttons when printing (210ms)
+  ✓   55 [chromium] › e2e/admin-statements.spec.ts:617:1 › shows the month cards and the actions sheet on a phone (317ms)
+  ✓   56 [chromium] › e2e/admin-statements.spec.ts:639:1 › labels the month picker, opens the regenerate dialog without scrim or ×, and shows the compact tab card on a phone (445ms)
+  ✓   57 [chromium] › e2e/admin-statements.spec.ts:685:1 › explains a seeded statement whose call charges have no CDR detail (197ms)
+  ✓   58 [chromium] › e2e/admin-tenants.spec.ts:6:1 › tenant list shows seeded tenants with status and per-currency balances (340ms)
+  ✓   59 [chromium] › e2e/admin-tenants.spec.ts:27:1 › onboarding shows the generated portal password once and the new account must change it (1.1s)
+  ✓   60 [chromium] › e2e/admin-tenants.spec.ts:87:1 › a duplicate tenant code is reported on the code field (270ms)
+  ✓   61 [chromium] › e2e/admin-tenants.spec.ts:101:1 › overview of the seeded ABC001 shows the first-day calls of this month (356ms)
+  ✓   62 [chromium] › e2e/admin-tenants.spec.ts:120:1 › overview tab shows this month, call counts and the 30-day chart from the API (268ms)
+  ✓   63 [chromium] › e2e/admin-tenants.spec.ts:172:1 › disable confirmation explains live call behavior (389ms)
+  -   64 [chromium] › e2e/admin-visual.spec.ts:855:1 › matches seeded admin pages in light dark and mobile
+  ✓   65 [chromium] › e2e/portal-cdrs.spec.ts:32:1 › shows 00:30 on the 29th for the 16:30 UTC call (1.0s)
+  ✓   66 [chromium] › e2e/portal-cdrs.spec.ts:47:1 › shows 英国 · 手机 for the 447 call and 英国 for the 44 call, and lists countries only in the filter (1.0s)
+  ✓   67 [chromium] › e2e/portal-cdrs.spec.ts:79:1 › searches the callee however the customer typed it (3.5s)
+  ✓   68 [chromium] › e2e/portal-cdrs.spec.ts:103:1 › hides the unanswered calls by default and notes them, then lists them in the all view (1.0s)
+  ✓   69 [chromium] › e2e/portal-cdrs.spec.ts:122:1 › pages through 50 calls at a time (1.0s)
+  ✓   70 [chromium] › e2e/portal-cdrs.spec.ts:137:1 › opens the call detail with the merged country and no ISO code (1.0s)
+  ✓   71 [chromium] › e2e/portal-cdrs.spec.ts:156:1 › network responses omit unverified, and the unverified call is an ordinary row (989ms)
+  ✓   72 [chromium] › e2e/portal-cdrs.spec.ts:178:1 › exports the current filters as CSV with ISO, country and description columns (999ms)
+  ✓   73 [chromium] › e2e/portal-cdrs.spec.ts:234:1 › a session that ends while the page is open asks to log in again and comes back to the same filters (1.2s)
+  ✓   74 [chromium] › e2e/portal-cdrs.spec.ts:264:1 › changing a filter after the session ended goes to the login page and returns with the new filter (1.3s)
+  ✓   75 [chromium] › e2e/portal-cdrs.spec.ts:287:1 › on a phone shows cards and moves range, country and status into the filter sheet (1.1s)
+[WebServer] 2026-10-22T23:00:43.031Z WARN [Better Auth]: Invalid password
+  ✓   76 [chromium] › e2e/portal-settings.spec.ts:21:1 › changes the password and keeps the page (1.3s)
+  -   77 [chromium] › e2e/portal-statements-visual.spec.ts:187:1 › matches portal statement frames in light and dark
+  ✓   78 [chromium] › e2e/portal-statements.spec.ts:465:1 › shows the empty state only without statements and activity (931ms)
+  ✓   79 [chromium] › e2e/auth.spec.ts:12:1 › customer login enters the portal and shows the CNY balance (358ms)
+  ✓   80 [chromium] › e2e/auth.spec.ts:24:1 › USD customer balance uses the dollar sign (303ms)
+  ✓   81 [chromium] › e2e/auth.spec.ts:31:1 › admin login enters the admin shell (317ms)
+  ✓   82 [chromium] › e2e/auth.spec.ts:41:1 › the login response kind decides the zone, not the login page used (690ms)
+  ✓   83 [chromium] › e2e/auth.spec.ts:56:1 › an expired cookie redirects to login and returns to the original page (687ms)
+  ✓   84 [chromium] › e2e/auth.spec.ts:70:1 › a session revoked in the database prompts re-login and returns to the page (748ms)
+  ✓   85 [chromium] › e2e/auth.spec.ts:96:1 › a return path from the other zone falls back to the identity home (422ms)
+  ✓   86 [chromium] › e2e/auth.spec.ts:105:1 › unknown pages show the 404 page and link home (489ms)
+[WebServer] 2026-10-22T23:00:48.695Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-22T23:00:48.791Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-22T23:00:48.880Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-22T23:00:48.977Z WARN [Better Auth]: Invalid password
+[WebServer] 2026-10-22T23:00:49.061Z WARN [Better Auth]: Invalid password
+  ✓   87 [chromium] › e2e/auth.spec.ts:126:1 › wrong passwords lock the account and show the retry countdown (611ms)
+[WebServer] 2026-10-22T23:00:49.298Z WARN [Better Auth]: User not found
+[WebServer] 2026-10-22T23:00:49.400Z WARN [Better Auth]: Invalid password
+  ✓   88 [chromium] › e2e/auth.spec.ts:160:1 › unknown email and wrong password show the same message (347ms)
+  ✓   89 [chromium] › e2e/auth.spec.ts:192:1 › a disabled account sees the disabled message (228ms)
+  ✓   90 [chromium] › e2e/auth.spec.ts:200:1 › logout from the account menu returns to the login page (557ms)
+  ✓   91 [chromium] › e2e/auth.spec.ts:214:1 › a failed logout keeps the session and offers a retry (714ms)
+  ✓   92 [chromium] › e2e/auth.spec.ts:246:1 › a forbidden home shows an explicit error, not a skeleton (360ms)
+  ✓   93 [chromium] › e2e/auth.spec.ts:265:1 › theme choice is applied and persisted (550ms)
+  ✓   94 [chromium] › e2e/auth.spec.ts:299:3 › mobile 375px › mobile login, account sheet theme switch and logout (581ms)
+  ✓   95 [chromium] › e2e/portal-home.spec.ts:14:1 › an overdrawn customer sees the figures, the 30-day chart and the recent answered calls (445ms)
+  ✓   96 [chromium] › e2e/portal-home.spec.ts:109:1 › a suspended customer sees the banner from design 1c (314ms)
+  ✓   97 [chromium] › e2e/portal-home.spec.ts:122:1 › a customer without calls sees the empty state and no chart (276ms)
+  ✓   98 [chromium] › e2e/portal-home.spec.ts:137:1 › the recent calls link to the full call list (341ms)
+  ✓   99 [chromium] › e2e/portal-home.spec.ts:150:3 › on a phone › recent calls are cards and the drawer lists the monthly statement (348ms)
+  ✓  100 [chromium] › e2e/portal-home.spec.ts:170:3 › on a phone › the phone top bar has the ◐ theme button and the status tag has its dot (449ms)
+  ✓  101 [chromium] › e2e/portal-home.spec.ts:183:3 › on a phone › a suspended customer sees the banner above the figures (340ms)
+  ✓  102 [chromium] › e2e/portal-ledger.spec.ts:13:1 › merges daily charges and jumps to that day of CDRs (560ms)
+  ✓  103 [chromium] › e2e/portal-ledger.spec.ts:44:1 › shows the seeded first day of this month: 20 merged calls and the recharge that offsets them (394ms)
+  ✓  104 [chromium] › e2e/portal-ledger.spec.ts:64:1 › filters by type and keeps the range and page in the address (620ms)
+  ✓  105 [chromium] › e2e/portal-ledger.spec.ts:89:1 › shows the empty state of a filtered range (438ms)
+  ✓  106 [chromium] › e2e/portal-ledger.spec.ts:97:1 › exports the filtered ledger as a CSV with the customer view of a credit recharge (898ms)
+  ✓  107 [chromium] › e2e/portal-settings.spec.ts:7:1 › shows the read-only account facts (399ms)
+  ✓  108 [chromium] › e2e/portal-statements.spec.ts:32:3 › ABC001 的月账单 › shows the August and September statements of the mockup (588ms)
+  ✓  109 [chromium] › e2e/portal-statements.spec.ts:106:3 › ABC001 的月账单 › lists countries only by country with each share of the call charges (527ms)
+  ✓  110 [chromium] › e2e/portal-statements.spec.ts:151:3 › ABC001 的月账单 › counts the days of the period and zero-fills the days without calls (473ms)
+  ✓  111 [chromium] › e2e/portal-statements.spec.ts:190:3 › ABC001 的月账单 › shows the live month first with 本月（进行中） and the 20 seeded calls (510ms)
+  ✓  112 [chromium] › e2e/portal-statements.spec.ts:232:3 › ABC001 的月账单 › downloads the long-format summary CSV whose amounts add up to the closing balance (441ms)
+  ✓  113 [chromium] › e2e/portal-statements.spec.ts:274:3 › ABC001 的月账单 › downloads the answered CDRs of the month, as many rows as the statement call count (526ms)
+  ✓  114 [chromium] › e2e/portal-statements.spec.ts:296:3 › ABC001 的月账单 › keeps the raw statement response free of internal fields (371ms)
+  ✓  115 [chromium] › e2e/portal-statements.spec.ts:315:3 › ABC001 的月账单 › has a print button and hides navigation and buttons under print media (422ms)
+  ✓  116 [chromium] › e2e/portal-statements.spec.ts:341:3 › ABC001 的月账单 › opens the print dialog from the print button (425ms)
+  ✓  117 [chromium] › e2e/portal-statements.spec.ts:357:3 › ABC001 的月账单 › answers a month before the opening or a malformed month with a not-found view (393ms)
+  ✓  118 [chromium] › e2e/portal-statements.spec.ts:370:3 › ABC001 的月账单 › trims the topbar and the title to the narrow mockup below 1280 px and keeps them at 1280 px (396ms)
+  ✓  119 [chromium] › e2e/portal-statements.spec.ts:391:3 › ABC001 的月账单 › centres the title of the phone detail topbar on the screen (457ms)
+  ✓  120 [chromium] › e2e/portal-statements.spec.ts:413:3 › ABC001 的月账单 › keeps each day of the phone day table on one line at 375 px (415ms)
+  ✓  121 [chromium] › e2e/portal-statements.spec.ts:430:3 › ABC001 的月账单 › lays the list and the detail out as cards on a phone (525ms)
+  ✓  122 [chromium] › e2e/portal-statements.spec.ts:482:1 › notes the charges without CDR details and sums the rows when the breakdown does not match the ledger (490ms)
+  -  123 [chromium] › e2e/portal-visual.spec.ts:200:1 › matches home frames 1a 1b 1c 1d in light and dark
+
+  4 skipped
+  119 passed (1.2m)

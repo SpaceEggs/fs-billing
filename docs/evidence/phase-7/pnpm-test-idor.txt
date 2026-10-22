@@ -1,0 +1,54 @@
+
+> fs-billing@ test:idor /Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6
+> vitest run --config vitest.db.config.ts apps/api/src/idor.db.test.ts --reporter=verbose
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing/.claude/worktrees/phase-7-pr6
+
+ ✓ apps/api/src/idor.db.test.ts > covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case 1ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > logs in one portal account for each of three distinct fixture tenants 237ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > rejects unauthenticated protected operations and customer access to all live admin operations 135ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > logout positive behavior and A to B attack 125ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > session positive behavior and A to B attack 129ms
+stderr | apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > changePassword positive behavior and A to B attack
+[2m2026-10-22T22:59:32.180Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > changePassword positive behavior and A to B attack 446ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > revokeOtherSessions positive behavior and A to B attack 161ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalContext positive behavior and A to B attack 222ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalHome positive behavior and A to B attack 235ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalCdrs positive behavior and A to B attack 200ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalCdrCountries positive behavior and A to B attack 135ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalCdrsExport positive behavior and A to B attack 82ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalLedger positive behavior and A to B attack 209ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalLedgerExport positive behavior and A to B attack 142ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalStatements positive behavior and A to B attack 387ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalStatement positive behavior and A to B attack 159ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalStatementExport positive behavior and A to B attack 148ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > unfiltered SQL proves the owner bypass and the app RLS boundary 1ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > logs in one portal account for each of three distinct fixture tenants 191ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > rejects unauthenticated protected operations and customer access to all live admin operations 145ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > logout positive behavior and A to B attack 128ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > session positive behavior and A to B attack 122ms
+stderr | apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > changePassword positive behavior and A to B attack
+[2m2026-10-22T22:59:35.299Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > changePassword positive behavior and A to B attack 472ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > revokeOtherSessions positive behavior and A to B attack 187ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalContext positive behavior and A to B attack 198ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalHome positive behavior and A to B attack 210ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalCdrs positive behavior and A to B attack 188ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalCdrCountries positive behavior and A to B attack 125ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalCdrsExport positive behavior and A to B attack 81ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalLedger positive behavior and A to B attack 191ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalLedgerExport positive behavior and A to B attack 137ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalStatements positive behavior and A to B attack 265ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalStatement positive behavior and A to B attack 137ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalStatementExport positive behavior and A to B attack 135ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > unfiltered SQL proves the owner bypass and the app RLS boundary 1ms
+
+ Test Files  1 passed (1)
+      Tests  35 passed (35)
+   Start at  07:59:25
+   Duration  11.71s (tests 91%, import 8%, transform 1%)
+

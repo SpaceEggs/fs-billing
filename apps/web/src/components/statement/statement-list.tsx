@@ -62,6 +62,9 @@ export function StatementList<Row extends StatementListRow>({
   actionLabel = '操作',
   renderAction,
   renderMonthNote,
+  renderMonthTag,
+  renderCard,
+  minutesUnit = false,
 }: {
   currency: Currency;
   rows: readonly Row[];
@@ -71,6 +74,12 @@ export function StatementList<Row extends StatementListRow>({
   renderAction?: (row: Row, layout: 'table' | 'card') => React.ReactNode;
   /** 月份旁与月份下方的附加标签与备注（如后台的「话单已删除」「账单已过期」）。 */
   renderMonthNote?: (row: Row, layout: 'table' | 'card') => React.ReactNode;
+  /** 电脑表格里月份同一行、状态标签之后的标签（后台的「话单已删除」，稿 1g）。 */
+  renderMonthTag?: (row: Row) => React.ReactNode;
+  /** 整张手机卡片：后台租户详情的账单标签页用稿 3f 的紧凑卡片；门户不传，用默认卡片。 */
+  renderCard?: (row: Row) => React.ReactNode;
+  /** 通话分钟数列带「分钟」（后台稿 1f）；门户稿的列表不带。 */
+  minutesUnit?: boolean;
 }) {
   const router = useRouter();
   const money = (amount: string) => ({ currency, amount });
@@ -148,15 +157,13 @@ export function StatementList<Row extends StatementListRow>({
                           </span>
                         )}
                         <StatementStateTag state={row.state} />
+                        {renderMonthTag?.(row)}
                       </div>
                       {renderMonthNote?.(row, 'table')}
                     </div>
                   </td>
                   <td className="px-3 py-3.5 text-right">
-                    <Money
-                      value={money(row.figures.openingBalance)}
-                      tone="plain"
-                    />
+                    <Money value={money(row.figures.openingBalance)} />
                   </td>
                   <td className="hidden px-3 py-3.5 text-right xl:table-cell">
                     <Money value={money(row.figures.recharge)} tone="plain" />
@@ -178,6 +185,7 @@ export function StatementList<Row extends StatementListRow>({
                   </td>
                   <td className="hidden px-3 py-3.5 text-right xl:table-cell">
                     {minutesCount(row.figures.callMinutes)}
+                    {minutesUnit ? '分钟' : ''}
                   </td>
                   {renderAction ? (
                     <td className="px-4 py-3.5 text-right">
@@ -200,6 +208,7 @@ export function StatementList<Row extends StatementListRow>({
       </div>
       <ul className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden">
         {rows.map((row) => {
+          if (renderCard) return <li key={row.month}>{renderCard(row)}</li>;
           const href = hrefFor?.(row);
           const body = (
             <>
@@ -221,10 +230,7 @@ export function StatementList<Row extends StatementListRow>({
                 <div className="flex flex-col gap-[3px]">
                   <span className="text-xs text-muted-foreground">期初</span>
                   <span className="text-sm">
-                    <Money
-                      value={money(row.figures.openingBalance)}
-                      tone="plain"
-                    />
+                    <Money value={money(row.figures.openingBalance)} />
                   </span>
                 </div>
                 <div className="flex flex-col gap-[3px]">

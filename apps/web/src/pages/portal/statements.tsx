@@ -49,6 +49,7 @@ export function PortalStatementsPage({ identity }: { identity: Identity }) {
       title="月账单"
       crumb={crumb}
       activeNav="月账单"
+      narrowTopbar
     >
       <div className="flex flex-col gap-5 p-4 md:p-7">
         <div className="flex items-baseline gap-3 max-md:sr-only">
@@ -56,7 +57,7 @@ export function PortalStatementsPage({ identity }: { identity: Identity }) {
             月账单
           </h1>
           {data ? (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-[13px] text-muted-foreground max-xl:hidden">
               {data.currency}
               {empty ? null : (
                 <span className="hidden xl:inline">

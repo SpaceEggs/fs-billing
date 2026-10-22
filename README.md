@@ -41,7 +41,7 @@ FreeSWITCH 接口放在 Worker 而不是 API，网站和 API 的故障或重启�
 4. 话单推送：通话结束后 `mod_json_cdr` 经本机 relay 推送到 Worker；失败的话单落盘，由重推脚本补推。
 5. 扣费：Worker 入库话单并创建扣费任务，按最长前缀匹配的费率计费，写入账本。
 6. 余额与流水：余额由账本维护，门户和后台查看。
-7. 月账单：每月汇总上月账单，属于阶段 7，进行中，尚未完成。
+7. 月账单：Worker 每天 02:00（北京时间）补出缺失的已结束月份，每月 1 日自然生成上月账单，期初 + 充值 + 赠送 ± 调账 − 通话扣费 = 期末，按国家、按日汇总；每天 03:00 核对期末与流水，不一致记入系统告警。门户和后台查看，管理员可重新生成。
 
 接口细节见 [Worker 接口](docs/worker-api.md)，FreeSWITCH 侧见 [FreeSWITCH 配置](freeswitch/README.md) 和 [FreeSWITCH 准备清单](docs/freeswitch.md)，业务规则见 [设计文档](docs/design.md) §3–§4。
 
@@ -51,18 +51,20 @@ FreeSWITCH 接口放在 Worker 而不是 API，网站和 API 的故障或重启�
 
 - 首页：余额、透支额度、本月消费、最近话单
 - 话单：筛选、查看、导出 CSV
+- 月账单：列表与详情（按国家、按日汇总），导出 CSV，打印
 - 余额流水：充值、扣费、调账等记录
 - 账号设置：账号信息、修改密码
 
 管理后台：
 
-- 租户：列表、新建、编辑，详情页含概览、余额流水、费率表、话单、门户账号和设置
+- 租户：列表、新建、编辑，详情页含概览、余额流水、费率表、话单、账单、门户账号和设置
 - 费率：按租户配置费率版本，支持导入费率表（CSV）、复制费率表到其他租户（或从其他租户复制）
 - 资金：充值、赊账、调账
 - 待收款：赊账充值的收款跟踪
+- 账单：按月份与币种列出所有租户的月账单，重新生成（话单已删除的月份不可用）
 - 管理员账号管理
 
-尚未实现：月账单、未归属话单、余额提醒与告警邮件、系统告警与操作日志页面。进度见 [阶段计划](docs/plan.md)。
+尚未实现：未归属话单、余额提醒与告警邮件、系统告警与操作日志页面。进度见 [阶段计划](docs/plan.md)。
 
 ## 部署
 
@@ -136,4 +138,4 @@ docs/            设计、计划、各阶段设计与验收记录、证据
 - [Worker 接口](docs/worker-api.md)：授权、话单与扣费接口
 - [FreeSWITCH 准备清单](docs/freeswitch.md) 与 [FreeSWITCH 配置](freeswitch/README.md)
 - [费率表设计](docs/rate-list-design.md)
-- 阶段设计与验收：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)、[阶段 4 后端设计](docs/phase-4-api-design.md)、[阶段 4 API](docs/phase-4-api.md)、[阶段 4 Web](docs/phase-4-web.md)、[阶段 5](docs/phase-5-design.md)、[阶段 6](docs/phase-6-design.md)
+- 阶段设计与验收：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)、[阶段 4 后端设计](docs/phase-4-api-design.md)、[阶段 4 API](docs/phase-4-api.md)、[阶段 4 Web](docs/phase-4-web.md)、[阶段 5](docs/phase-5-design.md)、[阶段 6](docs/phase-6-design.md)、[阶段 7](docs/phase-7-design.md)

@@ -109,6 +109,8 @@ export function RegenerateDialog({
         : { onOpenChange: (open) => open || close() })}
       title={title}
       description="按当前话单重新计算该月账单"
+      plainOnDesktop
+      className="md:w-[500px]"
     >
       <div className="flex flex-col gap-1.5">
         <h2 className="m-0 text-[17px] font-semibold">{title}</h2>
