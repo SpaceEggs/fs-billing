@@ -172,3 +172,24 @@ body {
 body {
   font-size: 14px;
 }
+
+/* 打印（决定 29）：导航与按钮在页面里用 print:hidden 隐藏；深色主题打印成浅色，避免白字印在白纸上。 */
+@media print {
+  [data-theme='dark'] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --fg: #09090b;
+    --card: #ffffff;
+    --muted: #f4f4f5;
+    --muted-fg: #71717a;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --primary: #18181b;
+    --primary-fg: #fafafa;
+    --neg: #dc2626;
+    --pos: #16a34a;
+    --side: #fafafa;
+    --row-hover: #fafafa;
+    --skeleton: #ececee;
+  }
+}

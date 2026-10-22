@@ -183,12 +183,16 @@ describe('portal home', () => {
     );
   });
 
-  it('offers neither the monthly statement nor unanswered-call figures', async () => {
+  it('offers the monthly statement entry but no unanswered-call figures', async () => {
     renderHome();
     await screen.findByRole('region', { name: '当前余额' });
     const nav = screen.getByRole('navigation', { name: '主导航' });
     expect(within(nav).getByRole('link', { name: '首页' })).toBeVisible();
-    expect(within(nav).queryByRole('link', { name: '月账单' })).toBeNull();
+    // 阶段 7 PR 4 起门户导航有「月账单」（阶段 6 刻意不放）。
+    expect(within(nav).getByRole('link', { name: '月账单' })).toHaveAttribute(
+      'href',
+      '/portal/statements',
+    );
     expect(screen.queryByText(/未接通/)).toBeNull();
   });
 });
