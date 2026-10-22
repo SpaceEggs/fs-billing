@@ -93,6 +93,20 @@ describe('账单核对（验收标准 2）', () => {
     expect(await alerts(tenant.id)).toEqual([]);
   });
 
+  it('checks the seeded ABC001 statements against the ledger', async () => {
+    const abc001 = (
+      await owner.pool.query<{ id: string }>(
+        "select id from tenants where code = 'ABC001'",
+      )
+    ).rows[0]!.id;
+    const result = await reconcile(abc001);
+    expect(result.statements.map((s) => [s.month, s.status])).toEqual([
+      ['2026-08-01', 'ok'],
+      ['2026-09-01', 'ok'],
+    ]);
+    expect(result.missing).toEqual([]);
+  });
+
   it('flags a call charge written after generation as stale and opens one alert', async () => {
     const tenant = await reconciledTenant();
     // 9 月的一通电话，扣费在生成之后才补写。

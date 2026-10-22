@@ -47,16 +47,20 @@ describe('ABC001 种子余额', () => {
     const result = await withTenant(app.db, abc001, async (tx) => ({
       ledger: (
         await tx.execute(
-          sql`select sum(amount)::text as total, count(*)::int as entries from ledger_entries`,
+          sql`select trim_scale(sum(amount))::text as total, count(*)::int as entries from ledger_entries`,
         )
       ).rows,
-      cached: (await tx.execute(sql`select balance::text from tenant_balances`))
-        .rows,
+      cached: (
+        await tx.execute(
+          sql`select trim_scale(balance)::text as balance from tenant_balances`,
+        )
+      ).rows,
       display: formatMoney((await loadRatingTenant(tx, 'ABC001'))!.balance),
     }));
     expect(result).toEqual({
-      ledger: [{ total: '-35.20', entries: 33 }],
-      cached: [{ balance: '-35.20' }],
+      // 5 笔人工流水 + 8 月 9,642 笔与 9 月 12,804 笔逐通扣费（阶段 7 决定 20）。
+      ledger: [{ total: '-35.2', entries: 22451 }],
+      cached: [{ balance: '-35.2' }],
       display: '-35.20',
     });
   });
@@ -103,7 +107,7 @@ describe('流水只能新增', () => {
     const { rows } = await owner.pool.query(
       `SELECT count(*)::int AS seeded FROM ledger_entries WHERE idempotency_key LIKE 'seed:%'`,
     );
-    expect(rows).toEqual([{ seeded: 50 }]);
+    expect(rows).toEqual([{ seeded: 22 }]);
   });
 });
 
@@ -232,16 +236,35 @@ describe('流水按发生时间归属月份', () => {
     ]);
   });
 
-  it('种子中 ABC001 的通话扣费全部归属 9 月，合计 −2486.30（设计稿本月消费）', async () => {
+  it('种子中 ABC001 的通话扣费按接通时间归属 8、9 月，合计即月账单设计稿的通话扣费', async () => {
     const abc001 = await tenantId(app, 'ABC001');
     const { rows } = await withTenant(app.db, abc001, (tx) =>
       tx.execute(sql`
         select to_char(occurred_at at time zone 'Asia/Shanghai', 'YYYY-MM') as month,
-               sum(amount)::text as charges, count(*)::int as entries
-        from ledger_entries where kind = 'call_charge' group by 1`),
+               trim_scale(sum(amount))::text as charges, count(*)::int as entries
+        from ledger_entries where kind = 'call_charge' group by 1 order by 1`),
     );
     expect(rows).toEqual([
-      { month: '2026-09', charges: '-2486.30', entries: 28 },
+      { month: '2026-08', charges: '-1873.4', entries: 9642 },
+      { month: '2026-09', charges: '-2486.3', entries: 12804 },
+    ]);
+  });
+
+  it('种子的逐通扣费用生产的幂等键 call:<UUID>，每条有对应话单，Worker 的补扣对账找不到缺失', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const { rows } = await withTenant(app.db, abc001, (tx) =>
+      tx.execute(sql`
+        select
+          count(*) filter (where l.idempotency_key not like 'call:%')::int as other_keys,
+          (select count(*)::int from cdrs c
+            where c.charge > 0 and not exists (
+              select 1 from ledger_entries x where x.tenant_id = c.tenant_id and x.kind = 'call_charge'
+                and x.idempotency_key = 'call:' || c.call_uuid::text)) as uncharged_cdrs,
+          count(*) filter (where l.occurred_at >= l.created_at)::int as not_after_answer
+        from ledger_entries l where l.kind = 'call_charge'`),
+    );
+    expect(rows).toEqual([
+      { other_keys: 0, uncharged_cdrs: 0, not_after_answer: 0 },
     ]);
   });
 

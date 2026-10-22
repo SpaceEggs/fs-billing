@@ -1,11 +1,13 @@
 import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { decimal } from '@fs-billing/rating';
 import {
   adminId,
   backendPid,
   connections,
   deferred,
   pgError,
+  tenantId,
 } from '../../test/support.js';
 import {
   ensureStatementPartitions,
@@ -48,6 +50,144 @@ async function created(
     throw new Error(`期望新建账单，实际 ${result.outcome}`);
   return result.statement;
 }
+
+describe('ABC001 种子账单（验收标准 1）', () => {
+  it('generates the ABC001 August and September statements from the seed with the mockup figures', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const august = (await read(abc001, '2026-08-01'))!;
+    const september = (await read(abc001, '2026-09-01'))!;
+    expect(august).toMatchObject({
+      month: '2026-08-01',
+      version: 1,
+      openingBalance: '0',
+      recharge: '3000',
+      gift: '50',
+      adjustment: '0',
+      callCharges: '1873.4',
+      closingBalance: '1176.6',
+      calls: 9642,
+      callMinutes: '37468',
+      breakdownGap: '0',
+      detailsDeleted: false,
+      generatedBy: null,
+    });
+    expect(september).toMatchObject({
+      month: '2026-09-01',
+      version: 1,
+      openingBalance: '1176.6',
+      recharge: '1300',
+      gift: '0',
+      adjustment: '-25.5',
+      callCharges: '2486.3',
+      closingBalance: '-35.2',
+      calls: 12804,
+      callMinutes: '49726',
+      breakdownGap: '0',
+      detailsDeleted: false,
+    });
+    // 9 月期末就是当前余额。
+    const { rows } = await withAdmin(app.db, (tx) =>
+      tx.execute<{ balance: string }>(
+        sql`select balance::text from tenant_balances where tenant_id = ${abc001}::uuid`,
+      ),
+    );
+    expect(decimal(rows[0]!.balance).eq(september.closingBalance)).toBe(true);
+  });
+
+  it('matches the mockup country tables with descriptions folded into the country', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const pick = (statement: StoredStatement) =>
+      statement.countries.map((c) => [c.country, c.calls, c.minutes, c.charge]);
+    expect(pick((await read(abc001, '2026-09-01'))!)).toEqual([
+      ['中国', 9820, '38476', '1923.8'],
+      ['牙买加', 186, '900', '225'],
+      ['英国', 1048, '3800', '146'],
+      ['日本', 704, '2600', '91'],
+      ['中国香港', 466, '1700', '51'],
+      ['新加坡', 398, '1500', '42'],
+      ['美国/加拿大', 182, '750', '7.5'],
+    ]);
+    expect(pick((await read(abc001, '2026-08-01'))!)).toEqual([
+      ['中国', 7350, '28803', '1440.15'],
+      ['牙买加', 145, '700', '175'],
+      ['英国', 792, '2900', '108'],
+      ['日本', 540, '2000', '70'],
+      ['中国香港', 384, '1400', '42'],
+      ['新加坡', 318, '1200', '33.6'],
+      ['美国/加拿大', 113, '465', '4.65'],
+    ]);
+  });
+
+  it('matches the mockup day tables: August starts on the opening day, September ends on the 29th', async () => {
+    const abc001 = await tenantId(app, 'ABC001');
+    const august = (await read(abc001, '2026-08-01'))!;
+    const september = (await read(abc001, '2026-09-01'))!;
+    expect(august.days).toHaveLength(20);
+    expect([august.days[0]!.day, august.days.at(-1)!.day]).toEqual([
+      '2026-08-12',
+      '2026-08-31',
+    ]);
+    expect(august.days[0]).toMatchObject({
+      calls: 163,
+      minutes: '629',
+      charge: '31.5',
+    });
+    expect(september.days).toHaveLength(29);
+    expect(
+      september.days
+        .filter((d) => d.day >= '2026-09-23')
+        .map((d) => [d.day, d.calls, d.minutes, d.charge]),
+    ).toEqual([
+      ['2026-09-23', 444, '1725', '86.05'],
+      ['2026-09-24', 429, '1672', '83.48'],
+      ['2026-09-25', 467, '1802', '90.12'],
+      ['2026-09-26', 443, '1716', '85.9'],
+      ['2026-09-27', 416, '1621', '81.27'],
+      ['2026-09-28', 454, '1776', '88.64'],
+      ['2026-09-29', 219, '843', '42.1'],
+    ]);
+    for (const statement of [august, september]) {
+      const sum = (key: 'calls' | 'minutes' | 'charge') =>
+        statement.days
+          .reduce((total, day) => total.plus(day[key]), decimal('0'))
+          .toFixed();
+      expect([sum('calls'), sum('minutes'), sum('charge')]).toEqual([
+        String(statement.calls),
+        statement.callMinutes,
+        statement.callCharges,
+      ]);
+    }
+  });
+
+  it('closing balance equals the ledger sum to month end for every seeded statement', async () => {
+    const { rows } = await withAdmin(app.db, (tx) =>
+      tx.execute<{ code: string; month: string; diff: string }>(sql`
+        select t.code, to_char(s.month, 'YYYY-MM') as month,
+          (s.closing_balance - (select coalesce(sum(l.amount), 0) from ledger_entries l
+            where l.tenant_id = s.tenant_id
+              and l.occurred_at < ((s.month + interval '1 month')::timestamp at time zone 'Asia/Shanghai')))::text as diff
+        from monthly_statements s join tenants t on t.id = s.tenant_id
+        where t.code in ('ABC001', 'HZX014', 'GZT007', 'SHC005') order by 1, 2`),
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+    for (const row of rows)
+      expect(decimal(row.diff).isZero(), `${row.code} ${row.month}`).toBe(true);
+  });
+
+  it('the seed generates September for every tenant that existed in September and nothing before the first month', async () => {
+    const { rows } = await withAdmin(app.db, (tx) =>
+      tx.execute<{ code: string; months: string }>(sql`
+        select t.code, string_agg(to_char(s.month, 'YYYY-MM'), ',' order by s.month) as months
+        from tenants t left join monthly_statements s on s.tenant_id = t.id
+        where t.code in ('ABC001', 'GZT007', 'CDT018') group by t.code order by t.code`),
+    );
+    expect(rows).toEqual([
+      { code: 'ABC001', months: '2026-08,2026-09' },
+      { code: 'CDT018', months: null },
+      { code: 'GZT007', months: '2026-09' },
+    ]);
+  });
+});
 
 describe('北京月归属（验收标准 3）', () => {
   it('puts a call answered on 09-30 23:59 and charged on 10-01 into September', async () => {
