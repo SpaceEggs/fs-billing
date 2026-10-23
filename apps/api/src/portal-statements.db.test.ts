@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { listPortalStatements } from '@fs-billing/db';
+import { sql } from 'drizzle-orm';
+import { listPortalStatements, withTenant } from '@fs-billing/db';
 import {
   addDecimalStrings,
   apiErrorSchema,
@@ -49,6 +50,10 @@ const monthsFrom = (first: string) => {
 /** 路由自己决定响应字段；门户 JSON 里不能出现任何内部字段。 */
 const internalFields =
   /"(version|generatedBy|reconcile\w*|breakdownGap|tenantId|tenant_id|firstGeneratedAt|regenerable|statementId)"/;
+
+/** 删除话单的元数据：谁、何时、多少条，及其任何写法。 */
+const deletionFields =
+  /details_?deleted_?(by|at|count)|deleted_?(by|at|count)/i;
 
 beforeAll(async () => {
   fixture = await createFixture(connections);
@@ -427,29 +432,40 @@ describe('GET /api/portal/statements/{month}', () => {
   it('marks a month whose call details were deleted without changing the figures', async () => {
     const tenant = fixture.a2.tenantId!;
     await generateMonth(connections, tenant, '2026-09-01');
+    // 阶段 8 的删除元数据（谁、何时、多少条）只给后台；门户响应一个字都不能带。
     await connections.owner.pool.query(
-      `update public.monthly_statements set details_deleted = true
+      `update public.monthly_statements set details_deleted = true,
+         details_deleted_at = now(), details_deleted_by = $2, details_deleted_count = 12
        where tenant_id = $1 and month = '2026-09-01'`,
-      [tenant],
+      [tenant, adminId()],
     );
     const response = await api.inject({
       url: '/api/portal/statements/2026-09',
       headers: requestHeaders(a2Cookie),
     });
+    // 租户身份对本租户的账单行有 SELECT 权限（既有策略），所以靠门户查询显式列出列来挡住这三列。
+    const visible = await withTenant(connections.app.db, tenant, (tx) =>
+      tx.execute(
+        sql`select details_deleted_by is not null as has_admin, details_deleted_count from monthly_statements
+            where month = '2026-09-01'`,
+      ),
+    );
+    expect(visible.rows).toEqual([
+      { has_admin: true, details_deleted_count: 12 },
+    ]);
+    expect(response.body).not.toMatch(deletionFields);
     const body = portalStatementResponseSchema.parse(response.json());
     expect(body).toMatchObject({
       state: 'final',
       detailsDeleted: true,
       figures: { recharge: '40', closingBalance: '39.5' },
     });
-    const list = portalStatementsResponseSchema.parse(
-      (
-        await api.inject({
-          url: '/api/portal/statements',
-          headers: requestHeaders(a2Cookie),
-        })
-      ).json(),
-    );
+    const listResponse = await api.inject({
+      url: '/api/portal/statements',
+      headers: requestHeaders(a2Cookie),
+    });
+    expect(listResponse.body).not.toMatch(deletionFields);
+    const list = portalStatementsResponseSchema.parse(listResponse.json());
     expect(
       list.items.find((item) => item.month === '2026-09')?.detailsDeleted,
     ).toBe(true);

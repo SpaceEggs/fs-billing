@@ -15,6 +15,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -251,6 +252,45 @@ export const rawCdrs = pgTable(
   (table) => [primaryKey({ columns: [table.id, table.receivedAt] })],
 );
 
+export const unassignedCdrStatuses = [
+  'pending',
+  'ignored',
+  'assigned',
+  'superseded',
+] as const;
+export type UnassignedCdrStatus = (typeof unassignedCdrStatuses)[number];
+
+/** 分配批次（只增）：一次分配一行，幂等键在租户内唯一。 */
+export const unassignedAssignments = pgTable(
+  'unassigned_assignments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestedBy: uuid('requested_by').notNull(),
+    /** 按分组选择时的标签（空串表示标签为空的分组），按勾选时为空。 */
+    sourceTag: text('source_tag'),
+    /** 请求（选择 + 预览数字）的摘要，同键重放时核对。 */
+    requestDigest: text('request_digest').notNull(),
+    assignedCount: integer('assigned_count').notNull(),
+    noRateCount: integer('no_rate_count').notNull(),
+    blockedCount: integer('blocked_count').notNull(),
+    chargeTotal: numeric('charge_total').notNull(),
+    balanceBefore: numeric('balance_before').notNull(),
+    balanceAfter: numeric('balance_after').notNull(),
+    /** 扣费流水落入的北京月（1 日）。 */
+    affectedMonths: date('affected_months').array().notNull(),
+    auditId: uuid('audit_id').notNull(),
+    createdAt: at('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    unique('unassigned_assignments_tenant_idempotency_key').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+  ],
+);
+
 export const unassignedCdrs = pgTable('unassigned_cdrs', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantTag: text('tenant_tag').notNull().default(''),
@@ -265,7 +305,7 @@ export const unassignedCdrs = pgTable('unassigned_cdrs', {
   callee: text('callee').notNull(),
   billingNumber: text('billing_number'),
   durationSeconds: integer('duration_seconds').notNull().default(0),
-  status: text('status', { enum: ['pending', 'ignored', 'assigned'] })
+  status: text('status', { enum: unassignedCdrStatuses })
     .notNull()
     .default('pending'),
   ignoreReason: text('ignore_reason'),
@@ -273,6 +313,18 @@ export const unassignedCdrs = pgTable('unassigned_cdrs', {
   resolvedBy: uuid('resolved_by'),
   resolvedAt: at('resolved_at'),
   receivedAt: at('received_at').notNull().defaultNow(),
+  hangupCause: text('hangup_cause').notNull().default(''),
+  unverified: boolean('unverified').notNull().default(false),
+  /** 无效推送去重键：原文 UTF-8 字节的 SHA-256 十六进制。 */
+  rawSha256: text('raw_sha256'),
+  pushCount: integer('push_count').notNull().default(1),
+  lastPushedAt: at('last_pushed_at'),
+  /** 校验失败的原文里尽力解析出的 variables.uuid。 */
+  candidateCallUuid: uuid('candidate_call_uuid'),
+  /** 状态 superseded 时，修正重推成功的通话 UUID。 */
+  supersededByCallUuid: uuid('superseded_by_call_uuid'),
+  /** 状态 assigned 时所属的分配批次。 */
+  assignmentId: uuid('assignment_id'),
 });
 
 export const statementReconcileStatuses = [
@@ -311,6 +363,10 @@ export const monthlyStatements = pgTable('monthly_statements', {
     .default('unchecked'),
   reconciledAt: at('reconciled_at'),
   reconcileDiff: numeric('reconcile_diff'),
+  /** 删除话单的时间、操作人与条数；三列同为空或同非空，只在 details_deleted 置真的同一次更新里写入。 */
+  detailsDeletedAt: at('details_deleted_at'),
+  detailsDeletedBy: uuid('details_deleted_by'),
+  detailsDeletedCount: integer('details_deleted_count'),
 });
 
 export const monthlyStatementCountries = pgTable(
@@ -347,7 +403,9 @@ export const monthlyStatementDays = pgTable(
 
 export const operationLogs = pgTable('operation_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
-  adminId: uuid('admin_id').notNull(),
+  /** 与 actorLabel 恰有其一：没有管理员的事件（auth:bootstrap 等）只有 actorLabel。 */
+  adminId: uuid('admin_id'),
+  actorLabel: text('actor_label'),
   tenantId: uuid('tenant_id'),
   action: text('action').notNull(),
   target: text('target').notNull().default(''),
@@ -361,6 +419,8 @@ export const systemAlertKinds = [
   'email_failed',
   'partition_failed',
   'statement_mismatch',
+  'audit_failed',
+  'raw_archive_failed',
 ] as const;
 export type SystemAlertKind = (typeof systemAlertKinds)[number];
 

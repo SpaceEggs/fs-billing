@@ -54,13 +54,14 @@ const auditQueryGrantOptionLine =
 type AuditRow = {
   id: string;
   created_at: Date;
-  admin_id: string;
-  admin_email: string;
-  admin_name: string;
+  admin_id: string | null;
+  admin_email: string | null;
+  admin_name: string | null;
   tenant_code: string | null;
   action: string;
   target: string;
   details: unknown;
+  actor_label: string | null;
 };
 
 const query = (
@@ -111,6 +112,7 @@ describe('audit_operation_logs', () => {
         action: 'other_action',
         target: 'r2',
         details: { n: 2 },
+        actor_label: null,
       },
       {
         id: r1,
@@ -122,8 +124,32 @@ describe('audit_operation_logs', () => {
         action: probe,
         target: 'r1',
         details: { n: 1 },
+        actor_label: null,
       },
     ]);
+  });
+
+  it('returns events that have no administrator with their actor label (nullable actor, LEFT JOIN)', async () => {
+    const label = `cli:auth:bootstrap@probe-${randomUUID()}/ops`;
+    await owner.pool.query(
+      `INSERT INTO operation_logs (admin_id, actor_label, tenant_id, action, target, details, created_at)
+       VALUES (NULL, $1, $2, $3, 'r5', '{"n":5}', '2001-01-05T00:00:00Z')`,
+      [label, tenantA.id, `${probe}_label`],
+    );
+    const rows = await query(null, `${probe}_label`, null, null);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({
+      ...rows[0]!,
+      created_at: new Date('2001-01-05T00:00:00Z'),
+      admin_id: null,
+      admin_email: null,
+      admin_name: null,
+      tenant_code: tenantA.code,
+      action: `${probe}_label`,
+      target: 'r5',
+      details: { n: 5 },
+      actor_label: label,
+    });
   });
 
   it('filters by exact action, keeping logs without a tenant', async () => {

@@ -361,3 +361,183 @@ describe('月账单明细表（阶段 7）', () => {
     });
   });
 });
+
+describe('话单运维表（阶段 8）', () => {
+  /** 为每张表备一行：未归属话单有种子，批次与操作日志由测试写入（owner）。 */
+  async function ensureOperationRows() {
+    const admin = await adminId(owner);
+    const tenant = await createTenant(app, 'CNY');
+    const auditId = randomUUID();
+    await owner.pool.query(
+      `insert into operation_logs (admin_id, tenant_id, action, target) values ($1, $2, 'rls_probe', 'x')`,
+      [admin, tenant.id],
+    );
+    await owner.pool.query(
+      `insert into unassigned_assignments (tenant_id, idempotency_key, requested_by, request_digest, assigned_count,
+         no_rate_count, blocked_count, charge_total, balance_before, balance_after, affected_months, audit_id)
+       values ($1, $2, $3, 'digest', 0, 0, 0, 0, 0, 0, '{}', $4)`,
+      [tenant.id, `rls:${auditId}`, admin, auditId],
+    );
+    return { admin, tenant };
+  }
+
+  it('new staff-only tables hide their rows from tenants', async () => {
+    const { admin, tenant } = await ensureOperationRows();
+    const abc001 = await tenantId(app, 'ABC001');
+    for (const scoped of [abc001, tenant.id]) {
+      const { rows } = await withTenant(app.db, scoped, (tx) =>
+        tx.execute(
+          sql`select (select count(*) from unassigned_cdrs)::int as unassigned,
+                     (select count(*) from unassigned_assignments)::int as assignments,
+                     (select count(*) from operation_logs)::int as logs`,
+        ),
+      );
+      expect(rows).toEqual([{ unassigned: 0, assignments: 0, logs: 0 }]);
+    }
+    // 管理员看得到：对照组，证明上面的 0 是策略而不是没有数据。
+    const { rows: seen } = await withAdmin(app.db, (tx) =>
+      tx.execute(
+        sql`select (select count(*) from unassigned_cdrs)::int > 0 as unassigned,
+                   (select count(*) from unassigned_assignments)::int > 0 as assignments,
+                   (select count(*) from operation_logs)::int > 0 as logs`,
+      ),
+    );
+    expect(seen).toEqual([{ unassigned: true, assignments: true, logs: true }]);
+
+    const writes: Record<
+      string,
+      { sql: ReturnType<typeof sql>; code: string }
+    > = {
+      'insert unassigned_cdrs': {
+        sql: sql`insert into unassigned_cdrs (call_uuid, reason, started_at, ended_at, caller, callee, billing_number)
+                 values (${randomUUID()}, '租户不存在', now(), now(), '1', '2', '8613800138000')`,
+        code: '42501',
+      },
+      'insert unassigned_assignments': {
+        sql: sql`insert into unassigned_assignments (tenant_id, idempotency_key, requested_by, request_digest, assigned_count,
+                   no_rate_count, blocked_count, charge_total, balance_before, balance_after, affected_months, audit_id)
+                 values (${abc001}::uuid, 'tenant-write', ${admin}::uuid, 'd', 0, 0, 0, 0, 0, 0, '{}', ${randomUUID()}::uuid)`,
+        code: '42501',
+      },
+      'insert operation_logs': {
+        sql: sql`insert into operation_logs (admin_id, action) values (${admin}::uuid, 'tenant-write')`,
+        code: '42501',
+      },
+      // 应用角色没有这些权限，先于策略被拒。
+      'update unassigned_assignments': {
+        sql: sql`update unassigned_assignments set assigned_count = 1`,
+        code: '42501',
+      },
+      'delete unassigned_assignments': {
+        sql: sql`delete from unassigned_assignments`,
+        code: '42501',
+      },
+      'delete unassigned_cdrs': {
+        sql: sql`delete from unassigned_cdrs`,
+        code: '42501',
+      },
+      'update operation_logs': {
+        sql: sql`update operation_logs set action = 'x'`,
+        code: '42501',
+      },
+      'delete operation_logs': {
+        sql: sql`delete from operation_logs`,
+        code: '42501',
+      },
+    };
+    for (const [label, write] of Object.entries(writes)) {
+      const error = await pgError(
+        withTenant(app.db, abc001, (tx) => tx.execute(write.sql)),
+      );
+      expect({ label, code: error.code }).toEqual({ label, code: write.code });
+    }
+    // 有 UPDATE 权限的 unassigned_cdrs：策略让租户一行都改不到。
+    const updated = await withTenant(app.db, abc001, (tx) =>
+      tx.execute(sql`update unassigned_cdrs set reason = '被租户改过'`),
+    );
+    expect(updated.rowCount).toBe(0);
+    const { rows: untouched } = await owner.pool.query(
+      `select count(*)::int as n from unassigned_cdrs where reason = '被租户改过'`,
+    );
+    expect(untouched).toEqual([{ n: 0 }]);
+  });
+
+  it('unassigned_assignments stays append-only', async () => {
+    await ensureOperationRows();
+    const messages = [];
+    for (const statement of [
+      `UPDATE unassigned_assignments SET assigned_count = assigned_count`,
+      `DELETE FROM unassigned_assignments`,
+    ])
+      messages.push((await pgError(owner.pool.query(statement))).message);
+    expect(messages).toEqual([
+      'unassigned_assignments 只能新增，禁止 UPDATE',
+      'unassigned_assignments 只能新增，禁止 DELETE',
+    ]);
+    // unassigned_cdrs 引用它，PostgreSQL 在触发器之前就拒绝了 TRUNCATE；触发器仍在，是第二道防线。
+    expect(
+      (await pgError(owner.pool.query('TRUNCATE unassigned_assignments')))
+        .message,
+    ).toMatch(/只能新增，禁止 TRUNCATE|cannot truncate a table referenced/);
+    const { rows } = await owner.pool.query(
+      `select tgname from pg_trigger where tgrelid = 'unassigned_assignments'::regclass and not tgisinternal order by 1`,
+    );
+    expect(rows).toEqual([
+      { tgname: 'unassigned_assignments_append_only' },
+      { tgname: 'unassigned_assignments_no_truncate' },
+    ]);
+  });
+
+  it('operation_logs stays append-only with a nullable actor', async () => {
+    const admin = await adminId(owner);
+    const insert = (adminValue: string | null, label: string | null) =>
+      owner.pool.query(
+        `insert into operation_logs (admin_id, actor_label, action, target) values ($1, $2, 'actor_probe', 'x') returning id`,
+        [adminValue, label],
+      );
+    // 恰有其一：管理员，或没有管理员的事件来源标签。
+    const label = `cli:auth:bootstrap@probe/${randomUUID().slice(0, 8)}`;
+    expect((await insert(admin, null)).rowCount).toBe(1);
+    expect((await insert(null, label)).rowCount).toBe(1);
+    for (const [adminValue, actorLabel] of [
+      [null, null],
+      [admin, label],
+      [null, ''],
+      [null, '   '],
+    ] as const)
+      expect(
+        await pgError(insert(adminValue, actorLabel)),
+        `${adminValue} / ${actorLabel}`,
+      ).toMatchObject({ code: '23514' });
+    // 带标签的行同样只增。
+    const messages = [];
+    for (const statement of [
+      `UPDATE operation_logs SET actor_label = 'x' WHERE action = 'actor_probe'`,
+      `DELETE FROM operation_logs WHERE action = 'actor_probe'`,
+      `TRUNCATE operation_logs`,
+    ])
+      messages.push((await pgError(owner.pool.query(statement))).message);
+    expect(messages).toEqual([
+      'operation_logs 只能新增，禁止 UPDATE',
+      'operation_logs 只能新增，禁止 DELETE',
+      'operation_logs 只能新增，禁止 TRUNCATE',
+    ]);
+    // 管理员身份可以写没有管理员的事件；系统身份与租户身份都不行。
+    await withAdmin(app.db, (tx) =>
+      tx.execute(
+        sql`insert into operation_logs (actor_label, action, target) values (${label}, 'actor_probe', 'admin-scope')`,
+      ),
+    );
+    expect(
+      (
+        await pgError(
+          withSystem(app.db, (tx) =>
+            tx.execute(
+              sql`insert into operation_logs (actor_label, action, target) values (${label}, 'actor_probe', 'system-scope')`,
+            ),
+          ),
+        )
+      ).code,
+    ).toBe('42501');
+  });
+});
