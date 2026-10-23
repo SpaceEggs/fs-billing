@@ -686,6 +686,8 @@ PR 2 与 PR 3 只依赖 PR 1，可并行；PR 4 也只依赖 PR 1。PR 5 依赖 
 
 无。原先的 14 个问题已由用户 2026-10-23 回答，全部采用推荐项，见[已决定](#已决定)第 31 至 44 项。
 
+PR 2 带来一个新问题：`ensure_month_partition` 要不要加 `lock_timeout`，加在 PR 3 的迁移 0019 里还是单独一个迁移？依据与实测见[PR 2 实现时的验证与偏差](#pr-2-实现时的验证与偏差)。这是技术问题，PR 2 没有改，等确认后在 PR 3 处理。
+
 ## 本步验证
 
 2026-10-23 在本机验证了以下事实，没有实现代码，没有运行 `pnpm check`，没有运行任何测试。
@@ -714,3 +716,16 @@ PR 2 与 PR 3 只依赖 PR 1，可并行；PR 4 也只依赖 PR 1。PR 5 依赖 
 - **`ASSIGN_MAX_ROWS` 取 500，不是 2000。** PR 1 先按 5 秒推送超时取 2000（实测 4.2 s，忙时 6.8 s 就超了），用户评审后改为 500（决定 45）：最终一次运行 500 条持租户锁 1.17 s，忙碌机器上 2.25 s。预览与分配共用这个上限；忽略与撤销忽略用单独的 `IGNORE_MAX_ROWS = 2000`，因为它们只是一条 UPDATE。
 - **分配给已停用的租户允许**（决定 46），有测试 `assigns to a disabled tenant like to an active one`。
 - **种子只有 ABC01 的 326 条**，空标签的 12 条与已忽略的 5 条留给 PR 5 或 PR 6（决定 47）。
+
+## PR 2 实现时的验证与偏差
+
+2026-10-23 至 24 PR 2 落地。证据与 200 次循环的原始记录在 [evidence/phase-8/README.md](evidence/phase-8/README.md) 和 [evidence/phase-8/partition-flake.md](evidence/phase-8/partition-flake.md)。与本文原先写法不同、或本文没有规定而由实现选择的地方：
+
+- **校验失败原因的格式。** `summarizeCdrIssues` 在 `packages/shared/src/worker.ts`。「路径」是 Zod issue 路径用 `.` 连接；路径为空（没有字段可指，例如整个正文不是对象、或时间与时长不一致的跨字段校验）写 `(root)`。完全相同的 `路径(错误码)` 只算一次。「等 N 项」的 N 是去重后的问题总数（不是被省略的个数），格式为 `…, v(x) 等 8 项`；超过 200 字符时先去掉列出的条目、保留「等 N 项」，仍超长才硬截断。Zod 的 `message` 与输入值都不进入原因。校验用的 `unassigned_cdrs_billing_number_reason_check` 依赖的前缀没有变。
+- **去重键与合并行。** `raw_sha256` 取收到的字符串按 UTF-8 的 SHA-256；冲突时只更新 `push_count`、`last_pushed_at`，行里的 `raw_id` 仍是第一次推送的原文，后来的原文只在 `raw_cdrs` 里（本来就每次各存一份）。新插入与否用 `RETURNING (xmax = 0)` 判断，仅新插入时写告警。去重对已忽略的行同样生效；行变成 `superseded` 之后不再占用索引，同一份坏原文再来会是新的待处理行并写告警（与索引谓词一致）。末尾多一个换行等字节差异算另一份原文。
+- **解决旧待处理行（superseded）。** 放在入库事务里、拿到租户锁并声明 `app.cdr_ingest` 之后、查 `call_uuids` 之前，所以入队、停放、重复三种结果都会执行，且与它们同事务回滚。只改 `status = 'pending'` 的行：已忽略的行不动（人工处理优先）。**已知局限，未改，需要产品取舍时再定：**（1）通话已经入库之后才到达的同 UUID 坏原文，保持待处理，直到该 UUID 再有一次通过校验的推送（重复也算）才被解决；（2）校验失败行的插入与同一 UUID 修正稿的入库没有互斥，极窄的并发顺序下旧行会漏掉标记，人工忽略即可。
+- **共用号码用例。** 文件 `freeswitch/tests/dialed-cases.tsv`：13 条合法、32 条非法，是原来 TypeScript 的 8 + 20 条与 Lua 的 7 + 21 条的并集再加 `+4471`、`12345678901234`；转义除设计里的 `\n`、`\s` 外还有 `\t`、`\r`、`\\`，并增加 `\e` 表示空串（空串拨号不能靠行尾留空，编辑器会去掉行尾空白）。读取与转义在 `tests/dialed-cases.ts`，`dialed.test.ts` 与 `tests/dialed-cases.test.ts` 共用；Lua 测试自己解析同一个文件并在成功后多打印一行 `dialed cases: 13 valid, 32 invalid`，`tests/billing-authorize.test.ts` 和 `tests/dialed-cases.test.ts` 按 TypeScript 读到的条数核对这一行，所以任何一侧少读、多读都会失败。两侧各自的「必须拒绝」与「必须归一化为」结论都来自这一个文件（并集里每个拨号两端结论一致，Lua 一侧本机用 Lua 5.5 跑过，CI 用 lua5.3）。`billing-authorize.test.ts` 里检查 dialplan 正则的几份清单测的是 XML 里的表达式，不是归一化函数，不在本项范围，没有动。本机没有 `lua5.3`，所以 `pnpm check` 里与 Lua 有关的两个测试在本机跳过，CI 必跑。
+- **分区维护测试偶发超时：没有复现，根因未找到，不能说已修复。** 修复前 200 次（单文件、空闲机器）0 次失败；另做 200 次（10 个 CPU 满载进程同时运行）0 次失败，20 次整套 `test:db` 里目标测试 0 次失败。因此 PR 2 只做了「能证明的」事：测试失败时输出任务状态、非空闲会话、等待中的锁和阻塞者（`lockSnapshot`），测试库设 `log_lock_waits = on`、`deadlock_timeout = 200ms`（`packages/db/test/global-setup.ts`），不放宽任何超时。修复后同样 200 次的结果（0 次失败）只说明加了诊断之后没有变坏，不说明不稳定已消除。plan.md 这一项**不**勾选，留给下次真实出现时用快照定位；详见 evidence；其中记录了两次与测试无关的宿主机/虚拟机整体停顿（Docker 虚拟机时钟落后主机 15.6 分钟，使几个用主机时间对数据库时间的无关测试失败），判断 CI 上真实的偶发超时时要先排除这一类。
+- **`ensure_month_partition` 加 `lock_timeout`：评估结论是需要，但 PR 2 不改。** 在临时库上实测：一个读过 `cdrs` 的长事务（6 秒）加一次缺分区的建分区调用，后到的普通 `SELECT FROM cdrs` 被排在建分区的 ACCESS EXCLUSIVE 请求后面等了 4.1 秒；给函数 `SET lock_timeout = '2s'` 后建分区在 2 秒后以 55P03 失败（Worker 记 `partition_failed` 告警，pg-boss 重试），被挡住的读只等了 1.1 秒。不改的原因：这要新增迁移，而 0019 已预留给 PR 3（归档），PR 2 与 PR 3 可并行，编号会冲突；日常维护提前一个月建分区，命中「已存在」直接返回，不会走到取锁这一步。建议并进 PR 3 的迁移（它本来就要写带 `lock_timeout` 的分离函数），请用户确认。
+- **`park()` 保存 `hangup_cause`、`unverified`。** PR 1 已做；PR 2 补了直接断言它的测试（`keeps the hangup cause and the unverified flag of a parked call`）。
+- **既有测试的预期变了。** `reliability.db.test.ts` 的「无效时间但有效 UUID 的推送……」原先断言同一份坏原文推两次得到两条待处理行，现在是一条（`push_count = 2`），修正重推后是 `superseded`。其余既有测试没有改预期。
