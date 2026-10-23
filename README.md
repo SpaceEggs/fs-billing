@@ -77,7 +77,7 @@ FreeSWITCH 接口放在 Worker 而不是 API，网站和 API 的故障或重启�
 
 ## 快速开始
 
-需要 Node.js 22.23.2（见 `.node-version`）、pnpm 10.34.7（`corepack enable`），以及 Docker（仅用于本地 PostgreSQL，执行前启动 Docker Desktop 或 OrbStack）。
+需要 Node.js 24.22.1（见 `.node-version`）、pnpm 10.34.7（`corepack enable`），以及 Docker（仅用于本地 PostgreSQL，执行前启动 Docker Desktop 或 OrbStack）。
 
 首次启动按顺序执行：
 
