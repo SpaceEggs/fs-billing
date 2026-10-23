@@ -1,4 +1,5 @@
-import { eq, sql } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   CDR_MONTH_DELETED_REASON,
   lockTenants,
@@ -11,9 +12,9 @@ import {
 } from '@fs-billing/db';
 import { resolveBillingNumber } from '@fs-billing/rating';
 import {
-  CDR_VALIDATION_FAILURE_PREFIX,
   INVALID_NUMBER_REASON,
   modJsonCdrSchema,
+  summarizeCdrIssues,
   type ParsedCdr,
 } from '@fs-billing/shared';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
@@ -67,6 +68,24 @@ async function park(
   return 'unassigned' as const;
 }
 
+/** 修正重推通过校验后，原文里能解析出同一 UUID 的待处理校验失败行标为已解决（superseded）。 */
+async function supersedeInvalidRows(tx: Tx, callUuid: string) {
+  await tx
+    .update(schema.unassignedCdrs)
+    .set({
+      status: 'superseded',
+      resolvedAt: sql`now()`,
+      supersededByCallUuid: callUuid,
+    })
+    .where(
+      and(
+        sql`${schema.unassignedCdrs.callUuid} IS NULL`,
+        eq(schema.unassignedCdrs.status, 'pending'),
+        eq(schema.unassignedCdrs.candidateCallUuid, callUuid),
+      ),
+    );
+}
+
 export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
   // 原文先独立提交；后续解析、去重或任务入队失败都不能撤销这次推送的原文。
   const [raw] = await withSystem(db, async (tx) => {
@@ -89,23 +108,44 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
   const parsed = modJsonCdrSchema.safeParse(payload);
   if (!parsed.success) {
     const { variables: identity } = invalidCdrIdentitySchema.parse(payload);
+    const reason = summarizeCdrIssues(parsed.error);
+    const sha256 = createHash('sha256').update(body, 'utf8').digest('hex');
     await withSystem(db, async (tx) => {
       await lockTenants(tx, []);
-      await tx.insert(schema.unassignedCdrs).values({
-        // 无效推送以原文定位，UUID 留在原文中，不能占用通话去重闸门。
-        callUuid: null,
-        tenantTag: identity.billing_tenant.toUpperCase(),
-        caller: identity.caller_id_number,
-        callee: identity.destination_number,
-        rawId: raw.id,
-        rawReceivedAt: raw.receivedAt,
-        reason: `${CDR_VALIDATION_FAILURE_PREFIX}${parsed.error.message}`,
-      });
-      await tx.insert(schema.systemAlerts).values({
-        kind: 'cdr_failed',
-        description: `${raw.id}: ${CDR_VALIDATION_FAILURE_PREFIX}${parsed.error.message}`,
-        affectedCalls: 1,
-      });
+      // 同一份原文（字节完全相同）合并成一行，只计推送次数；已忽略的行同样合并，不会再冒出来。
+      // 冲突目标与局部唯一索引 unassigned_cdrs_invalid_body 一致；xmax = 0 表示这次是新插入的。
+      const [row] = await tx
+        .insert(schema.unassignedCdrs)
+        .values({
+          // 无效推送以原文定位，UUID 留在原文中，不能占用通话去重闸门。
+          callUuid: null,
+          candidateCallUuid: identity.uuid ?? null,
+          tenantTag: identity.billing_tenant.toUpperCase(),
+          caller: identity.caller_id_number,
+          callee: identity.destination_number,
+          rawId: raw.id,
+          rawReceivedAt: raw.receivedAt,
+          rawSha256: sha256,
+          lastPushedAt: sql`now()`,
+          reason,
+        })
+        .onConflictDoUpdate({
+          target: schema.unassignedCdrs.rawSha256,
+          targetWhere: sql`call_uuid IS NULL AND status IN ('pending', 'ignored')`,
+          set: {
+            pushCount: sql`${schema.unassignedCdrs.pushCount} + 1`,
+            lastPushedAt: sql`now()`,
+          },
+        })
+        .returning({ inserted: sql<boolean>`(xmax = 0)` });
+      // 再次推送同一原文不写第二条告警（阶段 8 决定 42）。
+      if (row?.inserted) {
+        await tx.insert(schema.systemAlerts).values({
+          kind: 'cdr_failed',
+          description: `${raw.id}: ${reason}`,
+          affectedCalls: 1,
+        });
+      }
     });
     return { status: 'unassigned' as const, rawId: raw.id };
   }
@@ -125,6 +165,8 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         .where(eq(sql`upper(${schema.tenants.code})`, cdr.tenantTag));
       await lockTenants(tx, tenant ? [tenant.id] : []);
       await tx.execute(sql`select set_config('app.cdr_ingest', 'true', true)`);
+      // 通过校验的话单入库（入队、停放、重复都算「该通话已有身份」）：同一事务里解决它之前的校验失败行。
+      await supersedeInvalidRows(tx, cdr.callUuid);
       // 入库触发器允许阶段 8 认领未归属登记；HTTP 重推不能走认领流程。
       const [registered] = await tx
         .select()

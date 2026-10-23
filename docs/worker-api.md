@@ -98,7 +98,7 @@ CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化�
 处理顺序：
 
 1. 将收到的 UTF-8 文本原样写入 `raw_cdrs.body`，在独立系统事务里提交。每次推送一行，包括重复和损坏正文。保留空白、字段顺序与重复键；`payload` 是数据库生成的规范副本。先保存后解析，原文行的 `tenant_id`、`call_uuid` 保持 NULL；响应 `rawId` 可定位原文，UUID 可从 payload 查询。
-2. JSON 语法损坏时仍保留原文、返回 200 `invalid` 并告警。JSON 可解析但结构/时间校验失败时，保存 `unassigned_cdrs(status=pending)`、原因和 `raw_id/raw_received_at` 原文引用，返回 200 `unassigned` 并写 `cdr_failed`。校验失败时 UUID/开始/结束时间为 NULL，不伪造通话数据、不占用 `call_uuids` 去重闸门。每次无效推送各有待办，人工按原文处理；不自动猜测两份正文是否同一通话。
+2. JSON 语法损坏时仍保留原文、返回 200 `invalid` 并告警。JSON 可解析但结构/时间校验失败时，保存 `unassigned_cdrs(status=pending)`、原因和 `raw_id/raw_received_at` 原文引用，返回 200 `unassigned` 并写 `cdr_failed`。校验失败时 UUID/开始/结束时间为 NULL，不伪造通话数据、不占用 `call_uuids` 去重闸门。原因是固定前缀加最多 5 个 `路径(错误码)`（超出写「等 N 项」，总长 ≤ 200 字符，不含输入值，完整信息在原文里），告警描述是同一个字符串加原文 id。原文字节完全相同的重推（SHA-256 相同）合并为同一行，只累加 `push_count`、更新 `last_pushed_at`，不新增待办也不再写告警，已忽略的行同样合并；原文照样每次各存一份。字节不同的正文各有待办，不自动猜测它们是否同一通话；但原文里能解析出合法 `variables.uuid` 时保存为 `candidate_call_uuid`，之后同一 UUID 的有效话单入库（入队、停放、重复都算）时，同一事务把这些待处理行标为 `superseded`，写 `superseded_by_call_uuid`。没有可解析 UUID 的坏原文只能人工忽略。
 3. 解析成功后检查 `call_uuids`。已登记即返回 `duplicate`，不会将重推变成未归属话单的认领。入口设置事务级 `app.cdr_ingest=true`，登记触发器也禁止认领，因此并发插入同样只允许一条；只将 `23505` 且约束为 `call_uuids_pkey` 的冲突识别为重复，不使用话单 `ON CONFLICT DO NOTHING`。
 4. 缺标签、未知租户（包括 `ABC01`）、错误被叫进入 `unassigned_cdrs(status=pending)` 并写 `cdr_failed`，HTTP 200，不入扣费队列。重复推送不重复告警。
 5. 将原始展示号码存入 `callee`，将重新计算并核验的号码存入 `billing_number`。有效的未归属号码也保存到该列，号码格式错误或话单校验失败时为 NULL，投影不一致时保留计算后的号码。接通电话以 `billing_number` 按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务写一条 `auth_timeout` 告警，重推不重复写。Worker 不可能在断网时立即收到超时信号，告警随话单到达。

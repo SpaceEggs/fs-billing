@@ -10,8 +10,12 @@ import {
   withSystem,
 } from '@fs-billing/db';
 import { beijingTime, rate } from '@fs-billing/rating';
-import type { ChargeJob } from '@fs-billing/shared';
 import {
+  CDR_VALIDATION_FAILURE_PREFIX,
+  type ChargeJob,
+} from '@fs-billing/shared';
+import {
+  adminId,
   connections,
   createTenant,
 } from '../../../packages/db/test/support.js';
@@ -268,5 +272,396 @@ describe('话单所属月份的话单已删除（阶段 8 决定 38）', () => {
       CdrMonthDeletedError,
     );
     expect(await state(uuid)).toMatchObject({ cdrs: 1, charges: 0 });
+  });
+});
+
+/** 本文件的校验失败原文都带一个唯一标签，彼此（以及其他测试文件）不会撞上同一份原文。 */
+function invalidBody(tag: string, uuid: string | undefined, bad = 'bad') {
+  return JSON.stringify({
+    variables: {
+      ...(uuid === undefined ? {} : { uuid }),
+      billing_tenant: tag,
+      end_epoch: bad,
+    },
+  });
+}
+
+const tagOf = () =>
+  `INV${randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`;
+
+const invalidRows = async (tag: string) =>
+  (
+    await owner.pool.query<{
+      id: string;
+      status: string;
+      reason: string;
+      push_count: number;
+      raw_id: string;
+      raw_sha256: string;
+      candidate_call_uuid: string | null;
+      superseded_by_call_uuid: string | null;
+      resolved_by: string | null;
+      resolved: boolean;
+      last_pushed_after_received: boolean;
+    }>(
+      `select id, status, reason, push_count, raw_id, raw_sha256, candidate_call_uuid,
+              superseded_by_call_uuid, resolved_by, resolved_at is not null as resolved,
+              last_pushed_at >= raw_received_at as last_pushed_after_received
+       from unassigned_cdrs where call_uuid is null and tenant_tag = $1 order by raw_received_at, id`,
+      [tag],
+    )
+  ).rows;
+
+const alertsFor = async (...rawIds: string[]) =>
+  (
+    await owner.pool.query<{ kind: string; description: string }>(
+      `select kind, description from system_alerts where split_part(description, ':', 1) = any($1::text[])
+       order by description`,
+      [rawIds],
+    )
+  ).rows;
+
+describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => {
+  it('stores a short structured reason for a failed validation', async () => {
+    const tag = tagOf();
+    const secret = 'SECRET-INPUT-VALUE';
+    const { queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      JSON.stringify({
+        variables: {
+          uuid: 'broken',
+          billing_tenant: tag,
+          billsec: secret,
+          start_epoch: secret,
+        },
+      }),
+    );
+    expect(result.status).toBe('unassigned');
+    const [row] = await invalidRows(tag);
+    expect(row?.reason.startsWith(CDR_VALIDATION_FAILURE_PREFIX)).toBe(true);
+    expect(row?.reason.length).toBeLessThanOrEqual(200);
+    expect(row?.reason).toMatch(
+      /^话单校验失败: variables\.uuid\(invalid_format\)/,
+    );
+    expect(row?.reason).toContain('variables.billsec(');
+    expect(row?.reason).not.toContain(secret);
+    expect(row?.reason).not.toContain('Invalid');
+    // 告警是同一个字符串加原文 id。
+    expect(await alertsFor(result.rawId)).toEqual([
+      { kind: 'cdr_failed', description: `${result.rawId}: ${row?.reason}` },
+    ]);
+  });
+
+  it('stores a validation failure of an empty object without the Zod message', async () => {
+    const { queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      JSON.stringify({ unique: randomUUID() }),
+    );
+    const { rows } = await owner.pool.query<{ reason: string }>(
+      'select reason from unassigned_cdrs where raw_id = $1',
+      [result.rawId],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.reason).toBe('话单校验失败: variables(invalid_type)');
+  });
+
+  it('repeated pushes of one invalid body keep one pending row and count the pushes', async () => {
+    const tag = tagOf();
+    const text = invalidBody(tag, randomUUID());
+    const { queue } = recordingQueue();
+    const first = await ingestCdr(connection.db, queue, text);
+    const second = await ingestCdr(connection.db, queue, text);
+    const third = await ingestCdr(connection.db, queue, text);
+    expect([first, second, third].map((r) => r.status)).toEqual([
+      'unassigned',
+      'unassigned',
+      'unassigned',
+    ]);
+    // 三次推送三个原文 id，原文照样各存一份（阶段 2 决定），待处理行只有一条，指向第一次的原文。
+    expect(new Set([first.rawId, second.rawId, third.rawId]).size).toBe(3);
+    expect(
+      (
+        await owner.pool.query(
+          'select count(*)::int as n from raw_cdrs where id = any($1::uuid[])',
+          [[first.rawId, second.rawId, third.rawId]],
+        )
+      ).rows,
+    ).toEqual([{ n: 3 }]);
+    expect(await invalidRows(tag)).toMatchObject([
+      {
+        status: 'pending',
+        push_count: 3,
+        raw_id: first.rawId,
+        last_pushed_after_received: true,
+      },
+    ]);
+    // 只有第一次写告警（决定 42）。
+    expect(
+      await alertsFor(first.rawId, second.rawId, third.rawId),
+    ).toHaveLength(1);
+    expect(await alertsFor(first.rawId)).toHaveLength(1);
+  });
+
+  it('merges only byte-identical bodies', async () => {
+    const tag = tagOf();
+    const uuid = randomUUID();
+    const { queue } = recordingQueue();
+    const a = await ingestCdr(
+      connection.db,
+      queue,
+      invalidBody(tag, uuid, 'a'),
+    );
+    const b = await ingestCdr(
+      connection.db,
+      queue,
+      invalidBody(tag, uuid, 'b'),
+    );
+    // 末尾多一个换行也是另一份原文。
+    const c = await ingestCdr(
+      connection.db,
+      queue,
+      invalidBody(tag, uuid, 'a') + '\n',
+    );
+    const rows = await invalidRows(tag);
+    expect(rows.map((row) => row.push_count)).toEqual([1, 1, 1]);
+    expect(new Set(rows.map((row) => row.raw_sha256)).size).toBe(3);
+    expect(await alertsFor(a.rawId, b.rawId, c.rawId)).toHaveLength(3);
+  });
+
+  it('concurrent pushes of one invalid body keep one row', async () => {
+    const tag = tagOf();
+    const text = invalidBody(tag, randomUUID());
+    const { queue } = recordingQueue();
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => ingestCdr(connection.db, queue, text)),
+    );
+    expect(await invalidRows(tag)).toMatchObject([
+      { status: 'pending', push_count: 8 },
+    ]);
+    expect(await alertsFor(...results.map((r) => r.rawId))).toHaveLength(1);
+  });
+
+  it('an ignored invalid body does not come back', async () => {
+    const tag = tagOf();
+    const text = invalidBody(tag, randomUUID());
+    const { queue } = recordingQueue();
+    const first = await ingestCdr(connection.db, queue, text);
+    const [row] = await invalidRows(tag);
+    await owner.pool.query(
+      `update unassigned_cdrs set status = 'ignored', ignore_reason = '测试呼叫',
+              resolved_by = $2, resolved_at = now() where id = $1`,
+      [row?.id, await adminId(owner)],
+    );
+    const again = await ingestCdr(connection.db, queue, text);
+    expect(again.status).toBe('unassigned');
+    expect(await invalidRows(tag)).toMatchObject([
+      { id: row?.id, status: 'ignored', push_count: 2 },
+    ]);
+    expect(await alertsFor(first.rawId, again.rawId)).toHaveLength(1);
+  });
+
+  it('a body whose earlier row was resolved starts a new pending row', async () => {
+    const tag = tagOf();
+    const uuid = randomUUID();
+    const text = invalidBody(tag, uuid);
+    const tenant = await tenantWithRates();
+    const { queue } = recordingQueue();
+    await ingestCdr(connection.db, queue, text);
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuid, { billing_unverified: 'false' }),
+    );
+    expect(await invalidRows(tag)).toMatchObject([{ status: 'superseded' }]);
+    // 已解决的行不再占用去重索引：同一份坏原文再来，是新的待处理行，并且写告警。
+    const again = await ingestCdr(connection.db, queue, text);
+    expect(await invalidRows(tag)).toMatchObject([
+      { status: 'superseded', push_count: 1 },
+      { status: 'pending', push_count: 1 },
+    ]);
+    expect(await alertsFor(again.rawId)).toHaveLength(1);
+  });
+
+  it('a corrected push resolves the earlier invalid row as superseded', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const bad = body(tenant.code, uuid, {
+      billing_unverified: 'false',
+      end_epoch: 'bad',
+    });
+    await ingestCdr(connection.db, queue, bad);
+    expect(await invalidRows(tenant.code)).toMatchObject([
+      { status: 'pending', candidate_call_uuid: uuid },
+    ]);
+    const corrected = await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuid, { billing_unverified: 'false' }),
+    );
+    expect(corrected.status).toBe('queued');
+    expect(jobs).toEqual([{ tenantId: tenant.id, callUuid: uuid }]);
+    expect(await invalidRows(tenant.code)).toMatchObject([
+      {
+        status: 'superseded',
+        superseded_by_call_uuid: uuid,
+        resolved_by: null,
+        resolved: true,
+      },
+    ]);
+  });
+
+  it('a corrected push parked as unassigned also resolves it', async () => {
+    const uuid = randomUUID();
+    const tag = tagOf();
+    const { jobs, queue } = recordingQueue();
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tag, uuid, { billing_unverified: 'false', end_epoch: 'bad' }),
+    );
+    // 租户不存在：校验通过后停放到未归属，通话已有身份。
+    const corrected = await ingestCdr(
+      connection.db,
+      queue,
+      body(tag, uuid, { billing_unverified: 'false' }),
+    );
+    expect(corrected.status).toBe('unassigned');
+    expect(jobs).toEqual([]);
+    expect(await invalidRows(tag)).toMatchObject([
+      { status: 'superseded', superseded_by_call_uuid: uuid },
+    ]);
+  });
+
+  it('a duplicate of a registered call also resolves a later invalid row', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { queue } = recordingQueue();
+    const good = body(tenant.code, uuid, { billing_unverified: 'false' });
+    expect((await ingestCdr(connection.db, queue, good)).status).toBe('queued');
+    // 通话已登记之后才来的坏原文：下一次有效推送（这里是重复）把它解决。
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuid, {
+        billing_unverified: 'false',
+        end_epoch: 'bad',
+      }),
+    );
+    expect(await invalidRows(tenant.code)).toMatchObject([
+      { status: 'pending' },
+    ]);
+    expect((await ingestCdr(connection.db, queue, good)).status).toBe(
+      'duplicate',
+    );
+    expect(await invalidRows(tenant.code)).toMatchObject([
+      { status: 'superseded', superseded_by_call_uuid: uuid },
+    ]);
+  });
+
+  it('an invalid row without a parsable uuid stays pending', async () => {
+    const tag = tagOf();
+    const tenant = await tenantWithRates();
+    const { queue } = recordingQueue();
+    // 没有 uuid 字段、uuid 语法不合法：都不记候选 UUID。
+    await ingestCdr(connection.db, queue, invalidBody(tag, undefined));
+    await ingestCdr(connection.db, queue, invalidBody(tag, 'not-a-uuid'));
+    expect(await invalidRows(tag)).toMatchObject([
+      { status: 'pending', candidate_call_uuid: null },
+      { status: 'pending', candidate_call_uuid: null },
+    ]);
+    // 任何通过校验的话单都不会动它们。
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, randomUUID(), { billing_unverified: 'false' }),
+    );
+    expect((await invalidRows(tag)).map((row) => row.status)).toEqual([
+      'pending',
+      'pending',
+    ]);
+  });
+
+  it('does not resolve an ignored invalid row or one of another call', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { queue } = recordingQueue();
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuid, {
+        billing_unverified: 'false',
+        end_epoch: 'bad',
+      }),
+    );
+    const [row] = await invalidRows(tenant.code);
+    await owner.pool.query(
+      `update unassigned_cdrs set status = 'ignored', ignore_reason = '测试呼叫',
+              resolved_by = $2, resolved_at = now() where id = $1`,
+      [row?.id, await adminId(owner)],
+    );
+    // 另一通话入库不影响；同一通话修正重推也不改写已忽略的行（人工处理优先）。
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, randomUUID(), { billing_unverified: 'false' }),
+    );
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuid, { billing_unverified: 'false' }),
+    );
+    expect(await invalidRows(tenant.code)).toMatchObject([
+      { status: 'ignored', superseded_by_call_uuid: null },
+    ]);
+  });
+
+  it('keeps the hangup cause and the unverified flag of a parked call', async () => {
+    const uuid = randomUUID();
+    const tag = tagOf();
+    const { jobs, queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      body(tag, uuid, {
+        hangup_cause: 'USER_BUSY',
+        billing_unverified: 'true',
+      }),
+    );
+    expect(result.status).toBe('unassigned');
+    expect(jobs).toEqual([]);
+    expect(
+      (
+        await owner.pool.query(
+          `select reason, hangup_cause, unverified, billing_number from unassigned_cdrs where call_uuid = $1`,
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([
+      {
+        reason: '租户不存在',
+        hangup_cause: 'USER_BUSY',
+        unverified: true,
+        billing_number: '447700900123',
+      },
+    ]);
+    const otherUuid = randomUUID();
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tag, otherUuid, { billing_unverified: 'false' }),
+    );
+    expect(
+      (
+        await owner.pool.query(
+          `select hangup_cause, unverified from unassigned_cdrs where call_uuid = $1`,
+          [otherUuid],
+        )
+      ).rows,
+    ).toEqual([{ hangup_cause: 'NORMAL_CLEARING', unverified: false }]);
   });
 });

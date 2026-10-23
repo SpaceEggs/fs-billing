@@ -572,19 +572,33 @@ it('无效时间但有效 UUID 的推送保留原文，修正重推只收费一�
     responses.map((r) => cdrResponseSchema.parse(r.json()).status),
   ).toEqual(['unassigned', 'unassigned']);
   const rawIds = responses.map((r) => cdrResponseSchema.parse(r.json()).rawId);
+  // 字节相同的两次推送合并为一行（阶段 8 决定 25）：两份原文都在，待处理行只有一条，推送次数 2。
   expect(
     (
       await owner.pool.query(
-        `select u.call_uuid, u.status, r.body from unassigned_cdrs u
-         join raw_cdrs r on (r.id, r.received_at) = (u.raw_id, u.raw_received_at)
-         where r.id = any($1::uuid[])`,
+        'select count(*)::int as n from raw_cdrs where id = any($1::uuid[])',
         [rawIds],
       )
     ).rows,
-  ).toEqual([
-    { call_uuid: null, status: 'pending', body: payload },
-    { call_uuid: null, status: 'pending', body: payload },
+  ).toEqual([{ n: 2 }]);
+  const pending = await owner.pool.query<{ raw_id: string }>(
+    `select u.call_uuid, u.status, u.push_count, u.candidate_call_uuid, r.body, r.id as raw_id
+     from unassigned_cdrs u
+     join raw_cdrs r on (r.id, r.received_at) = (u.raw_id, u.raw_received_at)
+     where u.candidate_call_uuid = $1`,
+    [uuid],
+  );
+  expect(pending.rows).toEqual([
+    {
+      call_uuid: null,
+      status: 'pending',
+      push_count: 2,
+      candidate_call_uuid: uuid,
+      body: payload,
+      raw_id: pending.rows[0]?.raw_id,
+    },
   ]);
+  expect(rawIds).toContain(pending.rows[0]?.raw_id);
   expect(
     (
       await owner.pool.query(
@@ -596,6 +610,23 @@ it('无效时间但有效 UUID 的推送保留原文，修正重推只收费一�
   const corrected = await post(body(tenant.code, uuid));
   expect(corrected.statusCode).toBe(200);
   expect(cdrResponseSchema.parse(corrected.json()).status).toBe('queued');
+  // 修正重推成功：旧的待处理行标为已解决，不再留在待处理里。
+  expect(
+    (
+      await owner.pool.query(
+        `select status, superseded_by_call_uuid, resolved_by, resolved_at is not null as resolved
+         from unassigned_cdrs where candidate_call_uuid = $1`,
+        [uuid],
+      )
+    ).rows,
+  ).toEqual([
+    {
+      status: 'superseded',
+      superseded_by_call_uuid: uuid,
+      resolved_by: null,
+      resolved: true,
+    },
+  ]);
   expect(
     cdrResponseSchema.parse((await post(body(tenant.code, uuid))).json())
       .status,
