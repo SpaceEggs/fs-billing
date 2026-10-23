@@ -17,10 +17,15 @@ const FIXTURE_RATES = [
 /** 新建一个带费率表的租户（owner 连接）：创建时间和首个费率版本的生效时间可指定（北京时间）。 */
 export async function rateTenant(
   owner: Connection,
-  options: { createdAt?: string; firstRateAt?: string } = {},
+  options: {
+    createdAt?: string;
+    firstRateAt?: string;
+    status?: 'active' | 'disabled';
+  } = {},
 ): Promise<{ id: string; code: string }> {
   const tenant = await statementTenant(owner, {
     createdAt: options.createdAt ?? '2026-05-01 09:00:00',
+    ...(options.status && { status: options.status }),
   });
   await withAdmin(owner.db, (tx) =>
     createRateVersion(

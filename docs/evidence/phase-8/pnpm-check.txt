@@ -39,11 +39,11 @@ apps/api typecheck: Done
 
  Test Files  42 passed (42)
       Tests  777 passed | 1 skipped (778)
-   Start at  16:00:04
-   Duration  3.28s (import 54%, tests 39%, transform 7%, worker 1%)
+   Start at  21:13:52
+   Duration  3.16s (import 54%, tests 39%, transform 6%, worker 1%)
 
-    Isolate  42 workers spawned · ~91ms startup each (spawn + environment, per file)
-             at least ~333ms faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  42 workers spawned · ~92ms startup each (spawn + environment, per file)
+             at least ~336ms faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ test /Volumes/Dev/FS-Billing/apps/web
@@ -55,11 +55,11 @@ apps/api typecheck: Done
 
  Test Files  45 passed (45)
       Tests  600 passed (600)
-   Start at  16:00:07
-   Duration  24.35s (tests 77%, environment 14%, import 5%, setup 3%, transform 1%)
+   Start at  21:13:55
+   Duration  24.32s (tests 77%, environment 14%, import 5%, setup 2%, transform 2%)
 
-    Isolate  45 workers spawned · ~443ms startup each (spawn + environment, per file)
-             at least ~1.77s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  45 workers spawned · ~432ms startup each (spawn + environment, per file)
+             at least ~1.73s faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ build /Volumes/Dev/FS-Billing/apps/web

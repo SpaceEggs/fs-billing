@@ -3,8 +3,15 @@ import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import type { Tx } from '../client.js';
 import { unassignedCdrs, type UnassignedCdrStatus } from '../schema.js';
 
-/** 单次分配 / 选择的行数上限默认值（阶段 8 决定 5，以 PORTALBIG 实测为准，见 docs/evidence/phase-8）。 */
-export const ASSIGN_MAX_ROWS = 2000;
+/**
+ * 单次预览 / 分配的行数上限（阶段 8 决定 45，用户 2026-10-23 确认）。分配逐条写话单与流水，全程持租户锁，
+ * 该租户的话单入库与扣费在这期间排队，而 FreeSWITCH 的 json_cdr 推送超时是 5 秒。
+ * PORTALBIG 上约 2.2 ms/行，500 条约 1.1 s（实测见 docs/evidence/phase-8）。
+ */
+export const ASSIGN_MAX_ROWS = 500;
+
+/** 忽略 / 撤销忽略一次最多处理的行数：只是一条 UPDATE，不长时间持租户锁，不随分配的上限收紧。 */
+export const IGNORE_MAX_ROWS = 2000;
 
 /** 可分配的未归属原因（决定 35）：其余原因只能忽略。 */
 export const ASSIGNABLE_REASONS: readonly string[] = [

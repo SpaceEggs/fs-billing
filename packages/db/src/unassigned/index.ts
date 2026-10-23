@@ -1,5 +1,6 @@
 export {
   ASSIGN_MAX_ROWS,
+  IGNORE_MAX_ROWS,
   ASSIGNABLE_REASONS,
   UnassignedError,
   selectionDigest,

@@ -6,7 +6,7 @@ import { withAdmin, type Db, type Tx } from '../client.js';
 import { unassignedCdrs } from '../schema.js';
 import { databaseInstant } from '../statements/live.js';
 import {
-  ASSIGN_MAX_ROWS,
+  IGNORE_MAX_ROWS,
   UnassignedError,
   selectRows,
   selectionTag,
@@ -48,7 +48,7 @@ export async function ignoreUnassigned(
     const rows = await selectRows(tx, input.selection, {
       status: 'pending',
       lock: true,
-      maxRows: input.maxRows ?? ASSIGN_MAX_ROWS,
+      maxRows: input.maxRows ?? IGNORE_MAX_ROWS,
     });
     if (rows.length === 0) return { changed: 0, auditId: null };
     await tx
@@ -102,7 +102,7 @@ export function unignoreUnassigned(
     const rows = await selectRows(tx, input.selection, {
       status: 'ignored',
       lock: true,
-      maxRows: input.maxRows ?? ASSIGN_MAX_ROWS,
+      maxRows: input.maxRows ?? IGNORE_MAX_ROWS,
     });
     if (rows.length === 0) return { changed: 0, auditId: null };
     await tx

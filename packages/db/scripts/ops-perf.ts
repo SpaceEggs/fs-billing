@@ -135,7 +135,7 @@ try {
     chargeTotal: preview.chargeTotal,
   });
 
-  for (const n of [326, 2000, 5000]) {
+  for (const n of [326, 500, 2000, 5000]) {
     const tag = `PERF${n}`;
     await insertUnassigned(tag, n);
     const selection = { group: { tag } } as const;

@@ -17,6 +17,7 @@ import { lockTenants, withAdmin, withSystem } from '../client.js';
 import { createRateVersion, loadRatingTenant } from '../rates.js';
 import { reconcileTenantStatements } from '../statements/index.js';
 import {
+  ASSIGN_MAX_ROWS,
   assignUnassigned,
   describeAffectedMonths,
   previewAssignment,
@@ -665,6 +666,62 @@ describe('分配的规则', () => {
     ).rejects.toBeInstanceOf(UnassignedError);
     expect(await ledgerCount(tenant.id)).toBe(0);
     expect(await statusCounts(tag)).toEqual({ pending: 3 });
+  });
+
+  it('caps the default selection at 500 rows, so a larger group is assigned in batches', async () => {
+    expect(ASSIGN_MAX_ROWS).toBe(500);
+    const tenant = await rateTenant(owner);
+    const tag = newTag();
+    const rows = await insertUnassigned(
+      owner,
+      Array.from({ length: 501 }, () => ({ tag })),
+    );
+    // 501 条的分组、501 个 id 都超过默认上限，预览与分配一样被拒，什么都没写。
+    for (const selection of [group(tag), { ids: rows.map((row) => row.id) }]) {
+      await expect(
+        previewAssignment(app.db, { tenantId: tenant.id, selection }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      await expect(
+        assignUnassigned(app.db, {
+          actor,
+          tenantId: tenant.id,
+          selection,
+          idempotencyKey: randomUUID(),
+          expected: { assignable: 501, noRate: 0, chargeTotal: '50.1' },
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    }
+    expect(await cdrCount(tenant.id)).toBe(0);
+    expect(await ledgerCount(tenant.id)).toBe(0);
+    // 恰好 500 条可以；剩下的 1 条再分一批。
+    const first = await previewAndAssign(tenant.id, {
+      ids: rows.slice(0, 500).map((row) => row.id),
+    });
+    expect(first.result).toMatchObject({ assigned: 500, chargeTotal: '50' });
+    const second = await previewAndAssign(tenant.id, group(tag));
+    expect(second.result).toMatchObject({ assigned: 1, chargeTotal: '0.1' });
+    expect(await ledgerCount(tenant.id)).toBe(501);
+    expect(await statusCounts(tag)).toEqual({ assigned: 501 });
+  });
+
+  it('assigns to a disabled tenant like to an active one', async () => {
+    // 用户 2026-10-23 确认（决定 46）：停用只影响授权，不挡分配，入库路径本来也不看租户状态。
+    const tenant = await rateTenant(owner, { status: 'disabled' });
+    const tag = newTag();
+    await insertUnassigned(owner, [{ tag }, { tag }]);
+    const { result } = await previewAndAssign(tenant.id, group(tag));
+    expect(result).toMatchObject({
+      assigned: 2,
+      chargeTotal: '0.2',
+      balanceBefore: '0',
+      balanceAfter: '-0.2',
+    });
+    expect(await ledgerCount(tenant.id)).toBe(2);
+    expect(await cdrCount(tenant.id)).toBe(2);
+    expect(await balanceOf(tenant.id)).toBe('-0.2');
+    expect(
+      await one('select status from tenants where id = $1', [tenant.id]),
+    ).toEqual({ status: 'disabled' });
   });
 
   it('rolls back when the preview figures no longer match', async () => {
