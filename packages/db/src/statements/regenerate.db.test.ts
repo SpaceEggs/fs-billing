@@ -379,6 +379,121 @@ describe('话单已删除的月份不能重新生成', () => {
     expect((await read(tenant.id, '2026-09-01'))!.detailsDeleted).toBe(true);
   });
 
+  it('the guard rejects rewriting deletion metadata', async () => {
+    const message =
+      '话单删除记录只能在置删除标志的同一次更新里写入，之后不可修改';
+    const update = (tenantId: string, set: string) =>
+      pgError(
+        owner.pool.query(
+          `update monthly_statements set ${set} where tenant_id = $1`,
+          [tenantId],
+        ),
+      );
+    const meta = (tenantId: string) =>
+      owner.pool
+        .query<{
+          details_deleted: boolean;
+          details_deleted_count: number | null;
+          by_admin: boolean | null;
+          has_time: boolean;
+        }>(
+          `select details_deleted, details_deleted_count, details_deleted_by = $2 as by_admin, details_deleted_at is not null as has_time
+           from monthly_statements where tenant_id = $1`,
+          [tenantId, administrator],
+        )
+        .then((result) => result.rows[0]);
+
+    // 标志还没置真：元数据不能单独写（触发器兜底，另有检查约束要求三列同空同非空、非空时标志为真）。
+    const live = await septemberTenant();
+    await generate(live.id, '2026-09-01');
+    expect((await update(live.id, `details_deleted_count = 3`)).message).toBe(
+      message,
+    );
+    expect(
+      (
+        await update(
+          live.id,
+          `details_deleted_count = 3, details_deleted_by = '${administrator}', details_deleted_at = now()`,
+        )
+      ).message,
+    ).toBe(message);
+
+    // 置标志的同一条 UPDATE 里写入：允许；三列必须一起写。
+    expect(
+      (
+        await update(
+          live.id,
+          `details_deleted = true, details_deleted_count = 3`,
+        )
+      ).constraint,
+    ).toBe('monthly_statements_deletion_meta');
+    expect(
+      (
+        await update(
+          live.id,
+          `details_deleted = true, details_deleted_count = -1, details_deleted_by = '${administrator}', details_deleted_at = now()`,
+        )
+      ).code,
+    ).toBe('23514');
+    await owner.pool.query(
+      `update monthly_statements set details_deleted = true, details_deleted_count = 3,
+         details_deleted_by = $2, details_deleted_at = now() where tenant_id = $1`,
+      [live.id, administrator],
+    );
+    expect(await meta(live.id)).toEqual({
+      details_deleted: true,
+      details_deleted_count: 3,
+      by_admin: true,
+      has_time: true,
+    });
+
+    // 之后不可改、不可清空，应用角色同样受约束。
+    for (const set of [
+      'details_deleted_count = 4',
+      'details_deleted_count = NULL, details_deleted_by = NULL, details_deleted_at = NULL',
+      "details_deleted_at = now() + interval '1 day'",
+      'details_deleted_by = NULL',
+    ]) {
+      const actual = (await update(live.id, set)).message;
+      expect({
+        set,
+        rejected:
+          actual === message ||
+          actual.includes('monthly_statements_deletion_meta'),
+      }).toEqual({ set, rejected: true });
+    }
+    const viaApp = await pgError(
+      withAdmin(app.db, (tx) =>
+        tx.execute(
+          sql`update monthly_statements set details_deleted_count = 99 where tenant_id = ${live.id}::uuid`,
+        ),
+      ),
+    );
+    expect(viaApp.message).toBe(message);
+    expect((await meta(live.id))!.details_deleted_count).toBe(3);
+
+    // 标志先被单独置真（e2e 辅助的做法）而元数据为空：允许；之后元数据也不能再补。
+    const bare = await septemberTenant();
+    await generate(bare.id, '2026-09-01');
+    await owner.pool.query(
+      `update monthly_statements set details_deleted = true where tenant_id = $1`,
+      [bare.id],
+    );
+    expect(await meta(bare.id)).toMatchObject({
+      details_deleted: true,
+      details_deleted_count: null,
+      has_time: false,
+    });
+    expect(
+      (
+        await update(
+          bare.id,
+          `details_deleted_count = 3, details_deleted_by = '${administrator}', details_deleted_at = now()`,
+        )
+      ).message,
+    ).toBe(message);
+  });
+
   it('the guard protects identity, version steps and the version of live rows', async () => {
     const tenant = await septemberTenant();
     await generate(tenant.id, '2026-09-01');

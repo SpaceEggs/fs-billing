@@ -5,6 +5,7 @@ import { adminRateEntrySchema } from './rates.js';
 import { adminStatementVersionFiguresSchema } from './statements.js';
 import { statementMonthSchema } from '../statement-fields.js';
 import {
+  adminNonnegativeAmountSchema,
   adminNonzeroAmountSchema,
   adminPositiveAmountSchema,
   adminTimestampSchema,
@@ -37,6 +38,10 @@ export const auditActionSchema = z.enum([
   'admin_enable',
   'cdr_export',
   'statement_regenerate',
+  'unassigned_assign',
+  'unassigned_ignore',
+  'unassigned_unignore',
+  'cdr_delete',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 export const auditChangeSchema = z.strictObject({
@@ -57,6 +62,8 @@ export const auditChangeSchema = z.strictObject({
     'receivedOn',
     'code',
     'currency',
+    'balance',
+    'callCount',
   ]),
   before: z.union([z.string(), z.array(z.string()), z.null()]),
   after: z.union([z.string(), z.array(z.string()), z.null()]),
@@ -79,6 +86,7 @@ const envelopeFields = {
       'receivable',
       'admin',
       'statement',
+      'unassigned_batch',
     ]),
     id: z.uuid(),
   }),
@@ -179,6 +187,30 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
     changed: z.boolean(),
     before: adminStatementVersionFiguresSchema.nullable(),
     after: adminStatementVersionFiguresSchema,
+  }),
+  /** target 是分配批次的 id；tenantId 是目标租户。sourceTag 为空表示按勾选而不是按分组选择。 */
+  auditVariant('unassigned_assign', {
+    sourceTag: z.string().nullable(),
+    assignedCount: z.int().nonnegative(),
+    noRateCount: z.int().nonnegative(),
+    blockedCount: z.int().nonnegative(),
+    chargeTotal: adminNonnegativeAmountSchema,
+    currency: currencySchema,
+    affectedMonths: z.array(statementMonthSchema),
+  }),
+  /** 忽略与撤销忽略没有批次表：target 取本条审计自身的 id，tenantId 为空。 */
+  auditVariant('unassigned_ignore', {
+    count: z.int().positive(),
+    reason: z.string().trim().min(1).max(2000),
+    sourceTag: z.string().nullable(),
+  }),
+  auditVariant('unassigned_unignore', { count: z.int().positive() }),
+  /** 一个月一条；target 是账单头部的 id。 */
+  auditVariant('cdr_delete', {
+    month: statementMonthSchema,
+    deletedCount: z.int().nonnegative(),
+    range: z.strictObject({ from: z.iso.date(), to: z.iso.date() }),
+    confirmedCode: z.string().min(1),
   }),
 ]);
 export const auditContentSchema = z.discriminatedUnion('action', [

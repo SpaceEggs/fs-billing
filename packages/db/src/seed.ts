@@ -22,6 +22,7 @@ import { databaseNow } from './clock.js';
 import { ensureCdrPartitions } from './partitions.js';
 import { callChargeKey } from './ledger.js';
 import { createRateVersion } from './rates.js';
+import { planAbc01Unassigned } from './seed-unassigned.js';
 import {
   currentMonthSeedMonth,
   planAbc001Calls,
@@ -542,23 +543,7 @@ export async function seedDatabase(
       await seedAbc001Calls(tx, idOf('ABC001'), [...currentPlan.calls]);
     await seedCdrs(tx, idOf, registered);
     await chargeSampleCdrs(tx, idOf);
-    if (!registered.has(UNASSIGNED_CALL_UUID)) {
-      const callee = '+6591234567';
-      const billingNumber = normalizeDialedNumber(callee);
-      if (!billingNumber) throw new Error('种子未归属话单号码格式错误');
-      await tx.insert(unassignedCdrs).values({
-        tenantTag: 'ABC01',
-        callUuid: UNASSIGNED_CALL_UUID,
-        reason: '租户不存在',
-        startedAt: beijingTime('2026-09-28 15:00:00'),
-        answeredAt: beijingTime('2026-09-28 15:00:09'),
-        endedAt: beijingTime('2026-09-28 15:02:09'),
-        caller: '075586001299',
-        callee,
-        billingNumber,
-        durationSeconds: 120,
-      });
-    }
+    await seedUnassigned(tx, registered);
   });
   await seedStatements(db, tenantIds);
 }
@@ -668,6 +653,53 @@ async function seedTenants(tx: Tx): Promise<{
 
 const UNASSIGNED_CALL_UUID = 'a00000ff-0000-4000-8000-000000000001';
 
+/**
+ * ABC01 的 326 条未归属话单（阶段 8 验收 1）：原有的 9-28 示例话单加 seed-unassigned.ts 的 325 条。
+ * 已登记的 UUID 跳过，重复播种不增行。
+ */
+async function seedUnassigned(
+  tx: Tx,
+  registered: ReadonlySet<string>,
+): Promise<void> {
+  if (!registered.has(UNASSIGNED_CALL_UUID)) {
+    const callee = '+6591234567';
+    const billingNumber = normalizeDialedNumber(callee);
+    if (!billingNumber) throw new Error('种子未归属话单号码格式错误');
+    await tx.insert(unassignedCdrs).values({
+      tenantTag: 'ABC01',
+      callUuid: UNASSIGNED_CALL_UUID,
+      reason: '租户不存在',
+      startedAt: beijingTime('2026-09-28 15:00:00'),
+      answeredAt: beijingTime('2026-09-28 15:00:09'),
+      endedAt: beijingTime('2026-09-28 15:02:09'),
+      caller: '075586001299',
+      callee,
+      billingNumber,
+      durationSeconds: 120,
+      hangupCause: 'NORMAL_CLEARING',
+    });
+  }
+  const planned = planAbc01Unassigned().filter(
+    (row) => !registered.has(row.callUuid),
+  );
+  if (planned.length > 0)
+    await tx.insert(unassignedCdrs).values(
+      planned.map((row) => ({
+        tenantTag: row.tenantTag,
+        callUuid: row.callUuid,
+        reason: row.reason,
+        startedAt: row.startedAt,
+        answeredAt: row.answeredAt,
+        endedAt: row.endedAt,
+        caller: row.caller,
+        callee: row.callee,
+        billingNumber: row.billingNumber,
+        durationSeconds: row.durationSeconds,
+        hangupCause: row.hangupCause,
+      })),
+    );
+}
+
 /** 插入触发器在唯一冲突前就写登记表，ON CONFLICT 挡不住；重复执行时先查登记表跳过。 */
 async function registeredCallUuids(tx: Tx): Promise<Set<string>> {
   const rows = await tx
@@ -677,6 +709,7 @@ async function registeredCallUuids(tx: Tx): Promise<Set<string>> {
       inArray(callUuids.callUuid, [
         ...CDRS.map((c) => c.callUuid),
         UNASSIGNED_CALL_UUID,
+        ...planAbc01Unassigned().map((row) => row.callUuid),
       ]),
     );
   return new Set(rows.map((r) => r.callUuid));

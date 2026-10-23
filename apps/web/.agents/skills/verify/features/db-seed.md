@@ -1,6 +1,6 @@
 # Seed data
 
-The operator installs additive, repeatable development examples: admins, ten tenants, portal accounts, alert settings, rates, ledger entries, 22,449 formal CDRs (ABC001's per-call August/September calls plus three sample CDRs) and one unassigned call, then generates the monthly statements. Source: `packages/db/src/seed.ts`, `src/bin/seed.ts`, and seed assertions in `src/ledger.db.test.ts`, `src/rls.db.test.ts`, `src/rates.db.test.ts`, `src/seed.db.test.ts`, and `src/seed-calls.test.ts`.
+The operator installs additive, repeatable development examples: admins, ten tenants, portal accounts, alert settings, rates, ledger entries, 22,449 formal CDRs (ABC001's per-call August/September calls plus three sample CDRs) and 326 unassigned calls tagged `ABC01` (phase 8: 324 assignable to ABC001 for 58.35, two answered before ABC001's first rate version and so without a rate), then generates the monthly statements. Source: `packages/db/src/seed.ts`, `src/bin/seed.ts`, and seed assertions in `src/ledger.db.test.ts`, `src/rls.db.test.ts`, `src/rates.db.test.ts`, `src/seed.db.test.ts`, `src/seed-calls.test.ts`, and `src/seed-unassigned.test.ts`.
 
 ## Sub-features
 

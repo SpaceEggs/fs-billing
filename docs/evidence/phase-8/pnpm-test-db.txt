@@ -1,0 +1,1011 @@
+
+> fs-billing@ test:db /Volumes/Dev/FS-Billing
+> vitest run --config vitest.db.config.ts --reporter=verbose
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing
+
+ ✓ apps/api/src/auth.db.test.ts > logs real customers and admins in and returns only public identity plus a database-backed expiration 267ms
+stderr | apps/api/src/auth.db.test.ts > normalizes email exactly as installed Better Auth and resets prior failures after a successful login
+[2m2026-10-23T12:14:32.781Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > normalizes email exactly as installed Better Auth and resets prior failures after a successful login 185ms
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:32.981Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.030Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.077Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.125Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.172Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.220Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.267Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound
+[2m2026-10-23T12:14:33.313Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+ ✓ apps/api/src/auth.db.test.ts > returns identical invalid credentials for wrong passwords and unknown email, with a coarse timing sanity bound 467ms
+stderr | apps/api/src/auth.db.test.ts > locks the fifth attempt for a fixed fifteen minutes and never verifies, increments, or extends during lock
+[2m2026-10-23T12:14:33.447Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > locks the fifth attempt for a fixed fifteen minutes and never verifies, increments, or extends during lock
+[2m2026-10-23T12:14:33.493Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > locks the fifth attempt for a fixed fifteen minutes and never verifies, increments, or extends during lock
+[2m2026-10-23T12:14:33.543Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > locks the fifth attempt for a fixed fifteen minutes and never verifies, increments, or extends during lock
+[2m2026-10-23T12:14:33.591Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > locks the fifth attempt for a fixed fifteen minutes and never verifies, increments, or extends during lock
+[2m2026-10-23T12:14:33.636Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > locks the fifth attempt for a fixed fifteen minutes and never verifies, increments, or extends during lock 327ms
+stderr | apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window
+[2m2026-10-23T12:14:33.746Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window
+[2m2026-10-23T12:14:33.793Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window
+[2m2026-10-23T12:14:33.836Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window
+[2m2026-10-23T12:14:33.880Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window
+[2m2026-10-23T12:14:33.923Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+stderr | apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window
+[2m2026-10-23T12:14:33.968Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+ ✓ apps/api/src/auth.db.test.ts > unknown emails obey the same fifth-attempt lock and fifteen-minute window 328ms
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.075Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.119Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.193Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.196Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.197Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.198Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications
+[2m2026-10-23T12:14:34.234Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > resets a stale failure window and caps concurrent reservations at five password verifications 268ms
+stderr | apps/api/src/auth.db.test.ts > change-password shares login failures, changes the password and issues a new session while revoking all old devices
+[2m2026-10-23T12:14:34.573Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password shares login failures, changes the password and issues a new session while revoking all old devices
+[2m2026-10-23T12:14:34.773Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > change-password shares login failures, changes the password and issues a new session while revoking all old devices 603ms
+stderr | apps/api/src/auth.db.test.ts > a login lock also blocks a correct current password on change-password
+[2m2026-10-23T12:14:35.036Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > a login lock also blocks a correct current password on change-password
+[2m2026-10-23T12:14:35.083Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > a login lock also blocks a correct current password on change-password
+[2m2026-10-23T12:14:35.129Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > a login lock also blocks a correct current password on change-password
+[2m2026-10-23T12:14:35.178Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > a login lock also blocks a correct current password on change-password
+[2m2026-10-23T12:14:35.226Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > a login lock also blocks a correct current password on change-password 399ms
+ ✓ apps/api/src/auth.db.test.ts > revokes only the current user other sessions and accepts both bodyless POST and empty JSON 342ms
+stderr | apps/api/src/auth.db.test.ts > correct passwords reveal disabled or unavailable identities only after deleting the newly created session without cookies
+[2m2026-10-23T12:14:35.728Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > correct passwords reveal disabled or unavailable identities only after deleting the newly created session without cookies
+[2m2026-10-23T12:14:35.836Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > correct passwords reveal disabled or unavailable identities only after deleting the newly created session without cookies 380ms
+ ✓ apps/api/src/auth.db.test.ts > logout remains available when the identity becomes profile-disabled 175ms
+ ✓ apps/api/src/auth.db.test.ts > logout remains available when the identity becomes tenant-disabled 159ms
+ ✓ apps/api/src/auth.db.test.ts > logout remains available when the identity becomes missing 159ms
+ ✓ apps/api/src/auth.db.test.ts > logout remains available when the identity becomes ambiguous 168ms
+ ✓ apps/api/src/auth.db.test.ts > emits the contract reauthentication shape for missing and confirmed expired sessions 157ms
+ ✓ apps/api/src/auth.db.test.ts > denies customers every admin operation and honors real admin profiles over forged role headers 290ms
+stderr | apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:37.430Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:37.477Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:37.525Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:37.571Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:37.622Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:37.737Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > admin reset through portal-accounts revokes sessions, clears lock, changes credentials and preserves unrelated sessions 737ms
+stderr | apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:38.189Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:38.237Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:38.284Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:38.332Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:38.380Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions
+[2m2026-10-23T12:14:38.486Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > admin reset through admins revokes sessions, clears lock, changes credentials and preserves unrelated sessions 742ms
+stderr | apps/api/src/auth.db.test.ts > admin self-reset is forbidden before changing the password, failures, or any session
+[2m2026-10-23T12:14:38.814Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > admin self-reset is forbidden before changing the password, failures, or any session 334ms
+stderr | apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks
+[2m2026-10-23T12:14:39.004Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks
+[2m2026-10-23T12:14:39.050Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks
+[2m2026-10-23T12:14:39.097Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks
+[2m2026-10-23T12:14:39.146Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks
+[2m2026-10-23T12:14:39.192Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks
+[2m2026-10-23T12:14:39.245Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > counter cleanup removes inactive expired rows and retains current failures and locks 371ms
+stderr | apps/api/src/auth.db.test.ts > IP credential group > shares login and change-password limits across emails, rejects spoofed proxies before counting, leaves logout available and recovers
+[2m2026-10-23T12:14:39.452Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > IP credential group > shares login and change-password limits across emails, rejects spoofed proxies before counting, leaves logout available and recovers 1437ms
+stderr | apps/api/src/auth.db.test.ts > refunds a failed infrastructure attempt even when the fifth reservation would have locked and deletes the provisional session
+[2m2026-10-23T12:14:40.808Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > refunds a failed infrastructure attempt even when the fifth reservation would have locked and deletes the provisional session
+[2m2026-10-23T12:14:40.855Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > refunds a failed infrastructure attempt even when the fifth reservation would have locked and deletes the provisional session
+[2m2026-10-23T12:14:40.899Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > refunds a failed infrastructure attempt even when the fifth reservation would have locked and deletes the provisional session
+[2m2026-10-23T12:14:40.946Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > refunds a failed infrastructure attempt even when the fifth reservation would have locked and deletes the provisional session 402ms
+stderr | apps/api/src/auth.db.test.ts > reset rollback preserves password, sessions, and failures when session revocation fails after credential update
+[2m2026-10-23T12:14:41.340Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > reset rollback preserves password, sessions, and failures when session revocation fails after credential update 389ms
+ ✓ apps/api/src/auth.db.test.ts > unique credential constraint blocks a second account and reset rolls back when none remain 278ms
+ ✓ apps/api/src/auth.db.test.ts > login race guard deletes a session created by an old credential before a concurrent reset and emits no cookie 286ms
+ ✓ apps/api/src/auth.db.test.ts > login started after an uncommitted reset UPDATE waits for that reset and rejects the old credential 262ms
+ ✓ apps/api/src/auth.db.test.ts > rejects any credential version change even when its timestamp moves backwards 135ms
+ ✓ apps/api/src/auth.db.test.ts > reset clears counters with JavaScript normalization even when SQL collation differs 133ms
+ ✓ apps/api/src/auth.db.test.ts > logout with an expired session still clears its cookie and returns SESSION_EXPIRED 138ms
+stderr | apps/api/src/auth.db.test.ts > change-password cannot overwrite a concurrent reset after validating the old credential or leave a session
+[2m2026-10-23T12:14:43.108Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > change-password cannot overwrite a concurrent reset after validating the old credential or leave a session 395ms
+stderr | apps/api/src/auth.db.test.ts > change-password infrastructure rollback refunds its shared counter without changing password or sessions
+[2m2026-10-23T12:14:43.300Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > change-password infrastructure rollback refunds its shared counter without changing password or sessions 353ms
+ ✓ apps/api/src/auth.db.test.ts > write routes reject untrusted origins and Better Auth internals have no mounted catch-all 174ms
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:43.823Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:43.936Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:43.984Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.033Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.080Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.129Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.187Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.300Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.347Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.396Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.445Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.493Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.552Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.667Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.714Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.769Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.878Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.926Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:44.974Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > login refunds only its own reservation window after interleaved failures 1352ms
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.181Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.279Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.327Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.376Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.427Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.475Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.529Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.630Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.677Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.723Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.770Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.818Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.875Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:45.971Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:46.018Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:46.073Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:46.175Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:46.220Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+stderr | apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures
+[2m2026-10-23T12:14:46.268Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/auth.db.test.ts > change-password refunds only its own reservation window after interleaved failures 1290ms
+ ✓ apps/api/src/auth.db.test.ts > actual auth columns match the installed Better Auth tables with configured field names 96ms
+ ✓ packages/db/src/seed.db.test.ts > 开发种子（阶段 7 决定 20） > running the seed again adds no rows anywhere 233ms
+ ✓ packages/db/src/seed.db.test.ts > 开发种子（阶段 7 决定 20） > ABC001 opened on 2026-08-12 and its rate card applies from the opening 0ms
+ ✓ packages/db/src/seed.db.test.ts > 开发种子（阶段 7 决定 20） > every seeded call has the production ledger key and no call is left for the Worker reconciliation to charge again 32ms
+ ✓ packages/db/src/seed.db.test.ts > 开发种子（阶段 7 决定 20） > GZT007 sample calls are charged once with call:<uuid> keys: the balance is 86.27 1ms
+ ✓ packages/db/src/seed.db.test.ts > 开发种子（阶段 7 决定 20） > the seeded ledger of ABC001 follows the statement mockup: no gifts or reversals of the admin mockup remain 2ms
+ ✓ packages/db/src/seed.db.test.ts > 开发种子（阶段 7 决定 20） > the current-month calls are all in the past, in the early hours of the 1st, and offset exactly by one recharge 1ms
+ ✓ packages/db/src/seed.db.test.ts > seeding again in a later month > adds one set per month, keeps the balance at -35.20 and skips the early hours of the 1st 5572ms
+ ✓ packages/db/src/seed.db.test.ts > seeding again in a later month > does not seed any current-month calls while the clock is still in the mockup months 4512ms
+ ✓ apps/worker/src/statements.db.test.ts > 队列预建 > queue:migrate pre-creates the three statement queues with retries 2ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > fans out one child per missing tenant-month from the opening month and catches up after missed days 64ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > starts a tenant created mid-month at its opening month and includes disabled tenants with no activity 30ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > catches up every closed month since the first statement month, with no cap 237ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > a duplicate parent job enqueues no second child 15ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > re-enqueues a failed child on the next day run 22ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > repeated runs leave one statement with identical results 42ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > a scheduled run never overwrites an existing statement after late entries 25ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > concurrent child jobs for the same tenant-month produce one statement and one breakdown 29ms
+ ✓ apps/worker/src/statements.db.test.ts > 生成任务扇出与补缺（验收标准 4） > concurrent children for different months of one tenant all succeed 23ms
+ ✓ apps/worker/src/statements.db.test.ts > 核对任务（验收标准 2） > marks generated statements ok and opens no alert 41ms
+ ✓ apps/worker/src/statements.db.test.ts > 核对任务（验收标准 2） > flags a late call charge as stale with one alert, keeps it at one alert across reruns and recovers after regeneration 59ms
+ ✓ apps/worker/src/statements.db.test.ts > 核对任务（验收标准 2） > flags a late entry in an earlier month on both months and recovers them in order 36ms
+ ✓ apps/worker/src/statements.db.test.ts > 核对任务（验收标准 2） > reports a missing statement with an alert and recovers once it is generated 15ms
+ ✓ apps/worker/src/statements.db.test.ts > 核对任务（验收标准 2） > keeps going after one tenant fails, reports the aggregate and succeeds on retry 79ms
+ ✓ apps/worker/src/statements.db.test.ts > 调度与 Worker 端到端 > the daily schedule is registered with tz Asia/Shanghai 10ms
+ ✓ apps/worker/src/statements.db.test.ts > 调度与 Worker 端到端 > processes the parent job, the children and the reconcile job through pg-boss 8072ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 验收标准 1 与 2：种子数据 ABC01 → ABC001 > previews 326 ABC01 rows against ABC001 as 324 assignable, 58.35 and 2 without a rate 10ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 验收标准 1 与 2：种子数据 ABC01 → ABC001 > assigning charges 58.35 and writes one call_charge per assignable row 592ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 验收标准 1 与 2：种子数据 ABC01 → ABC001 > submitting the same batch twice charges once 18ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 验收标准 1 与 2：种子数据 ABC01 → ABC001 > the September statement becomes stale after the assignment and is not regenerated 16ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > prices each row at the rate valid when the call was answered, not the current one 29ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > copies the call fields to cdrs and writes the charge, batch, audit and claim in one go 17ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > assigns unanswered calls without a charge 10ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > keeps rows without a rate pending and explains why 17ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > selects by ids as well as by group, and the empty tag is a group of its own 16ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > rejects a selection above the row limit 8ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > caps the default selection at 500 rows, so a larger group is assigned in batches 743ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > assigns to a disabled tenant like to an active one 19ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > rolls back when the preview figures no longer match 38ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > rejects an idempotency key reused by another administrator or for another selection 39ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > assigns a row once when two admins submit at the same time 74ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > a row locked by another request and resolved meanwhile is not assigned afterwards 16ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > a second claim of the call uuid fails with call_uuids_pkey 22ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > a failure in the middle rolls the whole batch back 24ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > leaves rows without a call identity or billing number pending 23ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > rows answered in a details-deleted month are not assigned 28ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > creates the missing cdrs partition before assigning an old row 20ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > describes the statement state of each affected month 7ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 分配的规则 > previewing for a tenant that does not exist is a not-found error 2ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 租户锁 > an assignment waits for the tenant lock held by another transaction 331ms
+ ✓ packages/db/src/unassigned/assign.db.test.ts > 租户锁 > authorization reads do not wait for a transaction holding the tenant lock 11ms
+ ✓ apps/api/src/idor.db.test.ts > covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case 1ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > logs in one portal account for each of three distinct fixture tenants 236ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > rejects unauthenticated protected operations and customer access to all live admin operations 161ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > logout positive behavior and A to B attack 137ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > session positive behavior and A to B attack 136ms
+stderr | apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > changePassword positive behavior and A to B attack
+[2m2026-10-23T12:15:14.955Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > changePassword positive behavior and A to B attack 500ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > revokeOtherSessions positive behavior and A to B attack 194ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalContext positive behavior and A to B attack 213ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalHome positive behavior and A to B attack 245ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalCdrs positive behavior and A to B attack 229ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalCdrCountries positive behavior and A to B attack 125ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalCdrsExport positive behavior and A to B attack 82ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalLedger positive behavior and A to B attack 186ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalLedgerExport positive behavior and A to B attack 146ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalStatements positive behavior and A to B attack 399ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalStatement positive behavior and A to B attack 155ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > portalStatementExport positive behavior and A to B attack 152ms
+ ✓ apps/api/src/idor.db.test.ts > [app] live OpenAPI customer isolation > unfiltered SQL proves the owner bypass and the app RLS boundary 1ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > logs in one portal account for each of three distinct fixture tenants 179ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > rejects unauthenticated protected operations and customer access to all live admin operations 93ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > logout positive behavior and A to B attack 127ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > session positive behavior and A to B attack 133ms
+stderr | apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > changePassword positive behavior and A to B attack
+[2m2026-10-23T12:15:18.118Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > changePassword positive behavior and A to B attack 495ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > revokeOtherSessions positive behavior and A to B attack 194ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalContext positive behavior and A to B attack 208ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalHome positive behavior and A to B attack 212ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalCdrs positive behavior and A to B attack 215ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalCdrCountries positive behavior and A to B attack 127ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalCdrsExport positive behavior and A to B attack 92ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalLedger positive behavior and A to B attack 192ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalLedgerExport positive behavior and A to B attack 157ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalStatements positive behavior and A to B attack 296ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalStatement positive behavior and A to B attack 147ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > portalStatementExport positive behavior and A to B attack 155ms
+ ✓ apps/api/src/idor.db.test.ts > [owner] live OpenAPI customer isolation > unfiltered SQL proves the owner bypass and the app RLS boundary 1ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > creates admins with a same-transaction audit and initial temporary credential 421ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > maps duplicate portal account conflicts to the declared contract 209ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > lists auth email through private lookup without leaking internal ids 162ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > lists admins in one joined read with stable query count, search, order and pagination 123ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > lists zero or one portal account without separate auth queries and preserves tenant isolation 104ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > batch email lookup keeps auth tables private and requires admin scope 96ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > portal disable and enable audit without changing tenant status or restoring old sessions 325ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > temporary credentials reject after expiry and permanent password changes clear issuance 513ms
+stderr | apps/api/src/admin-accounts.db.test.ts > failed account creation rolls back the auth user and writes no audit
+[2m2026-10-23T12:15:22.971Z[0m [33mWARN[0m [1m[Better Auth]:[0m User not found
+
+ ✓ apps/api/src/admin-accounts.db.test.ts > failed account creation rolls back the auth user and writes no audit 220ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > customers cannot list or mutate admin or portal accounts 165ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > creates generated and supplied portal credentials without exposing supplied passwords 453ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > enforces configured temporary credential TTL for admin and portal logins 347ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > blocks business routes until a temporary password is changed 376ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > unchanged account status returns no audit id 150ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > rejects self-disable and records disable audit with session revoke 298ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > admin enable audits without restoring sessions 287ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > rejects uppercase own UUIDs for self-disable and self-reset 223ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > refuses one of two concurrent mutual admin disables and audits only the committed change 105ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > concurrent duplicate portal disables reread after the tenant lock and write one audit 111ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > portal enable rereads a status changed while waiting for its tenant lock 168ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > resets admin and portal credentials through the administrator transaction without querying the auth pool 404ms
+ ✓ apps/api/src/admin-accounts.db.test.ts > portal password reset waits for its tenant lock before changing credentials or revoking sessions 277ms
+ ✓ apps/api/src/last-login.db.test.ts > admin credential logins set and advance the timestamp exposed to admins 360ms
+ ✓ apps/api/src/last-login.db.test.ts > portal credential logins set and advance the timestamp exposed to admins 313ms
+ ✓ apps/api/src/last-login.db.test.ts > admin credential login preserves a later existing timestamp 226ms
+ ✓ apps/api/src/last-login.db.test.ts > portal credential login preserves a later existing timestamp 226ms
+stderr | apps/api/src/last-login.db.test.ts > admin failed logins preserve the previous timestamp
+[2m2026-10-23T12:15:28.107Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/last-login.db.test.ts > admin failed logins preserve the previous timestamp 360ms
+stderr | apps/api/src/last-login.db.test.ts > portal failed logins preserve the previous timestamp
+[2m2026-10-23T12:15:28.479Z[0m [33mWARN[0m [1m[Better Auth]:[0m Invalid password
+
+ ✓ apps/api/src/last-login.db.test.ts > portal failed logins preserve the previous timestamp 363ms
+ ✓ apps/api/src/last-login.db.test.ts > admin temporary-password login counts but password change and session reads do not 321ms
+ ✓ apps/api/src/last-login.db.test.ts > portal temporary-password login counts but password change and session reads do not 339ms
+ ✓ apps/api/src/last-login.db.test.ts > admin rate-limited credential login preserves the previous timestamp 241ms
+ ✓ apps/api/src/last-login.db.test.ts > portal rate-limited credential login preserves the previous timestamp 231ms
+ ✓ apps/api/src/last-login.db.test.ts > admin timestamp is generated by the database statement 223ms
+ ✓ apps/api/src/last-login.db.test.ts > portal timestamp is generated by the database statement 223ms
+ ✓ apps/api/src/last-login.db.test.ts > timestamp write failure 23514 rejects login and discards its session 225ms
+ ✓ apps/api/src/last-login.db.test.ts > timestamp write failure 08006 rejects login and discards its session 214ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 同一费率表插入两个相同生效时间的版本，被唯一约束拒绝 45ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 已排定未来版本时修改当前版本（新建立即生效版本）被拒绝，并提示先改未来版本 13ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 取消（删除）未来版本后，可以修改当前版本 13ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 新版本不能早于当前版本（不能倒填历史） 6ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 已生效的版本及其条目不可修改、不可删除 8ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > owner 修改费率版本或条目同样被触发器拒绝 12ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 事务在版本生效前开始，跨过生效时间后删除或修改被拒绝 3320ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 费率超过 4 位小数被拒绝，而不是被四舍五入 11ms
+ ✓ packages/db/src/rates.db.test.ts > 费率版本 > 删未来条目后插入，同时删除该版本，两个事务都提交 29ms
+ ✓ packages/db/src/rates.db.test.ts > 同一租户的费率修改串行执行 > 同时新建两个版本：后到的事务在租户锁上排队，再按已提交的版本校验 21ms
+ ✓ packages/db/src/rates.db.test.ts > 同一租户的费率修改串行执行 > 两个事务各插一条未来条目后都删版本：后到的事务排队，版本删掉后它的插入报外键错误 10ms
+ ✓ packages/db/src/rates.db.test.ts > 开户后立即授权 > 首个立即生效版本的生效时间取数据库 now()，提交后马上授权能匹配到费率 7ms
+ ✓ packages/db/src/rates.db.test.ts > 开户后立即授权 > 对照：若生效时间取应用服务器时钟且快了几秒，开户后立即授权会是“无费率” 6ms
+ ✓ packages/db/src/rates.db.test.ts > 开户后立即授权 > 种子租户 ABC001：10 月 1 日前后 447 分别使用 0.0450 与 0.0480 3ms
+ ✓ packages/db/src/rates.db.test.ts > stores ISO and description and returns each matched entry intact 7ms
+ ✓ packages/db/src/rates.db.test.ts > rows inserted without ISO and description read back as empty strings and rejects invalid ISO 12ms
+ ✓ packages/db/src/rates.db.test.ts > seed rates have GB/英国/empty for 44, GB/英国/手机 for 447 and empty ISO for 1 1ms
+ ✓ apps/api/src/bootstrap.db.test.ts > bootstraps a migrated admin profile through the installed Better Auth password hasher 266ms
+ ✓ apps/api/src/bootstrap.db.test.ts > bootstraps a migrated portal profile through the installed Better Auth password hasher 176ms
+ ✓ apps/api/src/bootstrap.db.test.ts > refuses an existing credential and replaces it only with explicit session revocation 439ms
+ ✓ apps/api/src/bootstrap.db.test.ts > serializes concurrent initializations and refuses unknown profiles and runtime roles 267ms
+ ✓ apps/api/src/bootstrap.db.test.ts > rolls back the credential update and counter cleanup when session revocation fails 274ms
+ ✓ apps/api/src/bootstrap.db.test.ts > CLI prints generated secrets once after success and never echoes stdin passwords 850ms
+ ✓ apps/api/src/bootstrap.db.test.ts > bootstrap CLI rejects password arguments without echoing their values 310ms
+ ✓ apps/api/src/bootstrap.db.test.ts > bootstrap CLI refuses fs_billing_app before reading a password or connecting 315ms
+ ✓ apps/api/src/bootstrap.db.test.ts > bootstrap CLI refuses fs_billing_auth before reading a password or connecting 315ms
+ ✓ apps/worker/src/reliability.db.test.ts > 启动后的 50 个并发推送在 10 秒内全部保存，独立小队列池不等待业务连接 306ms
+ ✓ apps/worker/src/reliability.db.test.ts > pg-boss 冷缓存且唯一业务连接被入库事务占用时，推送仍原子保存话单和任务 24ms
+ ✓ apps/worker/src/reliability.db.test.ts > 重试耗尽后对账重新入队，并发/重复对账与重复扣费只产生一笔流水 88ms
+ ✓ apps/worker/src/reliability.db.test.ts > 只对账窗口内开始的通话，较早话单保留给人工处理 40ms
+ ✓ apps/worker/src/reliability.db.test.ts > 按确定性 ID 找到 created 任务，不依赖 singleton_key 22ms
+ ✓ apps/worker/src/reliability.db.test.ts > 按确定性 ID 找到 retry 任务，不依赖 singleton_key 23ms
+ ✓ apps/worker/src/reliability.db.test.ts > 按确定性 ID 找到 active 任务，不依赖 singleton_key 23ms
+ ✓ apps/worker/src/reliability.db.test.ts > 候选事务失败仍处理其余话单，汇总错误且失败候选的补投整体回滚 100ms
+ ✓ apps/worker/src/reliability.db.test.ts > 真实扣费持续失败，补投次数持久保存且告警只写一次，恢复后仍可收费 165ms
+ ✓ apps/worker/src/reliability.db.test.ts > 校验失败 {} 保存为可定位原文的 pending，不产生扣费 8ms
+ ✓ apps/worker/src/reliability.db.test.ts > 校验失败 {"variables":{"uuid":"broken"}} 保存为可定位原文的 pending，不产生扣费 7ms
+ ✓ apps/worker/src/reliability.db.test.ts > 校验失败 null 保存为可定位原文的 pending，不产生扣费 6ms
+ ✓ apps/worker/src/reliability.db.test.ts > 校验失败 {"variables":{"uuid":"7deb61ba-8d36-44e5-a2c2-b096bf454c35","billsec":"-1"}} 保存为可定位原文的 pending，不产生扣费 6ms
+ ✓ apps/worker/src/reliability.db.test.ts > 无效时间但有效 UUID 的推送保留原文，修正重推只收费一次 33ms
+ ✓ apps/worker/src/reliability.db.test.ts > /authorize 缺失/错误密钥返回 401，白名单外返回 403 0ms
+ ✓ apps/worker/src/reliability.db.test.ts > 对账调度每分钟执行真实任务 2057ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > normalizes authorization and lowercase billing_tenant for uppercase stored codes 48ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > normalizes authorization and lowercase billing_tenant for lowercase stored codes 24ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > normalizes parked unknown and invalid lowercase billing_tenant while preserving raw payloads 16ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 真实格式样本推送两次：两份原文、一条话单、一个任务和一笔扣费；任务重复执行也不重扣 33ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > variables 缺少号码、callflow 主叫为 075586001234 时保存话单且只扣费一次 28ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > variables 缺少号码、callflow 主叫为 undefined 时保存话单且只扣费一次 26ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签 ABC01 进入 pending，并告警且不扣费 11ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签  进入 pending，并告警且不扣费 10ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 租户标签 UNKNOWN99 进入 pending，并告警且不扣费 11ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 0044 返回 200，原文与未归属告警保留 16ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 +44 返回 200，原文与未归属告警保留 15ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 447x 返回 200，原文与未归属告警保留 14ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫  返回 200，原文与未归属告警保留 13ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 138|evil 返回 200，原文与未归属告警保留 12ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 错误被叫 12345678901234 返回 200，原文与未归属告警保留 12ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 损坏或缺字段的正文 { "broken": 不返回 400，先保存原文并告警 2ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 接通时无费率进入待人工处理，不按零元计费 6ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 缺分区返回 503 留给重推，保留原文并写 partition_failed，不在写入路径建分区 27ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 原文分区缺失返回 503 并告警，恢复维护后重推成功 20ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 入队失败回滚话单和 UUID 登记，原文保留，恢复后重推成功 22ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 开户（entries 初始费率）后立即授权即匹配到首个费率版本 10ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 开户（csv 初始费率）后立即授权即匹配到首个费率版本 6ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 授权读取实时余额、状态与费率：放行或给出拒绝原因，错误号码返回 400 10ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 同一 UUID 并发推送只入一条话单和一个任务 13ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 已有未归属 UUID 改标签重推仍重复，HTTP 入库触发器也禁止并发认领 16ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 缺密钥或不在 IP 白名单的请求在保存正文前拒绝 0ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 接通时刻选择整表版本，跨月处理仍按九月入账 30ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 授权有费率，接通时新版移除前缀：pending 与告警，不回退旧费率也不扣零元 15ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 流水已插入后模拟崩溃：回滚余额，重新执行只扣一次 26ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 扣费提交但任务未确认：重启队列，过期任务重投不重复扣费 75ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > pg-boss 维护 SQL 不提前提交调用方事务，后续失败时队列写入回滚 1ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 启动维护立即建分区，每日北京时间调度可重复运行 2066ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 启动及维护任务失败写 partition_failed，错误向外抛出 21ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 +447700900123 保留原拨号，授权、话单和流水使用 447700900123 42ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 00447700900123 保留原拨号，授权、话单和流水使用 447700900123 21ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 13800138000 保留原拨号，授权、话单和流水使用 8613800138000 21ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 075586001234 保留原拨号，授权、话单和流水使用 8675586001234 20ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 +13055551234 保留原拨号，授权、话单和流水使用 13055551234 20ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 拨号 13055551234 保留原拨号，授权、话单和流水使用 8613055551234 20ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > 新话单不带投影时重新计算；投影不一致保存工作端投影供处理 24ms
+ ✓ apps/worker/src/app.db.test.ts > Worker HTTP 与真实数据库 > CDR without billing_dialed_number is parked as a validation failure and never billed 11ms
+ ✓ apps/worker/src/app.db.test.ts > snapshots ISO, country and description; blank labels and unanswered calls write NULL 36ms
+ ✓ packages/db/src/rls-initplan.db.test.ts > RLS InitPlan tenant_read > preserves tenant visibility and plans helper reads as InitPlans 2448ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > reads only preview identity before the tenant lock and parses the full payload once afterward 48ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects a stale actor before waiting for the target tenant lock 14ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects a stale consumed before waiting for the target tenant lock 15ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects a stale kind before waiting for the target tenant lock 9ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects a stale path before waiting for the target tenant lock 11ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > accepts case-insensitive actor and path identities in both preflight and locked checks 13ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > maps incompatible persisted payloads to PREVIEW_STALE without consuming them or writing rates 13ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > shares import previews across instances and consumes concurrent commits once 25ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > shares copy previews across instances and consumes concurrent commits once 31ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rolls preview consumption and version back when audit validation fails and allows a fresh instance retry 21ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > checks database expiry after waiting for the target tenant lock 26ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > hides previews from tenant scope and cleans old expired records on new previews 20ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > accepts exactly the CSV row limit and rejects one extra row before saving a preview 91ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects multiline edits without writes and reimports exported quoted countries 26ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > edits a complete version with exact precision and database immediate time plus audit 14ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > invalid CSV reports all physical rows and writes no versions or audits 8ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > Chinese CSV preview binds actor purpose and path and commits all rows once 17ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects stale previews after another version commits without partial writes 14ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > expires configured TTL and rechecks stored schedule at commit 614ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > uses configured horizon for edit import copy and commit 26ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > enforces decoded byte and row limits before writes 10ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > copy uses source path and writes only target audit with ownership and currency checks 38ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > exports four decimal CSV and a same transaction audit 13ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > cancels only future versions beyond configured margin and audits full entries 18ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > rejects cancellation exactly at the configured database clock margin 10ms
+ ✓ packages/db/src/admin/rates.db.test.ts > admin rates service > maps activation during a tenant lock wait to conflict and rolls back cancellation audit 1128ms
+ ✓ packages/db/src/admin/rates.db.test.ts > ISO-only and description-only edits are modified rows, search all labels, export/reimport unchanged and audit cancellation 60ms
+ ✓ packages/db/src/admin/rates.db.test.ts > old three-column CSV is rejected with a dedicated error and no writes 8ms
+ ✓ packages/db/src/admin/rates.db.test.ts > pre-migration previews without metadata are stale and remain unconsumed 13ms
+ ✓ packages/db/src/ledger.db.test.ts > ABC001 种子余额 > 以 ABC001 身份对流水求和（SQL 中没有租户条件）得到 −35.20 41ms
+ ✓ packages/db/src/ledger.db.test.ts > ABC001 种子余额 > 缓存余额与流水合计没有差异 9ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水只能新增 > 应用角色执行 UPDATE / DELETE / TRUNCATE 被拒绝（无权限） 3ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水只能新增 > owner（超级用户）执行 UPDATE / DELETE / TRUNCATE 也被触发器拒绝 15ms
+ ✓ packages/db/src/ledger.db.test.ts > appendLedgerEntry > 同一幂等键重试只记一次账，余额只变一次 11ms
+ ✓ packages/db/src/ledger.db.test.ts > appendLedgerEntry > 同一幂等键但金额不同时报错 8ms
+ ✓ packages/db/src/ledger.db.test.ts > appendLedgerEntry > CNY 金额记入 USD 租户在类型检查阶段报错 0ms
+ ✓ packages/db/src/ledger.db.test.ts > appendLedgerEntry > 数据库按类型检查符号与必填：正的通话扣费、无原因的调账被拒绝 5ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水按发生时间归属月份 > 9-30 23:59（北京时间）接通、10-01 才写入的扣费，按 occurred_at 归属 9 月 8ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水按发生时间归属月份 > 种子中 ABC001 的通话扣费按接通时间归属 8、9 月（合计即月账单设计稿的通话扣费）和播种月 10ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水按发生时间归属月份 > 种子的逐通扣费用生产的幂等键 call:<UUID>，每条有对应话单，Worker 的补扣对账找不到缺失 15ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水按发生时间归属月份 > 人工操作的发生时间只能是写入时间 3ms
+ ✓ packages/db/src/ledger.db.test.ts > 流水按发生时间归属月份 > 应用角色不能回填 created_at，人工调账的两列都是数据库 now() 6ms
+ ✓ packages/db/src/ledger.db.test.ts > 待收款 → 已收款 > 结算是独立记录：原流水不变，已有未撤销确认时拒绝再次确认 12ms
+ ✓ packages/db/src/ledger.db.test.ts > 待收款 → 已收款 > 不能结算非赊账充值的流水 8ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一事务的多租户流水按 tenant_id 升序加锁 > 输入顺序相反的两个事务都先锁较小的 tenant_id，互相等待后都能提交 39ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一事务的多租户流水按 tenant_id 升序加锁 > 去掉连字符或加上花括号后，仍先锁较小的 uuid 32ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一事务的多租户流水按 tenant_id 升序加锁 > 同一事务再写更小的 tenant_id 时拒绝，这次调用的流水全部回滚 9ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一事务的多租户流水按 tenant_id 升序加锁 > 非法 tenant_id 在写入之前被拒绝 2ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一事务的多租户流水按 tenant_id 升序加锁 > 同一事务对同一个租户写两次仍然成功 4ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一租户的写入在租户锁上串行 > A 写幂等键 a、b，B 写 b：B 排队，A 提交后 B 拿回 A 写的 b 18ms
+ ✓ packages/db/src/ledger.db.test.ts > 同一租户的写入在租户锁上串行 > A 锁两个租户、改低位费率并给两边记账，B 给两边记账：B 在低位租户的锁上排队，两边都提交 12ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 显式事务里 CALL rebuild_tenant_balances 报 2D000，不提交外层修改 3ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 缓存被改坏后，balance_discrepancies 列出该租户，rebuild_tenant_balances 修复 312ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 扣费已写入未提交时开始重算：重算等扣费提交，结束后缓存 = 流水合计 294ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > A 持有余额行锁时 B 开始重算，等待期间 C 开户 Q6NEW 并留下未提交扣费：结束后缓存与流水合计都是 -25 315ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 先改租户，再重算，再写流水：两边都进入锁等待，提交后缓存等于流水合计 312ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 重算等在高位租户上时，中途开户并按 tenant_id 升序扣两个租户，不发生死锁 309ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 先扣高位租户再扣低位租户，与重算交错，不发生死锁且缓存等于流水合计 301ms
+ ✓ packages/db/src/ledger.db.test.ts > 缓存余额可重算核对 > 应用角色不能直接修改缓存余额 1ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 月份状态 > lists the twelve months of a year with their states 58ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 月份状态 > marks months blocked while a charge is missing or the reconcile status is not ok 40ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > rejects the current month and a month without a statement 45ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > rejects the whole range when one month is not deletable and deletes nothing 44ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > deleting August leaves the ledger, balance, statement header and breakdown unchanged 93ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > a call that rang at the end of August and was answered in September goes with September 43ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > writes one cdr_delete audit per month with actor, time, tenant, month and count 45ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > flags the statement and removes the rows in one transaction 46ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > rejects an unknown operator without deleting anything 36ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > rejects a month with a charge not yet written 61ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > rejects a month that is stale or inconsistent 130ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > requires the exact tenant code and the previewed count 38ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除话单 > deleting a month without calls still records the deletion 58ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 并发 > deleting the same month twice affects it once 43ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 并发 > delete waits for an in-flight assignment 351ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 并发 > a call that arrives and is charged while the delete waits for the tenant lock stops the delete 287ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 并发 > regeneration racing a deletion is rejected by the guard 47ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 并发 > keeps the months already deleted when a later month fails and retries only the rest 61ms
+ ✓ packages/db/src/cdr-deletion/delete.db.test.ts > 删除之后 > a re-pushed deleted call is a duplicate 44ms
+ ✓ packages/db/src/client.db.test.ts > survives an idle client error and queries through a replacement connection 20ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > rejects nested isolation requests before running the callback 6ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > applies SERIALIZABLE to an outermost admin transaction 3ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > withSystem and withAdmin run a repeatable read snapshot transaction on request 4ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > rejects a nested repeatable read request on withSystem 1ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > retries a 40001 under repeatable read up to 8 attempts 771ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > 40P01 与 40001 回滚后重跑整个事务 25ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > 其他错误不重试；可重试的错误最多跑 3 次 20ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > 重试前的写入随回滚消失：只留下最后一次尝试写的流水 45ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > 嵌套调用不重试，错误抛给最外层，由最外层重跑整个事务 10ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > 嵌套调用遇到可重试的错误不在保存点里重跑：每次外层尝试只跑一次 19ms
+ ✓ packages/db/src/client.db.test.ts > withAdmin / withSystem 重试 > 嵌套在普通 db.transaction 里：设置管理员身份，不重试，错误抛给外层 2ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > serves the admin overview and rejects unknown, malformed and unauthenticated tenant reads 48ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > prevents customer IDOR against both tenant overviews despite forged admin and tenant headers 66ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > returns 503 after outermost 40001 retries are exhausted 25ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > returns 503 after outermost 40P01 retries are exhausted 22ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > uses the configured 3 digit cap in routes and services 67ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > uses the configured 11 digit cap in routes and services 44ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > keeps unconfigured tenants in the list and rejects only detail 10ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > creates, reads, edits, disables, enables and updates settings using the admin session 34ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > maps code collisions, ownership failures and currency mismatches to declared errors 13ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > performs all balance kinds with exact precision, credit projection, idempotency and stable ledger pagination 46ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > rejects another admin replaying topup without writing 24ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > rejects another admin replaying credit_topup without writing 20ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > rejects another admin replaying gift without writing 17ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > rejects another admin replaying adjustment without writing 17ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > rejects adjustment without a reason and invalid precision or caps before writes 6ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > lists per-currency balances without a combined total and preserves group ordering 34ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > independently decodes CSV, maps row and encoding errors, and accepts valid uploads above one MiB 64ms
+ ✓ apps/api/src/admin-tenants.db.test.ts > admin tenant and balance API > requires admin identity and rejects customer access to tenant data and balance mutations 64ms
+ ✓ apps/api/src/admin-statements.db.test.ts > GET /api/admin/statements > groups a month by currency, lists missing statements as pending without figures and totals only final rows 54ms
+ ✓ apps/api/src/admin-statements.db.test.ts > GET /api/admin/statements > exposes stale and inconsistent reconcile states in the list and the detail 48ms
+ ✓ apps/api/src/admin-statements.db.test.ts > GET /api/admin/statements > defaults to the previous Beijing month, is empty for the current month and rejects a future month 12ms
+ ✓ apps/api/src/admin-statements.db.test.ts > admin tenant statements > lists every month with live pending figures and the regenerable reason 22ms
+ ✓ apps/api/src/admin-statements.db.test.ts > admin tenant statements > shows version, generator, reconcile result and breakdown gap in the detail 32ms
+ ✓ apps/api/src/admin-statements.db.test.ts > admin tenant statements > answers 404 for an unknown tenant or a month before the first one, and 400 for a future month 30ms
+ ✓ apps/api/src/admin-statements.db.test.ts > admin tenant statements > exports the summary CSV that sums to the closing balance without an audit row, and the answered detail CSV with the cdr_export audit 51ms
+ ✓ apps/api/src/admin-statements.db.test.ts > admin tenant statements > keeps every statement operation away from customer sessions 25ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > regenerates and writes one statement_regenerate audit with before and after, and lists the stale following months 53ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > records a no-op as unchanged: no new version, still one audit row 29ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > rejects a stale expectedVersion with STATEMENT_VERSION_CONFLICT and writes no audit 41ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > lets exactly one of two concurrent regenerations with the same expectedVersion win 45ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > rejects a month whose call details were deleted with STATEMENT_DETAILS_DELETED 32ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > rejects the in-progress month with STATEMENT_NOT_FINAL 25ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > backfills a pending month as version 1 with expectedVersion 0 and a null before 18ms
+ ✓ apps/api/src/admin-statements.db.test.ts > POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate > answers 404 for an unknown tenant or a month before the first one and 400 for invalid input 25ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > supports staged users without credentials and persists temporary issuance until permanent password change 61ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > auth tables have no RLS and are not owned by runtime roles 7ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > roles cannot inherit or create privileges and have no membership 2ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > auth role has CRUD only on five auth tables and no schema CREATE 25ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > actual cross-boundary accesses fail with 42501 12ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > identity function is restricted SQL STABLE with exact search_path 14ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > Drizzle auth schema matches actual columns 4ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > rejects invalid temporary credential arguments through fs_billing_app before writes 82ms
+ ✓ packages/db/src/auth.db.test.ts > auth catalog and privilege boundary > pins credential column shapes and app-only execute on auth security definer functions 26ms
+ ✓ packages/db/src/auth.db.test.ts > identity cardinality before status > returns none for zero matches 3ms
+ ✓ packages/db/src/auth.db.test.ts > identity cardinality before status > returns admin including a disabled profile status 4ms
+ ✓ packages/db/src/auth.db.test.ts > identity cardinality before status > returns customer with disabled account and tenant states 8ms
+ ✓ packages/db/src/auth.db.test.ts > identity cardinality before status > active admin plus disabled customer is ambiguous 6ms
+ ✓ packages/db/src/auth.db.test.ts > identity cardinality before status > UNIQUE, NOT NULL, FK and RESTRICT apply independently to both profiles 33ms
+ ✓ packages/db/src/auth.db.test.ts > legacy profile migration > preserves profile IDs and references, normalizes email, creates no login credential 270ms
+ ✓ packages/db/src/auth.db.test.ts > legacy profile migration > normalized cross-table duplicate fails without partial structure 74ms
+ ✓ packages/db/src/auth.db.test.ts > auth migration ledger records the current SQL bytes and window id is required UUID 5ms
+ ✓ apps/api/src/portal-cdr-export.db.test.ts > portal CDR export HTTP lifecycle > returns the contract JSON error before hijacking when the first cursor batch is cancelled 160ms
+ ✓ apps/api/src/portal-cdr-export.db.test.ts > portal CDR export HTTP lifecycle > destroys an incomplete HTTP response after PostgreSQL ends the cursor and releases the tenant slot 354ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements > lists the tenant months from the first one to the current month, newest first 20ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements > carries no internal fields in the raw JSON 12ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements > never shows another tenant's numbers 17ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements > lists a month the generator has not reached yet as pending with live figures 7ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements > returns only the all-zero current month for a tenant with no activity, from which the empty state is derived 9ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements > rejects a tenant id in the query and anonymous or admin sessions 3ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > returns the stored statement with countries by charge, days and the opening date 5ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > starts the first month on the opening date 4ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > computes the in-progress month live up to now 5ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > computes a month without a statement row as pending, with asOf 5ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > answers 404 for another tenant's month exactly as for a month that never existed 6ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > rejects a malformed month, a future month and extra query keys with 400 3ms
+ ✓ apps/api/src/portal-statements.db.test.ts > GET /api/portal/statements/{month} > marks a month whose call details were deleted without changing the figures 18ms
+ ✓ apps/api/src/portal-statements.db.test.ts > POST /api/portal/statements/{month}/export > streams the long-format summary whose signed amounts add up to the closing balance 10ms
+ ✓ apps/api/src/portal-statements.db.test.ts > POST /api/portal/statements/{month}/export > exports the live current month and a pending month 17ms
+ ✓ apps/api/src/portal-statements.db.test.ts > POST /api/portal/statements/{month}/export > is the session tenant's file only and 404s for months that are not the tenant's 8ms
+ ✓ apps/api/src/portal-statements.db.test.ts > POST /api/portal/statements/{month}/export > exports the answered call details of the month, row count equal to the statement call count 11ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > confirms, reverses and reconfirms CNY without changing the ledger or balance 94ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > confirms, reverses and reconfirms USD without changing the ledger or balance 36ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > uses a fresh event timestamp after an older outer transaction waits 35ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > serializes concurrent confirmations and concurrent reversals without duplicate audits 20ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > requires current tokens and rejects another credit settlement on reversal 19ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rejects receipt dates before the Beijing credit date and future dates 7ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > returns NOT_FOUND for missing and non-credit entries 11ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rolls back the event when audit validation fails and rolls back a nested service with its outer transaction 10ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > does not automatically close a credit on adjustment; void requires reversal first and wins error precedence 33ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rolls back reversals and voids when their audit cannot be written 21ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rejects wrong amount, kind, tenant, missing adjustment and an earlier adjustment 24ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > compares exact PostgreSQL timestamp precision and rejects equal creation times 16ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rejects reused adjustments and conservatively rejects opposite later or equal-time adjustments 37ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > concurrent voids produce one event and one complete audit 12ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > new event tables and invoker view remain isolated by tenant and reject customer writes 26ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > requires tenant locks, enforces event FKs/uniques and rejects owner mutations 42ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > enforces void credit and adjustment uniqueness, kind and tenant FKs in Postgres 34ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rejects direct SQL voiding of received credits and all later events or mutations after voiding 35ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rejects direct SQL linking a CNY credit to another tenant adjustment in CNY 20ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > rejects direct SQL linking a CNY credit to another tenant adjustment in USD 18ms
+ ✓ packages/db/src/admin/receivables.db.test.ts > admin receivable event services against Postgres > serializes direct SQL confirmation against voiding with the existing tenant lock 12ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > places the merged row at the last charge of the day and chains balances row by row 11ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > orders a manual entry and the last charge of the day at the same instant by id 3ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > type filter keeps the running balance of the unfiltered list 4ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > returns total and totalAmount for an empty filter result and an out-of-range page 4ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > puts a charge at UTC 2026-09-28 16:30 on the 29th 3ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > groups charges by the Beijing day of occurred_at and not created_at 3ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > accepts from 0001-01-01 and returns only the rows inside that Beijing day 5ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > uses Asia/Shanghai calendar dates for 1988-05-31T15:30:00Z and excludes 1988-05-31 8ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > uses Asia/Shanghai calendar dates for 0001-01-01T15:59:00Z and excludes 0001-01-01 8ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > both anchors give the same balances in every month of the fixture 11ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > marks only today's row as partial 6ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > admin and portal agree on every merged row 7ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > keeps microsecond precision when replaying a single balance operation 13ms
+ ✓ packages/db/src/ledger-merge.db.test.ts > merged ledger > does not read internal fields in the portal SQL 0ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > cdrMonthStart agrees with the database month of coalesce(answered_at, started_at) at the Beijing boundaries 11ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > writes the rate snapshot for an answered call and a bare row for an unanswered one 58ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > returns no_rate without writing when no rate applies at the answer time 11ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > returns month_deleted for a deleted month and writes nothing 19ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > rechecks the deleted flag after the tenant lock is granted 324ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > chargeCall writes one call_charge at the answer time and charging twice charges once 30ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > chargeCall writes nothing for an unanswered call or a missing call 12ms
+ ✓ packages/db/src/cdr-intake.db.test.ts > 入库定价与扣费的共享函数 > chargeCall refuses to write a charge into a month whose calls were deleted 12ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > a late call charge then regeneration updates the figures, bumps the version and appends the new breakdown 60ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > an unchanged recomputation keeps the version and still reports changed false 21ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > a call answered after midnight belongs to the next day in the day breakdown 16ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > rejects expectedVersion that is stale 26ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > two administrators regenerating the same version: one wins, the other gets a version conflict 33ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > backfills a month that has no statement row when expectedVersion is 0 20ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > rejects an unfinished month, an unknown tenant and a month before the first one 13ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 手动重新生成（验收标准 5） > lists the following months whose stored opening no longer matches the ledger 32ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 话单已删除的月份不能重新生成 > rejects a details-deleted month at the service 31ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 话单已删除的月份不能重新生成 > the guard trigger rejects figure changes on a details-deleted month and a flag rollback 52ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 话单已删除的月份不能重新生成 > the guard allows setting the flag without touching the figures, and then freezes the row 21ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 话单已删除的月份不能重新生成 > the guard rejects rewriting deletion metadata 71ms
+ ✓ packages/db/src/statements/regenerate.db.test.ts > 话单已删除的月份不能重新生成 > the guard protects identity, version steps and the version of live rows 42ms
+ ✓ packages/db/src/cdrs.db.test.ts > 话单按通话 UUID 唯一 > 同一 UUID 插入两次，第二次被唯一约束挡住 16ms
+ ✓ packages/db/src/cdrs.db.test.ts > 话单按通话 UUID 唯一 > 同一 UUID 换了开始时间（落在另一个分区）也被挡住 10ms
+ ✓ packages/db/src/cdrs.db.test.ts > 正式话单与未归属话单共用 UUID 登记表 > 未归属话单登记的 UUID，之后由正式话单认领 25ms
+ ✓ packages/db/src/cdrs.db.test.ts > 正式话单与未归属话单共用 UUID 登记表 > 已在正式话单中的 UUID 再进未归属话单被拒绝 10ms
+ ✓ packages/db/src/cdrs.db.test.ts > 正式话单与未归属话单共用 UUID 登记表 > 同一 UUID 已归属一个租户后，再给第二个租户被拒绝 14ms
+ ✓ packages/db/src/cdrs.db.test.ts > 原始话单 > 原文逐字节保存：空白、键序、重复键原样读回；payload 是可查询的规范化副本 7ms
+ ✓ packages/db/src/cdrs.db.test.ts > 原始话单 > 不是合法 JSON 的原文也保存，payload 为空 3ms
+ ✓ packages/db/src/cdrs.db.test.ts > 原始话单 > 数值溢出的 JSON 原文仍保存，payload 为空 3ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 维护入口在类型层拒绝事务，只接受连接池数据库 0ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 建分区任务幂等地建出 cdrs 与 raw_cdrs 的当月与下月（北京时间），之后下月的话单落入新分区 29ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 没有分区的月份插入失败，不会悄悄落入兜底分区 4ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 分区已存在时不等待建分区锁；缺分区时才加锁 307ms
+ ✓ packages/db/src/cdrs.db.test.ts > 按月分区 > 迁移已建出 cdrs 与 raw_cdrs 当前月与下个月的分区 6ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 正式话单拒绝无效计费号码 null 8ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 正式话单拒绝无效计费号码 "12345" 6ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 正式话单拒绝无效计费号码 "012345" 5ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 正式话单拒绝无效计费号码 "1234567890123456" 4ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 号码格式错误 / null 3ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 话单校验失败: billing_dialed_number 缺失 / null 4ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 话单校验失败: 话单时间与时长不一致 / null 3ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 租户不存在 / 447700900123 2ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 计费号码不一致 / 447700900123 2ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 租户不存在 / null 1ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 计费号码不一致 / null 1ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 号码格式错误 / 447700900123 1ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 话单校验失败: 话单时间与时长不一致 / 447700900123 1ms
+ ✓ packages/db/src/cdrs.db.test.ts > 计费号码约束 > 未归属号码与原因对应 租户不存在 / 12345 1ms
+ ✓ packages/db/src/cdrs.db.test.ts > cdrs_iso_check rejects lowercase ISO and accepts NULL on the real partitioned table 15ms
+ ✓ apps/api/src/admin-rates.db.test.ts > admin rates HTTP > imports a Chinese header atomically, preserves precision and audits export 67ms
+ ✓ apps/api/src/admin-rates.db.test.ts > admin rates HTTP > reports every invalid physical CSV row and creates no version or audit 19ms
+ ✓ apps/api/src/admin-rates.db.test.ts > admin rates HTTP > maps wrong tenant versions, stale previews, invalid precision and encoding errors 22ms
+ ✓ apps/api/src/admin-rates.db.test.ts > admin rates HTTP > cancels only a future version outside the margin and snapshots the complete audit 42ms
+ ✓ apps/api/src/admin-rates.db.test.ts > admin rates HTTP > binds copy to the source path and audits changes against the target 40ms
+ ✓ apps/api/src/admin-rates.db.test.ts > admin rates HTTP > rejects customer identity on every rates operation despite forged admin headers 77ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > returns no audit id when a tenant mutation changes nothing 85ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > creates an immediately effective empty version and explicit defaults 18ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > creates entries, CSV and copied initial rates and rejects foreign versions and currency mismatches atomically 34ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > decodes GBK and rejects all post-parse row errors with physical line numbers and row limits 37ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > rejects code collisions without partial rows or audit and rolls back when audit validation fails 17ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > edits, disables, enables and normalizes settings with audits in the transaction 51ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > keeps currencies separate and groups status then currency before numeric balances 31ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > orders all health states and respects suspension and low balance boundaries 47ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > replays concurrent operations once, compares the complete payload and keeps credit pending 26ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > binds topup replay to the original admin id 17ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > binds credit_topup replay to the original admin id 14ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > binds gift replay to the original admin id 14ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > binds adjustment replay to the original admin id 15ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > allows only one admin to win concurrent use of the same balance key 10ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > rejects missing adjustment reason, caps, precision and reserved keys before writing 16ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > uses the existing tenant lock before state writes and preserves history before pagination 30ms
+ ✓ packages/db/src/admin/tenants.db.test.ts > admin tenant and balance services > lists unconfigured tenants without inventing settings and treats search wildcards as literals 9ms
+ ✓ apps/api/src/admin-receivables.db.test.ts > admin receivables HTTP > keeps exact CNY and USD totals over the full filtered set before pagination 62ms
+ ✓ apps/api/src/admin-receivables.db.test.ts > admin receivables HTTP > confirms and reverses without changing balance, rejects stale tokens and records event audits 40ms
+ ✓ apps/api/src/admin-receivables.db.test.ts > admin receivables HTTP > voids only a linked opposite adjustment and returns void conflict before other state errors 35ms
+ ✓ apps/api/src/admin-receivables.db.test.ts > admin receivables HTTP > requires admin identity for list and all mutations even with forged tenant headers 70ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > marks a statement ok when closing and opening equal the ledger 61ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > checks the seeded ABC001 statements against the ledger 11ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > flags a call charge written after generation as stale and opens one alert 34ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > marks the following month stale when its opening balance no longer matches 48ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > flags a closing that differs without late entries as inconsistent 31ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > opens one alert per tenant and month across reruns, updating it when the difference changes 44ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > recovers the alert after regeneration 49ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > reports a missing statement, opens an alert and recovers it once the statement exists 22ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > checks details-deleted months against the ledger without the breakdown gap 35ms
+ ✓ packages/db/src/statements/reconcile.db.test.ts > 账单核对（验收标准 2） > system_alerts accepts statement_mismatch and still rejects unknown kinds 8ms
+ ✓ packages/db/src/statements/generate.db.test.ts > ABC001 种子账单（验收标准 1） > generates the ABC001 August and September statements from the seed with the mockup figures 15ms
+ ✓ packages/db/src/statements/generate.db.test.ts > ABC001 种子账单（验收标准 1） > matches the mockup country tables with descriptions folded into the country 6ms
+ ✓ packages/db/src/statements/generate.db.test.ts > ABC001 种子账单（验收标准 1） > matches the mockup day tables: August starts on the opening day, September ends on the 29th 6ms
+ ✓ packages/db/src/statements/generate.db.test.ts > ABC001 种子账单（验收标准 1） > closing balance equals the ledger sum to month end for every seeded statement 12ms
+ ✓ packages/db/src/statements/generate.db.test.ts > ABC001 种子账单（验收标准 1） > the seed generates September for every tenant that existed in September and nothing before the first month 1ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 北京月归属（验收标准 3） > puts a call answered on 09-30 23:59 and charged on 10-01 into September 33ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 北京月归属（验收标准 3） > puts a call ringing on 09-30 23:59:50 and answered on 10-01 00:00:05 into October for both ledger and breakdown 17ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 北京月归属（验收标准 3） > puts a call ringing on 08-31 23:59:50 and answered on 09-01 00:00:05 into September, not August 22ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 北京月归属（验收标准 3） > ignores created_at when the entry was written months later 23ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > counts credit recharges as recharge and keeps adjustments signed 18ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > a void adjustment of a credit shows as a negative adjustment 11ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > opening balance is the ledger sum before the month, not the previous statement 11ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > counts zero-charge answered calls and ignores unanswered ones 15ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > groups by country and folds descriptions together 17ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > records the gap between the ledger and the call detail without failing 9ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 各项取数 > keeps the exact decimals without rounding 14ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 租户第一个应有月份与缺失账单 > starts at the earlier of tenant creation and the first ledger entry 11ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 租户第一个应有月份与缺失账单 > creates zero statements for tenants with no activity 7ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 租户第一个应有月份与缺失账单 > skips months that already have a statement and honors the first and the last month 11ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 生成只创建、重复执行结果相同（验收标准 4） > running the generator twice leaves one statement and one breakdown version 12ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 生成只创建、重复执行结果相同（验收标准 4） > a scheduled generation never overwrites an existing statement after late entries 11ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 生成只创建、重复执行结果相同（验收标准 4） > refuses a month that has not ended and a plain read committed transaction 6ms
+ ✓ packages/db/src/statements/generate.db.test.ts > 生成只创建、重复执行结果相同（验收标准 4） > concurrent generators produce exactly one statement 31ms
+ ✓ packages/db/src/statements/generate.db.test.ts > REPEATABLE READ 下的 ON CONFLICT DO NOTHING（设计标记为未验证的推断） > raises 40001 when the conflicting row was committed after the snapshot, and the wrapper retry converges on exists 26ms
+ ✓ packages/db/src/statements/generate.db.test.ts > REPEATABLE READ 下的 ON CONFLICT DO NOTHING（设计标记为未验证的推断） > a generator blocked on an uncommitted conflicting insert gets 40001 after the winner commits, never a silent no-op 19ms
+ ✓ packages/db/src/statements/generate.db.test.ts > REPEATABLE READ 下的 ON CONFLICT DO NOTHING（设计标记为未验证的推断） > a charge committed during generation never splits the header from the breakdown 19ms
+ ✓ apps/api/src/admin-cdr-export.db.test.ts > admin CDR export endpoint > streams unverified status and commits one acceptance audit with normalized filters 156ms
+ ✓ apps/api/src/admin-cdr-export.db.test.ts > exports ISO, country and description separately, neutralizes formulas, and labels unanswered only in country 147ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > shows a credit recharge as a recharge with the account recharge note and leaks no internal JSON keys or values 12ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > adds payment status, actor and internal note for admins only 9ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > rejects invalid ranges, timestamps, unknown filters and missing dates with 400 2ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > rejects year zero and accepts the supported year 0001 on both ledger routes 12ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > returns empty items with totals for pages beyond the last page 5ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > rejects admin sessions at the portal route and absent sessions 2ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > maps a missing admin tenant to 404 6ms
+ ✓ apps/api/src/portal-ledger.db.test.ts > portal and admin ledger HTTP boundary > keeps raw query projection free of actor and receivable reads for customer scope 6ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > filters by case-insensitive tenant code and returns the full row newest first 7ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > returns events that have no administrator with their actor label (nullable actor, LEFT JOIN) 7ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > filters by exact action, keeping logs without a tenant 3ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > time window includes p_from and excludes p_to 4ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > combines tenant, action and time filters 2ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports membership 52ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports table UPDATE 14ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports table MAINTAIN 12ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports column UPDATE 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports sequence USAGE 11ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports PUBLIC EXECUTE on an auth writer 11ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports default table privilege 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports global default table privilege 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports EXECUTE WITH GRANT OPTION on the audit query 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports USAGE WITH GRANT OPTION on schema public 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports schema CREATE 11ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations reports LOGIN attribute 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations is empty for the migrated role 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations ignores default privileges in unrelated schemas 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > audit_role_violations still reports the grant option after the auditor delegates it 10ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > migration refuses a pre-existing audit role after membership 12ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > migration refuses a pre-existing audit role after PUBLIC EXECUTE on an auth writer 11ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > migration refuses a pre-existing audit role after default table privilege 11ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > migration refuses a pre-existing audit role after a default EXECUTE WITH GRANT OPTION on new functions 11ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > migration replays over a clean pre-existing audit role 21ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > application role cannot execute the audit query 1ms
+ ✓ packages/db/src/audit.db.test.ts > audit_operation_logs > application role cannot execute audit_role_violations 3ms
+ ✓ apps/api/src/database-unavailable.db.test.ts > returns 503 for socket EOF during a query without retrying the transaction 47ms
+ ✓ apps/api/src/database-unavailable.db.test.ts > returns 503 for pool checkout timeout 262ms
+ ✓ apps/api/src/portal-home.db.test.ts > GET /api/portal/home > returns the signed-in tenant balance, 30-day usage and recent answered calls 29ms
+ ✓ apps/api/src/portal-home.db.test.ts > GET /api/portal/home > leaks neither the unverified flag nor the unanswered count in the raw JSON 8ms
+ ✓ apps/api/src/portal-home.db.test.ts > GET /api/portal/home > rejects an admin session and an anonymous request 3ms
+ ✓ apps/api/src/portal-home.db.test.ts > GET /api/portal/home > answers NOT_FOUND when the tenant is not visible to the session 3ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 以 ABC001 身份 SELECT * FROM cdrs（不写租户条件）只返回 ABC001 的话单 84ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 以 GZT007 身份看到的是 GZT007 自己的话单与流水 10ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 管理员身份可见全部租户的话单 6ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 未声明身份时什么都看不到 4ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 租户身份看不到仅限管理员的表 2ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 租户身份不能写入其他租户的行 3ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 租户身份不能给自己充值：冒用管理员编号插入充值流水被拒绝，余额不变 13ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 租户身份不能修改自己的透支额度 4ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 租户身份删除自己的话单：0 行受影响，话单仍在 8ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 系统身份（Worker）可以写入任一租户的扣费 6ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 建分区只允许管理员或系统身份：租户身份与未声明身份调用被拒绝 9ms
+ ✓ packages/db/src/rls.db.test.ts > RLS 租户隔离 > 应用角色不能绕过父表直接读分区 1ms
+ ✓ packages/db/src/rls.db.test.ts > 月账单明细表（阶段 7） > statement detail tables show a tenant only its own rows and reject writes 22ms
+ ✓ packages/db/src/rls.db.test.ts > 月账单明细表（阶段 7） > statement detail rows cannot be updated or deleted 25ms
+ ✓ packages/db/src/rls.db.test.ts > 月账单明细表（阶段 7） > the operator roles can append detail rows but the version must match a statement of the same tenant 3ms
+ ✓ packages/db/src/rls.db.test.ts > 话单运维表（阶段 8） > new staff-only tables hide their rows from tenants 17ms
+ ✓ packages/db/src/rls.db.test.ts > 话单运维表（阶段 8） > unassigned_assignments stays append-only 16ms
+ ✓ packages/db/src/rls.db.test.ts > 话单运维表（阶段 8） > operation_logs stays append-only with a nullable actor 26ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > matches the admin overview figures 77ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > reports a normal tenant as normal with its balance, overdraft limit and available balance 10ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > reports a low balance tenant as low_balance with its balance, overdraft limit and available balance 24ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > reports a overdraft tenant as overdraft with its balance, overdraft limit and available balance 12ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > reports a suspended tenant as suspended with its balance, overdraft limit and available balance 12ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > reports a disabled tenant as disabled with its balance, overdraft limit and available balance 16ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > lists the newest answered calls, at most 10, without the unverified flag 44ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > returns an empty recent list and a zero window for a tenant without calls 6ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > shows each tenant only its own figures 20ms
+ ✓ packages/db/src/portal/home.db.test.ts > portal home > throws NotFoundError for a tenant the session cannot see 1ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > zero-fills days before a tenant created midway through the window 26ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > uses Beijing month and day edges, includes today, excludes events outside the period and zero-fills exactly 30 days 38ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > includes clock-ahead events within the month and today, with exclusive period ends 22ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > counts billed minutes, unverified and zero-rate answers by answer time, and billing rejections by start time 14ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > ignores topups, gifts, adjustments, credit, void adjustments and settlement reversals 10ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > enforces tenant RLS, matches admin month consumption, and runs in a read-only transaction without tenant locks 30ms
+ ✓ packages/db/src/usage.db.test.ts > tenant usage overview snapshot > inherits the started-time index on existing and newly created partitions 7ms
+ ✓ packages/db/src/statements/compute.db.test.ts > computeStatement 与存下的账单、手算的数字一致 > closed months equal the hand-computed figures and the statement the generator stores 23ms
+ ✓ packages/db/src/statements/compute.db.test.ts > computeStatement 与存下的账单、手算的数字一致 > puts the month boundaries at Beijing midnight: the same figures come from an independent query bounded by UTC instants 5ms
+ ✓ packages/db/src/statements/compute.db.test.ts > computeStatement 与存下的账单、手算的数字一致 > the in-progress month agrees between the balance opening and the ledger opening, and honors asOf 8ms
+ ✓ packages/db/src/statements/compute.db.test.ts > computeStatement 与存下的账单、手算的数字一致 > gives the same figures under the tenant identity as under the administrator 4ms
+ ✓ packages/db/src/statements/compute.db.test.ts > computeStatement 与存下的账单、手算的数字一致 > runs as a plain parameterized statement: nothing is left in pg_prepared_statements 3ms
+ ✓ packages/db/src/unassigned/ignore.db.test.ts > 忽略与撤销忽略 > ignores with a reason and restores to pending 39ms
+ ✓ packages/db/src/unassigned/ignore.db.test.ts > 忽略与撤销忽略 > rejects an empty reason 15ms
+ ✓ packages/db/src/unassigned/ignore.db.test.ts > 忽略与撤销忽略 > an assigned row cannot be ignored or restored and an ignored row cannot be assigned 54ms
+ ✓ apps/worker/src/ingest.db.test.ts > 话单所属月份的话单已删除（阶段 8 决定 38） > parks a call answered in a details-deleted month without charging it and opens a cdr_failed alert 82ms
+ ✓ apps/worker/src/ingest.db.test.ts > 话单所属月份的话单已删除（阶段 8 决定 38） > still queues and charges a call of the same tenant answered in another month 26ms
+ ✓ apps/worker/src/ingest.db.test.ts > 话单所属月份的话单已删除（阶段 8 决定 38） > parks an unanswered call by its start month too 15ms
+ ✓ apps/worker/src/ingest.db.test.ts > 话单所属月份的话单已删除（阶段 8 决定 38） > refuses to charge a queued call whose month was deleted before the charge job ran 17ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > lock_tenants 只锁当前身份有权访问的租户 > 租户身份锁其他租户报 42501；锁自己的租户可以 43ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > lock_tenants 只锁当前身份有权访问的租户 > 未设置身份的连接锁任何租户都报 42501 14ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > lock_tenants 只锁当前身份有权访问的租户 > 新连接只设置 app.tenant_id、没有 app.scope，锁该租户报 42501 15ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 已持有只认本事务通过 lock_tenants 拿到的锁 > 会话级同键 advisory 锁不能代替 lock_tenants 写流水 8ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 已持有只认本事务通过 lock_tenants 拿到的锁 > 持有会话级同键锁时 lock_tenants 报 55000，而不是跳过加锁 6ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 已持有只认本事务通过 lock_tenants 拿到的锁 > 上一个事务的锁随提交释放，同一连接的下一个事务直接写入被拒绝 5ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 回滚到保存点清掉标记 > 在保存点里 lockTenants 后回滚该保存点，外层事务直接写流水报 55000 6ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 不调用 lock_tenants 的写入被拒绝 > 直接插入流水和费率版本都报 55000，余额不变 7ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 先加行锁再等租户锁会被拒绝，不会死锁 > A 先 FOR UPDATE 租户行再 lock_tenants 报 55000；持锁的 B 照常写流水并提交 19ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 先加行锁再等租户锁会被拒绝，不会死锁 > 先拿强表锁再调用 lockTenants 报 55000 4ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 先加行锁再等租户锁会被拒绝，不会死锁 > 改过租户行的事务再调用 lockTenants 报 55000 5ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 建分区不在租户锁内进行 > 持有租户锁时调用 cdr_ensure_partitions 报 55000，分区已存在也一样 5ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 建分区不在租户锁内进行 > A 持租户锁、B 读过话单后等 A 的锁，A 再建缺失的分区：A 报 55000，不出现 40P01 11ms
+ ✓ packages/db/src/tenant-lock.db.test.ts > 应用角色不能直接调用 advisory 锁函数 > pg_advisory_lock 报 42501；所有 advisory 锁函数的重载都没有 EXECUTE；lock_tenants 照常可用 6ms
+ ✓ packages/db/src/portal/cdrs.db.test.ts > portal CDR queries > uses the Beijing answered date, applies filters, and counts hidden unanswered rows 58ms
+ ✓ packages/db/src/portal/cdrs.db.test.ts > portal CDR queries > includes unanswered rows only in all status and leaves totals on an empty page 16ms
+ ✓ packages/db/src/portal/cdrs.db.test.ts > portal CDR queries > does not expose unverified fields to portal JSON while admins can filter and count them 19ms
+ ✓ packages/db/src/portal/cdrs.db.test.ts > returns ISO, country and description separately and groups country options across descriptions 20ms
+ ✓ packages/db/src/statements/live.db.test.ts > 实时（进行中）月份 > matches the home month spend for the current month 70ms
+ ✓ packages/db/src/statements/live.db.test.ts > 实时（进行中）月份 > honors a fixed asOf: later entries are not counted 15ms
+ ✓ packages/db/src/statements/live.db.test.ts > 实时（进行中）月份 > computes a pending month between midnight and generation 22ms
+ ✓ packages/db/src/statements/live.db.test.ts > 实时（进行中）月份 > rejects an unknown tenant and a month after the current one 6ms
+ ✓ packages/db/src/statements/live.db.test.ts > 实时（进行中）月份 > is read only: a tenant identity can run it and nothing is written 7ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > preview foreign key, payload check and expiry index metadata match the migration 18ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > tenant codes have case-insensitive uniqueness 26ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > migration precheck loudly lists every colliding code and ID before any schema changes 15ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > migration precheck lists every duplicate auth credential before adding uniqueness 7ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > 在已迁移的库上再执行一次不报错，也不重复记录 27ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > 应用以非超级用户、非 BYPASSRLS 的角色连接 1ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > public 中每张表都启用了 RLS 0ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > 除管理员表与未归属话单外，每张业务表都有 tenant_id 1ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > 金额与时间列的类型：没有 float/real/money，也没有不带时区的 timestamp 5ms
+ ✓ packages/db/src/migrate.db.test.ts > 迁移 > Drizzle 表描述与迁移后的列一一对应 3ms
+ ✓ packages/db/src/migrate.db.test.ts > adds ISO and description defaults to rates and nullable columns to CDR partitions with validated checks 4ms
+ ✓ packages/db/src/migrate.db.test.ts > migration preserves old country text and adds empty metadata without rewriting rows 5ms
+
+PR3_PREPARE_ABORT {"backendPid":89715,"before":{"state":"active","waitEventType":"Lock","waitEvent":"relation"},"after":{"state":"idle","waitEventType":"Client","waitEvent":"ClientRead"},"elapsedMs":11}
+ ✓ packages/db/src/admin/cdrs.db.test.ts > admin CDR export acceptance audit > keeps four decimal places when a rate has more integer digits than to_char masks 1ms
+ ✓ packages/db/src/admin/cdrs.db.test.ts > admin CDR export acceptance audit > counts the normalized filter and commits one audit before the stream 32ms
+ ✓ packages/db/src/admin/cdrs.db.test.ts > admin CDR export acceptance audit > aborts the checked-out audit connection when its deadline fires in the count 22ms
+ ✓ apps/worker/src/cdr-time.db.test.ts > stores the newer rate and uses the .900 answer timestamp for the ledger charge 60ms
+
+ Test Files  48 passed (48)
+      Tests  677 passed (677)
+   Start at  21:14:26
+   Duration  110.40s (tests 87%, import 12%)
+
+exit=0

@@ -1,0 +1,66 @@
+# Phase 8 PR 1: second run (N = 326, 2000, 5000; no 500). SUPERSEDED by ops-timings.txt. assign / delete / list / log timings on PORTALBIG
+# 2026-10-23 local PostgreSQL 17.9 (Docker postgres:17.9-alpine), macOS (Darwin 27.0.0), Node v24.22.1, fs_billing_app for the code under test, fs_billing (owner) only for bulk fixtures
+# Database: a clone, CREATE DATABASE fs_billing_perf_p8pr1 TEMPLATE fs_billing_perf (30 s); pnpm db:migrate on the clone applied 0016, 0017 and 0018 in 2.1 s wall (tsx start included)
+# The script writes (assigns, deletes, bulk inserts) so it refuses fs_billing_perf itself. PORTALBIG in the clone has 3.44 M cdrs and 2.85 M ledger entries before the run.
+# PERF_OWNER_URL=postgresql://fs_billing:***@127.0.0.1:5432/fs_billing_perf_p8pr1 PERF_APP_URL=postgresql://fs_billing_app:***@127.0.0.1:5432/fs_billing_perf_p8pr1 pnpm --filter @fs-billing/db exec tsx scripts/ops-perf.ts
+# "租户锁探针" is a second connection that repeatedly takes the same tenant lock (lock_tenants) while the operation runs; its longest wait is how long that tenant's ingest / charge jobs queue.
+# 克隆库 fs_billing_perf_p8pr1，租户 PORTALBIG
+# PORTALBIG 没有费率表，写入种子费率表（2025-01-01 起生效）
+preview N=326 run 1: 14.9 ms assignable=326 chargeTotal=55.619 noRate=0
+preview N=326 run 2: 11.4 ms assignable=326 chargeTotal=55.619 noRate=0
+preview N=326 run 3: 4.7 ms assignable=326 chargeTotal=55.619 noRate=0
+assign N=326: 1040.6 ms total, 3.19 ms/row, 租户锁探针最长排队 1031.2 ms（6 次探测） assigned=326 chargeTotal=55.619 balance 106351.3190 -> 106295.7
+preview N=2000 run 1: 15.3 ms assignable=2000 chargeTotal=341.628 noRate=0
+preview N=2000 run 2: 10.8 ms assignable=2000 chargeTotal=341.628 noRate=0
+preview N=2000 run 3: 16.8 ms assignable=2000 chargeTotal=341.628 noRate=0
+assign N=2000: 4437.0 ms total, 2.22 ms/row, 租户锁探针最长排队 4409.6 ms（7 次探测） assigned=2000 chargeTotal=341.628 balance 106295.7000 -> 105954.072
+preview N=5000 run 1: 24.4 ms assignable=5000 chargeTotal=854.784 noRate=0
+preview N=5000 run 2: 26.6 ms assignable=5000 chargeTotal=854.784 noRate=0
+preview N=5000 run 3: 23.6 ms assignable=5000 chargeTotal=854.784 noRate=0
+assign N=5000: 10396.3 ms total, 2.08 ms/row, 租户锁探针最长排队 10358.2 ms（7 次探测） assigned=5000 chargeTotal=854.784 balance 105954.0720 -> 105099.288
+generate statements 2026-08, 2026-09: 2.4 ms
+reconcile PORTALBIG: 2789.1 ms [["2025-10-01","ok"],["2025-11-01","ok"],["2025-12-01","ok"],["2026-01-01","ok"],["2026-02-01","ok"],["2026-03-01","ok"],["2026-04-01","ok"],["2026-05-01","ok"],["2026-06-01","ok"],["2026-07-01","ok"],["2026-08-01","ok"],["2026-09-01","ok"]]
+list deletion months 2026 run 1: 2719.8 ms [["2026-08","deletable",254796,[]],["2026-09","deletable",246574,[]]]
+list deletion months 2026 run 2: 2539.8 ms [["2026-08","deletable",254796,[]],["2026-09","deletable",246574,[]]]
+list deletion months 2026 run 3: 2344.9 ms [["2026-08","deletable",254796,[]],["2026-09","deletable",246574,[]]]
+delete 2026-09 (246574 cdrs): 1580.6 ms total, 租户锁探针最长排队 1126.5 ms（25 次探测） deleted=246574
+before {"ledger":2857513,"ledger_sum":"105099.2880","balance":"105099.2880","sept_cdrs":246574}
+after  {"ledger":2857513,"ledger_sum":"105099.2880","balance":"105099.2880","sept_cdrs":0}
+# unassigned_cdrs 补到 100000 行 pending（写入 99999 行 3737.0 ms）
+unassigned groups (pending, by tag) run 1: 29.3 ms rows=41
+unassigned groups (pending, by tag) run 2: 22.2 ms rows=41
+unassigned groups (pending, by tag) run 3: 22.7 ms rows=41
+unassigned page 1 of 50 (pending, newest first) run 1: 3.3 ms rows=50
+unassigned page 1 of 50 (pending, newest first) run 2: 0.8 ms rows=50
+unassigned page 1 of 50 (pending, newest first) run 3: 0.7 ms rows=50
+unassigned page 1000 of 50 (offset 49950) run 1: 25.0 ms rows=50
+unassigned page 1000 of 50 (offset 49950) run 2: 25.0 ms rows=50
+unassigned page 1000 of 50 (offset 49950) run 3: 25.0 ms rows=50
+unassigned count (pending) run 1: 15.3 ms rows=1
+unassigned count (pending) run 2: 14.6 ms rows=1
+unassigned count (pending) run 3: 14.6 ms rows=1
+unassigned page of one tag run 1: 1.1 ms rows=50
+unassigned page of one tag run 2: 0.7 ms rows=50
+unassigned page of one tag run 3: 0.7 ms rows=50
+# operation_logs 写入 1000000 行 12207.3 ms
+logs newest 50 (last 30 days) run 1: 29.2 ms rows=50
+logs newest 50 (last 30 days) run 2: 0.6 ms rows=50
+logs newest 50 (last 30 days) run 3: 0.6 ms rows=50
+logs count (last 30 days) run 1: 11.0 ms rows=1
+logs count (last 30 days) run 2: 7.1 ms rows=1
+logs count (last 30 days) run 3: 6.8 ms rows=1
+logs newest 50 (last 30 days + tenant) run 1: 2.4 ms rows=50
+logs newest 50 (last 30 days + tenant) run 2: 1.6 ms rows=50
+logs newest 50 (last 30 days + tenant) run 3: 1.5 ms rows=50
+logs count (last 30 days + tenant) run 1: 1.2 ms rows=1
+logs count (last 30 days + tenant) run 2: 1.3 ms rows=1
+logs count (last 30 days + tenant) run 3: 1.3 ms rows=1
+logs newest 50 (last 30 days + action set) run 1: 4.2 ms rows=50
+logs newest 50 (last 30 days + action set) run 2: 3.0 ms rows=50
+logs newest 50 (last 30 days + action set) run 3: 3.3 ms rows=50
+logs newest 50 (last 30 days + admin, no admin index) run 1: 0.8 ms rows=50
+logs newest 50 (last 30 days + admin, no admin index) run 2: 0.7 ms rows=50
+logs newest 50 (last 30 days + admin, no admin index) run 3: 0.7 ms rows=50
+logs newest 50 (whole year, deep page offset 100000) run 1: 188.2 ms rows=50
+logs newest 50 (whole year, deep page offset 100000) run 2: 190.1 ms rows=50
+logs newest 50 (whole year, deep page offset 100000) run 3: 184.6 ms rows=50
