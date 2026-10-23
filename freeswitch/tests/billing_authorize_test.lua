@@ -1,5 +1,30 @@
 local script = arg[1] or 'freeswitch/scripts/billing_authorize.lua'
 
+-- 号码用例与 packages/rating/src/dialed.test.ts 共用同一个文件；转义规则与 tests/dialed-cases.ts 一致。
+local cases_path = (arg[0]:match('^(.*)/[^/]*$') or '.') .. '/dialed-cases.tsv'
+local escapes = { t = '\t', n = '\n', r = '\r', s = ' ', e = '', ['\\'] = '\\' }
+local function unescape(field)
+    return (field:gsub('\\(.?)', function(char)
+        local value = escapes[char]
+        assert(value ~= nil, 'unknown escape \\' .. char .. ' in ' .. cases_path)
+        return value
+    end))
+end
+local valid_cases, invalid_cases = {}, {}
+for line in io.lines(cases_path) do
+    if line ~= '' and line:sub(1, 1) ~= '#' then
+        local fields = {}
+        for field in (line .. '\t'):gmatch('([^\t]*)\t') do fields[#fields + 1] = field end
+        if fields[1] == 'valid' and #fields == 3 then
+            valid_cases[#valid_cases + 1] = { unescape(fields[2]), unescape(fields[3]) }
+        elseif fields[1] == 'invalid' and #fields == 2 then
+            invalid_cases[#invalid_cases + 1] = unescape(fields[2])
+        else
+            error('malformed line in ' .. cases_path .. ': ' .. line)
+        end
+    end
+end
+
 local function run(destination, response, ready, http_status)
     local variables = { destination_number = destination, billing_tenant = 'tenant1' }
     local actions = {}
@@ -55,13 +80,7 @@ local function check(condition, message)
 end
 
 for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
-    for _, destination in ipairs({
-        '44712345678|evil', '44712345678,evil', '44712345678/evil',
-        '', '+', '0', '1', '+1', '0044', '000044712345678', '4471x', ' 4471', '4471 ', '44 71',
-        '4471\n', '4471\r', '44\t71',
-        '1234567890123456', '+1234567890123456', '001234567890123456',
-        '00123456789012345678', '+0044712345678',
-    }) do
+    for _, destination in ipairs(invalid_cases) do
         local variables, actions, requests, hangup = run(destination, response)
         local label = response .. ' ' .. destination
         check(variables.billing_authorized == 'false', label .. ' must not be allowed')
@@ -71,15 +90,7 @@ for _, response in ipairs({ 'timeout', '5xx', 'invalid' }) do
         check(actions.respond == '484', label .. ' must respond 484')
         check(hangup == 'INVALID_NUMBER_FORMAT', label .. ' must hang up for invalid number')
     end
-    for _, case in ipairs({
-        { '13800138000', '8613800138000' },
-        { '07551234567', '867551234567' },
-        { '13051234567', '8613051234567' },
-        { '+13051234567', '13051234567' },
-        { '+44712345678', '44712345678' },
-        { '0044712345678', '44712345678' },
-        { '00123456789012345', '123456789012345' },
-    }) do
+    for _, case in ipairs(valid_cases) do
         local destination, expected_billing = case[1], case[2]
         local variables, actions, requests, hangup, request = run(destination, response)
         check(variables.billing_authorized == 'true', response .. ' valid number must be allowed')
@@ -160,4 +171,5 @@ local invalid_code = run('44712345678',
 check(invalid_code.billing_unverified == 'true', 'fractional SIP code must use invalid-response fallback')
 
 assert(#failures == 0, table.concat(failures, '\n'))
+print(string.format('dialed cases: %d valid, %d invalid', #valid_cases, #invalid_cases))
 print('billing_authorize fallback tests passed')

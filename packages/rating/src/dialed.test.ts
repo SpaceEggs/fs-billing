@@ -1,43 +1,29 @@
 import { expect, test } from 'vitest';
+import {
+  invalidCases,
+  loadDialedCases,
+  validCases,
+} from '../../../tests/dialed-cases.js';
 import { normalizeDialedNumber, resolveBillingNumber } from './dialed.js';
 
-test.each([
-  ['00447700900123', '447700900123'],
-  ['+447700900123', '447700900123'],
-  ['13800138000', '8613800138000'],
-  ['075586001234', '8675586001234'],
-  ['+13055551234', '13055551234'],
-  ['13055551234', '8613055551234'],
-  ['00123456789012345', '123456789012345'],
-  ['+123456789012345', '123456789012345'],
-])('normalizes %s to %s', (dialed, billing) => {
-  expect(normalizeDialedNumber(dialed)).toBe(billing);
-});
+// 用例在 freeswitch/tests/dialed-cases.tsv，Lua 的 billing_authorize_test.lua 读同一个文件。
+const cases = loadDialedCases();
+const valid = validCases(cases);
+const invalid = invalidCases(cases);
 
-test.each([
-  '',
-  '0',
-  '1',
-  '+1',
-  '0044',
-  '+',
-  '00',
-  '+001234',
-  '000044712345678',
-  '+1234567890123456',
-  '001234567890123456',
-  '138001380001234',
-  '44712345678|evil',
-  '44712345678,evil',
-  '44712345678/evil',
-  ' 13800138000',
-  '13800138000 ',
-  '+44 123',
-  '123\n',
-  '++123',
-])('rejects invalid billing or routed number %j', (dialed) => {
-  expect(normalizeDialedNumber(dialed)).toBeUndefined();
-});
+test.each(valid.map((c) => [c.dialed, c.billing] as const))(
+  'normalizes %j to %j',
+  (dialed, billing) => {
+    expect(normalizeDialedNumber(dialed)).toBe(billing);
+  },
+);
+
+test.each(invalid.map((c) => [c.dialed] as const))(
+  'rejects invalid billing or routed number %j',
+  (dialed) => {
+    expect(normalizeDialedNumber(dialed)).toBeUndefined();
+  },
+);
 
 test('verifies the normalized callee and claimed billing number', () => {
   expect(
@@ -62,11 +48,24 @@ test('verifies the normalized callee and claimed billing number', () => {
   }
 });
 
-test.each(['', '0', '1', '+1', '0044', '12345678901234', '+4471'])(
+test.each(invalid.map((c) => [c.dialed] as const))(
   'rejects invalid dialed number %j before checking its projection',
   (dialedNumber) => {
     expect(resolveBillingNumber({ callee: '', dialedNumber })).toEqual({
       error: 'format',
     });
+  },
+);
+
+test.each(valid.map((c) => [c.dialed, c.billing] as const))(
+  'resolves %j to the billing number %j',
+  (dialedNumber, billingNumber) => {
+    expect(
+      resolveBillingNumber({
+        dialedNumber,
+        billingNumber,
+        callee: billingNumber,
+      }),
+    ).toEqual({ ok: true, billingNumber });
   },
 );
