@@ -1,0 +1,20 @@
+1	exit=0	n=677	target=passed	ms=2029	ok		
+2	exit=0	n=677	target=passed	ms=2061	ok		
+3	exit=0	n=677	target=passed	ms=2084	ok		
+4	exit=0	n=677	target=passed	ms=2075	ok		
+5	exit=0	n=677	target=passed	ms=2063	ok		
+6	exit=1	n=677	target=passed	ms=2057	FAIL	creates entries, CSV and copied initial ;previews 326 ABC01 rows against ABC001 a;assigning charges 58.35 and writes one c;submitting the same batch twice charges ;the September statement becomes stale af	
+7	exit=0	n=677	target=passed	ms=2068	ok		
+8	exit=0	n=677	target=passed	ms=2054	ok		
+9	exit=0	n=677	target=passed	ms=2052	ok		
+10	exit=0	n=677	target=passed	ms=2036	ok		
+11	exit=0	n=677	target=passed	ms=2086	ok		
+12	exit=0	n=677	target=passed	ms=2045	ok		
+13	exit=0	n=677	target=passed	ms=2044	ok		
+14	exit=0	n=677	target=passed	ms=2093	ok		
+15	exit=0	n=677	target=passed	ms=2039	ok		
+16	exit=0	n=677	target=passed	ms=2081	ok		
+17	exit=0	n=677	target=passed	ms=2037	ok		
+18	exit=0	n=677	target=passed	ms=2052	ok		
+19	exit=0	n=677	target=passed	ms=2101	ok		
+20	exit=0	n=677	target=passed	ms=2098	ok		

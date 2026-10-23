@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
+import { invalidCases, loadDialedCases, validCases } from './dialed-cases.js';
 
 const lua = spawnSync('lua5.3', ['-v']);
 
@@ -14,7 +15,12 @@ test.skipIf(!process.env.CI && lua.error?.message.includes('ENOENT') === true)(
     );
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
-    expect(result.stdout).toBe('billing_authorize fallback tests passed\n');
+    // Lua 读到的共用号码用例条数必须与 TypeScript 一致，见 tests/dialed-cases.test.ts。
+    const cases = loadDialedCases();
+    expect(result.stdout).toBe(
+      `dialed cases: ${validCases(cases).length} valid, ${invalidCases(cases).length} invalid\n` +
+        'billing_authorize fallback tests passed\n',
+    );
   },
 );
 

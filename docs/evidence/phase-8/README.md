@@ -55,3 +55,31 @@
 - 操作日志的「按管理员筛选」没有索引，测得很快是因为夹具只有两个管理员、每人一半的行（几乎每行都匹配，扫描很快就凑够 50 条）；管理员很多、某个管理员很少操作时这条查询会扫得更多，数据量大到需要时再加 `(admin_id, created_at)` 索引。
 - 迁移 0018 在克隆库上耗时包含在上面的迁移总耗时里；克隆库里 `operation_logs` 是空表（三个索引建在空表上），有历史数据的库上建索引的耗时没有测，上线前迁移演练（阶段 10）要测。
 - 归档（PR 3）与接口耗时（PR 4）不在本 PR。
+
+---
+
+# 阶段 8 PR 2 证据：Worker 入库加固与阶段 3 遗留
+
+2026-10-23 至 24，本机 PostgreSQL 17.9（Docker）、Node 24.22.1。设计见 [phase-8-design.md](../../phase-8-design.md)，实现时的偏差见该文末「PR 2 实现时的验证与偏差」。
+
+## 测试结果
+
+| 命令           | 结果                                                                                                                                                                                                                                                                                 | 输出                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `pnpm check`   | 退出 0：lint、格式检查、类型检查全过；根目录单元测试 44 个文件、849 通过 2 跳过；Web 单元测试 45 个文件、600 通过；Web 构建成功。跳过的 2 个是 Lua 测试（`billing-authorize.test.ts`、`dialed-cases.test.ts` 各一个），本机没有 `lua5.3`，CI 必跑（本机另用 Lua 5.5 手动跑过，见下） | [pr2-pnpm-check.txt](pr2-pnpm-check.txt)     |
+| `pnpm test:db` | 退出 0：48 个文件、690 个测试全部通过（PR 1 是 677 个，多出的是 `ingest.db.test.ts` 的 13 个新测试，加上 `reliability.db.test.ts` 改了预期、没有增减）                                                                                                                               | [pr2-pnpm-test-db.txt](pr2-pnpm-test-db.txt) |
+
+PR 1 的基线是 42 个文件 777 通过 1 跳过（根目录）和 48 个文件 677 通过（数据库）。本 PR 新增：`packages/shared/src/worker.test.ts`（7 个）、`tests/dialed-cases.test.ts`（11 个，其中 1 个 Lua 测试本机跳过）、`ingest.db.test.ts`（13 个）；`dialed.test.ts` 由 36 个变为 91 个（共用文件 13 + 32 条，每条在几个测试里用到）。
+
+验收 6 至 10 对应的测试：
+
+- 验收 6（简短原因）：`apps/worker/src/ingest.db.test.ts` / `stores a short structured reason for a failed validation`、`stores a validation failure of an empty object without the Zod message`；`packages/shared/src/worker.test.ts` / `summarizes issues to at most five paths` 等 7 个。
+- 验收 7（去重，决定 25、42）：`ingest.db.test.ts` / `repeated pushes of one invalid body keep one pending row and count the pushes`、`concurrent pushes of one invalid body keep one row`（8 个并发推送）、`an ignored invalid body does not come back`、`merges only byte-identical bodies`、`a body whose earlier row was resolved starts a new pending row`；`reliability.db.test.ts` 里同一份坏原文推两次的既有测试改为一行。再次推送同一原文不写第二条告警，每个测试里都断言告警条数。
+- 验收 8（superseded）：`ingest.db.test.ts` / `a corrected push resolves the earlier invalid row as superseded`、`a corrected push parked as unassigned also resolves it`、`a duplicate of a registered call also resolves a later invalid row`、`an invalid row without a parsable uuid stays pending`、`does not resolve an ignored invalid row or one of another call`。
+- `park()` 保存 `hangup_cause`、`unverified`（PR 1 实现）：`ingest.db.test.ts` / `keeps the hangup cause and the unverified flag of a parked call`。
+- 验收 9（分区测试）：见 [partition-flake.md](partition-flake.md)。**没有复现、根因未找到、不能说已修复**，修复前后各 200 次的失败计数都是 0。
+- 验收 10（共用号码用例）：`freeswitch/tests/dialed-cases.tsv`（13 条合法、32 条非法）；`packages/rating/src/dialed.test.ts` 读它；`freeswitch/tests/billing_authorize_test.lua` 读它并打印条数；`tests/dialed-cases.test.ts` / `the shared case file is well formed and read by both sides`、`the Lua test reads the same number of cases`。往文件里加一条两端结论不一致的用例（例如把合法的 `13800138000` 追加为非法）时，Lua 与 TypeScript 两边都会失败，已手动验证并还原。本机 Lua 5.5 跑 `lua freeswitch/tests/billing_authorize_test.lua` 的输出是 `dialed cases: 13 valid, 32 invalid` 加 `billing_authorize fallback tests passed`。
+
+## 200 次循环
+
+修复前（没有 PR 2 任何改动）单文件 200 次：目标测试失败 0 次，耗时 2025–2113 ms；CPU 满载 200 次：失败 0 次；整套 20 次：目标测试失败 0 次。修复后（加了诊断）单文件 200 次：失败 0 次，耗时 2035–2129 ms；整套 26 次（含重跑）：目标测试失败 0 次。**没有复现，所以这些数字不构成「已修复」的证据**，详见 [partition-flake.md](partition-flake.md) 和原始记录目录 [partition-flake/](partition-flake/)。

@@ -144,6 +144,29 @@ async function state(uuid: string) {
     )
   ).rows[0];
 }
+/** 诊断快照：该任务的状态与重试次数、本库非空闲会话的等待事件、尚未获得的锁（含被谁挡住）。 */
+async function lockSnapshot(jobId: string | null): Promise<string> {
+  const job = await owner.pool.query(
+    'select state, retry_count, start_after, output from pgboss.job where id = $1',
+    [jobId],
+  );
+  const sessions = await owner.pool.query(
+    `select pid, state, wait_event_type, wait_event, pg_blocking_pids(pid) as blocked_by,
+            now() - xact_start as xact_age, left(query, 120) as query
+     from pg_stat_activity
+     where datname = current_database() and pid <> pg_backend_pid() and state <> 'idle'`,
+  );
+  const locks = await owner.pool.query(
+    `select l.pid, l.locktype, l.mode, l.relation::regclass::text as relation
+     from pg_locks l join pg_stat_activity a using (pid)
+     where not l.granted and a.datname = current_database()`,
+  );
+  return JSON.stringify(
+    { job: job.rows, sessions: sessions.rows, waitingLocks: locks.rows },
+    null,
+    2,
+  );
+}
 beforeAll(async () => {
   await installQueue(owner);
   await boss.start();
@@ -1100,18 +1123,27 @@ describe('Worker HTTP 与真实数据库', () => {
     await maintainPartitions(connection.db, worker.log);
     const id = await boss.send(PARTITION_QUEUE);
     expect(id).not.toBeNull();
-    await expect
-      .poll(
-        async () =>
-          (
-            await owner.pool.query<{ state: string }>(
-              'select state from pgboss.job where name = $1 and id = $2',
-              [PARTITION_QUEUE, id],
-            )
-          ).rows[0]?.state,
-        { timeout: 10000 },
-      )
-      .toBe('completed');
+    // 偶发超时的诊断（阶段 8 PR 2）：等不到 completed 时，把任务状态、非空闲会话和等待中的锁写进断言消息，
+    // 而不是只报「期望 completed，得到 created」。
+    try {
+      await expect
+        .poll(
+          async () =>
+            (
+              await owner.pool.query<{ state: string }>(
+                'select state from pgboss.job where name = $1 and id = $2',
+                [PARTITION_QUEUE, id],
+              )
+            ).rows[0]?.state,
+          { timeout: 10000 },
+        )
+        .toBe('completed');
+    } catch (error) {
+      throw new Error(
+        `分区维护任务 ${id} 没有在 10 秒内完成\n${await lockSnapshot(id)}`,
+        { cause: error },
+      );
+    }
   });
 
   it('启动及维护任务失败写 partition_failed，错误向外抛出', async () => {

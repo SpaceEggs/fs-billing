@@ -1,0 +1,20 @@
+1	exit=0	n=690	target=passed	ms=2062	ok		
+2	exit=0	n=690	target=passed	ms=2067	ok		
+3	exit=0	n=690	target=passed	ms=2073	ok		
+4	exit=0	n=690	target=passed	ms=2082	ok		
+5	exit=0	n=690	target=passed	ms=2058	ok		
+6	exit=0	n=690	target=passed	ms=2070	ok		
+7	exit=0	n=690	target=passed	ms=2060	ok		
+8	exit=0	n=690	target=passed	ms=2061	ok		
+9	exit=0	n=690	target=passed	ms=2072	ok		
+10	exit=0	n=690	target=passed	ms=2078	ok		
+11	exit=0	n=690	target=passed	ms=2073	ok		
+12	exit=0	n=690	target=passed	ms=2063	ok		
+13	exit=0	n=690	target=passed	ms=2054	ok		
+14	exit=0	n=690	target=passed	ms=2076	ok		
+15	exit=0	n=690	target=passed	ms=2053	ok		
+16	exit=0	n=690	target=passed	ms=2061	ok		
+17	exit=0	n=690	target=passed	ms=2072	ok		
+18	exit=1	n=690	target=passed	ms=2053	FAIL	cancels only a future version outside th;destroys an incomplete HTTP response aft	
+19	exit=1	n=690	target=passed	ms=2069	FAIL	cancels only a future version outside th;rejects invalid temporary credential arg;cancels only future versions beyond conf;rejects cancellation exactly at the conf;maps activation during a tenant lock wai	
+20	exit=1	n=690	target=passed	ms=2062	FAIL	cancels only a future version outside th;rejects invalid temporary credential arg;cancels only future versions beyond conf;rejects cancellation exactly at the conf;maps activation during a tenant lock wai	

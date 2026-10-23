@@ -2,6 +2,10 @@ import { z } from 'zod';
 
 export const INVALID_NUMBER_REASON = '号码格式错误';
 export const CDR_VALIDATION_FAILURE_PREFIX = '话单校验失败: ';
+/** 校验失败原因最多列出的问题数，超出写「等 N 项」。 */
+export const CDR_ISSUE_LIMIT = 5;
+/** 校验失败原因的最大长度（含前缀）。 */
+export const CDR_REASON_MAX_LENGTH = 200;
 
 export const dialedNumberSchema = z
   .string()
@@ -139,6 +143,32 @@ export const modJsonCdrSchema = z
     hangupCause: v.hangup_cause,
   }));
 export type ParsedCdr = z.infer<typeof modJsonCdrSchema>;
+
+/**
+ * 话单校验失败的简短原因：固定前缀加最多 5 个「路径(错误码)」，超出写「等 N 项」（N 为问题总数），
+ * 总长不超过 200 字符。路径取自 schema 的字段名，不含输入值，也不含 Zod 的 message；完整信息仍在 raw_cdrs.body。
+ */
+export function summarizeCdrIssues(error: {
+  readonly issues: readonly {
+    readonly path: readonly PropertyKey[];
+    readonly code: string;
+  }[];
+}): string {
+  const entries: string[] = [];
+  for (const issue of error.issues) {
+    const path = issue.path.map(String).join('.') || '(root)';
+    const entry = `${path}(${issue.code})`;
+    if (!entries.includes(entry)) entries.push(entry);
+  }
+  const shown = entries.slice(0, CDR_ISSUE_LIMIT);
+  const render = () =>
+    `${CDR_VALIDATION_FAILURE_PREFIX}${shown.join(', ')}${
+      entries.length > shown.length ? ` 等 ${entries.length} 项` : ''
+    }`;
+  while (render().length > CDR_REASON_MAX_LENGTH && shown.length > 1)
+    shown.pop();
+  return render().slice(0, CDR_REASON_MAX_LENGTH);
+}
 
 export const chargeJobSchema = z.object({
   tenantId: z.uuid(),

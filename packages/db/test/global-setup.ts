@@ -37,6 +37,12 @@ export default async function setup(project: TestProject) {
   }
   await admin.query(`DROP DATABASE IF EXISTS ${TEST_DATABASE} WITH (FORCE)`);
   await admin.query(`CREATE DATABASE ${TEST_DATABASE}`);
+  // 锁等待诊断（阶段 8 PR 2，分区维护测试偶发超时）：超过 200ms 的锁等待写进 PostgreSQL 日志，
+  // 连同等待者与持有者，事后能看出是谁挡住了谁。需要超级用户；开发库与 CI 的 owner 都是超级用户。
+  await admin.query(`ALTER DATABASE ${TEST_DATABASE} SET log_lock_waits = on`);
+  await admin.query(
+    `ALTER DATABASE ${TEST_DATABASE} SET deadlock_timeout = '200ms'`,
+  );
   await admin.end();
 
   const authUrl = new URL(env.AUTH_DATABASE_URL ?? env.APP_DATABASE_URL);
