@@ -2,8 +2,6 @@ import { sql } from 'drizzle-orm';
 import type { Tx } from '../client.js';
 import { currentStatementMonth, parseStatementMonth } from './months.js';
 
-export const DEFAULT_STATEMENT_BACKFILL_MONTHS = 24;
-
 /**
  * 租户第一个应有账单的北京月：创建时间与最早流水中较早者所在的月。
  * 取较早者是因为种子的 created_at 晚于流水，也容忍管理员回填的历史流水。租户不存在返回 null。
@@ -36,24 +34,22 @@ export interface MissingStatementsOptions {
   readonly tenantId?: string;
   /** 最后一个应有月份。默认上一个北京月；种子用它固定上界。 */
   readonly through?: string;
-  /** 最多补多少个月，默认 24；更早的缺口靠管理员重新生成补建。 */
-  readonly backfillMonths?: number;
+  /** 最早列出的月份，默认每个租户的第一个应有月份（没有回溯上限）；后台按月份列表用它只看一个月。 */
+  readonly from?: string;
   /** 测试用的“现在”。 */
   readonly asOf?: Date;
 }
 
 /**
- * 应有而缺失的账单：所有租户（含已停用、含没有任何活动的）从第一个应有月份到上一个北京月，已有账单的跳过。
- * 只读，每天运行的生成任务据此扇出。
+ * 应有而缺失的账单：所有租户（含已停用、含没有任何活动的）从第一个应有月份到上一个北京月，已有账单的跳过，
+ * 没有回溯上限。只读，每天运行的生成任务据此扇出。
  */
 export async function listMissingStatements(
   tx: Tx,
   options: MissingStatementsOptions = {},
 ): Promise<MissingStatement[]> {
   const through = options.through ? parseStatementMonth(options.through) : null;
-  const backfill = options.backfillMonths ?? DEFAULT_STATEMENT_BACKFILL_MONTHS;
-  if (!Number.isInteger(backfill) || backfill < 1)
-    throw new Error('backfillMonths 必须是正整数');
+  const from = options.from ? parseStatementMonth(options.from) : null;
   const current = await currentStatementMonth(tx, options.asOf);
   const { rows } = await tx.execute<{
     tenant_id: string;
@@ -77,8 +73,7 @@ export async function listMissingStatements(
     from firsts f
     cross join last_month l
     cross join lateral generate_series(
-      greatest(f.month, (l.month - (${backfill}::int - 1) * interval '1 month')::date),
-      l.month, interval '1 month') as m(month)
+      greatest(f.month, ${from}::date), l.month, interval '1 month') as m(month)
     where not exists (
       select 1 from monthly_statements s where s.tenant_id = f.id and s.month = m.month::date
     )

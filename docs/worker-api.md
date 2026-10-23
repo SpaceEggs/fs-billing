@@ -20,7 +20,7 @@ pnpm --filter @fs-billing/worker start
 | `WORKER_SHARED_KEY`  | 至少 16 字符                                       |
 | `WORKER_ALLOWED_IPS` | 逗号分隔的非空 IP 列表，例如 `127.0.0.1,10.0.0.10` |
 
-可选：`STATEMENT_BACKFILL_MONTHS`（每日账单生成最多补多少个月，默认 24，1–120）、`WORKER_STATEMENT_CONCURRENCY`（账单子任务并发，默认 2，1–10）。
+可选：`WORKER_STATEMENT_CONCURRENCY`（账单子任务并发，默认 2，1–10）。每日账单生成从每个租户的第一个应有月份起补全所有缺失的已结束月份，没有回看上限（原 `STATEMENT_BACKFILL_MONTHS` 已取消，环境里残留的该变量被忽略）。
 
 `POST /authorize` 与 `POST /cdr` 必须带 `X-Billing-Key`，缺失或错误返回 401（固定长度 SHA-256 摘要经 `timingSafeEqual` 比较），来源 IP 不在白名单返回 403。使用连接的实际 IP，不信任代理头。`GET /health` 返回 `{"status":"ok","service":"worker"}`，不检查数据库。
 

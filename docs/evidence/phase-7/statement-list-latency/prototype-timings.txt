@@ -1,0 +1,87 @@
+# Prototype run through node-postgres (extended protocol, bind params, unnamed statement = custom plan), fs_billing_app, tenant RLS scope, one transaction per execution, 10 alternating rounds.
+# V0 = statement as in compute.ts; V1 = minimal diff (bounds inlined as expressions over the bind params, opening MATERIALIZED); V2 = list-only figures (no countries/days/gap), one ledger scan.
+# Month 2026-10 (in progress, asOf = script start time, i.e. all 2026-10 data in this copy):
+
+== V0 plan highlights
+  ->  GroupAggregate  (actual time=54.734..64.271 rows=20 loops=1)
+  Sort Method: external merge  Disk: 3720kB
+  ->  Seq Scan on cdrs_2026_11 c_14  (never executed)
+  ->  Seq Scan on ledger_entries ledger_entries_1  (actual time=101.003..111.282 rows=128797 loops=1)
+  ->  Seq Scan on ledger_entries ledger_entries_2  (actual time=98.484..109.097 rows=128797 loops=1)
+  Sort Method: quicksort  Memory: 25kB
+  ->  GroupAggregate  (actual time=56.384..66.162 rows=17 loops=1)
+  Sort Method: external merge  Disk: 3032kB
+  ->  Seq Scan on cdrs_2026_11 c_29  (never executed)
+  ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries  (actual time=0.030..17.008 rows=128797 loops=1)
+  Execution Time: 394.222 ms
+
+== V1 plan highlights
+  ->  Bitmap Heap Scan on ledger_entries ledger_entries_1  (actual time=2.244..9.169 rows=128797 loops=1)
+  ->  HashAggregate  (actual time=38.577..38.581 rows=20 loops=1)
+  Subplans Removed: 10
+  ->  Seq Scan on cdrs_2026_10 c_3  (actual time=0.004..20.221 rows=128793 loops=1)
+  Sort Method: quicksort  Memory: 25kB
+  ->  GroupAggregate  (actual time=45.190..55.015 rows=17 loops=1)
+  Sort Method: external merge  Disk: 3032kB
+  Subplans Removed: 10
+  ->  Seq Scan on cdrs_2026_10 c_7  (actual time=0.003..33.442 rows=128793 loops=1)
+  ->  Bitmap Heap Scan on ledger_entries  (actual time=2.154..9.394 rows=128797 loops=1)
+  Execution Time: 127.427 ms
+
+== V2 plan highlights
+  ->  Bitmap Heap Scan on ledger_entries  (actual time=2.150..9.920 rows=128797 loops=1)
+  Subplans Removed: 10
+  ->  Seq Scan on cdrs_2026_10 c_3  (actual time=0.002..16.468 rows=128793 loops=1)
+  Execution Time: 47.947 ms
+
+V0: median 353.4 ms (min 350.1, max 355.3) samples 351.9, 354.4, 354.8, 351.1, 352.5, 350.1, 355.3, 353.4, 354.6, 351.9
+  figures: 89020.7830 | 30000 | 500 | 0 | 13169.4640 | 106351.3190 | 128795 | 265012
+V1: median 104.5 ms (min 103.4, max 105.2) samples 105.2, 104.7, 105, 103.4, 104.5, 103.4, 104.3, 103.8, 104, 104.8
+  figures: 89020.7830 | 30000 | 500 | 0 | 13169.4640 | 106351.3190 | 128795 | 265012
+V2: median 42.3 ms (min 41.9, max 43.5) samples 42.2, 42.5, 42.4, 42.2, 41.9, 42.3, 42.2, 42.1, 42.7, 43.5
+  figures: 89020.7830 | 30000 | 500 | 0 | 13169.4640 | 106351.3190 | 128795 | 265012
+
+figures identical across V0, V1, V2
+
+# Month 2026-09 (full month, 234,277 calls; balance-anchor tail covers 2026-09 and 2026-10), asOf 2026-10-22T23:00:00Z:
+
+== V0 plan highlights
+  ->  GroupAggregate  (actual time=203.399..221.566 rows=20 loops=1)
+  Sort Method: external merge  Disk: 6760kB
+  ->  Seq Scan on cdrs_2026_11 c_14  (never executed)
+  ->  Seq Scan on ledger_entries ledger_entries_1  (actual time=100.668..125.447 rows=363077 loops=1)
+  ->  Seq Scan on ledger_entries ledger_entries_2  (actual time=91.458..118.355 rows=363077 loops=1)
+  Sort Method: quicksort  Memory: 25kB
+  ->  GroupAggregate  (actual time=87.509..106.317 rows=30 loops=1)
+  Sort Method: external merge  Disk: 5512kB
+  ->  Seq Scan on cdrs_2026_11 c_29  (never executed)
+  ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries  (actual time=0.458..63.213 rows=234280 loops=1)
+  Execution Time: 681.605 ms
+
+== V1 plan highlights
+  ->  Bitmap Heap Scan on ledger_entries ledger_entries_1  (actual time=8.896..41.570 rows=363077 loops=1)
+  ->  HashAggregate  (actual time=59.281..59.285 rows=20 loops=1)
+  Subplans Removed: 10
+  Sort Method: quicksort  Memory: 25kB
+  ->  GroupAggregate  (actual time=73.018..91.844 rows=30 loops=1)
+  Sort Method: external merge  Disk: 5512kB
+  Subplans Removed: 10
+  ->  Bitmap Heap Scan on ledger_entries  (actual time=4.483..17.102 rows=234280 loops=1)
+  Execution Time: 241.348 ms
+
+== V2 plan highlights
+  ->  Bitmap Heap Scan on ledger_entries  (actual time=6.935..29.521 rows=363077 loops=1)
+  Subplans Removed: 10
+  Execution Time: 104.385 ms
+
+V0: median 466.5 ms (min 462.5, max 468.2) samples 463.4, 466.5, 468.2, 465.3, 467.1, 462.5
+  figures: 82397.5500 | 30000 | 500 | -12.34 | 23864.4270 | 89020.7830 | 234277 | 481578
+V1: median 202.6 ms (min 201.6, max 209.4) samples 202.4, 201.6, 209.4, 202.6, 202.2, 203
+  figures: 82397.5500 | 30000 | 500 | -12.34 | 23864.4270 | 89020.7830 | 234277 | 481578
+V2: median 91.9 ms (min 91, max 92.3) samples 91, 91.6, 92.3, 91.8, 92.1, 91.9
+  figures: 82397.5500 | 30000 | 500 | -12.34 | 23864.4270 | 89020.7830 | 234277 | 481578
+
+figures identical across V0, V1, V2
+
+# Stored statement for PORTALBIG 2026-09 (generated by the Worker path from the ledger, canonical decimals): 82397.55 | 30000 | 500 | -12.34 | 23864.427 | 89020.783 | 234277 | 481578
+# (V0/V1/V2 figures above are the same numbers with trailing zeros)

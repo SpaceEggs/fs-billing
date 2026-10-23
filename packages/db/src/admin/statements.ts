@@ -111,10 +111,10 @@ export function listAdminStatements({
           },
         });
       }
-      // 补建的回溯上限只限制定时任务；这里只看这一个月份，所以任何早于现在的缺口都列出。
+      // 只看这一个月份：from 与 through 都是它。
       for (const missing of await listMissingStatements(tx, {
+        from: month,
         through: month,
-        backfillMonths: 1,
         asOf,
       })) {
         const tenant = tenants.get(missing.tenantId);

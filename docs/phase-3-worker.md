@@ -71,7 +71,7 @@ Claude Code 只读评审（`claude -p … --permission-mode plan`）：无 BLOCK
 
 实现在 `apps/worker/src/statements.ts`，取数、生成、核对和告警都在 `packages/db/src/statements/*`，Worker 只做调度与扇出。三个队列由 `queue:migrate` 预建（`generate-statements`、`generate-statement`、`reconcile-statements`，`retryLimit` 3），部署后需要重新执行它。
 
-- **生成**：`generate-statements` 每天 02:00（`Asia/Shanghai`，`missed: 'once'`）运行；`startStatementJobs` 之外，Worker 启动时再入队一次补缺。父任务在一个事务里用 `listMissingStatements` 列出所有租户（含停用、零活动）应有而缺失的已结束月份，最多回看 `STATEMENT_BACKFILL_MONTHS`（默认 24）个月，逐个入队 `generate-statement`。只补缺、不覆盖已有账单；Worker 停机多日后下一次运行一次补出全部缺口。
+- **生成**：`generate-statements` 每天 02:00（`Asia/Shanghai`，`missed: 'once'`）运行；`startStatementJobs` 之外，Worker 启动时再入队一次补缺。父任务在一个事务里用 `listMissingStatements` 列出所有租户（含停用、零活动）应有而缺失的已结束月份，从每个租户的第一个应有月份起，没有回看上限，逐个入队 `generate-statement`。只补缺、不覆盖已有账单；Worker 停机多日后下一次运行一次补出全部缺口。首次部署（或升级后第一次运行）会一次入队所有租户的全部历史缺口：租户数 × 月数个子任务，子任务并发 `WORKER_STATEMENT_CONCURRENCY`（默认 2）逐个执行，大租户每个月份几百毫秒到一两秒。
 - **子任务**：每个 (租户, 月份) 一个，`localConcurrency` 为 `WORKER_STATEMENT_CONCURRENCY`（默认 2）。`withSystem` 的 `repeatable read` 事务调用 `generateStatement`；已有账单（含并发抢先，经 40001 重试）得到 `exists`，什么都不写。失败抛出，pg-boss 退避重试 3 次，仍失败则进入 failed，次日父任务再入队。
 - **去重**：子任务 ID 由租户、月份与父任务运行的北京日确定性算出，`singletonKey` 为 `<租户>:<月份>`；同一天重复触发的父任务因主键冲突不产生第二个子任务，上一轮仍在排队、重试或执行的月份也跳过。
 - **核对**：`reconcile-statements` 每天 03:00 运行，逐租户一个 `repeatable read` 事务调用 `reconcileTenantStatements`（状态写回头部，`statement_mismatch` 告警每 (租户, 月份) 一条，恢复后置 `recovered_at`）。单个租户失败记录日志并继续，末尾抛出汇总错误让 pg-boss 重试整个任务。

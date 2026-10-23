@@ -25,7 +25,6 @@ import {
 
 const { app: connection, owner } = connections();
 const boss = createBoss(connection.db);
-const BACKFILL = 24;
 // 模拟 10 月 2 日 02:00 的定时触发：7、8、9 月已结束，10 月进行中。
 const OCTOBER = new Date('2026-10-02T02:00:00+08:00');
 const NEXT_DAY = new Date('2026-10-03T02:00:00+08:00');
@@ -53,14 +52,13 @@ afterAll(async () => {
 
 const enqueue = (tenantId: string, asOf = OCTOBER) =>
   enqueueMissingStatements(connection.db, boss, {
-    backfillMonths: BACKFILL,
     tenantId,
     asOf,
   });
 const reconcile = (tenantId: string) =>
   reconcileStatements(
     connection.db,
-    { backfillMonths: BACKFILL, tenantIds: [tenantId], asOf: OCTOBER },
+    { tenantIds: [tenantId], asOf: OCTOBER },
     log,
   );
 const read = (tenantId: string, month: string) =>
@@ -223,18 +221,32 @@ describe('生成任务扇出与补缺（验收标准 4）', () => {
     });
   });
 
-  it('limits catch-up to STATEMENT_BACKFILL_MONTHS', async () => {
-    const tenant = await activeTenant();
-    const summary = await enqueueMissingStatements(connection.db, boss, {
-      backfillMonths: 2,
-      tenantId: tenant.id,
-      asOf: OCTOBER,
+  it('catches up every closed month since the first statement month, with no cap', async () => {
+    // 2023-01 开户到 2026-09 共 45 个已结束月份，远超原先的 24 个月上限。
+    const tenant = await statementTenant(owner, {
+      createdAt: '2023-01-10 09:00:00',
     });
-    expect(summary.enqueued).toBe(2);
-    expect((await children(tenant.id)).map((job) => job.data.month)).toEqual([
-      '2026-08-01',
-      '2026-09-01',
-    ]);
+    const summary = await enqueue(tenant.id);
+    expect(summary).toMatchObject({ missing: 45, enqueued: 45 });
+    const months = (await children(tenant.id)).map((job) => job.data.month);
+    expect(months).toHaveLength(45);
+    expect(months[0]).toBe('2023-01-01');
+    expect(months.at(-1)).toBe('2026-09-01');
+    const outcomes = await runChildren(tenant.id);
+    expect(outcomes).toHaveLength(45);
+    expect(outcomes.every((outcome) => outcome.endsWith(':created'))).toBe(
+      true,
+    );
+    expect(await read(tenant.id, '2023-01-01')).toMatchObject({
+      openingBalance: '0',
+      closingBalance: '0',
+      calls: 0,
+    });
+    // 全部补齐后没有缺口，下一轮什么也不入队。
+    expect(await enqueue(tenant.id, NEXT_DAY)).toMatchObject({
+      missing: 0,
+      enqueued: 0,
+    });
   });
 
   it('a duplicate parent job enqueues no second child', async () => {
@@ -516,11 +528,7 @@ describe('核对任务（验收标准 2）', () => {
     });
     const error = await reconcileStatements(
       flaky,
-      {
-        backfillMonths: BACKFILL,
-        tenantIds: [failing.id, other.id],
-        asOf: OCTOBER,
-      },
+      { tenantIds: [failing.id, other.id], asOf: OCTOBER },
       log,
     ).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(AggregateError);
@@ -534,11 +542,7 @@ describe('核对任务（验收标准 2）', () => {
     // pg-boss 重试整个任务：幂等，补上失败的租户。
     await reconcileStatements(
       connection.db,
-      {
-        backfillMonths: BACKFILL,
-        tenantIds: [failing.id, other.id],
-        asOf: OCTOBER,
-      },
+      { tenantIds: [failing.id, other.id], asOf: OCTOBER },
       log,
     );
     expect(await read(failing.id, '2026-09-01')).toMatchObject({
@@ -556,12 +560,7 @@ describe('调度与 Worker 端到端', () => {
   });
 
   it('the daily schedule is registered with tz Asia/Shanghai', async () => {
-    await startStatementJobs(
-      boss,
-      connection.db,
-      { backfillMonths: BACKFILL, concurrency: 2 },
-      log,
-    );
+    await startStatementJobs(boss, connection.db, { concurrency: 2 }, log);
     expect(await boss.getSchedules(GENERATE_STATEMENTS_QUEUE)).toMatchObject([
       {
         cron: '0 2 * * *',

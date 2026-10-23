@@ -3,7 +3,6 @@ export * from './errors.js';
 export * from './months.js';
 export { computeStatement, type ComputeOptions } from './compute.js';
 export {
-  DEFAULT_STATEMENT_BACKFILL_MONTHS,
   firstStatementMonth,
   listMissingStatements,
   type MissingStatement,

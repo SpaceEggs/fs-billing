@@ -25,8 +25,6 @@ export const GENERATE_STATEMENTS_CRON = '0 2 * * *';
 export const RECONCILE_STATEMENTS_CRON = '0 3 * * *';
 
 export interface StatementJobOptions {
-  /** 补缺的最大月数（STATEMENT_BACKFILL_MONTHS）。 */
-  backfillMonths: number;
   /** 子任务并发（WORKER_STATEMENT_CONCURRENCY）。 */
   concurrency: number;
 }
@@ -65,7 +63,6 @@ export const statementSingletonKey = (tenantId: string, month: string) =>
   `${tenantId}:${month}`;
 
 export interface EnqueueOptions {
-  backfillMonths: number;
   /** 只处理一个租户。 */
   tenantId?: string;
   /** 测试用的“现在”。 */
@@ -84,7 +81,7 @@ export interface EnqueueSummary {
 
 /**
  * 父任务：列出所有租户应有而缺失的已结束月份（每天运行，所以 Worker 停机多日后的第一次运行补出全部缺口，
- * 最多 backfillMonths 个月），在同一事务里逐个入队子任务。只入队缺失的月份：已有账单从不覆盖。
+ * 从每个租户的第一个应有月份起，没有回溯上限），在同一事务里逐个入队子任务。只入队缺失的月份：已有账单从不覆盖。
  */
 export async function enqueueMissingStatements(
   db: Db,
@@ -93,7 +90,6 @@ export async function enqueueMissingStatements(
 ): Promise<EnqueueSummary> {
   return withSystem(db, async (tx) => {
     const missing = await listMissingStatements(tx, {
-      backfillMonths: options.backfillMonths,
       ...(options.tenantId && { tenantId: options.tenantId }),
       ...(options.asOf && { asOf: options.asOf }),
     });
@@ -161,7 +157,7 @@ export interface ReconcileSummary {
  */
 export async function reconcileStatements(
   db: Db,
-  options: { backfillMonths: number; tenantIds?: string[]; asOf?: Date },
+  options: { tenantIds?: string[]; asOf?: Date },
   logger: Logger,
 ): Promise<ReconcileSummary> {
   const tenants = await withSystem(db, async (tx) => {
@@ -192,7 +188,6 @@ export async function reconcileStatements(
         db,
         (tx) =>
           reconcileTenantStatements(tx, tenant.id, {
-            backfillMonths: options.backfillMonths,
             ...(options.asOf && { asOf: options.asOf }),
           }),
         snapshot,
@@ -271,7 +266,6 @@ export async function startStatementJobs(
     for (const job of jobs) {
       const data = parentData.parse(job.data);
       const summary = await enqueueMissingStatements(db, boss, {
-        backfillMonths: options.backfillMonths,
         ...(data.tenantId && { tenantId: data.tenantId }),
       });
       logger.info({ jobId: job.id, ...summary }, '账单生成任务已扇出');
@@ -283,7 +277,6 @@ export async function startStatementJobs(
       const summary = await reconcileStatements(
         db,
         {
-          backfillMonths: options.backfillMonths,
           ...(data.tenantId && { tenantIds: [data.tenantId] }),
         },
         logger,

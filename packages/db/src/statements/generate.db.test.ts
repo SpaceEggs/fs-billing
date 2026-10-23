@@ -568,15 +568,12 @@ describe('租户第一个应有月份与缺失账单', () => {
     });
   });
 
-  it('skips months that already have a statement and honors the backfill limit and the last month', async () => {
+  it('skips months that already have a statement and honors the first and the last month', async () => {
     const tenant = await statementTenant(owner, {
       createdAt: '2026-06-10 08:00:00',
     });
     await created(tenant.id, '2026-07-01');
-    const month = async (options: {
-      through?: string;
-      backfillMonths?: number;
-    }) =>
+    const month = async (options: { through?: string; from?: string }) =>
       (
         await withAdmin(app.db, (tx) =>
           listMissingStatements(tx, { tenantId: tenant.id, ...options }),
@@ -587,12 +584,16 @@ describe('租户第一个应有月份与缺失账单', () => {
       '2026-08-01',
       '2026-09-01',
     ]);
-    expect(await month({ through: '2026-09-01', backfillMonths: 2 })).toEqual([
+    expect(await month({ through: '2026-09-01', from: '2026-08-01' })).toEqual([
       '2026-08-01',
       '2026-09-01',
     ]);
-    expect(await month({ through: '2026-09-01', backfillMonths: 1 })).toEqual([
+    expect(await month({ through: '2026-09-01', from: '2026-09-01' })).toEqual([
       '2026-09-01',
+    ]);
+    // from 早于租户的第一个应有月份时不会补出开户前的月份。
+    expect(await month({ through: '2026-07-01', from: '2026-01-01' })).toEqual([
+      '2026-06-01',
     ]);
     // 以固定的“现在”为准：2026-09-15 时上一个北京月是 8 月。
     const asOf = (

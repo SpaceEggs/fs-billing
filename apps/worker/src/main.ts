@@ -74,7 +74,6 @@ try {
     boss,
     connection.db,
     {
-      backfillMonths: config.STATEMENT_BACKFILL_MONTHS,
       concurrency: config.WORKER_STATEMENT_CONCURRENCY,
     },
     app.log,

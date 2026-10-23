@@ -59,7 +59,7 @@ interface StatementLedgerRow extends Record<string, unknown> {
 export async function reconcileTenantStatements(
   tx: Tx,
   tenantId: string,
-  options: Pick<MissingStatementsOptions, 'asOf' | 'backfillMonths'> = {},
+  options: Pick<MissingStatementsOptions, 'asOf'> = {},
 ): Promise<TenantReconcileResult> {
   const [tenant] = await tx
     .select({ code: tenants.code })
@@ -121,7 +121,6 @@ export async function reconcileTenantStatements(
     await listMissingStatements(tx, {
       tenantId,
       ...(options.asOf && { asOf: options.asOf }),
-      ...(options.backfillMonths && { backfillMonths: options.backfillMonths }),
     })
   ).map((entry) => entry.month);
 

@@ -1,0 +1,159 @@
+# EXPLAIN (ANALYZE, BUFFERS, SETTINGS) of the live-row statement exactly as compute.ts emits it (balance opening), role fs_billing_app with tenant RLS scope, jit=off,
+# fs_billing_perf_inv, PORTALBIG, month 2026-10, asOf 2026-10-22 23:24:13Z, run after warm-up executions (hot). Plan nodes that were 'never executed' (pruned at run time) and trivial
+# InitPlan Result nodes were removed; lines cut at 240 chars. Key facts: two 'Seq Scan on ledger_entries' (InitPlan 18 and 27) are the duplicated opening-balance anchor;
+# the flows scan uses the index; both cdrs aggregates Sort 128,795 rows with an external merge to disk.
+                                                                                                                                                                                 QUERY PLAN                                                     
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Subquery Scan on f  (cost=300048.92..300048.99 rows=1 width=324) (actual time=388.401..388.413 rows=1 loops=1)
+   Buffers: shared hit=34670 read=100357, temp read=844 written=847
+   CTE bounds
+   CTE by_country
+     ->  GroupAggregate  (cost=25113.11..25113.92 rows=20 width=78) (actual time=56.345..66.288 rows=20 loops=1)
+           Group Key: c.country
+           Buffers: shared hit=11990, temp read=465 written=467
+           InitPlan 2
+           InitPlan 3
+           InitPlan 4
+           InitPlan 5
+           InitPlan 6
+           InitPlan 7
+           InitPlan 8
+           ->  Sort  (cost=25112.98..25113.07 rows=37 width=20) (actual time=52.237..57.933 rows=128795 loops=1)
+                 Sort Key: c.country
+                 Sort Method: external merge  Disk: 3720kB
+                 Buffers: shared hit=11990, temp read=465 written=467
+                 ->  Append  (cost=0.42..25112.02 rows=37 width=20) (actual time=16.365..35.774 rows=128795 loops=1)
+                       Buffers: shared hit=11987
+                       ->  Index Scan using cdrs_2026_08_tenant_id_started_at_idx on cdrs_2026_08 c_11  (cost=0.42..2117.67 rows=3 width=17) (actual time=0.521..0.521 rows=0 loops=1)
+                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= (InitPlan 4).col1) AND (started_at < (InitPlan 5).col1))
+                             Filter: ((answered_at >= (InitPlan 2).col1) AND (answered_at < (InitPlan 3).col1) AND ((InitPlan 6).col1 OR (((InitPlan 7).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 8).col1))))
+                             Rows Removed by Filter: 8219
+                             Buffers: shared hit=258
+                       ->  Index Scan using cdrs_2026_09_tenant_id_started_at_idx on cdrs_2026_09 c_12  (cost=0.42..2179.79 rows=3 width=17) (actual time=15.836..15.837 rows=2 loops=1)
+                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= (InitPlan 4).col1) AND (started_at < (InitPlan 5).col1))
+                             Filter: ((answered_at >= (InitPlan 2).col1) AND (answered_at < (InitPlan 3).col1) AND ((InitPlan 6).col1 OR (((InitPlan 7).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 8).col1))))
+                             Rows Removed by Filter: 246573
+                             Buffers: shared hit=7570
+                       ->  Index Scan using cdrs_2026_10_tenant_id_started_at_idx on cdrs_2026_10 c_13  (cost=0.42..1131.20 rows=2 width=17) (actual time=0.015..15.439 rows=128793 loops=1)
+                             Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= (InitPlan 4).col1) AND (started_at < (InitPlan 5).col1))
+                             Filter: ((answered_at >= (InitPlan 2).col1) AND (answered_at < (InitPlan 3).col1) AND ((InitPlan 6).col1 OR (((InitPlan 7).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 8).col1))))
+                             Rows Removed by Filter: 6823
+                             Buffers: shared hit=4159
+   InitPlan 13
+     ->  Bitmap Heap Scan on tenant_balances  (cost=4.19..8.21 rows=1 width=5) (actual time=0.024..0.025 rows=1 loops=1)
+           Recheck Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+           Filter: ((InitPlan 10).col1 OR (((InitPlan 11).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 12).col1)))
+           Heap Blocks: exact=1
+           Buffers: shared hit=2
+           InitPlan 10
+           InitPlan 11
+           InitPlan 12
+           ->  Bitmap Index Scan on tenant_balances_pkey  (cost=0.00..4.15 rows=1 width=0) (actual time=0.006..0.006 rows=1 loops=1)
+                 Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                 Buffers: shared hit=1
+   InitPlan 18
+     ->  Aggregate  (cost=113291.59..113291.60 rows=1 width=32) (actual time=117.885..117.885 rows=1 loops=1)
+           Buffers: shared hit=3196 read=50186
+           InitPlan 14
+           InitPlan 15
+           InitPlan 16
+           InitPlan 17
+           ->  Seq Scan on ledger_entries ledger_entries_1  (cost=0.00..112102.02 rows=475798 width=5) (actual time=98.806..114.397 rows=128797 loops=1)
+                 Filter: ((occurred_at >= (InitPlan 14).col1) AND (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND ((InitPlan 15).col1 OR (((InitPlan 16).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 17).col1))))
+                 Rows Removed by Filter: 2807174
+                 Buffers: shared hit=3196 read=50186
+   InitPlan 22
+     ->  Bitmap Heap Scan on tenant_balances tenant_balances_1  (cost=4.19..8.21 rows=1 width=5) (actual time=0.014..0.015 rows=1 loops=1)
+           Recheck Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+           Filter: ((InitPlan 19).col1 OR (((InitPlan 20).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 21).col1)))
+           Heap Blocks: exact=1
+           Buffers: shared hit=2
+           InitPlan 19
+           InitPlan 20
+           InitPlan 21
+           ->  Bitmap Index Scan on tenant_balances_pkey  (cost=0.00..4.15 rows=1 width=0) (actual time=0.005..0.005 rows=1 loops=1)
+                 Index Cond: (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid)
+                 Buffers: shared hit=1
+   InitPlan 27
+     ->  Aggregate  (cost=113291.59..113291.60 rows=1 width=32) (actual time=113.896..113.897 rows=1 loops=1)
+           Buffers: shared hit=3211 read=50171
+           InitPlan 23
+           InitPlan 24
+           InitPlan 25
+           InitPlan 26
+           ->  Seq Scan on ledger_entries ledger_entries_2  (cost=0.00..112102.02 rows=475798 width=5) (actual time=99.461..110.414 rows=128797 loops=1)
+                 Filter: ((occurred_at >= (InitPlan 23).col1) AND (tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND ((InitPlan 24).col1 OR (((InitPlan 25).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 26).col1))))
+                 Rows Removed by Filter: 2807174
+                 Buffers: shared hit=3211 read=50171
+   InitPlan 28
+     ->  Aggregate  (cost=0.45..0.46 rows=1 width=4) (actual time=66.294..66.294 rows=1 loops=1)
+           Buffers: shared hit=11990, temp read=465 written=467
+           ->  CTE Scan on by_country  (cost=0.00..0.40 rows=20 width=4) (actual time=56.347..66.290 rows=20 loops=1)
+                 Buffers: shared hit=11990, temp read=465 written=467
+   InitPlan 29
+     ->  Aggregate  (cost=0.45..0.47 rows=1 width=32) (actual time=0.003..0.003 rows=1 loops=1)
+           ->  CTE Scan on by_country by_country_1  (cost=0.00..0.40 rows=20 width=32) (actual time=0.000..0.001 rows=20 loops=1)
+   InitPlan 30
+     ->  Aggregate  (cost=0.45..0.46 rows=1 width=32) (actual time=0.002..0.002 rows=1 loops=1)
+           ->  CTE Scan on by_country by_country_2  (cost=0.00..0.40 rows=20 width=32) (actual time=0.000..0.001 rows=20 loops=1)
+   InitPlan 31
+     ->  Aggregate  (cost=1.18..1.19 rows=1 width=32) (actual time=0.072..0.072 rows=1 loops=1)
+           Buffers: shared hit=3
+           ->  Sort  (cost=0.83..0.88 rows=20 width=100) (actual time=0.033..0.033 rows=20 loops=1)
+                 Sort Key: by_country_3.charge DESC, by_country_3.country
+                 Sort Method: quicksort  Memory: 25kB
+                 Buffers: shared hit=3
+                 ->  CTE Scan on by_country by_country_3  (cost=0.00..0.40 rows=20 width=100) (actual time=0.000..0.001 rows=20 loops=1)
+   InitPlan 39
+     ->  Aggregate  (cost=25115.16..25115.17 rows=1 width=32) (actual time=67.218..67.220 rows=1 loops=1)
+           Buffers: shared hit=11990, temp read=379 written=380
+           ->  GroupAggregate  (cost=25113.30..25114.50 rows=33 width=72) (actual time=57.402..67.187 rows=17 loops=1)
+                 Group Key: (((c_15.answered_at AT TIME ZONE 'Asia/Shanghai'::text))::date)
+                 Buffers: shared hit=11990, temp read=379 written=380
+                 InitPlan 32
+                 InitPlan 33
+                 InitPlan 34
+                 InitPlan 35
+                 InitPlan 36
+                 InitPlan 37
+                 InitPlan 38
+                 ->  Sort  (cost=25113.17..25113.26 rows=37 width=14) (actual time=56.757..60.160 rows=128795 loops=1)
+                       Sort Key: (((c_15.answered_at AT TIME ZONE 'Asia/Shanghai'::text))::date)
+                       Sort Method: external merge  Disk: 3032kB
+                       Buffers: shared hit=11990, temp read=379 written=380
+                       ->  Append  (cost=0.42..25112.20 rows=37 width=14) (actual time=15.536..50.268 rows=128795 loops=1)
+                             Buffers: shared hit=11987
+                             ->  Index Scan using cdrs_2026_08_tenant_id_started_at_idx on cdrs_2026_08 c_26  (cost=0.42..2117.68 rows=3 width=14) (actual time=0.472..0.472 rows=0 loops=1)
+                                   Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= (InitPlan 34).col1) AND (started_at < (InitPlan 35).col1))
+                                   Filter: ((answered_at >= (InitPlan 32).col1) AND (answered_at < (InitPlan 33).col1) AND ((InitPlan 36).col1 OR (((InitPlan 37).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 38).col1))))
+                                   Rows Removed by Filter: 8219
+                                   Buffers: shared hit=258
+                             ->  Index Scan using cdrs_2026_09_tenant_id_started_at_idx on cdrs_2026_09 c_27  (cost=0.42..2179.81 rows=3 width=14) (actual time=15.058..15.059 rows=2 loops=1)
+                                   Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= (InitPlan 34).col1) AND (started_at < (InitPlan 35).col1))
+                                   Filter: ((answered_at >= (InitPlan 32).col1) AND (answered_at < (InitPlan 33).col1) AND ((InitPlan 36).col1 OR (((InitPlan 37).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 38).col1))))
+                                   Rows Removed by Filter: 246573
+                                   Buffers: shared hit=7570
+                             ->  Index Scan using cdrs_2026_10_tenant_id_started_at_idx on cdrs_2026_10 c_28  (cost=0.42..1131.21 rows=2 width=14) (actual time=0.015..30.822 rows=128793 loops=1)
+                                   Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (started_at >= (InitPlan 34).col1) AND (started_at < (InitPlan 35).col1))
+                                   Filter: ((answered_at >= (InitPlan 32).col1) AND (answered_at < (InitPlan 33).col1) AND ((InitPlan 36).col1 OR (((InitPlan 37).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 38).col1))))
+                                   Rows Removed by Filter: 6823
+                                   Buffers: shared hit=4159
+   ->  Aggregate  (cost=23217.62..23217.63 rows=1 width=128) (actual time=22.981..22.981 rows=1 loops=1)
+         Buffers: shared hit=4276
+         InitPlan 40
+         InitPlan 41
+         InitPlan 42
+         InitPlan 43
+         InitPlan 44
+         ->  Index Scan using ledger_entries_tenant_occurred_at on ledger_entries  (cost=0.43..23074.78 rows=7137 width=17) (actual time=0.020..12.103 rows=128797 loops=1)
+               Index Cond: ((tenant_id = '00000000-0000-4000-8000-000000000001'::uuid) AND (occurred_at >= (InitPlan 40).col1) AND (occurred_at < (InitPlan 41).col1))
+               Filter: ((InitPlan 42).col1 OR (((InitPlan 43).col1 = 'tenant'::text) AND (tenant_id = (InitPlan 44).col1)))
+               Buffers: shared hit=4276
+ Settings: jit = 'off'
+ Planning:
+   Buffers: shared hit=1567 read=182
+ Planning Time: 27.303 ms
+ Execution Time: 388.978 ms
+(248 rows)
+
+

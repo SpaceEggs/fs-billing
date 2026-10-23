@@ -56,21 +56,31 @@ export async function computeStatement(
   options: ComputeOptions = {},
 ): Promise<StatementComputation> {
   const month = parseStatementMonth(monthInput);
-  const { lo: monthLo, hi: monthHi } = monthRange(month);
+  const range = monthRange(month);
+  const lo = sql`(${range.lo})`;
+  const monthHi = sql`(${range.hi})`;
+  // 统计区间 [lo, hi) 与话单起始时间的下界直接写进各个谓词，不经 CTE 或子查询。
+  // 绑定参数在执行时已知，规划器由此得到常量：话单分区在规划时就被裁掉，期初走索引范围扫描。
+  // 若把边界放进 `(select lo from bounds)` 之类的 InitPlan，规划器看不到值，按默认选择度估算，
+  // 对占满整表的大租户退化成整表顺序扫描，并排序外溢到磁盘（300 万话单租户上约 360 ms 对约 105 ms）。
+  // 所以这条语句必须每次带实参规划：不要改成命名（prepared）语句或 `.prepare()`，
+  // 它们在第 6 次起可能切到通用计划，看不到参数值，退回上面的坏计划。
+  const hi = options.asOf
+    ? sql`least(${monthHi}, ${options.asOf.toISOString()}::timestamptz)`
+    : monthHi;
+  const startedFloor = sql`(${lo} - interval '31 days')`;
+  // 期初只算一次：作为 MATERIALIZED CTE，select 列表里引用两次也不会被内联成两个子查询（每个都扫一遍流水）。
   const opening =
     options.opening === 'balance'
       ? sql`(select balance from tenant_balances where tenant_id = ${tenantId}::uuid)
           - (select coalesce(sum(amount), 0) from ledger_entries
-             where tenant_id = ${tenantId}::uuid and occurred_at >= (select lo from bounds))`
+             where tenant_id = ${tenantId}::uuid and occurred_at >= ${lo})`
       : sql`(select coalesce(sum(amount), 0) from ledger_entries
-             where tenant_id = ${tenantId}::uuid and occurred_at < (select lo from bounds))`;
+             where tenant_id = ${tenantId}::uuid and occurred_at < ${lo})`;
   // 大租户要聚合上百万行，JIT 编译开销大于收益（同首页概况）；只影响当前事务。
   await tx.execute(sql`set local jit = off`);
   const { rows } = await tx.execute<ComputeRow>(sql`
-    with bounds as (
-      select ${monthLo} as lo, least(${monthHi}, ${options.asOf?.toISOString() ?? null}::timestamptz) as hi
-    ),
-    opening as (select ${opening} as amount),
+    with opening as materialized (select ${opening} as amount),
     flows as (
       select
         coalesce(sum(amount) filter (where kind in ('recharge', 'credit_recharge')), 0) as recharge,
@@ -79,14 +89,14 @@ export async function computeStatement(
         coalesce(-sum(amount) filter (where kind = 'call_charge'), 0) as call_charges
       from ledger_entries
       where tenant_id = ${tenantId}::uuid
-        and occurred_at >= (select lo from bounds) and occurred_at < (select hi from bounds)
+        and occurred_at >= ${lo} and occurred_at < ${hi}
     ),
     by_country as (
       select c.country, count(*)::int as calls, sum(c.billed_minutes) as minutes, sum(c.charge) as charge
       from cdrs c
       where c.tenant_id = ${tenantId}::uuid
-        and c.answered_at >= (select lo from bounds) and c.answered_at < (select hi from bounds)
-        and c.started_at >= (select lo - interval '31 days' from bounds) and c.started_at < (select hi from bounds)
+        and c.answered_at >= ${lo} and c.answered_at < ${hi}
+        and c.started_at >= ${startedFloor} and c.started_at < ${hi}
       group by c.country
     ),
     by_day as (
@@ -94,8 +104,8 @@ export async function computeStatement(
         count(*)::int as calls, sum(c.billed_minutes) as minutes, sum(c.charge) as charge
       from cdrs c
       where c.tenant_id = ${tenantId}::uuid
-        and c.answered_at >= (select lo from bounds) and c.answered_at < (select hi from bounds)
-        and c.started_at >= (select lo - interval '31 days' from bounds) and c.started_at < (select hi from bounds)
+        and c.answered_at >= ${lo} and c.answered_at < ${hi}
+        and c.started_at >= ${startedFloor} and c.started_at < ${hi}
       group by 1
     )
     select
