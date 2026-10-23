@@ -4,7 +4,7 @@
 
 ## Bot 运行命令
 
-使用仓库要求的 Node 22 或 24 与 pnpm 10.34.7，按 `.env.example` 配置 owner `DATABASE_URL`、业务 `APP_DATABASE_URL`、认证 `AUTH_DATABASE_URL`、`BETTER_AUTH_SECRET` 和 `BETTER_AUTH_URL`。
+使用仓库要求的 Node 24 与 pnpm 10.34.7，按 `.env.example` 配置 owner `DATABASE_URL`、业务 `APP_DATABASE_URL`、认证 `AUTH_DATABASE_URL`、`BETTER_AUTH_SECRET` 和 `BETTER_AUTH_URL`。
 
 依次执行以下命令。`test:db` 每次重建专用 `fs_billing_test` 数据库；隔离变异证明的四个进程依次重建同一个测试库，不能与其他 DB suite 并发运行。
 

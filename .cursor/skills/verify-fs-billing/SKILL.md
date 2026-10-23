@@ -40,7 +40,7 @@ From an empty database, `launch.sh` does the following:
 6. It runs `vite build --outDir <state>/web-dist`, so `apps/web/dist` is never touched. Then it starts `vite preview --strictPort` under `setsid` on a free port, with `FS_BILLING_API_ORIGIN` set so `/api` proxies to this run's API.
 7. **Ready** means a real `POST /api/auth/login` as `bjh003@example.com` through the web origin returns 200 with `"kind":"customer"` and `"email":"bjh003@example.com"`, and the logout that follows returns 204. Both transcripts are saved to `docs/evidence/verify-fs-billing/<RUN_ID>/launch/ready-login.http`. This is the stack's only login check outside the journeys.
 
-It prints `READY` with the web, API, and Postgres addresses. If it fails, it prints the cleanup command to run for that `RUN_ID`. Prerequisites: Docker, Node 22/24, pnpm 10.34.7, `pnpm install --frozen-lockfile` already done, Playwright Chromium (`pnpm --filter @fs-billing/web exec playwright install chromium` if missing), `ss`, and `python3`.
+It prints `READY` with the web, API, and Postgres addresses. If it fails, it prints the cleanup command to run for that `RUN_ID`. Prerequisites: Docker, Node 24.22.1, pnpm 10.34.7, `pnpm install --frozen-lockfile` already done, Playwright Chromium (`pnpm --filter @fs-billing/web exec playwright install chromium` if missing), `ss`, and `python3`.
 
 To work on an older run, set `VERIFY_RUN_ID=<id>` in front of any helper. Otherwise the helpers use the run in `/tmp/verify-fs-billing/current`.
 

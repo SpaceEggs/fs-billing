@@ -4,7 +4,7 @@
 
 ## 开发环境
 
-- Node.js 22.23.2（`.node-version`）；支持 Node.js 22.12+ 或 24.x。
+- Node.js 24.22.1（`.node-version`；仅支持 Node 24）。
 - pnpm 10.34.7（`package.json` 的 `packageManager` 固定版本）。用 `corepack enable` 激活。
 - Docker 引擎与 Docker Compose v2。执行前启动 Docker Desktop 或 OrbStack。
 
