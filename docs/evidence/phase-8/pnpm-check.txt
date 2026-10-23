@@ -1,0 +1,131 @@
+
+> fs-billing@ check /Volumes/Dev/FS-Billing
+> pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm --filter @fs-billing/web build
+
+
+> fs-billing@ lint /Volumes/Dev/FS-Billing
+> eslint . --max-warnings 0
+
+
+> fs-billing@ format:check /Volumes/Dev/FS-Billing
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> fs-billing@ typecheck /Volumes/Dev/FS-Billing
+> pnpm -r typecheck && tsc -p tsconfig.json
+
+Scope: 6 of 7 workspace projects
+packages/rating typecheck$ tsc -p tsconfig.json
+packages/shared typecheck$ tsc -p tsconfig.json
+packages/rating typecheck: Done
+packages/shared typecheck: Done
+apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
+packages/db typecheck: Done
+apps/web typecheck: Done
+apps/worker typecheck$ tsc -p tsconfig.json
+apps/api typecheck$ tsc -p tsconfig.json
+apps/worker typecheck: Done
+apps/api typecheck: Done
+
+> fs-billing@ test /Volumes/Dev/FS-Billing
+> vitest run && pnpm --filter @fs-billing/web test
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing
+
+
+ Test Files  42 passed (42)
+      Tests  777 passed | 1 skipped (778)
+   Start at  16:00:04
+   Duration  3.28s (import 54%, tests 39%, transform 7%, worker 1%)
+
+    Isolate  42 workers spawned · ~91ms startup each (spawn + environment, per file)
+             at least ~333ms faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @fs-billing/web@ test /Volumes/Dev/FS-Billing/apps/web
+> vitest run
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing/apps/web
+
+
+ Test Files  45 passed (45)
+      Tests  600 passed (600)
+   Start at  16:00:07
+   Duration  24.35s (tests 77%, environment 14%, import 5%, setup 3%, transform 1%)
+
+    Isolate  45 workers spawned · ~443ms startup each (spawn + environment, per file)
+             at least ~1.77s faster with isolate: false — reuses workers across files instead of one per file
+
+
+> @fs-billing/web@ build /Volumes/Dev/FS-Billing/apps/web
+> vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 472 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                   1.52 kB │ gzip:  0.76 kB
+dist/assets/index-DblrAADy.css                   51.30 kB │ gzip:  9.81 kB
+dist/assets/duration--1gSbKB4.js                  0.12 kB │ gzip:  0.13 kB
+dist/assets/input-BpCOES7y.js                     0.42 kB │ gzip:  0.29 kB
+dist/assets/tenant-status-Nj2o5wmw.js             0.43 kB │ gzip:  0.30 kB
+dist/assets/rolldown-runtime-WkwZ5CU-.js          0.59 kB │ gzip:  0.36 kB
+dist/assets/select-D46X8vRl.js                    0.63 kB │ gzip:  0.40 kB
+dist/assets/pagination-fZ1e55ru.js                0.65 kB │ gzip:  0.43 kB
+dist/assets/state-tag--O1dd9H9.js                 0.66 kB │ gzip:  0.44 kB
+dist/assets/segmented-D-8TFfso.js                 0.67 kB │ gzip:  0.43 kB
+dist/assets/search-box-BDY5cpvf.js                0.78 kB │ gzip:  0.48 kB
+dist/assets/alert-DgXV9xQu.js                     0.93 kB │ gzip:  0.48 kB
+dist/assets/rate-csv-template-link-C2gNeqFX.js    0.98 kB │ gzip:  0.68 kB
+dist/assets/load-error-DQhJWUp1.js                1.00 kB │ gzip:  0.64 kB
+dist/assets/admin-api-CG_tp081.js                 1.10 kB │ gzip:  0.59 kB
+dist/assets/home-DQzmucYy.js                      1.19 kB │ gzip:  0.71 kB
+dist/assets/problem-alert-1r6Z6zSd.js             1.34 kB │ gzip:  0.61 kB
+dist/assets/tenant-health-BIji-ZKX.js             1.47 kB │ gzip:  0.76 kB
+dist/assets/query-error-CKAN5ol-.js               1.50 kB │ gzip:  0.91 kB
+dist/assets/statement-DMNUFB5j.js                 1.76 kB │ gzip:  0.94 kB
+dist/assets/cdrs-D3bAimT6.js                      1.80 kB │ gzip:  1.04 kB
+dist/assets/cdr-export-xPAWqzTp.js                1.80 kB │ gzip:  0.97 kB
+dist/assets/data-format-CznRSjeW.js               1.89 kB │ gzip:  0.85 kB
+dist/assets/dialog-CuiWGWJw.js                    2.10 kB │ gzip:  1.15 kB
+dist/assets/filter-sheet-B7fvQsT9.js              2.25 kB │ gzip:  0.99 kB
+dist/assets/cdr-format-Br12zSuL.js                2.53 kB │ gzip:  1.57 kB
+dist/assets/settings-BpnzV4Gw.js                  2.55 kB │ gzip:  1.13 kB
+dist/assets/copy-field-CsqI9Ewx.js                2.73 kB │ gzip:  1.13 kB
+dist/assets/statements-u7UIimZB.js                2.90 kB │ gzip:  1.40 kB
+dist/assets/daily-spend-chart-DmBlVdSu.js         3.63 kB │ gzip:  1.77 kB
+dist/assets/api-problem-CriuucOE.js               3.96 kB │ gzip:  1.84 kB
+dist/assets/date-range-field-h2lw0I2L.js          5.10 kB │ gzip:  2.12 kB
+dist/assets/statement-list-Dd8wq2Bv.js            5.47 kB │ gzip:  1.47 kB
+dist/assets/change-password-U5Q2o2PD.js           5.68 kB │ gzip:  2.63 kB
+dist/assets/tenant-edit-BjiOh49Q.js               6.15 kB │ gzip:  2.72 kB
+dist/assets/login-VlWFiJWq.js                     6.20 kB │ gzip:  2.46 kB
+dist/assets/statement-regenerate-BuJ54LsQ.js      6.41 kB │ gzip:  2.81 kB
+dist/assets/statement-detail-DhcItAJi.js          7.16 kB │ gzip:  2.53 kB
+dist/assets/accounts-C2nP1SLK.js                  8.53 kB │ gzip:  3.35 kB
+dist/assets/ledger-CoFAkgcp.js                    8.95 kB │ gzip:  3.25 kB
+dist/assets/home-D1gNKrwK.js                      9.28 kB │ gzip:  2.94 kB
+dist/assets/tenant-list-C0ehi8Vi.js               9.67 kB │ gzip:  3.22 kB
+dist/assets/statement-equation-BBQ4DDqt.js       10.43 kB │ gzip:  2.05 kB
+dist/assets/form-fields-qyJzIhzX.js              10.53 kB │ gzip:  4.23 kB
+dist/assets/admin-accounts-2kuzcquX.js           12.94 kB │ gzip:  4.31 kB
+dist/assets/statements-DMx-Wf3X.js               13.80 kB │ gzip:  3.94 kB
+dist/assets/balance-dialog-Cs-BpqRm.js           14.13 kB │ gzip:  5.41 kB
+dist/assets/cdr-explorer-BbnBqEEA.js             14.68 kB │ gzip:  4.50 kB
+dist/assets/tenant-create-CjkViRDU.js            18.58 kB │ gzip:  6.80 kB
+dist/assets/decimal-i_D9dVJK.js                  31.94 kB │ gzip: 12.93 kB
+dist/assets/receivables-NlUjXVLM.js              35.49 kB │ gzip: 10.31 kB
+dist/assets/session-expired-dialog-B6uDT4o5.js  100.61 kB │ gzip: 35.12 kB
+dist/assets/tenant-detail-BvvJDS6y.js           106.37 kB │ gzip: 28.01 kB
+dist/assets/index-CahVFNUW.js                   119.10 kB │ gzip: 39.79 kB
+dist/assets/return-to-DX4cH6ha.js               178.88 kB │ gzip: 53.71 kB
+dist/assets/react-Dm1fmqBZ.js                   218.75 kB │ gzip: 68.27 kB
+
+✓ built in 161ms
+exit=0

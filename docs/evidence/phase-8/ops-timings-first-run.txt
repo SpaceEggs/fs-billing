@@ -1,0 +1,60 @@
+# Phase 8 PR 1: first run of the same script, kept as provenance. SUPERSEDED by ops-timings.txt.
+# Differences: N was 326 and 5000 only (no 2000); the "uncharged calls" part of the deletion month list was written as a per-row FILTER (NOT EXISTS)
+# aggregate, which took 7-10 s for the whole of 2026 on PORTALBIG; it was then rewritten as a WHERE NOT EXISTS anti join (about 2.5 s).
+# Same clone recipe (TEMPLATE fs_billing_perf, then pnpm db:migrate), 2026-10-23.
+# 克隆库 fs_billing_perf_p8pr1，租户 PORTALBIG
+# PORTALBIG 没有费率表，写入种子费率表（2025-01-01 起生效）
+preview N=326 run 1: 17.0 ms assignable=326 chargeTotal=55.619 noRate=0
+preview N=326 run 2: 5.4 ms assignable=326 chargeTotal=55.619 noRate=0
+preview N=326 run 3: 4.7 ms assignable=326 chargeTotal=55.619 noRate=0
+assign N=326: 1173.8 ms total, 3.60 ms/row, 租户锁探针最长排队 1165.5 ms（6 次探测） assigned=326 chargeTotal=55.619 balance 106351.3190 -> 106295.7
+preview N=5000 run 1: 30.2 ms assignable=5000 chargeTotal=854.784 noRate=0
+preview N=5000 run 2: 23.3 ms assignable=5000 chargeTotal=854.784 noRate=0
+preview N=5000 run 3: 27.4 ms assignable=5000 chargeTotal=854.784 noRate=0
+assign N=5000: 10793.4 ms total, 2.16 ms/row, 租户锁探针最长排队 10735.7 ms（7 次探测） assigned=5000 chargeTotal=854.784 balance 106295.7000 -> 105440.916
+generate statements 2026-08, 2026-09: 2.4 ms
+reconcile PORTALBIG: 1106.9 ms [["2025-10-01","ok"],["2025-11-01","ok"],["2025-12-01","ok"],["2026-01-01","ok"],["2026-02-01","ok"],["2026-03-01","ok"],["2026-04-01","ok"],["2026-05-01","ok"],["2026-06-01","ok"],["2026-07-01","ok"],["2026-08-01","ok"],["2026-09-01","ok"]]
+list deletion months 2026 run 1: 9635.1 ms [["2026-08","deletable",254796,[]],["2026-09","deletable",246574,[]]]
+list deletion months 2026 run 2: 7052.2 ms [["2026-08","deletable",254796,[]],["2026-09","deletable",246574,[]]]
+list deletion months 2026 run 3: 7096.7 ms [["2026-08","deletable",254796,[]],["2026-09","deletable",246574,[]]]
+delete 2026-09 (246574 cdrs): 2192.0 ms total, 租户锁探针最长排队 1094.4 ms（53 次探测） deleted=246574
+before {"ledger":2855513,"ledger_sum":"105440.9160","balance":"105440.9160","sept_cdrs":246574}
+after  {"ledger":2855513,"ledger_sum":"105440.9160","balance":"105440.9160","sept_cdrs":0}
+# unassigned_cdrs 补到 100000 行 pending（写入 99999 行 3026.5 ms）
+unassigned groups (pending, by tag) run 1: 24.0 ms rows=41
+unassigned groups (pending, by tag) run 2: 19.3 ms rows=41
+unassigned groups (pending, by tag) run 3: 19.5 ms rows=41
+unassigned page 1 of 50 (pending, newest first) run 1: 1.2 ms rows=50
+unassigned page 1 of 50 (pending, newest first) run 2: 0.7 ms rows=50
+unassigned page 1 of 50 (pending, newest first) run 3: 0.7 ms rows=50
+unassigned page 1000 of 50 (offset 49950) run 1: 23.9 ms rows=50
+unassigned page 1000 of 50 (offset 49950) run 2: 22.8 ms rows=50
+unassigned page 1000 of 50 (offset 49950) run 3: 23.5 ms rows=50
+unassigned count (pending) run 1: 14.7 ms rows=1
+unassigned count (pending) run 2: 13.8 ms rows=1
+unassigned count (pending) run 3: 14.3 ms rows=1
+unassigned page of one tag run 1: 0.9 ms rows=50
+unassigned page of one tag run 2: 0.8 ms rows=50
+unassigned page of one tag run 3: 0.8 ms rows=50
+# operation_logs 写入 1000000 行 11556.5 ms
+logs newest 50 (last 30 days) run 1: 6.1 ms rows=50
+logs newest 50 (last 30 days) run 2: 0.6 ms rows=50
+logs newest 50 (last 30 days) run 3: 0.7 ms rows=50
+logs count (last 30 days) run 1: 11.0 ms rows=1
+logs count (last 30 days) run 2: 7.1 ms rows=1
+logs count (last 30 days) run 3: 6.9 ms rows=1
+logs newest 50 (last 30 days + tenant) run 1: 2.0 ms rows=50
+logs newest 50 (last 30 days + tenant) run 2: 1.6 ms rows=50
+logs newest 50 (last 30 days + tenant) run 3: 1.6 ms rows=50
+logs count (last 30 days + tenant) run 1: 1.2 ms rows=1
+logs count (last 30 days + tenant) run 2: 1.2 ms rows=1
+logs count (last 30 days + tenant) run 3: 1.3 ms rows=1
+logs newest 50 (last 30 days + action set) run 1: 4.0 ms rows=50
+logs newest 50 (last 30 days + action set) run 2: 3.1 ms rows=50
+logs newest 50 (last 30 days + action set) run 3: 3.0 ms rows=50
+logs newest 50 (last 30 days + admin, no admin index) run 1: 0.7 ms rows=50
+logs newest 50 (last 30 days + admin, no admin index) run 2: 0.6 ms rows=50
+logs newest 50 (last 30 days + admin, no admin index) run 3: 0.6 ms rows=50
+logs newest 50 (whole year, deep page offset 100000) run 1: 187.5 ms rows=50
+logs newest 50 (whole year, deep page offset 100000) run 2: 189.8 ms rows=50
+logs newest 50 (whole year, deep page offset 100000) run 3: 185.0 ms rows=50

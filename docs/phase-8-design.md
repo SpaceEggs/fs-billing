@@ -95,20 +95,21 @@ plan 把阶段 3 评审遗留项列为 5 条（`plan.md:320-324`：4 条标「�
 
 新表 `unassigned_assignments`（分配批次，只增）：
 
-| 列                                                 | 类型与约束                                           | 用途                             |
-| -------------------------------------------------- | ---------------------------------------------------- | -------------------------------- |
-| `id`                                               | `uuid PRIMARY KEY DEFAULT gen_random_uuid()`         |                                  |
-| `tenant_id`                                        | `uuid NOT NULL REFERENCES tenants`                   | 目标租户                         |
-| `idempotency_key`                                  | `text NOT NULL CHECK (btrim(idempotency_key) <> '')` | 客户端幂等键                     |
-| `requested_by`                                     | `uuid NOT NULL REFERENCES admins`                    | 操作人                           |
-| `source_tag`                                       | `text`                                               | 按分组选择时的标签，按勾选时为空 |
-| `assigned_count`、`no_rate_count`、`blocked_count` | `integer NOT NULL CHECK (>= 0)`                      | 本批结果                         |
-| `charge_total`                                     | `numeric NOT NULL CHECK (charge_total >= 0)`         | 本批扣费合计（租户币种）         |
-| `balance_before`、`balance_after`                  | `numeric NOT NULL`                                   | 设计稿「−35.20 → −93.55」        |
-| `affected_months`                                  | `date[] NOT NULL`                                    | 扣费落入的北京月                 |
-| `audit_id`                                         | `uuid NOT NULL`                                      | 同事务写入的操作日志 id          |
-| `created_at`                                       | `timestamptz NOT NULL DEFAULT now()`                 |                                  |
-| 唯一约束                                           | `UNIQUE (tenant_id, idempotency_key)`                | 请求级幂等                       |
+| 列                                                 | 类型与约束                                           | 用途                                                                                  |
+| -------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `id`                                               | `uuid PRIMARY KEY DEFAULT gen_random_uuid()`         |                                                                                       |
+| `tenant_id`                                        | `uuid NOT NULL REFERENCES tenants`                   | 目标租户                                                                              |
+| `idempotency_key`                                  | `text NOT NULL CHECK (btrim(idempotency_key) <> '')` | 客户端幂等键                                                                          |
+| `requested_by`                                     | `uuid NOT NULL REFERENCES admins`                    | 操作人                                                                                |
+| `source_tag`                                       | `text`                                               | 按分组选择时的标签，按勾选时为空                                                      |
+| `assigned_count`、`no_rate_count`、`blocked_count` | `integer NOT NULL CHECK (>= 0)`                      | 本批结果                                                                              |
+| `charge_total`                                     | `numeric NOT NULL CHECK (charge_total >= 0)`         | 本批扣费合计（租户币种）                                                              |
+| `balance_before`、`balance_after`                  | `numeric NOT NULL`                                   | 设计稿「−35.20 → −93.55」                                                             |
+| `affected_months`                                  | `date[] NOT NULL`                                    | 扣费落入的北京月                                                                      |
+| `audit_id`                                         | `uuid NOT NULL`                                      | 同事务写入的操作日志 id                                                               |
+| `request_digest`                                   | `text NOT NULL`                                      | 请求（选择与预览数字）的 SHA-256；同键重放时核对是同一个请求（PR 1 加，原先没有列出） |
+| `created_at`                                       | `timestamptz NOT NULL DEFAULT now()`                 |                                                                                       |
+| 唯一约束                                           | `UNIQUE (tenant_id, idempotency_key)`                | 请求级幂等                                                                            |
 
 RLS 同 `unassigned_cdrs`（`staff_only`，`app_is_operator()`，`0000_init.sql:680-688`），应用角色 `SELECT, INSERT`，`reject_mutation()` 触发器拒绝 `UPDATE/DELETE/TRUNCATE`。
 
@@ -164,7 +165,7 @@ RLS 同 `unassigned_cdrs`（`staff_only`，`app_is_operator()`，`0000_init.sql:
 
 另一个键不同、选择相同的请求，在行状态这层得到 0 条可分配，返回 409 `UNASSIGNED_NOTHING_TO_ASSIGN`（不写批次、不写日志）。
 
-**批量上限。** 单次最多 5000 条（`ASSIGN_MAX_ROWS`，默认值待 PR 1 在 PORTALBIG 夹具上实测后定），超过返回 400 并提示分批。一个事务持租户锁期间，该租户的扣费任务和人工余额操作排队等待，不丢；授权读余额缓存，不等这把锁（未在本步验证）。
+**批量上限。** 单次最多 2000 条（`ASSIGN_MAX_ROWS`），超过返回 400 并提示分批。PR 1 在 PORTALBIG 克隆库上实测（[evidence](evidence/phase-8/README.md)）：约 2.2 ms/行，2000 条持租户锁约 4.4 s，5000 条约 10.4 s；FreeSWITCH 的 `json_cdr` 推送超时是 5 秒，持锁超过它，该租户的话单推送会超时重试，所以取 2000（原先的占位值是 5000）。一个事务持租户锁期间，该租户的扣费任务和人工余额操作排队等待，不丢；授权读余额缓存，不等这把锁（PR 1 已用测试验证：持锁并已改过余额缓存行的事务不会挡住授权读）。
 
 **分区。** `cdrs` 的分区只由维护任务建（`0000_init.sql:496-545`），而未归属话单可能比现有分区更老。分配事务之前，另起事务对选中行涉及的每个北京月调用 `ensureCdrPartitions(pool, { moment, monthsAhead: 0 })`，再开分配事务（建分区在持租户锁时被拒绝，所以必须在前）。API 的 `businessDb` 是否满足 `PoolDb` 类型，PR 1 核对。
 
@@ -197,14 +198,14 @@ RLS 同 `unassigned_cdrs`（`staff_only`，`app_is_operator()`，`0000_init.sql:
 
 `GET /api/admin/tenants/{tenantId}/cdr-deletions?year=2026` 返回 12 个月的状态，设计稿月份格的子标签即各状态的文案：
 
-| 状态             | 判定                                                                                                                     | 设计稿子标签 / 提示                              |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
-| `deletable`      | 该月有账单行、`details_deleted = false`、月份已结束、`reconcile_status = 'ok'` 且没有「有费用而无流水」的话单（决定 39） | 「9,642 条」（`cdrCount`）                       |
-| `deleted`        | `details_deleted = true`                                                                                                 | 「已删除」「该月话单已删除」                     |
-| `no_statement`   | 月份已结束但没有账单行（1 日 00:00–02:00 的间隙、或生成失败），或是当前月                                                | 「账单未生成」「本月账单尚未生成，不可选」       |
-| `before_opening` | 早于租户创建月                                                                                                           | 「未开户」                                       |
-| `future`         | 晚于当前北京月                                                                                                           | 「尚未到达」                                     |
-| `blocked`        | 有账单但决定 39 的前置条件不满足（核对不是 `ok`、有未扣费话单）                                                          | 设计稿没有；「账单待重新生成」「有话单尚未扣费」 |
+| 状态             | 判定                                                                                                                                                           | 设计稿子标签 / 提示                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `deletable`      | 该月有账单行、`details_deleted = false`、月份已结束、`reconcile_status = 'ok'` 且没有「有费用而无流水」的话单（决定 39）                                       | 「9,642 条」（`cdrCount`）                       |
+| `deleted`        | `details_deleted = true`                                                                                                                                       | 「已删除」「该月话单已删除」                     |
+| `no_statement`   | 月份已结束但没有账单行（1 日 00:00–02:00 的间隙、或生成失败），或是当前月                                                                                      | 「账单未生成」「本月账单尚未生成，不可选」       |
+| `before_opening` | 早于第一个应有账单的月份（创建月与最早流水所在月中较早者，和账单生成任务的 `firstStatementMonth` 一致；PR 1 实现时对齐，PORTALBIG 夹具的流水早于租户创建时间） | 「未开户」                                       |
+| `future`         | 晚于当前北京月                                                                                                                                                 | 「尚未到达」                                     |
+| `blocked`        | 有账单但决定 39 的前置条件不满足（核对不是 `ok`、有未扣费话单）                                                                                                | 设计稿没有；「账单待重新生成」「有话单尚未扣费」 |
 
 `cdrCount` 用与话单列表、导出相同的月份谓词（`packages/db/src/cdr-query.ts:20-39`）：`coalesce(answered_at, started_at)` 落在北京月 `[lo, hi)`，并带 `started_at >= lo - interval '31 days' AND started_at < hi` 的分区剪枝下界（振铃不超过 31 天的假设沿用阶段 6，`phase-6-design.md:169`）。一通 8-31 23:59:50 振铃、9-01 00:00:05 接通的电话在 `cdrs_2026_08` 分区里，但属于 9 月：它随 9 月被删，不随 8 月（和账单按 `answered_at` 归属一致）。
 
@@ -549,7 +550,7 @@ plan 阶段 8 没有性能验收。本步没有做任何测量，下面是 PR �
 - 归档 1 个月分区（原文约 1.7 GB 的估算见 `design.md:404-414`）的导出、校验耗时与压缩比；`DETACH` 的锁等待时间。
 - 未归属列表在 10 万行下的分页与分组耗时；操作日志在 100 万行下带筛选的耗时。
 
-结果写入 `docs/evidence/phase-8/`。
+结果写入 `docs/evidence/phase-8/`。PR 1 已测前两项和最后一项的 SQL 部分（分配 326、2000、5000 条，删除 PORTALBIG 的 2026-09，10 万行未归属话单的分组与分页，100 万行操作日志的筛选），见 [evidence/phase-8/README.md](evidence/phase-8/README.md)；归档由 PR 3 测，列表与日志的 HTTP 耗时由 PR 4 测。
 
 ## 已决定
 
@@ -561,7 +562,7 @@ plan 阶段 8 没有性能验收。本步没有做任何测量，下面是 PR �
 | 2   | 分配与扣费在同一个事务、API 进程内完成，不经 pg-boss；入库定价和扣费逻辑抽到 `packages/db` 共用                                                                                           | 本设计                                    | [分配](#分配事务幂等并发)；PR 1                                    |
 | 3   | 重复提交只扣费一次：请求幂等键、行状态加行锁、`call_uuids` 认领、流水幂等键四层                                                                                                           | plan 验收 2；`0001_worker_gate.sql`       | 同上                                                               |
 | 4   | 预览不落库；提交带 `expected`，事务内实算不符则 409 并回滚                                                                                                                                | 本设计（先例：`PREVIEW_STALE`）           | 同上                                                               |
-| 5   | 单次分配最多 `ASSIGN_MAX_ROWS` 条（默认 5000，待实测）                                                                                                                                    | 本设计                                    | 同上                                                               |
+| 5   | 单次分配最多 `ASSIGN_MAX_ROWS` 条（2000，PR 1 实测）                                                                                                                                      | 本设计                                    | 同上                                                               |
 | 6   | 补扣费落在已出账月份，该月账单变 `stale`，不自动重新生成；响应和页面列出受影响月份                                                                                                        | `phase-7-design.md` 依赖表                | 同上                                                               |
 | 7   | 纳入「忽略」「撤销忽略」，忽略必填原因，都记操作日志                                                                                                                                      | `pages.md:313-315`；设计稿                | [忽略](#忽略与撤销忽略)；PR 1、4                                   |
 | 8   | 「疑似拼写错误」= 标签与某租户编码的编辑距离 ≤ 1（忽略大小写）                                                                                                                            | 设计稿「相近：ABC001」；本设计            | [分组](#分组与列表)                                                |
@@ -672,7 +673,7 @@ PR 2 与 PR 3 只依赖 PR 1，可并行；PR 4 也只依赖 PR 1。PR 5 依赖 
 - **原文无法按租户清除。** `raw_cdrs.tenant_id`、`call_uuid` 从未写入，删除话单不能顺带清原文（决定 34）。
 - **plan.md 文字待更正。** 延后项 1（`plan.md:300`）与阶段 9 一项（`plan.md:347`）的文字与决定 40、42 不一致；本步不改 plan.md，由 PR 6 随勾选一并更正。
 - **无 UUID 的坏原文无法自动解决。** `candidate_call_uuid` 为空的行，修正重推不会关联到它，只能人工忽略。
-- **分配的批量上限未实测。** 5000 是占位；一个事务写几千行流水并触发余额触发器的耗时没有测。
+- **分配的批量上限随数据量变化。** 2000 条来自 PR 1 在 PORTALBIG（340 万话单、285 万笔流水）上的实测，每行约 2.2 ms（逐条写话单、认领登记、写流水、更新余额缓存）；硬件或租户数据量不同，持锁时间会不同，上线前要在目标机器上复测。
 - **`audit_operation_logs` 变更牵动审计角色的权限断言。** 函数返回列变了，要 `DROP` 重建并重新授权，`audit.db.test.ts` 里有对 ACL 文本的精确断言，漏改会失败。
 - **已分配的话单不可撤销。** 不在 plan 范围；分配错租户只能用调账冲正。
 - **多实例。** 阶段 3 遗留的「pg-boss 关闭 advisory locking 假设单实例」（`plan.md:349`）同样约束归档任务；归档靠 `singletonKey` 和 `PRIMARY KEY (month)` 避免重复，但两个实例同时写同一个 `.partial` 文件没有防护，PR 3 用独占创建（`wx` 标志）。
@@ -692,3 +693,18 @@ PR 2 与 PR 3 只依赖 PR 1，可并行；PR 4 也只依赖 PR 1。PR 5 依赖 
 - **费率匹配。** 读 `longestPrefix` 确认是最长前缀、`versionAt` 按接通时刻取版本：删掉 `1876` 后 `1876…` 会落到前缀 `1`。
 - **Node。** 本机 Node 是 v22.23.2（项目要求 24.22.1）：`zlib.zstdCompressSync` 与 `createGzip` 都存在；Node 24 上未验证。
 - **未验证。** 迁移、任务、API、页面均未实现；`DETACH PARTITION` 在 `SECURITY DEFINER` 函数里的行为与锁影响、对 `raw_cdrs` 写入的阻塞时间、`CONCURRENTLY` 在函数里不可用的推断、`FOR UPDATE` 在读已提交下重新计算条件的行为、分区测试偶发超时的根因、`ASSIGN_MAX_ROWS` 与各项耗时、`businessDb` 是否满足 `ensureCdrPartitions` 的 `PoolDb` 类型、授权接口是否等待租户锁，均未验证。
+
+## PR 1 实现时的验证与偏差
+
+2026-10-23 PR 1 落地时核对的、本文原先标为「未验证」的假设，和与本文不同的地方：
+
+- **`FOR UPDATE` 重新判断条件。** 读已提交下，被另一个事务持有行锁的待处理话单，在对方把它改成 `ignored` 并提交后，等待的分配重新判断 `status = 'pending'`，看不到这些行，得到 `UNASSIGNED_NOTHING_TO_ASSIGN`（`assign.db.test.ts` / `a row locked by another request and resolved meanwhile is not assigned afterwards`）。
+- **`businessDb` 满足 `PoolDb`。** `apps/api/src/app.ts` 的 `businessDb: PoolDb`，`main.ts` 传的是 `connect()` 返回的连接池数据库；PR 4 的分配处理器直接传它，`ensureCdrPartitions` 不需要别的类型。
+- **授权接口不等租户锁。** `apps/worker/src/app.ts` 的 `/authorize` 只读缓存余额，不调用 `lockTenants`；测试里持租户锁并已改过余额缓存行的事务没有挡住 `loadRatingTenant`。
+- **入库与扣费复核已删除标志。** 复核放在共享函数 `priceAndInsertCdr` 与 `chargeCall` 里，都在租户锁之后；`cdr-intake.db.test.ts` 用「删除事务持锁、入库等待」的顺序验证拿到锁之后读到的是最新已提交的标志。`chargeCall` 遇到已删除月份抛 `CdrMonthDeletedError`（任务失败，对账告警），不写流水。
+- **审计 variants 提前到 PR 1。** 分配、忽略、删除要在同一事务里写操作日志，`unassigned_assignments.audit_id` 也要有值，所以 `packages/shared/src/api/admin/audit.ts` 的四个 action（`unassigned_assign`、`unassigned_ignore`、`unassigned_unignore`、`cdr_delete`）、`target.kind: 'unassigned_batch'`、变更字段 `balance`、`callCount` 在 PR 1 加；`credential_bootstrap` 与 `actor` 的 `{ label }` 联合仍在 PR 4。`system_alerts.kind` 的 `audit_failed`、`raw_archive_failed` 两个值都在迁移 0018 里加。
+- **业务错误码。** PR 1 的数据库函数抛 `UnassignedError`、`CdrDeletionError`（带 `code`，沿用阶段 7 `StatementError` 的做法），不依赖 `adminConflictCodeSchema`；PR 4 把它们映射成 API 的 409 / 400。
+- **`unassigned_assignments.request_digest`。** 幂等重放要核对「同一份选择与 expected」，原表没有可比较的列，加了这一列。
+- **跨月删除的第一个月失败。** 没有任何月份被删时直接抛错；已有月份完成后失败，返回 `months / remaining / failure`，不抛。
+- **删除预检用快照读。** 预检是一个 `repeatable read` 只读事务，账单行的标志和话单条数取自同一时刻；否则另一个管理员恰好在两条语句之间提交删除时，会读到「标志未置而话单已没」的混合状态。
+- **月份列表的耗时。** 一整年 12 个月在 PORTALBIG 上约 2.5 s（最初把「有费用而无流水」写成逐行 `NOT EXISTS` 的聚合过滤，约 7–10 s，改为 `WHERE NOT EXISTS` 的反连接后降到约 2.5 s）；耗时与该年话单行数成正比，页面可以只在打开删除对话框时请求。
