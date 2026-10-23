@@ -75,24 +75,24 @@ describe('月账单任务的纯逻辑', () => {
       expect(options.retryLimit).toBe(3);
   });
 
-  it('configures backfill months and child concurrency with defaults', () => {
+  it('configures child concurrency with a default and has no backfill cap', () => {
     expect(workerEnvironmentSchema.parse(environment)).toMatchObject({
-      STATEMENT_BACKFILL_MONTHS: 24,
       WORKER_STATEMENT_CONCURRENCY: 2,
     });
     expect(
       workerEnvironmentSchema.parse({
         ...environment,
-        STATEMENT_BACKFILL_MONTHS: '36',
         WORKER_STATEMENT_CONCURRENCY: '4',
       }),
-    ).toMatchObject({
-      STATEMENT_BACKFILL_MONTHS: 36,
-      WORKER_STATEMENT_CONCURRENCY: 4,
-    });
+    ).toMatchObject({ WORKER_STATEMENT_CONCURRENCY: 4 });
+    // 旧部署环境里可能还留着 STATEMENT_BACKFILL_MONTHS：忽略，不报错，也不再生效。
+    expect(
+      workerEnvironmentSchema.parse({
+        ...environment,
+        STATEMENT_BACKFILL_MONTHS: '24',
+      }),
+    ).not.toHaveProperty('STATEMENT_BACKFILL_MONTHS');
     for (const bad of [
-      { STATEMENT_BACKFILL_MONTHS: '0' },
-      { STATEMENT_BACKFILL_MONTHS: '121' },
       { WORKER_STATEMENT_CONCURRENCY: '0' },
       { WORKER_STATEMENT_CONCURRENCY: '1.5' },
     ])

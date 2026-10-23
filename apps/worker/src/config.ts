@@ -1,9 +1,6 @@
 import { isIP } from 'node:net';
 import { z } from 'zod';
-import {
-  DEFAULT_STATEMENT_BACKFILL_MONTHS,
-  databaseEnvironmentSchema,
-} from '@fs-billing/db';
+import { databaseEnvironmentSchema } from '@fs-billing/db';
 
 function privateIpv4(value: string) {
   if (isIP(value) !== 4) return false;
@@ -43,13 +40,6 @@ export const workerEnvironmentSchema = z.object({
     .min(1)
     .max(365)
     .default(30),
-  // 每日账单生成补缺的最大月数；更早的缺口由管理员重新生成补建。
-  STATEMENT_BACKFILL_MONTHS: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(120)
-    .default(DEFAULT_STATEMENT_BACKFILL_MONTHS),
   WORKER_STATEMENT_CONCURRENCY: z.coerce
     .number()
     .int()
