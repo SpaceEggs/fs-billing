@@ -1,0 +1,3 @@
+1	exit=1	n=690	target=passed	ms=2062	FAIL	maps activation during a tenant lock wai	
+2	exit=1	n=690	target=passed	ms=2055	FAIL	maps activation during a tenant lock wai	
+3	exit=1	n=690	target=passed	ms=2053	FAIL	maps activation during a tenant lock wai	
