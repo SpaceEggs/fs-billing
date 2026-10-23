@@ -27,3 +27,4 @@ export * from './portal/home.js';
 export * from './portal/statements.js';
 export * from './admin/statements.js';
 export * from './statements/index.js';
+export * from './unassigned/index.js';
