@@ -3,6 +3,7 @@ export * from './cancel-postgres.js';
 export { withBoundedExportClient } from './bounded-export-client.js';
 export * from './clock.js';
 export * from './ledger.js';
+export * from './cdr-intake.js';
 export * from './ledger-merge.js';
 export * from './partitions.js';
 export * from './rates.js';

@@ -1,13 +1,15 @@
 import { eq, sql } from 'drizzle-orm';
 import {
+  CDR_MONTH_DELETED_REASON,
   lockTenants,
   loadRatingTenant,
+  priceAndInsertCdr,
   schema,
   withSystem,
   type Db,
   type Tx,
 } from '@fs-billing/db';
-import { findRate, resolveBillingNumber, priceCall } from '@fs-billing/rating';
+import { resolveBillingNumber } from '@fs-billing/rating';
 import {
   CDR_VALIDATION_FAILURE_PREFIX,
   INVALID_NUMBER_REASON,
@@ -156,28 +158,19 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         );
       const verifiedBillingNumber = resolved.billingNumber;
       const ratingTenant = await loadRatingTenant(tx, tenant.code);
-      const entry =
-        cdr.answeredAt &&
-        ratingTenant &&
-        findRate(ratingTenant.rates, verifiedBillingNumber, cdr.answeredAt);
-      if (cdr.answeredAt && !entry)
+      // 定价与写 cdrs 在 packages/db 的 priceAndInsertCdr，未归属话单的分配与这里共用。
+      const inserted = await priceAndInsertCdr(
+        tx,
+        { id: tenant.id, rating: ratingTenant },
+        cdr,
+        verifiedBillingNumber,
+      );
+      if (inserted.status === 'no_rate')
         return park(tx, cdr, '接通时无费率', verifiedBillingNumber);
-      const priced = entry
-        ? priceCall(cdr.billsec, entry.perMinute)
-        : undefined;
-      await tx.insert(schema.cdrs).values({
-        ...cdr,
-        billingNumber: verifiedBillingNumber,
-        tenantId: tenant.id,
-        durationSeconds: cdr.billsec,
-        billedMinutes: priced?.billedMinutes.toFixed() ?? '0',
-        charge: priced?.charge.value.toFixed() ?? '0',
-        matchedPrefix: entry ? entry.prefix : null,
-        country: entry ? entry.country : null,
-        iso: entry?.iso || null,
-        description: entry?.description || null,
-        rate: entry ? entry.perMinute.perMinute.toFixed() : null,
-      });
+      // 删除话单之后属于该月的新话单不能再进账（阶段 8 决定 38）。删除持有同一把租户锁，
+      // 上面的 lockTenants 之后读到的标志就是最新已提交的。
+      if (inserted.status === 'month_deleted')
+        return park(tx, cdr, CDR_MONTH_DELETED_REASON, verifiedBillingNumber);
       await queue.enqueue(tx, { tenantId: tenant.id, callUuid: cdr.callUuid });
       return 'queued' as const;
     });
