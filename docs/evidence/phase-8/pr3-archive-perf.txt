@@ -1,0 +1,41 @@
+# Phase 8 PR 3: archiving one month of raw_cdrs (PORTALBIG scale), DETACH lock impact on ingest, retrieval and whole-month restore. Final run (the second one, on a freshly cloned database).
+# 2026-10-27, local PostgreSQL 17.9 (Docker postgres:17.9-alpine, default settings: shared_buffers 128MB, work_mem 4MB, fsync on), macOS (Darwin 27.0.0), 10 CPUs / 7.8 GiB in the Docker VM, Node v24.22.1.
+# Database: a clone, CREATE DATABASE fs_billing_perf_p8pr3 TEMPLATE fs_billing_perf (about 30 s); pnpm db:migrate on the clone applied 0016 to 0019. The script writes, so it refuses fs_billing_perf itself.
+# Fixture (packages/db/scripts/raw-archive-perf.ts seed): synthetic FreeSWITCH-shaped bodies, NOT real CDRs. 2026-03 has 246,574 rows (the number of cdrs PORTALBIG had in 2026-09), average body 6,696 B, 1,574.5 MB of body text in total (design.md estimates about 1.7 GB for such a month).
+#   Each body is pretty-printed JSON with ~120 channel variables; about half of the values are random hex / ports / UUIDs, the rest are fixed strings. 2026-02, 2026-01 and 2025-12 have 20,000 rows each (used for the lock scenarios).
+# The partition was just written, so it is warm in the OS and PostgreSQL caches: a cold partition is bounded by disk throughput instead.
+# PERF_OWNER_URL=postgresql://fs_billing:***@127.0.0.1:5432/fs_billing_perf_p8pr3 PERF_APP_URL=postgresql://fs_billing_app:***@127.0.0.1:5432/fs_billing_perf_p8pr3 pnpm --filter @fs-billing/db exec tsx scripts/raw-archive-perf.ts run
+# Ingest load is a separate process: 4 writers, each inserting one 6 KB body into raw_cdrs under the system identity and then sleeping 25 ms (about 120 inserts/s measured; real PORTALBIG peaks are far lower).
+# "slowest single insert ... at +-1.7 s" is a sample taken before the archive started (the offset is relative to the start of the archive step).
+# First line below: load average at the start (uptime).
+11:36  up 6 days, 19:45, 3 users, load averages: 2.12 2.31 2.24
+# 归档目录 /var/folders/jr/kfy2kz791zv4qqdwk_5ccn380000gn/T/fsb-archive-perf-WuCDt6（运行结束后删除）
+# 1. 入库负载基线（4 个写入者，每次插入后停 25 ms，约 160 次/秒；整行 6 KB 原文）
+baseline ingest latency: n=2385 p50=7.8 p95=11.5 p99=18.2 max=69.2 ms
+fingerprint scan of the whole 2026-03 partition (count, sum(octet_length), bit_xor(hash)), warm cache: 1.9 s
+# 2. 归档 2026-03（246574 行）：导出、校验、分离，入库负载同时在跑
+stage=detached rows=246574 body=1574.5 MB file=282.6 MB chunks=453
+compression ratio (body bytes / file bytes): 5.57x (file = 17.9% of the original text)
+export (start -> exported, includes the sort in PostgreSQL): 29.4 s
+verify (exported -> verified; file hash + decode + second pass over the partition): 13.3 s
+publish + manifest (verified -> marked): 0.0 s
+detach step (marked -> committed; re-hash of the file + raw_cdrs_detach_partition): 2.0 s
+total wall time: 44.7 s (44.77 s by Date)
+export throughput: 53.5 MB/s of body text, 8385 rows/s
+Worker-process RSS peak while archiving: 338.0 MB; event loop delay p50=5.1 p99=7.3 max=14.1 ms (resolution 5 ms)
+parent-table ACCESS EXCLUSIVE window seen by a 2 ms poller: 20 ms (first seen +44.7 s)
+ingest latency while exporting:  n=4070 p50=3.4 p95=6.4 p99=8.5 max=24.4 ms
+ingest latency while verifying:  n=1812 p50=3.7 p95=7.2 p99=10.0 max=18.6 ms
+ingest latency during detach step: n=280 p50=2.9 p95=6.1 p99=7.9 max=8.0 ms
+ingest latency whole run:        n=6366 p50=3.4 p95=7.3 p99=10.0 max=41.0 ms
+slowest single insert: 41.0 ms at +-1.7 s (detach step began at +42.7 s)
+gzip -t raw-cdrs/2026/raw-cdrs-2026-03.jsonl.gz: ok in 1.1 s (282.6 MB)
+zcat | wc -l equivalent: 246574 lines in 9.8 s
+drop after the grace period: dropped=2026-03-01 failures=0
+restore one record (partition dropped; manifest query + read one ~1000-row member + gunzip + hash), 6 members across the file: 16, 12, 12, 13, 11, 7 ms
+restore whole month from the file: 246574 rows in 69.6 s (hash of every member and row, insert, partition fingerprint check)
+# 3. DETACH 被挡住时对入库的影响（2026-02，2 万行；入库负载同时在跑）
+no blocker: detach step detached after 262 ms; ingest during that window: n=97 p50=4.3 p95=9.3 p99=10.2 max=10.2 ms
+reader of the old partition: detach step failed (PostgreSQL 55P03: canceling statement due to lock timeout) after 3029 ms; ingest during that window: n=420 p50=7.7 p95=10.8 p99=13.1 max=14.1 ms
+reader of raw_cdrs (current partition only, constant range): detach step failed (PostgreSQL 55P03: canceling statement due to lock timeout) after 3261 ms; ingest during that window: n=96 p50=7.4 p95=10.9 p99=3001.6 max=3001.6 ms
+# done; load average at the end: 2.61 2.49 2.33

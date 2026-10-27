@@ -351,7 +351,7 @@ RLS `staff_only`；应用角色 `SELECT, INSERT, UPDATE`（状态机推进），
 
 ### 任务与状态机
 
-Worker 新队列 `archive-raw-cdrs`，`boss.schedule(…, '0 4 * * *', null, { tz: 'Asia/Shanghai' })`（01:00 分区维护之后、与 02:00 账单生成和 03:00 账单核对错开）；`installQueue` 预建队列，`retryLimit: 3`，`expireInSeconds` 给足（一个月分区按 `design.md:404-414` 的估算约 1.7 GB 原文，待 PR 3 实测）。每次运行只处理一个月（最老的未完成月），任务 `singletonKey = archive:YYYY-MM`，多次触发不并发。配置：`RAW_CDR_ARCHIVE_DIR`、`RAW_CDR_ARCHIVE_AFTER_MONTHS`（默认 6）、`RAW_CDR_ARCHIVE_GRACE_DAYS`（默认 7，决定 32）。
+Worker 新队列 `archive-raw-cdrs`，`boss.schedule(…, '0 4 * * *', null, { tz: 'Asia/Shanghai' })`（01:00 分区维护之后、与 02:00 账单生成和 03:00 账单核对错开）；`installQueue` 预建队列，`retryLimit: 3`，`expireInSeconds` 给足（一个月分区按 `design.md:404-414` 的估算约 1.7 GB 原文，PR 3 实测 24.7 万行、1.57 GB 原文的月份整个任务约 45 秒，见[偏差](#pr-3-实现时的验证与偏差)）。每次运行只处理一个月（最老的未完成月），任务 `singletonKey = archive:YYYY-MM`，多次触发不并发。配置：`RAW_CDR_ARCHIVE_DIR`、`RAW_CDR_ARCHIVE_AFTER_MONTHS`（默认 6）、`RAW_CDR_ARCHIVE_GRACE_DAYS`（默认 7，决定 32）。
 
 「超过 6 个月」按分区整月算：月份 M 的分区在 `M 月末 + 6 个月 ≤ 现在（北京）` 之后才可归档，也就是每条原文至少已保存 6 个月，最老的一月留到约 7 个月，不按半月分区（决定 32）。校验通过后 `DETACH` 并改名为 `raw_cdrs_YYYY_MM_archived`，保留宽限期后再 `DROP`，宽限期内可以原样挂回；`DROP` 是唯一不可逆的一步。不按行龄归档，因为那样分区里新旧混合，不能整月分离，与 `phase-2-db.md:371` 的方案冲突。
 
@@ -367,7 +367,7 @@ Worker 新队列 `archive-raw-cdrs`，`boss.schedule(…, '0 4 * * *', null, { t
 
 **校验通过之前数据库一行不动**；`detach` 之前文件已校验、已落盘；`drop` 之前有宽限期。
 
-`DETACH PARTITION … CONCURRENTLY` 不能在事务块里执行，而 `SECURITY DEFINER` 函数总在事务内，所以这里用普通 `DETACH`（对 `raw_cdrs` 短暂 `ACCESS EXCLUSIVE`）加 `lock_timeout` 重试。这是对 PostgreSQL 行为的推断，PR 3 在 PG 17 上实测（连同拿不到锁时对入库的影响）后再定，不能因此让入库阻塞超过 `lock_timeout`。
+`DETACH PARTITION … CONCURRENTLY` 不能在事务块里执行，而 `SECURITY DEFINER` 函数总在事务内，所以这里用普通 `DETACH`（对 `raw_cdrs` 短暂 `ACCESS EXCLUSIVE`）加 `lock_timeout` 重试。这个推断 PR 3 已在 PG 17.9 上验证（`CONCURRENTLY` 在事务块和函数里都被拒绝），拿不到锁时对入库的影响也已实测，见[偏差](#pr-3-实现时的验证与偏差)；入库阻塞不会超过 `lock_timeout`。
 
 ### 恢复与逐字节一致
 
@@ -550,7 +550,7 @@ plan 阶段 8 没有性能验收。本步没有做任何测量，下面是 PR �
 - 归档 1 个月分区（原文约 1.7 GB 的估算见 `design.md:404-414`）的导出、校验耗时与压缩比；`DETACH` 的锁等待时间。
 - 未归属列表在 10 万行下的分页与分组耗时；操作日志在 100 万行下带筛选的耗时。
 
-结果写入 `docs/evidence/phase-8/`。PR 1 已测前两项和最后一项的 SQL 部分（分配 326、500、2000、5000 条，删除 PORTALBIG 的 2026-09，10 万行未归属话单的分组与分页，100 万行操作日志的筛选），见 [evidence/phase-8/README.md](evidence/phase-8/README.md)；归档由 PR 3 测，列表与日志的 HTTP 耗时由 PR 4 测。
+结果写入 `docs/evidence/phase-8/`。PR 1 已测前两项和最后一项的 SQL 部分（分配 326、500、2000、5000 条，删除 PORTALBIG 的 2026-09，10 万行未归属话单的分组与分页，100 万行操作日志的筛选），见 [evidence/phase-8/README.md](evidence/phase-8/README.md)；归档由 PR 3 测（[evidence/phase-8/README.md](evidence/phase-8/README.md) 的 PR 3 一节），列表与日志的 HTTP 耗时由 PR 4 测。
 
 ## 已决定
 
@@ -729,3 +729,40 @@ PR 2 与 PR 3 只依赖 PR 1，可并行；PR 4 也只依赖 PR 1。PR 5 依赖 
 - **`ensure_month_partition` 加 `lock_timeout`：评估结论是需要，但 PR 2 不改。** 在临时库上实测：一个读过 `cdrs` 的长事务（6 秒）加一次缺分区的建分区调用，后到的普通 `SELECT FROM cdrs` 被排在建分区的 ACCESS EXCLUSIVE 请求后面等了 4.1 秒；给函数 `SET lock_timeout = '2s'` 后建分区在 2 秒后以 55P03 失败（Worker 记 `partition_failed` 告警，pg-boss 重试），被挡住的读只等了 1.1 秒。不改的原因：这要新增迁移，而 0019 已预留给 PR 3（归档），PR 2 与 PR 3 可并行，编号会冲突；日常维护提前一个月建分区，命中「已存在」直接返回，不会走到取锁这一步。用户 2026-10-24 确认（决定 48）：在 PR 3 的迁移 0019 里给 `ensure_month_partition` 加 `SET lock_timeout = '2s'`，已写进 PR 拆分第 3 行。
 - **`park()` 保存 `hangup_cause`、`unverified`。** PR 1 已做；PR 2 补了直接断言它的测试（`keeps the hangup cause and the unverified flag of a parked call`）。
 - **既有测试的预期变了。** `reliability.db.test.ts` 的「无效时间但有效 UUID 的推送……」原先断言同一份坏原文推两次得到两条待处理行，现在是一条（`push_count = 2`），修正重推后是 `superseded`。其余既有测试没有改预期。
+
+## PR 3 实现时的验证与偏差
+
+2026-10-27 PR 3 落地。测试、耗时和原始输出在 [evidence/phase-8/README.md](evidence/phase-8/README.md) 的 PR 3 一节。
+
+### 本文原先标为「未验证」的假设，现已验证
+
+- **普通 `DETACH` 加 `lock_timeout`，不能用 `CONCURRENTLY`。** 在 PostgreSQL 17.9 上：`DETACH … CONCURRENTLY` 在事务块里报 `cannot run inside a transaction block`，在函数里报 `cannot be executed from a function`；普通 `DETACH` 加 `RENAME` 在函数里是事务性的，回滚后分区仍挂着（[pr3-detach-concurrently.txt](evidence/phase-8/pr3-detach-concurrently.txt)）。
+- **对入库的影响。** 正常路径下 `raw_cdrs` 父表被 ACCESS EXCLUSIVE 锁住 11–20 ms，分离这一步期间同时进行的入库最大延迟 8.0 ms（基线 p99 18 ms），在噪声以内。最坏情况是有长事务拿着 `raw_cdrs` 父表的锁：分离在父表锁上排队 3 s 后放弃，排在后面的入库插入停到 3,001.6 ms（等于 `lock_timeout`）后恢复，低于 FreeSWITCH `json_cdr` 的 5 秒推送超时。有长事务读老分区时，分离函数在分区锁上等，没碰父表，入库不受影响。
+- **一个月的耗时。** 24.7 万行、1.57 GB 原文（合成夹具，不是真实话单）：导出 29–31 s，校验 13 s，分离 2 s，合计 45–46 s；归档文件 282.6 MB，压缩比 5.57 倍（只对这份合成数据成立）；取回一条 7–16 ms；整月恢复 69.6 s。`expireInSeconds` 取 6 小时，对冷磁盘和更大的月份留有余量。
+- **应用角色不能读分区。** 0000 迁移里各分区不授予应用角色权限，只能经父表访问；而经父表读会在整个导出期间持有父表的 ACCESS SHARE，把每日维护建下月分区的 ACCESS EXCLUSIVE 请求挡住，进而挡住全部话单读写。见下一节第 1 条。
+
+### 与本文不同的地方，或本文没有规定而由实现选择的地方
+
+1. **导出经 `raw_cdrs_export_cursor` 打开游标，而不是应用角色直接按分区名查询。** 本文写「直接按分区名查询」，但应用角色在分区上没有权限。新增 `SECURITY DEFINER` 函数 `raw_cdrs_export_cursor(date, boolean)`：属主直接按分区名打开游标（行按 `received_at, id` 排序，`received_at` 取文本，`sha256(convert_to(body, 'UTF8'))`、字节数和行哈希由数据库算），调用方在自己的 `REPEATABLE READ` 只读事务里 `FETCH`；权限在游标打开时检查，所以之后的 `FETCH` 不再需要分区权限。第二遍校验用同一个函数，`p_with_body = false`，只传哈希不传原文。`OperatorTransactionConfig` 因此加了可选的 `accessMode`（`withSystem` 以只读事务运行）。
+2. **多了两个函数，并让两个函数以清单为准。** 除本文的 `raw_cdrs_detach_partition`、`raw_cdrs_drop_detached` 外，加了上面的游标函数和 `raw_cdrs_reattach_partition(date)`（宽限期内把 `…_archived` 挂回，整月恢复的快路径）。四个函数都是 `SECURITY DEFINER`、`SET search_path = public, pg_temp`、`REVOKE ALL FROM PUBLIC`、只授予 `fs_billing_app`，函数内 `app_is_operator()` 守卫，月份必须是 1 日，名字只由月份生成。分离函数还要求清单记着「已校验、未分离」，传入的指纹必须与清单里的相等，并且重算的指纹与它相符（不符报 `XX001`）；丢弃函数要求清单记着「已分离、未丢弃」，该表若仍挂在父表下则拒绝，表已不存在（人工删过）视为完成；这样即使调用方出错，函数本身也不会丢掉没有归档的数据。
+3. **`lock_timeout` 用函数属性 `SET lock_timeout = '3s'`，不是函数体里的 `SET LOCAL`。** 效果相同，但函数返回后恢复调用方的设置，不会泄漏到事务里的后续语句。丢弃、挂回同为 3 s，`ensure_month_partition` 为 2 s（决定 48，同在迁移 0019 里，`CREATE OR REPLACE` 保留属主与权限，函数体不变）；有测试：拿不到锁时 2 s 后以 `55P03` 失败，后到的普通读在它放弃之后立刻通过，不用等长事务结束。
+4. **阶段由时间戳决定，`failed` 只是「最近一步抛了错」的标记。** 续作时按 `verified_at`、`detached_at`、`dropped_at` 判断停在哪一步，所以 `failed` 不需要再记失败前的阶段；CHECK 约束 `raw_cdr_archives_shape` 要求 verified 及以后的行清单齐全、步骤只能依次推进、`exporting` 不带任何时间戳。整月恢复把清单置回 `exporting`、清空三个时间戳并记 `restored_at`，文件信息保留作为「上一次归档」的记录（读取时只信 `verified_at` 非空的清单）。
+5. **队列用 `exclusive` 策略，不是每月一个 `singletonKey`。** 归档是每天一次、没有数据的 cron 任务，运行时才选「最老的未完成月」，没有可以放进 `singletonKey` 的月份；`exclusive` 保证同一时刻最多一个任务排队、重试或执行（重复触发、多实例都不会并发），测试里第二次 `send` 返回 null。月份级的重复由清单的条件更新兜底（`WHERE verified_at IS NULL` 等），输掉竞争的一方不算失败。策略只能在建队列时设定，`installQueue` 里 `createQueue` 带 `policy`，`updateQueue` 只更新其余选项。
+6. **「每次运行只处理一个月」的解释。** 每次运行先丢弃所有宽限期已过的月份（便宜），再把最老的未完成月推进到「已分离」（昂贵）。不然上线时积压多个月，第一个月在 7 天宽限期里会挡住后面所有月份。一个月失败不影响同一次运行里的其他步骤；最老的月份持续失败时，更新的月份不会越过它，靠告警发现。
+7. **`.partial` 的独占创建加陈旧判断。** 本文只写「用独占创建（`wx`）」，但崩溃后遗留的临时文件会让之后每次运行都失败。实现：`wx` 创建，已存在且最近 15 分钟内有写入就当另一个任务在写（`ArchiveBusyError`，本次跳过，不算失败，不开告警），更久没动则视为崩溃遗留，丢弃重写。任务自己出错时（校验没过、发布失败）会删掉临时文件。
+8. **分离前指纹不符时退回重新导出。** 导出之后分区内容又变了（例如有行被写入老分区），分离函数以 `XX001` 拒绝，实现把清单的 `verified_at` 清掉（`state = failed`），下次运行从头导出并重新校验，旧文件在新文件通过校验、改名发布时才被替换；不然清单会一直卡在已校验的旧指纹上。其余失败不改阶段。
+9. **分区里带 `tenant_id` 或 `call_uuid` 的行拒绝归档。** 归档格式只有 `id`、`received_at`、`sha256`、`body`；这两列至今从未被写入（入库先存原文再解析），导出时发现非空就失败，免得恢复后悄悄丢列。
+10. **`rows_digest` 与指纹的写法。** `rows_digest` 是按文件顺序拼接的逐行 SHA-256 原始字节（每行 32 字节）再取 SHA-256；`db_fingerprint` 是 `{ count, bodyBytes, xor }`，`xor` 是 64 位有符号整数的十进制字符串（超出 JavaScript 安全整数范围）。导出时 JavaScript 按 UTF-8 字节重算每行的 SHA-256 与长度，与数据库算的比较，驱动解码有任何变换都在导出时失败。
+11. **`RAW_CDR_ARCHIVE_DIR` 可以不设。** 不设置时 Worker 启动写一条警告、不注册归档任务，其余照常；设置了必须是绝对路径。不设为必填，是为了不让既有部署（和 FreeSWITCH 集成测试里启动的 Worker）因为归档目录没配而起不来。代价是漏配会静默不归档，所以启动警告里写明后果。`RAW_CDR_ARCHIVE_AFTER_MONTHS` 1–120，`RAW_CDR_ARCHIVE_GRACE_DAYS` 0–365。目录与文件权限为 0700 与 0600（归档里是通话记录）。
+12. **告警的细节。** 每月一条未恢复的 `raw_archive_failed`，描述前缀 `原始话单归档 YYYY-MM `，再次失败更新描述，`affected_calls` 为 0；该月成功推进、丢弃，或清单已是 `dropped` 时置 `recovered_at`。清单与分区矛盾（清单说已分离或已丢弃，分区却仍挂在 `raw_cdrs` 下）只开告警、不重试、不自动处理。`last_error` 与告警描述只含步骤和固定文字、SQLSTATE 与数据库自己的错误文本，不含原文，也不含解析器给出的片段。
+13. **整月恢复的细节。** 从文件重建时先 `ensureCdrPartitions`（它同时确保该月的 `cdrs` 分区，老月份的 `cdrs` 分区本来就在，通常什么都不做），上次恢复中途失败留下的空分区可以复用，分区里已有数据则拒绝覆盖；数据用一个 `jsonb` 参数分批 `INSERT`（500 行或 8 MiB 一批），不依赖驱动的数组参数转义；整个分区的指纹与清单一致才提交，不符整体回滚。`payload` 由生成列重新得到，测试里把它也纳入了整月摘要。
+14. **取回命令接受 psql 写法的时间。** `--received-at` 可以是 `2026-03-14T08:21:09.123456Z`，也可以是 psql 输出的 `2026-03-14 08:21:09.123456+00` 或带 `+08:00` 的偏移，转成归档里的写法时微秒原样保留，不经 `Date`。`pnpm` 会把 `--` 传给脚本，脚本先去掉开头的一个。
+15. **测试接缝。** `ArchiveOptions.onCheckpoint` 与 `asOf`、`staleAfterMs` 是为测试加的：在导出后、校验后、发布后、记入清单后、分离和丢弃的事务内注入故障；用 `asOf` 在不改时钟的情况下检查 6 个月边界和宽限期边界（差 1 毫秒）。注入的故障按「失败」处理（记 `failed`、清理临时文件）；崩溃（进程被杀）用「留下写完的临时文件、清单停在 `exporting`」来模拟。
+16. **既有测试的预期变了三处。** `migrate.db.test.ts`：迁移数 19 → 20、Drizzle 表数 23 → 24，以及「每张业务表都有 `tenant_id`」的例外名单加入 `raw_cdr_archives`（按月清单，不属于某个租户）。`rls.db.test.ts` 的阶段 8 用例扩到 `raw_cdr_archives`（租户读不到、写被拒、UPDATE 改到 0 行、应用角色不能 DELETE）。其余既有测试没有改预期。
+17. **压缩。** `node:zlib` 的 gzip，默认级别，异步压缩（不在事件循环上阻塞，Worker 与话单入库同进程）；游标每次取 100 行，原文最大约 1 MiB，一批最多约 100 MB。实测事件循环延迟 p99 7.3 ms、最大 14.1 ms（分辨率 5 ms）。
+
+### 没有做的事
+
+- 没有管理后台页面（决定 33）；没有对象存储实现（`ArchiveStore` 接口留好）；没有 zstd（决定 31）。
+- 阶段 10 的事仍在阶段 10：归档目录进备份、磁盘告警、目录权限与保留策略写进运维手册、有真实历史数据的库上演练 `DETACH` 与迁移 0018/0019 的锁时长。
+- 没有新的待用户确认的问题。

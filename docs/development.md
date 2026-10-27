@@ -38,19 +38,21 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 
 ## 常用命令
 
-| 命令               | 作用                                                                                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------------- |
-| `pnpm check`       | lint、格式检查、类型检查、单元测试和 Web 构建，与 CI 的 `check` job 一致                                |
-| `pnpm test`        | 单元测试，不连接数据库                                                                                  |
-| `pnpm test:db`     | 在全新的 `fs_billing_test` 库上迁移、写种子并运行数据库验收测试。需要先 `pnpm db:up`                    |
-| `pnpm test:idor`   | 只运行越权测试：用租户 A 的账号访问 OpenAPI 中每个客户端点的 B 租户数据，必须全部失败                   |
-| `pnpm test:e2e`    | Playwright e2e，启动真实 API 和 Web，连接真实 PostgreSQL。需要已迁移、写种子的库和 `SEED_AUTH_PASSWORD` |
-| `pnpm coverage`    | 计费核心 `packages/rating` 的覆盖率，行覆盖率低于 95% 时失败                                            |
-| `pnpm build`       | 编译所有包和服务，构建网页                                                                              |
-| `pnpm format`      | 自动格式化。已确认的设计稿和原始规划文档不参与格式化                                                    |
-| `pnpm db:migrate`  | 以 `DATABASE_URL`（owner）执行未应用的迁移，设置应用角色密码，建当月与下月话单分区。可重复执行          |
-| `pnpm db:seed`     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20）。可重复执行               |
-| `pnpm screenshots` | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                      |
+| 命令                                                                               | 作用                                                                                                                                |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`                                                                       | lint、格式检查、类型检查、单元测试和 Web 构建，与 CI 的 `check` job 一致                                                            |
+| `pnpm test`                                                                        | 单元测试，不连接数据库                                                                                                              |
+| `pnpm test:db`                                                                     | 在全新的 `fs_billing_test` 库上迁移、写种子并运行数据库验收测试。需要先 `pnpm db:up`                                                |
+| `pnpm test:idor`                                                                   | 只运行越权测试：用租户 A 的账号访问 OpenAPI 中每个客户端点的 B 租户数据，必须全部失败                                               |
+| `pnpm test:e2e`                                                                    | Playwright e2e，启动真实 API 和 Web，连接真实 PostgreSQL。需要已迁移、写种子的库和 `SEED_AUTH_PASSWORD`                             |
+| `pnpm coverage`                                                                    | 计费核心 `packages/rating` 的覆盖率，行覆盖率低于 95% 时失败                                                                        |
+| `pnpm build`                                                                       | 编译所有包和服务，构建网页                                                                                                          |
+| `pnpm format`                                                                      | 自动格式化。已确认的设计稿和原始规划文档不参与格式化                                                                                |
+| `pnpm db:migrate`                                                                  | 以 `DATABASE_URL`（owner）执行未应用的迁移，设置应用角色密码，建当月与下月话单分区。可重复执行                                      |
+| `pnpm db:seed`                                                                     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20）。可重复执行                                           |
+| `pnpm screenshots`                                                                 | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                                                  |
+| `pnpm --filter @fs-billing/worker raw:restore -- --id <uuid> --received-at <时间>` | 只读取回一条已归档的原始 JSON，核对哈希后把原文字节原样写到标准输出（阶段 8，见 [Worker 接口](worker-api.md#原始-json-归档阶段-8)） |
+| `pnpm --filter @fs-billing/worker raw:restore-month -- --month <YYYY-MM>`          | 整月恢复已归档的 `raw_cdrs` 分区（宽限期内挂回，已丢弃则从归档文件重建）                                                            |
 
 客户门户首页的视觉对照用 `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/portal-visual.spec.ts` 生成（环境同上），对照图写入 `docs/evidence/phase-6-web/visual/`，差异清单见 `docs/evidence/phase-6-web/visual-diff.md`。
 
