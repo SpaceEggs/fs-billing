@@ -1,0 +1,41 @@
+# Phase 8 PR 3: DETACH PARTITION ... CONCURRENTLY inside a transaction block and inside a function (a SECURITY DEFINER function always runs in a transaction), and plain DETACH + RENAME inside a function being transactional.
+# docker exec -i fs-billing-postgres-1 psql -U fs_billing -d <throwaway database> < concurrently.sql  (2026-10-27, PostgreSQL 17.9; the database was dropped afterwards)
+                                            version                                            
+-----------------------------------------------------------------------------------------------
+ PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+(1 row)
+
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+BEGIN
+ROLLBACK
+ERROR:  ALTER TABLE ... DETACH CONCURRENTLY cannot run inside a transaction block
+CREATE FUNCTION
+ERROR:  ALTER TABLE ... DETACH CONCURRENTLY cannot be executed from a function
+CONTEXT:  SQL statement "alter table t detach partition t_2026_03 concurrently"
+PL/pgSQL function detach_concurrently() line 3 at EXECUTE
+CREATE FUNCTION
+BEGIN
+ detach_plain 
+--------------
+ 
+(1 row)
+
+ inhrelid  
+-----------
+ t_2026_04
+(1 row)
+
+ROLLBACK
+ still_attached_after_rollback 
+-------------------------------
+ t_2026_03
+ t_2026_04
+(2 rows)
+
+ archived_after_rollback 
+-------------------------
+ 
+(1 row)
+

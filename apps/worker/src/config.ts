@@ -1,4 +1,5 @@
 import { isIP } from 'node:net';
+import { isAbsolute } from 'node:path';
 import { z } from 'zod';
 import { databaseEnvironmentSchema } from '@fs-billing/db';
 
@@ -46,6 +47,28 @@ export const workerEnvironmentSchema = z.object({
     .min(1)
     .max(10)
     .default(2),
+  // 原始 JSON 归档（阶段 8）：本地目录，必须是绝对路径；不设置则不启用归档（启动时告警）。
+  RAW_CDR_ARCHIVE_DIR: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .refine((value) => isAbsolute(value), '归档目录必须是绝对路径')
+      .optional(),
+  ),
+  // 月份 M 的原文在 M 月末之后再过这么多个月才归档。
+  RAW_CDR_ARCHIVE_AFTER_MONTHS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(120)
+    .default(6),
+  // 分离之后保留 raw_cdrs_YYYY_MM_archived 这么多天再丢弃。
+  RAW_CDR_ARCHIVE_GRACE_DAYS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(365)
+    .default(7),
   WORKER_HOST: z
     .string()
     .refine(privateIpv4, '只能监听内网或回环 IPv4 地址')

@@ -1,0 +1,32 @@
+# Phase 8 PR 3: first run of the same script, kept for comparison. Same fixture and machine (the database was cloned and seeded the same way), load average 2.1-2.6.
+# DIFFERENCE: scenario (c) "reader of raw_cdrs (current partition only)" used `received_at >= date_trunc('month', now())`, a STABLE expression that PostgreSQL does not prune at plan time,
+# so that reader locked every partition including the old one and the scenario collapsed into (b): the ingest max below (12.3 ms) is NOT the parent-table wait. The second run (pr3-archive-perf.txt) uses a constant range and shows the real wait.
+11:30  up 6 days, 19:39, 3 users, load averages: 2.38 2.17 2.15
+# 归档目录 /var/folders/jr/kfy2kz791zv4qqdwk_5ccn380000gn/T/fsb-archive-perf-NUoVoS（运行结束后删除）
+# 1. 入库负载基线（4 个写入者，每次插入后停 25 ms，约 160 次/秒；整行 6 KB 原文）
+baseline ingest latency: n=2349 p50=7.9 p95=10.8 p99=15.9 max=402.3 ms
+# 2. 归档 2026-03（246574 行）：导出、校验、分离，入库负载同时在跑
+stage=detached rows=246574 body=1574.5 MB file=282.6 MB chunks=453
+compression ratio (body bytes / file bytes): 5.57x (file = 17.9% of the original text)
+export (start -> exported, includes the sort in PostgreSQL): 30.9 s
+verify (exported -> verified; file hash + decode + second pass over the partition): 13.5 s
+publish + manifest (verified -> marked): 0.0 s
+detach step (marked -> committed; re-hash of the file + raw_cdrs_detach_partition): 2.0 s
+total wall time: 46.4 s (46.424 s by Date)
+export throughput: 51.0 MB/s of body text, 7991 rows/s
+Worker-process RSS peak while archiving: 341.2 MB; event loop delay p50=5.1 p99=7.4 max=18.4 ms (resolution 5 ms)
+parent-table ACCESS EXCLUSIVE window seen by a 2 ms poller: 11 ms (first seen +46.4 s)
+ingest latency while exporting:  n=4248 p50=3.3 p95=6.1 p99=8.8 max=197.8 ms
+ingest latency while verifying:  n=1844 p50=3.7 p95=7.2 p99=9.8 max=19.3 ms
+ingest latency during detach step: n=280 p50=2.9 p95=6.6 p99=8.0 max=8.2 ms
+ingest latency whole run:        n=6576 p50=3.4 p95=7.3 p99=10.9 max=197.8 ms
+slowest single insert: 197.8 ms at +17.9 s (detach step began at +44.4 s)
+gzip -t raw-cdrs/2026/raw-cdrs-2026-03.jsonl.gz: ok in 1.1 s (282.6 MB)
+zcat | wc -l equivalent: 246574 lines in 9.5 s
+drop after the grace period: dropped=2026-03-01 failures=0
+restore one record (partition dropped; manifest query + read one ~1000-row member + gunzip + hash), 6 members across the file: 16, 13, 12, 13, 14, 8 ms
+restore whole month from the file: 246574 rows in 69.7 s (hash of every member and row, insert, partition fingerprint check)
+# 3. DETACH 被挡住时对入库的影响（2026-02，2 万行；入库负载同时在跑）
+no blocker: detach step detached after 249 ms; ingest during that window: n=96 p50=4.0 p95=10.6 p99=12.2 max=12.2 ms
+reader of the old partition: detach step failed (PostgreSQL 55P03: canceling statement due to lock timeout) after 3031 ms; ingest during that window: n=421 p50=8.0 p95=11.9 p99=20.2 max=28.2 ms
+reader of raw_cdrs (current partition only): detach step failed (PostgreSQL 55P03: canceling statement due to lock timeout) after 3036 ms; ingest during that window: n=428 p50=7.9 p95=10.1 p99=11.1 max=12.3 ms

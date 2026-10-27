@@ -1,7 +1,13 @@
 import { sql } from 'drizzle-orm';
 import { authUsers } from './auth-schema.js';
 import type { RatePreviewPayload } from './admin/rate-preview.js';
+import type {
+  ArchiveChunk,
+  ArchiveFingerprint,
+  ArchiveState,
+} from './raw-archive/types.js';
 import {
+  bigint,
   boolean,
   check,
   date,
@@ -411,6 +417,28 @@ export const operationLogs = pgTable('operation_logs', {
   target: text('target').notNull().default(''),
   details: jsonb('details').notNull().default({}),
   createdAt: at('created_at').notNull().defaultNow(),
+});
+
+/** 原始 JSON 归档清单：每个北京月一行，阶段由 verified_at / detached_at / dropped_at 决定。 */
+export const rawCdrArchives = pgTable('raw_cdr_archives', {
+  /** 该月 1 日，对应分区 raw_cdrs_YYYY_MM。 */
+  month: date('month').primaryKey(),
+  state: text('state').$type<ArchiveState>().notNull(),
+  fileKey: text('file_key'),
+  rows: bigint('rows', { mode: 'number' }),
+  bodyBytes: bigint('body_bytes', { mode: 'number' }),
+  fileBytes: bigint('file_bytes', { mode: 'number' }),
+  fileSha256: text('file_sha256'),
+  rowsDigest: text('rows_digest'),
+  dbFingerprint: jsonb('db_fingerprint').$type<ArchiveFingerprint>(),
+  chunks: jsonb('chunks').$type<ArchiveChunk[]>(),
+  attempts: integer('attempts').notNull().default(0),
+  lastError: text('last_error'),
+  createdAt: at('created_at').notNull().defaultNow(),
+  verifiedAt: at('verified_at'),
+  detachedAt: at('detached_at'),
+  droppedAt: at('dropped_at'),
+  restoredAt: at('restored_at'),
 });
 
 export const systemAlertKinds = [

@@ -133,7 +133,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 19 }]);
+    expect(rows).toEqual([{ applied: 20 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {
@@ -153,7 +153,7 @@ describe('迁移', () => {
     expect(rows).toEqual([]);
   });
 
-  it('除管理员表与未归属话单外，每张业务表都有 tenant_id', async () => {
+  it('除管理员表、未归属话单与原始话单归档清单（按月，不属于某个租户）外，每张业务表都有 tenant_id', async () => {
     const { rows } = await owner.pool.query(
       `SELECT c.relname FROM pg_class c
        WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p') AND NOT c.relispartition
@@ -164,6 +164,7 @@ describe('迁移', () => {
     );
     expect(rows.map((r: { relname: string }) => r.relname)).toEqual([
       'admins',
+      'raw_cdr_archives',
       'tenants',
       'unassigned_cdrs',
     ]);
@@ -202,7 +203,7 @@ describe('迁移', () => {
         config.columns.map((c) => c.name).sort(),
       );
     }
-    expect(tables).toHaveLength(23);
+    expect(tables).toHaveLength(24);
   });
 });
 

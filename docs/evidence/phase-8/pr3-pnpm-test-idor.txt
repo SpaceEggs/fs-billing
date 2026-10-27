@@ -1,0 +1,14 @@
+
+> fs-billing@ test:idor /Volumes/Dev/FS-Billing
+> vitest run --config vitest.db.config.ts apps/api/src/idor.db.test.ts
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing
+
+
+ Test Files  1 passed (1)
+      Tests  35 passed (35)
+   Start at  12:09:54
+   Duration  12.11s (tests 91%, import 8%, transform 1%)
+
+exit=0

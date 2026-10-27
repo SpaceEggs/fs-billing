@@ -378,6 +378,9 @@ describe('话单运维表（阶段 8）', () => {
        values ($1, $2, $3, 'digest', 0, 0, 0, 0, 0, 0, '{}', $4)`,
       [tenant.id, `rls:${auditId}`, admin, auditId],
     );
+    await owner.pool.query(
+      `insert into raw_cdr_archives (month, state) values ('1999-01-01', 'exporting') on conflict (month) do nothing`,
+    );
     return { admin, tenant };
   }
 
@@ -389,20 +392,26 @@ describe('话单运维表（阶段 8）', () => {
         tx.execute(
           sql`select (select count(*) from unassigned_cdrs)::int as unassigned,
                      (select count(*) from unassigned_assignments)::int as assignments,
-                     (select count(*) from operation_logs)::int as logs`,
+                     (select count(*) from operation_logs)::int as logs,
+                     (select count(*) from raw_cdr_archives)::int as archives`,
         ),
       );
-      expect(rows).toEqual([{ unassigned: 0, assignments: 0, logs: 0 }]);
+      expect(rows).toEqual([
+        { unassigned: 0, assignments: 0, logs: 0, archives: 0 },
+      ]);
     }
     // 管理员看得到：对照组，证明上面的 0 是策略而不是没有数据。
     const { rows: seen } = await withAdmin(app.db, (tx) =>
       tx.execute(
         sql`select (select count(*) from unassigned_cdrs)::int > 0 as unassigned,
                    (select count(*) from unassigned_assignments)::int > 0 as assignments,
-                   (select count(*) from operation_logs)::int > 0 as logs`,
+                   (select count(*) from operation_logs)::int > 0 as logs,
+                   (select count(*) from raw_cdr_archives)::int > 0 as archives`,
       ),
     );
-    expect(seen).toEqual([{ unassigned: true, assignments: true, logs: true }]);
+    expect(seen).toEqual([
+      { unassigned: true, assignments: true, logs: true, archives: true },
+    ]);
 
     const writes: Record<
       string,
@@ -419,6 +428,10 @@ describe('话单运维表（阶段 8）', () => {
                  values (${abc001}::uuid, 'tenant-write', ${admin}::uuid, 'd', 0, 0, 0, 0, 0, 0, '{}', ${randomUUID()}::uuid)`,
         code: '42501',
       },
+      'insert raw_cdr_archives': {
+        sql: sql`insert into raw_cdr_archives (month, state) values ('2000-01-01', 'exporting')`,
+        code: '42501',
+      },
       'insert operation_logs': {
         sql: sql`insert into operation_logs (admin_id, action) values (${admin}::uuid, 'tenant-write')`,
         code: '42501',
@@ -426,6 +439,10 @@ describe('话单运维表（阶段 8）', () => {
       // 应用角色没有这些权限，先于策略被拒。
       'update unassigned_assignments': {
         sql: sql`update unassigned_assignments set assigned_count = 1`,
+        code: '42501',
+      },
+      'delete raw_cdr_archives': {
+        sql: sql`delete from raw_cdr_archives`,
         code: '42501',
       },
       'delete unassigned_assignments': {
@@ -456,6 +473,11 @@ describe('话单运维表（阶段 8）', () => {
       tx.execute(sql`update unassigned_cdrs set reason = '被租户改过'`),
     );
     expect(updated.rowCount).toBe(0);
+    // raw_cdr_archives 同样：应用角色有 UPDATE 权限（状态机推进），策略让租户一行都改不到。
+    const archiveUpdated = await withTenant(app.db, abc001, (tx) =>
+      tx.execute(sql`update raw_cdr_archives set state = 'failed'`),
+    );
+    expect(archiveUpdated.rowCount).toBe(0);
     const { rows: untouched } = await owner.pool.query(
       `select count(*)::int as n from unassigned_cdrs where reason = '被租户改过'`,
     );

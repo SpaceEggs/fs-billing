@@ -1,0 +1,16 @@
+
+> fs-billing@ test:db /Volumes/Dev/FS-Billing
+> vitest run --config vitest.db.config.ts
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing
+
+
+PR3_PREPARE_ABORT {"backendPid":8403,"before":{"state":"active","waitEventType":"Lock","waitEvent":"relation"},"after":{"state":"idle","waitEventType":"Client","waitEvent":"ClientRead"},"elapsedMs":11}
+
+ Test Files  51 passed (51)
+      Tests  734 passed (734)
+   Start at  12:07:30
+   Duration  144.10s (tests 90%, import 10%)
+
+exit=0

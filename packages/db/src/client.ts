@@ -176,6 +176,8 @@ export function withSystem<T>(
 /** 只能在最外层事务请求；`repeatable read` 用于一致快照读取，不使用 SSI 的 `serializable` 以免误伤并发扣费。 */
 export interface OperatorTransactionConfig {
   isolationLevel: 'serializable' | 'repeatable read';
+  /** 只读事务：长时间持有快照读取（原始话单归档的导出与校验）。 */
+  accessMode?: 'read only' | 'read write';
 }
 
 // 死锁（40P01）与序列化失败（40001）回滚整个事务，重跑 fn 是安全的。

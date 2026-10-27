@@ -10,7 +10,7 @@ pnpm --filter @fs-billing/worker queue:migrate
 pnpm --filter @fs-billing/worker start
 ```
 
-`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions`、月账单的 `generate-statements`、`generate-statement`、`reconcile-statements` 与内部调度队列并授权。**新增队列后必须重新执行**：运行时应用角色不能建队列，漏掉会让 Worker 在 `boss.work` 时失败。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
+`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions`、月账单的 `generate-statements`、`generate-statement`、`reconcile-statements`、原始 JSON 归档的 `archive-raw-cdrs`（阶段 8，`exclusive` 策略）与内部调度队列并授权。**新增队列后必须重新执行**：运行时应用角色不能建队列，漏掉会让 Worker 在 `boss.work` 时失败。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
 
 | 环境变量             | 要求                                               |
 | -------------------- | -------------------------------------------------- |
@@ -19,6 +19,8 @@ pnpm --filter @fs-billing/worker start
 | `WORKER_PORT`        | 默认 `3001`，整数 1–65535                          |
 | `WORKER_SHARED_KEY`  | 至少 16 字符                                       |
 | `WORKER_ALLOWED_IPS` | 逗号分隔的非空 IP 列表，例如 `127.0.0.1,10.0.0.10` |
+
+可选：`RAW_CDR_ARCHIVE_DIR`、`RAW_CDR_ARCHIVE_AFTER_MONTHS`（默认 6，1–120）、`RAW_CDR_ARCHIVE_GRACE_DAYS`（默认 7，0–365），见下文「原始 JSON 归档」。
 
 可选：`WORKER_STATEMENT_CONCURRENCY`（账单子任务并发，默认 2，1–10）。每日账单生成从每个租户的第一个应有月份起补全所有缺失的已结束月份，没有回看上限（原 `STATEMENT_BACKFILL_MONTHS` 已取消，环境里残留的该变量被忽略）。
 
@@ -169,3 +171,12 @@ Worker 启动时执行一次分区维护，然后注册每日北京时间零点�
 次数保存在话单，不随 pg-boss 清理历史任务而丢失。达到告警阈值后仍继续补投；`reconcile_alerted` 与 `system_alerts(kind=cdr_failed)` 同事务提交，一通话只告警一次。无需人工发现队列的 failed 状态；管理员可按告警中的 UUID 查账并处理。任务处理失败保留异常和日志，不吞错。数据库/Worker 不可用时需恢复服务，对账才会继续；邮件通知属于阶段 9。
 
 启动并发挂起的根因是 pg-boss `send()` 在使用传入事务插入任务之前，冷缓存的 `getQueueCache()` 会通过默认 adapter 另借连接。同一个默认 10 连接池被入库事务占满时，持连接的请求等待队列元数据查询，后者又等待这些请求归还连接。增加池大小或仅预热不能消除此依赖。现在 pg-boss 默认 adapter 使用独立应用角色池；任务 INSERT 仍使用入库事务的连接，保留话单/任务原子提交。两个池都设置有限 `connectionTimeoutMillis`，部署时按实例数为 PostgreSQL 预留两池总连接预算。连接获取失败会返回服务错误，CDR 保存失败按 503 重推；不存在无限等连接的默认配置。
+
+## 原始 JSON 归档（阶段 8）
+
+设计与取舍见 [phase-8-design.md](phase-8-design.md)「原始 JSON 归档与恢复」，实测见 [evidence/phase-8/README.md](evidence/phase-8/README.md)。
+
+- **启用。** 设置 `RAW_CDR_ARCHIVE_DIR`（绝对路径，只有 Worker 用户可读写）。未设置时 Worker 启动写一条警告，不注册归档任务，`raw_cdrs` 的分区不会被归档或丢弃。**归档文件是分区丢弃之后原文的唯一副本，目录必须进备份**，并监控磁盘。
+- **任务。** 队列 `archive-raw-cdrs`，每天 04:00（北京时间，`missed: 'once'`），`exclusive`（同一时刻最多一个任务排队、重试或执行），`retryLimit: 3`，`expireInSeconds: 21600`。月份 M 在 M 月末加 `RAW_CDR_ARCHIVE_AFTER_MONTHS` 个月之后才归档。每次运行先丢弃宽限期（`RAW_CDR_ARCHIVE_GRACE_DAYS`）已过的 `raw_cdrs_YYYY_MM_archived`，再把最老的未完成月推进到「已分离」：导出（`raw-cdrs/YYYY/raw-cdrs-YYYY-MM.jsonl.gz`，每个 gzip 成员 ≤ 1000 行或 4 MiB）、校验（文件与数据库逐行比对）、`DETACH`。任何一步失败：`raw_cdr_archives.state = 'failed'`、`attempts + 1`、`last_error`（不含原文），开一条 `raw_archive_failed` 告警（每月一条，成功后写 `recovered_at`），任务抛出由 pg-boss 重试。清单与分区状态矛盾（清单说已分离，分区却仍挂着）只开告警，不自动处理。
+- **取回一条。** `pnpm --filter @fs-billing/worker raw:restore -- --id <uuid> --received-at <时间> [--out <文件>]`：只读，不写数据库。`--received-at` 用 `raw_cdrs.received_at` 的完整微秒时间（`2026-03-14T08:21:09.123456Z`，psql 输出的 `2026-03-14 08:21:09.123456+00` 也可以）。成员哈希和原文 SHA-256 核对通过后，把 `body` 的 UTF-8 字节原样写到标准输出（不加换行）或 `--out` 文件（不覆盖已有文件）；核对不过则什么都不输出，退出码 1。归档文件本身是多个 gzip 成员首尾相接，`zcat <文件> | jq` 可整体读。
+- **整月恢复。** `pnpm --filter @fs-billing/worker raw:restore-month -- --month <YYYY-MM> [--dry-run]`：宽限期内（`…_archived` 还在）把它原样挂回；已丢弃则从归档文件重建分区，逐成员校验哈希、保留原 `id` 与 `received_at`，再用清单里的指纹核对整个分区，不符整体回滚。恢复后清单置回 `exporting` 并记 `restored_at`，30 天内不再归档该月。
