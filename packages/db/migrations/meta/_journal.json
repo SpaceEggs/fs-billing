@@ -134,6 +134,13 @@
       "when": 1793404800000,
       "tag": "0018_cdr_operations",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793491200000,
+      "tag": "0019_raw_cdr_archives",
+      "breakpoints": true
     }
   ]
 }
