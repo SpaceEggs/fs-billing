@@ -29,3 +29,4 @@ export * from './admin/statements.js';
 export * from './statements/index.js';
 export * from './unassigned/index.js';
 export * from './cdr-deletion/index.js';
+export * from './raw-archive/index.js';
