@@ -56,9 +56,45 @@ describe('Worker 启动配置边界', () => {
     { WORKER_ALLOWED_IPS: undefined },
     { APP_DATABASE_URL: 'postgresql://fs_billing:local@127.0.0.1/fs_billing' },
     { APP_DATABASE_URL: 'https://localhost' },
+    { RAW_CDR_ARCHIVE_DIR: 'relative/archive' },
+    { RAW_CDR_ARCHIVE_AFTER_MONTHS: '0' },
+    { RAW_CDR_ARCHIVE_AFTER_MONTHS: '121' },
+    { RAW_CDR_ARCHIVE_AFTER_MONTHS: '1.5' },
+    { RAW_CDR_ARCHIVE_GRACE_DAYS: '-1' },
+    { RAW_CDR_ARCHIVE_GRACE_DAYS: '366' },
   ])('拒绝无效配置 %j', (invalid) => {
     expect(() =>
       workerEnvironmentSchema.parse({ ...environment, ...invalid }),
     ).toThrow();
+  });
+});
+
+describe('原始 JSON 归档配置', () => {
+  it('is disabled until a directory is set and defaults to six months and a seven day grace period', () => {
+    const defaults = workerEnvironmentSchema.parse(environment);
+    expect(defaults.RAW_CDR_ARCHIVE_DIR).toBeUndefined();
+    expect(defaults).toMatchObject({
+      RAW_CDR_ARCHIVE_AFTER_MONTHS: 6,
+      RAW_CDR_ARCHIVE_GRACE_DAYS: 7,
+    });
+    expect(
+      workerEnvironmentSchema.parse({
+        ...environment,
+        RAW_CDR_ARCHIVE_DIR: '/var/lib/fs-billing/archive',
+        RAW_CDR_ARCHIVE_AFTER_MONTHS: '12',
+        RAW_CDR_ARCHIVE_GRACE_DAYS: '0',
+      }),
+    ).toMatchObject({
+      RAW_CDR_ARCHIVE_DIR: '/var/lib/fs-billing/archive',
+      RAW_CDR_ARCHIVE_AFTER_MONTHS: 12,
+      RAW_CDR_ARCHIVE_GRACE_DAYS: 0,
+    });
+  });
+
+  it('treats an empty directory setting as not set', () => {
+    expect(
+      workerEnvironmentSchema.parse({ ...environment, RAW_CDR_ARCHIVE_DIR: '' })
+        .RAW_CDR_ARCHIVE_DIR,
+    ).toBeUndefined();
   });
 });

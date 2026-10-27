@@ -8,7 +8,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.build.json",
     "queue:migrate": "tsx --env-file-if-exists=../../.env scripts/install-queue.ts",
-    "perf:authorize": "tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts"
+    "perf:authorize": "tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts",
+    "raw:restore": "tsx --env-file-if-exists=../../.env scripts/restore-raw-cdr.ts",
+    "raw:restore-month": "tsx --env-file-if-exists=../../.env scripts/restore-raw-month.ts"
   },
   "dependencies": {
     "@fs-billing/db": "workspace:*",

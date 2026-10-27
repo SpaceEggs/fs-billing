@@ -14,6 +14,16 @@ import type { ChargeJob } from '@fs-billing/shared';
 export const CHARGE_QUEUE = 'charge-cdr';
 export const RECONCILE_QUEUE = 'reconcile-cdr-charges';
 export const PARTITION_QUEUE = 'maintain-cdr-partitions';
+// 原始 JSON 归档（阶段 8）：每天 04:00，一次运行推进一个月。exclusive：同一时刻只允许一个任务排队、重试或执行，
+// 重复触发和多实例都不会并发归档；导出一个月分区要读完整个分区，给足执行期限。
+export const ARCHIVE_QUEUE = 'archive-raw-cdrs';
+export const ARCHIVE_QUEUE_POLICY = 'exclusive';
+export const ARCHIVE_QUEUE_OPTIONS = {
+  retryLimit: 3,
+  retryDelay: 300,
+  retryBackoff: true,
+  expireInSeconds: 6 * 3600,
+} as const;
 // 月账单：每日父任务扇出成每个 (租户, 月份) 一个子任务；核对任务每日一次。
 export const GENERATE_STATEMENTS_QUEUE = 'generate-statements';
 export const GENERATE_STATEMENT_QUEUE = 'generate-statement';
@@ -116,6 +126,12 @@ export async function installQueue({ pool }: Connection): Promise<void> {
       await boss.createQueue(name, options);
       await boss.updateQueue(name, options);
     }
+    // 归档队列的策略（exclusive）只能在建队列时设定；其余选项变化时重复执行本脚本即可生效。
+    await boss.createQueue(ARCHIVE_QUEUE, {
+      policy: ARCHIVE_QUEUE_POLICY,
+      ...ARCHIVE_QUEUE_OPTIONS,
+    });
+    await boss.updateQueue(ARCHIVE_QUEUE, ARCHIVE_QUEUE_OPTIONS);
     await boss.createQueue('__pgboss__send-it');
   } finally {
     await boss.stop();

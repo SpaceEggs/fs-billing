@@ -1,7 +1,8 @@
-import { connect } from '@fs-billing/db';
+import { connect, LocalArchiveStore } from '@fs-billing/db';
 import { pino } from 'pino';
 import { startReconciliation } from './reconcile.js';
 import { createWorker } from './app.js';
+import { startRawArchive } from './archive.js';
 import { workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeCdr } from './charge.js';
@@ -79,6 +80,21 @@ try {
     app.log,
   );
   await requestStatementCatchUp(boss);
+  if (config.RAW_CDR_ARCHIVE_DIR)
+    await startRawArchive(
+      boss,
+      connection.db,
+      new LocalArchiveStore(config.RAW_CDR_ARCHIVE_DIR),
+      {
+        afterMonths: config.RAW_CDR_ARCHIVE_AFTER_MONTHS,
+        graceDays: config.RAW_CDR_ARCHIVE_GRACE_DAYS,
+      },
+      app.log,
+    );
+  else
+    app.log.warn(
+      '未设置 RAW_CDR_ARCHIVE_DIR：原始话单归档未启用，raw_cdrs 的老分区不会被归档或丢弃',
+    );
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,
   );
