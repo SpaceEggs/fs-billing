@@ -130,7 +130,9 @@ test('adds 账单 to the admin navigation after 待收款 and defaults to the pr
     '概览',
     '租户',
     '待收款',
+    /^未归属话单(\d{1,3}(,\d{3})*)?$/,
     '账单',
+    '操作日志',
     '管理员',
   ]);
   await nav.getByRole('link', { name: '账单' }).click();
