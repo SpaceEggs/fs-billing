@@ -34,3 +34,13 @@ export {
   unignoreUnassigned,
   type IgnoreResult,
 } from './ignore.js';
+export {
+  listUnassigned,
+  readUnassignedGroups,
+  readUnassignedSummary,
+  type UnassignedGroup,
+  type UnassignedGroups,
+  type UnassignedList,
+  type UnassignedListRow,
+} from './list.js';
+export { withinOneEdit } from './suggest.js';

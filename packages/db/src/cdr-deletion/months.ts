@@ -218,20 +218,31 @@ export async function readCdrDeletionMonths(
   });
 }
 
-/** 租户某年 12 个月的删除状态（后台月份格），只读。 */
-export async function listCdrDeletionMonths(
+/** 租户某年 12 个月的删除状态（后台月份格），连同租户资料；只读。 */
+export async function readCdrDeletionYear(
   db: Db | Tx,
   input: { tenantId: string; year: number },
-): Promise<CdrDeletionMonth[]> {
+): Promise<{ tenant: DeletionTenant; months: CdrDeletionMonth[] }> {
   if (!Number.isInteger(input.year) || input.year < 1 || input.year > 9999)
     throw new RangeError('年份必须是 1 至 9999 的整数');
   const first = `${String(input.year).padStart(4, '0')}-01-01`;
   return withAdmin(db, async (tx) => {
     const tenant = await loadDeletionTenant(tx, input.tenantId);
-    return readCdrDeletionMonths(
-      tx,
+    return {
       tenant,
-      Array.from({ length: 12 }, (_, index) => addMonths(first, index)),
-    );
+      months: await readCdrDeletionMonths(
+        tx,
+        tenant,
+        Array.from({ length: 12 }, (_, index) => addMonths(first, index)),
+      ),
+    };
   });
+}
+
+/** 租户某年 12 个月的删除状态（后台月份格），只读。 */
+export async function listCdrDeletionMonths(
+  db: Db | Tx,
+  input: { tenantId: string; year: number },
+): Promise<CdrDeletionMonth[]> {
+  return (await readCdrDeletionYear(db, input)).months;
 }
