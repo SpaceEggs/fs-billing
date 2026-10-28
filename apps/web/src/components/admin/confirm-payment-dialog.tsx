@@ -13,7 +13,7 @@ import {
 } from '../../lib/receivables';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Input } from '../ui/input';
 import { Field, invalidClass } from './form-fields';
 import { ActionOutcome } from './receivable-action';

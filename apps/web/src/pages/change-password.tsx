@@ -1,9 +1,14 @@
 import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
 import { BrandRow } from '../components/brand';
 import { SessionExpiredDialog } from '../components/session-expired-dialog';
-import { Alert } from '../components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { useCredentialMutation } from '../lib/admin-api';
 import { ApiRequestError } from '../lib/api';
@@ -181,18 +186,26 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
       className="flex flex-col gap-5"
     >
       {changed ? (
-        <Alert tone="ok" title="✓ 密码已修改">
-          其他设备上的登录将失效
+        <Alert variant="success">
+          <CircleCheckIcon aria-hidden />
+          <AlertTitle>密码已修改</AlertTitle>
+          <AlertDescription>其他设备上的登录将失效</AlertDescription>
         </Alert>
       ) : null}
       {problem?.kind === 'wait' ? (
-        <Alert tone="warn" title="尝试次数过多，已暂时锁定">
-          {`请在 ${formatDuration(problem.seconds)} 后重试`}
+        <Alert variant="warning">
+          <TriangleAlertIcon aria-hidden />
+          <AlertTitle>尝试次数过多，已暂时锁定</AlertTitle>
+          <AlertDescription>
+            {`请在 ${formatDuration(problem.seconds)} 后重试`}
+          </AlertDescription>
         </Alert>
       ) : null}
       {problem?.kind === 'unavailable' ? (
-        <Alert tone="neg" title="暂时无法修改密码">
-          服务暂时不可用，请稍后重试
+        <Alert variant="destructive">
+          <CircleAlertIcon aria-hidden />
+          <AlertTitle>暂时无法修改密码</AlertTitle>
+          <AlertDescription>服务暂时不可用，请稍后重试</AlertDescription>
         </Alert>
       ) : null}
       <div className="flex flex-col gap-3.5">

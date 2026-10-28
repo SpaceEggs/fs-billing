@@ -3,7 +3,7 @@ import { formatDateTime } from '../../lib/format';
 import { formatDuration } from '../../lib/duration';
 import { cn } from '../../lib/utils';
 import { Money, Rate } from '../data-format';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import {
   cdrCountryLabel,
   cdrHangupCause,

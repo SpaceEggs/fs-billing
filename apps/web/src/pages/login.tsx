@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
 import type { LoginRequest } from '@fs-billing/shared';
 import {
   AdminPill,
@@ -8,7 +9,7 @@ import {
   LogoMark,
   productLabel,
 } from '../components/brand';
-import { Alert } from '../components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { callApi } from '../lib/api';
@@ -196,8 +197,14 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             </span>
           </div>
           {alert ? (
-            <Alert tone={alert.tone} title={alert.title}>
-              {alert.body}
+            <Alert variant={alert.tone === 'warn' ? 'warning' : 'destructive'}>
+              {alert.tone === 'warn' ? (
+                <TriangleAlertIcon aria-hidden />
+              ) : (
+                <CircleAlertIcon aria-hidden />
+              )}
+              <AlertTitle>{alert.title}</AlertTitle>
+              <AlertDescription>{alert.body}</AlertDescription>
             </Alert>
           ) : null}
           <div className="flex flex-col gap-3.5">

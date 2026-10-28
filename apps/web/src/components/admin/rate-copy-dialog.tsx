@@ -15,9 +15,10 @@ import { apiProblem, fieldIssues } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
 import { resolveSchedule, type ScheduleChoice } from '../../lib/rates';
 import { cn } from '../../lib/utils';
-import { CalloutIcon } from '../ui/alert';
+import { TriangleAlertIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button, buttonVariants } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 import { ScheduleField } from './rate-edit-dialog';
 import {
@@ -423,27 +424,22 @@ function ChooseTenant({
   return (
     <>
       {notice ? (
-        <div
-          role="status"
-          className="rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] font-semibold text-warn"
-        >
-          {notice}
-        </div>
+        <Alert variant="warning" role="status">
+          <AlertTitle className="col-start-1">{notice}</AlertTitle>
+        </Alert>
       ) : null}
-      <div className="flex items-start gap-2.5 rounded-lg border border-warn-border bg-warn-soft px-3.5 py-3 text-[13px]">
-        <CalloutIcon tone="warn" />
-        <div className="flex flex-col gap-0.5">
-          <span className="font-semibold text-warn">
-            {push
-              ? '将覆盖目标租户的整张费率表'
-              : `将覆盖 ${self.tenant.code} 的整张费率表`}
-          </span>
-          <span>
-            {push ? '目标租户' : '本租户'}
-            现有费率会被替换，来源中没有的前缀将被删除。
-          </span>
-        </div>
-      </div>
+      <Alert variant="warning" role="note" className="px-3.5 py-3">
+        <TriangleAlertIcon aria-hidden />
+        <AlertTitle>
+          {push
+            ? '将覆盖目标租户的整张费率表'
+            : `将覆盖 ${self.tenant.code} 的整张费率表`}
+        </AlertTitle>
+        <AlertDescription className="text-foreground">
+          {push ? '目标租户' : '本租户'}
+          现有费率会被替换，来源中没有的前缀将被删除。
+        </AlertDescription>
+      </Alert>
       <TenantPicker
         label={push ? '目标租户' : '来源租户'}
         currency={self.tenant.currency}

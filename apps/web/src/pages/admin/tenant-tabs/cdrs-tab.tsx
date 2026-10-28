@@ -104,7 +104,7 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   );
   const deleteButton = (className?: string) => (
     <Button
-      variant="danger"
+      variant="destructive"
       className={cn('border-err-border', className)}
       onClick={() => setDeleteOpen(true)}
     >

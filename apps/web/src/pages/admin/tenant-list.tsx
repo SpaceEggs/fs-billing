@@ -29,8 +29,11 @@ import { SearchBox } from '../../components/search-box';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { Segmented } from '../../components/ui/segmented';
-import { Select } from '../../components/ui/select';
+import { Segmented } from '../../components/segmented';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import { apiQuery } from '../../lib/admin-api';
 import type { TenantListSearch } from '../../lib/admin-search';
 import { cn } from '../../lib/utils';
@@ -121,7 +124,7 @@ function Filters({ total }: { total: number | undefined }) {
         <label htmlFor={statusId} className="sr-only">
           状态
         </label>
-        <Select
+        <NativeSelect
           id={statusId}
           value={search.status ?? ''}
           onChange={(event) => {
@@ -130,14 +133,17 @@ function Filters({ total }: { total: number | undefined }) {
             )?.value;
             setFilter({ status });
           }}
-          className="w-[150px]"
+          containerClassName="w-[150px]"
         >
           {statusChoices.map((option) => (
-            <option key={option.value ?? ''} value={option.value ?? ''}>
+            <NativeSelectOption
+              key={option.value ?? ''}
+              value={option.value ?? ''}
+            >
               {option.label}
-            </option>
+            </NativeSelectOption>
           ))}
-        </Select>
+        </NativeSelect>
         <Segmented
           label="币种"
           options={currencyChoices}
@@ -166,10 +172,7 @@ function filterSummary(search: TenantListSearch) {
 
 function NewTenantLink({ className }: { className?: string }) {
   return (
-    <Link
-      to="/admin/tenants/new"
-      className={cn(buttonVariants({ size: 'md' }), className)}
-    >
+    <Link to="/admin/tenants/new" className={cn(buttonVariants(), className)}>
       ＋ 新建租户
     </Link>
   );

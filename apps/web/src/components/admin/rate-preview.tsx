@@ -5,7 +5,8 @@ import {
 } from '@fs-billing/shared';
 import { formatDateTime } from '../../lib/format';
 import { cn } from '../../lib/utils';
-import { CalloutIcon } from '../ui/alert';
+import { CircleAlertIcon, CircleCheckIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ProblemAlert } from './problem-alert';
 import { RateChangesTable } from './rate-changes-table';
@@ -167,7 +168,7 @@ export function PreviewChanges({
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm tabular-nums">
         {labels.verified ? (
           <>
-            <CalloutIcon tone="ok" />
+            <CircleCheckIcon aria-hidden className="size-4 text-ok" />
             <span className="font-semibold">{labels.verified}</span>
           </>
         ) : null}
@@ -186,9 +187,9 @@ export function PreviewChanges({
         </span>
       </div>
       {labels.overwrite || deletedList ? (
-        <div className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3.5 py-2.5 text-[13px] text-err">
-          <CalloutIcon tone="err" />
-          <span>
+        <Alert variant="error" role="note" className="px-3.5">
+          <CircleAlertIcon aria-hidden />
+          <AlertDescription className="block">
             {labels.overwrite ? (
               <>
                 <span className="font-semibold">
@@ -206,8 +207,8 @@ export function PreviewChanges({
                 ：{deletedList}
               </>
             )}
-          </span>
-        </div>
+          </AlertDescription>
+        </Alert>
       ) : null}
       {changes.length ? (
         <div className="max-h-[320px] overflow-auto rounded-lg border border-border">

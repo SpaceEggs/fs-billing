@@ -3,7 +3,7 @@ import { shiftStatementMonth } from '../lib/admin-statements';
 import { statementMonthTitle } from '../lib/statement';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
-import { ModalDialog } from './ui/dialog';
+import { ModalDialog } from './modal-dialog';
 
 const step =
   'flex size-9 shrink-0 items-center justify-center rounded-lg border border-input text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 max-md:size-11';

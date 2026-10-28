@@ -19,7 +19,7 @@ import { ProblemAlert } from '../../../components/admin/problem-alert';
 import { DateTime } from '../../../components/data-format';
 import { QueryError } from '../../../components/query-error';
 import { Button } from '../../../components/ui/button';
-import { ModalDialog } from '../../../components/ui/dialog';
+import { ModalDialog } from '../../../components/modal-dialog';
 import { Input } from '../../../components/ui/input';
 import { apiQuery, useCredentialMutation } from '../../../lib/admin-api';
 import {

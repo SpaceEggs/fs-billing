@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 
 export type StatusChangeResult = {

@@ -19,7 +19,10 @@ import {
 } from '../../../components/filter-sheet';
 import { Pagination } from '../../../components/pagination';
 import { QueryError, RefreshError } from '../../../components/query-error';
-import { Select } from '../../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../../components/ui/native-select';
 import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
 import type { LedgerSearch } from '../../../lib/admin-search';
@@ -268,7 +271,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           <label htmlFor={kindId} className="sr-only">
             类型
           </label>
-          <Select
+          <NativeSelect
             id={kindId}
             value={kind ?? ''}
             onChange={(event) =>
@@ -278,11 +281,14 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
             }
           >
             {kindChoices.map((option) => (
-              <option key={option.value ?? ''} value={option.value ?? ''}>
+              <NativeSelectOption
+                key={option.value ?? ''}
+                value={option.value ?? ''}
+              >
                 {option.label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </Select>
+          </NativeSelect>
           {data ? (
             <span className="text-[13px] text-muted-foreground tabular-nums">
               共 {data.pagination.total} 条

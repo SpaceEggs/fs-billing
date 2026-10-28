@@ -4,7 +4,7 @@ import { send, useCredentialMutation } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
 import { SecretField } from '../copy-field';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 
 export type AccountAudience = 'admin' | 'portal';

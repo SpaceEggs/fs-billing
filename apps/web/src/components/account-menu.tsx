@@ -1,12 +1,18 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import type { Identity } from '@fs-billing/shared';
 import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity } from '../lib/zone';
 import { menuContentClass, menuItemClass } from './menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { ThemeSegmented } from './theme-controls';
-import { Sheet } from './ui/sheet';
+import { SheetPanel } from './sheet-panel';
 
 export function accountSummary(identity: Identity) {
   return identity.kind === 'admin'
@@ -57,8 +63,8 @@ export function AccountMenu({
   const logout = useLogout(zoneOfIdentity(identity));
   const summary = accountSummary(identity);
   return (
-    <DropdownMenu.Root modal={false}>
-      <DropdownMenu.Trigger
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger
         aria-label="账号菜单"
         className="group flex h-9 items-center gap-2 rounded-lg py-1 pr-2.5 pl-1 text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring data-[state=open]:bg-muted"
       >
@@ -69,63 +75,57 @@ export function AccountMenu({
         <span className={cn(condensedBelowXl && 'max-xl:hidden')}>
           {identity.kind === 'admin' ? identity.name : identity.email}
         </span>
-        <span
+        <ChevronDownIcon
           aria-hidden
           className={cn(
-            'group-data-[state=open]:hidden',
+            'size-3.5 group-data-[state=open]:hidden',
             condensedBelowXl && 'max-xl:hidden',
           )}
-        >
-          ▾
-        </span>
-        <span
+        />
+        <ChevronUpIcon
           aria-hidden
           className={cn(
-            'hidden group-data-[state=open]:inline',
+            'hidden size-3.5 group-data-[state=open]:inline',
             condensedBelowXl && 'max-xl:group-data-[state=open]:hidden',
           )}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className={cn(
+          menuContentClass,
+          identity.kind === 'admin' ? 'w-[250px]' : 'w-[260px]',
+        )}
+      >
+        <div className="mb-1 flex flex-col gap-0.5 border-b border-border px-2.5 pt-2.5 pb-3">
+          <span className="font-semibold">{summary.title}</span>
+          <span className="text-xs text-muted-foreground">
+            {summary.subtitle}
+          </span>
+        </div>
+        {logout.isError ? (
+          <p role="alert" className="m-0 px-2.5 py-1.5 text-xs text-neg">
+            {logoutFailedMessage}
+          </p>
+        ) : null}
+        {identity.kind === 'customer' ? (
+          <DropdownMenuItem asChild className={menuItemClass}>
+            <Link to="/portal/settings">账号设置</Link>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem
+          className={cn(menuItemClass, 'text-neg focus:text-neg')}
+          disabled={logout.isPending}
+          onSelect={(event) => {
+            event.preventDefault();
+            logout.mutate();
+          }}
         >
-          ▴
-        </span>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={8}
-          className={cn(
-            menuContentClass,
-            identity.kind === 'admin' ? 'w-[250px]' : 'w-[260px]',
-          )}
-        >
-          <div className="mb-1 flex flex-col gap-0.5 border-b border-border px-2.5 pt-2.5 pb-3">
-            <span className="font-semibold">{summary.title}</span>
-            <span className="text-xs text-muted-foreground">
-              {summary.subtitle}
-            </span>
-          </div>
-          {logout.isError ? (
-            <p role="alert" className="m-0 px-2.5 py-1.5 text-xs text-neg">
-              {logoutFailedMessage}
-            </p>
-          ) : null}
-          {identity.kind === 'customer' ? (
-            <DropdownMenu.Item asChild className={menuItemClass}>
-              <Link to="/portal/settings">账号设置</Link>
-            </DropdownMenu.Item>
-          ) : null}
-          <DropdownMenu.Item
-            className={cn(menuItemClass, 'text-neg')}
-            disabled={logout.isPending}
-            onSelect={(event) => {
-              event.preventDefault();
-              logout.mutate();
-            }}
-          >
-            退出登录
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+          退出登录
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -134,7 +134,7 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
   const logout = useLogout(zoneOfIdentity(identity));
   const summary = accountSummary(identity);
   return (
-    <Sheet
+    <SheetPanel
       side="bottom"
       title="账号菜单"
       trigger={
@@ -171,9 +171,10 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
           className="flex h-12 items-center justify-between border-b border-border text-base"
         >
           账号设置
-          <span aria-hidden className="text-muted-foreground">
-            ›
-          </span>
+          <ChevronRightIcon
+            aria-hidden
+            className="size-4 text-muted-foreground"
+          />
         </Link>
       ) : null}
       <button
@@ -184,6 +185,6 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
       >
         退出登录
       </button>
-    </Sheet>
+    </SheetPanel>
   );
 }

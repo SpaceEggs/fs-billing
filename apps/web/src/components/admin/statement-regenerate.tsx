@@ -1,5 +1,6 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { TriangleAlertIcon } from 'lucide-react';
 import type {
   AdminStatementRegenerateResponse,
   Currency,
@@ -11,9 +12,9 @@ import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
-import { Alert } from '../ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 
 /** 对话框打开时看到的账单；`current` 为 null 表示该月还没有账单行（版本 0，等同补建）。 */
@@ -239,22 +240,26 @@ export function RegenerateNotice({
         </button>
       </div>
       {result.staleFollowingMonths.length > 0 ? (
-        <Alert tone="warn" title="后续月份的账单已过期">
-          {tenantCode} 的{' '}
-          {result.staleFollowingMonths.map((stale, index) => (
-            <span key={stale}>
-              {index > 0 ? '、' : ''}
-              <Link
-                to="/admin/tenants/$tenantId"
-                params={{ tenantId }}
-                search={{ tab: 'statements', statementMonth: stale }}
-                className="underline"
-              >
-                {statementMonthTitle(stale)}
-              </Link>
-            </span>
-          ))}{' '}
-          账单的期初余额已与账本不符。重新生成只处理所选月份，请按月份顺序逐个重新生成。
+        <Alert variant="warning">
+          <TriangleAlertIcon aria-hidden />
+          <AlertTitle>后续月份的账单已过期</AlertTitle>
+          <AlertDescription className="block">
+            {tenantCode} 的{' '}
+            {result.staleFollowingMonths.map((stale, index) => (
+              <span key={stale}>
+                {index > 0 ? '、' : ''}
+                <Link
+                  to="/admin/tenants/$tenantId"
+                  params={{ tenantId }}
+                  search={{ tab: 'statements', statementMonth: stale }}
+                  className="underline"
+                >
+                  {statementMonthTitle(stale)}
+                </Link>
+              </span>
+            ))}{' '}
+            账单的期初余额已与账本不符。重新生成只处理所选月份，请按月份顺序逐个重新生成。
+          </AlertDescription>
         </Alert>
       ) : null}
     </div>

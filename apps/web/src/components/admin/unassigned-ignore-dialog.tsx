@@ -4,7 +4,7 @@ import type { UnassignedSelection } from '@fs-billing/shared';
 import { invalidateUnassigned, useApiMutation } from '../../lib/admin-api';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Field, invalidClass } from './form-fields';
 import { RequestFailure } from './problem-alert';
 

@@ -11,7 +11,7 @@ import {
 } from '../../../components/admin/form-fields';
 import { ProblemAlert } from '../../../components/admin/problem-alert';
 import { Button } from '../../../components/ui/button';
-import { ModalDialog } from '../../../components/ui/dialog';
+import { ModalDialog } from '../../../components/modal-dialog';
 import {
   apiKey,
   invalidateTenant,

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
-import { Sheet } from './ui/sheet';
+import { SheetPanel } from './sheet-panel';
 
 /**
  * 手机版「筛选」按钮与底部面板（设计系统 · 手机筛选）：筛选即时写入地址，
@@ -20,7 +20,7 @@ export function FilterSheet({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Sheet
+    <SheetPanel
       side="bottom"
       title="筛选"
       open={open}
@@ -63,7 +63,7 @@ export function FilterSheet({
       <Button size="lg" className="h-12" onClick={() => setOpen(false)}>
         {resultLabel}
       </Button>
-    </Sheet>
+    </SheetPanel>
   );
 }
 

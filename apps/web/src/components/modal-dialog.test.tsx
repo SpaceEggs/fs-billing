@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { ModalDialog } from './dialog';
+import { ModalDialog } from './modal-dialog';
 
 function Harness({
   dismissible,

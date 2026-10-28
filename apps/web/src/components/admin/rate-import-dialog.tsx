@@ -22,9 +22,10 @@ import {
 } from '../../lib/rate-csv';
 import { resolveSchedule, type ScheduleChoice } from '../../lib/rates';
 import { cn } from '../../lib/utils';
-import { CalloutIcon } from '../ui/alert';
+import { CircleAlertIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 import {
   DialogHeading,
@@ -562,20 +563,15 @@ function RowErrors({
 }) {
   return (
     <>
-      <div
-        role="alert"
-        className="flex items-start gap-2.5 rounded-[10px] border border-err-border bg-err-soft px-4 py-3.5"
-      >
-        <CalloutIcon tone="err" />
-        <div className="flex flex-col gap-1">
-          <span className="text-[15px] font-semibold text-err">
-            发现 {errors.length} 处错误，文件未导入
-          </span>
-          <span className="text-[13px]">
-            有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。
-          </span>
-        </div>
-      </div>
+      <Alert variant="error" className="rounded-[10px] px-4 py-3.5">
+        <CircleAlertIcon aria-hidden />
+        <AlertTitle className="text-[15px]">
+          发现 {errors.length} 处错误，文件未导入
+        </AlertTitle>
+        <AlertDescription className="text-foreground">
+          有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。
+        </AlertDescription>
+      </Alert>
       <div className="max-h-[320px] overflow-auto rounded-lg border border-border">
         <table className="w-full border-collapse text-[13px]">
           <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">

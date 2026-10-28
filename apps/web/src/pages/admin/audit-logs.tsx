@@ -14,7 +14,10 @@ import { FilterSheet, resultLabel } from '../../components/filter-sheet';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
-import { Select } from '../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import { apiQuery, send } from '../../lib/admin-api';
 import type { AuditLogSearch } from '../../lib/admin-search';
 import type { DayRange } from '../../lib/day-range';
@@ -340,15 +343,17 @@ function Filters({
           onFilter({ adminId: value === '' ? undefined : value })
         }
       >
-        <option value="">全部管理员</option>
+        <NativeSelectOption value="">全部管理员</NativeSelectOption>
         {search.adminId && !admins?.has(search.adminId) ? (
-          <option value={search.adminId}>{admins ? '已选管理员' : '…'}</option>
+          <NativeSelectOption value={search.adminId}>
+            {admins ? '已选管理员' : '…'}
+          </NativeSelectOption>
         ) : null}
         {admins
           ? [...admins].map(([id, name]) => (
-              <option key={id} value={id}>
+              <NativeSelectOption key={id} value={id}>
                 {name}
-              </option>
+              </NativeSelectOption>
             ))
           : null}
       </NamedSelect>
@@ -360,11 +365,11 @@ function Filters({
           onFilter({ label: auditLabelSchema.safeParse(value).data })
         }
       >
-        <option value="">全部操作</option>
+        <NativeSelectOption value="">全部操作</NativeSelectOption>
         {auditLabelSchema.options.map((label) => (
-          <option key={label} value={label}>
+          <NativeSelectOption key={label} value={label}>
             {auditLabelText[label]}
-          </option>
+          </NativeSelectOption>
         ))}
       </NamedSelect>
       <NamedSelect
@@ -376,15 +381,17 @@ function Filters({
           onFilter({ tenantId: value === '' ? undefined : value })
         }
       >
-        <option value="">全部租户</option>
+        <NativeSelectOption value="">全部租户</NativeSelectOption>
         {search.tenantId &&
         !tenants?.some((tenant) => tenant.id === search.tenantId) ? (
-          <option value={search.tenantId}>{tenants ? '已选租户' : '…'}</option>
+          <NativeSelectOption value={search.tenantId}>
+            {tenants ? '已选租户' : '…'}
+          </NativeSelectOption>
         ) : null}
         {tenants?.map((tenant) => (
-          <option key={tenant.id} value={tenant.id}>
+          <NativeSelectOption key={tenant.id} value={tenant.id}>
             {tenant.code} {tenant.name}
-          </option>
+          </NativeSelectOption>
         ))}
       </NamedSelect>
     </>
@@ -472,15 +479,15 @@ function NamedSelect({
       <label htmlFor={id} className="text-xs text-muted-foreground">
         {label}
       </label>
-      <Select
+      <NativeSelect
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={className}
+        containerClassName={className}
         {...(hintId ? { 'aria-describedby': hintId } : {})}
       >
         {children}
-      </Select>
+      </NativeSelect>
       {hint ? (
         <p id={hintId} className="m-0 text-xs text-muted-foreground">
           {hint}

@@ -19,7 +19,7 @@ import { formatDate, formatDateTime, formatMoney } from '../../lib/format';
 import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert, RequestFailure } from './problem-alert';
 
 const tenantPageSize = 100;

@@ -33,7 +33,7 @@ import { Money } from '../data-format';
 import { statusTags } from '../status-tag';
 import { healthStatus } from '../tenant-health';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Field, invalidClass, MoneyInput } from './form-fields';
 import { ProblemAlert } from './problem-alert';
 

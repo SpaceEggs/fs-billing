@@ -26,7 +26,7 @@ import { TenantStatus } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import {

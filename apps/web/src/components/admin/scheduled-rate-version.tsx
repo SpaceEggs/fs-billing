@@ -8,7 +8,7 @@ import {
   diffRateTables,
 } from '../../lib/rates';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 import { RateChangesTable } from './rate-changes-table';
 

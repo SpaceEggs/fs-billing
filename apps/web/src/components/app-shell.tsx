@@ -9,7 +9,7 @@ import { AccountMenu, MobileAccountMenu } from './account-menu';
 import { productLabel, SidebarBrand } from './brand';
 import { SessionExpiredDialog } from './session-expired-dialog';
 import { ThemeMenu } from './theme-controls';
-import { Sheet } from './ui/sheet';
+import { SheetPanel } from './sheet-panel';
 
 /** 后台导航按设计稿顺序；未归属话单带待处理条数角标，操作日志在账单之后。系统告警随该阶段加入。 */
 const navigation = {
@@ -162,7 +162,7 @@ export function AppShell({
         >
           <div className="flex justify-start">
             {mobileNav ?? (
-              <Sheet
+              <SheetPanel
                 side="left"
                 title="导航"
                 open={drawerOpen}
@@ -184,7 +184,7 @@ export function AppShell({
                   mobile
                   onNavigate={() => setDrawerOpen(false)}
                 />
-              </Sheet>
+              </SheetPanel>
             )}
           </div>
           {zone === 'admin' ? (

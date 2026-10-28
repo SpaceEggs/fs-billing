@@ -33,7 +33,7 @@ import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { Button } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { Input } from '../../components/ui/input';
 import { apiQuery, useCredentialMutation } from '../../lib/admin-api';
 import {

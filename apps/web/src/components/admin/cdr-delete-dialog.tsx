@@ -24,7 +24,7 @@ import { cn } from '../../lib/utils';
 import { QueryError } from '../query-error';
 import { MonthGrid, type MonthCellState } from '../month-field';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Input } from '../ui/input';
 import { invalidClass } from './form-fields';
 import { ProblemAlert } from './problem-alert';

@@ -27,7 +27,10 @@ import {
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
-import { Select } from '../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import { apiQuery } from '../../lib/admin-api';
 import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
@@ -323,7 +326,7 @@ export function PortalLedgerPage({
             <label htmlFor={kindId} className="sr-only">
               类型
             </label>
-            <Select
+            <NativeSelect
               id={kindId}
               value={kind ?? ''}
               onChange={(event) =>
@@ -332,14 +335,17 @@ export function PortalLedgerPage({
                     .data,
                 })
               }
-              className="w-40"
+              containerClassName="w-40"
             >
               {kindChoices.map((option) => (
-                <option key={option.value ?? ''} value={option.value ?? ''}>
+                <NativeSelectOption
+                  key={option.value ?? ''}
+                  value={option.value ?? ''}
+                >
                   {option.label}
-                </option>
+                </NativeSelectOption>
               ))}
-            </Select>
+            </NativeSelect>
             <span className="flex-1" />
             <span className="text-xs text-muted-foreground">
               通话扣费按天合并，点击可查看当天话单

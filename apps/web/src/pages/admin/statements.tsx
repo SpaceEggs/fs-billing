@@ -21,7 +21,7 @@ import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime, Money } from '../../components/data-format';
 import { MonthField } from '../../components/month-field';
 import { QueryError, RefreshError } from '../../components/query-error';
-import { Sheet } from '../../components/ui/sheet';
+import { SheetPanel } from '../../components/sheet-panel';
 import { apiQuery } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
 import { previousBeijingMonth } from '../../lib/admin-statements';
@@ -401,7 +401,7 @@ function GroupSection({
           </div>
         ))}
       </div>
-      <Sheet
+      <SheetPanel
         side="bottom"
         title={menu ? `${menu.tenant.code} 的操作` : '操作'}
         open={menu !== null}
@@ -440,7 +440,7 @@ function GroupSection({
             </button>
           </>
         ) : null}
-      </Sheet>
+      </SheetPanel>
     </section>
   );
 }

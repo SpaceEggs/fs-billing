@@ -9,7 +9,8 @@ import { LoadError } from '../../components/load-error';
 import { RecentCalls } from '../../components/portal/recent-calls';
 import { StatusTag } from '../../components/status-tag';
 import { healthStatus } from '../../components/tenant-health';
-import { CalloutIcon } from '../../components/ui/alert';
+import { CircleAlertIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { apiQuery } from '../../lib/admin-api';
 import { formatMoney, formatMonth } from '../../lib/format';
 import { cn } from '../../lib/utils';
@@ -25,18 +26,13 @@ function minutes(value: string) {
 /** 已停机横幅（设计稿 1c）。管理员停用的租户不显示（决定 28）。 */
 function SuspendedBanner() {
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-2.5 rounded-[10px] border border-err-border bg-err-soft p-3.5 text-err"
-    >
-      <CalloutIcon tone="err" />
-      <div className="flex flex-col gap-1">
-        <span className="text-[15px] font-semibold">余额不足，已暂停呼叫</span>
-        <span className="text-[13px] leading-normal">
-          请联系客服充值，到账后自动恢复呼叫。
-        </span>
-      </div>
-    </div>
+    <Alert variant="error" className="rounded-[10px] p-3.5">
+      <CircleAlertIcon aria-hidden />
+      <AlertTitle className="text-[15px]">余额不足，已暂停呼叫</AlertTitle>
+      <AlertDescription className="leading-normal">
+        请联系客服充值，到账后自动恢复呼叫。
+      </AlertDescription>
+    </Alert>
   );
 }
 

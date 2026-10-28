@@ -1,6 +1,7 @@
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
-import { CalloutIcon } from '../ui/alert';
+import { CircleAlertIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/button';
 
 /**
@@ -18,17 +19,16 @@ export function ProblemAlert({
 }) {
   if (error instanceof ApiRequestError && error.outcomeUnknown)
     return (
-      <div
-        role="alert"
-        className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-      >
-        <CalloutIcon tone="err" />
+      <Alert variant="error" className="flex items-start">
+        <CircleAlertIcon aria-hidden className="mt-px shrink-0" />
         <div className="flex flex-1 flex-col gap-0.5">
-          <span className="font-semibold">网络中断</span>
-          <span>{networkMessage ?? '请检查网络后重试'}</span>
+          <AlertTitle>网络中断</AlertTitle>
+          <AlertDescription>
+            {networkMessage ?? '请检查网络后重试'}
+          </AlertDescription>
         </div>
         <RefreshButton onRefresh={onRefresh} />
-      </div>
+      </Alert>
     );
   const problem = apiProblem(error);
   if (
@@ -38,17 +38,16 @@ export function ProblemAlert({
     return null;
   const notice = problemNotice(problem);
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-    >
-      <CalloutIcon tone="err" />
+    <Alert variant="error" className="flex items-start">
+      <CircleAlertIcon aria-hidden className="mt-px shrink-0" />
       <div className="flex flex-1 flex-col gap-0.5">
-        <span className="font-semibold">{notice.title}</span>
-        {notice.body ? <span>{notice.body}</span> : null}
+        <AlertTitle>{notice.title}</AlertTitle>
+        {notice.body ? (
+          <AlertDescription>{notice.body}</AlertDescription>
+        ) : null}
       </div>
       {notice.refresh ? <RefreshButton onRefresh={onRefresh} /> : null}
-    </div>
+    </Alert>
   );
 }
 
@@ -74,15 +73,14 @@ export function RequestFailure({
   if (problem.kind === 'validation') {
     const notice = problemNotice(problem);
     return (
-      <div
-        role="alert"
-        className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-      >
-        <span className="font-semibold">{notice.title}</span>
+      <Alert variant="error">
+        <AlertTitle className="col-start-1">{notice.title}</AlertTitle>
         {notice.details?.map((line) => (
-          <span key={line}>{line}</span>
+          <AlertDescription key={line} className="col-start-1">
+            {line}
+          </AlertDescription>
         ))}
-      </div>
+      </Alert>
     );
   }
   return (

@@ -19,14 +19,14 @@ import {
 } from '../../components/admin/confirm-payment-dialog';
 import { ReversePaymentDialog } from '../../components/admin/reverse-payment-dialog';
 import { VoidReceivableDialog } from '../../components/admin/void-receivable-dialog';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { AppShell, PageBody } from '../../components/app-shell';
 import {
   FilterGroup,
   FilterSheet,
   resultLabel,
 } from '../../components/filter-sheet';
-import { Segmented } from '../../components/ui/segmented';
+import { Segmented } from '../../components/segmented';
 import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -273,7 +273,7 @@ function Actions({
     return (
       <span className={row}>
         <Button
-          variant="danger"
+          variant="destructive"
           size="sm"
           aria-label={`撤销确认 ${target}`}
           disabled={blocked}
@@ -297,7 +297,7 @@ function Actions({
         确认收款
       </Button>
       <Button
-        variant="danger"
+        variant="destructive"
         size="sm"
         aria-label={`作废 ${target}`}
         disabled={blocked}

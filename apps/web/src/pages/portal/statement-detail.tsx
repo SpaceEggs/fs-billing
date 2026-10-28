@@ -15,7 +15,7 @@ import { StatementDays } from '../../components/statement/day-table';
 import { StatementEquation } from '../../components/statement/statement-equation';
 import { StatementStateTag } from '../../components/statement/state-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { callDownload } from '../../lib/api';
 import {

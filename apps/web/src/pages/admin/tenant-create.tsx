@@ -25,9 +25,12 @@ import {
 } from '../../components/admin/form-fields';
 import { CopyField, SecretField } from '../../components/copy-field';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { Input } from '../../components/ui/input';
-import { Select } from '../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import {
   apiQuery,
   invalidateTenant,
@@ -213,7 +216,7 @@ function CopySourcePicker({
         onChange={(event) => setSearch(event.target.value)}
       />
       <label htmlFor={id}>复制自</label>
-      <Select
+      <NativeSelect
         id={id}
         value={picked?.id ?? ''}
         disabled={!tenants.data}
@@ -223,9 +226,9 @@ function CopySourcePicker({
           );
           onChange(null);
         }}
-        className="font-normal md:h-10"
+        containerClassName="font-normal md:h-10"
       >
-        <option value="">
+        <NativeSelectOption value="">
           {tenants.isError
             ? '租户列表加载失败'
             : tenants.data
@@ -233,13 +236,13 @@ function CopySourcePicker({
                 ? '选择租户'
                 : '没有匹配的同币种租户'
               : '加载中…'}
-        </option>
+        </NativeSelectOption>
         {options.map((tenant) => (
-          <option key={tenant.id} value={tenant.id}>
+          <NativeSelectOption key={tenant.id} value={tenant.id}>
             {tenant.code} {tenant.name}
-          </option>
+          </NativeSelectOption>
         ))}
-      </Select>
+      </NativeSelect>
       <span className="text-xs font-normal text-muted-foreground">
         {rates.isError
           ? '该租户的费率表加载失败，请重新选择'

@@ -9,7 +9,7 @@ import {
 } from '../lib/day-range';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
-import { ModalDialog } from './ui/dialog';
+import { ModalDialog } from './modal-dialog';
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
