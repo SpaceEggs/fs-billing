@@ -12,7 +12,12 @@ import type {
   UnassignedSelection,
 } from '@fs-billing/shared';
 import { CheckIcon } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../components/ui/tabs';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Alert } from '../../components/ui/alert';
 import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign-dialog';
@@ -256,6 +261,136 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
 
   const pendingEmpty = summary.data?.pending === 0 && tab === 'pending';
 
+  const panelContent = (
+    <>
+      <PageStatus notice={notice} onDismiss={() => setNotice(null)} />
+      {pendingEmpty ? <PendingEmpty /> : null}
+      {tab === 'pending' && summary.data && summary.data.pending > 0 ? (
+        <>
+          <Alert variant="warning" className="m-0 px-3.5 text-foreground">
+            <span className="font-semibold text-warn">提示</span> 请同时检查
+            FreeSWITCH 中的 <code className="font-mono">billing_tenant</code>{' '}
+            配置，否则新话单会继续进入此处。
+          </Alert>
+          {groups.isError && !groups.data ? (
+            <QueryError
+              title="分组加载失败"
+              error={groups.error}
+              retrying={groups.isFetching}
+              onRetry={() => void groups.refetch()}
+            />
+          ) : groups.data ? (
+            <GroupCards
+              total={groups.data.total}
+              groupCount={groups.data.groups.length}
+              groups={groups.data.groups}
+              tag={search.tag}
+              onSelect={(tag) => update(tag === undefined ? {} : { tag })}
+            />
+          ) : (
+            <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
+              加载中
+            </p>
+          )}
+          {selection.kind === 'none' ? (
+            <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
+              <span>
+                勾选话单，或点击上方分组后「选择该分组全部」，再归属到租户或忽略。
+              </span>
+              {canSelectGroup ? (
+                <Button
+                  variant="link"
+                  size="inline"
+                  className="underline"
+                  onClick={() =>
+                    search.tag !== undefined &&
+                    setSelection({ kind: 'group', tag: search.tag })
+                  }
+                >
+                  {selectGroupLabel}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3 rounded-[10px] border border-brand-border bg-brand-soft px-4 py-2 text-sm">
+              <span className="font-semibold tabular-nums">
+                {selection.kind === 'group'
+                  ? `已选择「${contextTitle}」全部 ${countText(selectedCount)} 条`
+                  : `已选 ${countText(selectedCount)} 条`}
+              </span>
+              {canSelectGroup ? (
+                <Button
+                  variant="link"
+                  size="inline"
+                  className="text-[13px] underline"
+                  onClick={() =>
+                    search.tag !== undefined &&
+                    setSelection({ kind: 'group', tag: search.tag })
+                  }
+                >
+                  {selectGroupLabel}
+                </Button>
+              ) : null}
+              <Button
+                variant="link"
+                size="inline"
+                className="text-[13px] text-muted-foreground underline"
+                onClick={() => setSelection({ kind: 'none' })}
+              >
+                清除选择
+              </Button>
+              <span className="hidden flex-1 md:block" />
+              <Button variant="outline" size="sm" onClick={openIgnore}>
+                忽略
+              </Button>
+              <Button size="sm" onClick={openAssign}>
+                归属到租户
+              </Button>
+            </div>
+          )}
+        </>
+      ) : null}
+      {showList && !listed && list.isError ? (
+        <QueryError
+          title="话单加载失败"
+          error={list.error}
+          retrying={list.isFetching}
+          onRetry={() => void list.refetch()}
+        />
+      ) : null}
+      <RefreshError title="话单刷新失败，数据可能不是最新" query={list} />
+      {unignoreError ? <RequestFailure error={unignoreError} /> : null}
+      {listed && tab === 'pending' ? (
+        <PendingRows
+          rows={listed.items}
+          total={listed.pagination.total}
+          page={page}
+          selection={selection}
+          busy={list.isFetching}
+          onTogglePage={() => togglePage(listed.items)}
+          onToggleRow={toggleRow}
+          onPage={(next) => update(keptSearch(search, next))}
+        />
+      ) : null}
+      {listed && tab === 'ignored' ? (
+        <IgnoredRows
+          rows={listed.items}
+          total={listed.pagination.total}
+          page={page}
+          busy={list.isFetching}
+          unignoring={unignoring}
+          onUnignore={(id) => void unignore(id)}
+          onPage={(next) => update(keptSearch(search, next))}
+        />
+      ) : null}
+      {showList && !listed && !list.isError ? (
+        <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
+          加载中
+        </p>
+      ) : null}
+    </>
+  );
+
   return (
     <AppShell
       identity={identity}
@@ -282,6 +417,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
         {summary.data ? (
           <Tabs
             value={tab}
+            activationMode="manual"
             onValueChange={(next) =>
               update(next === 'ignored' ? { tab: 'ignored' } : {})
             }
@@ -303,137 +439,27 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
                 已忽略
               </TabButton>
             </TabsList>
+            {/* forceMount 让两个面板都在 DOM 里，标签的 aria-controls 因此总指向存在的元素；只有选中的面板渲染内容、其余隐藏。 */}
+            {(['pending', 'ignored'] as const).map((value) => (
+              <TabsContent
+                key={value}
+                value={value}
+                forceMount
+                hidden={value !== tab}
+                className="mt-5 flex flex-col gap-5"
+              >
+                {value === tab ? panelContent : null}
+              </TabsContent>
+            ))}
           </Tabs>
         ) : summary.isPending ? (
           <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
             加载中
           </p>
         ) : null}
-        <PageStatus notice={notice} onDismiss={() => setNotice(null)} />
-        {pendingEmpty ? <PendingEmpty /> : null}
-        {tab === 'pending' && summary.data && summary.data.pending > 0 ? (
-          <>
-            <Alert variant="warning" className="m-0 px-3.5 text-foreground">
-              <span className="font-semibold text-warn">提示</span> 请同时检查
-              FreeSWITCH 中的 <code className="font-mono">billing_tenant</code>{' '}
-              配置，否则新话单会继续进入此处。
-            </Alert>
-            {groups.isError && !groups.data ? (
-              <QueryError
-                title="分组加载失败"
-                error={groups.error}
-                retrying={groups.isFetching}
-                onRetry={() => void groups.refetch()}
-              />
-            ) : groups.data ? (
-              <GroupCards
-                total={groups.data.total}
-                groupCount={groups.data.groups.length}
-                groups={groups.data.groups}
-                tag={search.tag}
-                onSelect={(tag) => update(tag === undefined ? {} : { tag })}
-              />
-            ) : (
-              <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
-                加载中
-              </p>
-            )}
-            {selection.kind === 'none' ? (
-              <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
-                <span>
-                  勾选话单，或点击上方分组后「选择该分组全部」，再归属到租户或忽略。
-                </span>
-                {canSelectGroup ? (
-                  <Button
-                    variant="link"
-                    size="inline"
-                    className="underline"
-                    onClick={() =>
-                      search.tag !== undefined &&
-                      setSelection({ kind: 'group', tag: search.tag })
-                    }
-                  >
-                    {selectGroupLabel}
-                  </Button>
-                ) : null}
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-3 rounded-[10px] border border-brand-border bg-brand-soft px-4 py-2 text-sm">
-                <span className="font-semibold tabular-nums">
-                  {selection.kind === 'group'
-                    ? `已选择「${contextTitle}」全部 ${countText(selectedCount)} 条`
-                    : `已选 ${countText(selectedCount)} 条`}
-                </span>
-                {canSelectGroup ? (
-                  <Button
-                    variant="link"
-                    size="inline"
-                    className="text-[13px] underline"
-                    onClick={() =>
-                      search.tag !== undefined &&
-                      setSelection({ kind: 'group', tag: search.tag })
-                    }
-                  >
-                    {selectGroupLabel}
-                  </Button>
-                ) : null}
-                <Button
-                  variant="link"
-                  size="inline"
-                  className="text-[13px] text-muted-foreground underline"
-                  onClick={() => setSelection({ kind: 'none' })}
-                >
-                  清除选择
-                </Button>
-                <span className="hidden flex-1 md:block" />
-                <Button variant="outline" size="sm" onClick={openIgnore}>
-                  忽略
-                </Button>
-                <Button size="sm" onClick={openAssign}>
-                  归属到租户
-                </Button>
-              </div>
-            )}
-          </>
-        ) : null}
-        {showList && !listed && list.isError ? (
-          <QueryError
-            title="话单加载失败"
-            error={list.error}
-            retrying={list.isFetching}
-            onRetry={() => void list.refetch()}
-          />
-        ) : null}
-        <RefreshError title="话单刷新失败，数据可能不是最新" query={list} />
-        {unignoreError ? <RequestFailure error={unignoreError} /> : null}
-        {listed && tab === 'pending' ? (
-          <PendingRows
-            rows={listed.items}
-            total={listed.pagination.total}
-            page={page}
-            selection={selection}
-            busy={list.isFetching}
-            onTogglePage={() => togglePage(listed.items)}
-            onToggleRow={toggleRow}
-            onPage={(next) => update(keptSearch(search, next))}
-          />
-        ) : null}
-        {listed && tab === 'ignored' ? (
-          <IgnoredRows
-            rows={listed.items}
-            total={listed.pagination.total}
-            page={page}
-            busy={list.isFetching}
-            unignoring={unignoring}
-            onUnignore={(id) => void unignore(id)}
-            onPage={(next) => update(keptSearch(search, next))}
-          />
-        ) : null}
-        {showList && !listed && !list.isError ? (
-          <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
-            加载中
-          </p>
-        ) : null}
+        {summary.data ? null : (
+          <PageStatus notice={notice} onDismiss={() => setNotice(null)} />
+        )}
       </PageBody>
       {panel?.kind === 'assign' ? (
         <UnassignedAssignDialog

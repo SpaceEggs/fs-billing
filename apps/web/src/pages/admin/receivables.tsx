@@ -32,7 +32,7 @@ import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { CircleCheckIcon, XIcon, CheckIcon } from 'lucide-react';
-import { Alert } from '../../components/ui/alert';
+import { Alert, AlertAction } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { apiKey, apiQuery, invalidateTenant, send } from '../../lib/admin-api';
 import type { ReceivablesSearch } from '../../lib/admin-search';
@@ -574,22 +574,24 @@ function DoneNotice({
       ref={ref}
       variant="success"
       tabIndex={-1}
-      className="flex-row items-center gap-2 rounded-[10px] px-3.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+      className="rounded-[10px] px-3.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr_auto] has-[>svg]:items-center"
     >
       <CircleCheckIcon aria-hidden className="size-4 shrink-0" />
-      <span className="flex-1">
+      <span className="col-start-2">
         {done.receivable.tenant.code}{' '}
         {formatMoney(receivableMoney(done.receivable))} {doneText[done.kind]}
       </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label="关闭提示"
-        onClick={onDismiss}
-        className="h-7 px-2 text-ok hover:bg-transparent"
-      >
-        <XIcon aria-hidden />
-      </Button>
+      <AlertAction className="row-span-1 self-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="关闭提示"
+          onClick={onDismiss}
+          className="h-7 px-2 text-ok hover:bg-transparent"
+        >
+          <XIcon aria-hidden />
+        </Button>
+      </AlertAction>
     </Alert>
   );
 }

@@ -437,7 +437,7 @@ function ChooseTenant({
             ? '将覆盖目标租户的整张费率表'
             : `将覆盖 ${self.tenant.code} 的整张费率表`}
         </AlertTitle>
-        <AlertDescription className="text-foreground">
+        <AlertDescription className="text-foreground!">
           {push ? '目标租户' : '本租户'}
           现有费率会被替换，来源中没有的前缀将被删除。
         </AlertDescription>
@@ -563,7 +563,7 @@ function TenantPicker({
         value={search}
         disabled={disabled}
         onChange={(event) => setSearch(event.target.value)}
-        className="h-9 text-sm"
+        className="h-9 text-sm sm:h-9"
       />
       <span id={`${id}-group`} className="text-xs text-muted-foreground">
         可选 · 同币种（{currency}）

@@ -51,7 +51,7 @@ export const adminPageSize = 25;
 
 const statusTag = {
   active: { label: '启用', variant: 'ok' },
-  disabled: { label: '已停用', variant: 'secondary' },
+  disabled: { label: '已停用', variant: 'off' },
 } as const satisfies Record<AdminStatus, { label: string; variant: string }>;
 
 const selfDisableHint = '不能停用自己的账号';

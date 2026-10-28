@@ -603,6 +603,32 @@ describe('unassigned calls', () => {
     });
   });
 
+  it('points every tab at an existing panel and activates tabs manually', async () => {
+    const user = userEvent.setup();
+    const { location } = renderUnassigned();
+    const pending = await screen.findByRole('tab', { name: /待处理/ });
+    const ignored = screen.getByRole('tab', { name: /已忽略/ });
+    for (const tab of [pending, ignored]) {
+      const panel = document.getElementById(tab.getAttribute('aria-controls')!);
+      expect(panel).not.toBeNull();
+      expect(panel).toHaveAttribute('role', 'tabpanel');
+    }
+    expect(
+      document.getElementById(ignored.getAttribute('aria-controls')!),
+    ).not.toBeVisible();
+
+    pending.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(ignored).toHaveFocus();
+    expect(location()).toBe('/admin/unassigned');
+    expect(pending).toHaveAttribute('aria-selected', 'true');
+
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(location()).toBe('/admin/unassigned?tab=ignored'),
+    );
+  });
+
   it('shows the empty pending state and an empty ignored tab', async () => {
     const user = userEvent.setup();
     const { calls } = renderUnassigned({

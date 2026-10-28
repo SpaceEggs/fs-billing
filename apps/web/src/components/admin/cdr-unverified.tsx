@@ -78,7 +78,7 @@ export function UnverifiedBadge({ cdr }: { cdr: AdminCdr }) {
  */
 export function UnverifiedBanner({ total }: { total: number }) {
   return (
-    <Alert variant="unverified" className="px-3.5">
+    <Alert variant="unverified" className="px-3.5 text-foreground">
       <p className="m-0 hidden md:block">
         <span className="font-semibold text-unv">未经验证：</span>
         以下话单发生在计费系统授权超时期间，由 FreeSWITCH 放行，最长 30

@@ -169,6 +169,25 @@
   --color-alert-neg-border: var(--alert-neg-bd);
 }
 
+/* Tailwind v4 的 preflight 让裸 `border` 使用 currentcolor；与 shadcn/ui 一致，默认边框色取项目的 --border。 */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+}
+
+/* 弹层的进出场动画（tw-animate-css）在“减少动态效果”下关闭；Radix Presence 看到无动画会立即卸载。 */
+@media (prefers-reduced-motion: reduce) {
+  [class*='animate-in'],
+  [class*='animate-out'] {
+    animation: none !important;
+  }
+}
+
 html,
 body {
   margin: 0;

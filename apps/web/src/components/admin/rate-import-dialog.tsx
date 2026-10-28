@@ -566,7 +566,7 @@ function RowErrors({
         <AlertTitle className="text-[15px]">
           发现 {errors.length} 处错误，文件未导入
         </AlertTitle>
-        <AlertDescription className="text-foreground">
+        <AlertDescription className="text-foreground!">
           有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。
         </AlertDescription>
       </Alert>
