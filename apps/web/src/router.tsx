@@ -22,6 +22,7 @@ import { PendingPage } from './pages/pending';
 import {
   validateAdminAccountsSearch,
   validateAdminStatementsSearch,
+  validateAuditLogSearch,
   validateReceivablesSearch,
   validateTenantDetailSearch,
   validateTenantListSearch,
@@ -53,6 +54,10 @@ const ReceivablesPage = lazyRouteComponent(
 const AdminStatementsPage = lazyRouteComponent(
   () => import('./pages/admin/statements'),
   'AdminStatementsPage',
+);
+const AdminAuditLogsPage = lazyRouteComponent(
+  () => import('./pages/admin/audit-logs'),
+  'AdminAuditLogsPage',
 );
 const UnassignedPage = lazyRouteComponent(
   () => import('./pages/admin/unassigned'),
@@ -362,6 +367,16 @@ const adminStatements = createRoute({
   ),
 });
 
+const adminAuditLogs = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'audit-logs',
+  validateSearch: validateAuditLogSearch,
+  component: lazyRoute(
+    () => <AdminAuditLogsPage identity={useZoneIdentity()} />,
+    AdminAuditLogsPage,
+  ),
+});
+
 const adminAccounts = createRoute({
   getParentRoute: () => adminLayout,
   path: 'admins',
@@ -476,6 +491,7 @@ const routeTree = rootRoute.addChildren([
     adminReceivables,
     adminUnassigned,
     adminStatements,
+    adminAuditLogs,
     adminAccounts,
   ]),
 ]);

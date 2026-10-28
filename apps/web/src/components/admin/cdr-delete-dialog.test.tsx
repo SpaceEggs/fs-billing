@@ -232,6 +232,10 @@ describe('cdr delete dialog', () => {
     expect(
       screen.getByText(/余额 -¥35\.20 和 2026年8月 月账单不受影响/),
     ).toBeVisible();
+    expect(screen.getByRole('link', { name: '查看' })).toHaveAttribute(
+      'href',
+      `/admin/audit-logs?tenantId=${tenant.id}&label=cdr_delete`,
+    );
     expect(posts).toEqual([
       {
         fromMonth: '2026-08',

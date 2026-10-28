@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   validateAdminStatementsSearch,
+  validateAuditLogSearch,
   validateTenantDetailSearch,
   validateUnassignedSearch,
 } from './lib/admin-search';
@@ -127,6 +128,66 @@ describe('unassigned search', () => {
     expect(
       validateUnassignedSearch({ tab: 'nope', tag: true, page: 'abc' }),
     ).toEqual({ tab: undefined, tag: undefined, page: undefined });
+  });
+});
+
+describe('audit log search', () => {
+  it('keeps each audit-log filter on its own and drops a reversed end date', () => {
+    const adminId = '00000000-0000-4000-8000-000000000009';
+    const tenantId = '00000000-0000-4000-8000-00000000a001';
+    expect(
+      validateAuditLogSearch({
+        from: '2026-09-01',
+        to: '2026-09-29',
+        adminId,
+        label: 'cdr_delete',
+        tenantId,
+        page: 2,
+      }),
+    ).toEqual({
+      from: '2026-09-01',
+      to: '2026-09-29',
+      adminId,
+      label: 'cdr_delete',
+      tenantId,
+      page: 2,
+    });
+    expect(validateAuditLogSearch({ page: 1 })).toEqual({
+      from: undefined,
+      to: undefined,
+      adminId: undefined,
+      label: undefined,
+      tenantId: undefined,
+      page: undefined,
+    });
+    expect(
+      validateAuditLogSearch({
+        from: 'yesterday',
+        to: '2026-09-29',
+        adminId: 'wang',
+        label: '删除话单',
+        tenantId: 'ABC001',
+        page: 0,
+      }),
+    ).toEqual({
+      from: undefined,
+      to: '2026-09-29',
+      adminId: undefined,
+      label: undefined,
+      tenantId: undefined,
+      page: undefined,
+    });
+    // 开始晚于结束时契约拒绝整段查询，所以只丢掉结束日。
+    expect(
+      validateAuditLogSearch({ from: '2026-09-29', to: '2026-08-31' }),
+    ).toEqual({
+      from: '2026-09-29',
+      to: undefined,
+      adminId: undefined,
+      label: undefined,
+      tenantId: undefined,
+      page: undefined,
+    });
   });
 });
 

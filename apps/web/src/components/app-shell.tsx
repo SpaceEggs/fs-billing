@@ -11,7 +11,7 @@ import { SessionExpiredDialog } from './session-expired-dialog';
 import { ThemeMenu } from './theme-controls';
 import { Sheet } from './ui/sheet';
 
-/** 后台导航按设计稿顺序；未归属话单带待处理条数角标。系统告警、操作日志随各自阶段加入。 */
+/** 后台导航按设计稿顺序；未归属话单带待处理条数角标，操作日志在账单之后。系统告警随该阶段加入。 */
 const navigation = {
   portal: [
     { label: '首页', to: zones.portal.home },
@@ -26,6 +26,7 @@ const navigation = {
     { label: '待收款', to: '/admin/receivables' },
     { label: '未归属话单', to: '/admin/unassigned' },
     { label: '账单', to: '/admin/statements' },
+    { label: '操作日志', to: '/admin/audit-logs' },
     { label: '管理员', to: '/admin/admins' },
   ],
 } as const satisfies Record<Zone, readonly { label: string; to: string }[]>;

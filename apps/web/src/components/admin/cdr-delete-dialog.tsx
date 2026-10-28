@@ -782,7 +782,15 @@ function DoneView({
         role="status"
         className="m-0 text-[13px] leading-relaxed text-muted-foreground"
       >
-        已自动记入操作日志。余额{' '}
+        已自动记入操作日志
+        {' · '}
+        <a
+          href={`/admin/audit-logs?tenantId=${tenant.id}&label=cdr_delete`}
+          className="text-primary underline"
+        >
+          查看
+        </a>
+        。余额{' '}
         {formatMoney({ currency: tenant.currency, amount: tenant.balance })} 和{' '}
         {span} 月账单不受影响。
       </p>

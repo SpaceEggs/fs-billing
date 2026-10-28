@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  adminAuditLogsQuerySchema,
   adminLedgerKindSchema,
   adminPageQuerySchema,
   adminReceivablesQuerySchema,
@@ -7,6 +8,7 @@ import {
   adminUnassignedListQuerySchema,
   dayRangeFields,
   statementMonthSchema,
+  type AuditLabel,
 } from '@fs-billing/shared';
 import { validateCdrFilters, type CdrFilters } from './cdr-search';
 
@@ -170,6 +172,36 @@ export function validateUnassignedSearch(
   return {
     tab: raw['tab'] === 'ignored' ? 'ignored' : undefined,
     tag: unassignedTagOf(raw['tag']),
+    page: pageOf(raw['page']),
+  };
+}
+
+/**
+ * 操作日志：日期、管理员、操作标签、租户与页码。默认最近 30 天不写入地址。
+ * 两端都是合法日期但开始晚于结束时丢掉 `to`（契约把错误记在 to 上），避免整段查询被拒。
+ */
+export type AuditLogSearch = {
+  from?: string | undefined;
+  to?: string | undefined;
+  adminId?: string | undefined;
+  label?: AuditLabel | undefined;
+  tenantId?: string | undefined;
+  page?: number | undefined;
+};
+
+export function validateAuditLogSearch(
+  raw: Record<string, unknown>,
+): AuditLogSearch {
+  const shape = adminAuditLogsQuerySchema.shape;
+  const from = shape.from.safeParse(raw['from']).data;
+  let to = shape.to.safeParse(raw['to']).data;
+  if (from !== undefined && to !== undefined && from > to) to = undefined;
+  return {
+    from,
+    to,
+    adminId: shape.adminId.safeParse(raw['adminId']).data,
+    label: shape.label.safeParse(raw['label']).data,
+    tenantId: shape.tenantId.safeParse(raw['tenantId']).data,
     page: pageOf(raw['page']),
   };
 }
