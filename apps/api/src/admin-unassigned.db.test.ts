@@ -114,6 +114,18 @@ describe('GET /api/admin/unassigned-cdrs/{summary,groups}', () => {
   it('groups pending rows by tag with their reasons and similar tenant codes', async () => {
     const tenant = await rateTenant(connections.owner);
     const typo = `${tenant.code}X`;
+    // 空标签分组是共享库里全局的一组：先读出已有的原因条数，只断言本用例带来的增量。
+    const reasonCount = (
+      groups: { tag: string; reasons: { reason: string; count: number }[] }[],
+      reason: string,
+    ) =>
+      groups
+        .find((candidate) => candidate.tag === '')
+        ?.reasons.find((entry) => entry.reason === reason)?.count ?? 0;
+    const blankBefore = adminUnassignedGroupsResponseSchema.parse(
+      (await get('/api/admin/unassigned-cdrs/groups')).json(),
+    );
+    const blankReasonBefore = reasonCount(blankBefore.groups, '缺少租户标签');
     const empty = await insertUnassigned(connections.owner, [
       { tag: '', reason: '缺少租户标签' },
       { tag: '', reason: '缺少租户标签' },
@@ -154,7 +166,9 @@ describe('GET /api/admin/unassigned-cdrs/{summary,groups}', () => {
     // 标签为空的分组没有相近租户。
     const blank = body.groups.find((candidate) => candidate.tag === '');
     expect(blank?.suggestedTenants).toEqual([]);
-    expect(blank?.reasons).toContainEqual({ reason: '缺少租户标签', count: 2 });
+    expect(reasonCount(body.groups, '缺少租户标签')).toBe(
+      blankReasonBefore + 2,
+    );
     expect(body.total).toBe(
       body.groups.reduce((sum, candidate) => sum + candidate.count, 0),
     );
