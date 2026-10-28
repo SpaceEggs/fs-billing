@@ -108,16 +108,20 @@ const json = (status: number, body: unknown) =>
 function renderDialog(
   handlers?: {
     months?: () => AdminCdrDeletionMonth[];
-    post?: (call: number) => { status: number; body: unknown };
+    post?: (
+      call: number,
+    ) => { status: number; body: unknown } | { network: true };
   },
   options?: { strict?: boolean },
 ) {
   const posts: unknown[] = [];
+  let gets = 0;
   vi.stubGlobal(
     'fetch',
     vi.fn((path: string, init: RequestInit = {}) => {
       const method = init.method ?? 'GET';
       if (method === 'GET') {
+        gets += 1;
         const year = Number(
           new URL(path, 'http://localhost').searchParams.get('year'),
         );
@@ -138,6 +142,7 @@ function renderDialog(
         status: 200,
         body: deletedBody([{ month: '2026-08', deleted: 9642 }], 9642),
       };
+      if ('network' in reply) return Promise.reject(new TypeError('offline'));
       return Promise.resolve(json(reply.status, reply.body));
     }),
   );
@@ -152,7 +157,7 @@ function renderDialog(
     </QueryClientProvider>
   );
   render(options?.strict ? <StrictMode>{view}</StrictMode> : view);
-  return { posts };
+  return { posts, gets: () => gets };
 }
 
 beforeEach(() => {
@@ -400,8 +405,14 @@ describe('cdr delete dialog', () => {
     const retry = screen.getByRole('button', { name: '重试剩余月份' });
     await waitFor(() => expect(retry).toBeEnabled());
     await user.click(retry);
+    // 汇总包含首次已删的 8 月：总数累计，范围仍是整个选择。
     expect(
-      await screen.findByRole('heading', { name: '已删除 500 条话单' }),
+      await screen.findByRole('heading', { name: '已删除 10,142 条话单' }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        'ABC001 · 2026年8月 至 2026年9月（2026-08-12 至 2026-09-30）',
+      ),
     ).toBeVisible();
     expect(posts).toEqual([
       {
@@ -417,6 +428,113 @@ describe('cdr delete dialog', () => {
         expectedCount: 500,
       },
     ]);
+  });
+
+  it('does not trim the typed code', async () => {
+    const user = userEvent.setup();
+    const { posts } = renderDialog();
+    await user.click(
+      await screen.findByRole('button', { name: '开始月份：选择月份' }),
+    );
+    await choose(user, '2026年8月，9,642 条');
+    const code = screen.getByRole('textbox', { name: /请输入租户编码/ });
+    await user.type(code, ' ABC001 ');
+    expect(code).toHaveValue(' ABC001 ');
+    expect(screen.getByText('编码不一致，请输入 ABC001')).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '删除 9,642 条话单' }),
+    ).toBeDisabled();
+    await user.clear(code);
+    await user.type(code, 'ABC001');
+    await user.click(screen.getByRole('button', { name: '删除 9,642 条话单' }));
+    await screen.findByRole('heading', { name: '已删除 9,642 条话单' });
+    expect(posts).toEqual([
+      {
+        fromMonth: '2026-08',
+        toMonth: '2026-08',
+        tenantCode: 'ABC001',
+        expectedCount: 9642,
+      },
+    ]);
+  });
+
+  it('keeps the deleted months on the partial-failure page when the retry fails', async () => {
+    const user = userEvent.setup();
+    const { posts } = renderDialog({
+      months: () =>
+        defaultMonths({
+          '2026-09': { state: 'deletable', cdrCount: 500, statementId },
+        }),
+      post: (call) =>
+        call === 1
+          ? {
+              status: 200,
+              body: deletedBody([{ month: '2026-08', deleted: 9642 }], 9642, {
+                month: '2026-09',
+                message: failureMessage,
+              }),
+            }
+          : { status: 500, body: apiError('INTERNAL_ERROR') },
+    });
+    await user.click(
+      await screen.findByRole('button', { name: '开始月份：选择月份' }),
+    );
+    await choose(user, '2026年8月，9,642 条');
+    await user.click(
+      screen.getByRole('button', { name: '结束月份：2026年8月' }),
+    );
+    await choose(user, '2026年9月，500 条');
+    await user.type(
+      screen.getByRole('textbox', { name: /请输入租户编码/ }),
+      'ABC001',
+    );
+    await user.click(
+      screen.getByRole('button', { name: '删除 10,142 条话单' }),
+    );
+    const retry = await screen.findByRole('button', { name: '重试剩余月份' });
+    await waitFor(() => expect(retry).toBeEnabled());
+    await user.click(retry);
+    await waitFor(() => expect(posts).toHaveLength(2));
+    // 重试失败仍留在汇总页：已删的月份还在，不回到确认页，也没有重新输入编码的框。
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+    const summary = screen.getAllByRole('alert')[0];
+    expect(summary).toHaveTextContent('2026年8月 已删除 9,642 条');
+    expect(summary).toHaveTextContent('尚未删除：2026年9月');
+    expect(
+      screen.queryByRole('textbox', { name: /请输入租户编码/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^删除 [\d,]+ 条话单$/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重试剩余月份' })).toBeVisible();
+    // 重试沿用首次提交的确认编码。
+    expect(posts[1]).toEqual({
+      fromMonth: '2026-09',
+      toMonth: '2026-09',
+      tenantCode: 'ABC001',
+      expectedCount: 500,
+    });
+  });
+
+  it('refreshes the tenant data when the delete outcome is unknown', async () => {
+    const user = userEvent.setup();
+    const { posts, gets } = renderDialog({
+      post: () => ({ network: true }),
+    });
+    await user.click(
+      await screen.findByRole('button', { name: '开始月份：选择月份' }),
+    );
+    await choose(user, '2026年8月，9,642 条');
+    await user.type(
+      screen.getByRole('textbox', { name: /请输入租户编码/ }),
+      'ABC001',
+    );
+    await waitFor(() => expect(gets()).toBeGreaterThan(0));
+    const before = gets();
+    await user.click(screen.getByRole('button', { name: '删除 9,642 条话单' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('网络中断');
+    expect(posts).toHaveLength(1);
+    await waitFor(() => expect(gets()).toBeGreaterThan(before));
   });
 
   it('shows the completion page after a delete under StrictMode', async () => {

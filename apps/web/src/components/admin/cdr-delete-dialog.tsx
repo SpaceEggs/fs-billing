@@ -14,6 +14,7 @@ import {
   apiQuery,
   useApiMutation,
 } from '../../lib/admin-api';
+import { ApiRequestError } from '../../lib/api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatCount } from '../cdr/cdr-format';
 import { formatDate, formatMoney } from '../../lib/format';
@@ -61,8 +62,12 @@ type CdrDeleteFlow =
       step: 'done';
       from: string;
       to: string;
+      /** 首次提交时管理员输入的确认编码；重试沿用它，不另行替换。 */
+      code: string;
+      /** 累计结果：首次提交加上之后每次重试的月份与条数。 */
       result: AdminCdrDeleteResponse;
-      retry: 'idle' | 'pending';
+      /** 重试失败时留在本步并带上错误，已删除的月份不丢。 */
+      retry: 'idle' | 'pending' | { error: unknown };
     };
 
 type RangeVerdict =
@@ -198,6 +203,27 @@ function collectYears(flow: CdrDeleteFlow, currentYear: number) {
   return [...found].sort((left, right) => left - right);
 }
 
+/** 重试剩余月份的结果并入已有结果：已删除的月份与条数累计，未处理与失败取最新一次。 */
+function mergeDeleteResult(
+  previous: AdminCdrDeleteResponse,
+  next: AdminCdrDeleteResponse,
+): AdminCdrDeleteResponse {
+  const months = [...previous.months, ...next.months];
+  return {
+    months,
+    // 条数是各月已删条数之和（不是金额）。
+    total: months.reduce((count, row) => count + row.deleted, 0),
+    remaining: next.remaining,
+    failure: next.failure,
+  };
+}
+
+/** 请求没有得到明确答复（网络中断、响应读不出、无响应体的服务端错误），删除可能已经执行。 */
+function deleteOutcomeUnknown(error: unknown) {
+  if (error instanceof ApiRequestError && error.outcomeUnknown) return true;
+  return apiProblem(error).kind === 'unavailable';
+}
+
 function invalidateDeletionMonths(queryClient: QueryClient, tenantId: string) {
   return queryClient.invalidateQueries({
     predicate: ({ queryKey }) => {
@@ -294,7 +320,8 @@ function CdrDeleteForm({
     if (busy.current || flow.step === 'pick') return;
     busy.current = true;
     onLockedChange(true);
-    const confirmedCode = flow.step === 'confirm' ? flow.code : tenant.code;
+    // 确认编码只取管理员输入的；重试沿用首次提交时记下的那个。
+    const confirmedCode = flow.code;
     setFlow((current) => {
       if (current.step === 'confirm')
         return { ...current, submit: 'pending', grid: null };
@@ -307,7 +334,7 @@ function CdrDeleteForm({
         body: {
           fromMonth: from,
           toMonth: to,
-          tenantCode: tenant.code,
+          tenantCode: confirmedCode,
           expectedCount,
         },
       });
@@ -316,7 +343,22 @@ function CdrDeleteForm({
       } catch {
         // 刷新失败不能把已经删掉的月份说成没删。
       }
-      setFlow({ step: 'done', from, to, result, retry: 'idle' });
+      setFlow((current) =>
+        current.step === 'done'
+          ? {
+              ...current,
+              result: mergeDeleteResult(current.result, result),
+              retry: 'idle',
+            }
+          : {
+              step: 'done',
+              from,
+              to,
+              code: confirmedCode,
+              result,
+              retry: 'idle',
+            },
+      );
     } catch (error) {
       if (apiProblem(error).kind === 'conflict') {
         try {
@@ -324,15 +366,26 @@ function CdrDeleteForm({
         } catch {
           // 冲突说明仍然要留下，月份格刷新失败不盖住它。
         }
+      } else if (deleteOutcomeUnknown(error)) {
+        try {
+          // 结果未知：删除可能已经执行，刷新话单列表与已删除月份提示。
+          await invalidateTenant(queryClient, tenant.id);
+        } catch {
+          // 刷新失败不盖住“结果未知”的提示。
+        }
       }
-      setFlow({
-        step: 'confirm',
-        from,
-        to,
-        code: confirmedCode,
-        grid: null,
-        submit: { error },
-      });
+      setFlow((current) =>
+        current.step === 'done'
+          ? { ...current, retry: { error } }
+          : {
+              step: 'confirm',
+              from,
+              to,
+              code: confirmedCode,
+              grid: null,
+              submit: { error },
+            },
+      );
     } finally {
       busy.current = false;
       onLockedChange(false);
@@ -388,6 +441,7 @@ function CdrDeleteForm({
         onRetry={(from, to, expectedCount) =>
           void submitRange(from, to, expectedCount)
         }
+        onRefresh={() => void invalidateTenant(queryClient, tenant.id)}
       />
     );
 
@@ -479,6 +533,7 @@ function CdrDeleteForm({
                 )
               }
               value={selected}
+              columnsClassName="grid-cols-3 md:grid-cols-4"
               onPick={onPick}
               cell={(month) => monthCell(byMonth.get(month))}
             />
@@ -513,7 +568,7 @@ function CdrDeleteForm({
         onChange={(value) =>
           setFlow((current) =>
             current.step === 'confirm' && current.submit !== 'pending'
-              ? { ...current, code: value.trim() }
+              ? { ...current, code: value }
               : current,
           )
         }
@@ -691,12 +746,14 @@ function DoneView({
   byMonth,
   onClose,
   onRetry,
+  onRefresh,
 }: {
   tenant: Tenant;
   flow: Extract<CdrDeleteFlow, { step: 'done' }>;
   byMonth: ReadonlyMap<string, AdminCdrDeletionMonth>;
   onClose: () => void;
   onRetry: (from: string, to: string, expectedCount: number) => void;
+  onRefresh: () => void;
 }) {
   const { result } = flow;
   if (result.failure) {
@@ -726,6 +783,13 @@ function DoneView({
           </p>
           <p className="m-0 font-semibold text-err">{result.failure.message}</p>
         </div>
+        {typeof flow.retry === 'object' ? (
+          <ProblemAlert
+            error={flow.retry.error}
+            networkMessage="无法确认重试是否完成，请刷新后查看剩余月份。"
+            onRefresh={onRefresh}
+          />
+        ) : null}
         {retry.status === 'blocked' ? (
           <p className="m-0 text-sm text-muted-foreground">
             {statementMonthTitle(retry.month)}不可选：{retry.reason}

@@ -13,7 +13,8 @@ import {
   invalidateUnassigned,
   useApiMutation,
 } from '../../lib/admin-api';
-import { apiProblem } from '../../lib/api-problem';
+import { ApiRequestError } from '../../lib/api';
+import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { formatDate, formatDateTime, formatMoney } from '../../lib/format';
 import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
@@ -55,6 +56,19 @@ type AssignFlow =
       result: AdminUnassignedAssignResponse;
       tenantCode: string;
     };
+
+/**
+ * 确认被明确拒绝，原因是选择或批次已过时（没有可分配的话单、幂等键对应别的内容、
+ * 对象不存在）。这时重复确认没有意义，要先刷新。预览过期由重新预览单独处理，网络中断不在此列。
+ */
+function isStaleRejection(error: unknown) {
+  if (error instanceof ApiRequestError && error.outcomeUnknown) return false;
+  const problem = apiProblem(error);
+  return (
+    (problem.kind === 'conflict' || problem.kind === 'not-found') &&
+    problemNotice(problem).refresh
+  );
+}
 
 function minutePrecision(value: string) {
   const text = formatDateTime(value);
@@ -149,7 +163,9 @@ function AssignFlow({
   const previewMutation = useApiMutation('adminUnassignedAssignPreview');
   const assignMutation = useApiMutation('adminUnassignedAssign');
   // 同一次打开复用同一键，包括网络重试和预览过期后的再次确认。
-  const [idempotencyKey] = useState(() => `web:${crypto.randomUUID()}`);
+  const [idempotencyKey, setIdempotencyKey] = useState(
+    () => `web:${crypto.randomUUID()}`,
+  );
   const ticket = useRef(0);
   const [flow, setFlow] = useState<AssignFlow>({
     step: 'form',
@@ -201,6 +217,8 @@ function AssignFlow({
     if (flow.step !== 'form' || flow.preview.status !== 'ready') return;
     if (flow.submit === 'submitting' || flow.preview.data.assignable === 0)
       return;
+    if (typeof flow.submit === 'object' && isStaleRejection(flow.submit.error))
+      return;
     const preview = flow.preview.data;
     setFlow({ ...flow, submit: 'submitting' });
     onLockedChange(true);
@@ -217,10 +235,11 @@ function AssignFlow({
           },
         },
       });
-      await invalidateUnassigned(queryClient);
-      await invalidateTenant(queryClient, result.tenantId);
       onAssigned();
       setFlow({ step: 'done', result, tenantCode: preview.tenant.code });
+      // 归属已经完成，刷新不阻塞结果页，失败也不影响它。
+      void invalidateUnassigned(queryClient).catch(() => {});
+      void invalidateTenant(queryClient, result.tenantId).catch(() => {});
     } catch (error) {
       const problem = apiProblem(error);
       if (
@@ -230,6 +249,8 @@ function AssignFlow({
         loadPreview(preview.tenant.id, problem.message);
         return;
       }
+      if (isStaleRejection(error))
+        void invalidateUnassigned(queryClient).catch(() => {});
       setFlow({ ...flow, submit: { error } });
     } finally {
       onLockedChange(false);
@@ -260,6 +281,21 @@ function AssignFlow({
           submitting={submitting}
           onPick={(tenantId) => loadPreview(tenantId, null)}
           onConfirm={() => void confirm()}
+          onRefresh={() => {
+            if (!flow.tenantId) return;
+            // 幂等键对应的是别的内容时，同一个键再提交只会再次冲突；
+            // 这是被明确拒绝的请求，没有写入，换新键安全。
+            if (typeof flow.submit === 'object') {
+              const problem = apiProblem(flow.submit.error);
+              if (
+                problem.kind === 'conflict' &&
+                problem.code === 'IDEMPOTENCY_CONFLICT'
+              )
+                setIdempotencyKey(`web:${crypto.randomUUID()}`);
+            }
+            void invalidateUnassigned(queryClient).catch(() => {});
+            loadPreview(flow.tenantId, null);
+          }}
           onClose={() => onOpenChange(false)}
         />
       )}
@@ -274,6 +310,7 @@ function AssignForm({
   submitting,
   onPick,
   onConfirm,
+  onRefresh,
   onClose,
 }: {
   flow: Extract<AssignFlow, { step: 'form' }>;
@@ -282,9 +319,12 @@ function AssignForm({
   submitting: boolean;
   onPick: (tenantId: string) => void;
   onConfirm: () => void;
+  onRefresh: () => void;
   onClose: () => void;
 }) {
   const preview = flow.preview.status === 'ready' ? flow.preview.data : null;
+  const staleRejection =
+    typeof flow.submit === 'object' && isStaleRejection(flow.submit.error);
   const confirmLabel = preview
     ? `确认归属 ${preview.assignable} 条并扣费`
     : '确认归属';
@@ -315,6 +355,7 @@ function AssignForm({
         <RequestFailure
           error={flow.submit.error}
           networkMessage="网络中断，归属可能已经完成。请先刷新核对，再用这个对话框重试。"
+          {...(staleRejection ? { onRefresh } : {})}
         />
       ) : null}
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
@@ -328,7 +369,12 @@ function AssignForm({
         </Button>
         <Button
           className="h-12 md:h-9"
-          disabled={submitting || preview === null || preview.assignable === 0}
+          disabled={
+            submitting ||
+            staleRejection ||
+            preview === null ||
+            preview.assignable === 0
+          }
           onClick={onConfirm}
         >
           {submitting ? '正在归属…' : confirmLabel}

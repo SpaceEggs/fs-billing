@@ -144,6 +144,7 @@ export function MonthGrid({
   onPick,
   cell,
   yearRowClassName,
+  columnsClassName = 'grid-cols-4',
 }: {
   year: number;
   minYear: number;
@@ -155,6 +156,8 @@ export function MonthGrid({
   cell: (month: string) => MonthCellState;
   /** 年份行的额外类。账单页用它躲开对话框的关闭按钮。 */
   yearRowClassName?: string;
+  /** 月份格的列数类。默认四列（账单页）；删除话单手机稿三列，传 `grid-cols-3 md:grid-cols-4`。 */
+  columnsClassName?: string;
 }) {
   const key = (month: number) => `${year}-${String(month).padStart(2, '0')}`;
   return (
@@ -187,8 +190,7 @@ export function MonthGrid({
           ›
         </button>
       </div>
-      {/* 删除话单手机稿三列，电脑稿四列。账单页的稿没有展开的网格。 */}
-      <div className="grid grid-cols-3 gap-1.5 md:grid-cols-4">
+      <div className={cn('grid gap-1.5', columnsClassName)}>
         {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => {
           const monthKey = key(month);
           const state = cell(monthKey);

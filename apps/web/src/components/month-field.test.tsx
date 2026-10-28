@@ -87,4 +87,25 @@ describe('MonthGrid', () => {
       'false',
     );
   });
+
+  it('keeps four columns by default and takes the column classes from the caller', () => {
+    const props = {
+      year: 2026,
+      minYear: 2026,
+      maxYear: 2026,
+      onYearChange: vi.fn(),
+      value: null,
+      onPick: vi.fn(),
+      cell: () => ({ disabled: false }),
+    };
+    const { rerender } = render(<MonthGrid {...props} />);
+    const grid = () =>
+      screen.getByRole('button', { name: '2026年1月' }).parentElement;
+    expect(grid()).toHaveClass('grid-cols-4');
+    expect(grid()).not.toHaveClass('grid-cols-3');
+    rerender(
+      <MonthGrid {...props} columnsClassName="grid-cols-3 md:grid-cols-4" />,
+    );
+    expect(grid()).toHaveClass('grid-cols-3', 'md:grid-cols-4');
+  });
 });

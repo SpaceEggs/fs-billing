@@ -64,9 +64,11 @@ function RefreshButton({ onRefresh }: { onRefresh: (() => void) | undefined }) {
 export function RequestFailure({
   error,
   networkMessage,
+  onRefresh,
 }: {
   error: unknown;
   networkMessage?: string;
+  onRefresh?: () => void;
 }) {
   const problem = apiProblem(error);
   if (problem.kind === 'validation') {
@@ -87,6 +89,7 @@ export function RequestFailure({
     <ProblemAlert
       error={error}
       {...(networkMessage !== undefined ? { networkMessage } : {})}
+      {...(onRefresh ? { onRefresh } : {})}
     />
   );
 }

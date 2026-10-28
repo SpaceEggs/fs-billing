@@ -382,6 +382,146 @@ describe('unassigned calls', () => {
     });
   });
 
+  it('shows the done page without waiting for the list refetch', async () => {
+    const user = userEvent.setup();
+    let assigned = false;
+    const never = new Promise<never>(() => {});
+    const { calls } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
+        status: 200,
+        body: previewBody(),
+      }),
+      'POST /api/admin/unassigned-cdrs/assign': () => {
+        assigned = true;
+        return { status: 200, body: assignBody() };
+      },
+      // 归属之后，列表、分组、条数的重新请求一直不返回。
+      'GET /api/admin/unassigned-cdrs/summary': () =>
+        assigned ? never : { status: 200, body: { pending: 338, ignored: 5 } },
+      'GET /api/admin/unassigned-cdrs/groups': () =>
+        assigned ? never : { status: 200, body: groups },
+      'GET /api/admin/unassigned-cdrs': (url) =>
+        assigned ? never : { status: 200, body: listOf(url) },
+    });
+    await chooseAbcGroup(user);
+    await user.click(await screen.findByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await user.click(
+      await within(dialog).findByRole('button', {
+        name: '确认归属 324 条并扣费',
+      }),
+    );
+    expect(
+      await within(dialog).findByRole('heading', { name: '归属完成' }),
+    ).toBeVisible();
+    // 刷新已经发出，只是没有返回。
+    await waitFor(() =>
+      expect(
+        calls.filter(
+          (call) =>
+            call.method === 'GET' &&
+            call.path.startsWith('/api/admin/unassigned-cdrs/summary'),
+        ).length,
+      ).toBeGreaterThan(1),
+    );
+  });
+
+  it('refreshes and locks confirm when the selection has nothing left to assign', async () => {
+    const user = userEvent.setup();
+    let previews = 0;
+    const { calls } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => {
+        previews += 1;
+        return {
+          status: 200,
+          body:
+            previews === 1
+              ? previewBody()
+              : previewBody({ assignable: 0, chargeTotal: '0' }),
+        };
+      },
+      'POST /api/admin/unassigned-cdrs/assign': () => ({
+        status: 409,
+        body: apiError('UNASSIGNED_NOTHING_TO_ASSIGN'),
+      }),
+    });
+    await chooseAbcGroup(user);
+    await user.click(await screen.findByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    const summaryGets = () =>
+      calls.filter(
+        (call) =>
+          call.method === 'GET' &&
+          call.path.startsWith('/api/admin/unassigned-cdrs/summary'),
+      ).length;
+    const before = summaryGets();
+    await user.click(
+      await within(dialog).findByRole('button', {
+        name: '确认归属 324 条并扣费',
+      }),
+    );
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '选择中没有可分配的待处理话单',
+    );
+    // 列表被刷新，确认键不能再按。
+    await waitFor(() => expect(summaryGets()).toBeGreaterThan(before));
+    expect(
+      within(dialog).getByRole('button', { name: '确认归属 324 条并扣费' }),
+    ).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: '刷新' }));
+    await waitFor(() => expect(previews).toBe(2));
+    expect(
+      await within(dialog).findByRole('button', {
+        name: '确认归属 0 条并扣费',
+      }),
+    ).toBeDisabled();
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+    expect(posts(calls, '/api/admin/unassigned-cdrs/assign')).toHaveLength(1);
+  });
+
+  it('uses a new idempotency key after a conflict on the old one', async () => {
+    const user = userEvent.setup();
+    const { calls } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
+        status: 200,
+        body: previewBody(),
+      }),
+      'POST /api/admin/unassigned-cdrs/assign': () =>
+        posts(calls, '/api/admin/unassigned-cdrs/assign').length === 1
+          ? { status: 409, body: apiError('IDEMPOTENCY_CONFLICT') }
+          : { status: 200, body: assignBody() },
+    });
+    await chooseAbcGroup(user);
+    await user.click(await screen.findByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await user.click(
+      await within(dialog).findByRole('button', {
+        name: '确认归属 324 条并扣费',
+      }),
+    );
+    await within(dialog).findByRole('alert');
+    expect(
+      within(dialog).getByRole('button', { name: '确认归属 324 条并扣费' }),
+    ).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: '刷新' }));
+    await user.click(
+      await within(dialog).findByRole('button', {
+        name: '确认归属 324 条并扣费',
+      }),
+    );
+    expect(
+      await within(dialog).findByRole('heading', { name: '归属完成' }),
+    ).toBeVisible();
+    const keys = posts(calls, '/api/admin/unassigned-cdrs/assign').map(
+      (call) => (call.body as { idempotencyKey: string }).idempotencyKey,
+    );
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
   it('shows the server batch limit instead of capping the selection locally', async () => {
     const user = userEvent.setup();
     renderUnassigned({
