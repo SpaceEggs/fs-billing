@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { Identity, PortalStatementResponse } from '@fs-billing/shared';
-import { AppShell, mobileBarButtonClass } from '../../components/app-shell';
+import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { AppShell } from '../../components/app-shell';
+import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   CdrExportError,
   CdrExportButton,
@@ -95,15 +97,13 @@ function MobileMenu() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
+      <MobileBarButton
         aria-label="更多操作"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className={mobileBarButtonClass}
       >
-        ⋯
-      </button>
+        <EllipsisIcon aria-hidden />
+      </MobileBarButton>
       <ModalDialog open={open} onOpenChange={setOpen} title="更多操作">
         <Button
           variant="ghost"
@@ -302,13 +302,11 @@ export function PortalStatementDetailPage({
       activeNav="月账单"
       centerTitle
       mobileNav={
-        <Link
-          to="/portal/statements"
-          aria-label="返回月账单"
-          className={mobileBarButtonClass}
-        >
-          ‹
-        </Link>
+        <MobileBarButton asChild>
+          <Link to="/portal/statements" aria-label="返回月账单">
+            <ChevronLeftIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
       mobileActions={data ? <MobileMenu /> : null}
     >

@@ -7,11 +7,9 @@ import {
   type AdminTenantSummary,
   type Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarPrimaryClass,
-  PageBody,
-} from '../../components/app-shell';
+import { PlusIcon } from 'lucide-react';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import {
   healthOptions,
   TenantStatus,
@@ -398,13 +396,11 @@ export function TenantListPage({ identity }: { identity: Identity }) {
       crumb="租户"
       activeNav="租户"
       mobileActions={
-        <Link
-          to="/admin/tenants/new"
-          aria-label="新建租户"
-          className={mobileBarPrimaryClass}
-        >
-          ＋
-        </Link>
+        <MobileBarButton asChild variant="default">
+          <Link to="/admin/tenants/new" aria-label="新建租户">
+            <PlusIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
     >
       <PageBody

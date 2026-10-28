@@ -11,6 +11,8 @@ import type {
   AdminStatus,
   Identity,
 } from '@fs-billing/shared';
+import { PlusIcon } from 'lucide-react';
+import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   AccountStatusDialog,
   ResetPasswordDialog,
@@ -23,11 +25,7 @@ import {
 } from '../../components/admin/account-dialogs';
 import { Field, invalidClass } from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
-import {
-  AppShell,
-  mobileBarPrimaryClass,
-  PageBody,
-} from '../../components/app-shell';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -568,14 +566,13 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
       crumb="管理员"
       activeNav="管理员"
       mobileActions={
-        <button
-          type="button"
+        <MobileBarButton
+          variant="default"
           aria-label="新增管理员"
           onClick={() => open({ kind: 'create' })}
-          className={mobileBarPrimaryClass}
         >
-          ＋
-        </button>
+          <PlusIcon aria-hidden />
+        </MobileBarButton>
       }
     >
       <PageBody

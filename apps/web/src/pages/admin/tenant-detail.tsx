@@ -12,11 +12,9 @@ import type {
   AdminTenantsResponse,
   Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { BalanceDialog } from '../../components/admin/balance-dialog';
 import {
   TenantStatusDialog,
@@ -113,15 +111,13 @@ function MobileActions({
   const title = `${tenant.code} 的操作`;
   return (
     <>
-      <button
-        type="button"
+      <MobileBarButton
         aria-label="租户操作"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className={mobileBarButtonClass}
       >
-        ⋯
-      </button>
+        <EllipsisIcon aria-hidden />
+      </MobileBarButton>
       <ModalDialog open={open} onOpenChange={setOpen} title={title}>
         <span className="pb-1 text-[15px] font-semibold">{title}</span>
         <div className="flex flex-col">
@@ -352,13 +348,11 @@ function TenantDetail({
       crumb={<Crumb code={code} />}
       activeNav="租户"
       mobileNav={
-        <Link
-          to="/admin/tenants"
-          aria-label="返回租户列表"
-          className={mobileBarButtonClass}
-        >
-          ‹
-        </Link>
+        <MobileBarButton asChild>
+          <Link to="/admin/tenants" aria-label="返回租户列表">
+            <ChevronLeftIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
       mobileActions={
         tenant ? <MobileActions tenant={tenant} onStatus={openStatus} /> : null

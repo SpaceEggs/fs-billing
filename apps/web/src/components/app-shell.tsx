@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import {
+  Building2Icon,
+  FileTextIcon,
+  HandCoinsIcon,
+  HouseIcon,
+  LayoutDashboardIcon,
+  MenuIcon,
+  PhoneCallIcon,
+  PhoneMissedIcon,
+  ReceiptIcon,
+  ScrollTextIcon,
+  SettingsIcon,
+  ShieldUserIcon,
+  WalletIcon,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Identity } from '@fs-billing/shared';
 import { apiQuery } from '../lib/admin-api';
 import { cn } from '../lib/utils';
@@ -8,28 +24,32 @@ import { zoneOfIdentity, zones, type Zone } from '../lib/zone';
 import { AccountMenu, MobileAccountMenu } from './account-menu';
 import { productLabel, SidebarBrand } from './brand';
 import { SessionExpiredDialog } from './session-expired-dialog';
+import { MobileBarButton } from './mobile-bar-button';
 import { ThemeMenu } from './theme-controls';
 import { SheetPanel } from './sheet-panel';
 
 /** 后台导航按设计稿顺序；未归属话单带待处理条数角标，操作日志在账单之后。系统告警随该阶段加入。 */
 const navigation = {
   portal: [
-    { label: '首页', to: zones.portal.home },
-    { label: '话单', to: '/portal/cdrs' },
-    { label: '月账单', to: '/portal/statements' },
-    { label: '余额流水', to: '/portal/ledger' },
-    { label: '账号设置', to: '/portal/settings' },
+    { label: '首页', to: zones.portal.home, icon: HouseIcon },
+    { label: '话单', to: '/portal/cdrs', icon: PhoneCallIcon },
+    { label: '月账单', to: '/portal/statements', icon: FileTextIcon },
+    { label: '余额流水', to: '/portal/ledger', icon: WalletIcon },
+    { label: '账号设置', to: '/portal/settings', icon: SettingsIcon },
   ],
   admin: [
-    { label: '概览', to: zones.admin.home },
-    { label: '租户', to: '/admin/tenants' },
-    { label: '待收款', to: '/admin/receivables' },
-    { label: '未归属话单', to: '/admin/unassigned' },
-    { label: '账单', to: '/admin/statements' },
-    { label: '操作日志', to: '/admin/audit-logs' },
-    { label: '管理员', to: '/admin/admins' },
+    { label: '概览', to: zones.admin.home, icon: LayoutDashboardIcon },
+    { label: '租户', to: '/admin/tenants', icon: Building2Icon },
+    { label: '待收款', to: '/admin/receivables', icon: HandCoinsIcon },
+    { label: '未归属话单', to: '/admin/unassigned', icon: PhoneMissedIcon },
+    { label: '账单', to: '/admin/statements', icon: ReceiptIcon },
+    { label: '操作日志', to: '/admin/audit-logs', icon: ScrollTextIcon },
+    { label: '管理员', to: '/admin/admins', icon: ShieldUserIcon },
   ],
-} as const satisfies Record<Zone, readonly { label: string; to: string }[]>;
+} as const satisfies Record<
+  Zone,
+  readonly { label: string; to: string; icon: LucideIcon }[]
+>;
 export type NavLabel = (typeof navigation)[Zone][number]['label'];
 
 function NavItems({
@@ -58,6 +78,7 @@ function NavItems({
     >
       {navigation[zone].map((item) => {
         const current = item.label === active;
+        const Icon = item.icon;
         return (
           <Link
             key={item.to}
@@ -65,7 +86,7 @@ function NavItems({
             onClick={onNavigate}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'flex items-center rounded-lg',
+              'flex items-center gap-2.5 rounded-lg',
               mobile ? 'h-11 px-3' : 'h-9 px-2.5',
               item.to === '/admin/unassigned' && 'w-full',
               !current && 'text-muted-foreground hover:text-foreground',
@@ -75,6 +96,10 @@ function NavItems({
                   : 'bg-muted font-semibold text-foreground'),
             )}
           >
+            <Icon
+              aria-hidden
+              className={cn('shrink-0', mobile ? 'size-[18px]' : 'size-4')}
+            />
             {item.label}
             {item.to === '/admin/unassigned' && pendingCount !== null ? (
               <span className="ml-auto pl-2 text-[11px] tabular-nums text-muted-foreground">
@@ -88,16 +113,10 @@ function NavItems({
   );
 }
 
-/** 手机顶栏 40px 方形按钮（☰、‹、✕、⋯、＋）。 */
-export const mobileBarButtonClass =
-  'flex size-10 shrink-0 items-center justify-center rounded-lg border border-input text-base outline-none focus-visible:ring-[3px] focus-visible:ring-ring';
-export const mobileBarPrimaryClass =
-  'flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-xl text-primary-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring';
-
 /**
- * 登录后的外壳：电脑版左侧导航 + 顶栏（◐ 主题、头像菜单），
- * 手机版顶栏（☰ 抽屉、标题、头像底部面板）。
- * `mobileNav` 替换 ☰（如 ‹ 返回、✕ 关闭），`mobileActions` 放在头像左侧（如 ＋、⋯）。
+ * 登录后的外壳：电脑版左侧导航 + 顶栏（主题、头像菜单），
+ * 手机版顶栏（菜单抽屉、标题、头像底部面板）。
+ * `mobileNav` 替换菜单按钮（如返回、关闭），`mobileActions` 放在头像左侧（如新增、更多）。
  */
 export function AppShell({
   identity,
@@ -168,13 +187,9 @@ export function AppShell({
                 open={drawerOpen}
                 onOpenChange={setDrawerOpen}
                 trigger={
-                  <button
-                    type="button"
-                    aria-label="打开导航"
-                    className={mobileBarButtonClass}
-                  >
-                    ☰
-                  </button>
+                  <MobileBarButton aria-label="打开导航">
+                    <MenuIcon aria-hidden />
+                  </MobileBarButton>
                 }
               >
                 <SidebarBrand zone={zone} />

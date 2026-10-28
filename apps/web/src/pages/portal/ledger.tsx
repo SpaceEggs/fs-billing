@@ -11,11 +11,9 @@ import {
   type Identity,
   type PortalLedgerRow,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { DownloadIcon } from 'lucide-react';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime, Money } from '../../components/data-format';
 import { DateRangeField } from '../../components/date-range-field';
 import {
@@ -42,7 +40,6 @@ import {
   type PortalLedgerFilter,
   type PortalLedgerSearch,
 } from '../../lib/portal-ledger';
-import { cn } from '../../lib/utils';
 
 const kindChoices = [
   { value: undefined, label: '全部类型' },
@@ -263,15 +260,14 @@ export function PortalLedgerPage({
       crumb={crumb}
       activeNav="余额流水"
       mobileActions={
-        <button
-          type="button"
+        <MobileBarButton
           aria-label="导出 CSV"
           disabled={!canExport}
           onClick={() => download.mutate(filter)}
-          className={cn(mobileBarButtonClass, 'border-0 disabled:opacity-50')}
+          className="border-0"
         >
-          ⤓
-        </button>
+          <DownloadIcon aria-hidden />
+        </MobileBarButton>
       }
     >
       <PageBody

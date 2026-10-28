@@ -5,11 +5,7 @@ import {
   latestRangeEnd,
   type Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { CdrExplorer } from '../../components/cdr/cdr-explorer';
 import {
   CdrExportButton,
@@ -86,7 +82,6 @@ export function PortalCdrsPage({ identity }: { identity: Identity }) {
           exporting={exporter.isPending}
           disabled={inputError !== null}
           onExport={exportNow}
-          className={mobileBarButtonClass}
         />
       }
     >

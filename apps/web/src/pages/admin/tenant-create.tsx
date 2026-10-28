@@ -11,11 +11,9 @@ import {
   type Currency,
   type Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { XIcon } from 'lucide-react';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import {
   Field,
   FormSection,
@@ -647,13 +645,11 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
       }
       activeNav="租户"
       mobileNav={
-        <Link
-          to="/admin/tenants"
-          aria-label="取消新建，返回租户列表"
-          className={mobileBarButtonClass}
-        >
-          ✕
-        </Link>
+        <MobileBarButton asChild>
+          <Link to="/admin/tenants" aria-label="取消新建，返回租户列表">
+            <XIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
     >
       <PageBody title="新建租户">

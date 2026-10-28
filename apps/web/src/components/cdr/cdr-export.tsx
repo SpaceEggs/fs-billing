@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
+import { CircleAlertIcon, DownloadIcon, EllipsisIcon } from 'lucide-react';
 import { Button } from '../ui/button';
-import { CircleAlertIcon } from 'lucide-react';
+import { MobileBarButton } from '../mobile-bar-button';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 /**
@@ -57,28 +58,24 @@ export function CdrExportButton({
   );
 }
 
-/** 手机顶栏的 ⤓（设计稿 2d）。 */
+/** 手机顶栏的导出图标（设计稿 2d）。 */
 export function CdrExportIcon({
   exporting,
   disabled = false,
   onExport,
-  className,
 }: {
   exporting: boolean;
   disabled?: boolean;
   onExport: () => void;
-  className?: string;
 }) {
   return (
-    <button
-      type="button"
+    <MobileBarButton
       aria-label={exporting ? '正在导出' : '导出 CSV'}
       disabled={exporting || disabled}
       onClick={onExport}
-      className={className}
     >
-      {exporting ? '…' : '⤓'}
-    </button>
+      {exporting ? <EllipsisIcon aria-hidden /> : <DownloadIcon aria-hidden />}
+    </MobileBarButton>
   );
 }
 

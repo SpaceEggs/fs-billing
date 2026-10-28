@@ -7,17 +7,15 @@ import {
   type AdminTenantEditRequest,
   type Identity,
 } from '@fs-billing/shared';
+import { XIcon } from 'lucide-react';
+import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   Field,
   FormSection,
   invalidClass,
 } from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { QueryError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -265,14 +263,15 @@ export function TenantEditPage({ identity }: { identity: Identity }) {
       }
       activeNav="租户"
       mobileNav={
-        <Link
-          to="/admin/tenants/$tenantId"
-          params={{ tenantId }}
-          aria-label="取消编辑，返回租户详情"
-          className={mobileBarButtonClass}
-        >
-          ✕
-        </Link>
+        <MobileBarButton asChild>
+          <Link
+            to="/admin/tenants/$tenantId"
+            params={{ tenantId }}
+            aria-label="取消编辑，返回租户详情"
+          >
+            <XIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
     >
       <PageBody title="编辑租户">
