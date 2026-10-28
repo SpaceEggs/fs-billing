@@ -6,6 +6,7 @@ import {
   CircleCheckIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
+import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { BrandRow } from '../components/brand';
 import { SessionExpiredDialog } from '../components/session-expired-dialog';
@@ -91,7 +92,7 @@ function PasswordInput({
             'border-neg shadow-[0_0_0_3px_var(--alert-neg-bg)] focus-within:ring-0',
         )}
       >
-        <input
+        <Input
           id={id}
           type={shown ? 'text' : 'password'}
           autoComplete={autoComplete}
@@ -99,17 +100,18 @@ function PasswordInput({
           aria-describedby={message ? `${id}-message` : undefined}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-full min-w-0 flex-1 bg-transparent pl-3 text-base text-foreground outline-none sm:text-sm"
+          className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pr-0 pl-3 focus-visible:ring-0 sm:h-full"
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="inline"
           aria-label={shown ? `隐藏${label}` : `显示${label}`}
           aria-pressed={shown}
           onClick={() => setShown((value) => !value)}
-          className="flex h-11 w-14 shrink-0 items-center justify-center text-[13px] text-muted-foreground sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
+          className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
         >
           {shown ? '隐藏' : '显示'}
-        </button>
+        </Button>
       </div>
       {message ? (
         <span
@@ -288,14 +290,15 @@ export function ChangePasswordPage({
                 返回
               </Link>
             )}
-            <button
-              type="button"
-              className="text-neg"
+            <Button
+              variant="ghost"
+              size="inline"
+              className="text-neg hover:bg-transparent"
               disabled={logout.isPending}
               onClick={() => logout.mutate()}
             >
               退出登录
-            </button>
+            </Button>
           </div>
           {logout.isError ? (
             <p role="alert" className="m-0 text-center text-sm text-neg">

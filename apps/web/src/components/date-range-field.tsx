@@ -1,5 +1,10 @@
 import { useState } from 'react';
 import {
+  CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from 'lucide-react';
+import {
   monthCells,
   monthOf,
   orderedRange,
@@ -36,25 +41,23 @@ export function DateRangeField({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="outline"
         aria-haspopup="dialog"
         aria-label={`${label}：${value.from} 至 ${value.to}`}
         onClick={() => setOpen(true)}
         className={cn(
-          'flex h-11 items-center justify-between gap-2.5 rounded-lg border border-input px-3 text-sm tabular-nums outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9',
+          'h-11 justify-between gap-2.5 px-3 font-normal tabular-nums md:h-9',
           className,
         )}
       >
         <span className="md:hidden">{rangeLabel(value, true)}</span>
         <span className="hidden md:inline">{rangeLabel(value)}</span>
-        <span
+        <CalendarDaysIcon
           aria-hidden
-          className="hidden text-xs text-muted-foreground md:inline"
-        >
-          ▦
-        </span>
-      </button>
+          className="hidden size-3.5 text-muted-foreground md:inline"
+        />
+      </Button>
       {open ? (
         <RangeCalendar
           label={label}
@@ -120,26 +123,28 @@ function RangeCalendar({
       className="gap-3.5 md:w-[360px]"
     >
       <div className="mr-9 flex h-11 items-center justify-between md:h-9">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="上个月"
           onClick={() => setView((month) => shiftMonth(month, -1))}
-          className="flex size-9 items-center justify-center rounded-md text-[15px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring"
+          className="rounded-md text-muted-foreground"
         >
-          ‹
-        </button>
+          <ChevronLeftIcon aria-hidden />
+        </Button>
         <span aria-live="polite" className="text-base font-semibold">
           {view.year}年{view.month}月
         </span>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="下个月"
           disabled={atLastMonth}
           onClick={() => setView((month) => shiftMonth(month, 1))}
-          className="flex size-9 items-center justify-center rounded-md text-[15px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-40"
+          className="rounded-md text-muted-foreground disabled:opacity-40"
         >
-          ›
-        </button>
+          <ChevronRightIcon aria-hidden />
+        </Button>
       </div>
       <div
         aria-hidden

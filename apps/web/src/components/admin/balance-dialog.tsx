@@ -5,6 +5,7 @@ import type {
   AdminBalanceOperationResponse,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { CheckIcon } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Textarea } from '../ui/textarea';
 import { Alert } from '../ui/alert';
@@ -312,7 +313,7 @@ function BalanceFlow({
             aria-hidden
             className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-[22px] font-bold text-ok"
           >
-            ✓
+            <CheckIcon className="size-6" />
           </span>
           <h2 className="m-0 text-[17px] font-semibold">操作成功</h2>
           <p

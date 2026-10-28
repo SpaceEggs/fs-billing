@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { Toggle } from './ui/toggle';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { SheetPanel } from './sheet-panel';
@@ -26,12 +27,12 @@ export function FilterSheet({
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <button
-          type="button"
+        <Button
+          variant="outline"
           aria-label={activeCount ? `筛选，已选 ${activeCount} 项` : '筛选'}
           className={cn(
-            'flex h-11 shrink-0 items-center gap-1.5 rounded-lg border px-3.5 text-[15px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring md:hidden',
-            activeCount ? 'border-primary bg-brand-soft' : 'border-input',
+            'h-11 gap-1.5 px-3.5 text-[15px] font-normal md:hidden',
+            activeCount && 'border-primary bg-brand-soft hover:bg-brand-soft',
           )}
         >
           筛选
@@ -43,21 +44,22 @@ export function FilterSheet({
               {activeCount}
             </span>
           ) : null}
-        </button>
+        </Button>
       }
     >
       <div className="flex items-center justify-between">
         <span aria-hidden className="text-[17px] font-semibold">
           筛选
         </span>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="inline"
           disabled={activeCount === 0}
           onClick={onClear}
-          className="h-11 text-[15px] text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50"
+          className="h-11 text-[15px] text-muted-foreground hover:bg-transparent"
         >
           清除筛选
-        </button>
+        </Button>
       </div>
       <div className="flex flex-col gap-[18px] pt-2 pb-5">{children}</div>
       <Button size="lg" className="h-12" onClick={() => setOpen(false)}>
@@ -107,20 +109,19 @@ export function ChoiceGrid<Value extends string | undefined>({
       {options.map((option) => {
         const selected = value === option.value;
         return (
-          <button
+          <Toggle
             key={option.value ?? 'all'}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
+            variant="outline"
+            pressed={selected}
+            onPressedChange={() => onChange(option.value)}
             className={cn(
-              'h-11 rounded-lg border text-[15px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-              selected
-                ? 'border-[1.5px] border-primary bg-brand-soft font-medium text-primary'
-                : 'border-input',
+              'h-11 rounded-lg border-input px-0 text-[15px] font-normal shadow-none hover:bg-transparent hover:text-foreground',
+              selected &&
+                'border-[1.5px] border-primary bg-brand-soft font-medium text-primary data-[state=on]:bg-brand-soft data-[state=on]:text-primary hover:bg-brand-soft hover:text-primary',
             )}
           >
             {option.label}
-          </button>
+          </Toggle>
         );
       })}
     </div>

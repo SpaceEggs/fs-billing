@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import type { CdrFilters } from '../../lib/cdr-search';
 import type { DayRange } from '../../lib/day-range';
@@ -195,14 +196,14 @@ export function CdrFilterBar({
           />
         </Field>
         {extra?.desktop}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           disabled={!anyActive}
           onClick={() => onFilters({ callee: undefined, ...clearSheet() })}
-          className="h-9 rounded-lg px-3 text-sm text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50"
+          className="font-normal text-muted-foreground hover:bg-transparent"
         >
           重置
-        </button>
+        </Button>
         {trailing ? <div className="ml-auto">{trailing}</div> : null}
       </div>
     </div>

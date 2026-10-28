@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Currency } from '@fs-billing/shared';
+import { XIcon } from 'lucide-react';
 import { Label } from '../ui/label';
 import { addRecipients } from '../../lib/tenant-create';
 import { cn } from '../../lib/utils';
@@ -237,18 +238,18 @@ export function RecipientsInput({
           <span className="ml-1.5 text-[11px] text-warn">已停用管理员</span>
         ) : null}
       </span>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="inline"
         aria-label={`移除 ${email}`}
         onClick={() => onChange(emails.filter((item) => item !== email))}
         className={cn(
-          'shrink-0 text-[11px] text-muted-foreground',
-          stacked &&
-            'flex size-10 items-center justify-center text-sm md:size-auto md:text-[11px]',
+          'shrink-0 text-muted-foreground hover:bg-transparent',
+          stacked && 'size-10 md:size-auto',
         )}
       >
-        ✕
-      </button>
+        <XIcon aria-hidden className="size-3" />
+      </Button>
     </li>
   ));
   const input = (layout: string) => (
@@ -297,16 +298,16 @@ export function RecipientsInput({
               {chipItems}
             </ul>
           ) : null}
-          <button
-            type="button"
+          <Button
+            variant="outline"
             onClick={() => setAdding(true)}
             className={cn(
-              'h-11 items-center justify-center rounded-lg border border-dashed border-input text-[15px] font-normal text-primary outline-none focus-visible:ring-[3px] focus-visible:ring-ring md:hidden',
-              inputShown ? 'hidden' : 'flex',
+              'h-11 border-dashed text-[15px] font-normal text-primary md:hidden',
+              inputShown && 'hidden',
             )}
           >
             ＋ 添加邮箱
-          </button>
+          </Button>
           <div
             className={cn(
               'gap-2 font-normal md:flex',

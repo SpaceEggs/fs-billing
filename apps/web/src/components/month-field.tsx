@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from 'lucide-react';
 import { shiftStatementMonth } from '../lib/admin-statements';
 import { statementMonthTitle } from '../lib/statement';
 import { cn } from '../lib/utils';
@@ -6,7 +11,7 @@ import { Button } from './ui/button';
 import { ModalDialog } from './modal-dialog';
 
 const step =
-  'flex size-9 shrink-0 items-center justify-center rounded-lg border border-input text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 max-md:size-11';
+  'shrink-0 text-muted-foreground disabled:opacity-40 max-md:size-11';
 
 /**
  * 月份选择（运营稿 5a/5c：‹ 2026年8月 ▾ ›）：两侧按钮前后翻一个月，中间点开 12 个月的网格并可翻年。
@@ -38,36 +43,39 @@ export function MonthField({
   };
   const row = (
     <div className={cn('flex items-center gap-1', className)}>
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="icon"
         aria-label={`${label}：上个月`}
         disabled={value <= min}
         onClick={() => onChange(shiftStatementMonth(value, -1))}
         className={step}
       >
-        ‹
-      </button>
-      <button
-        type="button"
+        <ChevronLeftIcon aria-hidden />
+      </Button>
+      <Button
+        variant="outline"
         aria-haspopup="dialog"
         aria-label={`${label}：${statementMonthTitle(value)}`}
         onClick={openGrid}
-        className="flex h-9 min-w-0 items-center justify-between gap-6 rounded-lg border border-input px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 max-md:h-11 max-md:flex-1 max-md:justify-center max-md:text-[15px]"
+        className="min-w-0 justify-between gap-6 px-3 font-normal max-md:h-11 max-md:flex-1 max-md:justify-center max-md:text-[15px]"
       >
         {statementMonthTitle(value)}
-        <span aria-hidden className="text-xs text-muted-foreground">
-          ▾
-        </span>
-      </button>
-      <button
-        type="button"
+        <ChevronDownIcon
+          aria-hidden
+          className="size-3.5 text-muted-foreground"
+        />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
         aria-label={`${label}：下个月`}
         disabled={value >= max}
         onClick={() => onChange(shiftStatementMonth(value, 1))}
         className={step}
       >
-        ›
-      </button>
+        <ChevronRightIcon aria-hidden />
+      </Button>
       {open ? (
         <ModalDialog
           open
@@ -168,27 +176,29 @@ export function MonthGrid({
           yearRowClassName,
         )}
       >
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="上一年"
           disabled={year <= minYear}
           onClick={() => onYearChange(year - 1)}
-          className="flex size-9 items-center justify-center rounded-md text-[15px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-40"
+          className="rounded-md text-muted-foreground disabled:opacity-40"
         >
-          ‹
-        </button>
+          <ChevronLeftIcon aria-hidden />
+        </Button>
         <span aria-live="polite" className="text-base font-semibold">
           {year}年
         </span>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           aria-label="下一年"
           disabled={year >= maxYear}
           onClick={() => onYearChange(year + 1)}
-          className="flex size-9 items-center justify-center rounded-md text-[15px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-40"
+          className="rounded-md text-muted-foreground disabled:opacity-40"
         >
-          ›
-        </button>
+          <ChevronRightIcon aria-hidden />
+        </Button>
       </div>
       <div className={cn('grid gap-1.5', columnsClassName)}>
         {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => {

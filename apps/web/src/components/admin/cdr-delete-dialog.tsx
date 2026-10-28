@@ -24,7 +24,7 @@ import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { QueryError } from '../query-error';
 import { MonthGrid, type MonthCellState } from '../month-field';
-import { TriangleAlertIcon } from 'lucide-react';
+import { ChevronDownIcon, TriangleAlertIcon, CheckIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../modal-dialog';
@@ -488,24 +488,25 @@ function CdrDeleteForm({
               className="flex flex-col gap-1.5 text-[13px] font-medium"
             >
               <span>{label}</span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 aria-label={`${label}：${text}`}
                 aria-expanded={opened}
                 disabled={pending}
                 onClick={() => openPicker(which)}
                 className={cn(
-                  'flex h-11 items-center justify-between rounded-lg border px-3 text-sm font-normal outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50 md:h-10',
-                  opened ? 'border-primary' : 'border-input',
+                  'h-11 justify-between px-3 font-normal md:h-10',
+                  opened && 'border-primary',
                 )}
               >
                 <span className={value ? undefined : 'text-muted-foreground'}>
                   {text}
                 </span>
-                <span aria-hidden className="text-xs text-muted-foreground">
-                  ▾
-                </span>
-              </button>
+                <ChevronDownIcon
+                  aria-hidden
+                  className="size-3.5 text-muted-foreground"
+                />
+              </Button>
             </div>
           );
         })}
@@ -832,7 +833,7 @@ function DoneView({
         aria-hidden
         className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-[22px] font-bold text-ok"
       >
-        ✓
+        <CheckIcon className="size-6" />
       </span>
       <h2 className="m-0 text-[17px] font-semibold">
         已删除 {formatCount(result.total)} 条话单

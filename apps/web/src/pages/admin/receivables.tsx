@@ -31,7 +31,7 @@ import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
-import { CircleCheckIcon, XIcon } from 'lucide-react';
+import { CircleCheckIcon, XIcon, CheckIcon } from 'lucide-react';
 import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { apiKey, apiQuery, invalidateTenant, send } from '../../lib/admin-api';
@@ -490,7 +490,7 @@ function EmptyState({ search }: { search: ReceivablesSearch }) {
             aria-hidden
             className="flex size-11 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-lg font-bold text-ok md:size-12 md:text-xl"
           >
-            ✓
+            <CheckIcon className="size-6" />
           </span>
         ) : null}
         <span className="text-[15px] font-semibold md:text-base">

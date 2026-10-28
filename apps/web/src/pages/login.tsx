@@ -80,18 +80,19 @@ function ForgotLink({
   className?: string;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="link"
+      size="inline"
       onClick={onClick}
       className={cn(
         zone === 'admin'
-          ? 'text-primary'
+          ? 'hover:no-underline'
           : 'text-muted-foreground underline underline-offset-[3px]',
         className,
       )}
     >
       忘记密码？
-    </button>
+    </Button>
   );
 }
 
@@ -245,7 +246,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                   fieldClass,
                 )}
               >
-                <input
+                <Input
                   id={ids.password}
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -256,17 +257,18 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                   aria-invalid={invalid || undefined}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="h-full min-w-0 flex-1 bg-transparent pl-3 text-base text-foreground outline-none placeholder:text-muted-foreground sm:text-sm"
+                  className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pr-0 pl-3 focus-visible:ring-0 sm:h-full"
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="inline"
                   aria-label={showPassword ? '隐藏密码' : '显示密码'}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword((shown) => !shown)}
-                  className="flex h-11 w-14 shrink-0 items-center justify-center text-[13px] text-muted-foreground sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
+                  className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
                 >
                   {showPassword ? '隐藏' : '显示'}
-                </button>
+                </Button>
               </div>
               {forgotOpen ? (
                 <ForgotHint

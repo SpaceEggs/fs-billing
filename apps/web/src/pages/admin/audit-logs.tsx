@@ -7,6 +7,7 @@ import {
   type AdminAuditLog,
   type Identity,
 } from '@fs-billing/shared';
+import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
@@ -418,14 +419,14 @@ function Filters({
             className="w-full md:w-[240px]"
           />
         ) : (
-          <button
-            type="button"
+          <Button
+            variant="outline"
             disabled
             aria-label="日期范围"
-            className="flex h-11 w-full items-center rounded-lg border border-input px-3 text-sm text-muted-foreground md:h-9 md:w-[240px]"
+            className="h-11 w-full justify-start font-normal text-muted-foreground md:h-9 md:w-[240px]"
           >
             …
-          </button>
+          </Button>
         )}
       </div>
       <FilterSheet
@@ -444,13 +445,13 @@ function Filters({
       <div className="hidden items-end gap-3 md:flex">
         {selects('w-[160px]')}
       </div>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={onReset}
-        className="h-11 px-1 text-sm text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring md:h-9"
+        className="h-11 px-1 font-normal text-muted-foreground hover:bg-transparent md:h-9"
       >
         重置
-      </button>
+      </Button>
       {rowCount !== undefined ? (
         <span className="text-[13px] text-muted-foreground tabular-nums md:ml-auto">
           {countLabel(search.page ?? 1, rowCount)}
@@ -618,7 +619,11 @@ function LogRows({
         )}
       >
         <td className="py-3 pl-4 text-[11px] text-muted-foreground">
-          {open ? '▾' : '›'}
+          {open ? (
+            <ChevronDownIcon aria-hidden className="size-3.5" />
+          ) : (
+            <ChevronRightIcon aria-hidden className="size-3.5" />
+          )}
         </td>
         <td className="py-3 pr-3 whitespace-nowrap">
           <DateTime value={row.occurredAt} />
@@ -669,7 +674,11 @@ function LogCard({
           <span className="truncate font-mono text-sm">{objectText(row)}</span>
         </span>
         <span className="text-xs text-muted-foreground">
-          {open ? '▾' : '›'}
+          {open ? (
+            <ChevronDownIcon aria-hidden className="size-3.5" />
+          ) : (
+            <ChevronRightIcon aria-hidden className="size-3.5" />
+          )}
         </span>
       </span>
       <span className="text-sm leading-normal">{row.summary}</span>

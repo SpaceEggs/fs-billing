@@ -11,7 +11,7 @@ import {
   type Currency,
   type Identity,
 } from '@fs-billing/shared';
-import { XIcon } from 'lucide-react';
+import { XIcon, CheckIcon } from 'lucide-react';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Alert } from '../../components/ui/alert';
@@ -384,7 +384,7 @@ function CreatedDialog({
           aria-hidden
           className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-[22px] font-bold text-ok"
         >
-          ✓
+          <CheckIcon className="size-6" />
         </span>
         <h2 className="m-0 text-[17px] font-semibold">
           租户 {tenant.code} 已创建

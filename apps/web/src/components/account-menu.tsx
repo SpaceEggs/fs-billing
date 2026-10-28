@@ -1,6 +1,7 @@
 import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import type { Identity } from '@fs-billing/shared';
+import { Button } from './ui/button';
 import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity } from '../lib/zone';
@@ -138,13 +139,14 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
       side="bottom"
       title="账号菜单"
       trigger={
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="inline"
           aria-label="账号菜单"
-          className="m-[5px] rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+          className="m-[5px] rounded-full hover:bg-transparent"
         >
           <Avatar identity={identity} className="size-[30px]" />
-        </button>
+        </Button>
       }
     >
       <div className="flex items-center gap-3 border-b border-border pt-1 pb-3.5">
@@ -177,14 +179,15 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
           />
         </Link>
       ) : null}
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="inline"
         disabled={logout.isPending}
         onClick={() => logout.mutate()}
-        className="flex h-12 items-center text-base text-neg"
+        className="h-12 justify-start rounded-none text-base text-neg hover:bg-transparent"
       >
         退出登录
-      </button>
+      </Button>
     </SheetPanel>
   );
 }

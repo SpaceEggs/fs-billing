@@ -283,13 +283,14 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           )}
         >
           <span className="flex-1">{notice.text}</span>
-          <button
-            type="button"
+          <Button
+            variant="link"
+            size="inline"
             onClick={() => setNotice(null)}
-            className="rounded text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+            className="text-[13px] text-current"
           >
             关闭
-          </button>
+          </Button>
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-[13px] text-muted-foreground">
@@ -437,8 +438,9 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                       </td>
                       <td className="hidden px-4 py-2.5 text-right md:table-cell">
                         {/* G4：已有排定版本时不能单条编辑，提示与导入按钮共用。 */}
-                        <button
-                          type="button"
+                        <Button
+                          variant="link"
+                          size="inline"
                           aria-label={`编辑 ${rowName(entry)}`}
                           disabled={hasScheduled}
                           aria-describedby={
@@ -448,10 +450,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                             setNotice(null);
                             setEditing({ baseVersionId: currentId, entry });
                           }}
-                          className="rounded text-[13px] text-primary underline-offset-[3px] outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                          className="text-[13px] underline-offset-[3px] disabled:cursor-not-allowed disabled:text-muted-foreground"
                         >
                           编辑
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );

@@ -11,6 +11,7 @@ import type {
   Identity,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { CheckIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Alert } from '../../components/ui/alert';
@@ -343,16 +344,17 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
                   勾选话单，或点击上方分组后「选择该分组全部」，再归属到租户或忽略。
                 </span>
                 {canSelectGroup ? (
-                  <button
-                    type="button"
-                    className="text-primary underline"
+                  <Button
+                    variant="link"
+                    size="inline"
+                    className="underline"
                     onClick={() =>
                       search.tag !== undefined &&
                       setSelection({ kind: 'group', tag: search.tag })
                     }
                   >
                     {selectGroupLabel}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             ) : (
@@ -363,24 +365,26 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
                     : `已选 ${countText(selectedCount)} 条`}
                 </span>
                 {canSelectGroup ? (
-                  <button
-                    type="button"
-                    className="text-[13px] text-primary underline"
+                  <Button
+                    variant="link"
+                    size="inline"
+                    className="text-[13px] underline"
                     onClick={() =>
                       search.tag !== undefined &&
                       setSelection({ kind: 'group', tag: search.tag })
                     }
                   >
                     {selectGroupLabel}
-                  </button>
+                  </Button>
                 ) : null}
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="inline"
                   className="text-[13px] text-muted-foreground underline"
                   onClick={() => setSelection({ kind: 'none' })}
                 >
                   清除选择
-                </button>
+                </Button>
                 <span className="hidden flex-1 md:block" />
                 <Button variant="outline" size="sm" onClick={openIgnore}>
                   忽略
@@ -539,7 +543,7 @@ function PendingEmpty() {
         aria-hidden
         className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-xl text-ok"
       >
-        ✓
+        <CheckIcon className="size-6" />
       </span>
       <span className="text-[17px] font-semibold">所有话单都已归属</span>
       <span className="text-[13px] text-muted-foreground">
@@ -967,13 +971,14 @@ function UnignoreButton({
   onUnignore: (id: string) => void;
 }) {
   return (
-    <button
-      type="button"
-      className="text-[13px] text-primary underline disabled:opacity-50"
+    <Button
+      variant="link"
+      size="inline"
+      className="text-[13px] underline"
       disabled={pending}
       onClick={() => onUnignore(row.id)}
     >
       {pending ? '正在撤销…' : '撤销忽略'}
-    </button>
+    </Button>
   );
 }

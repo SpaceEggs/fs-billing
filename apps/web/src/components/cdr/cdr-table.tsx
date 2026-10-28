@@ -1,4 +1,5 @@
 import type { Currency, PortalCdr } from '@fs-billing/shared';
+import { Button } from '../ui/button';
 import { formatDuration } from '../../lib/duration';
 import { cn } from '../../lib/utils';
 import { DateTime, Money, Rate } from '../data-format';
@@ -57,17 +58,18 @@ export function CdrTable<Row extends PortalCdr>({
             >
               <td className="px-4 py-[11px]">
                 <span className="flex items-center gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="inline"
                     onClick={(event) => {
                       event.stopPropagation();
                       onSelect(cdr);
                     }}
                     aria-label={`查看话单详情 ${cdr.callee}`}
-                    className="rounded-sm text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+                    className="text-left hover:bg-transparent"
                   >
                     <DateTime value={cdrMoment(cdr)} />
-                  </button>
+                  </Button>
                   {badge?.(cdr)}
                 </span>
               </td>

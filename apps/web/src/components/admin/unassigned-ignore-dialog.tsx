@@ -117,17 +117,18 @@ function IgnoreForm({
       </div>
       <div className="flex flex-wrap gap-1.5">
         {quickReasons.map((reason) => (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             key={reason.label}
-            type="button"
             disabled={submitting}
             onClick={() =>
               setFlow({ reason: reason.text, attempted: false, submit: 'idle' })
             }
-            className="flex h-9 items-center rounded-full border border-input px-3 text-[13px] outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50"
+            className="rounded-full font-normal"
           >
             {reason.label}
-          </button>
+          </Button>
         ))}
       </div>
       <Field label="忽略原因" required error={error}>

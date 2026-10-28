@@ -29,6 +29,8 @@ const buttonVariants = cva(
         field: 'h-11 px-4 text-base sm:h-10 sm:text-sm',
         lg: 'h-11 px-4 text-base',
         icon: 'size-9 text-[15px]',
+        // 文字链接式按钮：不设高度、内边距与字号，随周围文字。
+        inline: 'h-auto gap-1 rounded-sm p-0 font-normal',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },
