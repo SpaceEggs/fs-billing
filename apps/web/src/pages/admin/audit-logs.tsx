@@ -7,6 +7,7 @@ import {
   type AdminAuditLog,
   type Identity,
 } from '@fs-billing/shared';
+import { Badge } from '../../components/ui/badge';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { DateRangeField } from '../../components/date-range-field';
 import { DateTime } from '../../components/data-format';
@@ -51,10 +52,10 @@ function toneOf(action: AdminAuditLog['action']): OpTone {
   return 'info';
 }
 
-const toneClass = {
-  err: 'border-err-border bg-err-soft text-err',
-  warn: 'border-warn-border bg-warn-soft text-warn',
-  info: 'border-brand-border bg-brand-soft text-primary',
+const toneVariant = {
+  err: 'error',
+  warn: 'warning',
+  info: 'brand',
 } as const satisfies Record<OpTone, string>;
 
 const changeFieldText = {
@@ -680,14 +681,12 @@ function LogCard({
 
 function OpBadge({ row }: { row: AdminAuditLog }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-5 shrink-0 items-center rounded-md border px-2 text-[11px] font-medium whitespace-nowrap md:h-[22px] md:text-xs',
-        toneClass[toneOf(row.action)],
-      )}
+    <Badge
+      variant={toneVariant[toneOf(row.action)]}
+      className="h-5 text-[11px] md:h-[22px] md:text-xs"
     >
       {auditLabelText[row.label]}
-    </span>
+    </Badge>
   );
 }
 

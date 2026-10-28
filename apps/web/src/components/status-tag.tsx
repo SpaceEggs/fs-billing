@@ -1,13 +1,15 @@
 import { cn } from '../lib/utils';
+import { Badge } from './ui/badge';
 
+/** 状态标签的色调对应 Badge 的变体。 */
 const tones = {
-  ok: 'border-ok-border bg-ok-soft text-ok',
-  warn: 'border-warn-border bg-warn-soft text-warn',
-  err: 'border-err-border bg-err-soft text-err',
-  off: 'border-off-border bg-off-soft text-off',
-  unv: 'border-unv-border bg-unv-soft text-unv',
-  plain: 'border-border text-foreground',
-  muted: 'border-border text-muted-foreground',
+  ok: 'ok',
+  warn: 'warning',
+  err: 'error',
+  off: 'off',
+  unv: 'unverified',
+  plain: 'plain',
+  muted: 'muted',
 } as const;
 
 /**
@@ -46,13 +48,7 @@ export function StatusTag({
 }) {
   const tag = statusTags[status];
   return (
-    <span
-      className={cn(
-        'inline-flex h-[22px] items-center gap-1.5 rounded-md border px-2 text-xs font-medium',
-        tones[tag.tone],
-        className,
-      )}
-    >
+    <Badge variant={tones[tag.tone]} className={className}>
       {tag.dot ? (
         <span
           aria-hidden
@@ -63,6 +59,6 @@ export function StatusTag({
         />
       ) : null}
       {tag.label}
-    </span>
+    </Badge>
   );
 }

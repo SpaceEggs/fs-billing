@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { AdminCdr } from '@fs-billing/shared';
+import { Badge } from '../ui/badge';
 import { Alert } from '../ui/alert';
 import { cn } from '../../lib/utils';
 import type { CdrDetailExtra } from '../cdr/cdr-detail';
@@ -109,11 +110,7 @@ export function unverifiedDetail(cdr: AdminCdr): CdrDetailExtra {
     rows: [
       {
         label: '验证状态',
-        value: (
-          <span className="inline-flex h-[22px] items-center rounded-md border border-unv-border bg-unv-soft px-2 text-xs font-medium text-unv">
-            计费系统授权超时
-          </span>
-        ),
+        value: <Badge variant="unverified">计费系统授权超时</Badge>,
       },
     ],
     note: (

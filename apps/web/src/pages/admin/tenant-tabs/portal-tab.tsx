@@ -5,6 +5,7 @@ import type {
   AdminPortalAccountCreateResponse,
   AdminStatus,
 } from '@fs-billing/shared';
+import { Badge } from '../../../components/ui/badge';
 import { Alert } from '../../../components/ui/alert';
 import {
   AccountStatusDialog,
@@ -33,12 +34,9 @@ import { apiProblem } from '../../../lib/api-problem';
 import { cn } from '../../../lib/utils';
 
 const accountStatus = {
-  active: { label: '启用', className: 'border-ok-border bg-ok-soft text-ok' },
-  disabled: {
-    label: '已停用',
-    className: 'border-off-border bg-off-soft text-off',
-  },
-} as const satisfies Record<AdminStatus, { label: string; className: string }>;
+  active: { label: '启用', variant: 'ok' },
+  disabled: { label: '已停用', variant: 'off' },
+} as const satisfies Record<AdminStatus, { label: string; variant: string }>;
 
 const fieldRow =
   'flex flex-col gap-0.5 border-b border-border py-3 last:border-b-0 md:grid md:grid-cols-[140px_1fr] md:items-center md:gap-0';
@@ -338,14 +336,9 @@ export function PortalTab({
             >
               <dt className={fieldLabel}>状态</dt>
               <dd className="m-0">
-                <span
-                  className={cn(
-                    'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium',
-                    accountStatus[account.status].className,
-                  )}
-                >
+                <Badge variant={accountStatus[account.status].variant}>
                   {accountStatus[account.status].label}
-                </span>
+                </Badge>
               </dd>
             </div>
             <div className={fieldRow}>

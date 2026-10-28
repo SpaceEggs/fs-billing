@@ -1,4 +1,5 @@
 import type { Currency, Identity } from '@fs-billing/shared';
+import { Badge } from '../../components/ui/badge';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { ThemeSegmented } from '../../components/theme-controls';
 import { Button } from '../../components/ui/button';
@@ -67,9 +68,12 @@ export function PortalSettingsPage({ identity }: { identity: Identity }) {
               </dt>
               <dd className="m-0 flex flex-wrap items-center gap-2 border-b border-border py-3">
                 {tenant.name}
-                <span className="inline-flex h-[22px] items-center rounded-md bg-muted px-2 font-mono text-xs">
+                <Badge
+                  variant="secondary"
+                  className="border-transparent font-mono"
+                >
                   {tenant.code}
-                </span>
+                </Badge>
               </dd>
               <dt className="py-3 text-muted-foreground">币种</dt>
               <dd className="m-0 py-3">{currencyLabel[tenant.currency]}</dd>

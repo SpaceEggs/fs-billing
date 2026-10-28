@@ -12,6 +12,7 @@ import type {
   Identity,
 } from '@fs-billing/shared';
 import { PlusIcon } from 'lucide-react';
+import { Badge } from '../../components/ui/badge';
 import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
@@ -48,12 +49,9 @@ import { cn } from '../../lib/utils';
 export const adminPageSize = 25;
 
 const statusTag = {
-  active: { label: '启用', className: 'border-ok-border bg-ok-soft text-ok' },
-  disabled: {
-    label: '已停用',
-    className: 'border-border bg-muted text-muted-foreground',
-  },
-} as const satisfies Record<AdminStatus, { label: string; className: string }>;
+  active: { label: '启用', variant: 'ok' },
+  disabled: { label: '已停用', variant: 'secondary' },
+} as const satisfies Record<AdminStatus, { label: string; variant: string }>;
 
 const selfDisableHint = '不能停用自己的账号';
 
@@ -81,15 +79,9 @@ function StatusTag({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium',
-        statusTag[status].className,
-        className,
-      )}
-    >
+    <Badge variant={statusTag[status].variant} className={className}>
       {statusTag[status].label}
-    </span>
+    </Badge>
   );
 }
 

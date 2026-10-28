@@ -1,3 +1,4 @@
+import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 import type { StatementState } from '../../lib/statement';
 
@@ -16,13 +17,11 @@ export function StatementStateTag({
 }) {
   if (state === 'final') return null;
   return (
-    <span
+    <Badge
+      variant={state === 'in_progress' ? 'plain' : 'muted'}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border border-border font-medium whitespace-nowrap',
         size === 'sm' && 'h-5 gap-[5px] rounded-[5px] px-1.5 text-[11px]',
-        size === 'md' && 'h-[22px] px-2 text-xs',
-        size === 'lg' && 'h-6 px-[9px] text-xs',
-        state === 'in_progress' ? 'text-foreground' : 'text-muted-foreground',
+        size === 'lg' && 'h-6 px-[9px]',
         className,
       )}
     >
@@ -30,6 +29,6 @@ export function StatementStateTag({
         <span aria-hidden className="size-1.5 rounded-full bg-pos" />
       ) : null}
       {state === 'in_progress' ? '本月（进行中）' : '待生成'}
-    </span>
+    </Badge>
   );
 }

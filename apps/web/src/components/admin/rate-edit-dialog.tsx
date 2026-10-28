@@ -7,6 +7,7 @@ import {
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { Badge } from '../ui/badge';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatRate } from '../../lib/format';
@@ -336,16 +337,12 @@ function RateComparison({
           </span>
         </div>
         {percent ? (
-          <span
-            className={cn(
-              'inline-flex h-[26px] items-center rounded-md border px-2.5 text-[13px] font-semibold',
-              percent.rising
-                ? 'border-err-border bg-err-soft text-err'
-                : 'border-ok-border bg-ok-soft text-ok',
-            )}
+          <Badge
+            variant={percent.rising ? 'error' : 'ok'}
+            className="h-[26px] px-2.5 text-[13px] font-semibold"
           >
             {percent.rising ? '涨' : '降'} {percent.text}
-          </span>
+          </Badge>
         ) : null}
       </div>
       <span className="text-center text-xs text-muted-foreground">

@@ -10,6 +10,7 @@ import {
   type AdminRateVersion,
   type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Badge } from '../../../components/ui/badge';
 import {
   RateEditDialog,
   rateUnit,
@@ -302,10 +303,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           }}
           className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9 md:w-[260px] md:text-sm"
         />
-        <span className="hidden h-6 items-center gap-1.5 rounded-md border border-ok-border bg-ok-soft px-2 text-xs font-medium text-ok md:inline-flex">
+        <Badge variant="ok" className="hidden h-6 md:inline-flex">
           <span aria-hidden className="size-1.5 rounded-full bg-current" />
           当前生效版本
-        </span>
+        </Badge>
         <span className="w-full text-xs tabular-nums max-md:order-first md:hidden">
           当前生效版本 ·{' '}
           {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`}
