@@ -31,6 +31,11 @@ export function MonthField({
   showLabel?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [year, setYear] = useState(() => Number(value.slice(0, 4)));
+  const openGrid = () => {
+    setYear(Number(value.slice(0, 4)));
+    setOpen(true);
+  };
   const row = (
     <div className={cn('flex items-center gap-1', className)}>
       <button
@@ -46,7 +51,7 @@ export function MonthField({
         type="button"
         aria-haspopup="dialog"
         aria-label={`${label}：${statementMonthTitle(value)}`}
-        onClick={() => setOpen(true)}
+        onClick={openGrid}
         className="flex h-9 min-w-0 items-center justify-between gap-6 rounded-lg border border-input px-3 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 max-md:h-11 max-md:flex-1 max-md:justify-center max-md:text-[15px]"
       >
         {statementMonthTitle(value)}
@@ -64,17 +69,36 @@ export function MonthField({
         ›
       </button>
       {open ? (
-        <MonthGrid
-          label={label}
-          value={value}
-          min={min}
-          max={max}
-          onClose={() => setOpen(false)}
-          onPick={(month) => {
-            setOpen(false);
-            onChange(month);
-          }}
-        />
+        <ModalDialog
+          open
+          onOpenChange={(next) => next || setOpen(false)}
+          title={label}
+          className="gap-3.5 md:w-[340px]"
+        >
+          <MonthGrid
+            year={year}
+            minYear={Number(min.slice(0, 4))}
+            maxYear={Number(max.slice(0, 4))}
+            onYearChange={setYear}
+            value={value}
+            onPick={(month) => {
+              setOpen(false);
+              onChange(month);
+            }}
+            cell={(month) => ({ disabled: month < min || month > max })}
+            // 关闭按钮盖在年份行右上角；删除话单的网格不在这一角，不传。
+            yearRowClassName="mr-9"
+          />
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              className="h-12 md:h-9"
+              onClick={() => setOpen(false)}
+            >
+              取消
+            </Button>
+          </div>
+        </ModalDialog>
       ) : null}
     </div>
   );
@@ -90,36 +114,65 @@ export function MonthField({
   );
 }
 
-function MonthGrid({
-  label,
+/** 删除话单月份格（月份可选规则）。账单页的月份选择只使用 `disabled`。 */
+export type MonthCellState = {
+  readonly disabled: boolean;
+  /** 月份下方的小字，例如「9,642 条」「已删除」「账单未生成」。 */
+  readonly sub?: string;
+  /** 不可选原因，悬停提示，例如「本月账单尚未生成，不可选」。 */
+  readonly title?: string;
+};
+
+function monthCellName(month: string, state: MonthCellState) {
+  const label = statementMonthTitle(month);
+  const extra = [state.sub, state.title].filter(
+    (part): part is string => !!part,
+  );
+  return extra.length === 0 ? label : [label, ...extra].join('，');
+}
+
+/**
+ * 一年 12 个月的网格和翻年。账单页把它包在对话框里；删除话单把它嵌在自己的对话框里，
+ * 每格的可选、小字和原因由 `cell` 给出（按 `YYYY-MM`）。
+ */
+export function MonthGrid({
+  year,
+  minYear,
+  maxYear,
+  onYearChange,
   value,
-  min,
-  max,
-  onClose,
   onPick,
+  cell,
+  yearRowClassName,
+  columnsClassName = 'grid-cols-4',
 }: {
-  label: string;
-  value: string;
-  min: string;
-  max: string;
-  onClose: () => void;
+  year: number;
+  minYear: number;
+  maxYear: number;
+  onYearChange: (year: number) => void;
+  /** 选中的 YYYY-MM。没有选中时为 null。 */
+  value: string | null;
   onPick: (month: string) => void;
+  cell: (month: string) => MonthCellState;
+  /** 年份行的额外类。账单页用它躲开对话框的关闭按钮。 */
+  yearRowClassName?: string;
+  /** 月份格的列数类。默认四列（账单页）；删除话单手机稿三列，传 `grid-cols-3 md:grid-cols-4`。 */
+  columnsClassName?: string;
 }) {
-  const [year, setYear] = useState(Number(value.slice(0, 4)));
   const key = (month: number) => `${year}-${String(month).padStart(2, '0')}`;
   return (
-    <ModalDialog
-      open
-      onOpenChange={(next) => next || onClose()}
-      title={label}
-      className="gap-3.5 md:w-[340px]"
-    >
-      <div className="mr-9 flex h-11 items-center justify-between md:h-9">
+    <>
+      <div
+        className={cn(
+          'flex h-11 items-center justify-between md:h-9',
+          yearRowClassName,
+        )}
+      >
         <button
           type="button"
           aria-label="上一年"
-          disabled={key(1) <= min.slice(0, 4) + '-01'}
-          onClick={() => setYear((current) => current - 1)}
+          disabled={year <= minYear}
+          onClick={() => onYearChange(year - 1)}
           className="flex size-9 items-center justify-center rounded-md text-[15px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-40"
         >
           ‹
@@ -130,41 +183,46 @@ function MonthGrid({
         <button
           type="button"
           aria-label="下一年"
-          disabled={year >= Number(max.slice(0, 4))}
-          onClick={() => setYear((current) => current + 1)}
+          disabled={year >= maxYear}
+          onClick={() => onYearChange(year + 1)}
           className="flex size-9 items-center justify-center rounded-md text-[15px] text-muted-foreground outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-40"
         >
           ›
         </button>
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className={cn('grid gap-1.5', columnsClassName)}>
         {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => {
-          const selected = key(month) === value;
+          const monthKey = key(month);
+          const state = cell(monthKey);
+          const selected = monthKey === value;
+          const sub = state.sub || undefined;
           return (
             <button
               key={month}
               type="button"
-              aria-label={statementMonthTitle(key(month))}
+              aria-label={monthCellName(monthKey, state)}
               aria-pressed={selected}
-              disabled={key(month) < min || key(month) > max}
-              onClick={() => onPick(key(month))}
+              disabled={state.disabled}
+              {...(state.title ? { title: state.title } : {})}
+              onClick={() => onPick(monthKey)}
               className={cn(
                 'h-11 rounded-lg text-[15px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:text-muted-foreground disabled:opacity-40 md:h-10 md:text-sm',
+                sub && 'flex flex-col items-center justify-center gap-px',
                 selected
                   ? 'bg-primary font-semibold text-primary-foreground'
                   : 'hover:bg-muted',
               )}
             >
               {month}月
+              {sub ? (
+                <span className="text-[10px] font-normal leading-none">
+                  {sub}
+                </span>
+              ) : null}
             </button>
           );
         })}
       </div>
-      <div className="flex justify-end">
-        <Button variant="outline" className="h-12 md:h-9" onClick={onClose}>
-          取消
-        </Button>
-      </div>
-    </ModalDialog>
+    </>
   );
 }

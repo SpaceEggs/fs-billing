@@ -21,7 +21,7 @@ const rows = (page: Page) => page.getByRole('table').getByRole('row');
 const summary = (page: Page) =>
   page.getByRole('region', { name: '汇总' }).first();
 
-test('tags the unverified call and counts it in the summary, without delete or alert links', async ({
+test('tags the unverified call, counts it in the summary, and offers delete', async ({
   page,
 }) => {
   const tenant = await tenantWithCdrs(page);
@@ -35,7 +35,9 @@ test('tags the unverified call and counts it in the summary, without delete or a
   ).not.toContainText('未经验证');
   await expect(summary(page)).toContainText('其中未经验证 1 条');
   await expect(summary(page)).toContainText('含未接通 1');
-  await expect(page.getByRole('button', { name: '删除话单' })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: '删除话单' }).first(),
+  ).toBeVisible();
   await expect(page.getByText('查看告警')).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: '话单', exact: true }),

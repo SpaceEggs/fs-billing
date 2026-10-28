@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { Identity } from '@fs-billing/shared';
+import { apiQuery } from '../lib/admin-api';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity, zones, type Zone } from '../lib/zone';
 import { AccountMenu, MobileAccountMenu } from './account-menu';
@@ -9,7 +11,7 @@ import { SessionExpiredDialog } from './session-expired-dialog';
 import { ThemeMenu } from './theme-controls';
 import { Sheet } from './ui/sheet';
 
-/** 后台导航按设计稿顺序；未归属话单、系统告警、操作日志随各自阶段加入。 */
+/** 后台导航按设计稿顺序；未归属话单带待处理条数角标，操作日志在账单之后。系统告警随该阶段加入。 */
 const navigation = {
   portal: [
     { label: '首页', to: zones.portal.home },
@@ -22,7 +24,9 @@ const navigation = {
     { label: '概览', to: zones.admin.home },
     { label: '租户', to: '/admin/tenants' },
     { label: '待收款', to: '/admin/receivables' },
+    { label: '未归属话单', to: '/admin/unassigned' },
     { label: '账单', to: '/admin/statements' },
+    { label: '操作日志', to: '/admin/audit-logs' },
     { label: '管理员', to: '/admin/admins' },
   ],
 } as const satisfies Record<Zone, readonly { label: string; to: string }[]>;
@@ -39,6 +43,14 @@ function NavItems({
   mobile?: boolean;
   onNavigate?: () => void;
 }) {
+  const pending = useQuery({
+    ...apiQuery('adminUnassignedSummary'),
+    enabled: zone === 'admin',
+  });
+  const pendingCount =
+    zone === 'admin' && pending.data && pending.data.pending > 0
+      ? pending.data.pending
+      : null;
   return (
     <nav
       aria-label="主导航"
@@ -55,6 +67,7 @@ function NavItems({
             className={cn(
               'flex items-center rounded-lg',
               mobile ? 'h-11 px-3' : 'h-9 px-2.5',
+              item.to === '/admin/unassigned' && 'w-full',
               !current && 'text-muted-foreground hover:text-foreground',
               current &&
                 (zone === 'admin'
@@ -63,6 +76,11 @@ function NavItems({
             )}
           >
             {item.label}
+            {item.to === '/admin/unassigned' && pendingCount !== null ? (
+              <span className="ml-auto pl-2 text-[11px] tabular-nums text-muted-foreground">
+                {pendingCount.toLocaleString('en-US')}
+              </span>
+            ) : null}
           </Link>
         );
       })}

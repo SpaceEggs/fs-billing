@@ -97,7 +97,12 @@ export function adminApi(
     if (path === '/api/auth/session') return { status: 200, body: session };
     const pathname = path.split('?')[0];
     const route = routes[`${method} ${pathname}`];
-    if (!route) throw new Error(`unexpected ${method} ${path}`);
+    if (!route) {
+      // 每个已登录的后台外壳都会拉待处理条数做导航角标；未登记的测试默认 0。
+      if (method === 'GET' && pathname === '/api/admin/unassigned-cdrs/summary')
+        return { status: 200, body: { pending: 0, ignored: 0 } };
+      throw new Error(`unexpected ${method} ${path}`);
+    }
     return route(path, init);
   };
   return { calls, handler };

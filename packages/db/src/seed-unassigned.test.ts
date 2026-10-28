@@ -9,7 +9,11 @@ import {
   versionAt,
 } from '@fs-billing/rating';
 import { OCTOBER_RATES_CSV, RATES_CSV } from './seed.js';
-import { planAbc01Unassigned } from './seed-unassigned.js';
+import {
+  planAbc01Unassigned,
+  planEmptyTagUnassigned,
+  planIgnoredUnassigned,
+} from './seed-unassigned.js';
 
 function table(effectiveFrom: string) {
   const first = parseRateCsv(RATES_CSV, 'CNY');
@@ -99,3 +103,161 @@ describe('ABC01 unassigned seed (phase 8 decision 37)', () => {
       );
   });
 });
+
+describe('mockup empty-tag and ignored rows (phase 8 decision 47)', () => {
+  const empty = planEmptyTagUnassigned();
+  const ignored = planIgnoredUnassigned();
+
+  it('plans 12 pending calls with an empty tag on 2026-09-29', () => {
+    expect(
+      empty.map((row) => ({
+        tag: row.tenantTag,
+        caller: row.caller,
+        callee: row.callee,
+        billingNumber: row.billingNumber,
+        seconds: row.durationSeconds,
+        reason: row.reason,
+        answeredAt: row.answeredAt.toISOString(),
+        hangupCause: row.hangupCause,
+      })),
+    ).toEqual([
+      row('8613710023757', 311, '2026-09-29T05:45:10.000Z'),
+      row('8613710245489', 27, '2026-09-29T05:27:24.000Z'),
+      row('8613710467221', 343, '2026-09-29T05:09:46.000Z'),
+      row('8613710688953', 59, '2026-09-29T04:51:59.000Z'),
+      row('8613710910685', 375, '2026-09-29T04:34:20.000Z'),
+      row('8613711132417', 91, '2026-09-29T04:16:32.000Z'),
+      row('8613711354149', 407, '2026-09-29T03:58:52.000Z'),
+      row('8613711575881', 123, '2026-09-29T03:41:03.000Z'),
+      row('8613711797613', 439, '2026-09-29T03:23:22.000Z'),
+      row('8613712019345', 155, '2026-09-29T03:05:32.000Z'),
+      row('8613712241077', 471, '2026-09-29T02:47:50.000Z'),
+      row('8613712462809', 187, '2026-09-29T02:30:16.000Z'),
+    ]);
+    for (const call of empty) {
+      expect(call.callUuid).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+      expect(call.endedAt.getTime() - call.answeredAt.getTime()).toBe(
+        call.durationSeconds * 1000,
+      );
+      expect(call.answeredAt.getTime()).toBeGreaterThan(
+        call.startedAt.getTime(),
+      );
+    }
+  });
+
+  it('plans 5 ignored calls with the mockup reasons and operators', () => {
+    expect(
+      ignored.map((row) => ({
+        tag: row.tenantTag,
+        caller: row.caller,
+        callee: row.callee,
+        billingNumber: row.billingNumber,
+        seconds: row.durationSeconds,
+        reason: row.reason,
+        ignoreReason: row.ignoreReason,
+        admin: row.admin,
+        answeredAt: row.answeredAt.toISOString(),
+        resolvedAt: row.resolvedAt.toISOString(),
+      })),
+    ).toEqual([
+      ignoredRow({
+        tag: 'TEST',
+        caller: '075500000001',
+        callee: '8613800000001',
+        seconds: 12,
+        reason: '租户不存在',
+        ignoreReason: 'FreeSWITCH 测试呼叫，不属于任何客户',
+        admin: 'wang',
+        answeredAt: '2026-09-28T09:42:10.000Z',
+        resolvedAt: '2026-09-28T10:05:00.000Z',
+      }),
+      ignoredRow({
+        tag: 'TEST',
+        caller: '075500000001',
+        callee: '8613800000001',
+        seconds: 9,
+        reason: '租户不存在',
+        ignoreReason: 'FreeSWITCH 测试呼叫，不属于任何客户',
+        admin: 'wang',
+        answeredAt: '2026-09-28T09:40:51.000Z',
+        resolvedAt: '2026-09-28T10:05:00.000Z',
+      }),
+      ignoredRow({
+        tag: 'TEST',
+        caller: '075500000001',
+        callee: '8613800000002',
+        seconds: 31,
+        reason: '租户不存在',
+        ignoreReason: 'FreeSWITCH 测试呼叫，不属于任何客户',
+        admin: 'wang',
+        answeredAt: '2026-09-28T09:39:33.000Z',
+        resolvedAt: '2026-09-28T10:05:00.000Z',
+      }),
+      ignoredRow({
+        tag: '',
+        caller: '02088776600',
+        callee: '8613500135000',
+        seconds: 64,
+        reason: '缺少租户标签',
+        ignoreReason: '内部线路，运维排障拨测',
+        admin: 'li',
+        answeredAt: '2026-09-26T02:15:08.000Z',
+        resolvedAt: '2026-09-26T03:30:00.000Z',
+      }),
+      ignoredRow({
+        tag: '',
+        caller: '02088776600',
+        callee: '8613500135000',
+        seconds: 58,
+        reason: '缺少租户标签',
+        ignoreReason: '内部线路，运维排障拨测',
+        admin: 'li',
+        answeredAt: '2026-09-26T02:12:47.000Z',
+        resolvedAt: '2026-09-26T03:30:00.000Z',
+      }),
+    ]);
+  });
+
+  it('keeps every seeded call uuid distinct from the ABC01 plan', () => {
+    const ids = [
+      ...planAbc01Unassigned().map((row) => row.callUuid),
+      ...empty.map((row) => row.callUuid),
+      ...ignored.map((row) => row.callUuid),
+    ];
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).not.toContain('a00000ff-0000-4000-8000-000000000001');
+  });
+});
+
+function row(digits: string, seconds: number, answeredAt: string) {
+  return {
+    tag: '',
+    caller: '02088776655',
+    callee: `+${digits}`,
+    billingNumber: digits,
+    seconds,
+    reason: '缺少租户标签',
+    answeredAt,
+    hangupCause: 'NORMAL_CLEARING',
+  };
+}
+
+function ignoredRow(input: {
+  tag: string;
+  caller: string;
+  callee: string;
+  seconds: number;
+  reason: string;
+  ignoreReason: string;
+  admin: 'wang' | 'li';
+  answeredAt: string;
+  resolvedAt: string;
+}) {
+  return {
+    ...input,
+    callee: `+${input.callee}`,
+    billingNumber: input.callee,
+  };
+}

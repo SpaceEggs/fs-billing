@@ -59,3 +59,37 @@ function RefreshButton({ onRefresh }: { onRefresh: (() => void) | undefined }) {
     </Button>
   ) : null;
 }
+
+/** 校验失败时逐条列出服务端说明（ProblemAlert 只显示标题）。一次超过 500 条的分批提示走这里。 */
+export function RequestFailure({
+  error,
+  networkMessage,
+  onRefresh,
+}: {
+  error: unknown;
+  networkMessage?: string;
+  onRefresh?: () => void;
+}) {
+  const problem = apiProblem(error);
+  if (problem.kind === 'validation') {
+    const notice = problemNotice(problem);
+    return (
+      <div
+        role="alert"
+        className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
+      >
+        <span className="font-semibold">{notice.title}</span>
+        {notice.details?.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <ProblemAlert
+      error={error}
+      {...(networkMessage !== undefined ? { networkMessage } : {})}
+      {...(onRefresh ? { onRefresh } : {})}
+    />
+  );
+}

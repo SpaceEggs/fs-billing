@@ -280,20 +280,35 @@ export function adjustmentsSince(receivable: AdminReceivable) {
   });
 }
 
-/** 确认人、作废人的姓名（G10）：管理员很少，全部取回一次后缓存；账号变更会使其失效。 */
+/** 管理员、租户下拉一次最多装下这么多条。操作日志的菜单据此说明后面还有。 */
+export const directoryPageSize = 100;
+export const directoryCap = 1000;
+
+/** 服务端总数比装下的多，或刚好取满上限。两种都要在菜单下说明。 */
+export function directoryCapped(loaded: number, total: number) {
+  return total > loaded || loaded === directoryCap;
+}
+
+/**
+ * 确认人、作废人的姓名（G10）。一次取回并缓存，账号变更会使其失效。
+ * `capped` 留给操作日志的管理员菜单；待收款只读姓名，仍把结果当 Map 用。
+ */
 export const adminNames = queryOptions({
   queryKey: [...apiKey('adminAccounts'), 'names'],
   staleTime: 5 * 60_000,
   queryFn: async () => {
     const names = new Map<string, string>();
-    for (let page = 1; page <= 10; page += 1) {
+    let total = 0;
+    const pages = directoryCap / directoryPageSize;
+    for (let page = 1; page <= pages; page += 1) {
       const result = await send('adminAccounts', {
-        query: { page, pageSize: 100 },
+        query: { page, pageSize: directoryPageSize },
       });
+      total = result.pagination.total;
       for (const account of result.items) names.set(account.id, account.name);
       if (page * result.pagination.pageSize >= result.pagination.total) break;
     }
-    return names;
+    return Object.assign(names, { capped: directoryCapped(names.size, total) });
   },
 });
 

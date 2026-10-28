@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   isDayRangeWithinOneMonth,
   latestRangeEnd,
+  type AdminDeletedMonth,
   type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { CdrDeleteDialog } from '../../../components/admin/cdr-delete-dialog';
 import {
   UnverifiedBadge,
   UnverifiedBanner,
@@ -12,12 +15,14 @@ import {
   unverifiedFilter,
   unverifiedSummaryNote,
 } from '../../../components/admin/cdr-unverified';
+import { formatCount } from '../../../components/cdr/cdr-format';
 import { CdrExplorer } from '../../../components/cdr/cdr-explorer';
 import {
   CdrExportButton,
   CdrExportError,
   useCdrExport,
 } from '../../../components/cdr/cdr-export';
+import { Button } from '../../../components/ui/button';
 import { apiQuery } from '../../../lib/admin-api';
 import { callDownload } from '../../../lib/api';
 import type { TenantDetailSearch } from '../../../lib/admin-search';
@@ -27,7 +32,9 @@ import {
   type CdrFilters,
 } from '../../../lib/cdr-search';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../../lib/day-range';
-import { formatDate } from '../../../lib/format';
+import { formatDate, formatDateTime } from '../../../lib/format';
+import { statementMonthTitle } from '../../../lib/statement';
+import { cn } from '../../../lib/utils';
 
 type CdrsSearch = Pick<
   TenantDetailSearch,
@@ -37,9 +44,11 @@ type CdrsSearch = Pick<
 /**
  * 租户话单（设计稿管理后台第三批 1b 至 1e、3b 至 3e）：与客户门户同一套话单组件，另有「未经验证」
  * 标签、「仅看未经验证」筛选、详情里的验证状态，导出会写操作日志。
- * 阶段 8 的「删除话单」与阶段 9 的「查看告警」未开发，不显示（决定 15）。
+ * 「删除话单」按整月删除已结束且账单已生成的月份（决定 15：当月、无账单月、已删除月不可选）。
+ * 范围内已删除的月份在列表上方提示（决定 12）。阶段 9 的「查看告警」未开发，不显示。
  */
 export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const search = useSearch({ from: '/admin/tenants/$tenantId' });
   const navigate = useNavigate({ from: '/admin/tenants/$tenantId' });
   const { callee, country, status, unverifiedOnly, page = 1 } = search;
@@ -93,6 +102,24 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       {...(className ? { className } : {})}
     />
   );
+  const deleteButton = (className?: string) => (
+    <Button
+      variant="danger"
+      className={cn('border-err-border', className)}
+      onClick={() => setDeleteOpen(true)}
+    >
+      删除话单
+    </Button>
+  );
+  const deletedMonths = list.data?.deletedMonths ?? [];
+  const unverifiedBanner =
+    unverifiedOnly && list.data ? (
+      <UnverifiedBanner total={list.data.pagination.total} />
+    ) : null;
+  const deletedBanner =
+    deletedMonths.length > 0 ? (
+      <DeletedMonthsBanner months={deletedMonths} />
+    ) : null;
   return (
     <div className="flex flex-col gap-4">
       <CdrExplorer
@@ -114,9 +141,14 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           />
         }
         banner={
-          unverifiedOnly && list.data ? (
-            <UnverifiedBanner total={list.data.pagination.total} />
-          ) : null
+          deletedBanner && unverifiedBanner ? (
+            <div className="flex flex-col gap-2">
+              {deletedBanner}
+              {unverifiedBanner}
+            </div>
+          ) : (
+            (deletedBanner ?? unverifiedBanner)
+          )
         }
         summaryNote={(summary) =>
           unverifiedSummaryNote(
@@ -127,7 +159,12 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         filterExtra={unverifiedFilter(unverifiedOnly === true, (checked) =>
           setFilter({ unverifiedOnly: checked ? true : undefined }),
         )}
-        filterTrailing={exportButton()}
+        filterTrailing={
+          <div className="flex gap-2">
+            {exportButton()}
+            {deleteButton()}
+          </div>
+        }
         activeExtraFilters={unverifiedOnly ? ['仅看未经验证'] : []}
         rowBadge={(cdr) => <UnverifiedBadge cdr={cdr} />}
         detailExtra={unverifiedDetail}
@@ -136,7 +173,43 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         onFilters={setFilter}
         onPage={(next) => update({ page: next > 1 ? next : undefined })}
       />
-      <div className="md:hidden">{exportButton('h-11 w-full')}</div>
+      <div className="flex flex-col gap-2 md:hidden">
+        {exportButton('h-11 w-full')}
+        {deleteButton('h-11 w-full')}
+      </div>
+      <CdrDeleteDialog
+        tenant={tenant}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
+    </div>
+  );
+}
+
+/** 旧标志没有条数、操作人或时间时只写月份（PR 4 偏差 4）。三列都在才写完整一行。 */
+function deletedMonthLine(row: AdminDeletedMonth) {
+  const title = `${statementMonthTitle(row.month)} 的话单已删除`;
+  if (row.count === null || row.deletedBy === null || row.deletedAt === null)
+    return title;
+  return `${title} · 共 ${formatCount(row.count)} 条 · ${row.deletedBy.name} 删除于 ${formatDateTime(row.deletedAt).slice(0, 16)}`;
+}
+
+function DeletedMonthsBanner({
+  months,
+}: {
+  months: readonly AdminDeletedMonth[];
+}) {
+  return (
+    <div
+      role="region"
+      aria-label="已删除的话单"
+      className="flex flex-col gap-1 rounded-lg border border-border bg-muted px-3.5 py-2.5 text-[13px] leading-normal text-muted-foreground"
+    >
+      {months.map((row) => (
+        <p key={row.month} className="m-0">
+          {deletedMonthLine(row)}
+        </p>
+      ))}
     </div>
   );
 }

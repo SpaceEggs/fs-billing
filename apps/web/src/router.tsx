@@ -22,9 +22,11 @@ import { PendingPage } from './pages/pending';
 import {
   validateAdminAccountsSearch,
   validateAdminStatementsSearch,
+  validateAuditLogSearch,
   validateReceivablesSearch,
   validateTenantDetailSearch,
   validateTenantListSearch,
+  validateUnassignedSearch,
 } from './lib/admin-search';
 import { clearBalanceAttempts } from './lib/balance-attempts';
 import { validatePortalCdrsSearch } from './lib/cdr-search';
@@ -52,6 +54,14 @@ const ReceivablesPage = lazyRouteComponent(
 const AdminStatementsPage = lazyRouteComponent(
   () => import('./pages/admin/statements'),
   'AdminStatementsPage',
+);
+const AdminAuditLogsPage = lazyRouteComponent(
+  () => import('./pages/admin/audit-logs'),
+  'AdminAuditLogsPage',
+);
+const UnassignedPage = lazyRouteComponent(
+  () => import('./pages/admin/unassigned'),
+  'AdminUnassignedPage',
 );
 const TenantCreatePage = lazyRouteComponent(
   () => import('./pages/admin/tenant-create'),
@@ -337,6 +347,16 @@ const adminReceivables = createRoute({
   ),
 });
 
+const adminUnassigned = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'unassigned',
+  validateSearch: validateUnassignedSearch,
+  component: lazyRoute(
+    () => <UnassignedPage identity={useZoneIdentity()} />,
+    UnassignedPage,
+  ),
+});
+
 const adminStatements = createRoute({
   getParentRoute: () => adminLayout,
   path: 'statements',
@@ -344,6 +364,16 @@ const adminStatements = createRoute({
   component: lazyRoute(
     () => <AdminStatementsPage identity={useZoneIdentity()} />,
     AdminStatementsPage,
+  ),
+});
+
+const adminAuditLogs = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'audit-logs',
+  validateSearch: validateAuditLogSearch,
+  component: lazyRoute(
+    () => <AdminAuditLogsPage identity={useZoneIdentity()} />,
+    AdminAuditLogsPage,
   ),
 });
 
@@ -459,7 +489,9 @@ const routeTree = rootRoute.addChildren([
     adminTenantDetail,
     adminTenantEdit,
     adminReceivables,
+    adminUnassigned,
     adminStatements,
+    adminAuditLogs,
     adminAccounts,
   ]),
 ]);

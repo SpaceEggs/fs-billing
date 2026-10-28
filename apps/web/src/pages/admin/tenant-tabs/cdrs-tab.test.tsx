@@ -1,7 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminApi, renderApp } from '../../../test/app';
+import { sessionExpiry } from '../../../lib/session';
+import {
+  adminApi,
+  apiError,
+  renderApp,
+  type ApiHandler,
+} from '../../../test/app';
 import { answeredCdr, cdrList } from '../../../test/cdr';
 
 const downloadBlob = vi.hoisted(() =>
@@ -49,18 +55,22 @@ const verifiedRow = answeredCdr(1, { unverified: false });
 
 function cdrApp(
   path: string,
-  list: (url: string) => { status: number; body?: unknown } = () => ({
-    status: 200,
-    body: cdrList([verifiedRow, unverifiedRow], { unverifiedCalls: 1 }),
-  }),
+  list?: (url: string) => { status: number; body?: unknown },
+  extra: Record<string, ApiHandler> = {},
 ) {
+  const fetchList =
+    list ??
+    (() => ({
+      status: 200,
+      body: cdrList([verifiedRow, unverifiedRow], { unverifiedCalls: 1 }),
+    }));
   const lists: URLSearchParams[] = [];
   const exports: { path: string; body: unknown }[] = [];
   const { handler } = adminApi({
     [`GET ${detailPath}`]: () => ({ status: 200, body: detail }),
     [`GET ${cdrsPath}`]: (url) => {
       lists.push(new URL(url, 'http://localhost').searchParams);
-      return list(url);
+      return fetchList(url);
     },
     [`GET ${cdrsPath}/countries`]: () => ({
       status: 200,
@@ -78,6 +88,25 @@ function cdrApp(
         },
       };
     },
+    [`GET ${detailPath}/cdr-deletions`]: () => ({
+      status: 200,
+      body: {
+        tenant: {
+          id: tenantId,
+          code: 'ABC001',
+          name: '深圳市某某科技有限公司',
+        },
+        year: 2026,
+        months: Array.from({ length: 12 }, (_, index) => ({
+          month: `2026-${String(index + 1).padStart(2, '0')}`,
+          state: index + 1 === 8 ? 'deletable' : 'no_statement',
+          cdrCount: index + 1 === 8 ? 9642 : null,
+          blockedReasons: [],
+          statementId: null,
+          deleted: null,
+        })),
+      },
+    }),
     [`GET ${detailPath}/ledger`]: () => ({
       status: 200,
       body: {
@@ -88,6 +117,7 @@ function cdrApp(
         pagination: { page: 1, pageSize: 25, total: 0 },
       },
     }),
+    ...extra,
   });
   return { lists, exports, ...renderApp(path, handler) };
 }
@@ -102,6 +132,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  sessionExpiry.clear();
 });
 
 const path = `/admin/tenants/${tenantId}?tab=cdrs`;
@@ -139,12 +170,97 @@ describe('admin tenant CDR tab', () => {
     ).toHaveTextContent('其中未经验证 1 条');
   });
 
-  it('shows neither the delete button nor the alert link of later phases', async () => {
+  it('shows the delete button and hides the alert link of the later phase', async () => {
     cdrApp(`${path}&unverifiedOnly=true`);
     await screen.findByRole('table');
-    expect(document.body).not.toHaveTextContent('删除话单');
+    expect(screen.getAllByRole('button', { name: '删除话单' })).toHaveLength(2);
     expect(document.body).not.toHaveTextContent('查看告警');
     expect(document.body).not.toHaveTextContent('关联告警');
+  });
+
+  it('banners each deleted month in the selected range, with metadata only when it exists', async () => {
+    cdrApp(path, () => ({
+      status: 200,
+      body: cdrList([verifiedRow], {
+        unverifiedCalls: 0,
+        deletedMonths: [
+          {
+            month: '2026-07',
+            count: null,
+            deletedBy: null,
+            deletedAt: null,
+          },
+          {
+            month: '2026-08',
+            count: 9642,
+            deletedBy: {
+              id: '00000000-0000-4000-8000-000000000009',
+              name: '王敏',
+            },
+            deletedAt: '2026-10-28T06:03:00.000Z',
+          },
+        ],
+      }),
+    }));
+    const banner = await screen.findByRole('region', { name: '已删除的话单' });
+    expect(within(banner).getByText('2026年7月 的话单已删除')).toBeVisible();
+    expect(
+      within(banner).getByText(
+        '2026年8月 的话单已删除 · 共 9,642 条 · 王敏 删除于 2026-10-28 14:03',
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole('table')).toBeVisible();
+  });
+
+  it('a 401 while deleting asks the admin to sign in again', async () => {
+    const user = userEvent.setup();
+    const { location } = cdrApp(path, undefined, {
+      [`POST ${detailPath}/cdr-deletions`]: () => ({
+        status: 401,
+        body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+      }),
+    });
+    await screen.findByRole('table');
+    await user.click(screen.getAllByRole('button', { name: '删除话单' })[0]!);
+    const dialog = await screen.findByRole('dialog', { name: '删除话单' });
+    await user.click(
+      within(dialog).getByRole('button', { name: '开始月份：选择月份' }),
+    );
+    await user.click(
+      await within(dialog).findByRole('button', {
+        name: '2026年8月，9,642 条',
+      }),
+    );
+    await user.type(
+      within(dialog).getByRole('textbox', { name: /请输入租户编码/ }),
+      'ABC001',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '删除 9,642 条话单' }),
+    );
+    const expired = await screen.findByRole('dialog', {
+      name: '登录已过期，请重新登录',
+    });
+    expect(dialog).toBeInTheDocument();
+    expect(screen.queryByRole('alert', { hidden: true })).toBeNull();
+    await user.click(within(expired).getByRole('button', { name: '重新登录' }));
+    await waitFor(() => expect(location()).toBe('/admin/login?reason=expired'));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '登录已过期，请重新登录登录后将返回之前的页面',
+    );
+  });
+
+  it('opens the delete dialog from the calls tab', async () => {
+    const user = userEvent.setup();
+    cdrApp(path);
+    await screen.findByRole('table');
+    await user.click(screen.getAllByRole('button', { name: '删除话单' })[0]!);
+    expect(
+      await screen.findByRole('dialog', { name: '删除话单' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '开始月份：选择月份' }),
+    ).toBeVisible();
   });
 
   it('filters to the unverified calls and explains them without the fault time or alerts', async () => {

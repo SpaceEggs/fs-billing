@@ -1,11 +1,14 @@
 import { z } from 'zod';
 import {
+  adminAuditLogsQuerySchema,
   adminLedgerKindSchema,
   adminPageQuerySchema,
   adminReceivablesQuerySchema,
   adminTenantsQuerySchema,
+  adminUnassignedListQuerySchema,
   dayRangeFields,
   statementMonthSchema,
+  type AuditLabel,
 } from '@fs-billing/shared';
 import { validateCdrFilters, type CdrFilters } from './cdr-search';
 
@@ -145,4 +148,60 @@ export function validateAdminStatementsSearch(
   raw: Record<string, unknown>,
 ): AdminStatementsSearch {
   return { month: statementMonthSchema.safeParse(raw['month']).data };
+}
+
+/**
+ * 未归属话单：默认待处理不写入地址。`tag` 不传是全部分组，空串是「标签为空」。
+ * 路由会把纯数字查询串收成 number（`"326"` → 326），这里还原成字符串，否则数字标签会被丢掉。
+ */
+export type UnassignedSearch = {
+  tab?: 'ignored' | undefined;
+  tag?: string | undefined;
+  page?: number | undefined;
+};
+
+function unassignedTagOf(raw: unknown) {
+  const value =
+    typeof raw === 'number' && Number.isFinite(raw) ? String(raw) : raw;
+  return adminUnassignedListQuerySchema.shape.tag.safeParse(value).data;
+}
+
+export function validateUnassignedSearch(
+  raw: Record<string, unknown>,
+): UnassignedSearch {
+  return {
+    tab: raw['tab'] === 'ignored' ? 'ignored' : undefined,
+    tag: unassignedTagOf(raw['tag']),
+    page: pageOf(raw['page']),
+  };
+}
+
+/**
+ * 操作日志：日期、管理员、操作标签、租户与页码。默认最近 30 天不写入地址。
+ * 两端都是合法日期但开始晚于结束时丢掉 `to`（契约把错误记在 to 上），避免整段查询被拒。
+ */
+export type AuditLogSearch = {
+  from?: string | undefined;
+  to?: string | undefined;
+  adminId?: string | undefined;
+  label?: AuditLabel | undefined;
+  tenantId?: string | undefined;
+  page?: number | undefined;
+};
+
+export function validateAuditLogSearch(
+  raw: Record<string, unknown>,
+): AuditLogSearch {
+  const shape = adminAuditLogsQuerySchema.shape;
+  const from = shape.from.safeParse(raw['from']).data;
+  let to = shape.to.safeParse(raw['to']).data;
+  if (from !== undefined && to !== undefined && from > to) to = undefined;
+  return {
+    from,
+    to,
+    adminId: shape.adminId.safeParse(raw['adminId']).data,
+    label: shape.label.safeParse(raw['label']).data,
+    tenantId: shape.tenantId.safeParse(raw['tenantId']).data,
+    page: pageOf(raw['page']),
+  };
 }

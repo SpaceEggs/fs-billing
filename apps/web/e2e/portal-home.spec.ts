@@ -60,13 +60,22 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
     expect(label).not.toMatch(/通/);
   // 设计稿 1a：横轴每 5 天一个日期，共 7 个。
   await expect(page.getByTestId('chart-dates').locator('span')).toHaveCount(7);
-  // 悬浮气泡是自绘的深色块，只有日期和金额。
-  await expect(page.getByTestId('chart-bubble')).toHaveCount(0);
-  await bars.first().hover();
+  // 气泡是自绘的深色块，只有日期和金额。用键盘触发：窗口随当天日期滑动，种子消费日会移出窗口，
+  // 悬停首根柱子可能是零消费日（柱高 0%，不可见）。
   const bubble = page.getByTestId('chart-bubble');
+  await expect(bubble).toHaveCount(0);
+  await chart.getByRole('list').focus();
+  // 聚焦后默认显示今日。
   await expect(bubble).toBeVisible();
+  await expect(bubble).toContainText(/^\d{4}-\d\d-\d\d（今日）¥[\d,.]+$/);
+  // Home 跳到窗口第一天，气泡日期与首根柱子一致。
+  await page.keyboard.press('Home');
+  const firstDate = (await bars.first().getAttribute('aria-label'))?.split(
+    ' ',
+  )[0];
   await expect(bubble).toContainText(/^\d{4}-\d\d-\d\d¥[\d,.]+$/);
-  await page.mouse.move(0, 0);
+  await expect(bubble).toContainText(firstDate ?? '');
+  await page.keyboard.press('Escape');
   await expect(bubble).toHaveCount(0);
 
   const calls = page

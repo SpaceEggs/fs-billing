@@ -37,6 +37,17 @@ export function apiQuery<Id extends OperationId>(
   });
 }
 
+/** 未归属话单的汇总、分组和列表。归属、忽略、撤销后一起刷新。 */
+export function invalidateUnassigned(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({
+    predicate: ({ queryKey }) =>
+      queryKey[0] === 'api' &&
+      (queryKey[1] === 'adminUnassignedSummary' ||
+        queryKey[1] === 'adminUnassignedGroups' ||
+        queryKey[1] === 'adminUnassignedList'),
+  });
+}
+
 /** 与租户相关的数据：列表、待收款汇总，以及 params.tenantId 等于该租户的所有查询。 */
 export function invalidateTenant(queryClient: QueryClient, tenantId: string) {
   return queryClient.invalidateQueries({
