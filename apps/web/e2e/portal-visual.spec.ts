@@ -75,15 +75,19 @@ const shots: Shot[] = [
     email: accounts.customer,
     viewport: desktopViewport,
     frame: frame('1a 电脑 · 透支中'),
-    note: '稿 1a 的气泡是静态画在今日柱上；种子里今日无消费，这里悬浮在 09-28 的柱子上，只对照气泡样式。',
+    note: '稿 1a 的气泡是静态画在今日柱上；图表窗口随运行日滑动（日期来自接口，不是浏览器时钟），种子消费止于 2026-09-29，今日一般无消费，所以气泡显示今日 ¥0.00，只对照气泡样式与位置（键盘聚焦会让图表带一圈焦点框，稿里没有）。',
     ready: async (page) => {
       await expect(
         page.getByRole('region', { name: '最近 30 天每日消费' }),
       ).toBeVisible();
     },
     prepare: async (page) => {
-      await page.getByRole('listitem', { name: /^2026-09-28 / }).hover();
-      await expect(page.getByTestId('chart-bubble')).toBeVisible();
+      // 键盘聚焦图表后气泡默认落在今日柱上，与窗口滑到哪一天无关（悬停固定日期的柱子会在种子日期移出窗口后超时）。
+      await page
+        .getByRole('region', { name: '最近 30 天每日消费' })
+        .getByRole('list')
+        .focus();
+      await expect(page.getByTestId('chart-bubble')).toContainText('（今日）');
     },
   },
   {
