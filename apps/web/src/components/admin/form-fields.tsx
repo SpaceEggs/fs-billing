@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Currency } from '@fs-billing/shared';
+import { Label } from '../ui/label';
 import { addRecipients } from '../../lib/tenant-create';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -83,7 +84,7 @@ export function Field({
   return (
     <div className={cn('flex flex-col gap-1.5 text-sm font-medium', className)}>
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={id}>
+        <Label htmlFor={id}>
           {shortLabel ? (
             <>
               <span aria-hidden className="md:hidden">
@@ -103,7 +104,7 @@ export function Field({
           {optional ? (
             <span className="font-normal text-muted-foreground">（可选）</span>
           ) : null}
-        </label>
+        </Label>
         {badge}
       </div>
       {children({
@@ -282,7 +283,7 @@ export function RecipientsInput({
         className,
       )}
     >
-      <label htmlFor={id}>通知邮箱</label>
+      <Label htmlFor={id}>通知邮箱</Label>
       <span className="-mt-1 text-xs font-normal text-muted-foreground">
         可添加多个，余额不足和停机通知会发送到这些邮箱
       </span>

@@ -7,6 +7,7 @@ import {
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { Label } from '../ui/label';
 import {
   apiQuery,
   invalidateTenant,
@@ -439,7 +440,7 @@ function Upload({
         </Alert>
       ) : null}
       <div className="flex flex-col gap-2">
-        <label
+        <Label
           htmlFor={id}
           onDragOver={(event) => {
             event.preventDefault();
@@ -491,7 +492,7 @@ function Upload({
             }}
             className="sr-only"
           />
-        </label>
+        </Label>
         {fileError ? (
           <span role="alert" className="text-xs text-err">
             {fileError}

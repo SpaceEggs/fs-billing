@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Label } from '../ui/label';
 import type { CdrFilters } from '../../lib/cdr-search';
 import type { DayRange } from '../../lib/day-range';
 import { latestRangeEnd } from '@fs-billing/shared';
@@ -138,9 +139,9 @@ export function CdrFilterBar({
           )}
         </FilterGroup>
         <div className="flex flex-col gap-2">
-          <label htmlFor={sheetCountryId} className="text-sm font-medium">
+          <Label htmlFor={sheetCountryId} className="text-sm font-medium">
             国家
-          </label>
+          </Label>
           <NativeSelect
             id={sheetCountryId}
             value={country}
@@ -169,9 +170,9 @@ export function CdrFilterBar({
       <div className="hidden md:contents">
         <Field label="日期范围 · 最长一个月">{dateField('w-[260px]')}</Field>
         <Field label="国家">
-          <label htmlFor={countryId} className="sr-only">
+          <Label htmlFor={countryId} className="sr-only">
             国家
-          </label>
+          </Label>
           <NativeSelect
             id={countryId}
             value={country}

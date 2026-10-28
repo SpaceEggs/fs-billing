@@ -9,6 +9,7 @@ import type {
   AdminCdrDeletionMonth,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Label } from '../ui/label';
 import {
   invalidateTenant,
   apiQuery,
@@ -699,13 +700,13 @@ function CodeField({
   const hardWrong = code.length > 0 && !tenantCode.startsWith(code);
   return (
     <div className="flex flex-col gap-1.5 text-[13px] font-medium">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         请输入租户编码{' '}
         <span className="rounded bg-muted px-1.5 py-px font-mono font-normal">
           {tenantCode}
         </span>{' '}
         以确认
-      </label>
+      </Label>
       <Input
         id={id}
         value={code}

@@ -8,6 +8,7 @@ import {
   type Identity,
 } from '@fs-billing/shared';
 import { PlusIcon } from 'lucide-react';
+import { Label } from '../../components/ui/label';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
 import {
@@ -119,9 +120,9 @@ function Filters({ total }: { total: number | undefined }) {
         </FilterGroup>
       </FilterSheet>
       <div className="hidden md:contents">
-        <label htmlFor={statusId} className="sr-only">
+        <Label htmlFor={statusId} className="sr-only">
           状态
-        </label>
+        </Label>
         <NativeSelect
           id={statusId}
           value={search.status ?? ''}

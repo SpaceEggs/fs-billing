@@ -6,6 +6,7 @@ import type {
   AdminTenantDetailResponse,
   AdminTenantStatementResponse,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { Alert } from '../../../components/ui/alert';
 import {
   RegenerateDialog,
@@ -92,10 +93,10 @@ export function StatementDetailView({
           onRetry={() => void detail.refetch()}
         />
       ) : (
-        <div
+        <Skeleton
           aria-busy
           aria-label="账单加载中"
-          className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+          className="h-[240px] rounded-xl"
         />
       )}
       <RegenerateDialog

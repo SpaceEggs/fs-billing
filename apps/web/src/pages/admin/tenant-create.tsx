@@ -12,6 +12,7 @@ import {
   type Identity,
 } from '@fs-billing/shared';
 import { XIcon } from 'lucide-react';
+import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
@@ -141,7 +142,7 @@ function CsvPicker({
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <label htmlFor={id}>CSV 文件</label>
+      <Label htmlFor={id}>CSV 文件</Label>
       <input
         id={id}
         type="file"
@@ -206,7 +207,7 @@ function CopySourcePicker({
   const total = tenants.data?.pagination.total ?? 0;
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium md:col-span-2">
-      <label htmlFor={`${id}-search`}>搜索来源租户</label>
+      <Label htmlFor={`${id}-search`}>搜索来源租户</Label>
       <Input
         id={`${id}-search`}
         type="search"
@@ -215,7 +216,7 @@ function CopySourcePicker({
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      <label htmlFor={id}>复制自</label>
+      <Label htmlFor={id}>复制自</Label>
       <NativeSelect
         id={id}
         value={picked?.id ?? ''}

@@ -7,6 +7,7 @@ import type {
   Currency,
   Identity,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   GenerationNotes,
   RegenerateButton,
@@ -123,10 +124,10 @@ export function AdminStatementsPage({ identity }: { identity: Identity }) {
             onRetry={() => void list.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="账单加载中"
-            className="h-[160px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[160px] rounded-xl"
           />
         )}
         <p className="m-0 text-xs text-muted-foreground max-md:hidden">

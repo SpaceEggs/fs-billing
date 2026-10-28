@@ -12,6 +12,8 @@ import {
   type PortalLedgerRow,
 } from '@fs-billing/shared';
 import { DownloadIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Label } from '../../components/ui/label';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime, Money } from '../../components/data-format';
@@ -319,9 +321,9 @@ export function PortalLedgerPage({
             </FilterGroup>
           </FilterSheet>
           <div className="hidden md:contents">
-            <label htmlFor={kindId} className="sr-only">
+            <Label htmlFor={kindId} className="sr-only">
               类型
-            </label>
+            </Label>
             <NativeSelect
               id={kindId}
               value={kind ?? ''}
@@ -414,10 +416,10 @@ export function PortalLedgerPage({
             onRetry={() => void ledger.refetch()}
           />
         ) : !data ? (
-          <div
+          <Skeleton
             aria-busy
             aria-label="余额流水加载中"
-            className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[240px] rounded-xl"
           />
         ) : data.items.length === 0 ? (
           isDefaultView ? (

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { Identity, PortalStatementResponse } from '@fs-billing/shared';
 import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
 import { AppShell } from '../../components/app-shell';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
@@ -339,10 +340,10 @@ export function PortalStatementDetailPage({
         </div>
       ) : (
         <div className="p-4 md:p-7">
-          <div
+          <Skeleton
             aria-busy
             aria-label="月账单加载中"
-            className="h-[320px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[320px] rounded-xl"
           />
         </div>
       )}

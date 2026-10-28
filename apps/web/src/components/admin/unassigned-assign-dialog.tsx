@@ -7,6 +7,7 @@ import type {
   AdminUnassignedPreviewResponse,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Skeleton } from '../ui/skeleton';
 import { Input } from '../ui/input';
 import { Alert } from '../ui/alert';
 import {
@@ -646,10 +647,10 @@ function TenantPicker({
           onRefresh={() => void tenants.refetch()}
         />
       ) : !tenants.data ? (
-        <div
+        <Skeleton
           aria-busy="true"
           aria-label="租户加载中"
-          className="h-10 animate-pulse rounded-lg bg-skeleton"
+          className="h-10 rounded-lg"
         />
       ) : others.length > 0 ? (
         <div

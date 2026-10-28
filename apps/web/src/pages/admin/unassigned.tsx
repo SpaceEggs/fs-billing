@@ -11,6 +11,7 @@ import type {
   Identity,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Alert } from '../../components/ui/alert';
 import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign-dialog';
@@ -278,26 +279,30 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
           query={summary}
         />
         {summary.data ? (
-          <div
-            role="tablist"
-            aria-label="未归属话单"
-            className="flex gap-2 border-border text-sm md:gap-1 md:border-b"
+          <Tabs
+            value={tab}
+            onValueChange={(next) =>
+              update(next === 'ignored' ? { tab: 'ignored' } : {})
+            }
+            className="gap-0"
           >
-            <TabButton
-              selected={tab === 'pending'}
-              count={summary.data.pending}
-              onClick={() => update({})}
-            >
-              待处理
-            </TabButton>
-            <TabButton
-              selected={tab === 'ignored'}
-              count={summary.data.ignored}
-              onClick={() => update({ tab: 'ignored' })}
-            >
-              已忽略
-            </TabButton>
-          </div>
+            <TabsList aria-label="未归属话单">
+              <TabButton
+                value="pending"
+                selected={tab === 'pending'}
+                count={summary.data.pending}
+              >
+                待处理
+              </TabButton>
+              <TabButton
+                value="ignored"
+                selected={tab === 'ignored'}
+                count={summary.data.ignored}
+              >
+                已忽略
+              </TabButton>
+            </TabsList>
+          </Tabs>
         ) : summary.isPending ? (
           <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
             加载中
@@ -460,31 +465,18 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
 }
 
 function TabButton({
+  value,
   selected,
   count,
-  onClick,
   children,
 }: {
+  value: 'pending' | 'ignored';
   selected: boolean;
   count: number;
-  onClick: () => void;
   children: string;
 }) {
   return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={selected}
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-1.5 px-3 outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-        'max-md:h-10 max-md:rounded-full',
-        'md:-mb-px md:border-b-2 md:py-2.5',
-        selected
-          ? 'font-semibold max-md:bg-primary max-md:text-primary-foreground md:border-primary'
-          : 'text-muted-foreground max-md:border max-md:border-input md:border-transparent',
-      )}
-    >
+    <TabsTrigger value={value}>
       {children}
       <span
         className={cn(
@@ -496,7 +488,7 @@ function TabButton({
       >
         {countText(count)}
       </span>
-    </button>
+    </TabsTrigger>
   );
 }
 

@@ -7,6 +7,8 @@ import {
   type AdminAuditLog,
   type Identity,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { DateRangeField } from '../../components/date-range-field';
@@ -296,10 +298,10 @@ export function AdminAuditLogsPage({ identity }: { identity: Identity }) {
             onRetry={() => void logs.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="操作日志加载中"
-            className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[240px] rounded-xl"
           />
         )}
       </PageBody>
@@ -477,9 +479,9 @@ function NamedSelect({
   const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs text-muted-foreground">
+      <Label htmlFor={id} className="text-xs text-muted-foreground">
         {label}
-      </label>
+      </Label>
       <NativeSelect
         id={id}
         value={value}

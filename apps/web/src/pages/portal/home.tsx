@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
 import type { Identity, PortalHomeResponse } from '@fs-billing/shared';
+import { Skeleton } from '../../components/ui/skeleton';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { DailyChart } from '../../components/daily-spend-chart';
 import { Money } from '../../components/data-format';
@@ -274,10 +275,10 @@ export function PortalHome({ identity }: { identity: Identity }) {
             onRetry={() => void home.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="首页加载中"
-            className="h-[320px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[320px] rounded-xl"
           />
         )}
       </PageBody>

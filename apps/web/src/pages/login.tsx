@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
 import type { LoginRequest } from '@fs-billing/shared';
+import { Label } from '../components/ui/label';
 import {
   AdminPill,
   BrandRow,
@@ -213,7 +214,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
           ) : null}
           <div className="flex flex-col gap-3.5">
             <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-              <label htmlFor={ids.email}>登录邮箱</label>
+              <Label htmlFor={ids.email}>登录邮箱</Label>
               <Input
                 id={ids.email}
                 type="email"
@@ -229,7 +230,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             </div>
             <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
               <div className="flex items-center justify-between">
-                <label htmlFor={ids.password}>密码</label>
+                <Label htmlFor={ids.password}>密码</Label>
                 <ForgotLink
                   zone={zone}
                   onClick={() => setForgotOpen((open) => !open)}

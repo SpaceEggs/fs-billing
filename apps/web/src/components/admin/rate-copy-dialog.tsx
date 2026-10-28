@@ -6,6 +6,7 @@ import {
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { Skeleton } from '../ui/skeleton';
 import { Input } from '../ui/input';
 import {
   apiQuery,
@@ -573,10 +574,10 @@ function TenantPicker({
           onRefresh={() => void tenants.refetch()}
         />
       ) : !tenants.data ? (
-        <div
+        <Skeleton
           aria-busy
           aria-label="租户加载中"
-          className="h-[120px] animate-pulse rounded-lg bg-skeleton"
+          className="h-[120px] rounded-lg"
         />
       ) : items.length === 0 ? (
         <span className="rounded-lg border border-border px-3 py-4 text-center text-[13px] text-muted-foreground">

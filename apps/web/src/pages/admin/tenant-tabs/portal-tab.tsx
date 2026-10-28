@@ -5,6 +5,7 @@ import type {
   AdminPortalAccountCreateResponse,
   AdminStatus,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { Badge } from '../../../components/ui/badge';
 import { Alert } from '../../../components/ui/alert';
 import {
@@ -265,10 +266,10 @@ export function PortalTab({
     );
   if (!accounts.data)
     return (
-      <div
+      <Skeleton
         aria-busy
         aria-label="门户账号加载中"
-        className="h-[180px] max-w-[760px] animate-pulse rounded-xl bg-skeleton"
+        className="h-[180px] max-w-[760px] rounded-xl"
       />
     );
   const account = accounts.data.items[0];

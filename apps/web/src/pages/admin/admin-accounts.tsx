@@ -12,6 +12,7 @@ import type {
   Identity,
 } from '@fs-billing/shared';
 import { PlusIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Badge } from '../../components/ui/badge';
 import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
@@ -506,10 +507,10 @@ export function CreateAdminDialog({ onClose }: { onClose: () => void }) {
 
 function LoadingRows() {
   return (
-    <div
+    <Skeleton
       aria-busy
       aria-label="管理员列表加载中"
-      className="h-[180px] animate-pulse rounded-xl bg-skeleton"
+      className="h-[180px] rounded-xl"
     />
   );
 }

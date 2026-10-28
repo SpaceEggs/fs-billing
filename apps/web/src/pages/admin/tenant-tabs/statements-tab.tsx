@@ -6,6 +6,7 @@ import type {
   AdminTenantStatementRow,
   AdminTenantStatementsResponse,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { Badge } from '../../../components/ui/badge';
 import {
   GenerationNotes,
@@ -74,10 +75,10 @@ function StatementList({ tenant }: { tenant: AdminTenantDetailResponse }) {
           onRetry={() => void list.refetch()}
         />
       ) : (
-        <div
+        <Skeleton
           aria-busy
           aria-label="账单加载中"
-          className="h-[160px] animate-pulse rounded-xl bg-skeleton"
+          className="h-[160px] rounded-xl"
         />
       )}
       <RegenerateDialog

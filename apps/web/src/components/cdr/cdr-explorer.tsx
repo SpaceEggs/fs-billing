@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { Currency, PortalCdr } from '@fs-billing/shared';
+import { Skeleton } from '../ui/skeleton';
 import type { CdrFilters } from '../../lib/cdr-search';
 import { rangeLabel, type DayRange } from '../../lib/day-range';
 import { cn } from '../../lib/utils';
@@ -26,7 +27,7 @@ export type CdrListData<Row extends PortalCdr> = {
   };
 };
 
-function Skeleton() {
+function CdrSkeleton() {
   return (
     <div
       aria-busy
@@ -38,10 +39,10 @@ function Skeleton() {
           key={index}
           className="grid h-[42px] grid-cols-[2fr_2fr_1fr_1fr] items-center gap-3.5 border-b border-border px-3.5 last:border-b-0"
         >
-          <span className="h-2.5 w-[85%] animate-pulse rounded bg-skeleton" />
-          <span className="h-2.5 w-[70%] animate-pulse rounded bg-skeleton" />
-          <span className="h-2.5 w-[60%] animate-pulse justify-self-end rounded bg-skeleton" />
-          <span className="h-2.5 w-[75%] animate-pulse justify-self-end rounded bg-skeleton" />
+          <Skeleton className="h-2.5 w-[85%] rounded" />
+          <Skeleton className="h-2.5 w-[70%] rounded" />
+          <Skeleton className="h-2.5 w-[60%] justify-self-end rounded" />
+          <Skeleton className="h-2.5 w-[75%] justify-self-end rounded" />
         </div>
       ))}
     </div>
@@ -206,7 +207,7 @@ export function CdrExplorer<Row extends PortalCdr>({
           onRetry={() => void list.refetch()}
         />
       ) : !data ? (
-        <Skeleton />
+        <CdrSkeleton />
       ) : data.items.length === 0 && data.pagination.total > 0 ? (
         <Empty
           filtered

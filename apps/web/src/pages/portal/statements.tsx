@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Identity } from '@fs-billing/shared';
+import { Skeleton } from '../../components/ui/skeleton';
 import { AppShell } from '../../components/app-shell';
 import { DateTime } from '../../components/data-format';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -100,10 +101,10 @@ export function PortalStatementsPage({ identity }: { identity: Identity }) {
             onRetry={() => void statements.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="月账单加载中"
-            className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[240px] rounded-xl"
           />
         )}
       </div>

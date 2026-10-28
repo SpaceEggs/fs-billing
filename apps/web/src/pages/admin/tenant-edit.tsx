@@ -8,6 +8,7 @@ import {
   type Identity,
 } from '@fs-billing/shared';
 import { XIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Textarea } from '../../components/ui/textarea';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
@@ -286,10 +287,10 @@ export function TenantEditPage({ identity }: { identity: Identity }) {
             onRetry={() => void detail.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="租户详情加载中"
-            className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[240px] rounded-xl"
           />
         )}
       </PageBody>

@@ -10,6 +10,7 @@ import {
   type AdminRateVersion,
   type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import {
@@ -169,10 +170,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     );
   if (!data)
     return (
-      <div
+      <Skeleton
         aria-busy
         aria-label="费率表加载中"
-        className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+        className="h-[240px] rounded-xl"
       />
     );
   const unit = rateUnit[data.currency];

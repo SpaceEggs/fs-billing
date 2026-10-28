@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { AdminCdr } from '@fs-billing/shared';
+import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { Badge } from '../ui/badge';
 import { Alert } from '../ui/alert';
@@ -25,7 +26,7 @@ function UnverifiedOnly({
 }) {
   const id = useId();
   return (
-    <label
+    <Label
       htmlFor={id}
       className={cn(
         'flex cursor-pointer items-center gap-2 rounded-lg border text-sm select-none has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring',
@@ -39,7 +40,7 @@ function UnverifiedOnly({
         onCheckedChange={(next) => onChange(next === true)}
       />
       仅看未经验证
-    </label>
+    </Label>
   );
 }
 

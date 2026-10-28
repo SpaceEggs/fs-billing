@@ -13,6 +13,7 @@ import type {
   Identity,
 } from '@fs-billing/shared';
 import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
@@ -485,10 +486,10 @@ function TenantDetail({
             onRetry={() => void detail.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="租户详情加载中"
-            className="h-[120px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[120px] rounded-xl"
           />
         )}
       </PageBody>

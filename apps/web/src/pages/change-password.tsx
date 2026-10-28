@@ -6,6 +6,7 @@ import {
   CircleCheckIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
+import { Label } from '../components/ui/label';
 import { BrandRow } from '../components/brand';
 import { SessionExpiredDialog } from '../components/session-expired-dialog';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
@@ -82,7 +83,7 @@ function PasswordInput({
   const message = error ?? hint;
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-      <label htmlFor={id}>{label}</label>
+      <Label htmlFor={id}>{label}</Label>
       <div
         className={cn(
           'flex h-11 items-center rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 sm:h-10 sm:pr-1',
