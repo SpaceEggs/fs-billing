@@ -22,7 +22,12 @@ import { databaseNow } from './clock.js';
 import { ensureCdrPartitions } from './partitions.js';
 import { callChargeKey } from './ledger.js';
 import { createRateVersion } from './rates.js';
-import { planAbc01Unassigned } from './seed-unassigned.js';
+import {
+  planAbc01Unassigned,
+  planEmptyTagUnassigned,
+  planIgnoredUnassigned,
+  type PlannedUnassigned,
+} from './seed-unassigned.js';
 import {
   currentMonthSeedMonth,
   planAbc001Calls,
@@ -543,7 +548,7 @@ export async function seedDatabase(
       await seedAbc001Calls(tx, idOf('ABC001'), [...currentPlan.calls]);
     await seedCdrs(tx, idOf, registered);
     await chargeSampleCdrs(tx, idOf);
-    await seedUnassigned(tx, registered);
+    await seedUnassigned(tx, registered, adminIds);
   });
   await seedStatements(db, tenantIds);
 }
@@ -653,13 +658,30 @@ async function seedTenants(tx: Tx): Promise<{
 
 const UNASSIGNED_CALL_UUID = 'a00000ff-0000-4000-8000-000000000001';
 
+function unassignedValues(row: PlannedUnassigned) {
+  return {
+    tenantTag: row.tenantTag,
+    callUuid: row.callUuid,
+    reason: row.reason,
+    startedAt: row.startedAt,
+    answeredAt: row.answeredAt,
+    endedAt: row.endedAt,
+    caller: row.caller,
+    callee: row.callee,
+    billingNumber: row.billingNumber,
+    durationSeconds: row.durationSeconds,
+    hangupCause: row.hangupCause,
+  };
+}
+
 /**
- * ABC01 的 326 条未归属话单（阶段 8 验收 1）：原有的 9-28 示例话单加 seed-unassigned.ts 的 325 条。
+ * 未归属话单：ABC01 的 326 条（阶段 8 验收 1），加上设计稿的 12 条空标签待处理和 5 条已忽略（决定 47）。
  * 已登记的 UUID 跳过，重复播种不增行。
  */
 async function seedUnassigned(
   tx: Tx,
   registered: ReadonlySet<string>,
+  adminIds: Record<AdminKey, string>,
 ): Promise<void> {
   if (!registered.has(UNASSIGNED_CALL_UUID)) {
     const callee = '+6591234567';
@@ -679,23 +701,23 @@ async function seedUnassigned(
       hangupCause: 'NORMAL_CLEARING',
     });
   }
-  const planned = planAbc01Unassigned().filter(
+  const pending = [
+    ...planAbc01Unassigned(),
+    ...planEmptyTagUnassigned(),
+  ].filter((row) => !registered.has(row.callUuid));
+  if (pending.length > 0)
+    await tx.insert(unassignedCdrs).values(pending.map(unassignedValues));
+  const ignored = planIgnoredUnassigned().filter(
     (row) => !registered.has(row.callUuid),
   );
-  if (planned.length > 0)
+  if (ignored.length > 0)
     await tx.insert(unassignedCdrs).values(
-      planned.map((row) => ({
-        tenantTag: row.tenantTag,
-        callUuid: row.callUuid,
-        reason: row.reason,
-        startedAt: row.startedAt,
-        answeredAt: row.answeredAt,
-        endedAt: row.endedAt,
-        caller: row.caller,
-        callee: row.callee,
-        billingNumber: row.billingNumber,
-        durationSeconds: row.durationSeconds,
-        hangupCause: row.hangupCause,
+      ignored.map((row) => ({
+        ...unassignedValues(row),
+        status: 'ignored' as const,
+        ignoreReason: row.ignoreReason,
+        resolvedBy: adminIds[row.admin],
+        resolvedAt: row.resolvedAt,
       })),
     );
 }
@@ -710,6 +732,8 @@ async function registeredCallUuids(tx: Tx): Promise<Set<string>> {
         ...CDRS.map((c) => c.callUuid),
         UNASSIGNED_CALL_UUID,
         ...planAbc01Unassigned().map((row) => row.callUuid),
+        ...planEmptyTagUnassigned().map((row) => row.callUuid),
+        ...planIgnoredUnassigned().map((row) => row.callUuid),
       ]),
     );
   return new Set(rows.map((r) => r.callUuid));
