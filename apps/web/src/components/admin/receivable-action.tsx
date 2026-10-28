@@ -1,3 +1,4 @@
+import { Textarea } from '../ui/textarea';
 import { Alert } from '../ui/alert';
 import type { ListRefresh } from '../../lib/receivables';
 import { Button } from '../ui/button';
@@ -106,7 +107,7 @@ export function ReasonField({
   return (
     <Field label={label} required error={error}>
       {(props) => (
-        <textarea
+        <Textarea
           {...props}
           rows={2}
           maxLength={2000}
@@ -114,10 +115,7 @@ export function ReasonField({
           disabled={disabled}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={cn(
-            'resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 md:text-sm',
-            invalidClass(error),
-          )}
+          className={cn('resize-none font-normal', invalidClass(error))}
         />
       )}
     </Field>

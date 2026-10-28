@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Input } from './ui/input';
 import { cn } from '../lib/utils';
 
 const searchDelayMs = 300;
@@ -28,17 +29,14 @@ export function SearchBox({
     return () => clearTimeout(timer);
   }, [draft, value]);
   return (
-    <input
+    <Input
       type="search"
       aria-label={label}
       placeholder={placeholder ?? label}
       maxLength={200}
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      className={cn(
-        'h-11 rounded-lg border border-input bg-transparent px-3 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9 md:text-sm',
-        className,
-      )}
+      className={cn('w-auto sm:h-11 sm:text-base md:h-9 md:text-sm', className)}
     />
   );
 }

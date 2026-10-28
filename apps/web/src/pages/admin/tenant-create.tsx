@@ -12,6 +12,7 @@ import {
   type Identity,
 } from '@fs-billing/shared';
 import { XIcon } from 'lucide-react';
+import { Textarea } from '../../components/ui/textarea';
 import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
@@ -808,13 +809,13 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
             </Field>
             <Field label="备注" error={errors.remark} className="md:col-span-2">
               {(props) => (
-                <textarea
+                <Textarea
                   {...props}
                   maxLength={2000}
                   placeholder="选填"
                   value={form.remark}
                   onChange={(event) => update({ remark: event.target.value })}
-                  className="min-h-16 rounded-lg border border-input bg-transparent px-3 py-2.5 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                  className="min-h-16 py-2.5 font-normal"
                 />
               )}
             </Field>

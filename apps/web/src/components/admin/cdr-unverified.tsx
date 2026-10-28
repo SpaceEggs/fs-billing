@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { AdminCdr } from '@fs-billing/shared';
+import { Checkbox } from '../ui/checkbox';
 import { Badge } from '../ui/badge';
 import { Alert } from '../ui/alert';
 import { cn } from '../../lib/utils';
@@ -13,7 +14,7 @@ import { StatusTag } from '../status-tag';
  * 未经验证是计费系统授权超时期间由 FreeSWITCH 放行的通话，已按费率补记计费，客户看不到。
  */
 
-function Checkbox({
+function UnverifiedOnly({
   checked,
   onChange,
   className,
@@ -32,12 +33,10 @@ function Checkbox({
         className,
       )}
     >
-      <input
+      <Checkbox
         id={id}
-        type="checkbox"
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="size-4 accent-primary"
+        onCheckedChange={(next) => onChange(next === true)}
       />
       仅看未经验证
     </label>
@@ -52,14 +51,14 @@ export function unverifiedFilter(
   return {
     active: unverifiedOnly,
     desktop: (
-      <Checkbox
+      <UnverifiedOnly
         checked={unverifiedOnly}
         onChange={onChange}
         className="h-9 px-3"
       />
     ),
     sheet: (
-      <Checkbox
+      <UnverifiedOnly
         checked={unverifiedOnly}
         onChange={onChange}
         className="h-11 px-3 text-[15px]"

@@ -7,6 +7,7 @@ import type {
   AdminUnassignedPreviewResponse,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Input } from '../ui/input';
 import { Alert } from '../ui/alert';
 import {
   apiQuery,
@@ -608,7 +609,7 @@ function TenantPicker({
   return (
     <div className="flex flex-col gap-2">
       <span className="text-[13px] font-medium">归属到租户</span>
-      <input
+      <Input
         type="search"
         aria-label="搜索编码或名称"
         placeholder="搜索编码或名称"
@@ -616,7 +617,7 @@ function TenantPicker({
         value={search}
         disabled={disabled}
         onChange={(event) => setSearch(event.target.value)}
-        className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="h-10 text-sm"
       />
       {suggestedShown.length > 0 ? (
         <div

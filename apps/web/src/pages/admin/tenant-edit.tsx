@@ -8,6 +8,7 @@ import {
   type Identity,
 } from '@fs-billing/shared';
 import { XIcon } from 'lucide-react';
+import { Textarea } from '../../components/ui/textarea';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   Field,
@@ -179,14 +180,14 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
         {text('contactPhone', '电话')}
         <Field label="备注" error={errors.remark} className="md:col-span-2">
           {(props) => (
-            <textarea
+            <Textarea
               {...props}
               rows={3}
               maxLength={limits.remark}
               placeholder="选填"
               value={form.remark}
               onChange={(event) => update({ remark: event.target.value })}
-              className="resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+              className="resize-y font-normal"
             />
           )}
         </Field>

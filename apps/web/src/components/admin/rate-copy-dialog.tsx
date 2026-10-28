@@ -6,6 +6,7 @@ import {
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { Input } from '../ui/input';
 import {
   apiQuery,
   invalidateTenant,
@@ -553,7 +554,7 @@ function TenantPicker({
     tenants.data.pagination.total > tenants.data.items.length;
   return (
     <div className="flex flex-col gap-2">
-      <input
+      <Input
         type="search"
         aria-label="搜索租户编码或名称"
         placeholder="搜索租户编码或名称"
@@ -561,7 +562,7 @@ function TenantPicker({
         value={search}
         disabled={disabled}
         onChange={(event) => setSearch(event.target.value)}
-        className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="h-9 text-sm"
       />
       <span id={`${id}-group`} className="text-xs text-muted-foreground">
         可选 · 同币种（{currency}）

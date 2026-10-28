@@ -10,6 +10,7 @@ import {
   type AdminRateVersion,
   type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import {
   RateEditDialog,
@@ -291,7 +292,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-[13px] text-muted-foreground">
-        <input
+        <Input
           type="search"
           aria-label="搜索前缀、ISO、国家或说明"
           placeholder="搜索前缀、ISO、国家或说明"
@@ -301,7 +302,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             setSearch(event.target.value);
             setPage(1);
           }}
-          className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9 md:w-[260px] md:text-sm"
+          className="sm:h-11 sm:text-base md:h-9 md:w-[260px] md:text-sm"
         />
         <Badge variant="ok" className="hidden h-6 md:inline-flex">
           <span aria-hidden className="size-1.5 rounded-full bg-current" />

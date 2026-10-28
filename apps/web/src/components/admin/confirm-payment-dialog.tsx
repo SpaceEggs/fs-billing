@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminReceivable } from '@fs-billing/shared';
+import { Textarea } from '../ui/textarea';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { formatDateTime, formatMoney } from '../../lib/format';
 import {
@@ -174,7 +175,7 @@ export function ConfirmPaymentDialog({
           error={errors.note}
         >
           {(props) => (
-            <textarea
+            <Textarea
               {...props}
               rows={2}
               maxLength={2000}
@@ -185,7 +186,7 @@ export function ConfirmPaymentDialog({
                 setDraft({ ...draft, note: event.target.value })
               }
               className={cn(
-                'resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50 md:text-sm',
+                'resize-none font-normal',
                 invalidClass(errors.note),
               )}
             />

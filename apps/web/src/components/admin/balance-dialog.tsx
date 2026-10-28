@@ -5,6 +5,8 @@ import type {
   AdminBalanceOperationResponse,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Checkbox } from '../ui/checkbox';
+import { Textarea } from '../ui/textarea';
 import { Alert } from '../ui/alert';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
@@ -448,11 +450,9 @@ function BalanceFlow({
               ，请再次核对金额与租户。
             </span>
             <label className="flex items-center gap-2 font-medium text-foreground">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={largeConfirmed}
-                onChange={(event) => setLargeConfirmed(event.target.checked)}
-                className="size-4 accent-primary"
+                onCheckedChange={(next) => setLargeConfirmed(next === true)}
               />
               我已核对，确认{rule.label} {signedMoney(tenant.currency, amount)}
             </label>
@@ -545,7 +545,7 @@ function BalanceFlow({
         }
       >
         {(props) => (
-          <textarea
+          <Textarea
             {...props}
             rows={2}
             maxLength={2000}
@@ -556,10 +556,7 @@ function BalanceFlow({
             }
             value={draft.note}
             onChange={(event) => update({ note: event.target.value })}
-            className={cn(
-              'resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm',
-              invalidClass(errors.note),
-            )}
+            className={cn('resize-none font-normal', invalidClass(errors.note))}
           />
         )}
       </Field>

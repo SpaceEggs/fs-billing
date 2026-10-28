@@ -11,6 +11,7 @@ import type {
   Identity,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Checkbox } from '../../components/ui/checkbox';
 import { Alert } from '../../components/ui/alert';
 import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign-dialog';
 import { UnassignedIgnoreDialog } from '../../components/admin/unassigned-ignore-dialog';
@@ -695,19 +696,16 @@ function PendingRows({
               <thead>
                 <tr className="bg-muted text-xs text-muted-foreground">
                   <th className="w-11 py-2.5 pr-0 pl-4 text-left font-medium">
-                    <input
-                      ref={(node) => {
-                        if (node)
-                          node.indeterminate =
-                            selection.kind !== 'group' &&
-                            selectedOnPage > 0 &&
-                            !allOnPage;
-                      }}
-                      type="checkbox"
+                    <Checkbox
                       aria-label="选择本页"
-                      checked={selection.kind === 'group' || allOnPage}
-                      onChange={onTogglePage}
-                      className="accent-primary"
+                      checked={
+                        selection.kind === 'group' || allOnPage
+                          ? true
+                          : selectedOnPage > 0
+                            ? 'indeterminate'
+                            : false
+                      }
+                      onCheckedChange={onTogglePage}
                     />
                   </th>
                   <th className="px-3 py-2.5 text-left font-medium">
@@ -733,13 +731,11 @@ function PendingRows({
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-border">
                     <td className="py-2.5 pr-0 pl-4">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         aria-label={`选择 ${row.caller} 呼 ${row.callee}`}
                         checked={picked(row.id)}
                         disabled={selection.kind === 'group'}
-                        onChange={() => onToggleRow(row.id)}
-                        className="accent-primary"
+                        onCheckedChange={() => onToggleRow(row.id)}
                       />
                     </td>
                     <td className="px-3 py-2.5">
@@ -775,13 +771,12 @@ function PendingRows({
                 className="flex items-center gap-1 rounded-[10px] border border-border py-3 pr-3.5 pl-1"
               >
                 <label className="flex size-11 shrink-0 items-center justify-center">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     aria-label={`选择 ${row.caller} 呼 ${row.callee}`}
                     checked={picked(row.id)}
                     disabled={selection.kind === 'group'}
-                    onChange={() => onToggleRow(row.id)}
-                    className="size-5 accent-primary"
+                    onCheckedChange={() => onToggleRow(row.id)}
+                    className="size-5"
                   />
                 </label>
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
