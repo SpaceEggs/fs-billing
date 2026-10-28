@@ -550,7 +550,7 @@ plan 阶段 8 没有性能验收。本步没有做任何测量，下面是 PR �
 - 归档 1 个月分区（原文约 1.7 GB 的估算见 `design.md:404-414`）的导出、校验耗时与压缩比；`DETACH` 的锁等待时间。
 - 未归属列表在 10 万行下的分页与分组耗时；操作日志在 100 万行下带筛选的耗时。
 
-结果写入 `docs/evidence/phase-8/`。PR 1 已测前两项和最后一项的 SQL 部分（分配 326、500、2000、5000 条，删除 PORTALBIG 的 2026-09，10 万行未归属话单的分组与分页，100 万行操作日志的筛选），见 [evidence/phase-8/README.md](evidence/phase-8/README.md)；归档由 PR 3 测（[evidence/phase-8/README.md](evidence/phase-8/README.md) 的 PR 3 一节），列表与日志的 HTTP 耗时由 PR 4 测。
+结果写入 `docs/evidence/phase-8/`。PR 1 已测前两项和最后一项的 SQL 部分（分配 326、500、2000、5000 条，删除 PORTALBIG 的 2026-09，10 万行未归属话单的分组与分页，100 万行操作日志的筛选），见 [evidence/phase-8/README.md](evidence/phase-8/README.md)；归档由 PR 3 测（[evidence/phase-8/README.md](evidence/phase-8/README.md) 的 PR 3 一节），列表、分组与日志的 HTTP 耗时由 PR 4 测（同一文件的 PR 4 一节）。
 
 ## 已决定
 
@@ -765,4 +765,42 @@ PR 2 与 PR 3 只依赖 PR 1，可并行；PR 4 也只依赖 PR 1。PR 5 依赖 
 
 - 没有管理后台页面（决定 33）；没有对象存储实现（`ArchiveStore` 接口留好）；没有 zstd（决定 31）。
 - 阶段 10 的事仍在阶段 10：归档目录进备份、磁盘告警、目录权限与保留策略写进运维手册、有真实历史数据的库上演练 `DETACH` 与迁移 0018/0019 的锁时长。
+- 没有新的待用户确认的问题。
+
+## PR 4 实现时的验证与偏差
+
+2026-10-28 PR 4 落地：十个端点、延后项 1 与 2、越权用例。测试、耗时和原始输出在 [evidence/phase-8/README.md](evidence/phase-8/README.md) 的 PR 4 一节。
+
+### 本文原先标为「未验证」的假设，或需要核对的前提，现已验证
+
+- **延后项 1 的前提不成立，已按决定 40 处理。** 用 owner 在 `operation_logs` 上建触发器，只让某个目标的 `reset_password` 审计失败：重置整体回滚（密码哈希、既有会话、审计行都没变），调用方得到数据库错误；另起事务写一条 `audit_failed` 告警，描述只有动作与对象 id（`admin-accounts.db.test.ts` 的三个新测试，包括「告警也写不进去」时只记日志、原错误照常抛出）。
+- **应用角色的计划与 owner 不同。** 操作日志的 `staff_only` 策略条件（`app_is_operator()`）让规划器把行数估成 5000：整年范围下 `OFFSET` 小于约 2000（前 39 页）走 `operation_logs_created` 索引，超过后规划器认为全排序更便宜，改用全表扫描加磁盘排序，100 万行约 0.2–0.6 s（[pr4-audit-deep-page-plan.txt](evidence/phase-8/pr4-audit-deep-page-plan.txt)）。PR 1 的 SQL 形状测量用的是 owner，没有这一层，所以「整年 offset 100,000 约 190 ms」在应用角色下不成立。默认的最近 30 天范围和各种筛选都在 10 ms 左右、前 39 页的查询在 1 ms 以内，深翻页的代价随表大小线性增长；真实数据量远小于 100 万行，本 PR 不处理，表增长到这个量级时改成游标分页（按 `(created_at, id)`）。
+- **原生 SQL 的 `timestamptz` 是字符串。** drizzle 的 `tx.execute` 不经列映射，驱动按文本返回 `2026-09-29 05:47:02+00`；`.toISOString()` 会在运行时报错。未归属列表、操作日志、话单页的 `deletedMonths` 都用 `cdrTimestamp()`（`to_char`）在数据库里格式化，类型是字符串。
+- **请求校验先于鉴权。** Fastify 在 `preValidation` 之后先校验 params、query、body，再进处理器鉴权，所以越权用例里「未登录得 401、客户得 403」必须给每个新端点发合法的请求体与查询串（`adminProbeBodies`、`cdr-deletions?year=`），否则得到 400。
+- **`operation_logs` 的 CHECK 对 bootstrap 够用。** owner 连接插入 `admin_id` 为空、`actor_label` 非空的行成功；`MULTIPLE_CREDENTIALS` 的分支实际不可达（`auth.account` 有 `UNIQUE (user_id, provider_id)`），保留作防御，枚举里也保留，没有测试。
+- **越权用例第 1、4 条已覆盖；第 2、3 条在 PR 1。** 第 1 条：十个操作登记为 `admin-only`，客户会话得 403、未登录得 401（既有的遍历用例加上探测请求体）；第 4 条：被停用的管理员会话立即 401，不能分配、忽略或删除（`admin-unassigned.db.test.ts`）。第 2 条（租户身份读不到新表）与第 3 条（门户账单不含删除元数据）是 PR 1 的 `rls.db.test.ts` 与 `portal-statements.db.test.ts`，本 PR 不重复。
+
+### 与本文不同的地方，或本文没有规定而由实现选择的地方
+
+1. **操作标签用稳定的键。** 本文的标签是中文示意；接口的 `label` 取 `tenant_create / tenant_edit / balance / rate / receivable / account / export / statement_regenerate / unassigned_assign / unassigned_ignore / cdr_delete`，`auditLabelActions` 给出每个键的 action 集合，`auditLabelText` 带设计稿的中文（PR 5 可直接用）；测试保证每个 action 恰属一个标签，新增 action 漏归类会失败。「撤销忽略」归在 `unassigned_ignore`（页面标签「忽略话单」），「初始化凭据」归在 `account`。
+2. **选择的 `ids` 上限在契约里是 2000，行数上限由数据库层强制。** `unassignedSelectionSchema` 的 `ids` 最多 2000 个（防异常输入，等于忽略的上限），预览与分配的 500 条上限仍由 `selectRows` 抛 `VALIDATION_ERROR`，响应是 400「一次最多选择 500 条，请分批处理」。按分组选择时该组超过上限同样是 400（PR 1 的行为，页面要引导分批）。
+3. **删除中途失败是 200，不是错误响应。** 月份之间不原子，响应要同时列出已删与未删的月份，所以失败时回 200：`months`（已完成）、`total`、`remaining`（第一个是失败的月份）、`failure { month, code, message }`；`failure.code` 为 `INTERNAL` 时 `message` 是固定中文，数据库的原文只记服务端日志。第一个月就失败（没有任何月份被删）时回错误响应：409 / 400，或 500。`remaining` 非空当且仅当 `failure` 非空，契约里有校验。
+4. **`adminTenantCdrs.deletedMonths[].count` 可为空。** 阶段 7 的 e2e 辅助直接置位的旧标志没有三列元数据，此时 `count`、`deletedBy`、`deletedAt` 为 `null`（与「标志为真而三列为空」的设计一致）。数组按月份升序，只含与 `[from 所在月, to 所在月]` 相交的月份。
+5. **未归属列表。** 状态参数接受 `pending`（默认）、`ignored`、`superseded`；`tag` 不传是全部，传空串是标签为空的分组。行里 `time` 是 `coalesce(answered_at, started_at)`，校验失败的话单两者都没有，为 `null`，另给 `receivedAt`；`assignable` 与预览同一个判定（决定 35）；`pushCount` 是同一份无效原文被推送的次数；已忽略的行带 `ignore { reason, by, at }`。`callUuid` 返回（没有通话身份的为 `null`）。
+6. **分组。** `suggestedTenants` 含编辑距离 0 的租户（标签恰好等于现有租户编码，说明租户是后建的），空标签不给建议；`reasons` 里校验失败的原因合成「话单校验失败」一类（在数据库里合并）；`total` 是全部待处理条数（设计稿的「全部」）。
+7. **操作日志列表。** 响应多一个 `range`（实际生效的北京日范围，请求没传时是默认的最近 30 天，含今天）；`actor` 是 `{ kind: 'admin', id, name }` 或 `{ kind: 'system', label }`；只列出 `auditActionSchema` 里的 action（测试库里别的测试写的 `rls_probe` 等行不会让页面报错）；`details` 缺失或不合规的旧记录仍然列出，`summary` 退回 action 名、`changes` 为空、`target` 为 `null`。默认每页 50 条，最大 100。日志本身的访问不写日志（有测试）。
+8. **页面查询先取页再联接。** 第一版把 `to_char` 和联接放在 `OFFSET` 之前，深翻页要先格式化十万行（操作日志整年 offset 100,000 约 1.3 s，未归属第 1000 页 48 ms）；改成子查询里先 `ORDER BY … LIMIT … OFFSET`，外层再联接、格式化后，分别是约 0.58 s（计划切换见上）和约 19 ms。第一次运行的记录保留在 [pr4-http-timings-first-run.txt](evidence/phase-8/pr4-http-timings-first-run.txt)。
+9. **业务错误在路由层映射。** `UnassignedError`、`CdrDeletionError` 在 `routes/business-errors.ts` 映射成 `AdminServiceError`，由现有的错误处理器按 `adminApiErrorStatus` 回 409 / 400（`NotFoundError` 仍回 404）。PR 1 的数据库函数不依赖 API 的错误码表，这一点没变。
+10. **`listCdrDeletionMonths` 之外多一个 `readCdrDeletionYear`。** 月份格响应带租户编码与名称，读年份的函数同时返回租户；`listCdrDeletionMonths` 保留（PR 1 的测试和脚本在用），转调它。
+11. **管理员操作者的类型改名 `AuditActor`。** `credential_bootstrap` 的 `actor` 是 `{ label }`，把 `AuditPayload['actor']` 变成联合会让所有业务函数的 `actor.id` 报类型错误；改为导出 `AuditActor`（`{ id, name }`），十几处签名机械替换，业务函数不接受 `{ label }`。`writeAudit` 按 `'id' in actor` 决定写 `admin_id` 还是 `actor_label`。命令行的 bootstrap 用原生 SQL 写审计（它是 `pg` 连接，不是 drizzle 事务），所以 `writeAudit` 的 `{ label }` 分支由 `packages/db/src/admin/audit.db.test.ts` 单独验证。
+12. **重置密码的告警。** `AdminAccountService` 多一个可选依赖 `logger`（`main.ts` 传入）；只在写审计（含取数据库时间）的那一步抛错时开告警，其他失败（目标不存在、被停用的管理员）不开；告警的 `tenant_id` 是门户账号的租户，管理员账号为空；描述为「重置密码的审计写入失败，凭据与会话未变更（管理员|门户账号 <id>）」。同一个事务被 `withAdmin` 因 40001 / 40P01 重跑时标志在每次回调开头重置。
+13. **bootstrap 的细节。** 新的 `BootstrapRejection`（`code` 为固定枚举 `PASSWORD_RULES / PROFILE_NOT_FOUND / CREDENTIAL_EXISTS / MULTIPLE_CREDENTIALS`，其余错误记 `UNKNOWN`），消息文本不变，命令行脚本的白名单正则照旧；密码不符合规则也记一条 `rejected`（本文只列了资料不存在、凭据已存在、多个凭据三种）；非 owner 角色被拒绝时不记审计（连接不能写 `operation_logs`，也没有对资料做任何事）；`actorLabel`（默认 `cli:auth:bootstrap@主机名/系统用户`）和 `warn`（默认写标准错误「审计未写入」）可由调用方传入，测试用它们；`revokedSessions` 是 `DELETE FROM auth.session` 的行数。`scripts/bootstrap-credential.ts` 没有改：默认的 `warn` 已经满足「失败只在标准错误提示、退出码不变」。
+14. **Web 只登记类型。** `webApiContract` 并入三组新契约，`conflictMessages` 补四个新错误码的中文提示并列入「需要刷新」的冲突，`apps/web/src/test/cdr.ts` 的后台话单夹具带 `deletedMonths: []`。页面、`MonthGrid` 与文案细化属于 PR 5。
+15. **接口测试的接缝。** 验收 1 的数字依赖种子（ABC01 → ABC001，余额 −35.20 → −93.55），分配会改变它们，所以 `apps/api/test/scratch.ts` 的 `seededApi()` 在单独的、播过种子的库里起一个 API（种子管理员补登录凭据），其余测试在共享测试库里用夹具租户和随机标签，互不影响。部分测试名与本文「计划测试」不同：`admin-cdr-deletion.db.test.ts` 的「删除当月 409」「每月一条审计」分别是 `rejects the current month, a month without a statement, a wrong code and a changed count` 和 `writes one cdr_delete entry per month and finds them through the log endpoint`；`bootstrap.db.test.ts` 的 `audits a rejected attempt and an unexpected failure with a fixed error code` 同时覆盖拒绝与未知失败。
+
+### 没有做的事
+
+- 没有 Web 页面（PR 5）、没有 e2e 与视觉对照（PR 6）、没有改 plan.md（PR 6 勾选时一并更正延后项 1 与阶段 9 一项的文字，决定 40、42）。
+- 没有为操作日志按管理员筛选加索引，也没有改成游标分页（见上，量级不到时不需要）。
+- 没有测删除接口经 HTTP 的耗时（PR 1 已测数据库层的 0.89 s；月份格接口测了，约 2.3 s，页面只在打开删除对话框时请求）。
 - 没有新的待用户确认的问题。

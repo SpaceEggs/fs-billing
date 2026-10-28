@@ -153,3 +153,63 @@ PR 2 的基线是根目录 44 个文件 849 通过 2 跳过、数据库 48 个�
 - 合成数据，压缩比与真实话单可能不同；热缓存，冷分区更慢。
 - 归档文件在本机临时目录，没有测网络存储。
 - 没有测两个 Worker 实例同时运行（`exclusive` 队列策略与清单的条件更新保证安全，有测试，没有压力测试）。
+
+---
+
+# 阶段 8 PR 4 证据：契约与 API
+
+2026-10-28，本机 PostgreSQL 17.9（Docker，默认配置）、Node 24.22.1、macOS。设计见 [phase-8-design.md](../../phase-8-design.md)，实现时的验证与偏差见该文末「PR 4 实现时的验证与偏差」。
+
+## 测试结果
+
+| 命令             | 结果                                                                                                                                                                                          | 输出                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `pnpm check`     | 退出 0：lint、格式检查、类型检查全过；根目录单元测试 48 个文件、917 通过 2 跳过（同 PR 2、3，是本机没有 `lua5.3` 而跳过的 Lua 测试，CI 必跑）；Web 单元测试 45 个文件、600 通过；Web 构建成功 | [pr4-pnpm-check.txt](pr4-pnpm-check.txt)         |
+| `pnpm test:db`   | 退出 0：55 个文件、770 个测试全部通过（PR 3 是 51 个文件、734 个）                                                                                                                            | [pr4-pnpm-test-db.txt](pr4-pnpm-test-db.txt)     |
+| `pnpm test:idor` | 退出 0：1 个文件、36 个测试全部通过（PR 3 是 35 个，多出的一个登记十个新操作为 admin-only）                                                                                                   | [pr4-pnpm-test-idor.txt](pr4-pnpm-test-idor.txt) |
+
+PR 3 的基线是根目录 46 个文件 890 通过 2 跳过、数据库 51 个文件 734 通过、越权 35 个。本 PR 新增：根目录 `operations.test.ts`（13，契约）、`suggest.test.ts`（13，编辑距离）、`cdrs.test.ts` 多 1 个（`deletedMonths`）；数据库 4 个新文件 28 个测试（`admin-unassigned.db.test.ts` 14、`admin-cdr-deletion.db.test.ts` 7、`admin-audit-logs.db.test.ts` 5、`packages/db/src/admin/audit.db.test.ts` 2，后者验证 `writeAudit` 按操作者类型写 `admin_id` 或 `actor_label`），`admin-accounts.db.test.ts` 多 3 个，`bootstrap.db.test.ts` 多 4 个；越权多 1 个。既有测试只改了两处：`cdrs.test.ts` 的后台话单响应夹具带 `deletedMonths`，Web 的 `test/cdr.ts` 夹具同理。
+
+验收标准与延后项对应的测试（名字同设计文档「验收标准对应计划测试」，不同处见设计文档偏差第 15 条）：
+
+- 验收 1（ABC01 → ABC001：预览 ¥58.35、324 条、2 条无费率前缀 1876；余额 −35.20 → −93.55，流水对应）：`admin-unassigned.db.test.ts` / `returns the mockup figures through the preview and assign endpoints`（在单独的、播过种子的库里，经 HTTP 预览与分配；分组里有「相近：ABC001」；分配后 324 笔 `call_charge`、2 条留在待处理）；另有无种子库的同形测试 `assigns with the previewed figures, charges once and writes one audit entry` 与 `previews the figures without writing anything`（预览不落库）。
+- 验收 2（重复提交只扣费一次）：同文件 `replays the stored result for the same idempotency key`（种子库，`replayed: true`、余额不变）、`assigns with the previewed figures, charges once…` 里的同键重放、另一个操作人同键 409 `IDEMPOTENCY_CONFLICT`、不同键同一分组 409 `UNASSIGNED_NOTHING_TO_ASSIGN`；`answers 409 when the figures changed since the preview and changes nothing`（`UNASSIGNED_PREVIEW_STALE`，余额、流水、日志都没变）。数据库层的四层幂等与并发测试在 PR 1。
+- 验收 3（删除当月的按钮不可用，服务端同样 409；删除 8 月后流水、余额不变）：`admin-cdr-deletion.db.test.ts` / `rejects the current month, a month without a statement, a wrong code and a changed count`（当月、开户前、编码不符 400、条数不符 409，什么都没删）、`deletes August: the ledger is untouched…`（流水条数、余额、流水摘要前后相同）、`marks a month blocked…`。门户导出与重新生成置灰是 PR 1 的数据库测试和 PR 6 的 e2e。
+- 验收 4（操作日志能查到删除：谁、何时、哪个租户、哪个月、多少条）：`admin-cdr-deletion.db.test.ts` / `deletes August…`（审计行的操作人、租户、月份、条数、范围、确认编码）与 `writes one cdr_delete entry per month and finds them through the log endpoint`；`admin-audit-logs.db.test.ts` / `lists the deletion with its filters`（按租户 + 标签 + 管理员筛选，其他管理员得到空）。
+- 延后项 1：`admin-accounts.db.test.ts` / `a failed audit write rolls the reset back and leaves credentials and sessions unchanged`、`a failed audit write opens one audit_failed alert without secrets`、`a failed alert write only logs: the original error still reaches the caller`。
+- 延后项 2：`bootstrap.db.test.ts` / `audits a created and a replaced credential in the same transaction`、`writes the credential, the session revocation and the audit in one transaction`（审计写不进去则凭据也没创建）、`audits a rejected attempt and an unexpected failure with a fixed error code`、`audit details never contain a password, hash or token`，命令行测试里多了对 `actor_label` 的断言。
+- 越权：`idor.db.test.ts` / `registers the ten phase 8 operations as admin-only` 与既有的遍历用例（未登录 401、客户会话 403，每个新端点都带合法的探测请求）；`admin-unassigned.db.test.ts` / `a deactivated administrator loses the session at once and cannot assign, ignore, delete or read`。
+- 测试能失败：逐项临时改坏实现，对应测试失败后还原——`resetPassword` 不开告警（告警测试 2 个失败）、`writeAudit` 不写 `actor_label`（`packages/db/src/admin/audit.db.test.ts` 失败；`bootstrap.db.test.ts` 不受影响，因为命令行自己用原生 SQL 写审计）、日志列表不按标签展开（`lists the deletion with its filters` 失败）、`deletedMonths` 恒为空（`deletes August…` 失败）、bootstrap 成功时不写审计（`bootstrap.db.test.ts` 4 个失败，含命令行测试）。
+
+## 耗时（经真实回环 HTTP，PORTALBIG 克隆库）
+
+原始输出：[pr4-http-timings.txt](pr4-http-timings.txt)（最终一次）、[pr4-http-timings-second-run.txt](pr4-http-timings-second-run.txt)（同一个库、同一份代码的第二次，看波动）、[pr4-http-timings-first-run.txt](pr4-http-timings-first-run.txt)（查询优化之前的第一次，见下）。脚本 `apps/api/scripts/ops-perf-http.ts` 会写库，只在 `fs_billing_perf` 的克隆库上运行（`CREATE DATABASE fs_billing_perf_p8pr4 TEMPLATE fs_billing_perf` 约 32 s，再 `pnpm db:migrate`，迁移到 0019；白名单拒绝原库、PR 3 库和快照库）。夹具与 PR 1 的 SQL 形状测量相同：`unassigned_cdrs` 补到 10 万行待处理（40 个标签）加 2000 行已忽略，`operation_logs` 补到 100 万行（最近一年，带真实形状的 `details`）。传输方式同阶段 7：进程内 Fastify（`createApi`）监听 127.0.0.1，Node `fetch`，真实 Cookie 网关，业务连接是 `fs_billing_app`，响应整体读完并用契约 schema 解析；2 次预热加 7 次计时。
+
+| 端点                                                                                  | 最终一次（中位数） | 第二次（中位数）   | 说明                                                            |
+| ------------------------------------------------------------------------------------- | ------------------ | ------------------ | --------------------------------------------------------------- |
+| `GET /api/admin/unassigned-cdrs/summary`                                              | 11.6 ms            | 12.5 ms            | 待处理 / 已忽略条数                                             |
+| `GET /api/admin/unassigned-cdrs/groups`（10 万待处理，41 组）                         | 23.2 ms            | 23.8 ms            | 分组、原因分布、相近租户                                        |
+| `GET /api/admin/unassigned-cdrs?pageSize=50`（第 1 页）                               | 10.1 ms            | 10.3 ms            | 含 `count(*)` 约 8 ms                                           |
+| 同上，第 1000 页（offset 49,950）                                                     | 18.7 ms            | 19.1 ms            |                                                                 |
+| 同上，`tag=TAG07`（2500 行）/ `status=ignored`（2000 行）                             | 2.3 ms / 2.2 ms    | 2.8 ms / 2.8 ms    |                                                                 |
+| `GET /api/admin/audit-logs`（默认最近 30 天，6.7 万行匹配，50 条）                    | 8.6 ms             | 11.8 ms            | 100 万行表                                                      |
+| 加租户 / 加标签 `cdr_delete` / 加租户 + 标签 + 管理员                                 | 6.4 / 5.9 / 5.2 ms | 6.7 / 6.1 / 6.1 ms | 最近 30 天                                                      |
+| 整年范围（100 万行）第 1 页                                                           | 88.1 ms            | 87.3 ms            | 计数 100 万行约 85 ms（`operation_logs_created` 仅索引扫描）    |
+| 整年范围，`page=2001`（offset 100,000）                                               | 583 ms             | 582 ms             | 计划切换，见下                                                  |
+| 整年范围，`label=unassigned_assign`，每页 100 条                                      | 12.3 ms            | 11.5 ms            | 10 万行匹配                                                     |
+| `GET /api/admin/tenants/{PORTALBIG}/cdr-deletions?year=2026`（12 个月，340 万行话单） | 2259 ms            | 2347 ms            | 与 PR 1 的数据库层一致（2.26–3.28 s）；页面只在打开对话框时请求 |
+
+### 第一次运行发现的问题与处理
+
+第一版列表查询把 `to_char` 和联接放在 `OFFSET` 之前：深翻页时数据库要先格式化、联接 `OFFSET + LIMIT` 行再丢掉前面的。整年范围 offset 100,000 是 1.3 s，未归属第 1000 页是 48 ms（PR 1 的 SQL 形状分别是 190 ms 和 25 ms）。改成子查询里先排序、分页，外层再联接和格式化后分别是 0.58 s 和 19 ms。
+
+### 操作日志深翻页的计划切换
+
+整年范围下，应用角色（RLS 生效）的查询计划在 `OFFSET` 超过约 2000（第 40 页起）时从 `operation_logs_created` 索引扫描变成全表扫描加磁盘排序：`staff_only` 策略条件让规划器把行数估成 5000，认为全排序更便宜。100 万行约 0.2–0.6 s，线性随表增长，owner 没有这一层所以 PR 1 的测量看不到（[pr4-audit-deep-page-plan.txt](pr4-audit-deep-page-plan.txt)）。默认的最近 30 天范围和前 39 页不受影响。真实数据量远小于 100 万行；增长到这个量级时改成按 `(created_at, id)` 的游标分页，本 PR 不处理。
+
+## 局限
+
+- 一台笔记本上的 Docker PostgreSQL，数字只用于比较量级，不是生产容量承诺；两次运行的差别在 10% 以内（默认日志列表第二次有一次 23.8 ms 的离群值）。
+- 夹具的 100 万行操作日志只有 10 种 action、2 个管理员，`details` 是合成的；真实日志按租户、管理员的分布不同。「按管理员筛选」仍然没有专用索引（PR 1 已记录）。
+- 删除接口（POST）没有经 HTTP 计时：数据库层 0.89 s 是 PR 1 的测量，本 PR 只测月份格。
+- 种子库里的接口测试不测耗时。
