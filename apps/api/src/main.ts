@@ -34,6 +34,7 @@ const app = createApi({
   accountService: createAdminAccountService({
     businessDb: business.db,
     auth: auth.auth,
+    logger,
   }),
   adminAmountMaxIntegerDigits: config.ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
   adminRates: {
