@@ -14,7 +14,7 @@ import {
   type AdminReversePaymentResponse,
   type AdminVoidReceivableRequest,
   type AdminVoidReceivableResponse,
-  type AuditPayload,
+  type AuditActor,
 } from '@fs-billing/shared';
 import { decimal } from '@fs-billing/rating';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
@@ -124,7 +124,7 @@ export function listReceivables({
 
 type ReceivableInput<Request> = {
   db: Db | Tx;
-  actor: AuditPayload['actor'];
+  actor: AuditActor;
   ledgerEntryId: string;
   request: Request;
 };

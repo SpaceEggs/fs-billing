@@ -9,6 +9,7 @@ export * from './partitions.js';
 export * from './rates.js';
 export * from './admin/receivables.js';
 export * from './admin/audit.js';
+export * from './admin/audit-logs.js';
 export * from './admin/cdrs.js';
 export * from './admin/errors.js';
 export * as schema from './schema.js';

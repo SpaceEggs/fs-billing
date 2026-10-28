@@ -52,6 +52,8 @@ export function cdrList(
     unverifiedCalls?: number;
     billedMinutes?: string;
     charge?: string;
+    /** 仅后台响应（带 unverifiedCalls）有：范围内话单已删除的月份。 */
+    deletedMonths?: unknown[];
   } = {},
 ) {
   return {
@@ -70,5 +72,8 @@ export function cdrList(
         ? {}
         : { unverifiedCalls: over.unverifiedCalls }),
     },
+    ...(over.unverifiedCalls === undefined
+      ? {}
+      : { deletedMonths: over.deletedMonths ?? [] }),
   };
 }

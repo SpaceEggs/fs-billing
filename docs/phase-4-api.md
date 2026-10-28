@@ -57,6 +57,8 @@ pnpm --filter @fs-billing/api auth:bootstrap --kind portal --profile <portal-pro
 
 密码只从 stdin 读取，或由 `--generate` 生成；不接受密码参数，避免 shell history 和进程列表泄露。stdin 可有一个结尾换行。生成密码仅在事务成功后输出一次，妥善保存；提供的密码不回显。需要 `BETTER_AUTH_SECRET` 与 `BETTER_AUTH_URL`，不限制 production。CLI 不创建业务资料或 auth.user，迁移和开户负责建立这些关联。
 
+每次初始化都写一条操作日志 `credential_bootstrap`（阶段 8）：没有管理员会话，操作者记在 `operation_logs.actor_label`，形如 `cli:auth:bootstrap@<主机名>/<系统用户>`（取自运行命令的机器与操作系统用户）；内容是 `mode`（`create` / `replace`）、`result`（`succeeded` / `rejected` / `failed`）、固定枚举的 `errorCode` 和撤销的会话数，不含密码、哈希、会话 token 或异常消息。成功时审计与凭据、会话撤销同一个事务提交，审计写不进去则整个初始化回滚；资料不存在、凭据已存在未带 `--replace`、密码不符合规则或未知失败在回滚后另写一条 `rejected` / `failed` 记录，这条尽力而为，写不进去时命令在标准错误输出「审计未写入」，退出码仍只反映初始化本身的结果。使用非 owner 角色被拒绝时不记审计。后台「操作日志」页面（`GET /api/admin/audit-logs`，标签「账号」）能看到这些记录。
+
 紧急解锁使用 owner `DATABASE_URL`，按 Better Auth 的邮箱小写规则删除 counter，不改密码或会话。
 
 ```sh

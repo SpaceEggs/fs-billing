@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { inArray, sql } from 'drizzle-orm';
-import type { AuditPayload } from '@fs-billing/shared';
+import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
 import { withAdmin, type Db, type Tx } from '../client.js';
 import { unassignedCdrs } from '../schema.js';
@@ -30,7 +30,7 @@ const MAX_REASON_LENGTH = 2000;
 export async function ignoreUnassigned(
   db: Db | Tx,
   input: {
-    readonly actor: AuditPayload['actor'];
+    readonly actor: AuditActor;
     readonly selection: UnassignedSelection;
     readonly reason: string;
     readonly maxRows?: number;
@@ -93,7 +93,7 @@ export async function ignoreUnassigned(
 export function unignoreUnassigned(
   db: Db | Tx,
   input: {
-    readonly actor: AuditPayload['actor'];
+    readonly actor: AuditActor;
     readonly selection: UnassignedSelection;
     readonly maxRows?: number;
   },

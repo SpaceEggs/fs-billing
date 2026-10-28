@@ -15,7 +15,7 @@ import {
   type AdminTenantStatementResponse,
   type AdminTenantStatementRow,
   type AdminTenantStatementsResponse,
-  type AuditPayload,
+  type AuditActor,
   type Currency,
 } from '@fs-billing/shared';
 import { withAdmin, type Db, type Tx } from '../client.js';
@@ -39,7 +39,7 @@ import {
 import { writeAudit } from './audit.js';
 import { AdminServiceError } from './errors.js';
 
-type Actor = AuditPayload['actor'];
+type Actor = AuditActor;
 
 const iso = (value: Date) => value.toISOString();
 

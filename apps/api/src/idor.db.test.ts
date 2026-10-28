@@ -826,6 +826,27 @@ const adminProbeBodies: Partial<Record<string, object>> = {
     reason: 'probe',
   },
   adminTenantStatementRegenerate: { expectedVersion: 1 },
+  adminUnassignedAssignPreview: {
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    selection: { ids: ['22222222-2222-4222-8222-222222222222'] },
+  },
+  adminUnassignedAssign: {
+    tenantId: '11111111-1111-4111-8111-111111111111',
+    selection: { group: { tag: 'ABC01' } },
+    idempotencyKey: 'idor-probe',
+    expected: { assignable: 1, noRate: 0, chargeTotal: '0.1' },
+  },
+  adminUnassignedIgnore: {
+    selection: { group: { tag: 'ABC01' } },
+    reason: 'probe',
+  },
+  adminUnassignedUnignore: { selection: { group: { tag: 'ABC01' } } },
+  adminTenantCdrDelete: {
+    fromMonth: '2026-08',
+    toMonth: '2026-08',
+    tenantCode: 'ABC001',
+    expectedCount: 1,
+  },
   adminAccountCreate: { name: 'probe', email: 'probe@example.com' },
   adminPortalAccountCreate: { email: 'probe@example.com' },
 };
@@ -849,6 +870,33 @@ let fixture: Fixture;
 beforeAll(async () => {
   fixture = await createFixture(connections);
 });
+it('registers the ten phase 8 operations as admin-only', () => {
+  const phase8 = [
+    'adminUnassignedSummary',
+    'adminUnassignedGroups',
+    'adminUnassignedList',
+    'adminUnassignedAssignPreview',
+    'adminUnassignedAssign',
+    'adminUnassignedIgnore',
+    'adminUnassignedUnignore',
+    'adminTenantCdrDeletionMonths',
+    'adminTenantCdrDelete',
+    'adminAuditLogs',
+  ];
+  const registered = operations.filter((operation) =>
+    phase8.includes(operation.operationId),
+  );
+  expect(registered.map((operation) => operation.operationId).sort()).toEqual(
+    [...phase8].sort(),
+  );
+  for (const operation of registered) {
+    expect(operation['x-access'], operation.operationId).toBe('admin');
+    expect(operation['x-isolation-case'], operation.operationId).toBe(
+      'admin-only',
+    );
+  }
+});
+
 it('covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case', () => {
   expect(customerOperations.length).toBeGreaterThan(0);
   expect(difference).toEqual({ missing: [], extra: [] });
@@ -916,6 +964,8 @@ for (const lane of lanes) {
           ].includes(operation.operationId)
         )
           url += '?from=2026-09-01&to=2026-09-30';
+        if (operation.operationId === 'adminTenantCdrDeletionMonths')
+          url += '?year=2026';
         const method = z
           .enum(['GET', 'POST'])
           .parse(operation.method.toUpperCase());

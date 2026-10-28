@@ -1,6 +1,7 @@
 export { CdrDeletionError, type CdrDeletionErrorCode } from './errors.js';
 export {
   listCdrDeletionMonths,
+  readCdrDeletionYear,
   readCdrDeletionMonths,
   type CdrDeletionMonth,
   type CdrMonthBlockedReason,

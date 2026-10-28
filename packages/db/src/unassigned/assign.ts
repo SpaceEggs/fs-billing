@@ -6,7 +6,7 @@ import {
   decimal,
   type Currency,
 } from '@fs-billing/rating';
-import type { AuditPayload } from '@fs-billing/shared';
+import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
 import {
   chargeCall,
@@ -41,7 +41,7 @@ import {
 import { NotFoundError } from '../errors.js';
 
 export interface AssignInput {
-  readonly actor: AuditPayload['actor'];
+  readonly actor: AuditActor;
   readonly tenantId: string;
   readonly selection: UnassignedSelection;
   /** 客户端幂等键，同一租户内唯一。 */

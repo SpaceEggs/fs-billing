@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
+import type { FastifyBaseLogger } from 'fastify';
 import { z } from 'zod';
 import {
   schema,
@@ -55,6 +56,8 @@ function isUserEmailConflict(error: unknown): boolean {
 export function createAdminAccountService(deps: {
   businessDb: Db;
   auth: BillingAuth;
+  /** 审计失败的告警写不进去时记日志；不传则不记。 */
+  logger?: Pick<FastifyBaseLogger, 'error'>;
 }) {
   const { businessDb: db, auth } = deps;
   async function actor(tx: Tx, principal: AdminPrincipal) {
@@ -100,6 +103,27 @@ export function createAdminAccountService(deps: {
     const [row] = await tx.select().from(table).where(eq(table.id, id));
     if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
     return row;
+  }
+  /** 描述只有动作与对象 id，不含密码、邮箱或异常原文。写不进去只记日志，不影响响应。 */
+  async function alertAuditFailed(
+    kind: 'admin' | 'portal',
+    id: string,
+    tenantId: string | null,
+  ) {
+    try {
+      await withAdmin(db, (tx) =>
+        tx.insert(schema.systemAlerts).values({
+          tenantId,
+          kind: 'audit_failed',
+          description: `重置密码的审计写入失败，凭据与会话未变更（${kind === 'admin' ? '管理员' : '门户账号'} ${id}）`,
+        }),
+      );
+    } catch (error) {
+      deps.logger?.error(
+        { err: error, event: 'audit.alert_failed' },
+        'Audit failure alert could not be written',
+      );
+    }
   }
   async function create(
     principal: AdminPrincipal,
@@ -370,28 +394,40 @@ export function createAdminAccountService(deps: {
       const temporaryPassword = randomBytes(24).toString('base64url');
       const hash = await hashPassword(temporaryPassword);
       const auditId = randomUUID();
-      await withAdmin(db, async (tx) => {
-        const who = await actor(tx, principal);
-        const row = await account(tx, kind, id);
-        const emails = await tx.execute(
-          sql`select email from auth.lookup_user_emails(ARRAY[${row.authUserId}::text])`,
-        );
-        const address = z
-          .object({ email: z.string().min(1) })
-          .parse(emails.rows[0]).email;
-        await setCredential(tx, row.authUserId, hash);
-        await clearLoginFailures(tx, normalizeEmail(address));
-        await revokeSessions(tx, row.authUserId);
-        await writeAudit(tx, {
-          id: auditId,
-          actor: who,
-          occurredAt: (await databaseNow(tx)).toISOString(),
-          tenantId: 'tenantId' in row ? row.tenantId : null,
-          target: { kind: kind === 'admin' ? 'admin' : 'portal_account', id },
-          action: 'reset_password',
-          content: { summary: '重置密码', changes: [] },
+      // 凭据、会话撤销与审计在同一个事务里：审计写不进去则整个重置回滚，不存在「已重置而无审计」（决定 40）。
+      // 审计失败时事务已回滚，另起事务尽力写一条 audit_failed 告警，让运维不必只靠 5xx 日志发现。
+      let failedAudit: { tenantId: string | null } | undefined;
+      try {
+        await withAdmin(db, async (tx) => {
+          failedAudit = undefined;
+          const who = await actor(tx, principal);
+          const row = await account(tx, kind, id);
+          const emails = await tx.execute(
+            sql`select email from auth.lookup_user_emails(ARRAY[${row.authUserId}::text])`,
+          );
+          const address = z
+            .object({ email: z.string().min(1) })
+            .parse(emails.rows[0]).email;
+          await setCredential(tx, row.authUserId, hash);
+          await clearLoginFailures(tx, normalizeEmail(address));
+          await revokeSessions(tx, row.authUserId);
+          const tenantId = 'tenantId' in row ? row.tenantId : null;
+          failedAudit = { tenantId };
+          await writeAudit(tx, {
+            id: auditId,
+            actor: who,
+            occurredAt: (await databaseNow(tx)).toISOString(),
+            tenantId,
+            target: { kind: kind === 'admin' ? 'admin' : 'portal_account', id },
+            action: 'reset_password',
+            content: { summary: '重置密码', changes: [] },
+          });
+          failedAudit = undefined;
         });
-      });
+      } catch (error) {
+        if (failedAudit) await alertAuditFailed(kind, id, failedAudit.tenantId);
+        throw error;
+      }
       return { temporaryPassword };
     },
   };

@@ -4,6 +4,9 @@ import {
   adminApiErrorSchema,
   adminCdrApiContract,
   adminStatementApiContract,
+  adminUnassignedApiContract,
+  adminCdrDeletionApiContract,
+  adminAuditLogApiContract,
   apiContract,
   portalApiContract,
   type AdminApiError,
@@ -22,7 +25,7 @@ const {
 } = portalApiContract;
 
 /**
- * 浏览器经 callApi 调用的 JSON 操作：阶段 4 认证与上下文，阶段 5 后台契约，阶段 6 门户与后台话单查询，阶段 7 月账单。
+ * 浏览器经 callApi 调用的 JSON 操作：阶段 4 认证与上下文，阶段 5 后台契约，阶段 6 门户与后台话单查询，阶段 7 月账单，阶段 8 未归属话单、删除话单与操作日志。
  * 导出的响应是 CSV 文本，不能按 JSON 解析，只放在 downloadApiContract 里，类型上无法交给 callApi。
  */
 export const webApiContract = {
@@ -30,6 +33,9 @@ export const webApiContract = {
   ...adminApiContract,
   ...adminCdrQueries,
   ...adminStatementQueries,
+  ...adminUnassignedApiContract,
+  ...adminCdrDeletionApiContract,
+  ...adminAuditLogApiContract,
   ...portalQueries,
 };
 /** 响应为文件的操作，经 callDownload 调用。 */

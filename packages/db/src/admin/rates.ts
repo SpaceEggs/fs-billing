@@ -32,7 +32,7 @@ import {
   type AdminRateCancelFutureVersionRequest,
   type AdminRatePreviewResponse,
   type AdminRatesQuery,
-  type AuditPayload,
+  type AuditActor,
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
@@ -48,7 +48,7 @@ import {
 
 type Mutation<Request> = {
   db: Db | Tx;
-  actor: AuditPayload['actor'];
+  actor: AuditActor;
   tenantId: string;
   request: Request;
 };
@@ -215,7 +215,7 @@ export function createAdminRatesService(
   async function writeVersion(
     tx: Tx,
     input: {
-      actor: AuditPayload['actor'];
+      actor: AuditActor;
       tenantId: string;
       entries: AdminRateEntry[];
       schedule: AdminRateSchedule;

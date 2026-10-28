@@ -1022,3 +1022,157 @@ it('portal password reset waits for its tenant lock before changing credentials 
     await pending;
   }
 });
+
+/**
+ * 阶段 8 延后项 1（决定 40）：重置密码的凭据、会话撤销与审计在同一个事务里。
+ * 审计写不进去时整个重置回滚（没有「已重置而无审计」），并另起事务写一条 audit_failed 告警。
+ * 用 owner 在 operation_logs 上建触发器，只让这一个目标的 reset_password 审计失败。
+ */
+async function failingResetAudit(target: string) {
+  const name = `reset_audit_failure_${randomUUID().replaceAll('-', '')}`;
+  await connections.owner.pool.query(
+    `CREATE FUNCTION public.${name}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='reset_password' AND NEW.target='${target}' THEN RAISE EXCEPTION 'Injected audit failure'; END IF; RETURN NEW; END $$`,
+  );
+  await connections.owner.pool.query(
+    `CREATE TRIGGER ${name} BEFORE INSERT ON public.operation_logs FOR EACH ROW EXECUTE FUNCTION public.${name}()`,
+  );
+  return async () => {
+    await connections.owner.pool.query(
+      `DROP TRIGGER IF EXISTS ${name} ON public.operation_logs`,
+    );
+    await connections.owner.pool.query(`DROP FUNCTION public.${name}()`);
+  };
+}
+const auditAlerts = async (needle: string) =>
+  (
+    await connections.owner.pool.query<{
+      kind: string;
+      description: string;
+      tenant_id: string | null;
+      recovered_at: Date | null;
+    }>(
+      `SELECT kind,description,tenant_id,recovered_at FROM public.system_alerts
+       WHERE kind='audit_failed' AND description LIKE $1`,
+      [`%${needle}%`],
+    )
+  ).rows;
+
+it('a failed audit write rolls the reset back and leaves credentials and sessions unchanged', async () => {
+  const session = await login(api, fixture.a);
+  const before = await connections.owner.pool.query(
+    'SELECT password FROM auth.account WHERE user_id=$1',
+    [fixture.a.userId],
+  );
+  const cleanup = await failingResetAudit(fixture.a.profileId);
+  try {
+    await expect(
+      service.resetPassword(principal(), 'portal', fixture.a.profileId),
+    ).rejects.toMatchObject({
+      cause: { message: 'Injected audit failure' },
+    });
+  } finally {
+    await cleanup();
+  }
+  expect(
+    (
+      await connections.owner.pool.query(
+        'SELECT password FROM auth.account WHERE user_id=$1',
+        [fixture.a.userId],
+      )
+    ).rows,
+  ).toEqual(before.rows);
+  const active = await api.inject({
+    url: '/api/auth/session',
+    headers: requestHeaders(session.cookie),
+  });
+  expect(active.statusCode).toBe(200);
+  expect(
+    (
+      await connections.owner.pool.query(
+        "SELECT id FROM public.operation_logs WHERE target=$1 AND action='reset_password'",
+        [fixture.a.profileId],
+      )
+    ).rows,
+  ).toEqual([]);
+  await login(api, fixture.a);
+});
+
+it('a failed audit write opens one audit_failed alert without secrets', async () => {
+  const cleanup = await failingResetAudit(fixture.a.profileId);
+  const logged: object[] = [];
+  const failing = createAdminAccountService({
+    businessDb: connections.app.db,
+    auth: connections.betterAuth,
+    logger: { error: (fields: object) => void logged.push(fields) },
+  });
+  try {
+    await expect(
+      failing.resetPassword(principal(), 'portal', fixture.a.profileId),
+    ).rejects.toMatchObject({
+      cause: { message: 'Injected audit failure' },
+    });
+  } finally {
+    await cleanup();
+  }
+  const alerts = await auditAlerts(fixture.a.profileId);
+  expect(alerts).toHaveLength(1);
+  expect(alerts[0]).toMatchObject({
+    kind: 'audit_failed',
+    tenant_id: fixture.a.tenantId,
+    recovered_at: null,
+  });
+  // 只有动作与对象 id：没有邮箱、密码、哈希或异常原文。
+  for (const secret of [
+    fixture.a.email,
+    'Injected',
+    'password',
+    '$argon',
+    'scrypt',
+  ])
+    expect(alerts[0]?.description).not.toContain(secret);
+  expect(logged).toEqual([]);
+
+  // 其他失败（对象不存在）不是审计失败，不开告警。
+  const missing = randomUUID();
+  await expect(
+    service.resetPassword(principal(), 'portal', missing),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  expect(await auditAlerts(missing)).toEqual([]);
+  // 审计成功的重置不开告警。
+  await service.resetPassword(principal(), 'portal', fixture.a2.profileId);
+  expect(await auditAlerts(fixture.a2.profileId)).toEqual([]);
+});
+
+it('a failed alert write only logs: the original error still reaches the caller', async () => {
+  const cleanup = await failingResetAudit(fixture.a.profileId);
+  const alertTrigger = `alert_failure_${randomUUID().replaceAll('-', '')}`;
+  await connections.owner.pool.query(
+    `CREATE FUNCTION public.${alertTrigger}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Injected alert failure'; END $$`,
+  );
+  await connections.owner.pool.query(
+    `CREATE TRIGGER ${alertTrigger} BEFORE INSERT ON public.system_alerts FOR EACH ROW WHEN (NEW.kind='audit_failed') EXECUTE FUNCTION public.${alertTrigger}()`,
+  );
+  const logged: { event?: string }[] = [];
+  const failing = createAdminAccountService({
+    businessDb: connections.app.db,
+    auth: connections.betterAuth,
+    logger: { error: (fields: object) => void logged.push(fields) },
+  });
+  try {
+    await expect(
+      failing.resetPassword(principal(), 'portal', fixture.a.profileId),
+    ).rejects.toMatchObject({
+      cause: { message: 'Injected audit failure' },
+    });
+  } finally {
+    await cleanup();
+    await connections.owner.pool.query(
+      `DROP TRIGGER IF EXISTS ${alertTrigger} ON public.system_alerts`,
+    );
+    await connections.owner.pool.query(
+      `DROP FUNCTION public.${alertTrigger}()`,
+    );
+  }
+  expect(logged).toMatchObject([{ event: 'audit.alert_failed' }]);
+  expect(await auditAlerts(fixture.a.profileId)).toEqual([]);
+});

@@ -1,0 +1,29 @@
+# 操作日志整年范围（100 万行）下，应用角色（RLS 策略生效）查询计划随 OFFSET 的变化。fs_billing_perf_p8pr4，PostgreSQL 17.9。
+# 策略条件（app_is_operator()）让规划器把行数估成 5000：OFFSET 超过约 2000（第 40 页起，每页 50 条）后，规划器认为「全排序」更便宜，改用全表扫描加磁盘排序。
+# 100 万行时热缓存约 0.2–0.6 s（OFFSET 100000 那一次约 0.5 s），随表大小线性增长；前 39 页走 operation_logs_created 索引，不受影响。
+# 夹具是 100 万行、整年范围；默认的最近 30 天范围只有约 6.7 万行，代价按比例更小（HTTP 耗时见 pr4-http-timings.txt）。
+## OFFSET 1800
+ Limit  (cost=70780.74..72746.86 rows=50 width=453) (actual time=0.365..0.375 rows=50 loops=1)
+   ->  Index Scan using operation_logs_created on operation_logs l  (cost=0.42..196612.41 rows=5000 width=453) (actual time=0.008..0.344 rows=1850 loops=1)
+         Index Cond: ((created_at >= '2025-10-28 16:00:00+00'::timestamp with time zone) AND (created_at < '2026-10-28 16:00:00+00'::timestamp with time zone))
+         Filter: (current_setting('app.scope'::text, true) = 'admin'::text)
+ Planning Time: 0.519 ms
+ Execution Time: 0.394 ms
+## OFFSET 2000
+ Limit  (cost=79128.88..79129.00 rows=50 width=453) (actual time=218.827..218.830 rows=50 loops=1)
+   ->  Sort  (cost=79123.88..79136.38 rows=5000 width=453) (actual time=218.758..218.802 rows=2050 loops=1)
+         Sort Key: created_at DESC, id
+         Sort Method: top-N heapsort  Memory: 2264kB
+         ->  Seq Scan on operation_logs l  (cost=0.00..78823.84 rows=5000 width=453) (actual time=0.023..121.262 rows=1000000 loops=1)
+               Filter: ((created_at >= '2025-10-28 16:00:00+00'::timestamp with time zone) AND (created_at < '2026-10-28 16:00:00+00'::timestamp with time zone) AND (current_setting('app.scope'::text,
+ Planning Time: 0.434 ms
+ Execution Time: 218.896 ms
+## OFFSET 100000
+ Limit  (cost=79143.53..79143.54 rows=1 width=453) (actual time=611.944..611.947 rows=50 loops=1)
+   ->  Sort  (cost=79131.03..79143.53 rows=5000 width=453) (actual time=604.162..610.511 rows=100050 loops=1)
+         Sort Key: created_at DESC, id
+         Sort Method: external merge  Disk: 428632kB
+         ->  Seq Scan on operation_logs l  (cost=0.00..78823.84 rows=5000 width=453) (actual time=0.020..153.268 rows=1000000 loops=1)
+               Filter: ((created_at >= '2025-10-28 16:00:00+00'::timestamp with time zone) AND (created_at < '2026-10-28 16:00:00+00'::timestamp with time zone) AND (current_setting('app.scope'::text,
+ Planning Time: 0.465 ms
+ Execution Time: 626.786 ms

@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   adminCdrExportRequestSchema,
-  type AuditPayload,
+  type AuditActor,
 } from '@fs-billing/shared';
 import { adminId, connections, createTenant } from '../../test/support.js';
 import { withAdmin } from '../client.js';
@@ -12,7 +12,7 @@ import { cdrs, operationLogs } from '../schema.js';
 import { acceptAdminCdrExport } from './cdrs.js';
 
 const { app, owner } = connections();
-let actor: AuditPayload['actor'];
+let actor: AuditActor;
 
 beforeAll(async () => {
   actor = { id: await adminId(owner), name: '系统管理员' };

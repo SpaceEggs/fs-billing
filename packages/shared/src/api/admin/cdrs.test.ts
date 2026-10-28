@@ -137,6 +137,7 @@ describe('admin CDR list contract', () => {
         unansweredCalls: 15,
         unverifiedCalls: 4,
       },
+      deletedMonths: [],
     };
     expect(adminCdrsResponseSchema.parse(response)).toEqual(response);
     expect(
@@ -145,6 +146,42 @@ describe('admin CDR list contract', () => {
         summary: { ...response.summary, unverifiedCalls: 287 },
       }).success,
     ).toBe(false);
+  });
+
+  it('lists the deleted months of the range, with or without deletion metadata', () => {
+    const response = {
+      currency: 'CNY',
+      items: [],
+      pagination: { page: 1, pageSize: 50, total: 0 },
+      summary: {
+        billedMinutes: '0',
+        charge: '0',
+        unansweredCalls: 0,
+        unverifiedCalls: 0,
+      },
+      deletedMonths: [
+        {
+          month: '2026-08',
+          count: 9642,
+          deletedBy: { id, name: '王敏' },
+          deletedAt: '2026-10-23T02:15:36.000Z',
+        },
+        // 阶段 7 的测试辅助直接置标志，没有删除元数据。
+        { month: '2026-07', count: null, deletedBy: null, deletedAt: null },
+      ],
+    };
+    expect(adminCdrsResponseSchema.parse(response)).toEqual(response);
+    for (const wrong of [
+      { ...response.deletedMonths[0]!, month: '2026-13' },
+      { ...response.deletedMonths[0]!, count: -1 },
+      { ...response.deletedMonths[0]!, extra: true },
+    ])
+      expect(
+        adminCdrsResponseSchema.safeParse({
+          ...response,
+          deletedMonths: [wrong],
+        }).success,
+      ).toBe(false);
   });
 });
 

@@ -11,3 +11,6 @@ export * from './errors.js';
 export * from './contract.js';
 export * from './amount-requests.js';
 export * from './statements.js';
+export * from './unassigned.js';
+export * from './cdr-deletions.js';
+export * from './audit-logs.js';

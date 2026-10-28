@@ -11,7 +11,7 @@ import {
   type AdminLedgerEntry,
   type AdminLedgerQuery,
   type AdminLedgerResponse,
-  type AuditPayload,
+  type AuditActor,
 } from '@fs-billing/shared';
 import { withAdmin, lockTenants, type Db, type Tx } from '../client.js';
 import { appendLedgerEntry } from '../ledger.js';
@@ -107,7 +107,7 @@ export async function operateBalance({
   amountRequests = adminAmountRequestSchemas,
 }: {
   db: Db | Tx;
-  actor: AuditPayload['actor'];
+  actor: AuditActor;
   tenantId: string;
   request: AdminBalanceOperationRequest;
   amountRequests?: AdminAmountRequestSchemas;

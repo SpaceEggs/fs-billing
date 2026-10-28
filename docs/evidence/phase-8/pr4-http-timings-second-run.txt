@@ -1,0 +1,40 @@
+# 第二次运行（同一个库、同一份代码，用来看波动）
+# Phase 8 PR 4: unassigned list / groups and operation log list over real loopback HTTP on a perf database copy
+# 2026-10-28T01:39:09.564Z database fs_billing_perf_p8pr4 (copy of fs_billing_perf, migrations applied: 20)
+# PostgreSQL 17.9 on aarch64-unknown-linux-musl
+# transport: in-process Fastify app (createApi) on 127.0.0.1, node fetch, real cookie gateway, fs_billing_app business role, response body fully read and parsed with the contract schema; 2 warmups + 7 measured rounds
+# data: 100000 pending and 2000 ignored unassigned rows, 1000000 operation log rows
+
+## Unassigned CDRs
+GET /api/admin/unassigned-cdrs/summary: n=7 min 11.9 median 12.5 max 18.5 ms, response 33 bytes, pending 100000, ignored 2000
+  samples ms: 12.1, 11.9, 12.9, 12.9, 18.5, 12.2, 12.5
+GET /api/admin/unassigned-cdrs/groups (100k pending rows): n=7 min 23.5 median 23.8 max 24.6 ms, response 7910 bytes, 41 groups, total 100000
+  samples ms: 24.6, 24.5, 23.8, 23.5, 23.5, 23.6, 23.8
+GET /api/admin/unassigned-cdrs?pageSize=50 (page 1): n=7 min 9.9 median 10.3 max 10.5 ms, response 16877 bytes, 50 rows of 100000
+  samples ms: 10.4, 10.1, 9.9, 10.5, 10.2, 10.3, 10.3
+GET /api/admin/unassigned-cdrs?pageSize=50&page=1000 (offset 49,950): n=7 min 18.8 median 19.1 max 20.2 ms, response 16885 bytes, 50 rows of 100000
+  samples ms: 20.2, 19, 18.8, 20, 18.9, 19.4, 19.1
+GET /api/admin/unassigned-cdrs?tag=TAG07&pageSize=50: n=7 min 2.6 median 2.8 max 3.2 ms, response 16880 bytes, 50 rows of 2500
+  samples ms: 3.2, 3, 2.6, 2.8, 3, 2.7, 2.6
+GET /api/admin/unassigned-cdrs?status=ignored&pageSize=50: n=7 min 2.3 median 2.8 max 8 ms, response 22981 bytes, 50 rows of 2000
+  samples ms: 2.3, 2.4, 3.1, 2.8, 5.9, 8, 2.6
+
+## Operation log (1M rows over the last year)
+GET /api/admin/audit-logs (default: last 30 days, 50 rows): n=7 min 9.7 median 11.8 max 23.8 ms, response 25069 bytes, 50 rows of 67252 (2026-09-29 .. 2026-10-28)
+  samples ms: 9.7, 17.9, 10.1, 11.2, 23.8, 19.5, 11.8
+GET /api/admin/audit-logs?tenantId=… (one tenant, last 30 days): n=7 min 6.5 median 6.7 max 8.5 ms, response 24965 bytes, 50 rows of 3956 (2026-09-29 .. 2026-10-28)
+  samples ms: 8.5, 6.9, 6.8, 6.6, 6.6, 6.7, 6.5
+GET /api/admin/audit-logs?label=cdr_delete (last 30 days): n=7 min 5.6 median 6.1 max 6.9 ms, response 24604 bytes, 50 rows of 6725 (2026-09-29 .. 2026-10-28)
+  samples ms: 6.1, 6.1, 5.9, 5.9, 6.4, 5.6, 6.9
+GET /api/admin/audit-logs?label=rate&tenantId=…&adminId=… (last 30 days): n=7 min 5.7 median 6.1 max 7.1 ms, response 24709 bytes, 50 rows of 395 (2026-09-29 .. 2026-10-28)
+  samples ms: 5.8, 5.7, 5.9, 6.3, 7.1, 6.8, 6.1
+GET /api/admin/audit-logs?from=2025-10-29 (whole year, page 1): n=7 min 86 median 87.3 max 93.7 ms, response 25071 bytes, 50 rows of 1000000 (2025-10-29 .. 2026-10-28)
+  samples ms: 93.7, 88.8, 89.4, 87.3, 87.2, 86, 86.2
+GET /api/admin/audit-logs?from=2025-10-29&page=2001 (whole year, offset 100,000): n=7 min 579.1 median 581.7 max 612.5 ms, response 25070 bytes, 50 rows of 1000000 (2025-10-29 .. 2026-10-28)
+  samples ms: 589.7, 580.7, 581.5, 579.1, 581.7, 594.4, 612.5
+GET /api/admin/audit-logs?from=2025-10-29&label=unassigned_assign&pageSize=100: n=7 min 11.1 median 11.5 max 12.1 ms, response 51200 bytes, 100 rows of 100000 (2025-10-29 .. 2026-10-28)
+  samples ms: 11.5, 11.1, 11.5, 11.5, 11.8, 12.1, 11.6
+
+## Deletion month grid (3.4M cdrs tenant)
+GET /api/admin/tenants/{PORTALBIG}/cdr-deletions?year=2026: n=7 min 2243.3 median 2347 max 2517.4 ms, response 1915 bytes, 01:blocked 02:blocked 03:blocked 04:blocked 05:blocked 06:blocked 07:blocked 08:blocked 09:blocked 10:no_statement 11:future 12:future
+  samples ms: 2243.3, 2323.2, 2280.1, 2350.5, 2347, 2517.4, 2376.6

@@ -52,6 +52,9 @@ import { cdrHandlers } from './routes/cdrs.js';
 import { homeHandlers } from './routes/home.js';
 import { exportHandlers } from './routes/exports.js';
 import { statementHandlers } from './routes/statements.js';
+import { unassignedHandlers } from './routes/unassigned.js';
+import { cdrDeletionHandlers } from './routes/cdr-deletions.js';
+import { auditLogHandlers } from './routes/audit-logs.js';
 
 export type ApiDependencies = {
   businessDb: PoolDb;
@@ -166,6 +169,9 @@ export function createApi(deps: ApiDependencies) {
     ...cdrHandlers(deps.businessDb),
     ...homeHandlers(deps.businessDb),
     ...statementHandlers(deps.businessDb),
+    ...unassignedHandlers(deps.businessDb),
+    ...cdrDeletionHandlers(deps.businessDb),
+    ...auditLogHandlers(deps.businessDb),
     ...exportHandlers({
       db: deps.businessDb,
       auditDb: exportConnection.db,
