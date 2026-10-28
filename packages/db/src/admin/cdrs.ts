@@ -9,14 +9,16 @@ import {
   adminCdrsResponseSchema,
   type AdminCdrExportRequest,
   type AdminCdrsQuery,
+  type AuditActor,
   type AuditPayload,
 } from '@fs-billing/shared';
 import { listCountries, portalCdrProjection } from '../portal/cdrs.js';
-import { withAdmin, type Db, type PoolDb } from '../client.js';
+import { withAdmin, type Db, type PoolDb, type Tx } from '../client.js';
 import { NotFoundError } from '../errors.js';
 import {
   adminCdrFilters,
   cdrBounds,
+  cdrTimestamp,
   type AdminCdrFilter,
 } from '../cdr-query.js';
 import { writeAudit } from './audit.js';
@@ -106,8 +108,46 @@ export function listAdminCdrs({
         response.currency === null)
     )
       throw new NotFoundError('租户不存在');
-    return adminCdrsResponseSchema.parse(response);
+    return adminCdrsResponseSchema.parse({
+      ...response,
+      deletedMonths: await deletedMonthsIn(tx, tenantId, input),
+    });
   });
+}
+
+/**
+ * 与日期范围相交的、话单已删除的月份（阶段 8 决定 12）：话单页的提示条。
+ * 范围按北京日，所以取 [from 所在月, to 所在月]；旧标志没有元数据时 count、deletedBy、deletedAt 为 null。
+ */
+async function deletedMonthsIn(
+  tx: Tx,
+  tenantId: string,
+  range: { from: string; to: string },
+) {
+  const { rows } = await tx.execute<{
+    month: string;
+    count: number | null;
+    deleted_at: string | null;
+    admin_id: string | null;
+    admin_name: string | null;
+  }>(sql`
+    select to_char(s.month, 'YYYY-MM') as month, s.details_deleted_count as count,
+      ${cdrTimestamp(sql`s.details_deleted_at`)} as deleted_at, a.id as admin_id, a.name as admin_name
+    from monthly_statements s
+    left join admins a on a.id = s.details_deleted_by
+    where s.tenant_id = ${tenantId}::uuid and s.details_deleted
+      and s.month >= date_trunc('month', ${range.from}::date)::date
+      and s.month <= date_trunc('month', ${range.to}::date)::date
+    order by s.month`);
+  return rows.map((row) => ({
+    month: row.month,
+    count: row.count,
+    deletedBy:
+      row.admin_id !== null && row.admin_name !== null
+        ? { id: row.admin_id, name: row.admin_name }
+        : null,
+    deletedAt: row.deleted_at,
+  }));
 }
 
 export function listAdminCdrCountries(input: {
@@ -155,7 +195,7 @@ export async function acceptAdminCdrExport({
 }: {
   db: PoolDb;
   tenantId: string;
-  actor: AuditPayload['actor'];
+  actor: AuditActor;
   query: AdminCdrExportRequest;
   signal: AbortSignal;
 }) {

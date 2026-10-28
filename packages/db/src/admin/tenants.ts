@@ -19,7 +19,7 @@ import {
   type AdminTenantDetailResponse,
   type AdminTenantsQuery,
   type AdminTenantsResponse,
-  type AuditPayload,
+  type AuditActor,
   type AuditChange,
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
@@ -46,7 +46,7 @@ import { parseInitialRateCsv } from './csv.js';
 
 type TenantInput = {
   db: Db | Tx;
-  actor: AuditPayload['actor'];
+  actor: AuditActor;
   tenantId: string;
 };
 
@@ -192,7 +192,7 @@ export async function createTenant({
   amountRequests = adminAmountRequestSchemas,
 }: {
   db: Db | Tx;
-  actor: AuditPayload['actor'];
+  actor: AuditActor;
   creatorEmail: string;
   request: AdminTenantCreateRequest;
   amountRequests?: AdminAmountRequestSchemas;
@@ -339,7 +339,7 @@ export async function createTenant({
 
 async function auditTenant(
   tx: Tx,
-  actor: AuditPayload['actor'],
+  actor: AuditActor,
   tenantId: string,
   action:
     | 'tenant_edit'

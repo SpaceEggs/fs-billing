@@ -43,6 +43,11 @@ export const conflictMessages = {
   STATEMENT_DETAILS_DELETED: '该月话单已删除，无法重新生成账单',
   STATEMENT_NOT_FINAL: '该月尚未结束，月结后才能重新生成账单',
   STATEMENT_VERSION_CONFLICT: '账单已被重新生成，请刷新后重试',
+  UNASSIGNED_PREVIEW_STALE: '预览之后数据已变化，请重新预览',
+  UNASSIGNED_NOTHING_TO_ASSIGN:
+    '选择中没有可分配的待处理话单，请刷新后重新选择',
+  CDR_MONTH_NOT_DELETABLE: '所选月份不能删除话单，请刷新后重新选择',
+  CDR_DELETE_COUNT_CHANGED: '话单条数与预览不符，请刷新后重新预览',
 } as const satisfies Record<ConflictCode, string>;
 
 /** 冲突说明页面数据已过时，刷新后可重新操作。 */
@@ -56,6 +61,10 @@ const staleConflicts: ReadonlySet<ConflictCode> = new Set([
   'RECEIVABLE_VOIDED',
   'SETTLEMENT_CONFLICT',
   'STATEMENT_VERSION_CONFLICT',
+  'UNASSIGNED_PREVIEW_STALE',
+  'UNASSIGNED_NOTHING_TO_ASSIGN',
+  'CDR_MONTH_NOT_DELETABLE',
+  'CDR_DELETE_COUNT_CHANGED',
 ]);
 
 export function apiProblem(error: unknown): ApiProblem {
@@ -110,6 +119,10 @@ export function apiProblem(error: unknown): ApiProblem {
     case 'STATEMENT_DETAILS_DELETED':
     case 'STATEMENT_NOT_FINAL':
     case 'STATEMENT_VERSION_CONFLICT':
+    case 'UNASSIGNED_PREVIEW_STALE':
+    case 'UNASSIGNED_NOTHING_TO_ASSIGN':
+    case 'CDR_MONTH_NOT_DELETABLE':
+    case 'CDR_DELETE_COUNT_CHANGED':
       return {
         kind: 'conflict',
         code: detail.code,

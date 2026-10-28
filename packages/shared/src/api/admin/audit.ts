@@ -42,6 +42,7 @@ export const auditActionSchema = z.enum([
   'unassigned_ignore',
   'unassigned_unignore',
   'cdr_delete',
+  'credential_bootstrap',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 export const auditChangeSchema = z.strictObject({
@@ -72,35 +73,60 @@ const contentFields = {
   summary: z.string().trim().min(1),
   changes: z.array(auditChangeSchema),
 };
+/** 管理员操作者。 */
+export const auditActorSchema = z.strictObject({
+  id: z.uuid(),
+  name: z.string().min(1),
+});
+/** 没有管理员的事件（auth:bootstrap 命令行）：来源标签，形如 cli:auth:bootstrap@主机/系统用户。 */
+export const auditSystemActorSchema = z.strictObject({
+  label: z.string().trim().min(1).max(200),
+});
+export type AuditActor = z.infer<typeof auditActorSchema>;
+export type AuditSystemActor = z.infer<typeof auditSystemActorSchema>;
+export const auditTargetKindSchema = z.enum([
+  'tenant',
+  'portal_account',
+  'ledger_entry',
+  'rate_version',
+  'receivable',
+  'admin',
+  'statement',
+  'unassigned_batch',
+]);
 const envelopeFields = {
   id: z.uuid(),
-  actor: z.strictObject({ id: z.uuid(), name: z.string().min(1) }),
+  actor: auditActorSchema,
   occurredAt: adminTimestampSchema,
   tenantId: z.uuid().nullable(),
-  target: z.strictObject({
-    kind: z.enum([
-      'tenant',
-      'portal_account',
-      'ledger_entry',
-      'rate_version',
-      'receivable',
-      'admin',
-      'statement',
-      'unassigned_batch',
-    ]),
-    id: z.uuid(),
-  }),
+  target: z.strictObject({ kind: auditTargetKindSchema, id: z.uuid() }),
 };
-function auditVariant<
+function variantOf<
   const Action extends AuditAction,
   Fields extends z.ZodRawShape,
->(action: Action, fields: Fields) {
+  Actor extends z.ZodType,
+>(actor: Actor, action: Action, fields: Fields) {
   return z.strictObject({
     ...envelopeFields,
+    actor,
     action: z.literal(action),
     content: z.strictObject({ ...contentFields, ...fields }),
   });
 }
+function auditVariant<
+  const Action extends AuditAction,
+  Fields extends z.ZodRawShape,
+>(action: Action, fields: Fields) {
+  return variantOf(auditActorSchema, action, fields);
+}
+/** bootstrap 被拒绝或失败的原因（固定枚举，不取异常消息）。 */
+export const credentialBootstrapErrorCodes = [
+  'PASSWORD_RULES',
+  'PROFILE_NOT_FOUND',
+  'CREDENTIAL_EXISTS',
+  'MULTIPLE_CREDENTIALS',
+  'UNKNOWN',
+] as const;
 const balanceFields = {
   ledgerEntryId: z.uuid(),
   amount: adminPositiveAmountSchema,
@@ -211,6 +237,17 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
     deletedCount: z.int().nonnegative(),
     range: z.strictObject({ from: z.iso.date(), to: z.iso.date() }),
     confirmedCode: z.string().min(1),
+  }),
+  /**
+   * auth:bootstrap 命令行没有管理员会话，操作者是 { label }（operation_logs.admin_id 为空）；
+   * target 是被初始化凭据的资料 id（admin 或 portal_account）。内容里没有密码、哈希、会话 token，
+   * 也没有异常消息：errorCode 取固定枚举。
+   */
+  variantOf(auditSystemActorSchema, 'credential_bootstrap', {
+    mode: z.enum(['create', 'replace']),
+    result: z.enum(['succeeded', 'rejected', 'failed']),
+    errorCode: z.enum(credentialBootstrapErrorCodes).nullable(),
+    revokedSessions: z.int().nonnegative(),
   }),
 ]);
 export const auditContentSchema = z.discriminatedUnion('action', [

@@ -11,12 +11,15 @@ import { cdrCountriesResponseSchema } from '../cdr-fields.js';
 import { csvExportResponseSchema } from '../export.js';
 import * as cdrs from './cdrs.js';
 import * as balance from './balance.js';
+import * as auditLogs from './audit-logs.js';
+import * as cdrDeletions from './cdr-deletions.js';
 import * as ledger from './ledger.js';
 import * as rates from './rates.js';
 import * as receivables from './receivables.js';
 import * as statements from './statements.js';
 import { statementMonthParamsSchema } from '../statement-fields.js';
 import * as tenants from './tenants.js';
+import * as unassigned from './unassigned.js';
 import {
   adminIdParamsSchema,
   adminMutationResponseSchema,
@@ -480,3 +483,110 @@ export const adminStatementApiContract = {
 } satisfies Record<string, ApiOperation>;
 export type AdminStatementApiOperationId =
   keyof typeof adminStatementApiContract;
+
+/**
+ * 阶段 8 未归属话单，登记方式同 adminStatementApiContract：后端 PR 把它并入 liveApiContract。
+ * 预览只读、不写日志；分配、忽略、撤销忽略各写一条操作日志（unassigned_assign / _ignore / _unignore）。
+ */
+export const adminUnassignedApiContract = {
+  adminUnassignedSummary: operation(
+    'adminUnassignedSummary',
+    'GET',
+    '/api/admin/unassigned-cdrs/summary',
+    globalRequest,
+    unassigned.adminUnassignedSummaryResponseSchema,
+    {},
+  ),
+  adminUnassignedGroups: operation(
+    'adminUnassignedGroups',
+    'GET',
+    '/api/admin/unassigned-cdrs/groups',
+    globalRequest,
+    unassigned.adminUnassignedGroupsResponseSchema,
+    {},
+  ),
+  adminUnassignedList: operation(
+    'adminUnassignedList',
+    'GET',
+    '/api/admin/unassigned-cdrs',
+    { ...globalRequest, query: unassigned.adminUnassignedListQuerySchema },
+    unassigned.adminUnassignedListResponseSchema,
+    {},
+  ),
+  adminUnassignedAssignPreview: operation(
+    'adminUnassignedAssignPreview',
+    'POST',
+    '/api/admin/unassigned-cdrs/assign-preview',
+    { ...globalRequest, body: unassigned.adminUnassignedPreviewRequestSchema },
+    unassigned.adminUnassignedPreviewResponseSchema,
+    {},
+  ),
+  adminUnassignedAssign: operation(
+    'adminUnassignedAssign',
+    'POST',
+    '/api/admin/unassigned-cdrs/assign',
+    { ...globalRequest, body: unassigned.adminUnassignedAssignRequestSchema },
+    unassigned.adminUnassignedAssignResponseSchema,
+    conflicts([
+      'UNASSIGNED_PREVIEW_STALE',
+      'UNASSIGNED_NOTHING_TO_ASSIGN',
+      'IDEMPOTENCY_CONFLICT',
+    ]),
+  ),
+  adminUnassignedIgnore: operation(
+    'adminUnassignedIgnore',
+    'POST',
+    '/api/admin/unassigned-cdrs/ignore',
+    { ...globalRequest, body: unassigned.adminUnassignedIgnoreRequestSchema },
+    unassigned.adminUnassignedResolveResponseSchema,
+    {},
+  ),
+  adminUnassignedUnignore: operation(
+    'adminUnassignedUnignore',
+    'POST',
+    '/api/admin/unassigned-cdrs/unignore',
+    { ...globalRequest, body: unassigned.adminUnassignedUnignoreRequestSchema },
+    unassigned.adminUnassignedResolveResponseSchema,
+    {},
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminUnassignedApiOperationId =
+  keyof typeof adminUnassignedApiContract;
+
+/**
+ * 阶段 8 删除话单：月份格状态是 GET，删除是 POST（每个月写一条 cdr_delete）。
+ * 月份之间不原子，中途失败时 200 响应带 remaining 与 failure（见 adminCdrDeleteResponseSchema）。
+ */
+export const adminCdrDeletionApiContract = {
+  adminTenantCdrDeletionMonths: operation(
+    'adminTenantCdrDeletionMonths',
+    'GET',
+    '/api/admin/tenants/{tenantId}/cdr-deletions',
+    { ...tenantRequest, query: cdrDeletions.adminCdrDeletionMonthsQuerySchema },
+    cdrDeletions.adminCdrDeletionMonthsResponseSchema,
+    {},
+  ),
+  adminTenantCdrDelete: operation(
+    'adminTenantCdrDelete',
+    'POST',
+    '/api/admin/tenants/{tenantId}/cdr-deletions',
+    { ...tenantRequest, body: cdrDeletions.adminCdrDeleteRequestSchema },
+    cdrDeletions.adminCdrDeleteResponseSchema,
+    conflicts(['CDR_MONTH_NOT_DELETABLE', 'CDR_DELETE_COUNT_CHANGED']),
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminCdrDeletionApiOperationId =
+  keyof typeof adminCdrDeletionApiContract;
+
+/** 阶段 8 操作日志：只读，访问日志本身不再记日志。 */
+export const adminAuditLogApiContract = {
+  adminAuditLogs: operation(
+    'adminAuditLogs',
+    'GET',
+    '/api/admin/audit-logs',
+    { ...globalRequest, query: auditLogs.adminAuditLogsQuerySchema },
+    auditLogs.adminAuditLogsResponseSchema,
+    {},
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminAuditLogApiOperationId = keyof typeof adminAuditLogApiContract;

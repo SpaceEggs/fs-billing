@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import { beijingDay } from '@fs-billing/rating';
-import type { AuditPayload } from '@fs-billing/shared';
+import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { monthlyStatements } from '../schema.js';
@@ -22,7 +22,7 @@ import {
 export const CDR_DELETE_MAX_MONTHS = 120;
 
 export interface DeleteCdrMonthsInput {
-  readonly actor: AuditPayload['actor'];
+  readonly actor: AuditActor;
   readonly tenantId: string;
   /** YYYY-MM。 */
   readonly fromMonth: string;

@@ -10,6 +10,8 @@ import {
   pageNumberSchema,
 } from '../cdr-fields.js';
 import { checkDayRange, dayRangeFields } from '../day-range.js';
+import { statementMonthSchema } from '../statement-fields.js';
+import { adminTimestampSchema } from './common.js';
 
 /**
  * 查询串里的布尔值只接受 'true' 或 'false'，z.coerce.boolean() 会把 'false' 当成真。
@@ -35,6 +37,21 @@ export const adminCdrsQuerySchema = z
   .superRefine(checkDayRange);
 export type AdminCdrsQuery = z.infer<typeof adminCdrsQuerySchema>;
 
+/**
+ * 与所选日期范围相交的、话单已删除的月份（阶段 8 决定 12），供话单页的提示条使用。
+ * 旧标志（阶段 7 的测试辅助直接置位）没有删除元数据，此时 count、deletedBy、deletedAt 为 null。
+ * 只有后台响应有这个字段，门户话单响应是另一个 strict schema，没有它。
+ */
+export const adminDeletedMonthSchema = z.strictObject({
+  month: statementMonthSchema,
+  count: z.int().nonnegative().nullable(),
+  deletedBy: z
+    .strictObject({ id: z.uuid(), name: z.string().min(1) })
+    .nullable(),
+  deletedAt: adminTimestampSchema.nullable(),
+});
+export type AdminDeletedMonth = z.infer<typeof adminDeletedMonthSchema>;
+
 export const adminCdrsResponseSchema = z
   .strictObject({
     currency: currencySchema,
@@ -45,6 +62,7 @@ export const adminCdrsResponseSchema = z
       /** 筛选结果中未经验证的条数，用于「其中未经验证 N 条」。 */
       unverifiedCalls: z.int().nonnegative(),
     }),
+    deletedMonths: z.array(adminDeletedMonthSchema),
   })
   .superRefine((response, context) => {
     if (response.summary.unverifiedCalls > response.pagination.total)
