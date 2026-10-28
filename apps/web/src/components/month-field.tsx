@@ -86,6 +86,8 @@ export function MonthField({
               onChange(month);
             }}
             cell={(month) => ({ disabled: month < min || month > max })}
+            // 关闭按钮盖在年份行右上角；删除话单的网格不在这一角，不传。
+            yearRowClassName="mr-9"
           />
           <div className="flex justify-end">
             <Button
@@ -141,6 +143,7 @@ export function MonthGrid({
   value,
   onPick,
   cell,
+  yearRowClassName,
 }: {
   year: number;
   minYear: number;
@@ -150,11 +153,18 @@ export function MonthGrid({
   value: string | null;
   onPick: (month: string) => void;
   cell: (month: string) => MonthCellState;
+  /** 年份行的额外类。账单页用它躲开对话框的关闭按钮。 */
+  yearRowClassName?: string;
 }) {
   const key = (month: number) => `${year}-${String(month).padStart(2, '0')}`;
   return (
     <>
-      <div className="mr-9 flex h-11 items-center justify-between md:h-9">
+      <div
+        className={cn(
+          'flex h-11 items-center justify-between md:h-9',
+          yearRowClassName,
+        )}
+      >
         <button
           type="button"
           aria-label="上一年"

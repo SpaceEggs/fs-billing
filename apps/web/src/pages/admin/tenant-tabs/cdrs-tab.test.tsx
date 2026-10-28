@@ -78,6 +78,25 @@ function cdrApp(
         },
       };
     },
+    [`GET ${detailPath}/cdr-deletions`]: () => ({
+      status: 200,
+      body: {
+        tenant: {
+          id: tenantId,
+          code: 'ABC001',
+          name: '深圳市某某科技有限公司',
+        },
+        year: 2026,
+        months: Array.from({ length: 12 }, (_, index) => ({
+          month: `2026-${String(index + 1).padStart(2, '0')}`,
+          state: index + 1 === 8 ? 'deletable' : 'no_statement',
+          cdrCount: index + 1 === 8 ? 9642 : null,
+          blockedReasons: [],
+          statementId: null,
+          deleted: null,
+        })),
+      },
+    }),
     [`GET ${detailPath}/ledger`]: () => ({
       status: 200,
       body: {
@@ -139,12 +158,59 @@ describe('admin tenant CDR tab', () => {
     ).toHaveTextContent('其中未经验证 1 条');
   });
 
-  it('shows neither the delete button nor the alert link of later phases', async () => {
+  it('shows the delete button and hides the alert link of the later phase', async () => {
     cdrApp(`${path}&unverifiedOnly=true`);
     await screen.findByRole('table');
-    expect(document.body).not.toHaveTextContent('删除话单');
+    expect(screen.getAllByRole('button', { name: '删除话单' })).toHaveLength(2);
     expect(document.body).not.toHaveTextContent('查看告警');
     expect(document.body).not.toHaveTextContent('关联告警');
+  });
+
+  it('banners each deleted month in the selected range, with metadata only when it exists', async () => {
+    cdrApp(path, () => ({
+      status: 200,
+      body: cdrList([verifiedRow], {
+        unverifiedCalls: 0,
+        deletedMonths: [
+          {
+            month: '2026-07',
+            count: null,
+            deletedBy: null,
+            deletedAt: null,
+          },
+          {
+            month: '2026-08',
+            count: 9642,
+            deletedBy: {
+              id: '00000000-0000-4000-8000-000000000009',
+              name: '王敏',
+            },
+            deletedAt: '2026-10-28T06:03:00.000Z',
+          },
+        ],
+      }),
+    }));
+    const banner = await screen.findByRole('region', { name: '已删除的话单' });
+    expect(within(banner).getByText('2026年7月 的话单已删除')).toBeVisible();
+    expect(
+      within(banner).getByText(
+        '2026年8月 的话单已删除 · 共 9,642 条 · 王敏 删除于 2026-10-28 14:03',
+      ),
+    ).toBeVisible();
+    expect(screen.getByRole('table')).toBeVisible();
+  });
+
+  it('opens the delete dialog from the calls tab', async () => {
+    const user = userEvent.setup();
+    cdrApp(path);
+    await screen.findByRole('table');
+    await user.click(screen.getAllByRole('button', { name: '删除话单' })[0]!);
+    expect(
+      await screen.findByRole('dialog', { name: '删除话单' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '开始月份：选择月份' }),
+    ).toBeVisible();
   });
 
   it('filters to the unverified calls and explains them without the fault time or alerts', async () => {
