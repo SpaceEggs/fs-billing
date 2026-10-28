@@ -2,8 +2,10 @@ import { useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
+import { CircleAlertIcon, DownloadIcon, EllipsisIcon } from 'lucide-react';
 import { Button } from '../ui/button';
-import { CalloutIcon } from '../ui/alert';
+import { MobileBarButton } from '../mobile-bar-button';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '../ui/alert';
 
 /**
  * 导出的状态：进行中禁用按钮，防止重复点击占满服务端的导出名额；筛选变了就丢掉上一次的错误。
@@ -56,28 +58,24 @@ export function CdrExportButton({
   );
 }
 
-/** 手机顶栏的 ⤓（设计稿 2d）。 */
+/** 手机顶栏的导出图标（设计稿 2d）。 */
 export function CdrExportIcon({
   exporting,
   disabled = false,
   onExport,
-  className,
 }: {
   exporting: boolean;
   disabled?: boolean;
   onExport: () => void;
-  className?: string;
 }) {
   return (
-    <button
-      type="button"
+    <MobileBarButton
       aria-label={exporting ? '正在导出' : '导出 CSV'}
       disabled={exporting || disabled}
       onClick={onExport}
-      className={className}
     >
-      {exporting ? '…' : '⤓'}
-    </button>
+      {exporting ? <EllipsisIcon aria-hidden /> : <DownloadIcon aria-hidden />}
+    </MobileBarButton>
   );
 }
 
@@ -95,19 +93,26 @@ export function CdrExportError({
   const message = exportFailure(error);
   if (message === null) return null;
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
+    <Alert
+      variant="error"
+      className="has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr_auto]"
     >
-      <CalloutIcon tone="err" />
-      <div className="flex flex-1 flex-col gap-0.5">
-        <span className="font-semibold">{message.title}</span>
-        {message.body ? <span>{message.body}</span> : null}
-      </div>
-      <Button variant="outline" size="sm" disabled={retrying} onClick={onRetry}>
-        重试
-      </Button>
-    </div>
+      <CircleAlertIcon aria-hidden />
+      <AlertTitle>{message.title}</AlertTitle>
+      {message.body ? (
+        <AlertDescription>{message.body}</AlertDescription>
+      ) : null}
+      <AlertAction>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={retrying}
+          onClick={onRetry}
+        >
+          重试
+        </Button>
+      </AlertAction>
+    </Alert>
   );
 }
 

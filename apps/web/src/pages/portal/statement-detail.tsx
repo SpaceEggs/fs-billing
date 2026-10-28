@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { Identity, PortalStatementResponse } from '@fs-billing/shared';
-import { AppShell, mobileBarButtonClass } from '../../components/app-shell';
+import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
+import { AppShell } from '../../components/app-shell';
+import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   CdrExportError,
   CdrExportButton,
@@ -15,7 +18,7 @@ import { StatementDays } from '../../components/statement/day-table';
 import { StatementEquation } from '../../components/statement/statement-equation';
 import { StatementStateTag } from '../../components/statement/state-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { callDownload } from '../../lib/api';
 import {
@@ -95,15 +98,13 @@ function MobileMenu() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
+      <MobileBarButton
         aria-label="更多操作"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className={mobileBarButtonClass}
       >
-        ⋯
-      </button>
+        <EllipsisIcon aria-hidden />
+      </MobileBarButton>
       <ModalDialog open={open} onOpenChange={setOpen} title="更多操作">
         <Button
           variant="ghost"
@@ -302,13 +303,11 @@ export function PortalStatementDetailPage({
       activeNav="月账单"
       centerTitle
       mobileNav={
-        <Link
-          to="/portal/statements"
-          aria-label="返回月账单"
-          className={mobileBarButtonClass}
-        >
-          ‹
-        </Link>
+        <MobileBarButton asChild>
+          <Link to="/portal/statements" aria-label="返回月账单">
+            <ChevronLeftIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
       mobileActions={data ? <MobileMenu /> : null}
     >
@@ -341,10 +340,10 @@ export function PortalStatementDetailPage({
         </div>
       ) : (
         <div className="p-4 md:p-7">
-          <div
+          <Skeleton
             aria-busy
             aria-label="月账单加载中"
-            className="h-[320px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[320px] rounded-xl"
           />
         </div>
       )}

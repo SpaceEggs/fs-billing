@@ -5,6 +5,10 @@ import type {
   AdminBalanceOperationResponse,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { CheckIcon } from 'lucide-react';
+import { Checkbox } from '../ui/checkbox';
+import { Textarea } from '../ui/textarea';
+import { Alert } from '../ui/alert';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem } from '../../lib/api-problem';
@@ -33,7 +37,7 @@ import { Money } from '../data-format';
 import { statusTags } from '../status-tag';
 import { healthStatus } from '../tenant-health';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Field, invalidClass, MoneyInput } from './form-fields';
 import { ProblemAlert } from './problem-alert';
 
@@ -309,7 +313,7 @@ function BalanceFlow({
             aria-hidden
             className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-[22px] font-bold text-ok"
           >
-            ✓
+            <CheckIcon className="size-6" />
           </span>
           <h2 className="m-0 text-[17px] font-semibold">操作成功</h2>
           <p
@@ -426,18 +430,15 @@ function BalanceFlow({
           {statusTags[healthStatus[projected.health]].label}」
         </div>
         {tenant.status === 'disabled' ? (
-          <div
-            role="note"
-            className="flex flex-col gap-0.5 rounded-lg border border-off-border bg-off-soft px-3 py-2.5 text-[13px] leading-normal"
-          >
+          <Alert variant="muted" role="note">
             <span className="font-semibold">该租户已停用，状态不会改变</span>
             <span>
               入账后租户仍为「已停用」，不会自动启用，正常授权路径仍拒绝新呼叫。如需恢复呼叫，请在租户详情右上角「启用」。
             </span>
-          </div>
+          </Alert>
         ) : null}
         {large ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
+          <Alert variant="warning" className="gap-2">
             <span className="font-semibold">
               大额{rule.label}，需要二次确认
             </span>
@@ -450,15 +451,13 @@ function BalanceFlow({
               ，请再次核对金额与租户。
             </span>
             <label className="flex items-center gap-2 font-medium text-foreground">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={largeConfirmed}
-                onChange={(event) => setLargeConfirmed(event.target.checked)}
-                className="size-4 accent-primary"
+                onCheckedChange={(next) => setLargeConfirmed(next === true)}
               />
               我已核对，确认{rule.label} {signedMoney(tenant.currency, amount)}
             </label>
-          </div>
+          </Alert>
         ) : null}
         {submitError ? (
           <ProblemAlert
@@ -547,7 +546,7 @@ function BalanceFlow({
         }
       >
         {(props) => (
-          <textarea
+          <Textarea
             {...props}
             rows={2}
             maxLength={2000}
@@ -558,10 +557,7 @@ function BalanceFlow({
             }
             value={draft.note}
             onChange={(event) => update({ note: event.target.value })}
-            className={cn(
-              'resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm',
-              invalidClass(errors.note),
-            )}
+            className={cn('resize-none font-normal', invalidClass(errors.note))}
           />
         )}
       </Field>

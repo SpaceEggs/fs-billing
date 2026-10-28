@@ -11,11 +11,12 @@ import {
   type Currency,
   type Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { XIcon, CheckIcon } from 'lucide-react';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
+import { Alert } from '../../components/ui/alert';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import {
   Field,
   FormSection,
@@ -25,9 +26,12 @@ import {
 } from '../../components/admin/form-fields';
 import { CopyField, SecretField } from '../../components/copy-field';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { Input } from '../../components/ui/input';
-import { Select } from '../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import {
   apiQuery,
   invalidateTenant,
@@ -138,7 +142,7 @@ function CsvPicker({
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <label htmlFor={id}>CSV 文件</label>
+      <Label htmlFor={id}>CSV 文件</Label>
       <input
         id={id}
         type="file"
@@ -203,7 +207,7 @@ function CopySourcePicker({
   const total = tenants.data?.pagination.total ?? 0;
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium md:col-span-2">
-      <label htmlFor={`${id}-search`}>搜索来源租户</label>
+      <Label htmlFor={`${id}-search`}>搜索来源租户</Label>
       <Input
         id={`${id}-search`}
         type="search"
@@ -212,8 +216,8 @@ function CopySourcePicker({
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      <label htmlFor={id}>复制自</label>
-      <Select
+      <Label htmlFor={id}>复制自</Label>
+      <NativeSelect
         id={id}
         value={picked?.id ?? ''}
         disabled={!tenants.data}
@@ -223,9 +227,9 @@ function CopySourcePicker({
           );
           onChange(null);
         }}
-        className="font-normal md:h-10"
+        containerClassName="font-normal md:h-10"
       >
-        <option value="">
+        <NativeSelectOption value="">
           {tenants.isError
             ? '租户列表加载失败'
             : tenants.data
@@ -233,13 +237,13 @@ function CopySourcePicker({
                 ? '选择租户'
                 : '没有匹配的同币种租户'
               : '加载中…'}
-        </option>
+        </NativeSelectOption>
         {options.map((tenant) => (
-          <option key={tenant.id} value={tenant.id}>
+          <NativeSelectOption key={tenant.id} value={tenant.id}>
             {tenant.code} {tenant.name}
-          </option>
+          </NativeSelectOption>
         ))}
-      </Select>
+      </NativeSelect>
       <span className="text-xs font-normal text-muted-foreground">
         {rates.isError
           ? '该租户的费率表加载失败，请重新选择'
@@ -255,10 +259,7 @@ function CopySourcePicker({
 
 function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
   return (
-    <div
-      role="alert"
-      className="flex flex-col gap-2 rounded-lg border border-err-border bg-err-soft px-3.5 py-3 text-[13px] text-err md:col-span-2"
-    >
+    <Alert variant="error" className="gap-2 px-3.5 py-3 md:col-span-2">
       <span className="font-semibold">
         CSV 有 {rows.length} 行错误，租户未创建
       </span>
@@ -269,7 +270,7 @@ function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
           </li>
         ))}
       </ul>
-    </div>
+    </Alert>
   );
 }
 
@@ -313,10 +314,7 @@ function PortalResult({
     );
   if (portal.status === 'failed')
     return (
-      <div
-        role="alert"
-        className="flex flex-col gap-2 rounded-[10px] border border-err-border bg-err-soft px-4 py-3.5 text-err"
-      >
+      <Alert variant="error" className="gap-2 rounded-[10px] px-4 py-3.5">
         <span className="text-sm font-semibold">
           门户账号 {portalRequest.email} 未开通
         </span>
@@ -332,7 +330,7 @@ function PortalResult({
         >
           重试开通
         </Button>
-      </div>
+      </Alert>
     );
   const { response } = portal;
   return (
@@ -343,14 +341,14 @@ function PortalResult({
       {response.passwordSource === 'generated' ? (
         <>
           <SecretField value={response.temporaryPassword} label="临时密码" />
-          <div className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
+          <Alert variant="warning">
             <span className="font-semibold">
               只显示一次，关闭后无法再次查看
             </span>
             <span>
               请立即复制并通过安全渠道发给客户，客户首次登录后需修改密码。
             </span>
-          </div>
+          </Alert>
         </>
       ) : (
         <span className="text-[13px] text-muted-foreground">
@@ -386,7 +384,7 @@ function CreatedDialog({
           aria-hidden
           className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-[22px] font-bold text-ok"
         >
-          ✓
+          <CheckIcon className="size-6" />
         </span>
         <h2 className="m-0 text-[17px] font-semibold">
           租户 {tenant.code} 已创建
@@ -395,7 +393,7 @@ function CreatedDialog({
           {tenant.name}（{tenant.currency}）· {created.rates}
         </span>
       </div>
-      <div className="flex flex-col gap-2.5 rounded-[10px] border border-warn-border bg-warn-soft px-4 py-3.5">
+      <Alert variant="warning" className="gap-2.5 rounded-[10px] px-4 py-3.5">
         <span className="text-sm font-semibold text-warn">
           下一步：请在 FreeSWITCH 中设置
         </span>
@@ -407,7 +405,7 @@ function CreatedDialog({
           在该客户的 SIP 账号或 IP
           对接上设置此通道变量，否则话单会进入「未归属话单」。
         </span>
-      </div>
+      </Alert>
       <PortalResult created={created} onRetry={onRetryPortal} />
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
         <Button
@@ -644,13 +642,11 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
       }
       activeNav="租户"
       mobileNav={
-        <Link
-          to="/admin/tenants"
-          aria-label="取消新建，返回租户列表"
-          className={mobileBarButtonClass}
-        >
-          ✕
-        </Link>
+        <MobileBarButton asChild>
+          <Link to="/admin/tenants" aria-label="取消新建，返回租户列表">
+            <XIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
     >
       <PageBody title="新建租户">
@@ -814,13 +810,13 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
             </Field>
             <Field label="备注" error={errors.remark} className="md:col-span-2">
               {(props) => (
-                <textarea
+                <Textarea
                   {...props}
                   maxLength={2000}
                   placeholder="选填"
                   value={form.remark}
                   onChange={(event) => update({ remark: event.target.value })}
-                  className="min-h-16 rounded-lg border border-input bg-transparent px-3 py-2.5 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                  className="min-h-16 py-2.5 font-normal"
                 />
               )}
             </Field>

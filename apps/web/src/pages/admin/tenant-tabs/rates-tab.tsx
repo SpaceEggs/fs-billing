@@ -10,6 +10,9 @@ import {
   type AdminRateVersion,
   type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
+import { Input } from '../../../components/ui/input';
+import { Badge } from '../../../components/ui/badge';
 import {
   RateEditDialog,
   rateUnit,
@@ -167,10 +170,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     );
   if (!data)
     return (
-      <div
+      <Skeleton
         aria-busy
         aria-label="费率表加载中"
-        className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+        className="h-[240px] rounded-xl"
       />
     );
   const unit = rateUnit[data.currency];
@@ -280,17 +283,18 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           )}
         >
           <span className="flex-1">{notice.text}</span>
-          <button
-            type="button"
+          <Button
+            variant="link"
+            size="inline"
             onClick={() => setNotice(null)}
-            className="rounded text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+            className="text-[13px] text-current"
           >
             关闭
-          </button>
+          </Button>
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-[13px] text-muted-foreground">
-        <input
+        <Input
           type="search"
           aria-label="搜索前缀、ISO、国家或说明"
           placeholder="搜索前缀、ISO、国家或说明"
@@ -300,12 +304,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             setSearch(event.target.value);
             setPage(1);
           }}
-          className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9 md:w-[260px] md:text-sm"
+          className="sm:h-11 sm:text-base md:h-9 md:w-[260px] md:text-sm"
         />
-        <span className="hidden h-6 items-center gap-1.5 rounded-md border border-ok-border bg-ok-soft px-2 text-xs font-medium text-ok md:inline-flex">
+        <Badge variant="ok" className="hidden h-6 md:inline-flex">
           <span aria-hidden className="size-1.5 rounded-full bg-current" />
           当前生效版本
-        </span>
+        </Badge>
         <span className="w-full text-xs tabular-nums max-md:order-first md:hidden">
           当前生效版本 ·{' '}
           {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`}
@@ -434,8 +438,9 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                       </td>
                       <td className="hidden px-4 py-2.5 text-right md:table-cell">
                         {/* G4：已有排定版本时不能单条编辑，提示与导入按钮共用。 */}
-                        <button
-                          type="button"
+                        <Button
+                          variant="link"
+                          size="inline"
                           aria-label={`编辑 ${rowName(entry)}`}
                           disabled={hasScheduled}
                           aria-describedby={
@@ -445,10 +450,10 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                             setNotice(null);
                             setEditing({ baseVersionId: currentId, entry });
                           }}
-                          className="rounded text-[13px] text-primary underline-offset-[3px] outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                          className="text-[13px] underline-offset-[3px] disabled:cursor-not-allowed disabled:text-muted-foreground"
                         >
                           编辑
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );

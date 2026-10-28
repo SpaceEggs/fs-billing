@@ -18,7 +18,7 @@ import {
 } from '../../lib/receivables';
 import { QueryError } from '../query-error';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ActionOutcome, ReasonField } from './receivable-action';
 
 function Candidates({
@@ -315,7 +315,7 @@ export function VoidReceivableDialog({
           {stale ? null : (
             <Button
               type="submit"
-              variant="danger"
+              variant="destructive"
               className="h-12 md:h-9"
               disabled={voidReceivable.isPending || blocked}
             >

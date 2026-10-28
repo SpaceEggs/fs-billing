@@ -1,5 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminRateVersion, Currency } from '@fs-billing/shared';
+import { Badge } from '../ui/badge';
+import { Alert } from '../ui/alert';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
 import {
@@ -8,7 +10,7 @@ import {
   diffRateTables,
 } from '../../lib/rates';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 import { RateChangesTable } from './rate-changes-table';
 
@@ -40,9 +42,7 @@ export function ScheduledRateVersion({
       className="flex flex-col gap-3 rounded-xl border border-brand-border bg-brand-soft px-3.5 py-3 md:px-[18px] md:py-3.5"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="inline-flex h-[22px] items-center rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground">
-          排定的新版本
-        </span>
+        <Badge className="font-semibold">排定的新版本</Badge>
         <span className="text-sm tabular-nums">
           <time dateTime={version.effectiveFrom} className="font-semibold">
             {formatDateTime(version.effectiveFrom)}
@@ -132,15 +132,12 @@ export function CancelScheduledDialog({
       </div>
       {cancel.error ? (
         knownFailure ? (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-          >
+          <Alert variant="error" className="flex-row items-start gap-3">
             <span className="flex-1 font-semibold">{knownFailure}</span>
             <Button variant="outline" size="sm" onClick={refresh}>
               刷新
             </Button>
-          </div>
+          </Alert>
         ) : (
           <ProblemAlert
             error={cancel.error}

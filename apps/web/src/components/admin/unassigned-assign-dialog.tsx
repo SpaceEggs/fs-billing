@@ -7,6 +7,9 @@ import type {
   AdminUnassignedPreviewResponse,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Skeleton } from '../ui/skeleton';
+import { Input } from '../ui/input';
+import { Alert } from '../ui/alert';
 import {
   apiQuery,
   invalidateTenant,
@@ -19,7 +22,7 @@ import { formatDate, formatDateTime, formatMoney } from '../../lib/format';
 import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert, RequestFailure } from './problem-alert';
 
 const tenantPageSize = 100;
@@ -413,12 +416,13 @@ function PreviewFigures({
         />
       </div>
       {preview.noRate.groups.map((group, index) => (
-        <p
+        <Alert
           key={`${group.reason}-${index}`}
-          className="m-0 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal"
+          variant="warning"
+          className="m-0 text-foreground"
         >
           {noRateExplanation(group, preview.tenant.code)}
-        </p>
+        </Alert>
       ))}
       {preview.blocked.count > 0 ? (
         // 决定 38：接通月份已删除的话单不可分配，留在待处理。
@@ -606,7 +610,7 @@ function TenantPicker({
   return (
     <div className="flex flex-col gap-2">
       <span className="text-[13px] font-medium">归属到租户</span>
-      <input
+      <Input
         type="search"
         aria-label="搜索编码或名称"
         placeholder="搜索编码或名称"
@@ -614,7 +618,7 @@ function TenantPicker({
         value={search}
         disabled={disabled}
         onChange={(event) => setSearch(event.target.value)}
-        className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="h-10 text-sm"
       />
       {suggestedShown.length > 0 ? (
         <div
@@ -643,10 +647,10 @@ function TenantPicker({
           onRefresh={() => void tenants.refetch()}
         />
       ) : !tenants.data ? (
-        <div
+        <Skeleton
           aria-busy="true"
           aria-label="租户加载中"
-          className="h-10 animate-pulse rounded-lg bg-skeleton"
+          className="h-10 rounded-lg"
         />
       ) : others.length > 0 ? (
         <div

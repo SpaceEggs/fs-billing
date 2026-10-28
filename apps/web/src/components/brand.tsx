@@ -1,3 +1,4 @@
+import { Badge } from './ui/badge';
 import type { Zone } from '../lib/zone';
 import { cn } from '../lib/utils';
 
@@ -22,9 +23,9 @@ export function LogoMark({ className }: { className?: string }) {
 
 export function AdminPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex h-6 items-center rounded-full border border-brand-border bg-brand-soft px-2.5 text-xs font-semibold text-primary">
+    <Badge variant="brand" className="h-6 rounded-full px-2.5 font-semibold">
       {children}
-    </span>
+    </Badge>
   );
 }
 

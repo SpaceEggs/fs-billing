@@ -6,6 +6,8 @@ import type {
   AdminTenantStatementRow,
   AdminTenantStatementsResponse,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
+import { Badge } from '../../../components/ui/badge';
 import {
   GenerationNotes,
   RegenerateButton,
@@ -25,7 +27,6 @@ import {
 } from '../../../lib/admin-statements';
 import { minutesCount, statementMonthTitle } from '../../../lib/statement';
 import { Money } from '../../../components/data-format';
-import { cn } from '../../../lib/utils';
 import { StatementDetailView } from './statement-detail';
 
 /**
@@ -74,10 +75,10 @@ function StatementList({ tenant }: { tenant: AdminTenantDetailResponse }) {
           onRetry={() => void list.refetch()}
         />
       ) : (
-        <div
+        <Skeleton
           aria-busy
           aria-label="账单加载中"
-          className="h-[160px] animate-pulse rounded-xl bg-skeleton"
+          className="h-[160px] rounded-xl"
         />
       )}
       <RegenerateDialog
@@ -176,15 +177,8 @@ function Statements({
   );
 }
 
-const tag =
-  'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium';
-
 function DeletedTag() {
-  return (
-    <span className={cn(tag, 'border-off-border bg-off-soft text-off')}>
-      话单已删除
-    </span>
-  );
+  return <Badge variant="off">话单已删除</Badge>;
 }
 
 /** 月份下方的小字：账单已过期 / 账单与流水不一致、已重新生成（决定 27）。话单已删除的标签在月份同一行。 */

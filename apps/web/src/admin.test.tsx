@@ -231,6 +231,23 @@ describe('admin navigation', () => {
       'page',
     );
   });
+
+  it('puts a decorative icon before every admin nav label', async () => {
+    const { handler } = adminApi({
+      'GET /api/admin/tenants': () => ({ status: 200, body: page(tenants) }),
+    });
+    renderApp('/admin/tenants', handler);
+    const nav = (
+      await screen.findAllByRole('navigation', { name: '主导航' })
+    )[0]!;
+    const links = within(nav).getAllByRole('link');
+    expect(links).toHaveLength(7);
+    for (const link of links) {
+      const icon = link.firstElementChild;
+      expect(icon?.tagName.toLowerCase()).toBe('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
 });
 
 describe('tenant list', () => {

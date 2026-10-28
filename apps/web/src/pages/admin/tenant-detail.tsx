@@ -12,11 +12,11 @@ import type {
   AdminTenantsResponse,
   Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Alert } from '../../components/ui/alert';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { BalanceDialog } from '../../components/admin/balance-dialog';
 import {
   TenantStatusDialog,
@@ -26,7 +26,7 @@ import { TenantStatus } from '../../components/admin/tenant-status';
 import { Money } from '../../components/data-format';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import {
@@ -113,15 +113,13 @@ function MobileActions({
   const title = `${tenant.code} 的操作`;
   return (
     <>
-      <button
-        type="button"
+      <MobileBarButton
         aria-label="租户操作"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className={mobileBarButtonClass}
       >
-        ⋯
-      </button>
+        <EllipsisIcon aria-hidden />
+      </MobileBarButton>
       <ModalDialog open={open} onOpenChange={setOpen} title={title}>
         <span className="pb-1 text-[15px] font-semibold">{title}</span>
         <div className="flex flex-col">
@@ -217,9 +215,10 @@ function DetailError({
     apiProblem(error).kind === 'unavailable'
   )
     return (
-      <div
+      <Alert
+        variant="unverified"
         role="alert"
-        className="flex flex-col gap-1 rounded-xl border border-unv-border bg-unv-soft px-[18px] py-4 text-unv"
+        className="gap-1 rounded-xl px-[18px] py-4"
       >
         <span className="text-sm font-semibold">
           该租户缺少余额提醒设置，暂时无法查看详情
@@ -227,7 +226,7 @@ function DetailError({
         <span className="text-[13px]">
           这是开户早于提醒设置的存量租户。请联系技术人员补齐设置后再查看；租户本身的呼叫与计费不受影响。
         </span>
-      </div>
+      </Alert>
     );
   return (
     <QueryError
@@ -352,13 +351,11 @@ function TenantDetail({
       crumb={<Crumb code={code} />}
       activeNav="租户"
       mobileNav={
-        <Link
-          to="/admin/tenants"
-          aria-label="返回租户列表"
-          className={mobileBarButtonClass}
-        >
-          ‹
-        </Link>
+        <MobileBarButton asChild>
+          <Link to="/admin/tenants" aria-label="返回租户列表">
+            <ChevronLeftIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
       mobileActions={
         tenant ? <MobileActions tenant={tenant} onStatus={openStatus} /> : null
@@ -489,10 +486,10 @@ function TenantDetail({
             onRetry={() => void detail.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="租户详情加载中"
-            className="h-[120px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[120px] rounded-xl"
           />
         )}
       </PageBody>

@@ -11,6 +11,11 @@ import type {
   AdminStatus,
   Identity,
 } from '@fs-billing/shared';
+import { PlusIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Badge } from '../../components/ui/badge';
+import { Alert } from '../../components/ui/alert';
+import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   AccountStatusDialog,
   ResetPasswordDialog,
@@ -23,17 +28,13 @@ import {
 } from '../../components/admin/account-dialogs';
 import { Field, invalidClass } from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
-import {
-  AppShell,
-  mobileBarPrimaryClass,
-  PageBody,
-} from '../../components/app-shell';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
 import { Button } from '../../components/ui/button';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { Input } from '../../components/ui/input';
 import { apiQuery, useCredentialMutation } from '../../lib/admin-api';
 import {
@@ -49,12 +50,9 @@ import { cn } from '../../lib/utils';
 export const adminPageSize = 25;
 
 const statusTag = {
-  active: { label: '启用', className: 'border-ok-border bg-ok-soft text-ok' },
-  disabled: {
-    label: '已停用',
-    className: 'border-border bg-muted text-muted-foreground',
-  },
-} as const satisfies Record<AdminStatus, { label: string; className: string }>;
+  active: { label: '启用', variant: 'ok' },
+  disabled: { label: '已停用', variant: 'off' },
+} as const satisfies Record<AdminStatus, { label: string; variant: string }>;
 
 const selfDisableHint = '不能停用自己的账号';
 
@@ -82,15 +80,9 @@ function StatusTag({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium',
-        statusTag[status].className,
-        className,
-      )}
-    >
+    <Badge variant={statusTag[status].variant} className={className}>
       {statusTag[status].label}
-    </span>
+    </Badge>
   );
 }
 
@@ -482,15 +474,12 @@ export function CreateAdminDialog({ onClose }: { onClose: () => void }) {
           创建后系统生成临时密码，只显示一次。对方首次登录后需修改密码。新增操作记入操作日志。
         </div>
         {unknown ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-          >
+          <Alert variant="error">
             <span className="font-semibold">无法确认是否已创建</span>
             <span>
               请关闭后在列表中搜索该邮箱：若已创建，用「重置密码」生成新的临时密码，不要重复创建。
             </span>
-          </div>
+          </Alert>
         ) : create.error && !emailTaken ? (
           <ProblemAlert error={create.error} />
         ) : null}
@@ -518,10 +507,10 @@ export function CreateAdminDialog({ onClose }: { onClose: () => void }) {
 
 function LoadingRows() {
   return (
-    <div
+    <Skeleton
       aria-busy
       aria-label="管理员列表加载中"
-      className="h-[180px] animate-pulse rounded-xl bg-skeleton"
+      className="h-[180px] rounded-xl"
     />
   );
 }
@@ -568,14 +557,13 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
       crumb="管理员"
       activeNav="管理员"
       mobileActions={
-        <button
-          type="button"
+        <MobileBarButton
+          variant="default"
           aria-label="新增管理员"
           onClick={() => open({ kind: 'create' })}
-          className={mobileBarPrimaryClass}
         >
-          ＋
-        </button>
+          <PlusIcon aria-hidden />
+        </MobileBarButton>
       }
     >
       <PageBody

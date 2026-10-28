@@ -1,5 +1,6 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { TriangleAlertIcon } from 'lucide-react';
 import type {
   AdminStatementRegenerateResponse,
   Currency,
@@ -11,9 +12,9 @@ import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
-import { Alert } from '../ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 
 /** 对话框打开时看到的账单；`current` 为 null 表示该月还没有账单行（版本 0，等同补建）。 */
@@ -220,41 +221,44 @@ export function RegenerateNotice({
   );
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <div
+      <Alert
+        variant={result.changed || result.created ? 'success' : 'muted'}
         role="status"
         className={cn(
-          'flex items-start justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-[13px]',
-          result.changed || result.created
-            ? 'border-ok-border bg-ok-soft text-ok'
-            : 'border-border bg-muted text-muted-foreground',
+          'flex-row items-start justify-between gap-3 px-3.5',
+          !(result.changed || result.created) && 'text-muted-foreground',
         )}
       >
         <span>{summary}</span>
-        <button
-          type="button"
+        <Button
+          variant="link"
+          className="h-auto shrink-0 p-0 text-[13px] font-normal text-current"
           onClick={onDismiss}
-          className="shrink-0 underline-offset-2 hover:underline"
         >
           知道了
-        </button>
-      </div>
+        </Button>
+      </Alert>
       {result.staleFollowingMonths.length > 0 ? (
-        <Alert tone="warn" title="后续月份的账单已过期">
-          {tenantCode} 的{' '}
-          {result.staleFollowingMonths.map((stale, index) => (
-            <span key={stale}>
-              {index > 0 ? '、' : ''}
-              <Link
-                to="/admin/tenants/$tenantId"
-                params={{ tenantId }}
-                search={{ tab: 'statements', statementMonth: stale }}
-                className="underline"
-              >
-                {statementMonthTitle(stale)}
-              </Link>
-            </span>
-          ))}{' '}
-          账单的期初余额已与账本不符。重新生成只处理所选月份，请按月份顺序逐个重新生成。
+        <Alert variant="warning" role="alert">
+          <TriangleAlertIcon aria-hidden />
+          <AlertTitle>后续月份的账单已过期</AlertTitle>
+          <AlertDescription className="block">
+            {tenantCode} 的{' '}
+            {result.staleFollowingMonths.map((stale, index) => (
+              <span key={stale}>
+                {index > 0 ? '、' : ''}
+                <Link
+                  to="/admin/tenants/$tenantId"
+                  params={{ tenantId }}
+                  search={{ tab: 'statements', statementMonth: stale }}
+                  className="underline"
+                >
+                  {statementMonthTitle(stale)}
+                </Link>
+              </span>
+            ))}{' '}
+            账单的期初余额已与账本不符。重新生成只处理所选月份，请按月份顺序逐个重新生成。
+          </AlertDescription>
         </Alert>
       ) : null}
     </div>

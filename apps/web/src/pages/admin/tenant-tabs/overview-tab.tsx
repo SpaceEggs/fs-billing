@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { DailyChart } from '../../../components/daily-spend-chart';
 import { QueryError } from '../../../components/query-error';
 import { apiQuery } from '../../../lib/admin-api';
@@ -59,10 +60,10 @@ export function OverviewTab({ tenantId }: { tenantId: string }) {
   const data = overview.data;
   if (!data)
     return (
-      <div
+      <Skeleton
         aria-busy
         aria-label="概况加载中"
-        className="h-[320px] animate-pulse rounded-xl bg-skeleton"
+        className="h-[320px] rounded-xl"
       />
     );
   const money = (amount: string) =>

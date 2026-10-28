@@ -19,18 +19,20 @@ import {
 } from '../../components/admin/confirm-payment-dialog';
 import { ReversePaymentDialog } from '../../components/admin/reverse-payment-dialog';
 import { VoidReceivableDialog } from '../../components/admin/void-receivable-dialog';
-import { ModalDialog } from '../../components/ui/dialog';
+import { ModalDialog } from '../../components/modal-dialog';
 import { AppShell, PageBody } from '../../components/app-shell';
 import {
   FilterGroup,
   FilterSheet,
   resultLabel,
 } from '../../components/filter-sheet';
-import { Segmented } from '../../components/ui/segmented';
+import { Segmented } from '../../components/segmented';
 import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
+import { CircleCheckIcon, XIcon, CheckIcon } from 'lucide-react';
+import { Alert, AlertAction } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { apiKey, apiQuery, invalidateTenant, send } from '../../lib/admin-api';
 import type { ReceivablesSearch } from '../../lib/admin-search';
@@ -273,7 +275,7 @@ function Actions({
     return (
       <span className={row}>
         <Button
-          variant="danger"
+          variant="destructive"
           size="sm"
           aria-label={`撤销确认 ${target}`}
           disabled={blocked}
@@ -297,7 +299,7 @@ function Actions({
         确认收款
       </Button>
       <Button
-        variant="danger"
+        variant="destructive"
         size="sm"
         aria-label={`作废 ${target}`}
         disabled={blocked}
@@ -488,7 +490,7 @@ function EmptyState({ search }: { search: ReceivablesSearch }) {
             aria-hidden
             className="flex size-11 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-lg font-bold text-ok md:size-12 md:text-xl"
           >
-            ✓
+            <CheckIcon className="size-6" />
           </span>
         ) : null}
         <span className="text-[15px] font-semibold md:text-base">
@@ -568,29 +570,29 @@ function DoneNotice({
   ref: React.Ref<HTMLDivElement>;
 }) {
   return (
-    <div
+    <Alert
       ref={ref}
-      role="status"
+      variant="success"
       tabIndex={-1}
-      className="flex items-center gap-2 rounded-[10px] border border-ok-border bg-ok-soft px-3.5 py-2.5 text-sm text-ok outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+      className="rounded-[10px] px-3.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr_auto] has-[>svg]:items-center"
     >
-      <span aria-hidden className="font-bold">
-        ✓
-      </span>
-      <span className="flex-1">
+      <CircleCheckIcon aria-hidden className="size-4 shrink-0" />
+      <span className="col-start-2">
         {done.receivable.tenant.code}{' '}
         {formatMoney(receivableMoney(done.receivable))} {doneText[done.kind]}
       </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label="关闭提示"
-        onClick={onDismiss}
-        className="h-7 px-2 text-ok hover:bg-transparent"
-      >
-        ✕
-      </Button>
-    </div>
+      <AlertAction className="row-span-1 self-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="关闭提示"
+          onClick={onDismiss}
+          className="h-7 px-2 text-ok hover:bg-transparent"
+        >
+          <XIcon aria-hidden />
+        </Button>
+      </AlertAction>
+    </Alert>
   );
 }
 

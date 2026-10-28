@@ -10,7 +10,7 @@ import {
   type ReceivableActionFailure,
 } from '../../lib/receivables';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ActionOutcome, ReasonField } from './receivable-action';
 
 type Received = Extract<AdminReceivable['payment'], { status: 'received' }>;
@@ -175,7 +175,7 @@ export function ReversePaymentDialog({
           {stale ? null : (
             <Button
               type="submit"
-              variant="danger"
+              variant="destructive"
               className="h-12 md:h-9"
               disabled={reverse.isPending || blocked}
             >

@@ -7,11 +7,10 @@ import {
   type AdminTenantSummary,
   type Identity,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarPrimaryClass,
-  PageBody,
-} from '../../components/app-shell';
+import { PlusIcon } from 'lucide-react';
+import { Label } from '../../components/ui/label';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import {
   healthOptions,
   TenantStatus,
@@ -29,8 +28,11 @@ import { SearchBox } from '../../components/search-box';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { Segmented } from '../../components/ui/segmented';
-import { Select } from '../../components/ui/select';
+import { Segmented } from '../../components/segmented';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import { apiQuery } from '../../lib/admin-api';
 import type { TenantListSearch } from '../../lib/admin-search';
 import { cn } from '../../lib/utils';
@@ -118,10 +120,10 @@ function Filters({ total }: { total: number | undefined }) {
         </FilterGroup>
       </FilterSheet>
       <div className="hidden md:contents">
-        <label htmlFor={statusId} className="sr-only">
+        <Label htmlFor={statusId} className="sr-only">
           状态
-        </label>
-        <Select
+        </Label>
+        <NativeSelect
           id={statusId}
           value={search.status ?? ''}
           onChange={(event) => {
@@ -130,14 +132,17 @@ function Filters({ total }: { total: number | undefined }) {
             )?.value;
             setFilter({ status });
           }}
-          className="w-[150px]"
+          containerClassName="w-[150px]"
         >
           {statusChoices.map((option) => (
-            <option key={option.value ?? ''} value={option.value ?? ''}>
+            <NativeSelectOption
+              key={option.value ?? ''}
+              value={option.value ?? ''}
+            >
               {option.label}
-            </option>
+            </NativeSelectOption>
           ))}
-        </Select>
+        </NativeSelect>
         <Segmented
           label="币种"
           options={currencyChoices}
@@ -166,10 +171,7 @@ function filterSummary(search: TenantListSearch) {
 
 function NewTenantLink({ className }: { className?: string }) {
   return (
-    <Link
-      to="/admin/tenants/new"
-      className={cn(buttonVariants({ size: 'md' }), className)}
-    >
+    <Link to="/admin/tenants/new" className={cn(buttonVariants(), className)}>
       ＋ 新建租户
     </Link>
   );
@@ -395,13 +397,11 @@ export function TenantListPage({ identity }: { identity: Identity }) {
       crumb="租户"
       activeNav="租户"
       mobileActions={
-        <Link
-          to="/admin/tenants/new"
-          aria-label="新建租户"
-          className={mobileBarPrimaryClass}
-        >
-          ＋
-        </Link>
+        <MobileBarButton asChild variant="default">
+          <Link to="/admin/tenants/new" aria-label="新建租户">
+            <PlusIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
     >
       <PageBody

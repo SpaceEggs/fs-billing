@@ -1,7 +1,11 @@
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
-import { CalloutIcon } from '../ui/alert';
+import { CircleAlertIcon } from 'lucide-react';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/button';
+
+/** 带右侧操作按钮的提示：图标、正文、按钮三列。 */
+const withAction = 'has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr_auto]';
 
 /**
  * 写操作失败的说明。登录过期与强制改密由全局处理，这里不显示；
@@ -18,17 +22,14 @@ export function ProblemAlert({
 }) {
   if (error instanceof ApiRequestError && error.outcomeUnknown)
     return (
-      <div
-        role="alert"
-        className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-      >
-        <CalloutIcon tone="err" />
-        <div className="flex flex-1 flex-col gap-0.5">
-          <span className="font-semibold">网络中断</span>
-          <span>{networkMessage ?? '请检查网络后重试'}</span>
-        </div>
+      <Alert variant="error" className={withAction}>
+        <CircleAlertIcon aria-hidden />
+        <AlertTitle>网络中断</AlertTitle>
+        <AlertDescription>
+          {networkMessage ?? '请检查网络后重试'}
+        </AlertDescription>
         <RefreshButton onRefresh={onRefresh} />
-      </div>
+      </Alert>
     );
   const problem = apiProblem(error);
   if (
@@ -38,25 +39,22 @@ export function ProblemAlert({
     return null;
   const notice = problemNotice(problem);
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-2.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-    >
-      <CalloutIcon tone="err" />
-      <div className="flex flex-1 flex-col gap-0.5">
-        <span className="font-semibold">{notice.title}</span>
-        {notice.body ? <span>{notice.body}</span> : null}
-      </div>
+    <Alert variant="error" className={withAction}>
+      <CircleAlertIcon aria-hidden />
+      <AlertTitle>{notice.title}</AlertTitle>
+      {notice.body ? <AlertDescription>{notice.body}</AlertDescription> : null}
       {notice.refresh ? <RefreshButton onRefresh={onRefresh} /> : null}
-    </div>
+    </Alert>
   );
 }
 
 function RefreshButton({ onRefresh }: { onRefresh: (() => void) | undefined }) {
   return onRefresh ? (
-    <Button variant="outline" size="sm" onClick={onRefresh}>
-      刷新
-    </Button>
+    <AlertAction>
+      <Button variant="outline" size="sm" onClick={onRefresh}>
+        刷新
+      </Button>
+    </AlertAction>
   ) : null;
 }
 
@@ -74,15 +72,12 @@ export function RequestFailure({
   if (problem.kind === 'validation') {
     const notice = problemNotice(problem);
     return (
-      <div
-        role="alert"
-        className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-      >
-        <span className="font-semibold">{notice.title}</span>
+      <Alert variant="error">
+        <AlertTitle>{notice.title}</AlertTitle>
         {notice.details?.map((line) => (
-          <span key={line}>{line}</span>
+          <AlertDescription key={line}>{line}</AlertDescription>
         ))}
-      </div>
+      </Alert>
     );
   }
   return (

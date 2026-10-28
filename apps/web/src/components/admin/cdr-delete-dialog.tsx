@@ -9,6 +9,7 @@ import type {
   AdminCdrDeletionMonth,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Label } from '../ui/label';
 import {
   invalidateTenant,
   apiQuery,
@@ -23,8 +24,10 @@ import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { QueryError } from '../query-error';
 import { MonthGrid, type MonthCellState } from '../month-field';
+import { ChevronDownIcon, TriangleAlertIcon, CheckIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Input } from '../ui/input';
 import { invalidClass } from './form-fields';
 import { ProblemAlert } from './problem-alert';
@@ -485,24 +488,25 @@ function CdrDeleteForm({
               className="flex flex-col gap-1.5 text-[13px] font-medium"
             >
               <span>{label}</span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 aria-label={`${label}：${text}`}
                 aria-expanded={opened}
                 disabled={pending}
                 onClick={() => openPicker(which)}
                 className={cn(
-                  'flex h-11 items-center justify-between rounded-lg border px-3 text-sm font-normal outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50 md:h-10',
-                  opened ? 'border-primary' : 'border-input',
+                  'h-11 justify-between px-3 font-normal md:h-10',
+                  opened && 'border-primary',
                 )}
               >
                 <span className={value ? undefined : 'text-muted-foreground'}>
                   {text}
                 </span>
-                <span aria-hidden className="text-xs text-muted-foreground">
-                  ▾
-                </span>
-              </button>
+                <ChevronDownIcon
+                  aria-hidden
+                  className="size-3.5 text-muted-foreground"
+                />
+              </Button>
             </div>
           );
         })}
@@ -548,19 +552,18 @@ function CdrDeleteForm({
         monthsPending={monthsPending}
       />
       {/* 决定 34：原文按归档策略老化，这次删除不碰它。 */}
-      <div className="flex gap-2.5 rounded-[10px] border border-err-border bg-err-soft px-3.5 py-3 text-[13px] leading-relaxed text-err">
-        <span
-          aria-hidden
-          className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white"
-        >
-          !
-        </span>
-        <p className="m-0">
+      <Alert
+        variant="error"
+        role="note"
+        className="rounded-[10px] px-3.5 py-3 leading-relaxed"
+      >
+        <TriangleAlertIcon aria-hidden />
+        <AlertDescription className="m-0 text-err">
           <span className="font-semibold">删除后无法恢复。</span>
           余额和已生成的月账单不受影响，但该时段将无法导出话单明细，也无法重新生成月账单。
           原始 JSON 不随删除话单清除，按归档策略老化。
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
       <CodeField
         tenantCode={tenant.code}
         code={code}
@@ -698,13 +701,13 @@ function CodeField({
   const hardWrong = code.length > 0 && !tenantCode.startsWith(code);
   return (
     <div className="flex flex-col gap-1.5 text-[13px] font-medium">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         请输入租户编码{' '}
         <span className="rounded bg-muted px-1.5 py-px font-mono font-normal">
           {tenantCode}
         </span>{' '}
         以确认
-      </label>
+      </Label>
       <Input
         id={id}
         value={code}
@@ -830,7 +833,7 @@ function DoneView({
         aria-hidden
         className="flex size-12 items-center justify-center rounded-full border border-ok-border bg-ok-soft text-[22px] font-bold text-ok"
       >
-        ✓
+        <CheckIcon className="size-6" />
       </span>
       <h2 className="m-0 text-[17px] font-semibold">
         已删除 {formatCount(result.total)} 条话单

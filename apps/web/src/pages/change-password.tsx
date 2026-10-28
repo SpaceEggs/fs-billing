@@ -1,9 +1,16 @@
 import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { BrandRow } from '../components/brand';
 import { SessionExpiredDialog } from '../components/session-expired-dialog';
-import { Alert } from '../components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { useCredentialMutation } from '../lib/admin-api';
 import { ApiRequestError } from '../lib/api';
@@ -77,7 +84,7 @@ function PasswordInput({
   const message = error ?? hint;
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-      <label htmlFor={id}>{label}</label>
+      <Label htmlFor={id}>{label}</Label>
       <div
         className={cn(
           'flex h-11 items-center rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 sm:h-10 sm:pr-1',
@@ -85,7 +92,7 @@ function PasswordInput({
             'border-neg shadow-[0_0_0_3px_var(--alert-neg-bg)] focus-within:ring-0',
         )}
       >
-        <input
+        <Input
           id={id}
           type={shown ? 'text' : 'password'}
           autoComplete={autoComplete}
@@ -93,17 +100,18 @@ function PasswordInput({
           aria-describedby={message ? `${id}-message` : undefined}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-full min-w-0 flex-1 bg-transparent pl-3 text-base text-foreground outline-none sm:text-sm"
+          className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pr-0 pl-3 focus-visible:ring-0 sm:h-full"
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="inline"
           aria-label={shown ? `隐藏${label}` : `显示${label}`}
           aria-pressed={shown}
           onClick={() => setShown((value) => !value)}
-          className="flex h-11 w-14 shrink-0 items-center justify-center text-[13px] text-muted-foreground sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
+          className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
         >
           {shown ? '隐藏' : '显示'}
-        </button>
+        </Button>
       </div>
       {message ? (
         <span
@@ -181,18 +189,26 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
       className="flex flex-col gap-5"
     >
       {changed ? (
-        <Alert tone="ok" title="✓ 密码已修改">
-          其他设备上的登录将失效
+        <Alert variant="success">
+          <CircleCheckIcon aria-hidden />
+          <AlertTitle>密码已修改</AlertTitle>
+          <AlertDescription>其他设备上的登录将失效</AlertDescription>
         </Alert>
       ) : null}
       {problem?.kind === 'wait' ? (
-        <Alert tone="warn" title="尝试次数过多，已暂时锁定">
-          {`请在 ${formatDuration(problem.seconds)} 后重试`}
+        <Alert variant="warning" role="alert">
+          <TriangleAlertIcon aria-hidden />
+          <AlertTitle>尝试次数过多，已暂时锁定</AlertTitle>
+          <AlertDescription>
+            {`请在 ${formatDuration(problem.seconds)} 后重试`}
+          </AlertDescription>
         </Alert>
       ) : null}
       {problem?.kind === 'unavailable' ? (
-        <Alert tone="neg" title="暂时无法修改密码">
-          服务暂时不可用，请稍后重试
+        <Alert variant="destructive">
+          <CircleAlertIcon aria-hidden />
+          <AlertTitle>暂时无法修改密码</AlertTitle>
+          <AlertDescription>服务暂时不可用，请稍后重试</AlertDescription>
         </Alert>
       ) : null}
       <div className="flex flex-col gap-3.5">
@@ -274,14 +290,15 @@ export function ChangePasswordPage({
                 返回
               </Link>
             )}
-            <button
-              type="button"
-              className="text-neg"
+            <Button
+              variant="ghost"
+              size="inline"
+              className="text-neg hover:bg-transparent"
               disabled={logout.isPending}
               onClick={() => logout.mutate()}
             >
               退出登录
-            </button>
+            </Button>
           </div>
           {logout.isError ? (
             <p role="alert" className="m-0 text-center text-sm text-neg">

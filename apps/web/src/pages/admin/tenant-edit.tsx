@@ -7,17 +7,17 @@ import {
   type AdminTenantEditRequest,
   type Identity,
 } from '@fs-billing/shared';
+import { XIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Textarea } from '../../components/ui/textarea';
+import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   Field,
   FormSection,
   invalidClass,
 } from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { QueryError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -181,14 +181,14 @@ function EditForm({ tenant }: { tenant: AdminTenantDetailResponse }) {
         {text('contactPhone', '电话')}
         <Field label="备注" error={errors.remark} className="md:col-span-2">
           {(props) => (
-            <textarea
+            <Textarea
               {...props}
               rows={3}
               maxLength={limits.remark}
               placeholder="选填"
               value={form.remark}
               onChange={(event) => update({ remark: event.target.value })}
-              className="resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+              className="resize-y font-normal"
             />
           )}
         </Field>
@@ -265,14 +265,15 @@ export function TenantEditPage({ identity }: { identity: Identity }) {
       }
       activeNav="租户"
       mobileNav={
-        <Link
-          to="/admin/tenants/$tenantId"
-          params={{ tenantId }}
-          aria-label="取消编辑，返回租户详情"
-          className={mobileBarButtonClass}
-        >
-          ✕
-        </Link>
+        <MobileBarButton asChild>
+          <Link
+            to="/admin/tenants/$tenantId"
+            params={{ tenantId }}
+            aria-label="取消编辑，返回租户详情"
+          >
+            <XIcon aria-hidden />
+          </Link>
+        </MobileBarButton>
       }
     >
       <PageBody title="编辑租户">
@@ -286,10 +287,10 @@ export function TenantEditPage({ identity }: { identity: Identity }) {
             onRetry={() => void detail.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="租户详情加载中"
-            className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[240px] rounded-xl"
           />
         )}
       </PageBody>

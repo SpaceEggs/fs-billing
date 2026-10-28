@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { UnassignedSelection } from '@fs-billing/shared';
+import { Textarea } from '../ui/textarea';
 import { invalidateUnassigned, useApiMutation } from '../../lib/admin-api';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { Field, invalidClass } from './form-fields';
 import { RequestFailure } from './problem-alert';
 
@@ -116,22 +117,23 @@ function IgnoreForm({
       </div>
       <div className="flex flex-wrap gap-1.5">
         {quickReasons.map((reason) => (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             key={reason.label}
-            type="button"
             disabled={submitting}
             onClick={() =>
               setFlow({ reason: reason.text, attempted: false, submit: 'idle' })
             }
-            className="flex h-9 items-center rounded-full border border-input px-3 text-[13px] outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50"
+            className="rounded-full font-normal"
           >
             {reason.label}
-          </button>
+          </Button>
         ))}
       </div>
       <Field label="忽略原因" required error={error}>
         {(props) => (
-          <textarea
+          <Textarea
             {...props}
             rows={3}
             maxLength={2000}
@@ -145,10 +147,7 @@ function IgnoreForm({
                 submit: 'idle',
               })
             }
-            className={cn(
-              'resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-base font-normal outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm',
-              invalidClass(error),
-            )}
+            className={cn('resize-none font-normal', invalidClass(error))}
           />
         )}
       </Field>

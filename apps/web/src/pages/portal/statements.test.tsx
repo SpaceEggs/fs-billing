@@ -51,6 +51,19 @@ describe('portal statements list', () => {
     );
   });
 
+  it('puts a decorative icon before every portal nav label', async () => {
+    renderStatements();
+    await screen.findByRole('table');
+    const nav = screen.getAllByRole('navigation', { name: '主导航' })[0]!;
+    const links = within(nav).getAllByRole('link');
+    expect(links).toHaveLength(5);
+    for (const link of links) {
+      const icon = link.firstElementChild;
+      expect(icon?.tagName.toLowerCase()).toBe('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
   it('lists the live month first, then the finished one, with the mockup figures', async () => {
     renderStatements();
     const table = await screen.findByRole('table');

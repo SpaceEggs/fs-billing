@@ -4,6 +4,7 @@ import type {
   AdminAccountsResponse,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Alert } from '../../../components/ui/alert';
 import {
   Field,
   MoneyInput,
@@ -11,7 +12,7 @@ import {
 } from '../../../components/admin/form-fields';
 import { ProblemAlert } from '../../../components/admin/problem-alert';
 import { Button } from '../../../components/ui/button';
-import { ModalDialog } from '../../../components/ui/dialog';
+import { ModalDialog } from '../../../components/modal-dialog';
 import {
   apiKey,
   invalidateTenant,
@@ -322,17 +323,14 @@ function SettingsEditor({
           <ChangeSummary tenant={tenant} changes={pending.changes} />
         ) : null}
         {pending?.request.emails.length === 0 ? (
-          <div
-            role="note"
-            className="rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] text-warn"
-          >
+          <Alert variant="warning" role="note">
             未配置收件人，余额提醒无法送达
-          </div>
+          </Alert>
         ) : null}
-        <div className="flex flex-col gap-0.5 rounded-lg border border-brand-border bg-brand-soft px-3 py-2.5 text-[13px]">
+        <Alert variant="brand">
           <span className="font-semibold text-primary">记入操作日志</span>
           <span>保存后立即生效，变更将记入操作日志。</span>
-        </div>
+        </Alert>
         {save.error ? (
           <ProblemAlert
             error={save.error}

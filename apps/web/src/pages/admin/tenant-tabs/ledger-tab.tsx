@@ -9,6 +9,8 @@ import {
   type Currency,
 } from '@fs-billing/shared';
 import { formatMergedChargeNote } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
+import { Label } from '../../../components/ui/label';
 import { DateTime, Money } from '../../../components/data-format';
 import { DateRangeField } from '../../../components/date-range-field';
 import {
@@ -19,7 +21,10 @@ import {
 } from '../../../components/filter-sheet';
 import { Pagination } from '../../../components/pagination';
 import { QueryError, RefreshError } from '../../../components/query-error';
-import { Select } from '../../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../../components/ui/native-select';
 import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
 import type { LedgerSearch } from '../../../lib/admin-search';
@@ -265,10 +270,10 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           </FilterGroup>
         </FilterSheet>
         <div className="hidden md:contents">
-          <label htmlFor={kindId} className="sr-only">
+          <Label htmlFor={kindId} className="sr-only">
             类型
-          </label>
-          <Select
+          </Label>
+          <NativeSelect
             id={kindId}
             value={kind ?? ''}
             onChange={(event) =>
@@ -278,11 +283,14 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
             }
           >
             {kindChoices.map((option) => (
-              <option key={option.value ?? ''} value={option.value ?? ''}>
+              <NativeSelectOption
+                key={option.value ?? ''}
+                value={option.value ?? ''}
+              >
                 {option.label}
-              </option>
+              </NativeSelectOption>
             ))}
-          </Select>
+          </NativeSelect>
           {data ? (
             <span className="text-[13px] text-muted-foreground tabular-nums">
               共 {data.pagination.total} 条
@@ -324,10 +332,10 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           onRetry={() => void ledger.refetch()}
         />
       ) : !data ? (
-        <div
+        <Skeleton
           aria-busy
           aria-label="余额流水加载中"
-          className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+          className="h-[240px] rounded-xl"
         />
       ) : data.items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-[10px] border border-border px-5 py-14 text-center">

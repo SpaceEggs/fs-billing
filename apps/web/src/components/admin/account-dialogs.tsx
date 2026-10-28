@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { cn } from '../../lib/utils';
+import { Alert } from '../ui/alert';
 import { send, useCredentialMutation } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
 import { SecretField } from '../copy-field';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 
 export type AccountAudience = 'admin' | 'portal';
@@ -67,13 +69,13 @@ export function TemporaryPassword({
   return (
     <>
       <SecretField value={value} label="临时密码" />
-      <div className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
+      <Alert variant="warning">
         <span className="font-semibold">关闭后无法再次查看</span>
         <span>
           请立即复制并通过安全渠道发给{recipient}，{recipient}
           首次登录后需修改密码。{logged}
         </span>
-      </div>
+      </Alert>
     </>
   );
 }
@@ -188,7 +190,7 @@ export function ResetPasswordDialog({
 type StatusCopy = {
   title: (t: AccountTarget) => string;
   body: (t: AccountTarget) => string;
-  note?: { title: string; body: string; tone: string };
+  note?: { title: string; body: string; tone: 'error' | 'brand' };
   confirm: string;
 };
 
@@ -214,7 +216,7 @@ const statusCopy = {
       note: {
         title: '不影响呼叫和计费',
         body: '租户的呼叫、计费和余额不受影响；如需暂停呼叫，请使用页面右上角的「停用」。可随时重新启用。停用和启用均记入操作日志。',
-        tone: 'border-err-border bg-err-soft',
+        tone: 'error',
       },
       confirm: '停用账号',
     },
@@ -311,20 +313,15 @@ export function AccountStatusDialog({
     >
       <Heading title={copy.title(target)} sub={copy.body(target)} />
       {copy.note ? (
-        <div
-          className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-[13px] leading-normal ${copy.note.tone}`}
-        >
+        <Alert variant={copy.note.tone} role="note" className="text-foreground">
           <span className="font-semibold">{copy.note.title}</span>
           <span>{copy.note.body}</span>
-        </div>
+        </Alert>
       ) : null}
       {extraNote ? (
-        <div
-          role="note"
-          className="rounded-lg border border-off-border bg-off-soft px-3 py-2.5 text-[13px] leading-normal"
-        >
+        <Alert variant="muted" role="note">
           {extraNote}
-        </div>
+        </Alert>
       ) : null}
       {mutation.error ? (
         <ProblemAlert
@@ -386,15 +383,12 @@ export function StatusChangeNotice({ change }: { change: StatusChange }) {
     change.changed ? 'changed' : 'same'
   ](change.target);
   return (
-    <div
+    <Alert
+      variant={change.changed ? 'success' : 'muted'}
       role="status"
-      className={
-        change.changed
-          ? 'rounded-lg border border-ok-border bg-ok-soft px-3.5 py-2.5 text-[13px] text-ok'
-          : 'rounded-lg border border-border bg-muted px-3.5 py-2.5 text-[13px] text-muted-foreground'
-      }
+      className={cn('px-3.5', !change.changed && 'text-muted-foreground')}
     >
       {text}
-    </div>
+    </Alert>
   );
 }

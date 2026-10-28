@@ -1,60 +1,65 @@
 import { useId } from 'react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { SunMoonIcon } from 'lucide-react';
 import {
   setThemePreference,
   themeOptions,
   useThemePreference,
 } from '../lib/theme';
 import { cn } from '../lib/utils';
-import { buttonVariants } from './ui/button';
+import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { menuContentClass, menuItemClass } from './menu';
 
 /**
- * 顶部 ◐ 按钮：浅色 / 深色 / 跟随系统。`mobile` 是门户手机顶栏的无边框 40 px 按钮（设计稿 1b）。
+ * 顶部主题按钮（SunMoon 图标）：浅色 / 深色 / 跟随系统。`mobile` 是门户手机顶栏的无边框 40 px 按钮（设计稿 1b）。
  */
 export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
   const preference = useThemePreference();
   return (
-    <DropdownMenu.Root modal={false}>
-      <DropdownMenu.Trigger
-        aria-label="主题"
-        className={
-          mobile
-            ? 'flex size-10 shrink-0 items-center justify-center rounded-lg text-[15px] outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring'
-            : cn(buttonVariants({ variant: 'outline', size: 'icon' }))
-        }
-      >
-        ◐
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={6}
-          className={cn(menuContentClass, 'w-40')}
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          aria-label="主题"
+          variant={mobile ? 'ghost' : 'outline'}
+          size="icon"
+          className={cn(mobile && 'size-10 shrink-0')}
         >
-          <DropdownMenu.RadioGroup
-            value={preference}
-            onValueChange={(value) =>
-              setThemePreference(
-                themeOptions.find((option) => option.value === value)?.value ??
-                  'system',
-              )
-            }
-          >
-            {themeOptions.map((option) => (
-              <DropdownMenu.RadioItem
-                key={option.value}
-                value={option.value}
-                className={cn(menuItemClass, 'justify-between')}
-              >
-                {option.label}
-                <DropdownMenu.ItemIndicator>✓</DropdownMenu.ItemIndicator>
-              </DropdownMenu.RadioItem>
-            ))}
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+          <SunMoonIcon aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className={cn(menuContentClass, 'w-40')}
+      >
+        <DropdownMenuRadioGroup
+          value={preference}
+          onValueChange={(value) =>
+            setThemePreference(
+              themeOptions.find((option) => option.value === value)?.value ??
+                'system',
+            )
+          }
+        >
+          {themeOptions.map((option) => (
+            <DropdownMenuRadioItem
+              key={option.value}
+              value={option.value}
+              indicator="end"
+              className={menuItemClass}
+            >
+              {option.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

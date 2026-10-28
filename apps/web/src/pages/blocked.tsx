@@ -27,7 +27,7 @@ export function BlockedPage({
       <h1 className="m-0 text-lg font-semibold">{alert?.title}</h1>
       <p className="m-0 text-sm text-muted-foreground">{alert?.body}</p>
       <Button
-        variant="danger"
+        variant="destructive"
         className="mt-2"
         disabled={logout.isPending}
         onClick={() => logout.mutate()}

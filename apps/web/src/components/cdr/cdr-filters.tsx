@@ -1,12 +1,14 @@
 import { useId } from 'react';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
 import type { CdrFilters } from '../../lib/cdr-search';
 import type { DayRange } from '../../lib/day-range';
 import { latestRangeEnd } from '@fs-billing/shared';
 import { DateRangeField } from '../date-range-field';
 import { FilterGroup, FilterSheet } from '../filter-sheet';
 import { SearchBox } from '../search-box';
-import { Segmented } from '../ui/segmented';
-import { Select } from '../ui/select';
+import { Segmented } from '../segmented';
+import { NativeSelect, NativeSelectOption } from '../ui/native-select';
 import { cn } from '../../lib/utils';
 
 const statusOptions = [
@@ -87,14 +89,16 @@ export function CdrFilterBar({
   });
   const countryOptions = (
     <>
-      <option value="">全部国家</option>
+      <NativeSelectOption value="">全部国家</NativeSelectOption>
       {filters.country && !countries.includes(filters.country) ? (
-        <option value={filters.country}>{filters.country}</option>
+        <NativeSelectOption value={filters.country}>
+          {filters.country}
+        </NativeSelectOption>
       ) : null}
       {countries.map((name) => (
-        <option key={name} value={name}>
+        <NativeSelectOption key={name} value={name}>
           {name}
-        </option>
+        </NativeSelectOption>
       ))}
     </>
   );
@@ -136,19 +140,19 @@ export function CdrFilterBar({
           )}
         </FilterGroup>
         <div className="flex flex-col gap-2">
-          <label htmlFor={sheetCountryId} className="text-sm font-medium">
+          <Label htmlFor={sheetCountryId} className="text-sm font-medium">
             国家
-          </label>
-          <Select
+          </Label>
+          <NativeSelect
             id={sheetCountryId}
             value={country}
             onChange={(event) =>
               onFilters({ country: event.target.value || undefined })
             }
-            className="w-full"
+            containerClassName="w-full"
           >
             {countryOptions}
-          </Select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">接通状态</span>
@@ -167,19 +171,19 @@ export function CdrFilterBar({
       <div className="hidden md:contents">
         <Field label="日期范围 · 最长一个月">{dateField('w-[260px]')}</Field>
         <Field label="国家">
-          <label htmlFor={countryId} className="sr-only">
+          <Label htmlFor={countryId} className="sr-only">
             国家
-          </label>
-          <Select
+          </Label>
+          <NativeSelect
             id={countryId}
             value={country}
             onChange={(event) =>
               onFilters({ country: event.target.value || undefined })
             }
-            className="w-[160px]"
+            containerClassName="w-[160px]"
           >
             {countryOptions}
-          </Select>
+          </NativeSelect>
         </Field>
         <Field label="接通状态">
           <Segmented
@@ -192,14 +196,14 @@ export function CdrFilterBar({
           />
         </Field>
         {extra?.desktop}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           disabled={!anyActive}
           onClick={() => onFilters({ callee: undefined, ...clearSheet() })}
-          className="h-9 rounded-lg px-3 text-sm text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-50"
+          className="font-normal text-muted-foreground hover:bg-transparent"
         >
           重置
-        </button>
+        </Button>
         {trailing ? <div className="ml-auto">{trailing}</div> : null}
       </div>
     </div>

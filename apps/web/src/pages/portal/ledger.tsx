@@ -11,11 +11,11 @@ import {
   type Identity,
   type PortalLedgerRow,
 } from '@fs-billing/shared';
-import {
-  AppShell,
-  mobileBarButtonClass,
-  PageBody,
-} from '../../components/app-shell';
+import { DownloadIcon } from 'lucide-react';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Label } from '../../components/ui/label';
+import { MobileBarButton } from '../../components/mobile-bar-button';
+import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime, Money } from '../../components/data-format';
 import { DateRangeField } from '../../components/date-range-field';
 import {
@@ -27,7 +27,10 @@ import {
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { Button } from '../../components/ui/button';
-import { Select } from '../../components/ui/select';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '../../components/ui/native-select';
 import { apiQuery } from '../../lib/admin-api';
 import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
@@ -39,7 +42,6 @@ import {
   type PortalLedgerFilter,
   type PortalLedgerSearch,
 } from '../../lib/portal-ledger';
-import { cn } from '../../lib/utils';
 
 const kindChoices = [
   { value: undefined, label: '全部类型' },
@@ -260,15 +262,14 @@ export function PortalLedgerPage({
       crumb={crumb}
       activeNav="余额流水"
       mobileActions={
-        <button
-          type="button"
+        <MobileBarButton
           aria-label="导出 CSV"
           disabled={!canExport}
           onClick={() => download.mutate(filter)}
-          className={cn(mobileBarButtonClass, 'border-0 disabled:opacity-50')}
+          className="border-0"
         >
-          ⤓
-        </button>
+          <DownloadIcon aria-hidden />
+        </MobileBarButton>
       }
     >
       <PageBody
@@ -320,10 +321,10 @@ export function PortalLedgerPage({
             </FilterGroup>
           </FilterSheet>
           <div className="hidden md:contents">
-            <label htmlFor={kindId} className="sr-only">
+            <Label htmlFor={kindId} className="sr-only">
               类型
-            </label>
-            <Select
+            </Label>
+            <NativeSelect
               id={kindId}
               value={kind ?? ''}
               onChange={(event) =>
@@ -332,14 +333,17 @@ export function PortalLedgerPage({
                     .data,
                 })
               }
-              className="w-40"
+              containerClassName="w-40"
             >
               {kindChoices.map((option) => (
-                <option key={option.value ?? ''} value={option.value ?? ''}>
+                <NativeSelectOption
+                  key={option.value ?? ''}
+                  value={option.value ?? ''}
+                >
                   {option.label}
-                </option>
+                </NativeSelectOption>
               ))}
-            </Select>
+            </NativeSelect>
             <span className="flex-1" />
             <span className="text-xs text-muted-foreground">
               通话扣费按天合并，点击可查看当天话单
@@ -412,10 +416,10 @@ export function PortalLedgerPage({
             onRetry={() => void ledger.refetch()}
           />
         ) : !data ? (
-          <div
+          <Skeleton
             aria-busy
             aria-label="余额流水加载中"
-            className="h-[240px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[240px] rounded-xl"
           />
         ) : data.items.length === 0 ? (
           isDefaultView ? (

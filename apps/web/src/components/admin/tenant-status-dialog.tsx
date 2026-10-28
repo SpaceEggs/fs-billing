@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
+import { Alert } from '../ui/alert';
 import { Button } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 
 export type StatusChangeResult = {
@@ -15,7 +16,7 @@ const copy = {
   disable: {
     title: (code: string) => `停用租户 ${code}？`,
     confirm: '停用租户',
-    tone: 'border-err-border bg-err-soft',
+    tone: 'error',
     noteTitle: '停用不能保证立即停止呼叫',
     note: '停用后正常授权路径拒绝新呼叫；Worker 授权超时时，新呼叫仍可能按最多 1800 秒放行；已接通电话按原上限结束并正常计费。',
     effects: [
@@ -27,7 +28,7 @@ const copy = {
   enable: {
     title: (code: string) => `启用租户 ${code}？`,
     confirm: '启用租户',
-    tone: 'border-brand-border bg-brand-soft',
+    tone: 'brand',
     noteTitle: '恢复正常授权',
     note: '启用后按余额与透支额度正常授权新呼叫；余额不足时仍会停机。',
     effects: [
@@ -98,12 +99,10 @@ export function TenantStatusDialog({
           {tenant.name}（{tenant.currency}）
         </span>
       </div>
-      <div
-        className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-[13px] leading-normal ${text.tone}`}
-      >
+      <Alert variant={text.tone} role="note" className="text-foreground">
         <span className="font-semibold">{text.noteTitle}</span>
         <span>{text.note}</span>
-      </div>
+      </Alert>
       <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-[13px] leading-normal text-muted-foreground">
         {text.effects.map((effect) => (
           <li key={effect}>{effect}</li>

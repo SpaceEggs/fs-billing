@@ -6,6 +6,8 @@ import {
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { Skeleton } from '../ui/skeleton';
+import { Input } from '../ui/input';
 import {
   apiQuery,
   invalidateTenant,
@@ -15,9 +17,10 @@ import { apiProblem, fieldIssues } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
 import { resolveSchedule, type ScheduleChoice } from '../../lib/rates';
 import { cn } from '../../lib/utils';
-import { CalloutIcon } from '../ui/alert';
+import { TriangleAlertIcon } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button, buttonVariants } from '../ui/button';
-import { ModalDialog } from '../ui/dialog';
+import { ModalDialog } from '../modal-dialog';
 import { ProblemAlert } from './problem-alert';
 import { ScheduleField } from './rate-edit-dialog';
 import {
@@ -423,27 +426,22 @@ function ChooseTenant({
   return (
     <>
       {notice ? (
-        <div
-          role="status"
-          className="rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] font-semibold text-warn"
-        >
-          {notice}
-        </div>
+        <Alert variant="warning" role="status">
+          <AlertTitle className="col-start-1">{notice}</AlertTitle>
+        </Alert>
       ) : null}
-      <div className="flex items-start gap-2.5 rounded-lg border border-warn-border bg-warn-soft px-3.5 py-3 text-[13px]">
-        <CalloutIcon tone="warn" />
-        <div className="flex flex-col gap-0.5">
-          <span className="font-semibold text-warn">
-            {push
-              ? '将覆盖目标租户的整张费率表'
-              : `将覆盖 ${self.tenant.code} 的整张费率表`}
-          </span>
-          <span>
-            {push ? '目标租户' : '本租户'}
-            现有费率会被替换，来源中没有的前缀将被删除。
-          </span>
-        </div>
-      </div>
+      <Alert variant="warning" className="px-3.5 py-3">
+        <TriangleAlertIcon aria-hidden />
+        <AlertTitle>
+          {push
+            ? '将覆盖目标租户的整张费率表'
+            : `将覆盖 ${self.tenant.code} 的整张费率表`}
+        </AlertTitle>
+        <AlertDescription className="text-foreground!">
+          {push ? '目标租户' : '本租户'}
+          现有费率会被替换，来源中没有的前缀将被删除。
+        </AlertDescription>
+      </Alert>
       <TenantPicker
         label={push ? '目标租户' : '来源租户'}
         currency={self.tenant.currency}
@@ -557,7 +555,7 @@ function TenantPicker({
     tenants.data.pagination.total > tenants.data.items.length;
   return (
     <div className="flex flex-col gap-2">
-      <input
+      <Input
         type="search"
         aria-label="搜索租户编码或名称"
         placeholder="搜索租户编码或名称"
@@ -565,7 +563,7 @@ function TenantPicker({
         value={search}
         disabled={disabled}
         onChange={(event) => setSearch(event.target.value)}
-        className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="h-9 text-sm sm:h-9"
       />
       <span id={`${id}-group`} className="text-xs text-muted-foreground">
         可选 · 同币种（{currency}）
@@ -576,10 +574,10 @@ function TenantPicker({
           onRefresh={() => void tenants.refetch()}
         />
       ) : !tenants.data ? (
-        <div
+        <Skeleton
           aria-busy
           aria-label="租户加载中"
-          className="h-[120px] animate-pulse rounded-lg bg-skeleton"
+          className="h-[120px] rounded-lg"
         />
       ) : items.length === 0 ? (
         <span className="rounded-lg border border-border px-3 py-4 text-center text-[13px] text-muted-foreground">

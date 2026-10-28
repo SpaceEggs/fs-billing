@@ -1,14 +1,16 @@
 import { useEffect, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
 import type { LoginRequest } from '@fs-billing/shared';
+import { Label } from '../components/ui/label';
 import {
   AdminPill,
   BrandRow,
   LogoMark,
   productLabel,
 } from '../components/brand';
-import { Alert } from '../components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { callApi } from '../lib/api';
@@ -57,13 +59,14 @@ function useNow(active: boolean) {
 
 function ExpiredBanner() {
   return (
-    <div
+    <Alert
+      variant="warning"
       role="status"
-      className="flex shrink-0 flex-col gap-0.5 border-y border-warn-border bg-warn-soft px-5 py-2.5 text-[13px] leading-normal text-warn sm:h-11 sm:flex-row sm:items-center sm:justify-center sm:gap-2 sm:border-t-0 sm:py-0"
+      className="shrink-0 rounded-none border-x-0 px-5 sm:h-11 sm:flex-row sm:items-center sm:justify-center sm:gap-2 sm:border-t-0 sm:py-0"
     >
       <span className="font-semibold">登录已过期，请重新登录</span>
       <span>登录后将返回之前的页面</span>
-    </div>
+    </Alert>
   );
 }
 
@@ -77,18 +80,19 @@ function ForgotLink({
   className?: string;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="link"
+      size="inline"
       onClick={onClick}
       className={cn(
         zone === 'admin'
-          ? 'text-primary'
+          ? 'hover:no-underline'
           : 'text-muted-foreground underline underline-offset-[3px]',
         className,
       )}
     >
       忘记密码？
-    </button>
+    </Button>
   );
 }
 
@@ -196,13 +200,22 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             </span>
           </div>
           {alert ? (
-            <Alert tone={alert.tone} title={alert.title}>
-              {alert.body}
+            <Alert
+              variant={alert.tone === 'warn' ? 'warning' : 'destructive'}
+              role="alert"
+            >
+              {alert.tone === 'warn' ? (
+                <TriangleAlertIcon aria-hidden />
+              ) : (
+                <CircleAlertIcon aria-hidden />
+              )}
+              <AlertTitle>{alert.title}</AlertTitle>
+              <AlertDescription>{alert.body}</AlertDescription>
             </Alert>
           ) : null}
           <div className="flex flex-col gap-3.5">
             <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-              <label htmlFor={ids.email}>登录邮箱</label>
+              <Label htmlFor={ids.email}>登录邮箱</Label>
               <Input
                 id={ids.email}
                 type="email"
@@ -218,7 +231,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             </div>
             <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
               <div className="flex items-center justify-between">
-                <label htmlFor={ids.password}>密码</label>
+                <Label htmlFor={ids.password}>密码</Label>
                 <ForgotLink
                   zone={zone}
                   onClick={() => setForgotOpen((open) => !open)}
@@ -233,7 +246,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                   fieldClass,
                 )}
               >
-                <input
+                <Input
                   id={ids.password}
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -244,17 +257,18 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                   aria-invalid={invalid || undefined}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="h-full min-w-0 flex-1 bg-transparent pl-3 text-base text-foreground outline-none placeholder:text-muted-foreground sm:text-sm"
+                  className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pr-0 pl-3 focus-visible:ring-0 sm:h-full"
                 />
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="inline"
                   aria-label={showPassword ? '隐藏密码' : '显示密码'}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword((shown) => !shown)}
-                  className="flex h-11 w-14 shrink-0 items-center justify-center text-[13px] text-muted-foreground sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
+                  className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
                 >
                   {showPassword ? '隐藏' : '显示'}
-                </button>
+                </Button>
               </div>
               {forgotOpen ? (
                 <ForgotHint

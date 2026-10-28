@@ -5,6 +5,9 @@ import type {
   AdminPortalAccountCreateResponse,
   AdminStatus,
 } from '@fs-billing/shared';
+import { Skeleton } from '../../../components/ui/skeleton';
+import { Badge } from '../../../components/ui/badge';
+import { Alert } from '../../../components/ui/alert';
 import {
   AccountStatusDialog,
   ResetPasswordDialog,
@@ -19,7 +22,7 @@ import { ProblemAlert } from '../../../components/admin/problem-alert';
 import { DateTime } from '../../../components/data-format';
 import { QueryError } from '../../../components/query-error';
 import { Button } from '../../../components/ui/button';
-import { ModalDialog } from '../../../components/ui/dialog';
+import { ModalDialog } from '../../../components/modal-dialog';
 import { Input } from '../../../components/ui/input';
 import { apiQuery, useCredentialMutation } from '../../../lib/admin-api';
 import {
@@ -32,12 +35,9 @@ import { apiProblem } from '../../../lib/api-problem';
 import { cn } from '../../../lib/utils';
 
 const accountStatus = {
-  active: { label: '启用', className: 'border-ok-border bg-ok-soft text-ok' },
-  disabled: {
-    label: '已停用',
-    className: 'border-off-border bg-off-soft text-off',
-  },
-} as const satisfies Record<AdminStatus, { label: string; className: string }>;
+  active: { label: '启用', variant: 'ok' },
+  disabled: { label: '已停用', variant: 'off' },
+} as const satisfies Record<AdminStatus, { label: string; variant: string }>;
 
 const fieldRow =
   'flex flex-col gap-0.5 border-b border-border py-3 last:border-b-0 md:grid md:grid-cols-[140px_1fr] md:items-center md:gap-0';
@@ -200,15 +200,12 @@ export function CreatePortalDialog({
           )}
         </Field>
         {unknown ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-          >
+          <Alert variant="error">
             <span className="font-semibold">无法确认是否已开通</span>
             <span>
               请关闭后查看门户账号：若已开通，用「重置密码」生成新的临时密码，不要重复开通。
             </span>
-          </div>
+          </Alert>
         ) : create.error && !emailTaken ? (
           <ProblemAlert
             error={create.error}
@@ -269,10 +266,10 @@ export function PortalTab({
     );
   if (!accounts.data)
     return (
-      <div
+      <Skeleton
         aria-busy
         aria-label="门户账号加载中"
-        className="h-[180px] max-w-[760px] animate-pulse rounded-xl bg-skeleton"
+        className="h-[180px] max-w-[760px] rounded-xl"
       />
     );
   const account = accounts.data.items[0];
@@ -304,22 +301,16 @@ export function PortalTab({
     <div className="flex max-w-[760px] flex-col gap-3.5">
       {change ? <StatusChangeNotice change={change} /> : null}
       {tenantDisabled ? (
-        <div
-          role="note"
-          className="rounded-lg border border-off-border bg-off-soft px-3.5 py-2.5 text-[13px] leading-normal"
-        >
+        <Alert variant="muted" role="note" className="px-3.5">
           <span className="font-semibold">租户已停用</span>
           ，客户暂时无法登录客户门户。门户账号本身的状态不受影响，租户启用后即可恢复登录。
-        </div>
+        </Alert>
       ) : null}
       {account?.status === 'disabled' ? (
-        <div
-          role="note"
-          className="rounded-lg border border-off-border bg-off-soft px-3.5 py-2.5 text-[13px] leading-normal"
-        >
+        <Alert variant="muted" role="note" className="px-3.5">
           <span className="font-semibold">门户账号已停用</span>
           ，客户无法登录客户门户。呼叫与计费不受影响。
-        </div>
+        </Alert>
       ) : null}
       <section
         aria-label="客户门户账号"
@@ -346,14 +337,9 @@ export function PortalTab({
             >
               <dt className={fieldLabel}>状态</dt>
               <dd className="m-0">
-                <span
-                  className={cn(
-                    'inline-flex h-[22px] items-center rounded-md border px-2 text-xs font-medium',
-                    accountStatus[account.status].className,
-                  )}
-                >
+                <Badge variant={accountStatus[account.status].variant}>
                   {accountStatus[account.status].label}
-                </span>
+                </Badge>
               </dd>
             </div>
             <div className={fieldRow}>

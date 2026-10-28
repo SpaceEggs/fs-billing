@@ -1,7 +1,9 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
+/* shadcn/ui 的变量名在 @theme 里映射到下面的项目令牌（popover/secondary/accent 对应卡片与 muted），明暗外观不变。 */
 /* 令牌取自 design/设计系统规范确认：设计系统与第三批设计稿。门户为中性主色，后台为蓝色主色。 */
 :root,
 [data-theme='light'] {
@@ -123,6 +125,13 @@
   --color-background: var(--bg);
   --color-foreground: var(--fg);
   --color-card: var(--card);
+  --color-card-foreground: var(--fg);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--fg);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--fg);
+  --color-accent: var(--muted);
+  --color-accent-foreground: var(--fg);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-fg);
   --color-border: var(--border);
@@ -158,6 +167,25 @@
   --color-alert-neg: var(--alert-neg-fg);
   --color-alert-neg-soft: var(--alert-neg-bg);
   --color-alert-neg-border: var(--alert-neg-bd);
+}
+
+/* Tailwind v4 的 preflight 让裸 `border` 使用 currentcolor；与 shadcn/ui 一致，默认边框色取项目的 --border。 */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+}
+
+/* 弹层的进出场动画（tw-animate-css）在“减少动态效果”下关闭；Radix Presence 看到无动画会立即卸载。 */
+@media (prefers-reduced-motion: reduce) {
+  [class*='animate-in'],
+  [class*='animate-out'] {
+    animation: none !important;
+  }
 }
 
 html,

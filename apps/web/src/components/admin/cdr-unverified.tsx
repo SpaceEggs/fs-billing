@@ -1,5 +1,9 @@
 import { useId } from 'react';
 import type { AdminCdr } from '@fs-billing/shared';
+import { Label } from '../ui/label';
+import { Checkbox } from '../ui/checkbox';
+import { Badge } from '../ui/badge';
+import { Alert } from '../ui/alert';
 import { cn } from '../../lib/utils';
 import type { CdrDetailExtra } from '../cdr/cdr-detail';
 import type { CdrFilterExtra } from '../cdr/cdr-filters';
@@ -11,7 +15,7 @@ import { StatusTag } from '../status-tag';
  * 未经验证是计费系统授权超时期间由 FreeSWITCH 放行的通话，已按费率补记计费，客户看不到。
  */
 
-function Checkbox({
+function UnverifiedOnly({
   checked,
   onChange,
   className,
@@ -22,7 +26,7 @@ function Checkbox({
 }) {
   const id = useId();
   return (
-    <label
+    <Label
       htmlFor={id}
       className={cn(
         'flex cursor-pointer items-center gap-2 rounded-lg border text-sm select-none has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring',
@@ -30,15 +34,13 @@ function Checkbox({
         className,
       )}
     >
-      <input
+      <Checkbox
         id={id}
-        type="checkbox"
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="size-4 accent-primary"
+        onCheckedChange={(next) => onChange(next === true)}
       />
       仅看未经验证
-    </label>
+    </Label>
   );
 }
 
@@ -50,14 +52,14 @@ export function unverifiedFilter(
   return {
     active: unverifiedOnly,
     desktop: (
-      <Checkbox
+      <UnverifiedOnly
         checked={unverifiedOnly}
         onChange={onChange}
         className="h-9 px-3"
       />
     ),
     sheet: (
-      <Checkbox
+      <UnverifiedOnly
         checked={unverifiedOnly}
         onChange={onChange}
         className="h-11 px-3 text-[15px]"
@@ -76,7 +78,7 @@ export function UnverifiedBadge({ cdr }: { cdr: AdminCdr }) {
  */
 export function UnverifiedBanner({ total }: { total: number }) {
   return (
-    <div className="rounded-lg border border-unv-border bg-unv-soft px-3.5 py-2.5 text-[13px] leading-normal">
+    <Alert variant="unverified" className="px-3.5 text-foreground">
       <p className="m-0 hidden md:block">
         <span className="font-semibold text-unv">未经验证：</span>
         以下话单发生在计费系统授权超时期间，由 FreeSWITCH 放行，最长 30
@@ -89,7 +91,7 @@ export function UnverifiedBanner({ total }: { total: number }) {
         <br />
         授权超时期间由 FreeSWITCH 放行，最长 30 分钟。
       </p>
-    </div>
+    </Alert>
   );
 }
 
@@ -108,21 +110,17 @@ export function unverifiedDetail(cdr: AdminCdr): CdrDetailExtra {
     rows: [
       {
         label: '验证状态',
-        value: (
-          <span className="inline-flex h-[22px] items-center rounded-md border border-unv-border bg-unv-soft px-2 text-xs font-medium text-unv">
-            计费系统授权超时
-          </span>
-        ),
+        value: <Badge variant="unverified">计费系统授权超时</Badge>,
       },
     ],
     note: (
-      <div className="flex flex-col gap-0.5 rounded-lg border border-unv-border bg-unv-soft px-3.5 py-2.5 text-[13px] leading-normal text-unv">
+      <Alert variant="unverified" className="px-3.5">
         <span className="font-semibold">未经验证</span>
         <span>
           计费系统故障期间由 FreeSWITCH 放行，最长 30
           分钟。通话结束后已按费率补记计费，此标签仅管理后台可见。
         </span>
-      </div>
+      </Alert>
     ),
   };
 }

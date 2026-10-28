@@ -7,6 +7,8 @@ import type {
   Currency,
   Identity,
 } from '@fs-billing/shared';
+import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
   GenerationNotes,
   RegenerateButton,
@@ -21,7 +23,8 @@ import { AppShell, PageBody } from '../../components/app-shell';
 import { DateTime, Money } from '../../components/data-format';
 import { MonthField } from '../../components/month-field';
 import { QueryError, RefreshError } from '../../components/query-error';
-import { Sheet } from '../../components/ui/sheet';
+import { EllipsisIcon } from 'lucide-react';
+import { SheetPanel } from '../../components/sheet-panel';
 import { apiQuery } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
 import { previousBeijingMonth } from '../../lib/admin-statements';
@@ -123,10 +126,10 @@ export function AdminStatementsPage({ identity }: { identity: Identity }) {
             onRetry={() => void list.refetch()}
           />
         ) : (
-          <div
+          <Skeleton
             aria-busy
             aria-label="账单加载中"
-            className="h-[160px] animate-pulse rounded-xl bg-skeleton"
+            className="h-[160px] rounded-xl"
           />
         )}
         <p className="m-0 text-xs text-muted-foreground max-md:hidden">
@@ -389,19 +392,20 @@ function GroupSection({
                 <GenerationNotes {...notesOf(row)} />
               </span>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               aria-label={`${row.tenant.code} 的操作`}
               aria-haspopup="dialog"
               onClick={() => setMenu(row)}
-              className="flex h-11 w-8 items-center justify-center text-muted-foreground"
+              className="h-11 w-8 text-muted-foreground hover:bg-transparent"
             >
-              ⋯
-            </button>
+              <EllipsisIcon aria-hidden />
+            </Button>
           </div>
         ))}
       </div>
-      <Sheet
+      <SheetPanel
         side="bottom"
         title={menu ? `${menu.tenant.code} 的操作` : '操作'}
         open={menu !== null}
@@ -423,24 +427,24 @@ function GroupSection({
             >
               查看
             </Link>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               disabled={!menu.regenerable.allowed}
               onClick={() => {
                 const row = menu;
                 setMenu(null);
                 onRegenerate(targetOf(row, currency));
               }}
-              className="flex h-12 items-center text-base text-primary disabled:text-muted-foreground"
+              className="h-12 justify-start rounded-none px-0 text-base font-normal text-primary hover:bg-transparent disabled:text-muted-foreground"
             >
               重新生成
               {menu.regenerable.reason === 'details_deleted'
                 ? '（话单已删除，不可用）'
                 : ''}
-            </button>
+            </Button>
           </>
         ) : null}
-      </Sheet>
+      </SheetPanel>
     </section>
   );
 }
