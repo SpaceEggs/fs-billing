@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   validateAdminStatementsSearch,
   validateTenantDetailSearch,
+  validateUnassignedSearch,
 } from './lib/admin-search';
 import { passwordGate, sessionExpiry } from './lib/session';
 import { adminApi, page, renderApp } from './test/app';
@@ -106,6 +107,26 @@ describe('tenant detail search', () => {
       country: undefined,
       page: undefined,
     });
+  });
+});
+
+describe('unassigned search', () => {
+  it('keeps an empty or numeric tag and drops a bad tab and page', () => {
+    expect(
+      validateUnassignedSearch({ tab: 'ignored', tag: '', page: 3 }),
+    ).toEqual({ tab: 'ignored', tag: '', page: 3 });
+    // 路由把纯数字查询串收成 number，校验要还原成字符串。
+    expect(
+      validateUnassignedSearch({ tab: 'pending', tag: 326, page: 1 }),
+    ).toEqual({ tab: undefined, tag: '326', page: undefined });
+    expect(validateUnassignedSearch({ tag: '01' })).toEqual({
+      tab: undefined,
+      tag: '01',
+      page: undefined,
+    });
+    expect(
+      validateUnassignedSearch({ tab: 'nope', tag: true, page: 'abc' }),
+    ).toEqual({ tab: undefined, tag: undefined, page: undefined });
   });
 });
 

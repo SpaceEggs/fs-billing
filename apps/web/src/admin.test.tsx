@@ -94,6 +94,8 @@ describe('password change gate', () => {
         return required
           ? { status: 403, body: apiError('PASSWORD_CHANGE_REQUIRED') }
           : { status: 200, body: page(tenants) };
+      if (path === '/api/admin/unassigned-cdrs/summary')
+        return { status: 200, body: { pending: 0, ignored: 0 } };
       throw new Error(`unexpected ${path}`);
     };
     return { calls, handler, unlock: () => (required = false) };
@@ -173,6 +175,8 @@ describe('password change gate', () => {
         required = true;
         return { status: 403, body: apiError('PASSWORD_CHANGE_REQUIRED') };
       }
+      if (path === '/api/admin/unassigned-cdrs/summary')
+        return { status: 200, body: { pending: 0, ignored: 0 } };
       throw new Error(`unexpected ${path}`);
     };
     const { location } = renderApp('/admin/tenants', handler);
@@ -201,7 +205,7 @@ describe('password change gate', () => {
 });
 
 describe('admin navigation', () => {
-  it('lists the phase 5 admin pages and marks the current one', async () => {
+  it('lists the admin pages and marks the current one', async () => {
     const { handler } = adminApi({
       'GET /api/admin/tenants': () => ({ status: 200, body: page(tenants) }),
     });
@@ -217,6 +221,7 @@ describe('admin navigation', () => {
       ['概览', '/admin'],
       ['租户', '/admin/tenants'],
       ['待收款', '/admin/receivables'],
+      ['未归属话单', '/admin/unassigned'],
       ['账单', '/admin/statements'],
       ['管理员', '/admin/admins'],
     ]);
@@ -276,7 +281,7 @@ describe('tenant list', () => {
       ],
     ]);
     expect(screen.getByText('共 3 个')).toBeVisible();
-    expect(calls[1]?.path).toBe(
+    expect(calls.map((call) => call.path)).toContain(
       '/api/admin/tenants?page=1&pageSize=25&sort=status_currency_balance',
     );
   });
@@ -987,7 +992,10 @@ describe('tenant create', () => {
     await waitFor(() =>
       expect(screen.getByLabelText(/租户编码/)).toHaveFocus(),
     );
-    expect(calls.map((call) => call.path)).toEqual(['/api/auth/session']);
+    expect(calls.map((call) => call.path)).toEqual([
+      '/api/auth/session',
+      '/api/admin/unassigned-cdrs/summary',
+    ]);
   });
 
   it('maps an existing code to the code field', async () => {

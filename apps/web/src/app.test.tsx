@@ -292,6 +292,8 @@ describe('home load errors', () => {
         return { status: 200, body: adminSession };
       if (path === '/api/admin/context')
         return { status: 200, body: { identity: adminSession.identity } };
+      if (path === '/api/admin/unassigned-cdrs/summary')
+        return { status: 200, body: { pending: 0, ignored: 0 } };
       throw new Error(`unexpected ${path}`);
     });
     const main = await screen.findByRole('main');
@@ -327,6 +329,8 @@ describe('home load errors', () => {
         contextCalls += 1;
         throw new TypeError('network down');
       }
+      if (path === '/api/admin/unassigned-cdrs/summary')
+        return { status: 200, body: { pending: 0, ignored: 0 } };
       throw new Error(`unexpected ${path}`);
     });
     const alert = await screen.findByRole('alert', {}, { timeout: 6000 });

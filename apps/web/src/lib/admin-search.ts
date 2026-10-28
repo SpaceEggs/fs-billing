@@ -4,6 +4,7 @@ import {
   adminPageQuerySchema,
   adminReceivablesQuerySchema,
   adminTenantsQuerySchema,
+  adminUnassignedListQuerySchema,
   dayRangeFields,
   statementMonthSchema,
 } from '@fs-billing/shared';
@@ -145,4 +146,30 @@ export function validateAdminStatementsSearch(
   raw: Record<string, unknown>,
 ): AdminStatementsSearch {
   return { month: statementMonthSchema.safeParse(raw['month']).data };
+}
+
+/**
+ * 未归属话单：默认待处理不写入地址。`tag` 不传是全部分组，空串是「标签为空」。
+ * 路由会把纯数字查询串收成 number（`"326"` → 326），这里还原成字符串，否则数字标签会被丢掉。
+ */
+export type UnassignedSearch = {
+  tab?: 'ignored' | undefined;
+  tag?: string | undefined;
+  page?: number | undefined;
+};
+
+function unassignedTagOf(raw: unknown) {
+  const value =
+    typeof raw === 'number' && Number.isFinite(raw) ? String(raw) : raw;
+  return adminUnassignedListQuerySchema.shape.tag.safeParse(value).data;
+}
+
+export function validateUnassignedSearch(
+  raw: Record<string, unknown>,
+): UnassignedSearch {
+  return {
+    tab: raw['tab'] === 'ignored' ? 'ignored' : undefined,
+    tag: unassignedTagOf(raw['tag']),
+    page: pageOf(raw['page']),
+  };
 }
