@@ -31,7 +31,7 @@
 | 5    | 管理后台：开户与资金 | 管理员能开户、配费率、充值，可以接第一个试用客户 | 代码验收已完成（PR #21–#37，[视觉对照](evidence/phase-5-web/visual-diff.md)）；2 条运维项（NTP 监测、现网 billing_tenant 核对）随阶段 10                                                                                 |
 | 6    | 客户门户             | 客户能自助查余额、话单、流水                     | 已完成（PR #40 至 #53，[PR 7 验收记录](evidence/phase-6-web/README.md)，6 项验收全部勾选）；Windows 上用 Excel 打开带 BOM 的 UTF-8 CSV 的显示没有自动化手段，需人工核对一次（见[阶段 6 设计风险](phase-6-design.md#风险)） |
 | 7    | 月账单               | 每月自动出账，客户可查看和导出                   | 代码验收已完成（PR #56–#61 与验收 PR，[验收记录](evidence/phase-7/README.md)、[视觉对照](evidence/phase-7-web/visual-diff.md)）；真实 cron 触发随阶段 9 遗留项 |
-| 8    | 话单运维             | 未归属话单分配、删除话单、操作日志               | 未开始                                                                                                                                                                           |
+| 8    | 话单运维             | 未归属话单分配、删除话单、操作日志               | 代码验收已完成（PR #65–#71 与验收 PR，[验收记录](evidence/phase-8/README.md#pr-6-验收记录)、[视觉对照](evidence/phase-8-web/visual-diff.md)）；10 项验收全部勾选（「分区维护 DB 测试偶发超时」按未复现关闭，再次出现则重新打开，[排查记录](evidence/phase-8/partition-flake.md)）；视觉差异有 7 项待用户决定 |
 | 9    | 通知与告警           | 余额提醒、停机通知、故障告警邮件                 | 未开始                                                                                                                                                                           |
 | 10   | 部署与上线           | 生产环境运行，备份可恢复，SIPp 压测通过          | 未开始                                                                                                                                                                           |
 
@@ -297,9 +297,9 @@
 
 ### 阶段 8：话单运维
 
-延后项：管理员重置密码提交成功后，审计写入失败目前只记结构化错误日志。阶段 8 接入 `system_alerts` 告警，不回滚已提交的凭据与会话撤销。
+延后项：管理员重置密码的审计写入失败。**已由阶段 5 原子化，阶段 8 加告警与回归测试**（设计文档[决定 40](phase-8-design.md#已决定)）：凭据、会话撤销与审计在同一个事务里（阶段 5 的 #22），审计写入失败整个重置回滚，不存在「提交成功后审计写入失败」的窗口，所以不需要「不回滚已提交的凭据与会话撤销」；阶段 8 加了回归测试证明审计失败时凭据和会话不变，并在审计写入失败（5xx）时另起事务尽力写一条 `system_alerts`（`audit_failed`，不含密码、邮箱或原文）。已完成，见[PR 6 验收记录](evidence/phase-8/README.md#pr-6-验收记录#延后项)（`apps/api/src/admin-accounts.db.test.ts` / `a failed audit write rolls the reset back and leaves credentials and sessions unchanged`、`a failed audit write opens one audit_failed alert without secrets`）。
 
-延后项：owner `auth:bootstrap` 创建与替换凭据目前未写入操作审计。阶段 8 补充 bootstrap 审计，记录操作者、目标资料、操作类型与结果，不记录密码、哈希或会话 token。
+延后项：owner `auth:bootstrap` 创建与替换凭据目前未写入操作审计。阶段 8 补充 bootstrap 审计，记录操作者、目标资料、操作类型与结果，不记录密码、哈希或会话 token。 已完成（[决定 41](phase-8-design.md#已决定)：`operation_logs.admin_id` 可空、加 `actor_label`），见[PR 6 验收记录](evidence/phase-8/README.md#pr-6-验收记录#延后项)（`apps/api/src/bootstrap.db.test.ts` / `audits a created and a replaced credential in the same transaction`、`audits a rejected attempt and an unexpected failure with a fixed error code`、`audit details never contain a password, hash or token`）。
 
 **范围**
 
@@ -312,16 +312,16 @@
 
 **验收标准**
 
-- [ ] 种子数据下，把 ABC01 的 326 条分配给 ABC001：预览显示扣费 ¥58.35、324 条可分配、2 条无费率（前缀 1876）；执行后余额减少 58.35，流水中有对应扣费
-- [ ] 同一批未归属话单重复提交分配，只扣费一次
-- [ ] 删除当月话单的按钮不可用；删除 8 月话单后，ABC001 的余额、8 月账单数字不变，8 月账单的"导出话单明细"提示已删除，"重新生成"不可用
-- [ ] 操作日志中能查到上述删除：谁、何时、哪个租户、哪个月、多少条
-- [ ] 归档后恢复一条原始 JSON，内容与归档前逐字节相同
-- [ ] `apps/worker/src/ingest.ts` 的话单校验失败原因不再保存冗长的 Zod 错误消息，改为简短或结构化的原因（来自阶段 3 评审）
-- [ ] 无 UUID 的校验失败话单每次重推都会新建一条 pending 行：去重或合并，并有测试覆盖（来自阶段 3 评审）
-- [ ] 修正重推成功后，旧的 pending 行从待人工处理列表中移除或标记已解决（来自阶段 3 评审）
-- [ ] 分区维护 DB 测试偶发超时：排查根因并修复，后续通过不能证明不稳定已消除（来自阶段 3 评审）
-- [ ] Lua 与 `packages/rating/src/dialed.test.ts` 共用号码用例列表，避免两套列表漂移；现有独立测试及 SIPp 覆盖已通过，此项为测试维护改进（来自阶段 3 收尾评审）
+- [x] 种子数据下，把 ABC01 的 326 条分配给 ABC001：预览显示扣费 ¥58.35、324 条可分配、2 条无费率（前缀 1876）；执行后余额减少 58.35，流水中有对应扣费。种子数据（新库）下预览显示扣费 ¥58.35、324 条可分配、2 条无费率（接通早于 ABC001 第一个费率版本，`prefixHint` 为 1876，决定 36、37）；执行后 ABC001 余额 −35.20 变为 −93.55，流水多 324 条 `call_charge`，话单多 324 条，剩余 2 条仍是待处理，9 月账单变为待重新生成（不自动重新生成）。2026-10-29 `pnpm test:db`、`pnpm test:e2e` 通过，另在刚播种的库上用 `FSB_ABC01_ASSIGN=1` 经真实浏览器走一遍。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`packages/db/src/unassigned/assign.db.test.ts` / `previews 326 ABC01 rows against ABC001 as 324 assignable, 58.35 and 2 without a rate`、`assigning charges 58.35 and writes one call_charge per assignable row`、`the September statement becomes stale after the assignment and is not regenerated`；`apps/api/src/admin-unassigned.db.test.ts` / `returns the mockup figures through the preview and assign endpoints`；`apps/web/e2e/admin-unassigned.spec.ts` / `previews the whole ABC01 group against ABC001 without charging anything`、`assigns a group to the nearest tenant, charges it once and writes the ledger and the audit`；`apps/web/e2e/admin-unassigned-abc01.spec.ts` / `assigns the ABC01 group to ABC001: 324 rows charged 58.35, 2 without a rate stay, a replay charges nothing`）。
+- [x] 同一批未归属话单重复提交分配，只扣费一次。四层幂等（请求幂等键、行状态加行锁、`call_uuids` 认领、流水幂等键）任何一层单独都足够，同键重放返回原结果，换新键得到 409 `UNASSIGNED_NOTHING_TO_ASSIGN`，两个管理员同时提交只处理一次。2026-10-29 `pnpm test:db`、`pnpm test:e2e` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`assign.db.test.ts` / `submitting the same batch twice charges once`、`assigns a row once when two admins submit at the same time`、`a second claim of the call uuid fails with call_uuids_pkey`；`admin-unassigned.db.test.ts` / `replays the stored result for the same idempotency key`；e2e `admin-unassigned.spec.ts` / `assigns a group to the nearest tenant, charges it once and writes the ledger and the audit`（同键重放 `replayed: true`、换键 409、流水与余额不变））。
+- [x] 删除当月话单的按钮不可用；删除 8 月话单后，ABC001 的余额、8 月账单数字不变，8 月账单的"导出话单明细"提示已删除，"重新生成"不可用。服务端同样拒绝当月、无账单月与已删除月（409 `CDR_MONTH_NOT_DELETABLE`）；删除 8 月后流水、余额、账单头部与明细的前后快照一致（删除只碰 `cdrs`，标志、元数据与话单删除同一事务）；界面里 8 月账单的「导出 CSV（该月话单明细）」置灰并提示已删除，「重新生成」置灰。2026-10-29 `pnpm test:db`、`pnpm test:e2e` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`packages/db/src/cdr-deletion/delete.db.test.ts` / `rejects the current month and a month without a statement`、`deleting August leaves the ledger, balance, statement header and breakdown unchanged`、`flags the statement and removes the rows in one transaction`；`apps/api/src/admin-cdr-deletion.db.test.ts` / `rejects the current month, a month without a statement, a wrong code and a changed count`、`deletes August: the ledger is untouched, the audit names who, when, which tenant, month and count`；`apps/web/e2e/admin-cdr-deletion.spec.ts` / `disables the current month, deletes August after the typed code, and shows the deleted notices`、`the server refuses the current month and a wrong code even when the page is bypassed`）。
+- [x] 操作日志中能查到上述删除：谁、何时、哪个租户、哪个月、多少条。每个月一条 `cdr_delete`，带操作人、时间、租户、月份、条数和确认的编码；操作日志页按管理员、操作类型、租户筛选能找到它，展开能看到条数 1 → 0 与只读元信息。2026-10-29 `pnpm test:db`、`pnpm test:e2e` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`delete.db.test.ts` / `writes one cdr_delete audit per month with actor, time, tenant, month and count`；`apps/api/src/admin-audit-logs.db.test.ts` / `lists the deletion with its filters`；`apps/web/e2e/admin-audit-logs.spec.ts` / `finds the deletion by admin, type and tenant, and expands the before and after`）。
+- [x] 归档后恢复一条原始 JSON，内容与归档前逐字节相同。整月导出为 gzip 的 JSON Lines、校验后分离分区，恢复单条时校验哈希，丢弃分区后仍与归档前逐字节相同（含多字节 UTF-8、CRLF、重复键、1 MiB 正文、微秒 `received_at`）。2026-10-29 `pnpm test:db` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`packages/db/src/raw-archive/archive.db.test.ts` / `restores a single raw cdr byte for byte after the partition is dropped`、`refuses to return a body whose hash does not match`、`restores a whole month with the same ids, times and bodies`；`apps/worker/src/archive.db.test.ts` / `the scheduled job archives a month older than six months and leaves a younger one alone`、`prints the stored body byte for byte, without a trailing newline, from the archive alone`）。
+- [x] `apps/worker/src/ingest.ts` 的话单校验失败原因不再保存冗长的 Zod 错误消息，改为简短或结构化的原因（来自阶段 3 评审）。原因改为固定前缀加最多 5 个 `路径(错误码)`，总长不超过 200 字符，不含输入值与 Zod 的 `message`。2026-10-29 `pnpm test:db`、`pnpm test` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`apps/worker/src/ingest.db.test.ts` / `stores a short structured reason for a failed validation`、`stores a validation failure of an empty object without the Zod message`；`packages/shared/src/worker.test.ts` / `summarizes issues to at most five paths`）。
+- [x] 无 UUID 的校验失败话单每次重推都会新建一条 pending 行：去重或合并，并有测试覆盖（来自阶段 3 评审）。按原文 SHA-256 去重，同一份坏原文再推只累计 `push_count`，已忽略的不会再冒出来；同一原文再次推送不再写第二条告警（决定 42）。2026-10-29 `pnpm test:db` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`ingest.db.test.ts` / `repeated pushes of one invalid body keep one pending row and count the pushes`、`concurrent pushes of one invalid body keep one row`、`an ignored invalid body does not come back`）。
+- [x] 修正重推成功后，旧的 pending 行从待人工处理列表中移除或标记已解决（来自阶段 3 评审）。修正稿成功入库（入队、停放、重复三种结果都算）后，旧行标为 `superseded`；原文里没有可解析 UUID 的坏话单仍需人工忽略（决定 49 接受）。2026-10-29 `pnpm test:db` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`ingest.db.test.ts` / `a corrected push resolves the earlier invalid row as superseded`、`a corrected push parked as unassigned also resolves it`、`an invalid row without a parsable uuid stays pending`）。
+- [x] 分区维护 DB 测试偶发超时：排查根因并修复，后续通过不能证明不稳定已消除（来自阶段 3 评审）。**按未复现关闭**：PR 2 修复前后各 200 次（另有 200 次 CPU 满载、20 次整套）目标测试 0 次失败，此后各次运行（含 PR 6 的整套 `test:db`）也未再出现；根因未找到，不声称不稳定已消除。决定 48 的 `ensure_month_partition` `SET lock_timeout = '2s'` 已并进迁移 0019，失败时输出任务状态与锁等待快照、测试库打开锁等待日志也在；再次出现则重新打开此项，用快照定位。见[排查记录](evidence/phase-8/partition-flake.md)（200 次循环：[修复前](evidence/phase-8/partition-flake/before-200-single-file.tsv)、[修复后](evidence/phase-8/partition-flake/after-200-single-file.tsv)）、[PR 6 整套 test:db](evidence/phase-8/pr6-pnpm-test-db.txt)、[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)。
+- [x] Lua 与 `packages/rating/src/dialed.test.ts` 共用号码用例列表，避免两套列表漂移；现有独立测试及 SIPp 覆盖已通过，此项为测试维护改进（来自阶段 3 收尾评审）。`freeswitch/tests/dialed-cases.tsv`（13 条合法、32 条非法）由 `dialed.test.ts` 与 Lua 测试共同读取，两端读到的条数不等就失败；本机没有 `lua5.3`，Lua 一侧由 CI 运行（本机另用 Lua 5.5 手动跑过，见 [PR 2 证据](evidence/phase-8/README.md)）。2026-10-29 `pnpm test` 通过。见[PR 6 验收记录](evidence/phase-8/README.md#plan-勾选)（`tests/dialed-cases.test.ts` / `the shared case file is well formed and read by both sides`；`packages/rating/src/dialed.test.ts`；`freeswitch/tests/billing_authorize_test.lua`）。
 
 ---
 
@@ -344,7 +344,7 @@
 - [ ] 模拟授权超时持续 20 分钟（N = 10）：共收到 开始 1 封 + 汇总 2 封 + 恢复 1 封
 - [ ] 概览页的待收款合计、告警数与对应页面数字一致
 - [ ] 对账（补投）告警在恢复后标记为已恢复（来自阶段 3 评审）
-- [ ] 通用无效输入每次重推仍重复写告警：同类告警去重或合并。扣费重试与对账告警已去重，此项仅剩通用无效输入告警（来自阶段 3 评审）
+- [ ] 无效输入告警的合并展示与恢复：阶段 8 已让同一份坏原文再次推送不再写第二条告警（只累计 `push_count`，设计文档[决定 42](phase-8-design.md#已决定)），修正稿成功入库后旧行标为 `superseded`；此项只剩系统告警页面上同类告警的合并展示，以及原文修正后相应告警标记为已恢复。JSON 解析失败（只写告警、不写待处理行）不在阶段 8 范围，仍按每次推送一条处理，此处一并定规则（来自阶段 3 评审）
 - [ ] 增加真实每分钟 cron 触发测试：现有测试检查调度元数据后手动 `boss.send()`，尚未证明时钟触发（来自阶段 3 评审）
 - [ ] pg-boss 关闭 advisory locking 的补丁假设只有单个 Worker 实例：验证多实例安全性或修改实现，必须在多实例部署前完成（来自阶段 3 评审）
 - [ ] `apps/worker/src/app.ts` 的计费号码不一致错误日志包含原始拨号、被叫和计费号码：决定并落实日志脱敏规则，明确访问与保留策略，必须在阶段 10 上线前解决（来自阶段 3 收尾评审）

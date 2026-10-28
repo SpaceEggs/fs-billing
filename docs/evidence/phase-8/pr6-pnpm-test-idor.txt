@@ -1,0 +1,13 @@
+
+> fs-billing@ test:idor /Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c
+> vitest run --config vitest.db.config.ts apps/api/src/idor.db.test.ts
+
+
+ RUN  v5.0.4 /Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c
+
+
+ Test Files  1 passed (1)
+      Tests  36 passed (36)
+   Start at  08:26:16
+   Duration  10.32s (tests 91%, import 8%, transform 1%)
+
