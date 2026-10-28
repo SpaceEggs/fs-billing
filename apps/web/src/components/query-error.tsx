@@ -1,4 +1,6 @@
 import { apiProblem, problemNotice } from '../lib/api-problem';
+import { CircleAlertIcon } from 'lucide-react';
+import { Alert } from './ui/alert';
 import { Button } from './ui/button';
 
 /**
@@ -38,15 +40,15 @@ export function QueryError({
   const retryable =
     problem.kind === 'unavailable' || problem.kind === 'rate-limited';
   return (
-    <div
+    <Alert
       role="alert"
-      className="flex items-center gap-3 rounded-xl border border-err-border bg-card px-[18px] py-4"
+      className="flex-row items-center gap-3 rounded-xl border-err-border px-[18px] py-4 text-sm"
     >
       <span
         aria-hidden
-        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-err-soft font-bold text-err"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-err-soft text-err"
       >
-        !
+        <CircleAlertIcon className="size-4" />
       </span>
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="text-sm font-semibold">{title}</span>
@@ -62,7 +64,7 @@ export function QueryError({
           重试
         </Button>
       ) : null}
-    </div>
+    </Alert>
   );
 }
 

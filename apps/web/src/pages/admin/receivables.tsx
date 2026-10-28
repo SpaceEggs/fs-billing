@@ -31,6 +31,8 @@ import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { SearchBox } from '../../components/search-box';
+import { CircleCheckIcon, XIcon } from 'lucide-react';
+import { Alert } from '../../components/ui/alert';
 import { Button } from '../../components/ui/button';
 import { apiKey, apiQuery, invalidateTenant, send } from '../../lib/admin-api';
 import type { ReceivablesSearch } from '../../lib/admin-search';
@@ -568,15 +570,13 @@ function DoneNotice({
   ref: React.Ref<HTMLDivElement>;
 }) {
   return (
-    <div
+    <Alert
       ref={ref}
-      role="status"
+      variant="success"
       tabIndex={-1}
-      className="flex items-center gap-2 rounded-[10px] border border-ok-border bg-ok-soft px-3.5 py-2.5 text-sm text-ok outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+      className="flex-row items-center gap-2 rounded-[10px] px-3.5 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >
-      <span aria-hidden className="font-bold">
-        ✓
-      </span>
+      <CircleCheckIcon aria-hidden className="size-4 shrink-0" />
       <span className="flex-1">
         {done.receivable.tenant.code}{' '}
         {formatMoney(receivableMoney(done.receivable))} {doneText[done.kind]}
@@ -588,9 +588,9 @@ function DoneNotice({
         onClick={onDismiss}
         className="h-7 px-2 text-ok hover:bg-transparent"
       >
-        ✕
+        <XIcon aria-hidden />
       </Button>
-    </div>
+    </Alert>
   );
 }
 

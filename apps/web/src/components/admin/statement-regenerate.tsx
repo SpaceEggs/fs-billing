@@ -221,26 +221,25 @@ export function RegenerateNotice({
   );
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <div
+      <Alert
+        variant={result.changed || result.created ? 'success' : 'muted'}
         role="status"
         className={cn(
-          'flex items-start justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-[13px]',
-          result.changed || result.created
-            ? 'border-ok-border bg-ok-soft text-ok'
-            : 'border-border bg-muted text-muted-foreground',
+          'flex-row items-start justify-between gap-3 px-3.5',
+          !(result.changed || result.created) && 'text-muted-foreground',
         )}
       >
         <span>{summary}</span>
-        <button
-          type="button"
+        <Button
+          variant="link"
+          className="h-auto shrink-0 p-0 text-[13px] font-normal text-current"
           onClick={onDismiss}
-          className="shrink-0 underline-offset-2 hover:underline"
         >
           知道了
-        </button>
-      </div>
+        </Button>
+      </Alert>
       {result.staleFollowingMonths.length > 0 ? (
-        <Alert variant="warning">
+        <Alert variant="warning" role="alert">
           <TriangleAlertIcon aria-hidden />
           <AlertTitle>后续月份的账单已过期</AlertTitle>
           <AlertDescription className="block">

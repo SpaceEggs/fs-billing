@@ -6,6 +6,7 @@ import type {
   AdminTenantDetailResponse,
   AdminTenantStatementResponse,
 } from '@fs-billing/shared';
+import { Alert } from '../../../components/ui/alert';
 import {
   RegenerateDialog,
   RegenerateNotice,
@@ -253,12 +254,15 @@ function Detail({
         />
       </div>
       {statement.detailsDeleted ? (
-        <div className="flex flex-col gap-0.5 rounded-[10px] border border-off-border bg-off-soft px-4 py-3 text-sm md:flex-row md:items-center md:gap-2.5">
+        <Alert
+          variant="muted"
+          className="rounded-[10px] px-4 py-3 text-sm md:flex-row md:items-center md:gap-2.5"
+        >
           <span className="font-semibold">该月话单明细已删除</span>
           <span className="text-muted-foreground">
             账单汇总不受影响，但无法再导出该月话单明细，也无法重新生成账单。
           </span>
-        </div>
+        </Alert>
       ) : null}
       {state === 'in_progress' ? (
         <p className="m-0 text-[13px] text-muted-foreground">

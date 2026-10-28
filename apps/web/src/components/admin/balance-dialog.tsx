@@ -5,6 +5,7 @@ import type {
   AdminBalanceOperationResponse,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
+import { Alert } from '../ui/alert';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem } from '../../lib/api-problem';
@@ -426,18 +427,15 @@ function BalanceFlow({
           {statusTags[healthStatus[projected.health]].label}」
         </div>
         {tenant.status === 'disabled' ? (
-          <div
-            role="note"
-            className="flex flex-col gap-0.5 rounded-lg border border-off-border bg-off-soft px-3 py-2.5 text-[13px] leading-normal"
-          >
+          <Alert variant="muted" role="note">
             <span className="font-semibold">该租户已停用，状态不会改变</span>
             <span>
               入账后租户仍为「已停用」，不会自动启用，正常授权路径仍拒绝新呼叫。如需恢复呼叫，请在租户详情右上角「启用」。
             </span>
-          </div>
+          </Alert>
         ) : null}
         {large ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
+          <Alert variant="warning" className="gap-2">
             <span className="font-semibold">
               大额{rule.label}，需要二次确认
             </span>
@@ -458,7 +456,7 @@ function BalanceFlow({
               />
               我已核对，确认{rule.label} {signedMoney(tenant.currency, amount)}
             </label>
-          </div>
+          </Alert>
         ) : null}
         {submitError ? (
           <ProblemAlert

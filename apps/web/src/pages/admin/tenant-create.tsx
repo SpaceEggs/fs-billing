@@ -12,6 +12,7 @@ import {
   type Identity,
 } from '@fs-billing/shared';
 import { XIcon } from 'lucide-react';
+import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
 import {
@@ -256,10 +257,7 @@ function CopySourcePicker({
 
 function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
   return (
-    <div
-      role="alert"
-      className="flex flex-col gap-2 rounded-lg border border-err-border bg-err-soft px-3.5 py-3 text-[13px] text-err md:col-span-2"
-    >
+    <Alert variant="error" className="gap-2 px-3.5 py-3 md:col-span-2">
       <span className="font-semibold">
         CSV 有 {rows.length} 行错误，租户未创建
       </span>
@@ -270,7 +268,7 @@ function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
           </li>
         ))}
       </ul>
-    </div>
+    </Alert>
   );
 }
 
@@ -314,10 +312,7 @@ function PortalResult({
     );
   if (portal.status === 'failed')
     return (
-      <div
-        role="alert"
-        className="flex flex-col gap-2 rounded-[10px] border border-err-border bg-err-soft px-4 py-3.5 text-err"
-      >
+      <Alert variant="error" className="gap-2 rounded-[10px] px-4 py-3.5">
         <span className="text-sm font-semibold">
           门户账号 {portalRequest.email} 未开通
         </span>
@@ -333,7 +328,7 @@ function PortalResult({
         >
           重试开通
         </Button>
-      </div>
+      </Alert>
     );
   const { response } = portal;
   return (
@@ -344,14 +339,14 @@ function PortalResult({
       {response.passwordSource === 'generated' ? (
         <>
           <SecretField value={response.temporaryPassword} label="临时密码" />
-          <div className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal text-warn">
+          <Alert variant="warning">
             <span className="font-semibold">
               只显示一次，关闭后无法再次查看
             </span>
             <span>
               请立即复制并通过安全渠道发给客户，客户首次登录后需修改密码。
             </span>
-          </div>
+          </Alert>
         </>
       ) : (
         <span className="text-[13px] text-muted-foreground">
@@ -396,7 +391,7 @@ function CreatedDialog({
           {tenant.name}（{tenant.currency}）· {created.rates}
         </span>
       </div>
-      <div className="flex flex-col gap-2.5 rounded-[10px] border border-warn-border bg-warn-soft px-4 py-3.5">
+      <Alert variant="warning" className="gap-2.5 rounded-[10px] px-4 py-3.5">
         <span className="text-sm font-semibold text-warn">
           下一步：请在 FreeSWITCH 中设置
         </span>
@@ -408,7 +403,7 @@ function CreatedDialog({
           在该客户的 SIP 账号或 IP
           对接上设置此通道变量，否则话单会进入「未归属话单」。
         </span>
-      </div>
+      </Alert>
       <PortalResult created={created} onRetry={onRetryPortal} />
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
         <Button

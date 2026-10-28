@@ -11,6 +11,7 @@ import type {
   Identity,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Alert } from '../../components/ui/alert';
 import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign-dialog';
 import { UnassignedIgnoreDialog } from '../../components/admin/unassigned-ignore-dialog';
 import { RequestFailure } from '../../components/admin/problem-alert';
@@ -305,11 +306,11 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
         {pendingEmpty ? <PendingEmpty /> : null}
         {tab === 'pending' && summary.data && summary.data.pending > 0 ? (
           <>
-            <p className="m-0 rounded-lg border border-warn-border bg-warn-soft px-3.5 py-2.5 text-[13px]">
+            <Alert variant="warning" className="m-0 px-3.5 text-foreground">
               <span className="font-semibold text-warn">提示</span> 请同时检查
               FreeSWITCH 中的 <code className="font-mono">billing_tenant</code>{' '}
               配置，否则新话单会继续进入此处。
-            </p>
+            </Alert>
             {groups.isError && !groups.data ? (
               <QueryError
                 title="分组加载失败"
@@ -518,24 +519,23 @@ function PageStatus({
     (notice.kind === 'ignored' || notice.kind === 'unignored') &&
     notice.count === 0;
   return (
-    <div
+    <Alert
+      variant={quiet ? 'muted' : 'success'}
       role="status"
       className={cn(
-        'flex items-start justify-between gap-3 rounded-lg border px-3.5 py-2.5 text-[13px]',
-        quiet
-          ? 'border-border bg-muted text-muted-foreground'
-          : 'border-ok-border bg-ok-soft text-ok',
+        'flex-row items-start justify-between gap-3 px-3.5',
+        quiet && 'text-muted-foreground',
       )}
     >
       <span>{text}</span>
-      <button
-        type="button"
+      <Button
+        variant="link"
+        className="h-auto shrink-0 p-0 text-[13px] font-normal text-current"
         onClick={onDismiss}
-        className="shrink-0 underline-offset-2 hover:underline"
       >
         知道了
-      </button>
-    </div>
+      </Button>
+    </Alert>
   );
 }
 

@@ -5,7 +5,7 @@ import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { CircleAlertIcon, DownloadIcon, EllipsisIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { MobileBarButton } from '../mobile-bar-button';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '../ui/alert';
 
 /**
  * 导出的状态：进行中禁用按钮，防止重复点击占满服务端的导出名额；筛选变了就丢掉上一次的错误。
@@ -93,17 +93,25 @@ export function CdrExportError({
   const message = exportFailure(error);
   if (message === null) return null;
   return (
-    <Alert variant="error" className="flex items-start">
-      <CircleAlertIcon aria-hidden className="mt-px shrink-0" />
-      <div className="flex flex-1 flex-col gap-0.5">
-        <AlertTitle>{message.title}</AlertTitle>
-        {message.body ? (
-          <AlertDescription>{message.body}</AlertDescription>
-        ) : null}
-      </div>
-      <Button variant="outline" size="sm" disabled={retrying} onClick={onRetry}>
-        重试
-      </Button>
+    <Alert
+      variant="error"
+      className="has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr_auto]"
+    >
+      <CircleAlertIcon aria-hidden />
+      <AlertTitle>{message.title}</AlertTitle>
+      {message.body ? (
+        <AlertDescription>{message.body}</AlertDescription>
+      ) : null}
+      <AlertAction>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={retrying}
+          onClick={onRetry}
+        >
+          重试
+        </Button>
+      </AlertAction>
     </Alert>
   );
 }

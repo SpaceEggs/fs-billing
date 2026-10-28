@@ -5,6 +5,7 @@ import type {
   AdminPortalAccountCreateResponse,
   AdminStatus,
 } from '@fs-billing/shared';
+import { Alert } from '../../../components/ui/alert';
 import {
   AccountStatusDialog,
   ResetPasswordDialog,
@@ -200,15 +201,12 @@ export function CreatePortalDialog({
           )}
         </Field>
         {unknown ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-          >
+          <Alert variant="error">
             <span className="font-semibold">无法确认是否已开通</span>
             <span>
               请关闭后查看门户账号：若已开通，用「重置密码」生成新的临时密码，不要重复开通。
             </span>
-          </div>
+          </Alert>
         ) : create.error && !emailTaken ? (
           <ProblemAlert
             error={create.error}
@@ -304,22 +302,16 @@ export function PortalTab({
     <div className="flex max-w-[760px] flex-col gap-3.5">
       {change ? <StatusChangeNotice change={change} /> : null}
       {tenantDisabled ? (
-        <div
-          role="note"
-          className="rounded-lg border border-off-border bg-off-soft px-3.5 py-2.5 text-[13px] leading-normal"
-        >
+        <Alert variant="muted" role="note" className="px-3.5">
           <span className="font-semibold">租户已停用</span>
           ，客户暂时无法登录客户门户。门户账号本身的状态不受影响，租户启用后即可恢复登录。
-        </div>
+        </Alert>
       ) : null}
       {account?.status === 'disabled' ? (
-        <div
-          role="note"
-          className="rounded-lg border border-off-border bg-off-soft px-3.5 py-2.5 text-[13px] leading-normal"
-        >
+        <Alert variant="muted" role="note" className="px-3.5">
           <span className="font-semibold">门户账号已停用</span>
           ，客户无法登录客户门户。呼叫与计费不受影响。
-        </div>
+        </Alert>
       ) : null}
       <section
         aria-label="客户门户账号"

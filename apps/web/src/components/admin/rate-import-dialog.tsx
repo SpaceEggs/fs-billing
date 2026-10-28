@@ -434,12 +434,9 @@ function Upload({
   return (
     <>
       {notice ? (
-        <div
-          role="status"
-          className="rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] font-semibold text-warn"
-        >
+        <Alert variant="warning" role="status" className="font-semibold">
           {notice}
-        </div>
+        </Alert>
       ) : null}
       <div className="flex flex-col gap-2">
         <label

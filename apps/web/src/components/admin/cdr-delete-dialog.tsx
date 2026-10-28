@@ -23,6 +23,8 @@ import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { QueryError } from '../query-error';
 import { MonthGrid, type MonthCellState } from '../month-field';
+import { TriangleAlertIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../modal-dialog';
 import { Input } from '../ui/input';
@@ -548,19 +550,18 @@ function CdrDeleteForm({
         monthsPending={monthsPending}
       />
       {/* 决定 34：原文按归档策略老化，这次删除不碰它。 */}
-      <div className="flex gap-2.5 rounded-[10px] border border-err-border bg-err-soft px-3.5 py-3 text-[13px] leading-relaxed text-err">
-        <span
-          aria-hidden
-          className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive text-xs font-bold text-white"
-        >
-          !
-        </span>
-        <p className="m-0">
+      <Alert
+        variant="error"
+        role="note"
+        className="rounded-[10px] px-3.5 py-3 leading-relaxed"
+      >
+        <TriangleAlertIcon aria-hidden />
+        <AlertDescription className="m-0 text-err">
           <span className="font-semibold">删除后无法恢复。</span>
           余额和已生成的月账单不受影响，但该时段将无法导出话单明细，也无法重新生成月账单。
           原始 JSON 不随删除话单清除，按归档策略老化。
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
       <CodeField
         tenantCode={tenant.code}
         code={code}

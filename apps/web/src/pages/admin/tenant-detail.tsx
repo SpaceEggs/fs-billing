@@ -13,6 +13,7 @@ import type {
   Identity,
 } from '@fs-billing/shared';
 import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
+import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { BalanceDialog } from '../../components/admin/balance-dialog';
@@ -213,9 +214,10 @@ function DetailError({
     apiProblem(error).kind === 'unavailable'
   )
     return (
-      <div
+      <Alert
+        variant="unverified"
         role="alert"
-        className="flex flex-col gap-1 rounded-xl border border-unv-border bg-unv-soft px-[18px] py-4 text-unv"
+        className="gap-1 rounded-xl px-[18px] py-4"
       >
         <span className="text-sm font-semibold">
           该租户缺少余额提醒设置，暂时无法查看详情
@@ -223,7 +225,7 @@ function DetailError({
         <span className="text-[13px]">
           这是开户早于提醒设置的存量租户。请联系技术人员补齐设置后再查看；租户本身的呼叫与计费不受影响。
         </span>
-      </div>
+      </Alert>
     );
   return (
     <QueryError

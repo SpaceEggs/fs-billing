@@ -58,13 +58,14 @@ function useNow(active: boolean) {
 
 function ExpiredBanner() {
   return (
-    <div
+    <Alert
+      variant="warning"
       role="status"
-      className="flex shrink-0 flex-col gap-0.5 border-y border-warn-border bg-warn-soft px-5 py-2.5 text-[13px] leading-normal text-warn sm:h-11 sm:flex-row sm:items-center sm:justify-center sm:gap-2 sm:border-t-0 sm:py-0"
+      className="shrink-0 rounded-none border-x-0 px-5 sm:h-11 sm:flex-row sm:items-center sm:justify-center sm:gap-2 sm:border-t-0 sm:py-0"
     >
       <span className="font-semibold">登录已过期，请重新登录</span>
       <span>登录后将返回之前的页面</span>
-    </div>
+    </Alert>
   );
 }
 
@@ -197,7 +198,10 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             </span>
           </div>
           {alert ? (
-            <Alert variant={alert.tone === 'warn' ? 'warning' : 'destructive'}>
+            <Alert
+              variant={alert.tone === 'warn' ? 'warning' : 'destructive'}
+              role="alert"
+            >
               {alert.tone === 'warn' ? (
                 <TriangleAlertIcon aria-hidden />
               ) : (

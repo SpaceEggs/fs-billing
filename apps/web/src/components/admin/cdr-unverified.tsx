@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { AdminCdr } from '@fs-billing/shared';
+import { Alert } from '../ui/alert';
 import { cn } from '../../lib/utils';
 import type { CdrDetailExtra } from '../cdr/cdr-detail';
 import type { CdrFilterExtra } from '../cdr/cdr-filters';
@@ -76,7 +77,7 @@ export function UnverifiedBadge({ cdr }: { cdr: AdminCdr }) {
  */
 export function UnverifiedBanner({ total }: { total: number }) {
   return (
-    <div className="rounded-lg border border-unv-border bg-unv-soft px-3.5 py-2.5 text-[13px] leading-normal">
+    <Alert variant="unverified" className="px-3.5">
       <p className="m-0 hidden md:block">
         <span className="font-semibold text-unv">未经验证：</span>
         以下话单发生在计费系统授权超时期间，由 FreeSWITCH 放行，最长 30
@@ -89,7 +90,7 @@ export function UnverifiedBanner({ total }: { total: number }) {
         <br />
         授权超时期间由 FreeSWITCH 放行，最长 30 分钟。
       </p>
-    </div>
+    </Alert>
   );
 }
 
@@ -116,13 +117,13 @@ export function unverifiedDetail(cdr: AdminCdr): CdrDetailExtra {
       },
     ],
     note: (
-      <div className="flex flex-col gap-0.5 rounded-lg border border-unv-border bg-unv-soft px-3.5 py-2.5 text-[13px] leading-normal text-unv">
+      <Alert variant="unverified" className="px-3.5">
         <span className="font-semibold">未经验证</span>
         <span>
           计费系统故障期间由 FreeSWITCH 放行，最长 30
           分钟。通话结束后已按费率补记计费，此标签仅管理后台可见。
         </span>
-      </div>
+      </Alert>
     ),
   };
 }

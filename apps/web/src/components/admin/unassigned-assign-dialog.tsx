@@ -7,6 +7,7 @@ import type {
   AdminUnassignedPreviewResponse,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { Alert } from '../ui/alert';
 import {
   apiQuery,
   invalidateTenant,
@@ -413,12 +414,13 @@ function PreviewFigures({
         />
       </div>
       {preview.noRate.groups.map((group, index) => (
-        <p
+        <Alert
           key={`${group.reason}-${index}`}
-          className="m-0 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] leading-normal"
+          variant="warning"
+          className="m-0 text-foreground"
         >
           {noRateExplanation(group, preview.tenant.code)}
-        </p>
+        </Alert>
       ))}
       {preview.blocked.count > 0 ? (
         // 决定 38：接通月份已删除的话单不可分配，留在待处理。

@@ -12,6 +12,7 @@ import type {
   Identity,
 } from '@fs-billing/shared';
 import { PlusIcon } from 'lucide-react';
+import { Alert } from '../../components/ui/alert';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import {
   AccountStatusDialog,
@@ -480,15 +481,12 @@ export function CreateAdminDialog({ onClose }: { onClose: () => void }) {
           创建后系统生成临时密码，只显示一次。对方首次登录后需修改密码。新增操作记入操作日志。
         </div>
         {unknown ? (
-          <div
-            role="alert"
-            className="flex flex-col gap-0.5 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-          >
+          <Alert variant="error">
             <span className="font-semibold">无法确认是否已创建</span>
             <span>
               请关闭后在列表中搜索该邮箱：若已创建，用「重置密码」生成新的临时密码，不要重复创建。
             </span>
-          </div>
+          </Alert>
         ) : create.error && !emailTaken ? (
           <ProblemAlert error={create.error} />
         ) : null}

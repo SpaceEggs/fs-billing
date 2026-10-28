@@ -1,3 +1,4 @@
+import { Alert } from '../ui/alert';
 import type { ListRefresh } from '../../lib/receivables';
 import { Button } from '../ui/button';
 import { Field, invalidClass } from './form-fields';
@@ -31,13 +32,10 @@ function Warning({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      role="alert"
-      className="flex flex-col gap-0.5 rounded-lg border border-warn-border bg-warn-soft px-3 py-2.5 text-[13px] text-warn"
-    >
+    <Alert variant="warning" role="alert">
       <span className="font-semibold">{title}</span>
       {children}
-    </div>
+    </Alert>
   );
 }
 

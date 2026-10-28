@@ -1,4 +1,6 @@
 import { ApiRequestError } from '../lib/api';
+import { CircleAlertIcon } from 'lucide-react';
+import { Alert } from './ui/alert';
 import { Button } from './ui/button';
 
 /** 数据加载失败：4xx 重试不会改变结果，只说明原因；网络或服务器错误提供重试。 */
@@ -18,15 +20,15 @@ export function LoadError({
     error.status < 500
   );
   return (
-    <div
+    <Alert
       role="alert"
-      className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-6 py-10 text-center"
+      className="items-center gap-2 rounded-xl px-6 py-10 text-center text-base"
     >
       <span
         aria-hidden
-        className="flex size-10 items-center justify-center rounded-full bg-muted text-base font-semibold text-muted-foreground"
+        className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"
       >
-        !
+        <CircleAlertIcon className="size-5" />
       </span>
       <span className="text-base font-semibold">
         {forbidden ? '没有权限查看' : '加载失败'}
@@ -48,6 +50,6 @@ export function LoadError({
           重试
         </Button>
       ) : null}
-    </div>
+    </Alert>
   );
 }

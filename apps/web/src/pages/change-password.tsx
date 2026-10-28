@@ -193,7 +193,7 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
         </Alert>
       ) : null}
       {problem?.kind === 'wait' ? (
-        <Alert variant="warning">
+        <Alert variant="warning" role="alert">
           <TriangleAlertIcon aria-hidden />
           <AlertTitle>尝试次数过多，已暂时锁定</AlertTitle>
           <AlertDescription>

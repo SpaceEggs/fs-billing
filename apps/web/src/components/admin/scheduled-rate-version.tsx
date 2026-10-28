@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminRateVersion, Currency } from '@fs-billing/shared';
+import { Alert } from '../ui/alert';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
 import {
@@ -132,15 +133,12 @@ export function CancelScheduledDialog({
       </div>
       {cancel.error ? (
         knownFailure ? (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-lg border border-err-border bg-err-soft px-3 py-2.5 text-[13px] text-err"
-          >
+          <Alert variant="error" className="flex-row items-start gap-3">
             <span className="flex-1 font-semibold">{knownFailure}</span>
             <Button variant="outline" size="sm" onClick={refresh}>
               刷新
             </Button>
-          </div>
+          </Alert>
         ) : (
           <ProblemAlert
             error={cancel.error}

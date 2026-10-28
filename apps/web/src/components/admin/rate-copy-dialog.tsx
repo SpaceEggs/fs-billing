@@ -428,7 +428,7 @@ function ChooseTenant({
           <AlertTitle className="col-start-1">{notice}</AlertTitle>
         </Alert>
       ) : null}
-      <Alert variant="warning" role="note" className="px-3.5 py-3">
+      <Alert variant="warning" className="px-3.5 py-3">
         <TriangleAlertIcon aria-hidden />
         <AlertTitle>
           {push
