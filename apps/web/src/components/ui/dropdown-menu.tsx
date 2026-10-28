@@ -28,15 +28,34 @@ function DropdownMenuTrigger({
   );
 }
 
+/**
+ * 点触发按钮时，按钮自己已经切换了开合（Radix Popover 同理）；内容的外部点击 / 焦点监听不该再关一次。
+ * 否则刚选完项、退出动画还没结束时再点触发按钮（内容仍挂载），按钮把菜单重新打开，
+ * 紧接着外部点击又把它关掉，菜单打不开。
+ */
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  ref,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
+        ref={(node) => {
+          contentRef.current = node;
+          if (typeof ref === 'function') ref(node);
+          else if (ref) ref.current = node;
+        }}
+        onInteractOutside={(event) => {
+          const triggerId = contentRef.current?.getAttribute('aria-labelledby');
+          const trigger = triggerId ? document.getElementById(triggerId) : null;
+          if (trigger?.contains(event.target as Node)) event.preventDefault();
+          onInteractOutside?.(event);
+        }}
         sideOffset={sideOffset}
         className={cn(
           'z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
@@ -116,26 +135,40 @@ function DropdownMenuRadioGroup({
   );
 }
 
+/**
+ * `indicator="start"`（shadcn 默认）在左侧显示圆点；`"end"` 在右侧显示对勾，文字与对勾两端对齐。
+ */
 function DropdownMenuRadioItem({
   className,
   children,
+  indicator = 'start',
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioItem> & {
+  indicator?: 'start' | 'end';
+}) {
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        indicator === 'start' ? 'pl-8' : 'justify-between pl-2',
         className,
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <DropdownMenuPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
-        </DropdownMenuPrimitive.ItemIndicator>
-      </span>
+      {indicator === 'start' ? (
+        <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+          <DropdownMenuPrimitive.ItemIndicator>
+            <CircleIcon className="size-2 fill-current" />
+          </DropdownMenuPrimitive.ItemIndicator>
+        </span>
+      ) : null}
       {children}
+      {indicator === 'end' ? (
+        <DropdownMenuPrimitive.ItemIndicator>
+          <CheckIcon />
+        </DropdownMenuPrimitive.ItemIndicator>
+      ) : null}
     </DropdownMenuPrimitive.RadioItem>
   );
 }

@@ -51,7 +51,8 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
             <DropdownMenuRadioItem
               key={option.value}
               value={option.value}
-              className={cn(menuItemClass, 'pl-8')}
+              indicator="end"
+              className={menuItemClass}
             >
               {option.label}
             </DropdownMenuRadioItem>
