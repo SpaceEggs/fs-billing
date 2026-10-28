@@ -149,6 +149,7 @@ function previewBody(overrides: Record<string, unknown> = {}) {
     balance: { current: '-35.20', afterEstimate: '-93.55' },
     affectedMonths: [
       { month: '2026-09', statementState: 'final' },
+      { month: '2026-10', statementState: 'live' },
       { month: '2026-08', statementState: 'none' },
     ],
     ...overrides,
@@ -170,6 +171,7 @@ function assignBody(overrides: Record<string, unknown> = {}) {
     balanceAfter: '-93.55',
     affectedMonths: [
       { month: '2026-09', statementState: 'final' },
+      { month: '2026-10', statementState: 'live' },
       { month: '2026-08', statementState: 'none' },
     ],
     ...overrides,
@@ -231,7 +233,7 @@ async function chooseAbcGroup(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('unassigned calls', () => {
-  it('groups a similar tenant, then assigns the whole group and shows affected months', async () => {
+  it('groups a similar tenant, then shows affected months before and after assigning', async () => {
     const user = userEvent.setup();
     const { calls } = renderUnassigned({
       'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
@@ -277,6 +279,13 @@ describe('unassigned calls', () => {
     expect(dialog).toHaveTextContent(
       '确认后从 ABC001 余额扣除 ¥58.35（-¥35.20 → -¥93.55），并记入操作日志。',
     );
+    expect(dialog).toHaveTextContent('受影响的月份');
+    expect(dialog).toHaveTextContent('2026年9月 · 已出账，需重新生成');
+    expect(dialog).toHaveTextContent('2026年10月 · 当前月，账单尚未生成');
+    expect(dialog).toHaveTextContent('2026年8月 · 账单尚未生成');
+    expect(
+      within(dialog).queryByRole('link', { name: '前往账单页重新生成' }),
+    ).toBeNull();
 
     await user.click(
       within(dialog).getByRole('button', { name: '确认归属 324 条并扣费' }),
@@ -286,6 +295,7 @@ describe('unassigned calls', () => {
     ).toBeVisible();
     expect(dialog).toHaveTextContent('已归属 324 条到 ABC001');
     expect(dialog).toHaveTextContent('2026年9月 · 已出账，需重新生成');
+    expect(dialog).toHaveTextContent('2026年10月 · 当前月，账单尚未生成');
     expect(dialog).toHaveTextContent('2026年8月 · 账单尚未生成');
     const links = within(dialog).getAllByRole('link', {
       name: '前往账单页重新生成',
@@ -528,6 +538,109 @@ describe('unassigned calls', () => {
     expect(
       new URL(list?.path ?? '', 'http://localhost').searchParams.get('tag'),
     ).toBe('326');
+  });
+});
+
+async function expectSignedOutAgain(
+  location: () => string,
+  stillThere?: HTMLElement,
+) {
+  const expired = await screen.findByRole('dialog', {
+    name: '登录已过期，请重新登录',
+  });
+  // 过期对话框打开后，底下的页面会被标成 aria-hidden，错误条仍要算进去。
+  expect(screen.queryByRole('alert', { hidden: true })).toBeNull();
+  if (stillThere) expect(stillThere).toBeInTheDocument();
+  await userEvent.click(
+    within(expired).getByRole('button', { name: '重新登录' }),
+  );
+  await waitFor(() => expect(location()).toBe('/admin/login?reason=expired'));
+  expect(await screen.findByRole('status')).toHaveTextContent(
+    '登录已过期，请重新登录登录后将返回之前的页面',
+  );
+}
+
+describe('unassigned session expiry', () => {
+  it('a 401 while ignoring asks the admin to sign in again', async () => {
+    const user = userEvent.setup();
+    const { location } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/ignore': () => ({
+        status: 401,
+        body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+      }),
+    });
+    const table = await screen.findByRole('table');
+    await user.click(
+      within(table).getByRole('checkbox', {
+        name: '选择 13800000001 呼 18760000001',
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: '忽略' }));
+    const dialog = await screen.findByRole('dialog', { name: '忽略 1 条话单' });
+    await user.click(within(dialog).getByRole('button', { name: '测试呼叫' }));
+    await user.click(within(dialog).getByRole('button', { name: '忽略 1 条' }));
+    await expectSignedOutAgain(location, dialog);
+  });
+
+  it('a 401 while previewing an assignment asks the admin to sign in again', async () => {
+    const user = userEvent.setup();
+    const { location } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
+        status: 401,
+        body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+      }),
+    });
+    await chooseAbcGroup(user);
+    await user.click(await screen.findByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await expectSignedOutAgain(location, dialog);
+  });
+
+  it('a 401 while assigning asks the admin to sign in again', async () => {
+    const user = userEvent.setup();
+    const { location } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
+        status: 200,
+        body: previewBody(),
+      }),
+      'POST /api/admin/unassigned-cdrs/assign': () => ({
+        status: 401,
+        body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+      }),
+    });
+    await chooseAbcGroup(user);
+    await user.click(await screen.findByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await user.click(
+      await within(dialog).findByRole('button', {
+        name: '确认归属 324 条并扣费',
+      }),
+    );
+    await expectSignedOutAgain(location, dialog);
+  });
+
+  it('a 401 while undoing an ignore asks the admin to sign in again', async () => {
+    const user = userEvent.setup();
+    const { location } = renderUnassigned({
+      'POST /api/admin/unassigned-cdrs/unignore': () => ({
+        status: 401,
+        body: apiError('SESSION_EXPIRED', { action: 'reauthenticate' }),
+      }),
+    });
+    await user.click(await screen.findByRole('tab', { name: /已忽略/ }));
+    const table = await screen.findByRole('table');
+    await user.click(within(table).getByRole('button', { name: '撤销忽略' }));
+    const expired = await screen.findByRole('dialog', {
+      name: '登录已过期，请重新登录',
+    });
+    expect(
+      within(table).getByRole('button', { name: '撤销忽略', hidden: true }),
+    ).toBeEnabled();
+    expect(screen.queryByRole('alert', { hidden: true })).toBeNull();
+    await user.click(within(expired).getByRole('button', { name: '重新登录' }));
+    await waitFor(() => expect(location()).toBe('/admin/login?reason=expired'));
   });
 });
 

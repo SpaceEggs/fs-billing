@@ -187,7 +187,8 @@ export function MonthGrid({
           ›
         </button>
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
+      {/* 删除话单手机稿三列，电脑稿四列。账单页的稿没有展开的网格。 */}
+      <div className="grid grid-cols-3 gap-1.5 md:grid-cols-4">
         {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => {
           const monthKey = key(month);
           const state = cell(monthKey);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { UnassignedSelection } from '@fs-billing/shared';
-import { invalidateUnassigned, send } from '../../lib/admin-api';
+import { invalidateUnassigned, useApiMutation } from '../../lib/admin-api';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../ui/dialog';
@@ -77,6 +77,7 @@ function IgnoreForm({
   onLockedChange: (locked: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const ignore = useApiMutation('adminUnassignedIgnore');
   const [flow, setFlow] = useState<IgnoreFlow>({
     reason: '',
     attempted: false,
@@ -95,7 +96,7 @@ function IgnoreForm({
     setFlow({ ...flow, attempted: true, submit: 'submitting' });
     onLockedChange(true);
     try {
-      const result = await send('adminUnassignedIgnore', {
+      const result = await ignore.mutateAsync({
         body: { selection, reason: flow.reason.trim() },
       });
       await invalidateUnassigned(queryClient);

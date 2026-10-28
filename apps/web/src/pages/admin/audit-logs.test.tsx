@@ -111,9 +111,13 @@ const rows = [
   }),
 ];
 
-function body(items: unknown[], total = items.length) {
+function body(
+  items: unknown[],
+  total = items.length,
+  range = { from: '2026-09-01', to: '2026-09-30' },
+) {
   return {
-    range: { from: '2026-09-01', to: '2026-09-30' },
+    range,
     items,
     pagination: { page: 1, pageSize: 50, total },
   };
@@ -123,27 +127,42 @@ function renderLogs(
   path = '/admin/audit-logs',
   items: unknown[] = rows,
   total = items.length,
+  directory?: {
+    range?: { from: string; to: string };
+    adminTotal?: number;
+    tenantTotal?: number;
+    admins?: ReturnType<typeof admin>[];
+    tenants?: (typeof listedTenant)[];
+  },
 ) {
   const { calls, handler } = adminApi({
     'GET /api/admin/audit-logs': () => ({
       status: 200,
-      body: body(items, total),
+      body: body(items, total, directory?.range),
     }),
     'GET /api/admin/admins': () => ({
       status: 200,
       body: {
-        items: [
+        items: directory?.admins ?? [
           admin(ids.wang, '王敏', 'wangmin@example.com'),
           admin(ids.li, '李俊', 'lijun@example.com'),
         ],
-        pagination: { page: 1, pageSize: 100, total: 2 },
+        pagination: {
+          page: 1,
+          pageSize: 100,
+          total: directory?.adminTotal ?? 2,
+        },
       },
     }),
     'GET /api/admin/tenants': () => ({
       status: 200,
       body: {
-        items: [listedTenant],
-        pagination: { page: 1, pageSize: 100, total: 1 },
+        items: directory?.tenants ?? [listedTenant],
+        pagination: {
+          page: 1,
+          pageSize: 100,
+          total: directory?.tenantTotal ?? 1,
+        },
       },
     }),
   } satisfies Record<string, ApiHandler>);
@@ -317,6 +336,9 @@ describe('audit logs', () => {
       expect(params.get('page')).toBeNull();
     });
     expect(
+      screen.queryByText('仅显示前 1000 个，更多请在地址栏按 ID 筛选'),
+    ).toBeNull();
+    expect(
       calls.some((call) => {
         const params = auditParams(call.path);
         return (
@@ -354,12 +376,51 @@ describe('audit logs', () => {
     expect(await screen.findByText('没有符合条件的操作记录')).toBeVisible();
     expect(
       await screen.findByText(
-        '管理员：王敏 · 操作：删除话单 · 租户：ABC001 · 最近 30 天',
+        '管理员：王敏 · 操作：删除话单 · 租户：ABC001 · 2026-09-01 — 2026-09-30',
       ),
     ).toBeVisible();
     await user.click(screen.getByRole('button', { name: '清除筛选' }));
     await waitFor(() => expect(location()).toBe('/admin/audit-logs'));
-    expect(screen.getByText('最近 30 天')).toBeVisible();
+    const cleared = screen.getByText('没有符合条件的操作记录');
+    expect(cleared.parentElement).toHaveTextContent('2026-09-01 — 2026-09-30');
+    expect(cleared.parentElement).not.toHaveTextContent('最近 30 天');
     expect(screen.queryByText(/管理员：王敏/)).toBeNull();
+  });
+
+  it('describes a one-ended date filter with the range the server applied', async () => {
+    renderLogs('/admin/audit-logs?to=2026-03-02', [], 0, {
+      range: { from: '2026-02-01', to: '2026-03-02' },
+    });
+    const empty = await screen.findByText('没有符合条件的操作记录');
+    expect(empty.parentElement).toHaveTextContent('2026-02-01 — 2026-03-02');
+    expect(empty.parentElement).not.toHaveTextContent('最近 30 天');
+  });
+
+  it('says when the admin or tenant menu stops at 1000 and keeps an address id', async () => {
+    const outsiderAdmin = '00000000-0000-4000-8000-00000000f001';
+    const outsiderTenant = '00000000-0000-4000-8000-00000000f002';
+    renderLogs(
+      `/admin/audit-logs?adminId=${outsiderAdmin}&tenantId=${outsiderTenant}`,
+      rows,
+      rows.length,
+      { adminTotal: 1001, tenantTotal: 1001, admins: [], tenants: [] },
+    );
+    expect(
+      await screen.findByRole('option', { name: '已选管理员' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: '已选租户' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: '管理员' })).toHaveValue(
+      outsiderAdmin,
+    );
+    expect(screen.getByRole('combobox', { name: '租户' })).toHaveValue(
+      outsiderTenant,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByText('仅显示前 1000 个，更多请在地址栏按 ID 筛选'),
+      ).toHaveLength(2),
+    );
   });
 });

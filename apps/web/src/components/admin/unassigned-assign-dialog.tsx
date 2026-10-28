@@ -11,7 +11,7 @@ import {
   apiQuery,
   invalidateTenant,
   invalidateUnassigned,
-  send,
+  useApiMutation,
 } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatDate, formatDateTime, formatMoney } from '../../lib/format';
@@ -146,6 +146,8 @@ function AssignFlow({
   onLockedChange: (locked: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const previewMutation = useApiMutation('adminUnassignedAssignPreview');
+  const assignMutation = useApiMutation('adminUnassignedAssign');
   // 同一次打开复用同一键，包括网络重试和预览过期后的再次确认。
   const [idempotencyKey] = useState(() => `web:${crypto.randomUUID()}`);
   const ticket = useRef(0);
@@ -167,30 +169,32 @@ function AssignFlow({
       stale,
       submit: 'idle',
     });
-    void send('adminUnassignedAssignPreview', {
-      body: { tenantId, selection },
-    }).then(
-      (data) => {
-        if (request !== ticket.current) return;
-        setFlow({
-          step: 'form',
-          tenantId,
-          preview: { status: 'ready', data },
-          stale,
-          submit: 'idle',
-        });
-      },
-      (error: unknown) => {
-        if (request !== ticket.current) return;
-        setFlow({
-          step: 'form',
-          tenantId,
-          preview: { status: 'error', error },
-          stale,
-          submit: 'idle',
-        });
-      },
-    );
+    void previewMutation
+      .mutateAsync({
+        body: { tenantId, selection },
+      })
+      .then(
+        (data) => {
+          if (request !== ticket.current) return;
+          setFlow({
+            step: 'form',
+            tenantId,
+            preview: { status: 'ready', data },
+            stale,
+            submit: 'idle',
+          });
+        },
+        (error: unknown) => {
+          if (request !== ticket.current) return;
+          setFlow({
+            step: 'form',
+            tenantId,
+            preview: { status: 'error', error },
+            stale,
+            submit: 'idle',
+          });
+        },
+      );
   }
 
   async function confirm() {
@@ -201,7 +205,7 @@ function AssignFlow({
     setFlow({ ...flow, submit: 'submitting' });
     onLockedChange(true);
     try {
-      const result = await send('adminUnassignedAssign', {
+      const result = await assignMutation.mutateAsync({
         body: {
           tenantId: preview.tenant.id,
           selection,
@@ -390,6 +394,8 @@ function PreviewFigures({
       <p className="m-0 text-[13px] leading-normal text-muted-foreground tabular-nums">
         {`确认后从 ${preview.tenant.code} 余额扣除 ${charge}（${money(currency, preview.balance.current)} → ${money(currency, preview.balance.afterEstimate)}），并记入操作日志。`}
       </p>
+      {/* 决定 6：确认前就要看到哪些月份会过期。重新生成链接留在结果页。 */}
+      <AffectedMonths months={preview.affectedMonths} />
     </div>
   );
 }
@@ -432,6 +438,48 @@ function Figure({
   );
 }
 
+function AffectedMonths({
+  months,
+  tenantId,
+}: {
+  months: AdminUnassignedPreviewResponse['affectedMonths'];
+  /** 结果页才传。已出账的月份链到账单页；预览只列出月份和状态。 */
+  tenantId?: string;
+}) {
+  if (months.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[13px] font-medium">受影响的月份</span>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0 text-[13px]">
+        {months.map((month) => (
+          <li
+            key={month.month}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1"
+          >
+            <span>
+              {statementMonthTitle(month.month)} ·{' '}
+              {statementStateText[month.statementState]}
+            </span>
+            {tenantId && month.statementState === 'final' ? (
+              <Link
+                to="/admin/tenants/$tenantId"
+                params={{ tenantId }}
+                search={{
+                  tab: 'statements',
+                  statementMonth: month.month,
+                }}
+                className="underline"
+              >
+                前往账单页重新生成
+              </Link>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AssignResult({
   result,
   tenantCode,
@@ -457,37 +505,10 @@ function AssignResult({
           : ''}
         {result.replayed ? ' 这是此前同一操作的结果，没有再次扣费。' : ''}
       </p>
-      {result.affectedMonths.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-medium">受影响的月份</span>
-          <ul className="m-0 flex list-none flex-col gap-2 p-0 text-[13px]">
-            {result.affectedMonths.map((month) => (
-              <li
-                key={month.month}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1"
-              >
-                <span>
-                  {statementMonthTitle(month.month)} ·{' '}
-                  {statementStateText[month.statementState]}
-                </span>
-                {month.statementState === 'final' ? (
-                  <Link
-                    to="/admin/tenants/$tenantId"
-                    params={{ tenantId: result.tenantId }}
-                    search={{
-                      tab: 'statements',
-                      statementMonth: month.month,
-                    }}
-                    className="underline"
-                  >
-                    前往账单页重新生成
-                  </Link>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <AffectedMonths
+        months={result.affectedMonths}
+        tenantId={result.tenantId}
+      />
       <div className="flex justify-end">
         <Button className="h-12 md:h-9" onClick={onClose}>
           完成

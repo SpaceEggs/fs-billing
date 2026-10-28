@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import {
   useQueries,
   useQueryClient,
@@ -9,7 +9,11 @@ import type {
   AdminCdrDeletionMonth,
   AdminTenantDetailResponse,
 } from '@fs-billing/shared';
-import { invalidateTenant, apiQuery, send } from '../../lib/admin-api';
+import {
+  invalidateTenant,
+  apiQuery,
+  useApiMutation,
+} from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatCount } from '../cdr/cdr-format';
 import { formatDate, formatMoney } from '../../lib/format';
@@ -247,15 +251,9 @@ function CdrDeleteForm({
   onLockedChange: (locked: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const remove = useApiMutation('adminTenantCdrDelete');
   const [flow, setFlow] = useState<CdrDeleteFlow>({ step: 'pick', grid: null });
   const busy = useRef(false);
-  const mounted = useRef(true);
-  useEffect(
-    () => () => {
-      mounted.current = false;
-    },
-    [],
-  );
   const currentYear = Number(formatDate(new Date()).slice(0, 4));
   const years = useMemo(
     () => collectYears(flow, currentYear),
@@ -304,7 +302,7 @@ function CdrDeleteForm({
       return current;
     });
     try {
-      const result = await send('adminTenantCdrDelete', {
+      const result = await remove.mutateAsync({
         params: { tenantId: tenant.id },
         body: {
           fromMonth: from,
@@ -318,7 +316,6 @@ function CdrDeleteForm({
       } catch {
         // 刷新失败不能把已经删掉的月份说成没删。
       }
-      if (!mounted.current) return;
       setFlow({ step: 'done', from, to, result, retry: 'idle' });
     } catch (error) {
       if (apiProblem(error).kind === 'conflict') {
@@ -328,7 +325,6 @@ function CdrDeleteForm({
           // 冲突说明仍然要留下，月份格刷新失败不盖住它。
         }
       }
-      if (!mounted.current) return;
       setFlow({
         step: 'confirm',
         from,

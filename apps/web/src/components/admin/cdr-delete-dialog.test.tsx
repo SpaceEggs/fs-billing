@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -104,10 +105,13 @@ const json = (status: number, body: unknown) =>
     headers: { 'content-type': 'application/json' },
   });
 
-function renderDialog(handlers?: {
-  months?: () => AdminCdrDeletionMonth[];
-  post?: (call: number) => { status: number; body: unknown };
-}) {
+function renderDialog(
+  handlers?: {
+    months?: () => AdminCdrDeletionMonth[];
+    post?: (call: number) => { status: number; body: unknown };
+  },
+  options?: { strict?: boolean },
+) {
   const posts: unknown[] = [];
   vi.stubGlobal(
     'fetch',
@@ -142,11 +146,12 @@ function renderDialog(handlers?: {
       queries: { retry: false, refetchOnWindowFocus: false },
     },
   });
-  render(
+  const view = (
     <QueryClientProvider client={client}>
       <CdrDeleteDialog tenant={tenant} open onOpenChange={() => {}} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  render(options?.strict ? <StrictMode>{view}</StrictMode> : view);
   return { posts };
 }
 
@@ -412,5 +417,63 @@ describe('cdr delete dialog', () => {
         expectedCount: 500,
       },
     ]);
+  });
+
+  it('shows the completion page after a delete under StrictMode', async () => {
+    const user = userEvent.setup();
+    renderDialog(undefined, { strict: true });
+    await user.click(
+      await screen.findByRole('button', { name: '开始月份：选择月份' }),
+    );
+    await choose(user, '2026年8月，9,642 条');
+    await user.type(
+      screen.getByRole('textbox', { name: /请输入租户编码/ }),
+      'ABC001',
+    );
+    await user.click(screen.getByRole('button', { name: '删除 9,642 条话单' }));
+    expect(
+      await screen.findByRole('heading', { name: '已删除 9,642 条话单' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: '完成' })).toBeVisible();
+  });
+
+  it('shows the partial-failure page after a delete under StrictMode', async () => {
+    const user = userEvent.setup();
+    renderDialog(
+      {
+        months: () =>
+          defaultMonths({
+            '2026-09': { state: 'deletable', cdrCount: 500, statementId },
+          }),
+        post: () => ({
+          status: 200,
+          body: deletedBody([{ month: '2026-08', deleted: 9642 }], 9642, {
+            month: '2026-09',
+            message: failureMessage,
+          }),
+        }),
+      },
+      { strict: true },
+    );
+    await user.click(
+      await screen.findByRole('button', { name: '开始月份：选择月份' }),
+    );
+    await choose(user, '2026年8月，9,642 条');
+    await user.click(
+      screen.getByRole('button', { name: '结束月份：2026年8月' }),
+    );
+    await choose(user, '2026年9月，500 条');
+    await user.type(
+      screen.getByRole('textbox', { name: /请输入租户编码/ }),
+      'ABC001',
+    );
+    await user.click(
+      screen.getByRole('button', { name: '删除 10,142 条话单' }),
+    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('2026年8月 已删除 9,642 条');
+    expect(alert).toHaveTextContent('尚未删除：2026年9月');
+    expect(alert).toHaveTextContent(failureMessage);
+    expect(screen.getByRole('button', { name: '重试剩余月份' })).toBeVisible();
   });
 });

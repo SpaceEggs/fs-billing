@@ -19,16 +19,23 @@ import { apiQuery, send } from '../../lib/admin-api';
 import type { AuditLogSearch } from '../../lib/admin-search';
 import type { DayRange } from '../../lib/day-range';
 import { formatDate, formatDateTime } from '../../lib/format';
-import { adminNames } from '../../lib/receivables';
+import {
+  adminNames,
+  directoryCap,
+  directoryCapped,
+  directoryPageSize,
+} from '../../lib/receivables';
 import { cn } from '../../lib/utils';
 
 const pageSize = 50;
-/** 与确认人姓名相同的上限：下拉框取前 1000 个，再多的不在筛选项里。 */
-const directoryPages = 10;
+const directoryPages = directoryCap / directoryPageSize;
+const directoryCapHint = `仅显示前 ${directoryCap} 个，更多请在地址栏按 ID 筛选`;
 
 type OpTone = 'err' | 'warn' | 'info';
 
 type DirectoryTenant = { id: string; code: string; name: string };
+
+type TenantDirectory = { items: DirectoryTenant[]; capped: boolean };
 
 type OpenIds = ReadonlySet<string>;
 
@@ -121,6 +128,7 @@ function filterSummary(
   search: AuditLogSearch,
   admins: Map<string, string> | undefined,
   tenants: readonly DirectoryTenant[] | undefined,
+  range: DayRange | undefined,
 ) {
   const parts: string[] = [];
   if (search.adminId) {
@@ -132,9 +140,8 @@ function filterSummary(
     const code = tenants?.find((tenant) => tenant.id === search.tenantId)?.code;
     parts.push(code ? `租户：${code}` : '租户');
   }
-  parts.push(
-    search.from && search.to ? `${search.from} — ${search.to}` : '最近 30 天',
-  );
+  // 单端或被丢掉的日期以响应里的实际范围为准，不用地址栏猜「最近 30 天」。
+  parts.push(range ? `${range.from} — ${range.to}` : '最近 30 天');
   return parts.join(' · ');
 }
 
@@ -150,12 +157,14 @@ function useTenantDirectory() {
   return useQuery({
     queryKey: ['api', 'adminTenants', 'directory'],
     staleTime: 5 * 60_000,
-    queryFn: async () => {
+    queryFn: async (): Promise<TenantDirectory> => {
       const items: DirectoryTenant[] = [];
+      let total = 0;
       for (let page = 1; page <= directoryPages; page += 1) {
         const result = await send('adminTenants', {
-          query: { page, pageSize: 100 },
+          query: { page, pageSize: directoryPageSize },
         });
+        total = result.pagination.total;
         for (const tenant of result.items)
           items.push({
             id: tenant.id,
@@ -164,7 +173,7 @@ function useTenantDirectory() {
           });
         if (page * result.pagination.pageSize >= result.pagination.total) break;
       }
-      return items;
+      return { items, capped: directoryCapped(items.length, total) };
     },
   });
 }
@@ -220,7 +229,12 @@ export function AdminAuditLogsPage({ identity }: { identity: Identity }) {
   const range = logs.isPlaceholderData
     ? (requested ?? logs.data?.range)
     : (logs.data?.range ?? requested);
-  const summary = filterSummary(search, admins.data, tenants.data);
+  const summary = filterSummary(
+    search,
+    admins.data,
+    tenants.data?.items,
+    range,
+  );
   const setFilter = (patch: Omit<AuditLogSearch, 'page'>) =>
     update({ ...search, ...patch, page: undefined });
 
@@ -245,7 +259,9 @@ export function AdminAuditLogsPage({ identity }: { identity: Identity }) {
           search={search}
           range={range}
           admins={admins.data}
-          tenants={tenants.data}
+          adminCapped={admins.data?.capped ?? false}
+          tenants={tenants.data?.items}
+          tenantCapped={tenants.data?.capped ?? false}
           rowCount={logs.isPlaceholderData ? undefined : rowCount}
           onRange={(next) => setFilter({ from: next.from, to: next.to })}
           onFilter={setFilter}
@@ -291,7 +307,9 @@ function Filters({
   search,
   range,
   admins,
+  adminCapped,
   tenants,
+  tenantCapped,
   rowCount,
   onRange,
   onFilter,
@@ -300,7 +318,9 @@ function Filters({
   search: AuditLogSearch;
   range: DayRange | undefined;
   admins: Map<string, string> | undefined;
+  adminCapped: boolean;
   tenants: readonly DirectoryTenant[] | undefined;
+  tenantCapped: boolean;
   rowCount: number | undefined;
   onRange: (range: DayRange) => void;
   onFilter: (patch: Omit<AuditLogSearch, 'page'>) => void;
@@ -315,6 +335,7 @@ function Filters({
         label="管理员"
         className={className}
         value={search.adminId ?? ''}
+        {...(adminCapped ? { hint: directoryCapHint } : {})}
         onChange={(value) =>
           onFilter({ adminId: value === '' ? undefined : value })
         }
@@ -350,6 +371,7 @@ function Filters({
         label="租户"
         className={className}
         value={search.tenantId ?? ''}
+        {...(tenantCapped ? { hint: directoryCapHint } : {})}
         onChange={(value) =>
           onFilter({ tenantId: value === '' ? undefined : value })
         }
@@ -433,15 +455,18 @@ function NamedSelect({
   value,
   onChange,
   className,
+  hint,
   children,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   className: string;
+  hint?: string;
   children: ReactNode;
 }) {
   const id = useId();
+  const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-xs text-muted-foreground">
@@ -452,9 +477,15 @@ function NamedSelect({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className={className}
+        {...(hintId ? { 'aria-describedby': hintId } : {})}
       >
         {children}
       </Select>
+      {hint ? (
+        <p id={hintId} className="m-0 text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

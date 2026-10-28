@@ -24,6 +24,7 @@ import {
   apiQuery,
   invalidateUnassigned,
   send,
+  useApiMutation,
 } from '../../lib/admin-api';
 import type { ApiQuery } from '../../lib/api';
 import type { UnassignedSearch } from '../../lib/admin-search';
@@ -111,6 +112,7 @@ function useUnassignedSearch() {
 export function AdminUnassignedPage({ identity }: { identity: Identity }) {
   const { search, update } = useUnassignedSearch();
   const queryClient = useQueryClient();
+  const unignoreMutation = useApiMutation('adminUnassignedUnignore');
   const tab: 'pending' | 'ignored' =
     search.tab === 'ignored' ? 'ignored' : 'pending';
   const page = search.page ?? 1;
@@ -236,7 +238,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
     setUnignoring(id);
     setUnignoreError(null);
     try {
-      const result = await send('adminUnassignedUnignore', {
+      const result = await unignoreMutation.mutateAsync({
         body: { selection: { ids: [id] } },
       });
       await invalidateUnassigned(queryClient);
