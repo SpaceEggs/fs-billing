@@ -1,0 +1,15 @@
+
+> @fs-billing/web@ test:e2e /Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/apps/web
+> playwright test e2e/admin-unassigned-abc01.spec.ts
+
+
+> @fs-billing/api@ auth:seed /Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/apps/api
+> node --env-file-if-exists=../../.env --import tsx scripts/seed-auth.ts
+
+开发种子凭据已初始化，已有凭据保持不变。
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › e2e/admin-unassigned-abc01.spec.ts:16:1 › assigns the ABC01 group to ABC001: 324 rows charged 58.35, 2 without a rate stay, a replay charges nothing (1.7s)
+
+  1 passed (6.9s)

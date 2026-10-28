@@ -1,0 +1,836 @@
+{
+  "entries": [
+    {
+      "page": "unassigned-list-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3a 列表 · 全部分组"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-list-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-list-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-list-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-group-checked-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3b 点击分组筛选「ABC01」· 勾选 3 条"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-group-checked-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-group-checked-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-group-checked-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-group-all-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3c 已选择该分组全部 326 条"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-group-all-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-group-all-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-group-all-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-pick-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3d 归属到租户 · 选择租户"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-assign-pick-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-pick-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-assign-pick-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-preview-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3e 归属到租户 · 预览（2 条匹配不到费率）"
+      },
+      "note": "只预览，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-assign-preview-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-preview-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-assign-preview-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-ignore-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3f 忽略 · 原因必填（未填写时提交）"
+      },
+      "note": "只打开并空提交，不忽略。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-ignore-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-ignore-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-ignore-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-ignored-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3g 已忽略标签页"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-ignored-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-ignored-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-ignored-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-empty-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3h 没有未归属话单"
+      },
+      "note": "种子里有 338 条待处理，这一状态用接口拦截（summary、groups、list 返回空）渲染，不改库。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-empty-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-empty-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-empty-desktop-light.png"
+      }
+    },
+    {
+      "page": "unassigned-list-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 手机",
+        "label": "4a 手机 · 列表（分组 + 勾选）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-list-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-list-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-list-phone-light.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-preview-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 手机",
+        "label": "4b 手机 · 归属预览（底部面板）"
+      },
+      "note": "只预览，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-assign-preview-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-preview-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-assign-preview-phone-light.png"
+      }
+    },
+    {
+      "page": "unassigned-ignore-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 手机",
+        "label": "4c 手机 · 忽略（原因必填）"
+      },
+      "note": "只打开并空提交，不忽略。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-ignore-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-ignore-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-ignore-phone-light.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-done-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "稿中没有归属完成画面，只存档。夹具租户（每次新建），不是 ABC001。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-done-desktop-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "unassigned-assign-done-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "稿中没有归属完成画面，只存档。夹具租户。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-done-phone-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "audit-logs-list-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7a 列表"
+      },
+      "note": "稿的 214 条是示例；实现是种子加本轮夹具产生的记录。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-list-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-list-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-list-desktop-light.png"
+      }
+    },
+    {
+      "page": "audit-logs-expanded-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7b 展开详情 · 修改费率、确认收款"
+      },
+      "note": "稿展开的是修改费率与确认收款；实现展开最近的两条（删除话单、归属话单）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-expanded-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-expanded-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-expanded-desktop-light.png"
+      }
+    },
+    {
+      "page": "audit-logs-empty-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7c 筛选结果为空"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-empty-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-empty-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-empty-desktop-light.png"
+      }
+    },
+    {
+      "page": "audit-logs-list-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7d 手机 · 列表（点击卡片展开）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-list-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-list-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-list-phone-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-pick-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4a 选择月份 · 月份选择器展开（9月不可选）"
+      },
+      "note": "夹具租户：8 月有 3 条话单、账单已生成，9 月没有账单（不可选，与稿一致）。当月（运行日所在月）同样置灰。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-pick-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-pick-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-pick-desktop-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-preview-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4b 预览与影响说明 · 未输入编码，删除不可用"
+      },
+      "note": "夹具租户，数字不是稿中的 9,642 条。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-preview-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-preview-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-preview-desktop-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-wrong-code-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4c 编码输入错误（ABC01）· 仍不可用"
+      },
+      "note": "稿输入的是标签 ABC01；实现输入夹具租户编码的小写形式。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-wrong-code-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-wrong-code-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-wrong-code-desktop-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-ready-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4d 编码正确 · 删除按钮可用"
+      },
+      "note": "只填编码，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-ready-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-ready-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-ready-desktop-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-done-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4e 删除完成"
+      },
+      "note": "夹具租户上真实删除。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-done-desktop-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-done-desktop-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-done-desktop-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-pick-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4f 手机 · 选择月份（底部面板）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-pick-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-pick-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-pick-phone-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-ready-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4g 手机 · 编码正确，可删除"
+      },
+      "note": "只填编码，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-ready-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-ready-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-ready-phone-light.png"
+      }
+    },
+    {
+      "page": "cdr-delete-done-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4h 手机 · 删除完成"
+      },
+      "note": "夹具租户上真实删除。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-done-phone-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-done-phone-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-done-phone-light.png"
+      }
+    },
+    {
+      "page": "tenant-cdrs-deleted-desktop",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "租户详情话单标签页的已删除月份提示条与「删除话单」按钮；删除话单原型没有对应的静态画框，只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-tenant-cdrs-deleted-desktop-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "tenant-cdrs-deleted-phone",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "同上，手机。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-tenant-cdrs-deleted-phone-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "unassigned-list-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3a 列表 · 全部分组"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-list-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-list-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-list-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-group-checked-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3b 点击分组筛选「ABC01」· 勾选 3 条"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-group-checked-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-group-checked-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-group-checked-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-group-all-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3c 已选择该分组全部 326 条"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-group-all-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-group-all-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-group-all-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-pick-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3d 归属到租户 · 选择租户"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-assign-pick-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-pick-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-assign-pick-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-preview-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3e 归属到租户 · 预览（2 条匹配不到费率）"
+      },
+      "note": "只预览，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-assign-preview-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-preview-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-assign-preview-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-ignore-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3f 忽略 · 原因必填（未填写时提交）"
+      },
+      "note": "只打开并空提交，不忽略。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-ignore-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-ignore-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-ignore-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-ignored-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3g 已忽略标签页"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-ignored-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-ignored-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-ignored-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-empty-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 电脑",
+        "label": "3h 没有未归属话单"
+      },
+      "note": "种子里有 338 条待处理，这一状态用接口拦截（summary、groups、list 返回空）渲染，不改库。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-empty-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-empty-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-empty-desktop-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-list-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 手机",
+        "label": "4a 手机 · 列表（分组 + 勾选）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-list-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-list-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-list-phone-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-preview-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 手机",
+        "label": "4b 手机 · 归属预览（底部面板）"
+      },
+      "note": "只预览，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-assign-preview-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-preview-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-assign-preview-phone-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-ignore-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "未归属话单 手机",
+        "label": "4c 手机 · 忽略（原因必填）"
+      },
+      "note": "只打开并空提交，不忽略。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-unassigned-ignore-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-ignore-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-unassigned-ignore-phone-dark.png"
+      }
+    },
+    {
+      "page": "unassigned-assign-done-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "稿中没有归属完成画面，只存档。夹具租户（每次新建），不是 ABC001。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-done-desktop-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "unassigned-assign-done-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "稿中没有归属完成画面，只存档。夹具租户。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-unassigned-assign-done-phone-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "audit-logs-list-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7a 列表"
+      },
+      "note": "稿的 214 条是示例；实现是种子加本轮夹具产生的记录。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-list-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-list-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-list-desktop-dark.png"
+      }
+    },
+    {
+      "page": "audit-logs-expanded-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7b 展开详情 · 修改费率、确认收款"
+      },
+      "note": "稿展开的是修改费率与确认收款；实现展开最近的两条（删除话单、归属话单）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-expanded-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-expanded-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-expanded-desktop-dark.png"
+      }
+    },
+    {
+      "page": "audit-logs-empty-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7c 筛选结果为空"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-empty-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-empty-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-empty-desktop-dark.png"
+      }
+    },
+    {
+      "page": "audit-logs-list-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "操作日志",
+        "label": "7d 手机 · 列表（点击卡片展开）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-audit-logs-list-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-audit-logs-list-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-audit-logs-list-phone-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-pick-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4a 选择月份 · 月份选择器展开（9月不可选）"
+      },
+      "note": "夹具租户：8 月有 3 条话单、账单已生成，9 月没有账单（不可选，与稿一致）。当月（运行日所在月）同样置灰。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-pick-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-pick-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-pick-desktop-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-preview-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4b 预览与影响说明 · 未输入编码，删除不可用"
+      },
+      "note": "夹具租户，数字不是稿中的 9,642 条。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-preview-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-preview-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-preview-desktop-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-wrong-code-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4c 编码输入错误（ABC01）· 仍不可用"
+      },
+      "note": "稿输入的是标签 ABC01；实现输入夹具租户编码的小写形式。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-wrong-code-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-wrong-code-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-wrong-code-desktop-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-ready-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4d 编码正确 · 删除按钮可用"
+      },
+      "note": "只填编码，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-ready-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-ready-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-ready-desktop-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-done-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4e 删除完成"
+      },
+      "note": "夹具租户上真实删除。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-done-desktop-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-done-desktop-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-done-desktop-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-pick-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4f 手机 · 选择月份（底部面板）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-pick-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-pick-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-pick-phone-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-ready-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4g 手机 · 编码正确，可删除"
+      },
+      "note": "只填编码，不提交。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-ready-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-ready-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-ready-phone-dark.png"
+      }
+    },
+    {
+      "page": "cdr-delete-done-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 租户详情.dc.html",
+        "section": "删除话单对话框",
+        "label": "4h 手机 · 删除完成"
+      },
+      "note": "夹具租户上真实删除。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/design-cdr-delete-done-phone-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-cdr-delete-done-phone-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/compare-cdr-delete-done-phone-dark.png"
+      }
+    },
+    {
+      "page": "tenant-cdrs-deleted-desktop",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "租户详情话单标签页的已删除月份提示条与「删除话单」按钮；删除话单原型没有对应的静态画框，只存档。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-tenant-cdrs-deleted-desktop-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "tenant-cdrs-deleted-phone",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "同上，手机。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-ace50b9fc651ae65c/docs/evidence/phase-8-web/visual/app-tenant-cdrs-deleted-phone-dark.png",
+        "compare": null
+      }
+    }
+  ]
+}

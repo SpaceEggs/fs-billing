@@ -62,9 +62,12 @@ FreeSWITCH 接口放在 Worker 而不是 API，网站和 API 的故障或重启�
 - 资金：充值、赊账、调账
 - 待收款：赊账充值的收款跟踪
 - 账单：按月份与币种列出所有租户的月账单，重新生成（话单已删除的月份不可用）
+- 未归属话单：按租户标签分组，预览计费金额与无费率条数后分配给租户并补扣费，或填原因忽略、撤销忽略
+- 删除话单：选择租户和已出账的整月，输入租户编码二次确认；删除后流水与账单不变
+- 操作日志：只读，按日期、管理员、操作类型、租户筛选，展开看修改前后
 - 管理员账号管理
 
-尚未实现：未归属话单、余额提醒与告警邮件、系统告警与操作日志页面。进度见 [阶段计划](docs/plan.md)。
+Worker 另有原始 JSON 的 6 个月压缩归档与恢复（[Worker 接口](docs/worker-api.md#原始-json-归档阶段-8)）。尚未实现：余额提醒与告警邮件、系统告警页面。进度见 [阶段计划](docs/plan.md)。
 
 ## 部署
 
@@ -138,4 +141,4 @@ docs/            设计、计划、各阶段设计与验收记录、证据
 - [Worker 接口](docs/worker-api.md)：授权、话单与扣费接口
 - [FreeSWITCH 准备清单](docs/freeswitch.md) 与 [FreeSWITCH 配置](freeswitch/README.md)
 - [费率表设计](docs/rate-list-design.md)
-- 阶段设计与验收：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)、[阶段 4 后端设计](docs/phase-4-api-design.md)、[阶段 4 API](docs/phase-4-api.md)、[阶段 4 Web](docs/phase-4-web.md)、[阶段 5](docs/phase-5-design.md)、[阶段 6](docs/phase-6-design.md)、[阶段 7](docs/phase-7-design.md)
+- 阶段设计与验收：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)、[阶段 4 后端设计](docs/phase-4-api-design.md)、[阶段 4 API](docs/phase-4-api.md)、[阶段 4 Web](docs/phase-4-web.md)、[阶段 5](docs/phase-5-design.md)、[阶段 6](docs/phase-6-design.md)、[阶段 7](docs/phase-7-design.md)、[阶段 8](docs/phase-8-design.md)
