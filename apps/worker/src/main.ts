@@ -3,9 +3,10 @@ import { pino } from 'pino';
 import { startReconciliation } from './reconcile.js';
 import { createWorker } from './app.js';
 import { startRawArchive } from './archive.js';
-import { workerEnvironmentSchema } from './config.js';
+import { mailSettingsOf, workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeCdr } from './charge.js';
+import { startNotifyJobs } from './mail.js';
 import { startPartitionMaintenance } from './maintenance.js';
 import { requestStatementCatchUp, startStatementJobs } from './statements.js';
 
@@ -95,6 +96,16 @@ try {
     app.log.warn(
       '未设置 RAW_CDR_ARCHIVE_DIR：原始话单归档未启用，raw_cdrs 的老分区不会被归档或丢弃',
     );
+  const mail = mailSettingsOf(config);
+  if (!mail)
+    app.log.warn(
+      '未设置 SMTP_HOST：邮件发送未启用，发件箱照常入队但不会发出（余额提醒、故障告警邮件）',
+    );
+  await startNotifyJobs(boss, connection.db, {
+    mail,
+    quietMinutes: config.ALERT_QUIET_MINUTES,
+    logger: app.log,
+  });
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,
   );

@@ -133,7 +133,7 @@ describe('迁移', () => {
     const { rows } = await owner.pool.query(
       'SELECT count(*)::int AS applied FROM drizzle.__drizzle_migrations',
     );
-    expect(rows).toEqual([{ applied: 21 }]);
+    expect(rows).toEqual([{ applied: 22 }]);
   });
 
   it('应用以非超级用户、非 BYPASSRLS 的角色连接', async () => {
@@ -203,7 +203,7 @@ describe('迁移', () => {
         config.columns.map((c) => c.name).sort(),
       );
     }
-    expect(tables).toHaveLength(24);
+    expect(tables).toHaveLength(25);
   });
 });
 

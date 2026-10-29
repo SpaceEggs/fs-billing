@@ -245,6 +245,16 @@ plan 阶段 9 验收里有一条（`plan.md:347`）已被阶段 8 缩小（[phas
 - 单元层另测：退避序列、失败分类（用一个会返回指定 SMTP 响应的假服务）、模板转义、配置校验（含 QQ 发件人等于认证账号）。
 - 真实 QQ 账号的发送不进 CI；PR 2 做一次手工核实（`mail:test --to <地址>`），结果与上面 7 点的实测结论写入 `docs/evidence/phase-9/`，不含授权码。
 
+**PR 2 实现时对本章的补充与更正：**
+
+- **`notify-tick` 的壳先在 PR 2 建好。** 队列 `notify-tick`（`exclusive`，不重试，每分钟，`Asia/Shanghai`）由 `queue:migrate` 预建；PR 2 的处理函数 `runNotifyTick` 依次做：事件型告警静默恢复（`recoverQuietAlerts`，窗口取 `ALERT_QUIET_MINUTES`）→ `recipient:*` 告警 7 天窗口恢复 → 分发发件箱。PR 4 在分发之前加上告警的开始、汇总、恢复通知，不再新增定时任务。`SMTP_HOST` 未设置时前两步照常运行，只是不分发。发件箱满 180 天的清理（`email_outbox_purge()`）由这个任务每天（北京时间）调用一次。
+- **配置校验比上表多几条。** 端口与 TLS 要一致（465 必须 `SMTP_SECURE=true`；25、587、2525 不能配隐式 TLS）；只设置了 `SMTP_USER` 或 `SMTP_PASS` 而没有 `SMTP_HOST` 直接报错（多半是主机名拼错，不要悄悄关掉邮件）；非回环主机必须认证；`APP_PUBLIC_URL` 必须是 `https://` 站点根（本机回环可用 `http://`），不含路径、账号、查询串。校验信息是固定文字，不回显取值。`SMTP_SECURE=false` 时传输层对非回环主机强制 `requireTLS`，所以不存在「非回环明文」的配置。
+- **失败分类。** 认证失败（`EAUTH`、530/534/535/538）退避重试并每次累加 `smtp` 告警；连接、超时、DNS、TLS 握手、4xx、421 可重试；RCPT TO 阶段全部 5xx、地址格式错误、MAIL FROM 被拒、DATA 之后的 5xx 是永久失败。5xx 但响应文字像限流（`frequen`、`too many`、`rate limit`、`exceed`、`try again`、`频繁`、`限制` 等）按可重试处理——QQ 的限流用哪些码和文字未知，由手工核实补充（[运行手册](evidence/phase-9/qq-smtp-check.md)）。没见过的错误一律重试，不丢通知。`last_error` 里的邮箱地址一律抹成 `<地址>`。
+- **`email_failed` 告警的归属。** 租户邮件的收件人被拒记到 `recipient:<租户 id>`（带租户）；没有租户的邮件（管理员告警）被拒、认证失败、整封被拒、渲染失败记到 `smtp`。部分收件人被拒、其余接受时整封算 `sent`，只有租户邮件才开 `recipient` 告警；管理员邮件的部分拒收只留 `rejected` 与日志。`recipient:*` 恢复：最近一次拒收满 7 天（分发任务内），或租户邮箱列表被修改（`recoverRecipientAlert`，PR 3 保存租户设置时调用）。
+- **清理函数不删被 `balance_alert_deliveries` 引用的行。** `balance_alert_deliveries` 只增不改（触发器拒绝 `UPDATE`、`DELETE`），外键 `outbox_id` 不能悬空，也不能 `ON DELETE SET NULL`。这些行的收件人本来就永久保存在 `balance_alert_deliveries.recipients`，不清理它们不增加长期保留的地址。
+- **`mail:test` 不经过发件箱。** 它用 `SMTP_*` 直接发一封 `test` 模板邮件并打印响应码与分类，不写数据库、不碰告警，因为它的用途是核实 SMTP 配置本身（数据库不可用时也能用）。`test` 模板仍在发件箱的模板白名单里。
+- **测试不读 `SMTP_*`。** 开发机的 `.env` 可能是真实邮箱，测试只认 `MAILPIT_SMTP_HOST`、`MAILPIT_SMTP_PORT`、`MAILPIT_API_URL`（默认就是 compose 的端口），且必须是回环地址。Mailpit 固定为 `axllent/mailpit:v1.31.5`（镜像是 scratch 构建，健康检查用 `/mailpit readyz`）；`nodemailer` 固定 `10.1.1`，自带类型。
+
 ## 余额提醒与停机通知
 
 ### 状态与滞回
