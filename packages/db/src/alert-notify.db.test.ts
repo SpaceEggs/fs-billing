@@ -7,6 +7,8 @@ import {
   DEFAULT_ALERT_DIGEST_MINUTES,
   MAX_ALERTS_PER_MAIL,
   normalizeAlertRecipients,
+  noticeSlot,
+  previewDigestTopTenants,
   queueAlertNotices,
   readAlertSettings,
   resolveAlertRecipients,
@@ -27,6 +29,11 @@ const minute = (m: number) => new Date(T0.getTime() + m * 60_000);
 const system = <T>(fn: Parameters<typeof withSystem<T>>[1]) =>
   withSystem(app.db, fn);
 const tick = (at: Date) => system((tx) => queueAlertNotices(tx, { at }));
+/** 同 Worker 的做法：先在加锁之前预算受影响租户，再带着结果入队。 */
+const tickWithTopTenants = async (at: Date) => {
+  const topTenants = await previewDigestTopTenants(app.db, at);
+  return system((tx) => queueAlertNotices(tx, { at, topTenants }));
+};
 const raise = (
   overrides: Partial<Parameters<typeof raiseAlert>[1]> & { at: Date },
 ) =>
@@ -248,6 +255,42 @@ describe('alert settings', () => {
       recoveredRecipientAlerts: 1,
     });
     expect(await state()).toEqual([{ recovered_at: minute(2) }]);
+  });
+
+  it('reordering the recipients alone does not recover the recipient:admin alert', async () => {
+    await withAdmin(app.db, (tx) =>
+      saveAlertSettings(tx, {
+        recipients: ['a@example.test', 'b@example.test'],
+        digestMinutes: 15,
+        expectedVersion: 1,
+        updatedBy: adminId,
+        at: T0,
+      }),
+    );
+    await system((tx) =>
+      raiseEmailFailed(tx, {
+        adminRecipients: true,
+        description: '管理员告警邮件的收件人被拒绝',
+        at: minute(1),
+      }),
+    );
+    const reordered = await withAdmin(app.db, (tx) =>
+      saveAlertSettings(tx, {
+        recipients: ['B@example.test', 'a@example.test'],
+        digestMinutes: 15,
+        expectedVersion: 2,
+        updatedBy: adminId,
+        at: minute(2),
+      }),
+    );
+    expect(reordered).toMatchObject({
+      recipientsChanged: false,
+      recoveredRecipientAlerts: 0,
+    });
+    const { rows } = await owner.pool.query(
+      "select 1 from system_alerts where subject_key = 'recipient:admin' and recovered_at is null",
+    );
+    expect(rows).toHaveLength(1);
   });
 
   it('a failed save does not recover the recipient alert (same transaction)', async () => {
@@ -612,7 +655,7 @@ describe('alert digests', () => {
     await insertCdr(tenants[0]!.id, false, minute(3));
     await insertCdr(tenants[0]!.id, true, minute(-30));
     await raise({ at: minute(9) });
-    await tick(minute(10));
+    await tickWithTopTenants(minute(10));
     const digest = (await outbox()).find(
       (row) => row.template === 'alert_digest',
     )!;
@@ -620,11 +663,125 @@ describe('alert digests', () => {
       [5, 4, 3, 2, 1].map((i) => tenants[i]!.code),
     );
     expect(
-      await system((tx) => topUnverifiedTenants(tx, minute(0), 2)),
+      await system((tx) =>
+        topUnverifiedTenants(tx, { since: minute(0), until: minute(10) }, 2),
+      ),
     ).toEqual([tenants[5]!.code, tenants[4]!.code]);
     await owner.pool.query('delete from cdrs where tenant_id = any($1)', [
       tenants.map((tenant) => tenant.id),
     ]);
+  });
+
+  it('counts only the calls received since the previous mail', async () => {
+    await started();
+    await ensureCdrPartitions(owner.db, { moment: T0 });
+    const [first, second] = [
+      await createTenant(app, 'CNY'),
+      await createTenant(app, 'CNY'),
+    ] as const;
+    const load = (tenantId: string, receivedAt: Date, count: number) =>
+      owner.pool.query(
+        `insert into cdrs (tenant_id, call_uuid, started_at, ended_at, caller, callee, billing_number, unverified, received_at)
+         select $1::uuid, gen_random_uuid(), $2::timestamptz, $2::timestamptz, '1001', '8613800138000', '8613800138000', true, $3::timestamptz
+         from generate_series(1, $4::int)`,
+        [tenantId, minute(1), receivedAt, count],
+      );
+    try {
+      await load(first.id, minute(2), 3000);
+      await raise({ at: minute(9) });
+      await tickWithTopTenants(minute(10));
+      // 第二封汇总只统计第一封（分钟 10）之后入库的：第一个租户的话单在分钟 2，不再出现。
+      await load(second.id, minute(12), 2000);
+      await raise({ at: minute(19) });
+      await tickWithTopTenants(minute(20));
+      const digests = (await outbox()).filter(
+        (row) => row.template === 'alert_digest',
+      );
+      expect(digests).toHaveLength(2);
+      expect(digests[0]!.params.alerts[0]!.topTenants).toEqual(
+        expect.arrayContaining([first.code]),
+      );
+      const later = digests[1]!.params.alerts[0]!.topTenants as string[];
+      expect(later[0]).toBe(second.code);
+      expect(later).not.toContain(first.code);
+    } finally {
+      await owner.pool.query('delete from cdrs where tenant_id = any($1)', [
+        [first.id, second.id],
+      ]);
+    }
+  });
+
+  it('the top tenant statistics time out instead of holding the tick, and a digest still goes out without tenants', async () => {
+    await started();
+    await raise({ at: minute(9) });
+    // 另一个会话占着 cdrs 的排他锁：统计查询等不到，语句超时。
+    const blocker = await owner.pool.connect();
+    try {
+      await blocker.query('begin');
+      await blocker.query('lock table cdrs in access exclusive mode');
+      const startedAt = Date.now();
+      await expect(
+        previewDigestTopTenants(app.db, minute(10), 300),
+      ).rejects.toThrow();
+      expect(Date.now() - startedAt).toBeLessThan(3000);
+    } finally {
+      await blocker.query('rollback');
+      blocker.release();
+    }
+    // 预算不到就不带：汇总照发，租户编码为空。
+    expect(await tick(minute(10))).toMatchObject({ digested: 1 });
+    const digest = (await outbox()).find(
+      (row) => row.template === 'alert_digest',
+    )!;
+    expect(digest.params.alerts[0]!.topTenants).toEqual([]);
+  });
+
+  it('does not slip a minute when the tick starts a few seconds later than the previous one', async () => {
+    await withAdmin(app.db, (tx) =>
+      saveAlertSettings(tx, {
+        recipients: ['ops@example.test'],
+        digestMinutes: 15,
+        expectedVersion: 1,
+        updatedBy: adminId,
+      }),
+    );
+    // 开始邮件的 tick 在 01:00:03.2，下一次 tick 在 01:15:01.8：比 N = 15 分钟差 1.4 秒，仍然到期。
+    const startTick = new Date(T0.getTime() + 3200);
+    await raise({ at: startTick });
+    await tick(startTick);
+    expect((await alertRows())[0]).toMatchObject({
+      notified_start_at: noticeSlot(startTick),
+      last_digest_at: noticeSlot(startTick),
+    });
+    expect(noticeSlot(startTick)).toEqual(T0);
+    await raise({ at: minute(14) });
+    const early = new Date(T0.getTime() + 15 * 60_000 + 1800);
+    expect(await tick(new Date(minute(14).getTime() + 59_000))).toMatchObject({
+      digested: 0,
+    });
+    expect(await tick(early)).toMatchObject({ digested: 1 });
+    expect((await alertRows())[0]).toMatchObject({
+      last_digest_at: minute(15),
+    });
+  });
+
+  it('skips rows another transaction holds and picks them up on the next tick', async () => {
+    await raise({ at: T0 });
+    const blocker = await owner.pool.connect();
+    try {
+      await blocker.query('begin');
+      await blocker.query('select id from system_alerts for update');
+      // 不等锁：立刻返回，什么也没认领。
+      const startedAt = Date.now();
+      expect(await tick(minute(1))).toMatchObject({ started: 0 });
+      expect(Date.now() - startedAt).toBeLessThan(2000);
+      expect(await outbox()).toEqual([]);
+    } finally {
+      await blocker.query('rollback');
+      blocker.release();
+    }
+    expect(await tick(minute(2))).toMatchObject({ started: 1 });
+    expect(await outbox()).toHaveLength(1);
   });
 
   it('names the tenant of a tenant-scoped alert and nothing for global ones, never a description', async () => {

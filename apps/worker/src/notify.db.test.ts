@@ -1,6 +1,6 @@
 import type {} from '../../../packages/db/test/global-setup.js';
 import { randomUUID } from 'node:crypto';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   enqueueEmail,
   raiseAlert,
@@ -49,8 +49,8 @@ const raiseAuthTimeout = (m: number) =>
     }),
   );
 
-let adminId = '';
-beforeEach(async () => {
+/** 本文件造的数据：告警、告警类邮件、告警设置。共用的测试库里不留给后面的文件。 */
+async function cleanUp() {
   await clearMailpit();
   await owner.pool.query('delete from system_alerts');
   await owner.pool.query(
@@ -62,6 +62,12 @@ beforeEach(async () => {
   await owner.pool.query(
     `update alert_settings set recipients = '{}', digest_minutes = 15, version = 1, updated_by = null`,
   );
+}
+
+let adminId = '';
+beforeEach(cleanUp);
+afterAll(cleanUp);
+beforeEach(async () => {
   adminId = (
     await owner.pool.query<{ id: string }>(
       "select id from admins where status = 'active' order by created_at limit 1",
@@ -353,8 +359,37 @@ describe('历史告警与开始即恢复', () => {
   });
 });
 
-describe('notify-tick 的事务', () => {
-  it('rolls back recoveries and claims together when queueing fails, yet still dispatches the outbox', async () => {
+describe('notify-tick 的事务与失败隔离', () => {
+  /** 在回调期间让一条改名使某个查询必然失败，结束后改回来。 */
+  async function breaking<T>(
+    renames: [table: string, from: string, to: string][],
+    run: () => Promise<T>,
+  ): Promise<T> {
+    for (const [table, from, to] of renames)
+      await owner.pool.query(
+        `alter table ${table} rename column ${from} to ${to}`,
+      );
+    try {
+      return await run();
+    } finally {
+      for (const [table, from, to] of renames)
+        await owner.pool.query(
+          `alter table ${table} rename column ${to} to ${from}`,
+        );
+    }
+  }
+  const queueTest = () =>
+    withSystem(app.db, (tx) =>
+      enqueueEmail(tx, {
+        dedupeKey: `test:${randomUUID()}`,
+        template: 'test',
+        params: { sentAt: T0.toISOString() },
+        recipients: [OPS],
+        at: T0,
+      }),
+    );
+
+  it('rolls the claims back when queueing fails, keeps the recoveries, still dispatches the outbox and then fails the job', async () => {
     // 开着一条等着被静默恢复的旧事件告警，和一条等着发开始邮件的新告警。
     await raiseAuthTimeout(0);
     await withSystem(app.db, (tx) =>
@@ -366,15 +401,7 @@ describe('notify-tick 的事务', () => {
       }),
     );
     // 与告警无关、早已在发件箱里的一封邮件（余额提醒之类）。
-    const queued = await withSystem(app.db, (tx) =>
-      enqueueEmail(tx, {
-        dedupeKey: `test:${randomUUID()}`,
-        template: 'test',
-        params: { sentAt: T0.toISOString() },
-        recipients: [OPS],
-        at: T0,
-      }),
-    );
+    const queued = await queueTest();
     // 接收邮箱为空时要读管理员邮箱：让这个函数不存在，入队就会失败。
     await owner.pool.query(
       'alter function alert_admin_emails() rename to alert_admin_emails_off',
@@ -386,16 +413,14 @@ describe('notify-tick 的事务', () => {
         'alter function alert_admin_emails_off() rename to alert_admin_emails',
       );
     }
-    // 第 1 步的恢复（fs-authorize 静默 15 分钟）和第 2 步的认领都随事务回滚了。
-    expect(await alertState()).toMatchObject({
-      recovered_at: null,
-      notified_start_at: null,
-    });
+    // 认领整体回滚：没有哪条告警被标成已通知，也没有半截的邮件。
     const { rows } = await owner.pool.query(
       'select 1 from system_alerts where notified_start_at is not null',
     );
     expect(rows).toEqual([]);
     expect(await outbox()).toEqual([]);
+    // 恢复是独立的步骤，仍然提交：不会因为通知持续失败而让告警永远恢复不了。
+    expect((await alertState())!.recovered_at).not.toBeNull();
     // 失败没有拖住发件箱：那封无关的邮件照常发出。
     const { rows: sent } = await owner.pool.query<{ status: string }>(
       'select status from email_outbox where id = $1',
@@ -403,10 +428,93 @@ describe('notify-tick 的事务', () => {
     );
     expect(sent[0]!.status).toBe('sent');
     expect(await mailpitMessages()).toHaveLength(1);
-    // 下一分钟恢复正常：恢复和认领一起落地。
+    // 下一分钟恢复正常：分区告警的开始邮件发出（认领没有丢）。
     await tickAt(16);
-    expect(await alertState()).toMatchObject({ notified_start_at: null });
-    expect((await alertState())!.recovered_at).not.toBeNull();
+    expect((await outbox()).map((row) => row.template)).toEqual([
+      'alert_start',
+    ]);
+  });
+
+  it('a failing top tenant lookup does not stop the recovery and the start and digest mails', async () => {
+    await configure();
+    await raiseAuthTimeout(0);
+    await tickAt(0);
+    // 分钟 10：授权超时到期汇总，同时另有一条分区告警等着开始邮件、一条旧的事件告警等着静默恢复。
+    await raiseAuthTimeout(9);
+    await withSystem(app.db, (tx) =>
+      raiseAlert(tx, {
+        kind: 'cdr_failed',
+        subjectKey: 'cdr-save',
+        description: 'HTTP 503',
+        at: minute(-30),
+      }),
+    );
+    await withSystem(app.db, (tx) =>
+      raiseAlert(tx, {
+        kind: 'partition_failed',
+        subjectKey: 'partition-maintenance',
+        description: '分区维护失败',
+        at: minute(9),
+      }),
+    );
+    // 统计受影响租户的查询引用 cdrs.unverified：改名后它必然报错。
+    const log = { info: () => undefined, warn: vi.fn(), error: vi.fn() };
+    await breaking([['cdrs', 'unverified', 'unverified_off']], () =>
+      runNotifyTick(app.db, {
+        mail: settings(),
+        quietMinutes: 10,
+        now: () => minute(10),
+        logger: log,
+      }),
+    );
+    expect(log.warn).toHaveBeenCalled();
+    // 没有抛出；汇总、开始邮件都发了（汇总不带租户），静默恢复也发生了。
+    const templates = (await outbox()).map((row) => row.template);
+    expect(templates).toEqual(['alert_start', 'alert_digest', 'alert_start']);
+    const digest = (await mailpitMessages()).find((message) =>
+      message.Subject.startsWith('【故障汇总】'),
+    )!;
+    expect((await mailpitMessage(digest.ID)).Text).not.toContain(
+      '受影响最多的租户',
+    );
+    const { rows } = await owner.pool.query<{ recovered_at: Date | null }>(
+      "select recovered_at from system_alerts where subject_key = 'cdr-save'",
+    );
+    expect(rows[0]!.recovered_at).not.toBeNull();
+  });
+
+  it('a persistently failing recovery step does not block the other steps or the notices', async () => {
+    await configure();
+    await raiseAuthTimeout(0);
+    await withSystem(app.db, (tx) =>
+      raiseAlert(tx, {
+        kind: 'cdr_failed',
+        subjectKey: 'cdr-save',
+        description: 'HTTP 503',
+        at: minute(-30),
+      }),
+    );
+    const log = { info: () => undefined, warn: vi.fn(), error: vi.fn() };
+    // 对账告警的流水兜底查询引用 ledger_entries.idempotency_key：改名后它每分钟都会失败。
+    await breaking(
+      [['ledger_entries', 'idempotency_key', 'idem_off']],
+      async () => {
+        for (const m of [1, 2]) {
+          await runNotifyTick(app.db, {
+            mail: settings(),
+            quietMinutes: 10,
+            now: () => minute(m),
+            logger: log,
+          });
+        }
+      },
+    );
+    expect(log.error).toHaveBeenCalledTimes(2);
+    // 事件告警仍然按静默窗口恢复，开始邮件仍然发出。
+    const { rows } = await owner.pool.query<{ recovered_at: Date | null }>(
+      "select recovered_at from system_alerts where subject_key = 'cdr-save'",
+    );
+    expect(rows[0]!.recovered_at).not.toBeNull();
     expect((await outbox()).map((row) => row.template)).toEqual([
       'alert_start',
     ]);

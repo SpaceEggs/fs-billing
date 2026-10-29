@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import type { Tx } from './client.js';
+import { withSystem, type PoolDb, type Tx } from './client.js';
 import { enqueueEmail, recoverAdminRecipientAlert } from './outbox.js';
 import { alertSettings, systemAlerts, tenants } from './schema.js';
 
@@ -29,6 +29,8 @@ export const DIGEST_TOP_TENANTS = 5;
  * Worker 停机后可能晚几天），而 cdrs 按 started_at 分区，这个下限让查询只碰最近的几个分区。
  */
 export const TOP_TENANTS_LOOKBACK_DAYS = 7;
+/** 受影响租户统计的语句超时：只是邮件里的辅助信息，宁可放弃也不拖住 tick。 */
+export const TOP_TENANTS_TIMEOUT_MS = 3000;
 const DESCRIPTION_MAX = 2000;
 
 /** 三种邮件的幂等键。一封邮件可以合并同一 tick 的多条告警，键取这一批里最小的告警 id。 */
@@ -166,9 +168,11 @@ export async function saveAlertSettings(
     )
     .returning();
   if (!row) throw new AlertSettingsVersionConflictError(before.version);
+  // 当作集合比较：只是调换顺序不算改了接收邮箱，不恢复 recipient:admin。
+  const previous = new Set(before.recipients);
   const recipientsChanged =
-    before.recipients.length !== recipients.length ||
-    before.recipients.some((address, index) => address !== recipients[index]);
+    previous.size !== recipients.length ||
+    recipients.some((address) => !previous.has(address));
   const recoveredRecipientAlerts = recipientsChanged
     ? await recoverAdminRecipientAlert(tx, input.at)
     : 0;
@@ -205,6 +209,11 @@ export async function resolveAlertRecipients(
 export interface QueueAlertNoticesOptions {
   /** 本次 tick 的时间；通知列、汇总节拍、持续时长都按它算。 */
   readonly at: Date;
+  /**
+   * 到期汇总的 `auth_timeout` 告警 id → 受影响最多的租户编码。由 {@link previewDigestTopTenants} 在加锁之前
+   * 单独算好传进来；没有的（或没传）按空列表，汇总邮件照发。
+   */
+  readonly topTenants?: ReadonlyMap<string, readonly string[]> | undefined;
 }
 export interface QueueAlertNoticesResult {
   /** 本次认领的告警条数（一封邮件可含多条）。 */
@@ -218,6 +227,23 @@ export interface QueueAlertNoticesResult {
     readonly alerts: number;
   }[];
 }
+
+/**
+ * 通知的时间槽：tick 时间向下取整到分钟。`notified_start_at`、`last_digest_at` 和到期比较都用它，
+ * 否则 tick 每次启动的秒数有抖动（上一次 12:00:03，这一次 12:15:01.8 就差 1.2 秒不到 N = 15），汇总会无端推迟一分钟。
+ */
+export const noticeSlot = (at: Date) =>
+  new Date(Math.floor(at.getTime() / 60_000) * 60_000);
+
+/** 汇总到期：距上次开始/汇总邮件满 N 分钟，并且有新增事件。 */
+const digestDue = (slot: Date, digestMinutes: number) =>
+  and(
+    eq(systemAlerts.notify, true),
+    isNotNull(systemAlerts.notifiedStartAt),
+    isNull(systemAlerts.recoveredAt),
+    sql`${systemAlerts.occurrences} > ${systemAlerts.digestCursor}`,
+    sql`${slot}::timestamptz >= greatest(${systemAlerts.notifiedStartAt}, coalesce(${systemAlerts.lastDigestAt}, ${systemAlerts.notifiedStartAt})) + ${digestMinutes} * interval '1 minute'`,
+  )!;
 
 const minutesBetween = (from: Date, to: Date) =>
   Math.max(0, Math.floor((to.getTime() - from.getTime()) / 60_000));
@@ -249,8 +275,8 @@ export async function queueAlertNotices(
   options: QueueAlertNoticesOptions,
 ): Promise<QueueAlertNoticesResult> {
   const { at } = options;
+  const slot = noticeSlot(at);
   const settings = await readAlertSettings(tx);
-  const digestInterval = sql`${settings.digestMinutes} * interval '1 minute'`;
 
   // --- 开始 ---
   const toStart = await tx
@@ -269,13 +295,13 @@ export async function queueAlertNotices(
       ),
     )
     .orderBy(systemAlerts.id)
-    .for('update');
+    .for('update', { skipLocked: true });
   if (toStart.length > 0)
     await tx
       .update(systemAlerts)
       .set({
-        notifiedStartAt: at,
-        lastDigestAt: at,
+        notifiedStartAt: slot,
+        lastDigestAt: slot,
         digestCursor: sql`${systemAlerts.occurrences}`,
       })
       .where(
@@ -296,23 +322,16 @@ export async function queueAlertNotices(
       previousCursor: systemAlerts.digestCursor,
     })
     .from(systemAlerts)
-    .where(
-      and(
-        eq(systemAlerts.notify, true),
-        isNotNull(systemAlerts.notifiedStartAt),
-        isNull(systemAlerts.recoveredAt),
-        sql`${systemAlerts.occurrences} > ${systemAlerts.digestCursor}`,
-        // 每条告警自己的节拍：从开始邮件或上一封汇总邮件算起 N 分钟。
-        sql`${at}::timestamptz >= greatest(${systemAlerts.notifiedStartAt}, coalesce(${systemAlerts.lastDigestAt}, ${systemAlerts.notifiedStartAt})) + ${digestInterval}`,
-        // 本 tick 刚认领的开始邮件不会同时到期（N ≥ 1 分钟），不需要额外排除。
-      ),
-    )
+    .where(digestDue(slot, settings.digestMinutes))
     .orderBy(systemAlerts.id)
-    .for('update');
+    .for('update', { skipLocked: true });
   if (toDigest.length > 0)
     await tx
       .update(systemAlerts)
-      .set({ lastDigestAt: at, digestCursor: sql`${systemAlerts.occurrences}` })
+      .set({
+        lastDigestAt: slot,
+        digestCursor: sql`${systemAlerts.occurrences}`,
+      })
       .where(
         inArray(
           systemAlerts.id,
@@ -340,11 +359,11 @@ export async function queueAlertNotices(
       ),
     )
     .orderBy(systemAlerts.id)
-    .for('update');
+    .for('update', { skipLocked: true });
   if (toRecover.length > 0)
     await tx
       .update(systemAlerts)
-      .set({ notifiedRecoveredAt: at })
+      .set({ notifiedRecoveredAt: slot })
       .where(
         inArray(
           systemAlerts.id,
@@ -399,18 +418,16 @@ export async function queueAlertNotices(
     );
     const digestRows: {
       alert: (typeof toDigest)[number];
-      topTenants: string[];
-    }[] = [];
-    for (const alert of toDigest)
-      digestRows.push({
-        alert,
-        topTenants:
-          alert.kind === 'auth_timeout'
-            ? await topUnverifiedTenants(tx, alert.startedAt)
-            : alert.tenantId && tenantCodes.has(alert.tenantId)
-              ? [tenantCodes.get(alert.tenantId)!]
-              : [],
-      });
+      topTenants: readonly string[];
+    }[] = toDigest.map((alert) => ({
+      alert,
+      topTenants:
+        alert.kind === 'auth_timeout'
+          ? (options.topTenants?.get(alert.id) ?? [])
+          : alert.tenantId && tenantCodes.has(alert.tenantId)
+            ? [tenantCodes.get(alert.tenantId)!]
+            : [],
+    }));
     for (const batch of chunked(digestRows, MAX_ALERTS_PER_MAIL))
       await send(
         'alert_digest',
@@ -425,7 +442,7 @@ export async function queueAlertNotices(
             durationMinutes: minutesBetween(alert.startedAt, at),
             added: alert.occurrences - alert.previousCursor,
             total: alert.occurrences,
-            topTenants,
+            topTenants: [...topTenants],
           })),
         },
         batch.length,
@@ -468,23 +485,71 @@ async function tenantCodesOf(
 }
 
 /**
- * 授权超时的受影响租户：告警开始以来入库的未验证话单，按租户计数取前 5 个编码（决定 34：只给编码，不给号码和 UUID）。
- * 按 `received_at`（入库时间）而不是话单的 started_at 取，因为告警的开始时间就是第一条未验证话单入库的时间。
- * `started_at` 下限只为分区剪枝，见 {@link TOP_TENANTS_LOOKBACK_DAYS}。
+ * 授权超时的受影响租户：`since` 到 `until` 之间入库（`cdrs.received_at`）的未验证话单，按租户计数取前 5 个编码
+ * （决定 34：只给编码，不给号码和 UUID）。按 `received_at` 而不是话单的 started_at 取，因为告警的开始时间就是
+ * 第一条未验证话单入库的时间。
+ *
+ * `started_at` 的两侧边界只为分区剪枝（`cdrs` 按 started_at 月分区，`unverified`/`received_at` 没有索引）：
+ * 下限 `since − 7 天`（见 {@link TOP_TENANTS_LOOKBACK_DAYS}），上限 `until + 1 天`（FreeSWITCH 与数据库的时钟差）。
  */
 export async function topUnverifiedTenants(
   tx: Tx,
-  since: Date,
+  range: { since: Date; until: Date },
   limit = DIGEST_TOP_TENANTS,
 ): Promise<string[]> {
   const { rows } = await tx.execute<{ code: string }>(sql`
     SELECT t.code
     FROM cdrs c JOIN tenants t ON t.id = c.tenant_id
     WHERE c.unverified
-      AND c.received_at >= ${since}::timestamptz
-      AND c.started_at >= ${since}::timestamptz - ${TOP_TENANTS_LOOKBACK_DAYS} * interval '1 day'
+      AND c.received_at >= ${range.since}::timestamptz
+      AND c.received_at <= ${range.until}::timestamptz
+      AND c.started_at >= ${range.since}::timestamptz - ${TOP_TENANTS_LOOKBACK_DAYS} * interval '1 day'
+      AND c.started_at <= ${range.until}::timestamptz + interval '1 day'
     GROUP BY t.code
     ORDER BY count(*) DESC, t.code
     LIMIT ${limit}`);
   return rows.map((row) => row.code);
+}
+
+/**
+ * 在 tick 加锁之前，为这一轮到期汇总的 `auth_timeout` 告警算好受影响最多的租户（只读，独立事务）。
+ * 统计的是**距上次开始/汇总邮件以来**入库的未验证话单：`received_at >= greatest(开始时间, 上次邮件时间)`，
+ * 与汇总里的「距上次通知新增」同一个区间。`cdrs` 没有 `unverified`/`received_at` 索引，只靠 started_at 做分区剪枝，
+ * 所以这个查询可能很慢——它在 tick 的锁（`lock_alert_family()`、告警行的 FOR UPDATE）之外，并带语句超时
+ * （{@link TOP_TENANTS_TIMEOUT_MS}）；失败或超时由调用方降级为空列表。结果是近似的：到期的集合在加锁时可能已变，
+ * 没有预算到的告警按空列表。
+ */
+export async function previewDigestTopTenants(
+  db: PoolDb,
+  at: Date,
+  timeoutMs = TOP_TENANTS_TIMEOUT_MS,
+): Promise<Map<string, string[]>> {
+  return withSystem(db, async (tx) => {
+    await tx.execute(
+      sql.raw(`set local statement_timeout = ${Math.trunc(timeoutMs)}`),
+    );
+    const settings = await readAlertSettings(tx);
+    const due = await tx
+      .select({
+        id: systemAlerts.id,
+        since: sql<Date>`greatest(${systemAlerts.startedAt}, coalesce(${systemAlerts.lastDigestAt}, ${systemAlerts.notifiedStartAt}, ${systemAlerts.startedAt}))`,
+      })
+      .from(systemAlerts)
+      .where(
+        and(
+          eq(systemAlerts.kind, 'auth_timeout'),
+          digestDue(noticeSlot(at), settings.digestMinutes),
+        ),
+      );
+    const result = new Map<string, string[]>();
+    for (const alert of due)
+      result.set(
+        alert.id,
+        await topUnverifiedTenants(tx, {
+          since: new Date(alert.since),
+          until: at,
+        }),
+      );
+    return result;
+  });
 }

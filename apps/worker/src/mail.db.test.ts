@@ -804,14 +804,16 @@ describe('notify-tick', () => {
         at: T0,
       });
     });
+    // 本用例只测静默窗口和分发：让这条告警不发通知邮件（告警邮件的行为在 notify.db.test.ts），
+    // 认领数就只取决于这里入队的那一封。
+    await owner.pool.query('update system_alerts set notify = false');
     const queued = await enqueue();
     const tick = (minutes: number, quietMinutes: number, mail = settings()) => {
       now = after(T0, minutes * 60);
       return runNotifyTick(app.db, { mail, quietMinutes, now: clock });
     };
     // 差一分钟不到窗口：不恢复，但邮件照发。
-    // 认领 2 封：测试里入队的那封，加上 PR 4 起 tick 为这条要发邮件的告警入队的开始邮件。
-    expect(await tick(9, 10)).toMatchObject({ claimed: 2, sent: 2 });
+    expect(await tick(9, 10)).toMatchObject({ claimed: 1, sent: 1 });
     expect((await alerts('auth_timeout'))[0]!.recovered_at).toBeNull();
     expect((await row(queued.id)).status).toBe('sent');
     // 窗口 15 分钟时第 10 分钟仍不恢复（配置真的生效），第 15 分钟恢复。

@@ -403,7 +403,7 @@ export function recoverAdminRecipientAlert(tx: Tx, at?: Date): Promise<number> {
 /** `recipient:*`（含 `recipient:admin`）告警：7 天内没有新的拒收就恢复（按最近一次拒收的时间）。 */
 export function recoverStaleRecipientAlerts(
   tx: Tx,
-  options: { at?: Date; windowDays?: number } = {},
+  options: { at?: Date; windowDays?: number; skipLocked?: boolean } = {},
 ): Promise<number> {
   const now = options.at ?? sql`now()`;
   const days = options.windowDays ?? RECIPIENT_ALERT_WINDOW_DAYS;
@@ -415,5 +415,6 @@ export function recoverStaleRecipientAlerts(
       sql`${systemAlerts.lastSeenAt} <= ${now}::timestamptz - ${days} * interval '1 day'`,
     )!,
     options.at,
+    { skipLocked: options.skipLocked === true },
   );
 }

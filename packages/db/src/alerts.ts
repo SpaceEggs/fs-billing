@@ -138,16 +138,35 @@ export async function recoverAlert(
   );
 }
 
-/** 恢复满足条件的未恢复告警。条件由调用方写，已恢复的行永远不动。 */
+/**
+ * 恢复满足条件的未恢复告警。条件由调用方写，已恢复的行永远不动。
+ *
+ * `skipLocked`（notify-tick 用）：先按 id 顺序 `FOR UPDATE SKIP LOCKED` 选出要改的行再更新，被别的事务锁着的行
+ * 这一轮跳过、下一分钟再恢复。tick 因此永远不会为告警行等锁，也就不会和写入路径（例如账单核对逐行按开始时间锁
+ * `statement:*`）的加锁顺序成环；各写入点自己的恢复仍然是普通的（等锁的）UPDATE，必须恢复成功。
+ */
 export async function recoverAlertsWhere(
   tx: Tx,
   condition: SQL,
   at?: Date,
+  options: { readonly skipLocked?: boolean } = {},
 ): Promise<number> {
+  const open = and(isNull(systemAlerts.recoveredAt), condition)!;
+  const target = options.skipLocked
+    ? inArray(
+        systemAlerts.id,
+        tx
+          .select({ id: systemAlerts.id })
+          .from(systemAlerts)
+          .where(open)
+          .orderBy(systemAlerts.id)
+          .for('update', { skipLocked: true }),
+      )
+    : open;
   const recovered = await tx
     .update(systemAlerts)
     .set({ recoveredAt: recoveredAtValue(at) })
-    .where(and(isNull(systemAlerts.recoveredAt), condition))
+    .where(target)
     .returning({ id: systemAlerts.id });
   return recovered.length;
 }
@@ -174,7 +193,11 @@ const QUIET_WINDOW_ALERTS: readonly {
  */
 export async function recoverQuietAlerts(
   tx: Tx,
-  options: { quietMinutes?: number; at?: Date } = {},
+  options: {
+    quietMinutes?: number;
+    at?: Date;
+    skipLocked?: boolean;
+  } = {},
 ): Promise<number> {
   const quietMinutes = options.quietMinutes ?? DEFAULT_ALERT_QUIET_MINUTES;
   const now = options.at ?? sql`now()`;
@@ -190,6 +213,7 @@ export async function recoverQuietAlerts(
       )})`,
     )!,
     options.at,
+    { skipLocked: options.skipLocked === true },
   );
 }
 
@@ -299,6 +323,7 @@ export async function recoverClearedUnassignedAlerts(
 export async function recoverPaidChargeReconcileAlerts(
   tx: Tx,
   at?: Date,
+  options: { readonly skipLocked?: boolean } = {},
 ): Promise<number> {
   const prefix = AlertKeys.chargeReconcile('');
   return recoverAlertsWhere(
@@ -311,5 +336,6 @@ export async function recoverPaidChargeReconcileAlerts(
           AND l.idempotency_key = 'call:' || substring(${systemAlerts.subjectKey} FROM ${prefix.length + 1}::int))`,
     )!,
     at,
+    options,
   );
 }
