@@ -233,6 +233,18 @@ const posts = (
   path: string,
 ) => calls.filter((call) => call.method === 'POST' && call.path === path);
 
+/** 点开租户下拉（单行，运营稿 3d）并选一个选项；下拉的列表挂在对话框之外。 */
+async function pickTenant(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+  name: RegExp,
+) {
+  await user.click(
+    within(dialog).getByRole('combobox', { name: /^归属到租户/ }),
+  );
+  await user.click(await screen.findByRole('option', { name }));
+}
+
 async function chooseAbcGroup(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole('button', { name: /疑似拼写错误，相近：ABC001/ }),
@@ -272,8 +284,28 @@ describe('unassigned calls', () => {
     await chooseAbcGroup(user);
     await user.click(screen.getByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    expect(within(dialog).getByText('与标签 ABC01 相近')).toBeVisible();
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    // 运营稿 3d：单行下拉，没选时写「选择租户」；点开后相近租户置顶并带「与标签 ABC01 相近」。
+    const trigger = within(dialog).getByRole('combobox', {
+      name: '归属到租户：选择租户',
+    });
+    expect(trigger).toHaveTextContent('选择租户');
+    expect(within(dialog).queryByRole('radio')).toBeNull();
+    await user.click(trigger);
+    const option = await screen.findByRole('option', { name: /ABC001/ });
+    expect(option).toHaveTextContent(
+      'ABC001深圳市某某科技有限公司与标签 ABC01 相近',
+    );
+    expect(
+      screen.getByRole('combobox', { name: '搜索编码或名称' }),
+    ).toBeVisible();
+    await user.click(option);
+    // 运营稿 3e：选中后下拉收起，一行显示「编码 名称（币种）」。
+    expect(screen.queryByRole('option')).toBeNull();
+    expect(
+      within(dialog).getByRole('combobox', {
+        name: '归属到租户：ABC001　深圳市某某科技有限公司（CNY）',
+      }),
+    ).toHaveTextContent('ABC001 深圳市某某科技有限公司（CNY）');
 
     expect(await within(dialog).findByText('324 条')).toBeVisible();
     expect(dialog).toHaveTextContent('扣费合计');
@@ -337,6 +369,101 @@ describe('unassigned calls', () => {
     ).toMatch(/^web:/);
   });
 
+  it('lists the similar tenant first, searches among many tenants on the server, and previews the one picked last', async () => {
+    const user = userEvent.setup();
+    const other = (n: number, code: string, currency: 'CNY' | 'USD') => ({
+      ...tenant,
+      id: id(900 + n),
+      code,
+      name: `${code} 有限公司`,
+      currency,
+    });
+    const everyone = [
+      tenant,
+      other(1, 'BJH003', 'CNY'),
+      other(2, 'XYZ002', 'USD'),
+    ];
+    const { calls } = renderUnassigned({
+      'GET /api/admin/tenants': (url) => {
+        const search = new URL(url, 'http://localhost').searchParams.get(
+          'search',
+        );
+        const items = search
+          ? everyone.filter((item) => item.code.includes(search))
+          : everyone;
+        return {
+          status: 200,
+          // 总数大于一页：提示只显示前 100 个。
+          body: {
+            items,
+            pagination: { page: 1, pageSize: 100, total: 130 },
+          },
+        };
+      },
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
+        status: 200,
+        body: previewBody(),
+      }),
+    });
+    await chooseAbcGroup(user);
+    await user.click(screen.getByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await user.click(
+      within(dialog).getByRole('combobox', { name: /^归属到租户/ }),
+    );
+    // 相近租户（标签 ABC01 拼写相近）置顶，其余租户按币种标注。
+    await screen.findByRole('option', { name: /BJH003/ });
+    const names = screen
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+    expect(names).toEqual([
+      'ABC001深圳市某某科技有限公司与标签 ABC01 相近',
+      'BJH003BJH003 有限公司CNY',
+      'XYZ002XYZ002 有限公司USD',
+    ]);
+    expect(screen.getByText('只显示前 100 个，请搜索编码或名称')).toBeVisible();
+    // 租户多时先搜索：搜索词交给服务端，列表只剩匹配的租户。
+    await user.type(
+      screen.getByRole('combobox', { name: '搜索编码或名称' }),
+      'XYZ',
+    );
+    await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(1));
+    expect(
+      calls.some(
+        (call) =>
+          call.path.includes('/api/admin/tenants?') &&
+          call.path.includes('search=XYZ'),
+      ),
+    ).toBe(true);
+    await user.click(screen.getByRole('option', { name: /XYZ002/ }));
+    await waitFor(() =>
+      expect(
+        posts(calls, '/api/admin/unassigned-cdrs/assign-preview').map(
+          (call) => (call.body as { tenantId: string }).tenantId,
+        ),
+      ).toEqual([id(902)]),
+    );
+    expect(
+      within(dialog).getByRole('combobox', {
+        name: '归属到租户：XYZ002　XYZ002 有限公司（USD）',
+      }),
+    ).toBeVisible();
+    // 再选另一个租户重新预览；再点已选的这个不重复预览。
+    await pickTenant(user, dialog, /ABC001/);
+    await waitFor(() =>
+      expect(
+        posts(calls, '/api/admin/unassigned-cdrs/assign-preview'),
+      ).toHaveLength(2),
+    );
+    await pickTenant(user, dialog, /ABC001/);
+    expect(
+      posts(calls, '/api/admin/unassigned-cdrs/assign-preview'),
+    ).toHaveLength(2);
+    expect(
+      posts(calls, '/api/admin/unassigned-cdrs/assign-preview')[1]?.body,
+    ).toMatchObject({ tenantId });
+  });
+
   it('re-previews after a stale conflict and retries with the same idempotency key', async () => {
     const user = userEvent.setup();
     let previews = 0;
@@ -366,7 +493,7 @@ describe('unassigned calls', () => {
     await chooseAbcGroup(user);
     await user.click(await screen.findByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     await user.click(
       await within(dialog).findByRole('button', {
         name: '确认归属 324 条并扣费',
@@ -419,7 +546,7 @@ describe('unassigned calls', () => {
     await chooseAbcGroup(user);
     await user.click(await screen.findByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     await user.click(
       await within(dialog).findByRole('button', {
         name: '确认归属 324 条并扣费',
@@ -462,7 +589,7 @@ describe('unassigned calls', () => {
     await chooseAbcGroup(user);
     await user.click(await screen.findByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     const summaryGets = () =>
       calls.filter(
         (call) =>
@@ -509,7 +636,7 @@ describe('unassigned calls', () => {
     await chooseAbcGroup(user);
     await user.click(await screen.findByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     await user.click(
       await within(dialog).findByRole('button', {
         name: '确认归属 324 条并扣费',
@@ -548,7 +675,7 @@ describe('unassigned calls', () => {
     await chooseAbcGroup(user);
     await user.click(screen.getByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     const alert = await within(dialog).findByRole('alert');
     expect(alert).toHaveTextContent('一次最多处理 500 条，请分批处理');
   });
@@ -813,7 +940,7 @@ describe('unassigned session expiry', () => {
     await chooseAbcGroup(user);
     await user.click(await screen.findByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     await expectSignedOutAgain(location, dialog);
   });
 
@@ -832,7 +959,7 @@ describe('unassigned session expiry', () => {
     await chooseAbcGroup(user);
     await user.click(await screen.findByRole('button', { name: '归属到租户' }));
     const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
-    await user.click(within(dialog).getByRole('radio', { name: /ABC001/ }));
+    await pickTenant(user, dialog, /ABC001/);
     await user.click(
       await within(dialog).findByRole('button', {
         name: '确认归属 324 条并扣费',

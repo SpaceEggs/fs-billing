@@ -99,8 +99,24 @@ test('previews the whole ABC01 group against ABC001 without charging anything', 
     .click();
   await page.getByRole('button', { name: '归属到租户' }).click();
   const dialog = page.getByRole('dialog', { name: '归属到租户' });
-  await expect(dialog.getByText('与标签 ABC01 相近')).toBeVisible();
-  await dialog.getByRole('radio', { name: /ABC001/ }).check();
+  // 设计稿 3d、3e：单行下拉，点开后相近租户置顶并带「与标签 ABC01 相近」；选中后一行显示编码、名称和币种。
+  const picker = dialog.getByRole('combobox', { name: /^归属到租户/ });
+  await expect(picker).toContainText('选择租户');
+  await picker.click();
+  await expect(page.getByRole('option').first()).toContainText('ABC001');
+  // 租户多时先搜索：按编码查到 XYZ002，清空搜索后列表恢复。
+  const search = page.getByRole('combobox', { name: '搜索编码或名称' });
+  await search.fill('XYZ002');
+  await expect(page.getByRole('option')).toHaveCount(1);
+  await expect(page.getByRole('option')).toContainText('XYZ002');
+  await search.fill('');
+  await expect(page.getByRole('option').first()).toContainText('ABC001');
+  const option = page.getByRole('option', { name: /ABC001/ });
+  await expect(option).toContainText('与标签 ABC01 相近');
+  await option.click();
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await expect(picker).toContainText('ABC001');
+  await expect(picker).toContainText('（CNY）');
   // 设计稿 3e 的三个数字：324 条可归属、扣费 ¥58.35、2 条匹配不到费率。
   await expect(dialog).toContainText('实际归属324 条');
   await expect(dialog).toContainText('扣费合计¥58.35');
@@ -140,11 +156,11 @@ test('assigns a group to the nearest tenant, charges it once and writes the ledg
   await page.getByRole('button', { name: '归属到租户' }).click();
   const dialog = page.getByRole('dialog', { name: '归属到租户' });
   // 相近租户置顶并带提示。
-  await expect(
-    dialog.getByRole('radiogroup', { name: '相近租户' }),
-  ).toBeVisible();
-  const radio = dialog.getByRole('radio', { name: new RegExp(tenant.code) });
-  await radio.check();
+  await dialog.getByRole('combobox', { name: /^归属到租户/ }).click();
+  await expect(page.getByRole('option').first()).toContainText(tenant.code);
+  const option = page.getByRole('option', { name: new RegExp(tenant.code) });
+  await expect(option).toContainText(`与标签 ${tenant.tag} 相近`);
+  await option.click();
   await expect(dialog).toContainText(`实际归属${assignRowsAssignable} 条`);
   await expect(dialog).toContainText(`扣费合计¥${assignRowsCharge}`);
   await expect(dialog).toContainText('匹配不到费率1 条');
