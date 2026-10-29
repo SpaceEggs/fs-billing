@@ -27,14 +27,15 @@ export async function maintainPartitions(
     });
     throw error;
   }
-  // 分区维护成功：入库缺分区与维护失败两条告警都恢复。
-  await withSystem(db, async (tx) => {
-    for (const subjectKey of [
-      AlertKeys.partitionMissing,
-      AlertKeys.partitionMaintenance,
-    ])
-      await recoverAlert(tx, { kind: 'partition_failed', subjectKey });
-  });
+  // 分区维护成功：只恢复维护失败那一条。partition-missing 不随维护恢复——维护只建当月和下一个月，
+  // 缺的若是被归档分离的旧月或更远的将来月，维护成功而入库仍 23514，恢复会和下一条话单的告警来回开关；
+  // 它走静默窗口（recoverQuietAlerts）。
+  await withSystem(db, (tx) =>
+    recoverAlert(tx, {
+      kind: 'partition_failed',
+      subjectKey: AlertKeys.partitionMaintenance,
+    }),
+  );
 }
 
 export async function startPartitionMaintenance(

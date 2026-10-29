@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { inArray, sql } from 'drizzle-orm';
 import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
-import { recoverClearedUnassignedAlerts } from '../alerts.js';
+import {
+  lockUnassignedAlerts,
+  recoverClearedUnassignedAlerts,
+} from '../alerts.js';
 import { withAdmin, type Db, type Tx } from '../client.js';
 import { unassignedCdrs } from '../schema.js';
 import { databaseInstant } from '../statements/live.js';
@@ -47,6 +50,8 @@ export async function ignoreUnassigned(
       `忽略原因不能超过 ${MAX_REASON_LENGTH} 个字`,
     );
   return withAdmin(db, async (tx) => {
+    // 先拿未归属告警族的互斥锁，再锁待处理行：与入库停放、修正稿同序，不会成环。
+    await lockUnassignedAlerts(tx);
     const rows = await selectRows(tx, input.selection, {
       status: 'pending',
       lock: true,

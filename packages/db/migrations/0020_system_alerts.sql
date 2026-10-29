@@ -50,3 +50,20 @@ CREATE UNIQUE INDEX system_alerts_open_subject ON system_alerts (kind, subject_k
 CREATE INDEX system_alerts_started_at ON system_alerts (started_at DESC);
 --> statement-breakpoint
 CREATE INDEX system_alerts_open ON system_alerts (recovered_at) WHERE recovered_at IS NULL;
+--> statement-breakpoint
+-- 未归属 / 校验失败这一族告警（unassigned:*、invalid-cdr:*）的事务级互斥。入库停放、修正稿、忽略、分配和恢复扫描
+-- 先拿它再碰待处理行与告警行，避免各路径加锁顺序不一致成环。应用角色不能直接调 pg_advisory_*（0000），
+-- 所以经 SECURITY DEFINER 函数；键的写法同 tenant_lock_key / 分区锁（hashtextextended('<前缀>:…', 0)）。
+-- 注意 lock_tenants 要求事务里还没有别的锁：先 lock_tenants，再调本函数。
+CREATE FUNCTION lock_alert_family() RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NOT app_is_operator() THEN
+    RAISE EXCEPTION '告警互斥锁只允许管理员或系统身份' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('alerts:unassigned', 0));
+END $$;
+--> statement-breakpoint
+REVOKE ALL ON FUNCTION lock_alert_family() FROM PUBLIC;
+--> statement-breakpoint
+GRANT EXECUTE ON FUNCTION lock_alert_family() TO fs_billing_app;

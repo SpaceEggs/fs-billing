@@ -8,7 +8,10 @@ import {
 } from '@fs-billing/rating';
 import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
-import { recoverClearedUnassignedAlerts } from '../alerts.js';
+import {
+  lockUnassignedAlerts,
+  recoverClearedUnassignedAlerts,
+} from '../alerts.js';
 import {
   chargeCall,
   loadDeletedMonths,
@@ -179,6 +182,8 @@ export async function assignUnassigned(
     }
 
     const target = await loadAssignmentTarget(tx, input.tenantId);
+    // 租户锁之后、锁待处理行之前：未归属告警族的互斥锁（与入库停放、修正稿、忽略同序）。
+    await lockUnassignedAlerts(tx);
     const rows = await selectRows(tx, input.selection, {
       status: 'pending',
       lock: true,

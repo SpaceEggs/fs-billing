@@ -882,4 +882,46 @@ describe('告警按键合并（阶段 9 PR 1）', () => {
       { recovered: true },
     ]);
   });
+
+  it('only the parked and invalid paths wait for the unassigned alert family lock', async () => {
+    const tenant = await tenantWithRates();
+    const { queue } = recordingQueue();
+    // 别的事务持有未归属告警族的互斥锁（与 lock_alert_family() 同一把键）。
+    const holder = await owner.pool.connect();
+    const settled = (promise: Promise<unknown>, ms: number) =>
+      Promise.race([
+        promise.then(() => true),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
+      ]);
+    try {
+      await holder.query('begin');
+      await holder.query(
+        "select pg_advisory_xact_lock(hashtextextended('alerts:unassigned', 0))",
+      );
+      // 正常入库（入队扣费）不拿这把锁。
+      const good = await ingestCdr(
+        connection.db,
+        queue,
+        body(tenant.code, randomUUID(), { billing_unverified: 'false' }),
+      );
+      expect(good.status).toBe('queued');
+      // 停放和校验失败要等。
+      const parked = ingestCdr(
+        connection.db,
+        queue,
+        body(tagOf(), randomUUID(), { billing_unverified: 'false' }),
+      );
+      const invalid = ingestCdr(
+        connection.db,
+        queue,
+        invalidBody(tagOf(), undefined),
+      );
+      expect(await settled(Promise.all([parked, invalid]), 400)).toBe(false);
+      await holder.query('commit');
+      expect((await parked).status).toBe('unassigned');
+      expect((await invalid).status).toBe('unassigned');
+    } finally {
+      holder.release();
+    }
+  });
 });

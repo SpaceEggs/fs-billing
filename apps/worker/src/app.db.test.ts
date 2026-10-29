@@ -9,6 +9,7 @@ import {
   ensureCdrPartitions,
   lockTenants,
   raiseAlert,
+  recoverQuietAlerts,
   withSystem,
   schema,
 } from '@fs-billing/db';
@@ -1177,7 +1178,7 @@ describe('Worker HTTP 与真实数据库', () => {
     ).toEqual([{ kind: 'partition_failed', merged: true }]);
   });
 
-  it('a successful partition maintenance recovers both partition alerts', async () => {
+  it('a successful partition maintenance recovers only the maintenance alert', async () => {
     await withSystem(connection.db, async (tx) => {
       for (const subjectKey of ['partition-missing', 'partition-maintenance'])
         await raiseAlert(tx, {
@@ -1187,6 +1188,21 @@ describe('Worker HTTP 与真实数据库', () => {
         });
     });
     await maintainPartitions(connection.db, worker.log);
+    // partition-missing 不随维护成功恢复（维护只建当月和下月，缺的可能是已分离的旧月），走静默窗口。
+    expect(
+      (
+        await owner.pool.query(
+          `select subject_key from system_alerts
+           where kind = 'partition_failed' and recovered_at is null`,
+        )
+      ).rows,
+    ).toEqual([{ subject_key: 'partition-missing' }]);
+    await withSystem(connection.db, (tx) =>
+      recoverQuietAlerts(tx, {
+        quietMinutes: 10,
+        at: new Date(Date.now() + 11 * 60_000),
+      }),
+    );
     expect(
       (
         await owner.pool.query(

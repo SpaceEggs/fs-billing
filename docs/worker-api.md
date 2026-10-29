@@ -89,7 +89,7 @@ pnpm --filter @fs-billing/worker start
 
 `caller_id_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。`destination_number` 不参与计费；话单校验失败且缺少 `billing_dialed_number` 时，用它作为展示被叫的回退。`billing_dialed_number` 用于展示被叫，避免 `execute_extension` 改变 `destination_number` 后丢失客户原始拨号。缺主叫不拒绝话单；原始拨号为空按号码格式错误保存为未归属话单，缺少 `billing_dialed_number` 按话单校验失败保存。
 
-CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并写 `cdr_failed` 告警，不登记通话 UUID、不入队、不收费。投影不一致的 A-leg 话单以 `计费号码不一致` 原因停放在 `unassigned_cdrs`，保存 Worker 计算的号码和通话 UUID，不写 `cdrs`、不入扣费队列、不记账。授权因不一致被拒绝时，每个 UUID 只写一条 `cdr_failed` 告警，重推不重复写；不写 `auth_timeout`。
+CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并并入 `invalid-cdr:<原因>` 告警（见[系统告警](#系统告警阶段-9)），不登记通话 UUID、不入队、不收费。投影不一致的 A-leg 话单以 `计费号码不一致` 原因停放在 `unassigned_cdrs`，保存 Worker 计算的号码和通话 UUID，不写 `cdrs`、不入扣费队列、不记账。授权因不一致被拒绝时，话单入库后并入 `unassigned:计费号码不一致` 告警（每个 UUID 只累加一次，重推不重复）；不写 `auth_timeout`。
 
 迁移 `0004_billing_number_not_null` 要求 `cdrs.billing_number` 非空且为首位非零的 6–15 位数字。`unassigned_cdrs.billing_number` 仅在原因是 `号码格式错误` 或以 `话单校验失败: ` 开头时允许且要求 NULL。格式错误无法生成号码，结构或时间校验失败则无法产生可信的完整话单。其他停放原因必须保存有效号码，包括投影不一致。数据库 CHECK 约束保证该对应关系。
 
@@ -100,10 +100,10 @@ CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化�
 处理顺序：
 
 1. 将收到的 UTF-8 文本原样写入 `raw_cdrs.body`，在独立系统事务里提交。每次推送一行，包括重复和损坏正文。保留空白、字段顺序与重复键；`payload` 是数据库生成的规范副本。先保存后解析，原文行的 `tenant_id`、`call_uuid` 保持 NULL；响应 `rawId` 可定位原文，UUID 可从 payload 查询。
-2. JSON 语法损坏时仍保留原文、返回 200 `invalid` 并告警。JSON 可解析但结构/时间校验失败时，保存 `unassigned_cdrs(status=pending)`、原因和 `raw_id/raw_received_at` 原文引用，返回 200 `unassigned` 并写 `cdr_failed`。校验失败时 UUID/开始/结束时间为 NULL，不伪造通话数据、不占用 `call_uuids` 去重闸门。原因是固定前缀加最多 5 个 `路径(错误码)`（超出写「等 N 项」，总长 ≤ 200 字符，不含输入值，完整信息在原文里），告警描述是同一个字符串加原文 id。原文字节完全相同的重推（SHA-256 相同）合并为同一行，只累加 `push_count`、更新 `last_pushed_at`，不新增待办也不再写告警，已忽略的行同样合并；原文照样每次各存一份。字节不同的正文各有待办，不自动猜测它们是否同一通话；但原文里能解析出合法 `variables.uuid` 时保存为 `candidate_call_uuid`，之后同一 UUID 的有效话单入库（入队、停放、重复都算）时，同一事务把这些待处理行标为 `superseded`，写 `superseded_by_call_uuid`。没有可解析 UUID 的坏原文只能人工忽略。
+2. JSON 语法损坏时仍保留原文、返回 200 `invalid` 并累加全局告警 `invalid-json`（不写待处理行，描述只写最近一次的原文 id）。JSON 可解析但结构/时间校验失败时，保存 `unassigned_cdrs(status=pending)`、原因和 `raw_id/raw_received_at` 原文引用，返回 200 `unassigned` 并并入 `invalid-cdr:<原因>` 告警。校验失败时 UUID/开始/结束时间为 NULL，不伪造通话数据、不占用 `call_uuids` 去重闸门。原因是固定前缀加最多 5 个 `路径(错误码)`（超出写「等 N 项」，总长 ≤ 200 字符，不含输入值，完整信息在原文里），告警按这个原因合并：同一种校验失败无论多少份不同原文只有一条告警（`affected_calls` 是不同原文的份数），描述是原因加最近一份原文 id。原文字节完全相同的重推（SHA-256 相同）合并为同一行，只累加 `push_count`、更新 `last_pushed_at`，不新增待办也不再累加告警，已忽略的行同样合并；原文照样每次各存一份。字节不同的正文各有待办，不自动猜测它们是否同一通话；但原文里能解析出合法 `variables.uuid` 时保存为 `candidate_call_uuid`，之后同一 UUID 的有效话单入库（入队、停放、重复都算）时，同一事务把这些待处理行标为 `superseded`，写 `superseded_by_call_uuid`，同原因的待处理行因此清零时告警恢复。没有可解析 UUID 的坏原文只能人工忽略。
 3. 解析成功后检查 `call_uuids`。已登记即返回 `duplicate`，不会将重推变成未归属话单的认领。入口设置事务级 `app.cdr_ingest=true`，登记触发器也禁止认领，因此并发插入同样只允许一条；只将 `23505` 且约束为 `call_uuids_pkey` 的冲突识别为重复，不使用话单 `ON CONFLICT DO NOTHING`。
-4. 缺标签、未知租户（包括 `ABC01`）、错误被叫进入 `unassigned_cdrs(status=pending)` 并写 `cdr_failed`，HTTP 200，不入扣费队列。重复推送不重复告警。
-5. 将原始展示号码存入 `callee`，将重新计算并核验的号码存入 `billing_number`。有效的未归属号码也保存到该列，号码格式错误或话单校验失败时为 NULL，投影不一致时保留计算后的号码。接通电话以 `billing_number` 按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务写一条 `auth_timeout` 告警，重推不重复写。Worker 不可能在断网时立即收到超时信号，告警随话单到达。
+4. 缺标签、未知租户（包括 `ABC01`）、错误被叫进入 `unassigned_cdrs(status=pending)` 并并入 `unassigned:<原因>` 告警（租户不存在再按标签分），HTTP 200，不入扣费队列。重复推送不重复累加。
+5. 将原始展示号码存入 `callee`，将重新计算并核验的号码存入 `billing_number`。有效的未归属号码也保存到该列，号码格式错误或话单校验失败时为 NULL，投影不一致时保留计算后的号码。接通电话以 `billing_number` 按接通时刻选版本与最长前缀，保存费率和计价快照。接通时无费率也进入 pending 并并入 `unassigned:接通时无费率` 告警；不能按 0 元收费。未接通话单的时长和费用为 0。`billing_unverified` 保存为 `cdrs.unverified`，照常计费；首次有效话单在同一入库事务累加全局告警 `auth_timeout`（`fs-authorize`，租户为空），重推不重复累加。Worker 不可能在断网时立即收到超时信号，告警随话单到达，时间按话单到达时间记录。
 6. CDR 插入与 `charge-cdr` 入队在同一事务内提交。队列失败时两者和 UUID 登记全部回滚，原文保留，返回 503 供 FreeSWITCH 重推。
 
 成功响应均为 HTTP 200：
@@ -114,13 +114,38 @@ CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化�
 
 `status` 为 `queued`、`duplicate`、`unassigned` 或 `invalid`。只有数据库/队列保存失败时返回 503 `{"error":"话单保存失败，请重推"}`，不暴露数据库错误详情。失败告警尽力写入，数据库故障导致告警也无法保存时只记日志，仍返回同一 503 正文；坏话单不返回 400。HTTP 层仍限制正文大小（Fastify 默认 1 MiB）；文本列不能保存非法 UTF-8 字节或实际 NUL 字符。
 
+## 系统告警（阶段 9）
+
+所有写入点经 `packages/db/src/alerts.ts` 的 `raiseAlert` / `recoverAlert`，不再有「按描述前缀找告警」的写法。设计见 [phase-9-design.md](phase-9-design.md#告警模型)。
+
+- **身份。** `system_alerts` 有 `subject_key`；同一 `kind` 内同一 `subject_key` 同时只有一条未恢复（局部唯一索引 `system_alerts_open_subject`）。再次发生是在这一条上合并：`occurrences + 1`、`affected_calls` 累加（账单核对覆盖为当前值）、`last_seen_at` 与描述更新为最近一次事件。恢复之后再发生开新的一条。
+- **时间。** `started_at` / `last_seen_at` / `recovered_at` 都是数据库处理时间，不是话单时间。
+- **租户。** 只有按租户分的键（`charge-reconcile:*`、`statement:*`）带 `tenant_id`；其余全局键的租户为空，对象信息在描述里。
+- **通知。** 新开时按 `kind` 定下 `notify`（`email_failed` 为假，其余为真）；邮件由后续 PR 的定时任务发出，历史告警 `notify = false`。
+
+| 写入点              | kind                 | `subject_key`                                 | 恢复                                            |
+| ------------------- | -------------------- | --------------------------------------------- | ----------------------------------------------- |
+| 未验证话单入库      | `auth_timeout`       | `fs-authorize`                                | 静默窗口                                        |
+| 停放到未归属        | `cdr_failed`         | `unassigned:<原因>`；租户不存在再加 `:<标签>` | 同键的 `pending` 行清零（忽略、分配）           |
+| 话单校验失败        | `cdr_failed`         | `invalid-cdr:<结构化原因>`                    | 同原因的 `pending` 行清零（`superseded`、忽略） |
+| JSON 语法损坏       | `cdr_failed`         | `invalid-json`                                | 静默窗口                                        |
+| HTTP 503 保存失败   | `cdr_failed`         | `cdr-save`                                    | 静默窗口                                        |
+| 入库缺分区（23514） | `partition_failed`   | `partition-missing`                           | 静默窗口（不随分区维护成功恢复）                |
+| 分区维护失败        | `partition_failed`   | `partition-maintenance`                       | 下一次分区维护成功                              |
+| 扣费对账持续失败    | `cdr_failed`         | `charge-reconcile:<UUID>`                     | `chargeCall` 写流水的同一事务；扫描兜底         |
+| 月账单核对          | `statement_mismatch` | `statement:<租户 id>:<YYYY-MM>`               | 核对通过                                        |
+| 原始话单归档        | `raw_archive_failed` | `archive:<YYYY-MM>`                           | 该月成功或已丢弃                                |
+| 重置密码审计失败    | `audit_failed`       | `audit:reset-password`                        | 静默窗口                                        |
+
+静默窗口（`recoverQuietAlerts`，默认 10 分钟，配置键 `ALERT_QUIET_MINUTES` 随阶段 9 邮件 PR 加入）：事件型告警在窗口内没有新事件即恢复。未归属 / 校验失败这一族告警的恢复在改动待处理行的同一事务里完成（入库修正稿、忽略、分配），并有 `recoverClearedUnassignedAlerts` 全量扫描兜底；这一族的停放、修正稿、忽略、分配和恢复先拿同一把事务级互斥锁（`lock_alert_family()`），正常入库不拿。
+
 ## 扣费队列边界
 
 `ChargeQueue.enqueue(tx, {tenantId, callUuid})` 只做数据库操作，使用 pg-boss `fromDrizzle(tx, sql)` 与话单共用事务。`chargeCdr(db, unknown)` 在任务边界校验形状，再读取已保存的计价快照，调用 `appendLedgerEntry`，幂等键为 `call:<UUID>`、`occurred_at=answered_at`。零费率或未接通不产生零元流水（数据库只接受负值通话扣费）。扣费备注为 `通话扣费 <UUID> <billing_number>`。余额缓存由流水触发器更新。
 
 启动后消费真实 pg-boss 扣费任务；开启 `supervise` 与 `schedule`，使用固定版本补丁禁用额外 advisory 锁。DB 测试通过真实队列领取、重复执行处理器、模拟提交前崩溃与提交后未确认任务的重投，断言账本与余额。
 
-Worker 启动时在独立维护事务调用一次 `ensureCdrPartitions`。CDR 写入路径不建分区；遇到 SQLSTATE 23514 `no partition of relation … found for row` 时记日志、独立写 `partition_failed`、返回 503。缺分区的写入回滚，不登记 UUID，原文（若收到月份分区存在）保留，等待维护后重推。原文分区也缺失时同样告警并返回 503。维护启动失败记录 `partition_failed` 并退出。
+Worker 启动时在独立维护事务调用一次 `ensureCdrPartitions`。CDR 写入路径不建分区；遇到 SQLSTATE 23514 `no partition of relation … found for row` 时记日志、独立累加 `partition_failed`（`partition-missing`）、返回 503。缺分区的写入回滚，不登记 UUID，原文（若收到月份分区存在）保留，等待维护后重推。原文分区也缺失时同样告警并返回 503。维护启动失败记录 `partition_failed` 并退出。
 
 ## 验证命令
 
@@ -136,11 +161,11 @@ pnpm coverage
 
 ## 扣费与维护任务
 
-入库使用 `answered_at` 选择整表费率版本与最长前缀，保存该时刻的费率快照。任务只带租户编号与通话 UUID，以快照费率和接通时长调用 `packages/rating` 计价；接通时无匹配费率就在入库事务里保存 pending 未归属话单、写 `cdr_failed` 告警，不入扣费队列。未接通或合法零费率不产生扣费流水。
+入库使用 `answered_at` 选择整表费率版本与最长前缀，保存该时刻的费率快照。任务只带租户编号与通话 UUID，以快照费率和接通时长调用 `packages/rating` 计价；接通时无匹配费率就在入库事务里保存 pending 未归属话单、并入 `unassigned:接通时无费率` 告警，不入扣费队列。未接通或合法零费率不产生扣费流水。
 
-扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败立即记日志，错误继续向队列抛出；持续失败由对账任务合并为每话单一条告警。
+扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败立即记日志，错误继续向队列抛出；持续失败由对账任务写为每话单一条 `charge-reconcile:<UUID>` 告警，流水终于写出时恢复。
 
-Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 PoolDb，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed` 告警并抛错；启动失败不监听 HTTP。入库路径缺分区返回 503、记录同类告警，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。
+Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 PoolDb，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed`（`partition-maintenance`）告警并抛错，下一次维护成功时恢复它；启动失败不监听 HTTP。入库路径缺分区返回 503、累加 `partition-missing`，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。`partition-missing` 不随维护成功恢复（维护只建当月和下个月，缺的可能是已分离的旧月），按静默窗口恢复。
 
 `patches/pg-boss@12.37.1.patch` 为固定版本提供 `noAdvisoryLocks` 配置，并让 Drizzle adapter 保留调用方事务的提交权。运行时禁止队列额外 advisory 锁，关闭队列统计分区和索引 DDL；队列安装仍是 owner 部署操作。升级 pg-boss 时需重新核对该补丁与崩溃重投验收。
 
@@ -168,7 +193,7 @@ Worker 启动时执行一次分区维护，然后注册每日北京时间零点�
 
 每个候选沿用已有租户锁，拿锁后重新检查流水、宽限期和未终结任务（包括升级前没有 singletonKey 的任务）。补投使用稳定 `singletonKey=callUuid` 和由 UUID/轮次生成的确定性任务 ID；真正的去重由任务主键、同一事务内更新的 `reconcile_attempts/reconciled_at` 及原有租户锁保证，标准队列的 singletonKey 本身不保证唯一。重复/并发对账不增加任务或次数。计费仍使用账本唯一键，不重复扣费。
 
-次数保存在话单，不随 pg-boss 清理历史任务而丢失。达到告警阈值后仍继续补投；`reconcile_alerted` 与 `system_alerts(kind=cdr_failed)` 同事务提交，一通话只告警一次。无需人工发现队列的 failed 状态；管理员可按告警中的 UUID 查账并处理。任务处理失败保留异常和日志，不吞错。数据库/Worker 不可用时需恢复服务，对账才会继续；邮件通知属于阶段 9。
+次数保存在话单，不随 pg-boss 清理历史任务而丢失。达到告警阈值后仍继续补投；`reconcile_alerted` 与 `system_alerts(kind=cdr_failed, subject_key=charge-reconcile:<UUID>)` 同事务提交，一通话只告警一次；`chargeCall` 写出 `call:<UUID>` 流水的同一事务把该告警置为已恢复（人工补记流水的情形由 `recoverPaidChargeReconcileAlerts` 扫描兜底）。无需人工发现队列的 failed 状态；管理员可按告警中的 UUID 查账并处理。任务处理失败保留异常和日志，不吞错。数据库/Worker 不可用时需恢复服务，对账才会继续；邮件通知属于阶段 9。
 
 启动并发挂起的根因是 pg-boss `send()` 在使用传入事务插入任务之前，冷缓存的 `getQueueCache()` 会通过默认 adapter 另借连接。同一个默认 10 连接池被入库事务占满时，持连接的请求等待队列元数据查询，后者又等待这些请求归还连接。增加池大小或仅预热不能消除此依赖。现在 pg-boss 默认 adapter 使用独立应用角色池；任务 INSERT 仍使用入库事务的连接，保留话单/任务原子提交。两个池都设置有限 `connectionTimeoutMillis`，部署时按实例数为 PostgreSQL 预留两池总连接预算。连接获取失败会返回服务错误，CDR 保存失败按 503 重推；不存在无限等连接的默认配置。
 
@@ -177,6 +202,6 @@ Worker 启动时执行一次分区维护，然后注册每日北京时间零点�
 设计与取舍见 [phase-8-design.md](phase-8-design.md)「原始 JSON 归档与恢复」，实测见 [evidence/phase-8/README.md](evidence/phase-8/README.md)。
 
 - **启用。** 设置 `RAW_CDR_ARCHIVE_DIR`（绝对路径，只有 Worker 用户可读写）。未设置时 Worker 启动写一条警告，不注册归档任务，`raw_cdrs` 的分区不会被归档或丢弃。**归档文件是分区丢弃之后原文的唯一副本，目录必须进备份**，并监控磁盘。
-- **任务。** 队列 `archive-raw-cdrs`，每天 04:00（北京时间，`missed: 'once'`），`exclusive`（同一时刻最多一个任务排队、重试或执行），`retryLimit: 3`，`expireInSeconds: 21600`。月份 M 在 M 月末加 `RAW_CDR_ARCHIVE_AFTER_MONTHS` 个月之后才归档。每次运行先丢弃宽限期（`RAW_CDR_ARCHIVE_GRACE_DAYS`）已过的 `raw_cdrs_YYYY_MM_archived`，再把最老的未完成月推进到「已分离」：导出（`raw-cdrs/YYYY/raw-cdrs-YYYY-MM.jsonl.gz`，每个 gzip 成员 ≤ 1000 行或 4 MiB）、校验（文件与数据库逐行比对）、`DETACH`。任何一步失败：`raw_cdr_archives.state = 'failed'`、`attempts + 1`、`last_error`（不含原文），开一条 `raw_archive_failed` 告警（每月一条，成功后写 `recovered_at`），任务抛出由 pg-boss 重试。清单与分区状态矛盾（清单说已分离，分区却仍挂着）只开告警，不自动处理。
+- **任务。** 队列 `archive-raw-cdrs`，每天 04:00（北京时间，`missed: 'once'`），`exclusive`（同一时刻最多一个任务排队、重试或执行），`retryLimit: 3`，`expireInSeconds: 21600`。月份 M 在 M 月末加 `RAW_CDR_ARCHIVE_AFTER_MONTHS` 个月之后才归档。每次运行先丢弃宽限期（`RAW_CDR_ARCHIVE_GRACE_DAYS`）已过的 `raw_cdrs_YYYY_MM_archived`，再把最老的未完成月推进到「已分离」：导出（`raw-cdrs/YYYY/raw-cdrs-YYYY-MM.jsonl.gz`，每个 gzip 成员 ≤ 1000 行或 4 MiB）、校验（文件与数据库逐行比对）、`DETACH`。任何一步失败：`raw_cdr_archives.state = 'failed'`、`attempts + 1`、`last_error`（不含原文），开一条 `raw_archive_failed` 告警（键 `archive:<YYYY-MM>`，每月一条，成功或已丢弃后写 `recovered_at`），任务抛出由 pg-boss 重试。清单与分区状态矛盾（清单说已分离，分区却仍挂着）只开告警，不自动处理。
 - **取回一条。** `pnpm --filter @fs-billing/worker raw:restore -- --id <uuid> --received-at <时间> [--out <文件>]`：只读，不写数据库。`--received-at` 用 `raw_cdrs.received_at` 的完整微秒时间（`2026-03-14T08:21:09.123456Z`，psql 输出的 `2026-03-14 08:21:09.123456+00` 也可以）。成员哈希和原文 SHA-256 核对通过后，把 `body` 的 UTF-8 字节原样写到标准输出（不加换行）或 `--out` 文件（不覆盖已有文件）；核对不过则什么都不输出，退出码 1。归档文件本身是多个 gzip 成员首尾相接，`zcat <文件> | jq` 可整体读。
 - **整月恢复。** `pnpm --filter @fs-billing/worker raw:restore-month -- --month <YYYY-MM> [--dry-run]`：宽限期内（`…_archived` 还在）把它原样挂回；已丢弃则从归档文件重建分区，逐成员校验哈希、保留原 `id` 与 `received_at`，再用清单里的指纹核对整个分区，不符整体回滚。恢复后清单置回 `exporting` 并记 `restored_at`，30 天内不再归档该月。

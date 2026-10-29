@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { beijingTime, money, parseDialedNumber } from '@fs-billing/rating';
 import {
   adminId,
+  adminTransaction,
   connections,
   createTenant,
   pgError,
@@ -13,6 +14,7 @@ import { insertUnassigned, rateTenant } from '../test/unassigned.js';
 import {
   AlertKeys,
   alertNotifies,
+  lockUnassignedAlerts,
   raiseAlert,
   recoverAlert,
   recoverClearedUnassignedAlerts,
@@ -24,7 +26,7 @@ import { chargeCall, priceAndInsertCdr } from './cdr-intake.js';
 import { lockTenants, withSystem } from './client.js';
 import { appendLedgerEntry, callChargeKey } from './ledger.js';
 import { loadRatingTenant } from './rates.js';
-import { cdrs, systemAlertKinds } from './schema.js';
+import { cdrs, systemAlertKinds, unassignedCdrs } from './schema.js';
 import { ignoreUnassigned } from './unassigned/ignore.js';
 
 const { app, owner } = connections();
@@ -262,12 +264,19 @@ describe('raiseAlert 与 recoverAlert', () => {
       description: 'p',
       at: t0,
     });
+    // partition-missing 是事件型：不随分区维护成功恢复，只走静默窗口。
+    await raise({
+      kind: 'partition_failed',
+      subjectKey: AlertKeys.partitionMissing,
+      description: 'm',
+      at: t0,
+    });
     const quiet = (minutes: number) =>
       withSystem(app.db, (tx) =>
         recoverQuietAlerts(tx, { quietMinutes: 10, at: at(minutes) }),
       );
     expect(await quiet(9)).toBe(0);
-    expect(await quiet(10)).toBe(1);
+    expect(await quiet(10)).toBe(2);
     expect(await quiet(15)).toBe(1);
     expect(await quiet(600)).toBe(0);
     const rows = await alerts();
@@ -277,6 +286,7 @@ describe('raiseAlert 与 recoverAlert', () => {
       ),
     ).toEqual({
       'fs-authorize': true,
+      'partition-missing': true,
       'partition-maintenance': false,
       'invalid-json': true,
     });
@@ -513,5 +523,151 @@ describe('扣费对账告警的恢复', () => {
     });
     expect(await sweep()).toBe(1);
     expect(await sweep()).toBe(0);
+  });
+});
+
+describe('未归属告警族的互斥', () => {
+  const tagOf = () =>
+    `T${randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`;
+  const FAILURE = '话单校验失败: variables.billsec(invalid_union)';
+  const actor = () => ({ id: administrator, name: '王敏' });
+  const pause = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  /** 入库停放做的事（一个事务）：互斥锁 → 写待处理行 → 累加同键告警。 */
+  const park = (tag: string, hold = 0) =>
+    adminTransaction(app.db, async (tx) => {
+      await lockTenants(tx, []);
+      await lockUnassignedAlerts(tx);
+      await tx.insert(unassignedCdrs).values({
+        tenantTag: tag,
+        callUuid: randomUUID(),
+        startedAt: beijingTime('2026-09-10 10:00:00'),
+        endedAt: beijingTime('2026-09-10 10:01:00'),
+        reason: '租户不存在',
+        caller: '075586001234',
+        callee: '+8613800138000',
+        billingNumber: '8613800138000',
+      });
+      if (hold) await pause(hold);
+      await raiseAlert(tx, {
+        kind: 'cdr_failed',
+        subjectKey: AlertKeys.unassigned('租户不存在', tag),
+        description: 'park',
+        calls: 1,
+      });
+    });
+
+  it('recover versus raise: after both commit, no open pending row is left without an open alert', async () => {
+    for (let round = 0; round < 20; round++) {
+      const tag = tagOf();
+      const key = AlertKeys.unassigned('租户不存在', tag);
+      await insertUnassigned(owner, [{ tag }]);
+      await raise({ kind: 'cdr_failed', subjectKey: key, description: 'x' });
+      await Promise.all([
+        ignoreUnassigned(app.db, {
+          actor: actor(),
+          selection: { group: { tag } },
+          reason: '测试',
+        }),
+        pause((round % 4) * 3).then(() => park(tag, 10)),
+      ]);
+      const pending = (
+        await owner.pool.query<{ n: number }>(
+          `select count(*)::int as n from unassigned_cdrs where tenant_tag = $1 and status = 'pending'`,
+          [tag],
+        )
+      ).rows[0]!.n;
+      const open = (
+        await owner.pool.query<{ n: number }>(
+          `select count(*)::int as n from system_alerts where subject_key = $1 and recovered_at is null`,
+          [key],
+        )
+      ).rows[0]!.n;
+      // 有待处理行就必须有进行中的告警；没有待处理行时告警一定已恢复。
+      expect(open > 0, `round ${round}`).toBe(pending > 0);
+      expect(open).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('a mixed ignore selection and a corrected-but-parked push do not deadlock', async () => {
+    const deadlocks = async () =>
+      (
+        await owner.pool.query<{ n: number }>(
+          `select deadlocks::int as n from pg_stat_database where datname = current_database()`,
+        )
+      ).rows[0]!.n;
+    await owner.pool.query('select pg_stat_force_next_flush()');
+    const before = await deadlocks();
+    for (let round = 0; round < 25; round++) {
+      const tag = tagOf();
+      const reason = `${FAILURE}-${round}`;
+      // 同一失败原因的两条校验失败行（其中一条待修正）和一条停放行，各原因一条告警：
+      // 告警的 id 随机，两条告警的先后因轮而异。
+      const [invalid, parked, corrected] = await insertUnassigned(owner, [
+        { tag, callUuid: null, reason },
+        { tag },
+        { tag, callUuid: null, reason },
+      ]);
+      const invalidKey = AlertKeys.invalidCdr(reason);
+      const parkedKey = AlertKeys.unassigned('租户不存在', tag);
+      await raise({
+        kind: 'cdr_failed',
+        subjectKey: invalidKey,
+        description: 'x',
+      });
+      await raise({
+        kind: 'cdr_failed',
+        subjectKey: parkedKey,
+        description: 'x',
+      });
+      await Promise.all([
+        // 忽略：同时选中两条
+        adminTransaction(app.db, (tx) =>
+          ignoreUnassigned(tx, {
+            actor: actor(),
+            selection: { ids: [invalid!.id, parked!.id] },
+            reason: '测试',
+          }),
+        ),
+        // 入库：修正稿把校验失败行 superseded（恢复 invalid 告警），随后又停放（累加 parked 告警）。
+        adminTransaction(app.db, async (tx) => {
+          await lockTenants(tx, []);
+          await lockUnassignedAlerts(tx);
+          const rows = await tx
+            .update(unassignedCdrs)
+            .set({
+              status: 'superseded',
+              resolvedAt: sql`now()`,
+              supersededByCallUuid: randomUUID(),
+            })
+            .where(
+              and(
+                eq(unassignedCdrs.id, corrected!.id),
+                eq(unassignedCdrs.status, 'pending'),
+              ),
+            )
+            .returning({
+              reason: unassignedCdrs.reason,
+              tenantTag: unassignedCdrs.tenantTag,
+            });
+          await recoverClearedUnassignedAlerts(
+            tx,
+            rows.map((row) => ({ ...row, callUuid: null })),
+          );
+          // 另一条同原因的行还在待处理：不恢复，但已锁了这条告警。
+          await pause(15);
+          await raiseAlert(tx, {
+            kind: 'cdr_failed',
+            subjectKey: parkedKey,
+            description: 'park',
+            calls: 1,
+          });
+        }),
+      ]);
+    }
+    await pause(1200);
+    await owner.pool.query('select pg_stat_force_next_flush()');
+    expect(await deadlocks()).toBe(before);
   });
 });

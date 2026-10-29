@@ -59,7 +59,12 @@ export function alertNotifies(kind: SystemAlertKind): boolean {
 export interface RaiseAlertInput {
   readonly kind: SystemAlertKind;
   readonly subjectKey: string;
-  /** 新开时记录；合并到已有告警时保持原值。 */
+  /**
+   * 新开时记录；合并到已有告警时保持原值。只有按租户分的键（`charge-reconcile:*`、`statement:*`，
+   * 以后的 `recipient:*`）带租户；全局键（`fs-authorize`、`invalid-json`、`cdr-save`、`partition-*`、
+   * `audit:reset-password`、`unassigned:*`、`invalid-cdr:*`、`archive:*`）不传，租户为空——
+   * 合并了多个租户的事件之后，保留第一次事件的租户没有意义。
+   */
   readonly tenantId?: string | null | undefined;
   /** 总是覆盖为最近一次事件的描述。 */
   readonly description: string;
@@ -147,7 +152,11 @@ export async function recoverAlertsWhere(
   return recovered.length;
 }
 
-/** 事件型告警：没有「修正」可对，靠静默窗口恢复（决定 35）。其余键由各自的条件恢复。 */
+/**
+ * 事件型告警：没有「修正」可对，靠静默窗口恢复（决定 35）。其余键由各自的条件恢复。
+ * `partition-missing` 也在这里，不能随分区维护成功恢复：维护只建当月和下一个月，缺的若是被归档分离的旧月或更远的
+ * 将来月份，维护照常成功而入库继续 23514，恢复后下一条话单又重开，会成为开/恢复的往返（PR 4 起每次都发邮件）。
+ */
 const QUIET_WINDOW_ALERTS: readonly {
   kind: SystemAlertKind;
   subjectKey: string;
@@ -156,6 +165,7 @@ const QUIET_WINDOW_ALERTS: readonly {
   { kind: 'cdr_failed', subjectKey: AlertKeys.invalidJson },
   { kind: 'cdr_failed', subjectKey: AlertKeys.cdrSave },
   { kind: 'audit_failed', subjectKey: AlertKeys.auditResetPassword },
+  { kind: 'partition_failed', subjectKey: AlertKeys.partitionMissing },
 ];
 
 /**
@@ -181,6 +191,19 @@ export async function recoverQuietAlerts(
     )!,
     options.at,
   );
+}
+
+/**
+ * 未归属 / 校验失败这一族告警（`unassigned:*`、`invalid-cdr:*`）的事务级互斥。
+ * 入库停放与修正稿、忽略、分配、恢复扫描都改这一族告警，又互相锁待处理行和告警行，各自按不同顺序会成环
+ * （告警行的 id 是随机 UUID，`ORDER BY id` 也不能让两条路径的加锁顺序一致）。所以所有这些路径先拿同一把锁，
+ * 再碰任何待处理行或告警行；正常入库（入队扣费）不拿。
+ *
+ * 应用角色不能直接调 pg_advisory_*（迁移 0000 撤销），经 SECURITY DEFINER 的 lock_alert_family()。
+ * 顺序约定：先 `lockTenants`（它要求事务里还没有别的锁），再拿这把锁；入库之外的路径里它先于待处理行的 FOR UPDATE。
+ */
+export async function lockUnassignedAlerts(tx: Tx): Promise<void> {
+  await tx.execute(sql`select lock_alert_family()`);
 }
 
 /** 一条未归属话单对应的告警键。校验失败行没有 call_uuid，原因带固定前缀。 */
@@ -219,8 +242,8 @@ function pendingRowsOfKey(key: string): SQL | undefined {
  * 同键的 pending 未归属行清零（分配、忽略、修正稿使旧行 superseded 都算）就恢复对应的告警。
  * `rows` 是刚离开 pending 的行时只检查它们的键（在同一事务里调用）；不传则检查全部进行中的未归属类告警（定时任务兜底）。
  *
- * 先给告警行加锁再判断：并发入库在新插入待处理行之后才去累加同一条告警，会在这把锁上等待或在我们
- * 恢复之后新开一条，所以不会把刚有新待处理行的告警恢复掉。
+ * 先拿这一族告警的互斥锁（lockUnassignedAlerts），再给告警行加锁、判断：并发入库的停放与校验失败路径也先拿同一把锁，
+ * 所以不会出现「先判断没有待处理行、随后入库新插入待处理行并累加告警、再被恢复掉」。
  */
 export async function recoverClearedUnassignedAlerts(
   tx: Tx,
@@ -232,6 +255,7 @@ export async function recoverClearedUnassignedAlerts(
 ): Promise<number> {
   const keys = rows ? [...new Set(rows.map(unassignedRowAlertKey))] : undefined;
   if (keys?.length === 0) return 0;
+  await lockUnassignedAlerts(tx);
   const open = await tx
     .select({ id: systemAlerts.id, subjectKey: systemAlerts.subjectKey })
     .from(systemAlerts)

@@ -1099,7 +1099,7 @@ it('a failed audit write rolls the reset back and leaves credentials and session
 });
 
 it('a failed audit write opens one audit_failed alert without secrets', async () => {
-  // 告警按键合并成一条，租户取第一次事件的；先清掉别的用例留下的未恢复告警。
+  // 告警按键合并成一条；先清掉别的用例留下的未恢复告警。
   await connections.owner.pool.query(
     "DELETE FROM public.system_alerts WHERE kind='audit_failed'",
   );
@@ -1124,7 +1124,8 @@ it('a failed audit write opens one audit_failed alert without secrets', async ()
   expect(alerts[0]).toMatchObject({
     kind: 'audit_failed',
     subject_key: 'audit:reset-password',
-    tenant_id: fixture.a.tenantId,
+    // 全局键：不带租户，对象 id 在描述里。
+    tenant_id: null,
     recovered_at: null,
   });
   // 只有动作与对象 id：没有邮箱、密码、哈希或异常原文。
