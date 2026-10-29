@@ -19,6 +19,7 @@ import {
 } from '@fs-billing/rating';
 import { ingestCdr, postgresError, recordAlert } from './ingest.js';
 import type { ChargeQueue } from './queue.js';
+import { billingMismatchLog } from './redact.js';
 
 const sipCodes = {
   号码格式错误: 484,
@@ -82,14 +83,15 @@ export function createWorker(dependencies?: WorkerDependencies) {
       if ('error' in resolved) {
         if (resolved.error === 'mismatch') {
           request.log.error(
-            {
+            // 号码是个人信息，日志只留掩码和结构性对比字段（redact.ts）；完整号码在数据库。
+            billingMismatchLog({
               uuid: parsed.data.uuid,
               tenant,
               dialedNumber: parsed.data.dialedNumber,
               callee: parsed.data.callee,
               luaBillingNumber: parsed.data.billingNumber,
               billingNumber: resolved.billingNumber,
-            },
+            }),
             '授权计费号码不一致',
           );
           return reply.code(400).send({ error: '授权计费号码不一致' });

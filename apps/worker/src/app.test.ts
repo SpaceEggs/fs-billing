@@ -1,9 +1,11 @@
+import { Writable } from 'node:stream';
 import { connect } from '@fs-billing/db';
 import { pino } from 'pino';
 import { INVALID_NUMBER_REASON, modJsonCdrSchema } from '@fs-billing/shared';
 import { expect, test, vi } from 'vitest';
 import { createWorker } from './app.js';
 import { invalidCdrIdentitySchema } from './invalid-cdr.js';
+import { createWorkerLogger } from './redact.js';
 
 test('invalid CDR retains the original dialed number for display', () => {
   const identity = invalidCdrIdentitySchema.parse({
@@ -244,3 +246,82 @@ test.each([
     }
   },
 );
+
+async function authorizeLogs(numbers: Record<string, string>) {
+  const lines: string[] = [];
+  const stream = new Writable({
+    write(chunk: Buffer, _encoding, callback) {
+      lines.push(...chunk.toString('utf8').split('\n').filter(Boolean));
+      callback();
+    },
+  });
+  const connection = connect('postgresql://localhost/unused');
+  const transaction = vi
+    .spyOn(connection.db, 'transaction')
+    .mockRejectedValue(new Error('database unavailable'));
+  const app = createWorker({
+    loggerInstance: createWorkerLogger(stream),
+    db: connection.db,
+    queue: { enqueue: async () => {} },
+    security: { secret: 'test-worker-key', allowedIps: ['127.0.0.1'] },
+  });
+  try {
+    await app.inject({
+      method: 'POST',
+      url: '/authorize',
+      headers: { 'x-billing-key': 'test-worker-key' },
+      payload: {
+        tenant: 'abc01',
+        uuid: 'debf1234-1234-4234-8234-123456789abc',
+        ...numbers,
+      },
+    });
+    return lines;
+  } finally {
+    transaction.mockRestore();
+    await app.close();
+    await connection.pool.end();
+  }
+}
+
+test('the mismatch log masks every number and keeps the comparison fields', async () => {
+  const lines = await authorizeLogs({
+    callee: '13800138000',
+    dialedNumber: '13800138000',
+    billingNumber: '13055551234',
+  });
+  const entry = lines
+    .map((line) => JSON.parse(line) as Record<string, unknown>)
+    .find((item) => item.msg === '授权计费号码不一致');
+  expect(entry).toMatchObject({
+    uuid: 'debf1234-1234-4234-8234-123456789abc',
+    tenant: 'ABC01',
+    dialedNumber: '1380*****00(11)',
+    callee: '1380*****00(11)',
+    luaBillingNumber: '1305*****34(11)',
+    billingNumber: '8613*******00(13)',
+    calleeEqualsDialed: false,
+    luaEqualsWorker: false,
+    reason: 'callee-differs',
+    shapes: {
+      dialedNumber: { length: 11, plus: false, doubleZero: false },
+      billingNumber: { length: 13, plus: false, doubleZero: false },
+    },
+  });
+  const text = lines.join('\n');
+  for (const full of ['13800138000', '13055551234', '8613800138000'])
+    expect(text).not.toContain(full);
+});
+
+test('a consistent request writes no mismatch log', async () => {
+  const lines = await authorizeLogs({
+    callee: '8613800138000',
+    dialedNumber: '13800138000',
+    billingNumber: '8613800138000',
+  });
+  const text = lines.join('\n');
+  expect(text).not.toContain('授权计费号码不一致');
+  // 一致的请求走到数据库（这里被替换成不可用），日志里也没有完整号码。
+  expect(text).toContain('授权失败');
+  expect(text).not.toContain('8613800138000');
+});
