@@ -10,6 +10,19 @@ import {
 } from '@fs-billing/shared';
 import type { ApiDependencies } from './app.js';
 
+const blankToUndefined = <T extends z.ZodType>(schema: T) =>
+  z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    schema.optional(),
+  );
+
+/** 邮件发送是否启用：与 Worker 的 `mailConfig` 返回非 undefined 同一个条件。 */
+export function mailEnabled(
+  config: Pick<z.infer<typeof apiEnvironmentSchema>, 'SMTP_HOST' | 'MAIL_FROM'>,
+): boolean {
+  return config.SMTP_HOST !== undefined && config.MAIL_FROM !== undefined;
+}
+
 const authUrl = z
   .url()
   .refine(
@@ -72,12 +85,11 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .int()
       .positive()
       .default(DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS),
-    // 邮件发送是否启用的开关（阶段 9）：只给设置页显示「邮件发送未配置」，不含任何凭据；
-    // 与 Worker 的 SMTP_HOST 在同一个环境文件里一起设置（API 自己没有 SMTP 凭据，判断不了）。
-    MAIL_ENABLED: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((value) => value === 'true'),
+    // 邮件发送是否启用（阶段 9）只给设置页显示「邮件发送未配置」：与 Worker 同一个信号，即 SMTP_HOST 与 MAIL_FROM
+    // 都已设置（空串等同于没设置，同 apps/worker/src/config.ts）。API 只读这两个非秘密的键，不读也不校验
+    // SMTP_USER / SMTP_PASS：API 没有 SMTP 凭据，也不该因为凭据配置问题而启动失败。
+    SMTP_HOST: blankToUndefined(z.string()),
+    MAIL_FROM: blankToUndefined(z.string()),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),

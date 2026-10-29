@@ -403,6 +403,7 @@ export async function queueAlertNotices(
       AlertMailKeys.start(batch[0]!.id),
       {
         alerts: batch.map((alert) => ({
+          id: alert.id,
           kind: alert.kind,
           description: alert.description.slice(0, DESCRIPTION_MAX),
           startedAt: alert.startedAt.toISOString(),
@@ -437,6 +438,7 @@ export async function queueAlertNotices(
         ),
         {
           alerts: batch.map(({ alert, topTenants }) => ({
+            id: alert.id,
             kind: alert.kind,
             startedAt: alert.startedAt.toISOString(),
             durationMinutes: minutesBetween(alert.startedAt, at),
@@ -458,6 +460,7 @@ export async function queueAlertNotices(
           // recovered_at 在这里一定有值（查询要求）；防御性地回退到 at。
           const recoveredAt = alert.recoveredAt ?? at;
           return {
+            id: alert.id,
             kind: alert.kind,
             startedAt: alert.startedAt.toISOString(),
             recoveredAt: recoveredAt.toISOString(),

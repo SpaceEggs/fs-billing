@@ -373,6 +373,60 @@ describe('告警设置', () => {
     expect(await logged()).toBe(before + 1);
   });
 
+  it('an unchanged save does nothing: no version, no audit entry, but the version is still checked', async () => {
+    const logged = () =>
+      connections.owner.pool
+        .query<{ n: number }>(
+          `select count(*)::int as n from operation_logs where action = 'alert_settings_update'`,
+        )
+        .then((result) => result.rows[0]!.n);
+    const before = await logged();
+    // 默认设置原样保存。
+    const same = await put({
+      recipients: [],
+      digestMinutes: 15,
+      expectedVersion: 1,
+    });
+    expect(same.statusCode, same.body).toBe(200);
+    expect(adminAlertSettingsUpdateResponseSchema.parse(same.json())).toEqual({
+      recipients: [],
+      digestMinutes: 15,
+      version: 1,
+      mailEnabled: false,
+      auditId: null,
+    });
+    expect(await logged()).toBe(before);
+    // 真正改动一次，再用调换顺序的同一组邮箱保存：按集合比较，仍然什么也不做。
+    const changed = await put({
+      recipients: ['a@example.com', 'b@example.com'],
+      digestMinutes: 20,
+      expectedVersion: 1,
+    });
+    expect(changed.statusCode).toBe(200);
+    expect(await logged()).toBe(before + 1);
+    const reordered = adminAlertSettingsUpdateResponseSchema.parse(
+      (
+        await put({
+          recipients: ['b@example.com', 'a@example.com'],
+          digestMinutes: 20,
+          expectedVersion: 2,
+        })
+      ).json(),
+    );
+    expect(reordered).toMatchObject({ version: 2, auditId: null });
+    expect(await logged()).toBe(before + 1);
+    // 内容没变但版本过期：仍是 409。
+    const stale = await put({
+      recipients: ['a@example.com', 'b@example.com'],
+      digestMinutes: 20,
+      expectedVersion: 1,
+    });
+    expect(stale.statusCode, stale.body).toBe(409);
+    expect(adminApiErrorSchema.parse(stale.json()).error.code).toBe(
+      'ALERT_SETTINGS_VERSION_CONFLICT',
+    );
+  });
+
   it('validates recipients, interval and unknown fields', async () => {
     const valid = { recipients: [], digestMinutes: 15, expectedVersion: 1 };
     const tooMany = Array.from(

@@ -225,6 +225,8 @@ export function getAlertDetail(
   options: { now?: Date } = {},
 ): Promise<AdminSystemAlertDetail> {
   return withAdmin(db, async (tx) => {
+    // 详情的两个查询是小结果的扫描：JIT 编译的开销（PORTALBIG 形状的库上实测 130 ms）远大于收益。只影响当前事务。
+    await tx.execute(sql`set local jit = off`);
     const { rows } = await tx.execute<AlertRow>(sql`
       select ${selectAlertColumns(options.now)}
       from system_alerts a left join tenants t on t.id = a.tenant_id
@@ -247,6 +249,9 @@ export function getAlertDetail(
       alert.kind === 'auth_timeout'
         ? await readUnverifiedStats(tx, alertId, options.now)
         : { affectedTenants: null, cdrRange: null };
+    // 邮件快照里每条告警带 id（PR 6 起）：按 id 关联；此前入队的行没有 id，退回 (kind, startedAt)。
+    // 取最新的 50 封，按时间从旧到新显示。
+    const startedAtText = key.startedAt.toISOString();
     const noticeRows = await tx.execute<{
       template: 'alert_start' | 'alert_digest' | 'alert_recovered';
       status: 'pending' | 'sending' | 'sent' | 'failed' | 'skipped';
@@ -255,18 +260,23 @@ export function getAlertDetail(
       attempts: number;
       skip_reason: string | null;
     }>(sql`
-      select template, status, ${cdrTimestamp(sql`created_at`)} as queued_at, ${cdrTimestamp(sql`sent_at`)} as sent_at,
-        attempts, skip_reason
-      from email_outbox
-      where template in ('alert_start', 'alert_digest', 'alert_recovered')
-        and created_at >= ${key.startedAt.toISOString()}::timestamptz
-        and params @> ${JSON.stringify({
-          alerts: [
-            { kind: alert.kind, startedAt: key.startedAt.toISOString() },
-          ],
-        })}::jsonb
-      order by created_at, id
-      limit ${ALERT_DETAIL_MAX_NOTICES}`);
+      select template, status, queued_at, sent_at, attempts, skip_reason
+      from (
+        select id, template, status, created_at, ${cdrTimestamp(sql`created_at`)} as queued_at,
+          ${cdrTimestamp(sql`sent_at`)} as sent_at, attempts, skip_reason
+        from email_outbox
+        where template in ('alert_start', 'alert_digest', 'alert_recovered')
+          and created_at >= ${startedAtText}::timestamptz
+          and exists (
+            select 1 from jsonb_array_elements(params -> 'alerts') snapshot
+            where snapshot ->> 'id' = ${alertId}
+              or (not snapshot ? 'id' and snapshot ->> 'kind' = ${alert.kind}
+                  and snapshot ->> 'startedAt' = ${startedAtText})
+          )
+        order by created_at desc, id desc
+        limit ${ALERT_DETAIL_MAX_NOTICES}
+      ) newest
+      order by created_at, id`);
     return {
       ...alert,
       notify: key.notify,
@@ -288,7 +298,8 @@ export function getAlertDetail(
 }
 
 /**
- * `auth_timeout` 详情：告警期间（`received_at` 在 [开始, 恢复或现在]，最多回看 30 天）入库的未验证话单，
+ * `auth_timeout` 详情：告警期间（`received_at` 在 [开始, 恢复或现在]）入库的未验证话单，范围最长 30 天，
+ * 以告警的结束（恢复时间，进行中的算现在）往前数，所以很久以前恢复的短告警也统计得到，
  * 按租户计数取前 5，加上这些话单 `started_at` 的最早最晚（北京日，供跳转租户话单标签页）。
  * `cdrs` 按 `started_at` 月分区，`unverified` / `received_at` 没有索引：`started_at` 的两侧边界
  * （下限 −7 天，上限 +1 天，同 notify-tick 的汇总统计）只为分区剪枝。一次扫描，两个结果。
@@ -311,10 +322,12 @@ async function readUnverifiedStats(
     truncated: boolean;
   }>(sql`
     with bounds as (
-      select greatest(a.started_at, ${instant(now)} - ${ALERT_DETAIL_MAX_DAYS} * interval '1 day') as lo,
-        coalesce(a.recovered_at, ${instant(now)}) as hi,
-        a.started_at < ${instant(now)} - ${ALERT_DETAIL_MAX_DAYS} * interval '1 day' as truncated
-      from system_alerts a where a.id = ${alertId}::uuid
+      select greatest(a.started_at, e.hi - ${ALERT_DETAIL_MAX_DAYS} * interval '1 day') as lo,
+        e.hi as hi,
+        e.hi - a.started_at > ${ALERT_DETAIL_MAX_DAYS} * interval '1 day' as truncated
+      from system_alerts a
+      cross join lateral (select coalesce(a.recovered_at, ${instant(now)}) as hi) e
+      where a.id = ${alertId}::uuid
     ),
     scoped as materialized (
       select c.tenant_id, c.started_at

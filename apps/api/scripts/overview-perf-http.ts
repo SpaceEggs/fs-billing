@@ -40,6 +40,7 @@ assert(
 const ROUNDS = Number(process.env['PERF_ROUNDS'] ?? 7);
 const WARMUPS = 2;
 const ALERT_ROWS = 100_000;
+const OUTBOX_ROWS = 50_000;
 const localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 function targetUrl(value: string | undefined, role: string) {
@@ -222,6 +223,35 @@ try {
   ).rows[0]!;
   out(
     `# data: ${counts.cdrs} cdrs (${counts.unverified} unverified), ${counts.ledger} ledger entries, ${counts.tenants} tenants, ${counts.alerts} system alerts (${counts.open} open)`,
+  );
+  // 夹具三：5 万封发件箱（180 天内，绝大多数是已发送的告警通知，快照里带告警 id），
+  // 其中 120 封属于那条持续 40 天的 auth_timeout 告警，其余属于别的告警。
+  const outbox = (
+    await owner.query<{ n: number }>(
+      "select count(*)::int as n from email_outbox where dedupe_key like 'perf-p9pr6:%'",
+    )
+  ).rows[0]!.n;
+  if (outbox < OUTBOX_ROWS) {
+    const authId = (
+      await owner.query<{ id: string }>(
+        "select id from system_alerts where kind = 'auth_timeout' and recovered_at is null limit 1",
+      )
+    ).rows[0]!.id;
+    await owner.query(
+      `insert into email_outbox (dedupe_key, template, params, recipients, status, sent_at, created_at)
+       select 'perf-p9pr6:' || g,
+         (array['alert_start','alert_digest','alert_recovered'])[1 + g % 3],
+         jsonb_build_object('alerts', jsonb_build_array(jsonb_build_object(
+           'id', case when g % 400 = 0 then $1::text else gen_random_uuid()::text end,
+           'kind', 'cdr_failed', 'startedAt', to_char(now() - (g * interval '5 minutes'), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')))),
+         array['perf@example.test'], 'sent', now() - (g * interval '5 minutes'), now() - (g * interval '5 minutes')
+       from generate_series(1, $2::int) g`,
+      [authId, OUTBOX_ROWS - outbox],
+    );
+    await owner.query('analyze email_outbox');
+  }
+  out(
+    `# email_outbox: ${(await owner.query<{ n: number }>('select count(*)::int as n from email_outbox')).rows[0]!.n} rows (180 days, alert notices carry the alert id; 125 belong to the measured alert)`,
   );
   const authAlert = (
     await owner.query<{ id: string }>(

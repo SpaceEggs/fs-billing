@@ -9,6 +9,7 @@ import {
   adminTenantsResponseSchema,
   adminUnassignedSummaryResponseSchema,
 } from '@fs-billing/shared';
+import { decimal } from '@fs-billing/rating';
 import { raiseAlert, recoverAlert, withSystem } from '@fs-billing/db';
 import {
   apiConnections,
@@ -34,7 +35,6 @@ const get = (url: string) =>
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000);
 const raise = (input: Parameters<typeof raiseAlert>[1]) =>
   withSystem(connections.app.db, (tx) => raiseAlert(tx, input));
-const num = (text: string) => Number(text);
 
 async function overview() {
   const response = await get('/api/admin/overview');
@@ -96,14 +96,17 @@ describe('GET /api/admin/overview', () => {
     const page = await receivables();
     expect(after.metrics.pendingReceivable).toEqual(page.totals);
     // 新增的两笔赊账恰好是差额，并且按币种分开、不相加。
+    // 精确比较（十进制），不经过浮点数。
     expect(
-      num(after.metrics.pendingReceivable.CNY) -
-        num(before.metrics.pendingReceivable.CNY),
-    ).toBeCloseTo(123.45, 3);
+      decimal(after.metrics.pendingReceivable.CNY)
+        .minus(before.metrics.pendingReceivable.CNY)
+        .toFixed(2),
+    ).toBe('123.45');
     expect(
-      num(after.metrics.pendingReceivable.USD) -
-        num(before.metrics.pendingReceivable.USD),
-    ).toBeCloseTo(67.89, 3);
+      decimal(after.metrics.pendingReceivable.USD)
+        .minus(before.metrics.pendingReceivable.USD)
+        .toFixed(2),
+    ).toBe('67.89');
   });
 
   it('overview alert count equals the alerts page total for the same window', async () => {

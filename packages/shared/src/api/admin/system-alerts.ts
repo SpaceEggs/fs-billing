@@ -160,7 +160,7 @@ export const adminAlertSettingsResponseSchema = z.strictObject({
   recipients: z.array(z.email()).max(ADMIN_ALERT_RECIPIENTS_MAX),
   digestMinutes: adminAlertDigestMinutesSchema,
   version: z.int().positive(),
-  /** API 配置里的开关（`MAIL_ENABLED`，不含凭据）；为假时页面写「邮件发送未配置，告警和提醒不会发出」。 */
+  /** 与 Worker 同一个信号：API 环境里 `SMTP_HOST` 与 `MAIL_FROM` 都已设置（不含凭据）；为假时页面写「邮件发送未配置，告警和提醒不会发出」。 */
   mailEnabled: z.boolean(),
 });
 export type AdminAlertSettingsResponse = z.infer<
@@ -176,7 +176,10 @@ export type AdminAlertSettingsUpdateRequest = z.infer<
   typeof adminAlertSettingsUpdateRequestSchema
 >;
 export const adminAlertSettingsUpdateResponseSchema =
-  adminAlertSettingsResponseSchema.extend({ auditId: z.uuid() });
+  adminAlertSettingsResponseSchema.extend({
+    /** 内容没变时不保存也不写日志，为 null。 */
+    auditId: z.uuid().nullable(),
+  });
 export type AdminAlertSettingsUpdateResponse = z.infer<
   typeof adminAlertSettingsUpdateResponseSchema
 >;

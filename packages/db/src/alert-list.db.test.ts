@@ -357,6 +357,85 @@ describe('告警详情', () => {
     expect(detail.unassignedFilter).toBeNull();
   });
 
+  it('counts the period of an old, short, recovered authorization alert', async () => {
+    await ensureStatementPartitions(app);
+    await removeUnverifiedCdrs();
+    const tenant = await createTenant(app, 'CNY');
+    cdrTenants.push(tenant.id);
+    // 2026-08-20 开始、2 小时后恢复：离 NOW 已有两个多月，但只持续了两小时，不该被「最近 30 天」截掉。
+    const startedAt = new Date('2026-08-20T02:00:00Z');
+    const { id } = await raise({
+      kind: 'auth_timeout',
+      subjectKey: 'fs-authorize',
+      description: '很久以前的授权超时',
+      at: startedAt,
+    });
+    await recover({
+      kind: 'auth_timeout',
+      subjectKey: 'fs-authorize',
+      at: new Date('2026-08-20T04:00:00Z'),
+    });
+    const insert = (receivedAt: string) =>
+      owner.pool.query(
+        `insert into cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee, billing_number,
+           duration_seconds, billed_minutes, matched_prefix, country, rate, charge, hangup_cause, unverified, received_at)
+         values ($1,$2,$3,$3,$3,'1','8613800138000','8613800138000',1,1,'86','中国',0.05,0.1,'NORMAL_CLEARING',true,$3)`,
+        [tenant.id, randomUUID(), new Date(receivedAt)],
+      );
+    await insert('2026-08-20T03:00:00Z');
+    await insert('2026-08-20T03:30:00Z');
+    await insert('2026-08-20T05:00:00Z'); // 恢复之后：不算
+    const detail = await getAlertDetail(app.db, id, { now: NOW });
+    expect(detail.status).toBe('recovered');
+    expect(detail.affectedTenants).toEqual({
+      items: [
+        {
+          id: tenant.id,
+          code: tenant.code,
+          name: `测试 ${tenant.code}`,
+          count: 2,
+        },
+      ],
+      truncated: false,
+    });
+    expect(detail.cdrRange).toMatchObject({
+      fromDay: '2026-08-20',
+      toDay: '2026-08-20',
+    });
+  });
+
+  it('caps a long recovered alert at thirty days before its end', async () => {
+    await ensureStatementPartitions(app);
+    await removeUnverifiedCdrs();
+    const tenant = await createTenant(app, 'CNY');
+    cdrTenants.push(tenant.id);
+    // 2026-07-01 开始、2026-08-20 恢复（50 天）：只统计恢复前 30 天，即 2026-07-21 起。
+    const { id } = await raise({
+      kind: 'auth_timeout',
+      subjectKey: 'fs-authorize',
+      description: '持续五十天',
+      at: new Date('2026-07-01T00:00:00Z'),
+    });
+    await recover({
+      kind: 'auth_timeout',
+      subjectKey: 'fs-authorize',
+      at: new Date('2026-08-20T00:00:00Z'),
+    });
+    for (const receivedAt of ['2026-07-05T00:00:00Z', '2026-08-01T00:00:00Z'])
+      await owner.pool.query(
+        `insert into cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee, billing_number,
+           duration_seconds, billed_minutes, matched_prefix, country, rate, charge, hangup_cause, unverified, received_at)
+         values ($1,$2,$3,$3,$3,'1','8613800138000','8613800138000',1,1,'86','中国',0.05,0.1,'NORMAL_CLEARING',true,$3)`,
+        [tenant.id, randomUUID(), new Date(receivedAt)],
+      );
+    const detail = await getAlertDetail(app.db, id, { now: NOW });
+    expect(detail.affectedTenants?.truncated).toBe(true);
+    expect(detail.affectedTenants?.items.map((item) => item.count)).toEqual([
+      1,
+    ]);
+    expect(detail.cdrRange?.fromDay).toBe('2026-08-01');
+  });
+
   it('caps a long running authorization alert at thirty days and says so', async () => {
     await ensureStatementPartitions(app);
     // 上一个用例留下的未验证话单在窗口内，先清掉（owner 可以删）。
@@ -397,6 +476,93 @@ describe('告警详情', () => {
     expect(
       (await getAlertDetail(app.db, other.id)).unassignedFilter,
     ).toBeNull();
+  });
+
+  it('tells two same-kind alerts with the same start time apart by id, and falls back to kind and start for old rows', async () => {
+    const at = new Date('2026-10-29T01:00:00Z');
+    // 同一个事务里开两条同类型的告警：startedAt 完全相同。
+    const [first, second] = await system(async (tx) => [
+      await raiseAlert(tx, {
+        kind: 'cdr_failed',
+        subjectKey: 'twin-1',
+        description: '一',
+        at,
+      }),
+      await raiseAlert(tx, {
+        kind: 'cdr_failed',
+        subjectKey: 'twin-2',
+        description: '二',
+        at,
+      }),
+    ]);
+    await owner.pool.query(
+      `update alert_settings set recipients = array['ops@example.test'], digest_minutes = 10`,
+    );
+    const tick = (when: string) =>
+      system((tx) => queueAlertNotices(tx, { at: new Date(when) }));
+    await tick('2026-10-29T01:01:00Z'); // 一封开始邮件，两条都在里面
+    await raise({
+      kind: 'cdr_failed',
+      subjectKey: 'twin-1',
+      description: '一 again',
+      at: new Date('2026-10-29T01:05:00Z'),
+    });
+    await tick('2026-10-29T01:11:00Z'); // 只有 twin-1 有新增，只汇总它
+    const templates = async (id: string) =>
+      (await getAlertDetail(app.db, id, { now: NOW })).notices.map(
+        (notice) => notice.template,
+      );
+    expect(await templates(first.id)).toEqual(['alert_start', 'alert_digest']);
+    expect(await templates(second.id)).toEqual(['alert_start']);
+
+    // 此前入队的行没有 id：按 (kind, startedAt) 关联。
+    const old = await raise({
+      kind: 'audit_failed',
+      subjectKey: 'old-row',
+      description: '旧',
+      at: new Date('2026-10-29T02:00:00Z'),
+    });
+    await owner.pool.query(
+      `insert into email_outbox (dedupe_key, template, params, recipients, status, created_at)
+       values ('legacy-start', 'alert_start', $1::jsonb, array['ops@example.test'], 'pending', '2026-10-29T02:01:00Z')`,
+      [
+        JSON.stringify({
+          alerts: [
+            {
+              kind: 'audit_failed',
+              description: '旧',
+              startedAt: '2026-10-29T02:00:00.000Z',
+            },
+          ],
+        }),
+      ],
+    );
+    expect(await templates(old.id)).toEqual(['alert_start']);
+  });
+
+  it('shows the newest fifty notices, oldest first', async () => {
+    const { id } = await raise({
+      kind: 'cdr_failed',
+      subjectKey: 'chatty',
+      description: '很多邮件',
+      at: new Date('2026-10-29T00:00:00Z'),
+    });
+    await owner.pool.query(
+      `insert into email_outbox (dedupe_key, template, params, recipients, status, created_at)
+       select 'chatty:' || g, 'alert_digest',
+         jsonb_build_object('alerts', jsonb_build_array(jsonb_build_object('id', $1::text, 'kind', 'cdr_failed',
+           'startedAt', '2026-10-29T00:00:00.000Z'))),
+         array['ops@example.test'], 'pending', '2026-10-29T01:00:00Z'::timestamptz + g * interval '1 minute'
+       from generate_series(1, 60) g`,
+      [id],
+    );
+    const { notices } = await getAlertDetail(app.db, id, { now: NOW });
+    expect(notices).toHaveLength(50);
+    const times = notices.map((notice) => notice.queuedAt);
+    expect(times).toEqual([...times].sort());
+    // 最新的一封（第 60 分钟）在，最旧的十封（第 1–10 分钟）不在。
+    expect(times.at(-1)).toBe('2026-10-29T02:00:00.000000Z');
+    expect(times[0]).toBe('2026-10-29T01:11:00.000000Z');
   });
 
   it('lists the start, digest and recovery mails of this alert only, without recipient addresses', async () => {

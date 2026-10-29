@@ -72,7 +72,7 @@ export type ApiDependencies = {
   };
   adminAmountMaxIntegerDigits?: number;
   accountService?: AdminAccountService;
-  /** 邮件发送是否启用（`MAIL_ENABLED`）；只用于告警设置页的提示。默认 false。 */
+  /** 邮件发送是否启用（`SMTP_HOST` 与 `MAIL_FROM` 都已设置，见 config.ts 的 `mailEnabled`）；只用于告警设置页的提示。默认 false。 */
   mailEnabled?: boolean;
   exportPoolApplicationName?: string;
 };

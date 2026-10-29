@@ -7,7 +7,8 @@ import {
 } from '@fs-billing/db';
 
 /**
- * 阶段 8 的数据库函数抛 UnassignedError / CdrDeletionError（阶段 9 加告警设置的两个错误）（带 code，不依赖 API 的错误码表），
+ * 阶段 8 的数据库函数抛 UnassignedError / CdrDeletionError，阶段 9 的告警设置抛 AlertSettingsVersionConflictError /
+ * AlertSettingsInvalidError；它们都带 code，不依赖 API 的错误码表。
  * 这里映射成 AdminServiceError，由 app 的错误处理器按 adminApiErrorStatus 回 409 / 400。
  */
 export async function mapBusinessErrors<T>(run: () => Promise<T>): Promise<T> {

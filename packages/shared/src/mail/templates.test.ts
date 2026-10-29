@@ -195,6 +195,29 @@ describe('邮件模板', () => {
     ).toThrow();
   });
 
+  it('accepts the alert id of the snapshot but never prints it', () => {
+    const id = '5c0f6a64-1b6c-4f0a-9f1e-2f3c7a8d9e10';
+    for (const [template, params] of [
+      ['alert_start', startParams],
+      ['alert_digest', digestParams],
+      ['alert_recovered', recoveredParams],
+    ] as const) {
+      const withIds = {
+        alerts: params.alerts.map((alert) => ({ ...alert, id })),
+      };
+      const plain = renderMail(template, params);
+      const mail = renderMail(template, withIds);
+      expect(mail).toEqual(plain);
+      expect(mail.text + mail.html + mail.subject).not.toContain(id);
+    }
+    // 不是 UUID 的 id 被严格 schema 拒绝。
+    expect(() =>
+      renderMail('alert_start', {
+        alerts: [{ ...startParams.alerts[0], id: 'not-a-uuid' }],
+      }),
+    ).toThrow();
+  });
+
   it('includes a site link only when a site URL is configured', () => {
     expect(renderMail('alert_start', startParams).text).not.toContain('http');
     const withLink = renderMail('alert_start', startParams, {

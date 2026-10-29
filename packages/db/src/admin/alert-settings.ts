@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { AuditActor, AuditChange } from '@fs-billing/shared';
 import {
+  AlertSettingsVersionConflictError,
+  normalizeAlertRecipients,
   readAlertSettings,
   saveAlertSettings,
   type AlertSettings,
@@ -16,13 +18,15 @@ export function getAlertSettings(db: Db | Tx): Promise<AlertSettings> {
 
 export interface UpdateAlertSettingsResult {
   readonly settings: AlertSettings;
-  readonly auditId: string;
+  /** 内容没变时不保存、不写日志，为 null。 */
+  readonly auditId: string | null;
 }
 
 /**
  * 保存告警设置并写 `alert_settings_update` 操作日志（同一事务）。版本不符抛
  * `AlertSettingsVersionConflictError`（API 映射为 409 `ALERT_SETTINGS_VERSION_CONFLICT`），此时不写日志。
- * 内容没变也会保存（版本加一）并写日志，`changes` 为空：操作确实发生了，而且保存方拿到新版本才能继续改。
+ * 内容没变（接收邮箱按集合比较，同 PR 4；汇总间隔相同）时什么也不做：不加版本、不写日志，返回当前设置和
+ * `auditId: null`（同 `updateTenantSettings` 的先例）；`expectedVersion` 仍要匹配，否则照样是冲突。
  */
 export function updateAlertSettings(
   db: Db | Tx,
@@ -34,6 +38,17 @@ export function updateAlertSettings(
   },
 ): Promise<UpdateAlertSettingsResult> {
   return withAdmin(db, async (tx) => {
+    const current = await readAlertSettings(tx);
+    if (current.version !== input.expectedVersion)
+      throw new AlertSettingsVersionConflictError(current.version);
+    const wanted = normalizeAlertRecipients(input.recipients);
+    const known = new Set(current.recipients);
+    if (
+      input.digestMinutes === current.digestMinutes &&
+      wanted.length === known.size &&
+      wanted.every((address) => known.has(address))
+    )
+      return { settings: current, auditId: null };
     const { before, after } = await saveAlertSettings(tx, {
       recipients: input.recipients,
       digestMinutes: input.digestMinutes,
