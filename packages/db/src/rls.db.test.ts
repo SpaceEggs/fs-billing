@@ -563,3 +563,139 @@ describe('话单运维表（阶段 8）', () => {
     ).toBe('42501');
   });
 });
+
+describe('通知与告警表（阶段 9）', () => {
+  const secret = 'rls-probe-recipient@example.test';
+
+  /** 每张表备一行（owner）：发件箱、系统告警；状态行和告警设置迁移已建；送达记录给两个租户各一条。 */
+  async function ensureRows() {
+    const mine = await createTenant(app, 'CNY');
+    const theirs = await createTenant(app, 'CNY');
+    await owner.pool.query(
+      // skipped：别的测试文件里的分发器不会去发它。
+      `insert into email_outbox (dedupe_key, template, params, recipients, tenant_id, status, skip_reason)
+       values ($1, 'balance_low', '{}'::jsonb, array[$2]::text[], $3, 'skipped', 'rls_probe')`,
+      [`rls-probe:${randomUUID()}`, secret, theirs.id],
+    );
+    await owner.pool.query(
+      // 已恢复：不算进行中的告警。
+      `insert into system_alerts (kind, subject_key, tenant_id, description, recovered_at)
+       values ('statement_mismatch', $1, $2, 'rls-probe', now())`,
+      [`rls-probe:${randomUUID()}`, theirs.id],
+    );
+    for (const tenant of [mine, theirs])
+      await owner.pool.query(
+        `insert into balance_alert_deliveries (tenant_id, kind, balance, recipients)
+         values ($1, 'low_balance', 1, array[$2]::text[])`,
+        [tenant.id, `${tenant.code.toLowerCase()}@example.test`],
+      );
+    return { mine, theirs };
+  }
+
+  it('tenants read none of the notification tables and cannot write them', async () => {
+    const { mine, theirs } = await ensureRows();
+    const abc001 = await tenantId(app, 'ABC001');
+    for (const scoped of [mine.id, abc001]) {
+      const { rows } = await withTenant(app.db, scoped, (tx) =>
+        tx.execute(
+          sql`select (select count(*) from email_outbox)::int as outbox,
+                     (select count(*) from balance_notice_state)::int as notice_state,
+                     (select count(*) from alert_settings)::int as settings,
+                     (select count(*) from system_alerts)::int as alerts`,
+        ),
+      );
+      expect(rows).toEqual([
+        { outbox: 0, notice_state: 0, settings: 0, alerts: 0 },
+      ]);
+    }
+    // 对照组：管理员看得到，证明上面的 0 是策略而不是没有数据。
+    const { rows: seen } = await withAdmin(app.db, (tx) =>
+      tx.execute(
+        sql`select (select count(*) from email_outbox)::int > 0 as outbox,
+                   (select count(*) from balance_notice_state)::int > 0 as notice_state,
+                   (select count(*) from alert_settings)::int > 0 as settings,
+                   (select count(*) from system_alerts)::int > 0 as alerts`,
+      ),
+    );
+    expect(seen).toEqual([
+      { outbox: true, notice_state: true, settings: true, alerts: true },
+    ]);
+
+    const snapshot = () =>
+      owner.pool.query(
+        `select (select count(*) from email_outbox)::int as outbox,
+                (select count(*) from system_alerts)::int as alerts,
+                (select version from alert_settings) as version,
+                (select count(*) from balance_notice_state where low_active)::int as low`,
+      );
+    const before = await snapshot();
+    const writes: Record<string, ReturnType<typeof sql>> = {
+      'insert email_outbox': sql`insert into email_outbox (dedupe_key, template, params, recipients, status)
+        values ('tenant-write', 'test', '{}'::jsonb, array['a@example.test'], 'pending')`,
+      'insert system_alerts': sql`insert into system_alerts (kind, subject_key, description)
+        values ('cdr_failed', 'tenant-write', 'x')`,
+      'insert alert_settings': sql`insert into alert_settings (id) values (false)`,
+      'insert balance_notice_state': sql`insert into balance_notice_state (tenant_id) values (${mine.id}::uuid)`,
+      'insert balance_alert_deliveries': sql`insert into balance_alert_deliveries (tenant_id, kind, balance, recipients)
+        values (${theirs.id}::uuid, 'low_balance', 1, array['a@example.test'])`,
+      'delete email_outbox': sql`delete from email_outbox`,
+      'delete system_alerts': sql`delete from system_alerts`,
+      'delete alert_settings': sql`delete from alert_settings`,
+      'delete balance_notice_state': sql`delete from balance_notice_state`,
+    };
+    for (const [label, statement] of Object.entries(writes)) {
+      const error = await pgError(
+        withTenant(app.db, mine.id, (tx) => tx.execute(statement)),
+      );
+      expect({ label, code: error.code }).toEqual({ label, code: '42501' });
+    }
+    // 有 UPDATE 权限的表：策略让租户一行都改不到。
+    for (const update of [
+      sql`update email_outbox set status = 'failed'`,
+      sql`update system_alerts set description = 'tenant-write'`,
+      sql`update alert_settings set digest_minutes = 1`,
+    ]) {
+      const result = await withTenant(app.db, mine.id, (tx) =>
+        tx.execute(update),
+      );
+      expect(result.rowCount).toBe(0);
+    }
+    // 没有 UPDATE 权限的表：先于策略被拒。
+    for (const update of [
+      sql`update balance_notice_state set low_active = true`,
+      sql`update balance_alert_deliveries set balance = 0`,
+    ])
+      expect(
+        (await pgError(withTenant(app.db, mine.id, (tx) => tx.execute(update))))
+          .code,
+      ).toBe('42501');
+    expect((await snapshot()).rows).toEqual(before.rows);
+  });
+
+  it('balance_alert_deliveries shows a tenant only its own rows', async () => {
+    const { mine, theirs } = await ensureRows();
+    const own = await withTenant(app.db, mine.id, (tx) =>
+      tx.execute<{ tenant_id: string; recipients: string[] }>(
+        sql`select tenant_id, recipients from balance_alert_deliveries`,
+      ),
+    );
+    expect(own.rows.length).toBeGreaterThan(0);
+    expect(new Set(own.rows.map((row) => row.tenant_id))).toEqual(
+      new Set([mine.id]),
+    );
+    // 直接按别人的租户编号查，也是空的。
+    const other = await withTenant(app.db, mine.id, (tx) =>
+      tx.execute(
+        sql`select 1 from balance_alert_deliveries where tenant_id = ${theirs.id}::uuid`,
+      ),
+    );
+    expect(other.rows).toEqual([]);
+    // 管理员能看到两边（对照）。
+    const admin = await withAdmin(app.db, (tx) =>
+      tx.execute<{ tenant_id: string }>(
+        sql`select distinct tenant_id from balance_alert_deliveries where tenant_id in (${mine.id}::uuid, ${theirs.id}::uuid)`,
+      ),
+    );
+    expect(admin.rows).toHaveLength(2);
+  });
+});

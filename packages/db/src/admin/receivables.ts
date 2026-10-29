@@ -32,6 +32,46 @@ import {
 import { writeAudit } from './audit.js';
 import { AdminServiceError } from './errors.js';
 
+/** 待收款列表与概览共用的过滤条件。 */
+function receivableFilter(
+  input: Pick<AdminReceivablesQuery, 'status' | 'currency' | 'search'>,
+) {
+  return and(
+    eq(receivables.status, input.status),
+    input.currency ? eq(tenants.currency, input.currency) : undefined,
+    input.search
+      ? or(
+          sql`${tenants.code} ilike ${likeContains(input.search)} escape '\\'`,
+          sql`${tenants.name} ilike ${likeContains(input.search)} escape '\\'`,
+        )
+      : undefined,
+  );
+}
+
+/**
+ * 待收款的条数与按币种的合计。`listReceivables` 的 `totals` / `pagination.total` 和概览页的「待收款总额」
+ * 是同一个函数（阶段 9 验收 5：同源，不重写聚合）。
+ */
+export async function readReceivableTotals(
+  tx: Tx,
+  input: Pick<AdminReceivablesQuery, 'status'> &
+    Partial<Pick<AdminReceivablesQuery, 'currency' | 'search'>>,
+): Promise<{ total: number; totals: { CNY: string; USD: string } }> {
+  const [aggregate] = await tx
+    .select({
+      total: sql<number>`count(*)::int`,
+      CNY: sql<string>`coalesce(sum(${receivables.amount}) filter (where ${tenants.currency} = 'CNY'), 0)::text`,
+      USD: sql<string>`coalesce(sum(${receivables.amount}) filter (where ${tenants.currency} = 'USD'), 0)::text`,
+    })
+    .from(receivables)
+    .innerJoin(tenants, eq(tenants.id, receivables.tenantId))
+    .where(receivableFilter(input));
+  return {
+    total: aggregate?.total ?? 0,
+    totals: { CNY: aggregate?.CNY ?? '0', USD: aggregate?.USD ?? '0' },
+  };
+}
+
 export function listReceivables({
   db,
   query,
@@ -41,25 +81,8 @@ export function listReceivables({
 }): Promise<AdminReceivablesResponse> {
   const input = adminReceivablesQuerySchema.parse(query);
   return withAdmin(db, async (tx) => {
-    const filter = and(
-      eq(receivables.status, input.status),
-      input.currency ? eq(tenants.currency, input.currency) : undefined,
-      input.search
-        ? or(
-            sql`${tenants.code} ilike ${likeContains(input.search)} escape '\\'`,
-            sql`${tenants.name} ilike ${likeContains(input.search)} escape '\\'`,
-          )
-        : undefined,
-    );
-    const [aggregate] = await tx
-      .select({
-        total: sql<number>`count(*)::int`,
-        CNY: sql<string>`coalesce(sum(${receivables.amount}) filter (where ${tenants.currency} = 'CNY'), 0)::text`,
-        USD: sql<string>`coalesce(sum(${receivables.amount}) filter (where ${tenants.currency} = 'USD'), 0)::text`,
-      })
-      .from(receivables)
-      .innerJoin(tenants, eq(tenants.id, receivables.tenantId))
-      .where(filter);
+    const filter = receivableFilter(input);
+    const aggregate = await readReceivableTotals(tx, input);
     const rows = await tx
       .select({
         ...getViewSelectedFields(receivables),
@@ -112,11 +135,11 @@ export function listReceivables({
                 : { status: 'pending' },
         }),
       ),
-      totals: { CNY: aggregate?.CNY ?? '0', USD: aggregate?.USD ?? '0' },
+      totals: aggregate.totals,
       pagination: {
         page: input.page,
         pageSize: input.pageSize,
-        total: aggregate?.total ?? 0,
+        total: aggregate.total,
       },
     };
   });

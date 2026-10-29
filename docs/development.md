@@ -50,6 +50,7 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 | `SMTP_TIMEOUT_MS`、`MAIL_RATE_PER_MINUTE`  | 15000、20 | 连接/问候/套接字超时；每次分发（每分钟）最多发送封数                                               |
 | `MAIL_MAX_ATTEMPTS`、`ALERT_QUIET_MINUTES` | 6、10     | 单封最多尝试次数（退避 1 分、5 分、15 分、1 小时、3 小时）；事件型告警的静默恢复窗口               |
 | `APP_PUBLIC_URL`                           | 无        | 邮件里链接的站点根地址（`https://…`，本机回环可用 `http://`）                                      |
+| `MAIL_ENABLED`（API）                      | false     | 仅供设置页提示「邮件发送未配置」，无凭据；设置了 `SMTP_HOST` 就设为 `true`                         |
 
 - `pnpm --filter @fs-billing/worker mail:test -- --to <地址>`：用当前 `SMTP_*` 直接发一封测试邮件并打印响应码，不经过发件箱（核实 SMTP 配置，真实 QQ 账号的核实步骤见 [运行手册](evidence/phase-9/qq-smtp-check.md)）。
 - `pnpm --filter @fs-billing/worker mail:requeue -- --id <uuid>` 或 `--since <时间>`：把 `failed` 的邮件放回待发（额度恢复后补发）。

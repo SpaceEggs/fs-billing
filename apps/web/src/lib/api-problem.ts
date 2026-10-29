@@ -48,6 +48,7 @@ export const conflictMessages = {
     '选择中没有可分配的待处理话单，请刷新后重新选择',
   CDR_MONTH_NOT_DELETABLE: '所选月份不能删除话单，请刷新后重新选择',
   CDR_DELETE_COUNT_CHANGED: '话单条数与预览不符，请刷新后重新预览',
+  ALERT_SETTINGS_VERSION_CONFLICT: '告警设置已被其他人修改，请刷新后重试',
 } as const satisfies Record<ConflictCode, string>;
 
 /** 冲突说明页面数据已过时，刷新后可重新操作。 */
@@ -65,6 +66,7 @@ const staleConflicts: ReadonlySet<ConflictCode> = new Set([
   'UNASSIGNED_NOTHING_TO_ASSIGN',
   'CDR_MONTH_NOT_DELETABLE',
   'CDR_DELETE_COUNT_CHANGED',
+  'ALERT_SETTINGS_VERSION_CONFLICT',
 ]);
 
 export function apiProblem(error: unknown): ApiProblem {
@@ -123,6 +125,7 @@ export function apiProblem(error: unknown): ApiProblem {
     case 'UNASSIGNED_NOTHING_TO_ASSIGN':
     case 'CDR_MONTH_NOT_DELETABLE':
     case 'CDR_DELETE_COUNT_CHANGED':
+    case 'ALERT_SETTINGS_VERSION_CONFLICT':
       return {
         kind: 'conflict',
         code: detail.code,

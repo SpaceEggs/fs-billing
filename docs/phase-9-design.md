@@ -380,6 +380,18 @@ N 取自 `alert_settings.digest_minutes`。函数 `runNotifyTick(db, { now })` �
 - **汇总节拍的取整（评审后修订）。** `notified_start_at`、`last_digest_at`、`notified_recovered_at` 和到期比较都用向下取整到分钟的 tick 时间（`noticeSlot`）。否则 tick 每次启动的秒数有抖动（上一次 12:00:03，这一次 12:15:01.8 差 1.2 秒不到 N = 15），汇总会无端推迟一分钟。发件箱行和持续时长仍用原始时间。
 - **`recipient:admin` 的恢复按集合比较**：只是调换接收邮箱的顺序不算改了，不恢复。
 
+**PR 6 实现时对「系统告警页与概览页」「端点与契约」的补充与更正：**
+
+- **契约方法加 `PUT`。** `ApiOperation.method` 原只有 `GET`、`POST`；设置写入按设计用 `PUT /api/admin/alert-settings`，所以加上 `PUT`，来源检查（`Origin` / `Sec-Fetch-Site`）从「仅 POST」改为「所有非 GET」。`web/src/lib/api.ts` 的契约登记留给 PR 7。
+- **口径。** 告警窗口谓词 `alertWindowPredicate`（`packages/db/src/alert-list.ts`）：`recovered_at IS NULL OR started_at >= T − 窗口 OR recovered_at >= T − 窗口`，`T` 默认事务的 `now()`；列表的 `total`、概览的 `last24h`、汇总的 `last24h` 都经 `countAlertsInWindow`。进行中条数 `countOpenAlerts`（列表 `openCount`、汇总 `open`、概览 `open`）。概览的待收款是 `readReceivableTotals`（`listReceivables` 也改用它），已停机 / 余额不足是 `readTenantsByHealth`（与列表同一个 `tenantHealth` 片段和排序），未归属是 `readUnassignedSummary`。概览整体在一个 `repeatable read` 只读事务里（`getAdminOverview`）。
+- **消费与分钟的聚合。** 流水一次扫描（本月 1 日与 29 天前较早者起），按北京日、币种分组，今日 / 本月 / 近 30 天都从这一组取；今日分钟按接通时间，`started_at` 下界取今天零点前一天，只为分区剪枝。租户总数含已停用租户。
+- **`lastOpenedAt`** 取进行中告警里最近一条的开始时间（没有进行中的为 null）。
+- **详情。** `auth_timeout` 的受影响租户与话单时间范围取 `received_at` 在 [开始, 恢复或现在]（最多回看 30 天）的未验证话单，一次扫描；`cdrRange` 给最早、最晚 `started_at` 及其北京日，页面据此拼租户话单标签页的链接。`cdr_failed` 的未归属 / 校验失败类由告警键反推 `unassignedFilter`（`reason`，租户不存在时再加 `tag`），未归属列表因此加了精确匹配的 `reason` 筛选。通知记录按发件箱快照里的 `(kind, startedAt)` 关联（快照没有告警 id），响应不含收件人地址。
+- **设置。** `updateAlertSettings`（`packages/db/src/admin/alert-settings.ts`）调用 `saveAlertSettings`，同一事务写 `alert_settings_update`；版本不符的 `AlertSettingsVersionConflictError` 经 `mapBusinessErrors` 变成 409。内容没变的保存也会加版本并写日志（`changes` 为空）。操作日志标签新增 `settings`（「修改设置」），对象类型 `alert_settings`（全局单行没有 uuid，对象取审计自身的 id），变更字段 `alertRecipients`、`digestMinutes`。邮箱规则同租户邮箱：不去空白，带空白的地址按格式错误拒绝。
+- **`MAIL_ENABLED`** 是 API 的环境变量（`true` / `false`，默认 `false`），传给 `createApi({ mailEnabled })`；`.env.example` 与 `docs/development.md` 已补。
+- **web 的最小改动。** 新的冲突码、审计字段和对象类型让 web 里的穷尽映射无法通过类型检查，所以 `lib/api-problem.ts`、`pages/admin/audit-logs.tsx` 各补了中文文案；页面本身留给 PR 7。
+- **性能。** 见 [overview-perf.md](evidence/phase-9/overview-perf.md)：PORTALBIG 形状的库上概览中位数约 195 ms，`auth_timeout` 详情约 290 ms，没有加缓存或索引。
+
 ## 定时任务：真实 cron 与多实例
 
 ### 真实每分钟 cron 触发测试（验收 8）

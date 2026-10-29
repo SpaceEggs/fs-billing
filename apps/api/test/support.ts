@@ -151,6 +151,7 @@ export function fixtureApi(
     hooks?: AuthHooks;
     rateLimit?: { max: number; timeWindow: number };
     exportPoolApplicationName?: string;
+    mailEnabled?: boolean;
   } = {},
 ) {
   const logs: object[] = [];
@@ -179,6 +180,9 @@ export function fixtureApi(
     }),
     trustedOrigins: [origin],
     rateLimit: options.rateLimit ?? { max: 1000, timeWindow: 60_000 },
+    ...(options.mailEnabled !== undefined
+      ? { mailEnabled: options.mailEnabled }
+      : {}),
     ...(options.exportPoolApplicationName
       ? { exportPoolApplicationName: options.exportPoolApplicationName }
       : {}),

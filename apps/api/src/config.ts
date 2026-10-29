@@ -72,6 +72,12 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .int()
       .positive()
       .default(DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS),
+    // 邮件发送是否启用的开关（阶段 9）：只给设置页显示「邮件发送未配置」，不含任何凭据；
+    // 与 Worker 的 SMTP_HOST 在同一个环境文件里一起设置（API 自己没有 SMTP 凭据，判断不了）。
+    MAIL_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),

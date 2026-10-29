@@ -110,3 +110,23 @@ test.each([
     ).toThrow();
   },
 );
+
+test.each([
+  [undefined, false],
+  ['false', false],
+  ['true', true],
+])('MAIL_ENABLED %j means %j and carries no credentials', (value, expected) => {
+  const parsed = apiEnvironmentSchema.parse({
+    ...environment,
+    ...(value === undefined ? {} : { MAIL_ENABLED: value }),
+  });
+  expect(parsed.MAIL_ENABLED).toBe(expected);
+});
+
+test('MAIL_ENABLED only accepts true or false', () => {
+  for (const value of ['1', 'yes', 'TRUE', ''])
+    expect(
+      apiEnvironmentSchema.safeParse({ ...environment, MAIL_ENABLED: value })
+        .success,
+    ).toBe(false);
+});

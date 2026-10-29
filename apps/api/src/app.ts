@@ -55,6 +55,8 @@ import { statementHandlers } from './routes/statements.js';
 import { unassignedHandlers } from './routes/unassigned.js';
 import { cdrDeletionHandlers } from './routes/cdr-deletions.js';
 import { auditLogHandlers } from './routes/audit-logs.js';
+import { overviewHandlers } from './routes/overview.js';
+import { systemAlertHandlers } from './routes/system-alerts.js';
 
 export type ApiDependencies = {
   businessDb: PoolDb;
@@ -70,6 +72,8 @@ export type ApiDependencies = {
   };
   adminAmountMaxIntegerDigits?: number;
   accountService?: AdminAccountService;
+  /** 邮件发送是否启用（`MAIL_ENABLED`）；只用于告警设置页的提示。默认 false。 */
+  mailEnabled?: boolean;
   exportPoolApplicationName?: string;
 };
 export function createApi(deps: ApiDependencies) {
@@ -172,6 +176,10 @@ export function createApi(deps: ApiDependencies) {
     ...unassignedHandlers(deps.businessDb),
     ...cdrDeletionHandlers(deps.businessDb),
     ...auditLogHandlers(deps.businessDb),
+    ...overviewHandlers(deps.businessDb),
+    ...systemAlertHandlers(deps.businessDb, {
+      mailEnabled: deps.mailEnabled ?? false,
+    }),
     ...exportHandlers({
       db: deps.businessDb,
       auditDb: exportConnection.db,

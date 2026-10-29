@@ -37,6 +37,7 @@ const app = createApi({
     logger,
   }),
   adminAmountMaxIntegerDigits: config.ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
+  mailEnabled: config.MAIL_ENABLED,
   adminRates: {
     horizonMs: config.ADMIN_RATE_SCHEDULE_HORIZON_MS,
     previewTtlMs: config.ADMIN_RATE_PREVIEW_TTL_MS,

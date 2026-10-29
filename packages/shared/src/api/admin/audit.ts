@@ -43,6 +43,7 @@ export const auditActionSchema = z.enum([
   'unassigned_unignore',
   'cdr_delete',
   'credential_bootstrap',
+  'alert_settings_update',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 export const auditChangeSchema = z.strictObject({
@@ -65,6 +66,8 @@ export const auditChangeSchema = z.strictObject({
     'currency',
     'balance',
     'callCount',
+    'alertRecipients',
+    'digestMinutes',
   ]),
   before: z.union([z.string(), z.array(z.string()), z.null()]),
   after: z.union([z.string(), z.array(z.string()), z.null()]),
@@ -93,6 +96,7 @@ export const auditTargetKindSchema = z.enum([
   'admin',
   'statement',
   'unassigned_batch',
+  'alert_settings',
 ]);
 const envelopeFields = {
   id: z.uuid(),
@@ -249,6 +253,11 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
     errorCode: z.enum(credentialBootstrapErrorCodes).nullable(),
     revokedSessions: z.int().nonnegative(),
   }),
+  /**
+   * 系统告警设置（阶段 9）：全局单行，没有自己的 uuid，target 取本条审计自身的 id，tenantId 为空。
+   * changes 含接收邮箱与汇总间隔的前后值（管理员自己的运营邮箱，写入日志可接受）；version 是保存后的版本。
+   */
+  auditVariant('alert_settings_update', { version: z.int().positive() }),
 ]);
 export const auditContentSchema = z.discriminatedUnion('action', [
   auditPayloadSchema.options[0].pick({ action: true, content: true }),
