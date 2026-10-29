@@ -34,7 +34,8 @@ test('assigns the ABC01 group to ABC001: 324 rows charged 58.35, 2 without a rat
     .click();
   await page.getByRole('button', { name: '归属到租户' }).click();
   const dialog = page.getByRole('dialog', { name: '归属到租户' });
-  await dialog.getByRole('radio', { name: /ABC001/ }).check();
+  await dialog.getByRole('combobox', { name: /^归属到租户/ }).click();
+  await page.getByRole('option', { name: /ABC001/ }).click();
   await expect(dialog).toContainText('实际归属324 条');
   await expect(dialog).toContainText('扣费合计¥58.35');
   await expect(dialog).toContainText('匹配不到费率2 条');

@@ -7,7 +7,7 @@ import type {
 } from '@fs-billing/shared';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { Badge } from '../../../components/ui/badge';
-import { Alert } from '../../../components/ui/alert';
+import { Alert, AlertDescription } from '../../../components/ui/alert';
 import {
   AccountStatusDialog,
   ResetPasswordDialog,
@@ -302,14 +302,18 @@ export function PortalTab({
       {change ? <StatusChangeNotice change={change} /> : null}
       {tenantDisabled ? (
         <Alert variant="muted" role="note" className="px-3.5">
-          <span className="font-semibold">租户已停用</span>
-          ，客户暂时无法登录客户门户。门户账号本身的状态不受影响，租户启用后即可恢复登录。
+          <AlertDescription>
+            <span className="font-semibold">租户已停用</span>
+            ，客户暂时无法登录客户门户。门户账号本身的状态不受影响，租户启用后即可恢复登录。
+          </AlertDescription>
         </Alert>
       ) : null}
       {account?.status === 'disabled' ? (
         <Alert variant="muted" role="note" className="px-3.5">
-          <span className="font-semibold">门户账号已停用</span>
-          ，客户无法登录客户门户。呼叫与计费不受影响。
+          <AlertDescription>
+            <span className="font-semibold">门户账号已停用</span>
+            ，客户无法登录客户门户。呼叫与计费不受影响。
+          </AlertDescription>
         </Alert>
       ) : null}
       <section

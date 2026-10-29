@@ -1,4 +1,4 @@
-import { useDeferredValue, useId, useRef, useState } from 'react';
+import { useDeferredValue, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type {
@@ -7,8 +7,16 @@ import type {
   AdminUnassignedPreviewResponse,
   UnassignedSelection,
 } from '@fs-billing/shared';
+import { ChevronDownIcon, CheckIcon } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
-import { Input } from '../ui/input';
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Alert } from '../ui/alert';
 import {
   apiQuery,
@@ -337,6 +345,7 @@ function AssignForm({
         tagLabel={tagLabel}
         suggested={suggested}
         tenantId={flow.tenantId}
+        previewTenant={preview?.tenant ?? null}
         disabled={submitting}
         onPick={onPick}
       />
@@ -568,21 +577,32 @@ function AssignResult({
   );
 }
 
+type PickedTenant = { code: string; name: string; currency: string | null };
+
+/**
+ * 选租户（运营稿 3d、3e、4b）：单行下拉，点开后是「搜索编码或名称」加租户列表，
+ * 相近租户（标签拼写相近）置顶并带「与标签 X 相近」，其余按币种标注。
+ * 搜索走服务端（租户多时只取前 100 个），所以 Command 关掉自带的过滤。
+ */
 function TenantPicker({
   tagLabel,
   suggested,
   tenantId,
+  previewTenant,
   disabled,
   onPick,
 }: {
   tagLabel: string | null;
   suggested: readonly SuggestedTenant[];
   tenantId: string | null;
+  /** 预览返回的租户（含币种）；相近租户自带的数据没有币种，触发器的币种以它为准补上。 */
+  previewTenant: { id: string; currency: string } | null;
   disabled: boolean;
   onPick: (tenantId: string) => void;
 }) {
-  const id = useId();
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [picked, setPicked] = useState<PickedTenant | null>(null);
   const deferred = useDeferredValue(search.trim());
   const tenants = useQuery(
     apiQuery('adminTenants', {
@@ -607,98 +627,155 @@ function TenantPicker({
     tenants.data !== undefined &&
     tenants.data.pagination.total > tenants.data.items.length;
   const hint = tagLabel ? `与${tagLabel} 相近` : '相近租户';
+  const currencyOf = (id: string) =>
+    tenants.data?.items.find((tenant) => tenant.id === id)?.currency ?? null;
+  const choose = (id: string, tenant: PickedTenant) => {
+    setPicked(tenant);
+    setOpen(false);
+    setSearch('');
+    // 再点一次已选的租户不重新预览。
+    if (id !== tenantId) onPick(id);
+  };
+  const currency =
+    picked?.currency ??
+    (previewTenant && previewTenant.id === tenantId
+      ? previewTenant.currency
+      : null);
+  const value = tenantId && picked ? pickedText({ ...picked, currency }) : null;
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-[13px] font-medium">归属到租户</span>
-      <Input
-        type="search"
-        aria-label="搜索编码或名称"
-        placeholder="搜索编码或名称"
-        maxLength={200}
-        value={search}
-        disabled={disabled}
-        onChange={(event) => setSearch(event.target.value)}
-        className="h-10 text-sm"
-      />
-      {suggestedShown.length > 0 ? (
-        <div
-          role="radiogroup"
-          aria-label="相近租户"
-          className="flex flex-col rounded-lg border border-border"
-        >
-          {suggestedShown.map((tenant) => (
-            <TenantOption
-              key={tenant.id}
-              name={id}
-              checked={tenant.id === tenantId}
-              disabled={disabled}
-              code={tenant.code}
-              label={tenant.name}
-              hint={hint}
-              hintTone="warn"
-              onPick={() => onPick(tenant.id)}
+    <div className="flex flex-col gap-1.5 text-[13px] font-medium">
+      <span>归属到租户</span>
+      <Popover
+        modal
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setSearch('');
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            aria-label={`归属到租户：${value ?? '选择租户'}`}
+            disabled={disabled}
+            className={cn(
+              'h-11 w-full justify-between px-3 font-normal md:h-10',
+              open && 'border-primary ring-[3px] ring-brand-soft',
+            )}
+          >
+            <span
+              className={cn(
+                'min-w-0 truncate',
+                value ? undefined : 'text-muted-foreground',
+              )}
+            >
+              {value ?? '选择租户'}
+            </span>
+            <ChevronDownIcon
+              aria-hidden
+              className="size-3.5 shrink-0 text-muted-foreground"
             />
-          ))}
-        </div>
-      ) : null}
-      {tenants.isError ? (
-        <ProblemAlert
-          error={tenants.error}
-          onRefresh={() => void tenants.refetch()}
-        />
-      ) : !tenants.data ? (
-        <Skeleton
-          aria-busy="true"
-          aria-label="租户加载中"
-          className="h-10 rounded-lg"
-        />
-      ) : others.length > 0 ? (
-        <div
-          role="radiogroup"
-          aria-label="全部租户"
-          className="flex max-h-[220px] flex-col overflow-auto rounded-lg border border-border"
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-(--radix-popover-trigger-width) p-1 font-normal"
         >
-          {others.map((tenant) => (
-            <TenantOption
-              key={tenant.id}
-              name={id}
-              checked={tenant.id === tenantId}
-              disabled={disabled}
-              code={tenant.code}
-              label={tenant.name}
-              hint={tenant.currency}
-              hintTone="muted"
-              onPick={() => onPick(tenant.id)}
+          <Command shouldFilter={false} label="搜索编码或名称">
+            <CommandInput
+              aria-label="搜索编码或名称"
+              placeholder="搜索编码或名称"
+              maxLength={200}
+              value={search}
+              onValueChange={setSearch}
             />
-          ))}
-        </div>
-      ) : suggestedShown.length === 0 ? (
-        <span className="rounded-lg border border-border px-3 py-4 text-center text-[13px] text-muted-foreground">
-          {deferred ? '没有匹配的租户' : '没有租户'}
-        </span>
-      ) : null}
-      {more ? (
-        <span className="text-xs text-muted-foreground">
-          只显示前 {tenantPageSize} 个，请搜索编码或名称
-        </span>
-      ) : null}
+            <CommandList className="max-h-[220px]">
+              {suggestedShown.length > 0 ? (
+                <CommandGroup aria-label="相近租户">
+                  {suggestedShown.map((tenant) => (
+                    <TenantOption
+                      key={tenant.id}
+                      checked={tenant.id === tenantId}
+                      code={tenant.code}
+                      label={tenant.name}
+                      hint={hint}
+                      hintTone="warn"
+                      onPick={() =>
+                        choose(tenant.id, {
+                          code: tenant.code,
+                          name: tenant.name,
+                          currency: currencyOf(tenant.id),
+                        })
+                      }
+                    />
+                  ))}
+                </CommandGroup>
+              ) : null}
+              {tenants.isError ? (
+                <ProblemAlert
+                  error={tenants.error}
+                  onRefresh={() => void tenants.refetch()}
+                />
+              ) : !tenants.data ? (
+                <Skeleton
+                  aria-busy="true"
+                  aria-label="租户加载中"
+                  className="m-1 h-10 rounded-lg"
+                />
+              ) : others.length > 0 ? (
+                <CommandGroup aria-label="全部租户">
+                  {others.map((tenant) => (
+                    <TenantOption
+                      key={tenant.id}
+                      checked={tenant.id === tenantId}
+                      code={tenant.code}
+                      label={tenant.name}
+                      hint={tenant.currency}
+                      hintTone="muted"
+                      onPick={() =>
+                        choose(tenant.id, {
+                          code: tenant.code,
+                          name: tenant.name,
+                          currency: tenant.currency,
+                        })
+                      }
+                    />
+                  ))}
+                </CommandGroup>
+              ) : suggestedShown.length === 0 ? (
+                <p className="m-0 px-3 py-4 text-center text-[13px] text-muted-foreground">
+                  {deferred ? '没有匹配的租户' : '没有租户'}
+                </p>
+              ) : null}
+            </CommandList>
+            {more ? (
+              <p className="m-0 border-t border-border px-3 pt-2 pb-1 text-xs font-normal text-muted-foreground">
+                只显示前 {tenantPageSize} 个，请搜索编码或名称
+              </p>
+            ) : null}
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
 
+/** 触发器里的已选租户：编码、全角空格、名称、（币种），如 ABC001 深圳市某某科技有限公司（CNY）。 */
+function pickedText(tenant: PickedTenant) {
+  return `${tenant.code}${String.fromCharCode(0x3000)}${tenant.name}${tenant.currency ? `（${tenant.currency}）` : ''}`;
+}
+
 function TenantOption({
-  name,
   checked,
-  disabled,
   code,
   label,
   hint,
   hintTone,
   onPick,
 }: {
-  name: string;
   checked: boolean;
-  disabled: boolean;
   code: string;
   label: string;
   hint: string;
@@ -706,15 +783,13 @@ function TenantOption({
   onPick: () => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2.5 border-t border-border px-3 py-2 text-[13px] first:border-t-0 has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring">
-      <input
-        type="radio"
-        name={name}
-        checked={checked}
-        disabled={disabled}
-        onChange={onPick}
-        className="accent-primary"
-      />
+    <CommandItem
+      // 搜索由服务端完成；value 只用来让 cmdk 区分每一项。
+      value={`${code} ${label}`}
+      data-checked={checked || undefined}
+      onSelect={onPick}
+      className="h-10 gap-2.5 px-2.5 text-sm data-[checked]:bg-muted"
+    >
       <span className="font-mono">{code}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span
@@ -725,6 +800,9 @@ function TenantOption({
       >
         {hint}
       </span>
-    </label>
+      {checked ? (
+        <CheckIcon aria-label="已选" className="size-4 text-primary" />
+      ) : null}
+    </CommandItem>
   );
 }

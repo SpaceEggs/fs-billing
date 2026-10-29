@@ -2,6 +2,12 @@ import { StrictMode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AdminCdrDeletionMonth } from '@fs-billing/shared';
 import { apiError } from '../../test/app';
@@ -107,13 +113,14 @@ const json = (status: number, body: unknown) =>
 
 function renderDialog(
   handlers?: {
-    months?: () => AdminCdrDeletionMonth[];
+    months?: (year: number) => AdminCdrDeletionMonth[];
     post?: (
       call: number,
     ) => { status: number; body: unknown } | { network: true };
   },
-  options?: { strict?: boolean },
+  options?: { strict?: boolean; tenant?: typeof tenant },
 ) {
+  const subject = options?.tenant ?? tenant;
   const posts: unknown[] = [];
   let gets = 0;
   vi.stubGlobal(
@@ -133,7 +140,7 @@ function renderDialog(
               name: tenant.name,
             },
             year,
-            months: handlers?.months?.() ?? defaultMonths(),
+            months: handlers?.months?.(year) ?? defaultMonths(),
           }),
         );
       }
@@ -151,11 +158,19 @@ function renderDialog(
       queries: { retry: false, refetchOnWindowFocus: false },
     },
   });
-  const view = (
-    <QueryClientProvider client={client}>
-      <CdrDeleteDialog tenant={tenant} open onOpenChange={() => {}} />
-    </QueryClientProvider>
-  );
+  // 完成页的「查看」是路由 Link，需要路由上下文。
+  const rootRoute = createRootRoute({
+    component: () => (
+      <QueryClientProvider client={client}>
+        <CdrDeleteDialog tenant={subject} open onOpenChange={() => {}} />
+      </QueryClientProvider>
+    ),
+  });
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  const view = <RouterProvider router={router} />;
   render(options?.strict ? <StrictMode>{view}</StrictMode> : view);
   return { posts, gets: () => gets };
 }
@@ -171,6 +186,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** 打开后预选最近一个可删除的月份，不用点开月份选择。 */
+async function preselected(month = '2026年8月') {
+  return await screen.findByRole('button', { name: `开始月份：${month}` });
+}
+
 async function choose(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole('button', { name }));
 }
@@ -179,9 +199,7 @@ describe('cdr delete dialog', () => {
   it('disables the current, unsettled, future, and other non-deletable months', async () => {
     const user = userEvent.setup();
     renderDialog();
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
+    await user.click(await preselected());
     const dialog = screen.getByRole('dialog', { name: '删除话单' });
     const month = (name: string) =>
       within(dialog).getByRole('button', { name });
@@ -204,11 +222,32 @@ describe('cdr delete dialog', () => {
 
   it('previews the count and range, then deletes only after the exact code', async () => {
     const user = userEvent.setup();
-    const { posts } = renderDialog();
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
-    await choose(user, '2026年8月，9,642 条');
+    let deleted = false;
+    const { posts } = renderDialog({
+      months: () =>
+        defaultMonths(
+          deleted
+            ? {
+                '2026-08': {
+                  state: 'deleted',
+                  cdrCount: 9642,
+                  deleted: {
+                    at: '2026-09-29T07:42:10.000Z',
+                    by: { id: tenant.id, name: '王敏' },
+                  },
+                },
+              }
+            : {},
+        ),
+      post: () => {
+        deleted = true;
+        return {
+          status: 200,
+          body: deletedBody([{ month: '2026-08', deleted: 9642 }], 9642),
+        };
+      },
+    });
+    await preselected();
     const range = screen.getByText(
       '时间范围 2026-08-12 00:00:00 至 2026-08-31 23:59:59（北京时间）',
     );
@@ -239,13 +278,27 @@ describe('cdr delete dialog', () => {
     expect(
       screen.getByText('ABC001 · 2026年8月（2026-08-12 至 2026-08-31）'),
     ).toBeVisible();
+    // 设计稿 4e：信息行。操作人与时间是服务端记录的删除人与时间（北京时间），取自刷新后的月份列表。
+    const rows = screen.getByRole('status');
     expect(
-      screen.getByText(/余额 -¥35\.20 和 2026年8月 月账单不受影响/),
-    ).toBeVisible();
-    expect(screen.getByRole('link', { name: '查看' })).toHaveAttribute(
+      within(rows).getByText('操作日志').nextElementSibling,
+    ).toHaveTextContent('已自动记入 · 查看');
+    expect(
+      within(rows).getByText('操作人').nextElementSibling,
+    ).toHaveTextContent('王敏 · 2026-09-29 15:42:10');
+    expect(
+      within(rows).getByText('不受影响').nextElementSibling,
+    ).toHaveTextContent('余额 -¥35.20、2026年8月 月账单');
+    const logLink = within(rows).getByRole('link', { name: '查看' });
+    expect(logLink).toHaveAttribute(
       'href',
       `/admin/audit-logs?tenantId=${tenant.id}&label=cdr_delete`,
     );
+    // 完成页没有标题栏 ×，只剩「完成」。
+    expect(
+      screen.queryByRole('button', { name: '关闭对话框' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '完成' })).toBeVisible();
     expect(posts).toEqual([
       {
         fromMonth: '2026-08',
@@ -268,14 +321,8 @@ describe('cdr delete dialog', () => {
           },
         }),
     });
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
+    await user.click(await preselected());
     await choose(user, '2026年6月，10 条');
-    await user.click(
-      screen.getByRole('button', { name: '结束月份：2026年6月' }),
-    );
-    await choose(user, '2026年8月，9,642 条');
     expect(
       screen.getByText('2026年7月不可选：本月账单尚未生成，不可选'),
     ).toBeVisible();
@@ -304,10 +351,7 @@ describe('cdr delete dialog', () => {
         };
       },
     });
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
-    await choose(user, '2026年8月，9,642 条');
+    await preselected();
     await user.type(
       screen.getByRole('textbox', { name: /请输入租户编码/ }),
       'ABC001',
@@ -375,14 +419,9 @@ describe('cdr delete dialog', () => {
         };
       },
     });
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
+    // 9 月也可删除，打开时预选的是最近的 9 月：开始月份改选 8 月，范围是 8 月至 9 月。
+    await user.click(await preselected('2026年9月'));
     await choose(user, '2026年8月，9,642 条');
-    await user.click(
-      screen.getByRole('button', { name: '结束月份：2026年8月' }),
-    );
-    await choose(user, '2026年9月，500 条');
     expect(
       screen.getByText(/时间范围 2026-08-12/).parentElement,
     ).toHaveTextContent(
@@ -433,10 +472,7 @@ describe('cdr delete dialog', () => {
   it('does not trim the typed code', async () => {
     const user = userEvent.setup();
     const { posts } = renderDialog();
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
-    await choose(user, '2026年8月，9,642 条');
+    await preselected();
     const code = screen.getByRole('textbox', { name: /请输入租户编码/ });
     await user.type(code, ' ABC001 ');
     expect(code).toHaveValue(' ABC001 ');
@@ -476,14 +512,9 @@ describe('cdr delete dialog', () => {
             }
           : { status: 500, body: apiError('INTERNAL_ERROR') },
     });
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
+    // 9 月也可删除，打开时预选的是最近的 9 月：开始月份改选 8 月，范围是 8 月至 9 月。
+    await user.click(await preselected('2026年9月'));
     await choose(user, '2026年8月，9,642 条');
-    await user.click(
-      screen.getByRole('button', { name: '结束月份：2026年8月' }),
-    );
-    await choose(user, '2026年9月，500 条');
     await user.type(
       screen.getByRole('textbox', { name: /请输入租户编码/ }),
       'ABC001',
@@ -521,10 +552,7 @@ describe('cdr delete dialog', () => {
     const { posts, gets } = renderDialog({
       post: () => ({ network: true }),
     });
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
-    await choose(user, '2026年8月，9,642 条');
+    await preselected();
     await user.type(
       screen.getByRole('textbox', { name: /请输入租户编码/ }),
       'ABC001',
@@ -540,10 +568,7 @@ describe('cdr delete dialog', () => {
   it('shows the completion page after a delete under StrictMode', async () => {
     const user = userEvent.setup();
     renderDialog(undefined, { strict: true });
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
-    await choose(user, '2026年8月，9,642 条');
+    await preselected();
     await user.type(
       screen.getByRole('textbox', { name: /请输入租户编码/ }),
       'ABC001',
@@ -573,14 +598,9 @@ describe('cdr delete dialog', () => {
       },
       { strict: true },
     );
-    await user.click(
-      await screen.findByRole('button', { name: '开始月份：选择月份' }),
-    );
+    // 9 月也可删除，打开时预选的是最近的 9 月：开始月份改选 8 月，范围是 8 月至 9 月。
+    await user.click(await preselected('2026年9月'));
     await choose(user, '2026年8月，9,642 条');
-    await user.click(
-      screen.getByRole('button', { name: '结束月份：2026年8月' }),
-    );
-    await choose(user, '2026年9月，500 条');
     await user.type(
       screen.getByRole('textbox', { name: /请输入租户编码/ }),
       'ABC001',
@@ -593,5 +613,209 @@ describe('cdr delete dialog', () => {
     expect(alert).toHaveTextContent('尚未删除：2026年9月');
     expect(alert).toHaveTextContent(failureMessage);
     expect(screen.getByRole('button', { name: '重试剩余月份' })).toBeVisible();
+  });
+
+  it('shows the preview and the code field as soon as it opens, on the latest deletable month', async () => {
+    renderDialog();
+    // 8 月是最近一个可删除的月份（9、10 月账单未生成，11、12 月尚未到达）；开始、结束都预选它。
+    await preselected();
+    expect(
+      screen.getByRole('button', { name: '结束月份：2026年8月' }),
+    ).toBeVisible();
+    const range = await screen.findByText(
+      '时间范围 2026-08-12 00:00:00 至 2026-08-31 23:59:59（北京时间）',
+    );
+    expect(range.parentElement).toHaveTextContent(
+      '将删除 ABC001 在 2026年8月 的 9,642 条话单',
+    );
+    expect(
+      screen.getByRole('button', { name: '删除 9,642 条话单' }),
+    ).toBeDisabled();
+  });
+
+  it('follows the month rule when the latest month is not deletable', async () => {
+    renderDialog({
+      months: () =>
+        defaultMonths({
+          '2026-08': { state: 'deleted', deleted: { at: null, by: null } },
+          '2026-06': { state: 'deletable', cdrCount: 10, blockedReasons: [] },
+        }),
+    });
+    await preselected('2026年6月');
+    expect(
+      await screen.findByRole('button', { name: '删除 10 条话单' }),
+    ).toBeDisabled();
+  });
+
+  it('looks back to the previous year when the current year has nothing deletable', async () => {
+    const earlier = { ...tenant, createdAt: '2025-03-02T02:31:02.000Z' };
+    renderDialog(
+      {
+        months: (year) =>
+          year === 2025
+            ? Array.from({ length: 12 }, (_, index) => {
+                const month = `2025-${String(index + 1).padStart(2, '0')}`;
+                return index === 10
+                  ? monthRow(month, 'deletable', { cdrCount: 7, statementId })
+                  : monthRow(month, index < 2 ? 'before_opening' : 'deleted', {
+                      deleted: index < 2 ? null : { at: null, by: null },
+                    });
+              })
+            : Array.from({ length: 12 }, (_, index) =>
+                monthRow(
+                  `2026-${String(index + 1).padStart(2, '0')}`,
+                  index < 9 ? 'deleted' : 'no_statement',
+                  { deleted: index < 9 ? { at: null, by: null } : null },
+                ),
+              ),
+      },
+      { tenant: earlier },
+    );
+    await preselected('2025年11月');
+    expect(
+      await screen.findByRole('button', { name: '删除 7 条话单' }),
+    ).toBeDisabled();
+  });
+
+  it('does not search before the year the tenant was created', async () => {
+    const { gets } = renderDialog({
+      months: () =>
+        defaultMonths({
+          '2026-08': { state: 'deleted', deleted: { at: null, by: null } },
+        }),
+    });
+    expect(
+      await screen.findByText(
+        '请选择开始和结束月份，选择后显示将删除的话单数量',
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '开始月份：选择月份' }),
+    ).toBeVisible();
+    // 租户 2026-08 开户：只查了 2026 年，没有往前翻。
+    expect(gets()).toBe(1);
+  });
+
+  it('looks back at most two earlier years, then opens with nothing preselected instead of loading on', async () => {
+    const old = { ...tenant, createdAt: '2015-03-02T02:31:02.000Z' };
+    const years: number[] = [];
+    const { gets } = renderDialog(
+      {
+        months: (year) => {
+          years.push(year);
+          return Array.from({ length: 12 }, (_, index) =>
+            monthRow(
+              `${year}-${String(index + 1).padStart(2, '0')}`,
+              'deleted',
+              { deleted: { at: null, by: null } },
+            ),
+          );
+        },
+      },
+      { tenant: old },
+    );
+    // 当年、前一年、再前一年；2015 年开户也不再往前翻。
+    expect(
+      await screen.findByText(
+        '请选择开始和结束月份，选择后显示将删除的话单数量',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText('正在加载可删除的月份…')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: '开始月份：选择月份' }),
+    ).toBeVisible();
+    expect(gets()).toBe(3);
+    expect([...new Set(years)].sort()).toEqual([2024, 2025, 2026]);
+  });
+
+  it('explains the months that cannot be chosen under the grid', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await user.click(await preselected());
+    const reasons = await screen.findByTestId('month-reasons');
+    // 设计稿 4a：当前月写明几号生成后可选；末句说明只能选已生成月账单的月份和开户日。
+    expect(reasons).toHaveTextContent(
+      '10月不可选：本月账单尚未生成（2026-11-01 生成后可选）。',
+    );
+    expect(reasons).toHaveTextContent('9月不可选：账单未生成。');
+    expect(reasons).toHaveTextContent('5月不可选：该月话单已删除。');
+    expect(reasons).toHaveTextContent(
+      '3月不可选：账单待重新生成、有话单尚未扣费。',
+    );
+    expect(reasons).toHaveTextContent(
+      '只能选择已生成月账单的月份；2026-08-12 开户前无话单。',
+    );
+    // 「未开户」「尚未到达」由格子里的小字说明，不重复列。
+    expect(reasons).not.toHaveTextContent('1月不可选');
+    expect(reasons).not.toHaveTextContent('11月不可选');
+  });
+
+  describe('on a phone', () => {
+    beforeEach(() => {
+      vi.stubGlobal('matchMedia', () => ({
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+    });
+
+    it('picks a month in a bottom sheet and applies it only on 确定', async () => {
+      const user = userEvent.setup();
+      renderDialog({
+        months: () =>
+          defaultMonths({
+            '2026-06': { state: 'deletable', cdrCount: 10, blockedReasons: [] },
+          }),
+      });
+      await user.click(await preselected());
+      // 设计稿 4f：单独的「选择开始月份」面板，带不可选原因和「确定」。
+      const sheet = await screen.findByRole('dialog', { name: '选择开始月份' });
+      // 对话框标题（读屏用）之外，面板里还有一行可见标题。
+      expect(
+        within(sheet).getAllByRole('heading', { name: '选择开始月份' }).at(-1),
+      ).toBeVisible();
+      expect(within(sheet).getByTestId('month-reasons')).toHaveTextContent(
+        '10月不可选：本月账单尚未生成（2026-11-01 生成后可选）。',
+      );
+      const confirm = within(sheet).getByRole('button', { name: '确定' });
+      // 点月份只改面板里的选中项，表单里的月份不变。
+      await user.click(
+        within(sheet).getByRole('button', { name: '2026年6月，10 条' }),
+      );
+      expect(
+        within(sheet).getByRole('button', { name: '2026年6月，10 条' }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      // 面板打开时表单被读屏隐藏，用 hidden 找到它：月份还是 8 月。
+      expect(
+        screen.getByRole('button', {
+          name: '开始月份：2026年8月',
+          hidden: true,
+        }),
+      ).toBeInTheDocument();
+      await user.click(confirm);
+      expect(
+        screen.queryByRole('dialog', { name: '选择开始月份' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: '开始月份：2026年6月' }),
+      ).toBeVisible();
+    });
+
+    it('keeps the old month when the sheet is dismissed without 确定', async () => {
+      const user = userEvent.setup();
+      renderDialog();
+      await user.click(await preselected());
+      const sheet = await screen.findByRole('dialog', { name: '选择开始月份' });
+      await user.click(
+        within(sheet).getByRole('button', { name: '2026年8月，9,642 条' }),
+      );
+      await user.keyboard('{Escape}');
+      expect(
+        screen.queryByRole('dialog', { name: '选择开始月份' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: '开始月份：2026年8月' }),
+      ).toBeVisible();
+    });
   });
 });

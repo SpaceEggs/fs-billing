@@ -19,7 +19,7 @@ import {
   TabsTrigger,
 } from '../../components/ui/tabs';
 import { Checkbox } from '../../components/ui/checkbox';
-import { Alert } from '../../components/ui/alert';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign-dialog';
 import { UnassignedIgnoreDialog } from '../../components/admin/unassigned-ignore-dialog';
 import { RequestFailure } from '../../components/admin/problem-alert';
@@ -40,6 +40,7 @@ import type { UnassignedSearch } from '../../lib/admin-search';
 import { formatDateTime } from '../../lib/format';
 import { formatDuration } from '../../lib/duration';
 import { cn } from '../../lib/utils';
+import { useIsDesktop } from '../../lib/use-is-desktop';
 
 const pageSize = 50;
 
@@ -120,6 +121,7 @@ function useUnassignedSearch() {
 /** 未归属话单（pages.md §3.9）：待处理按标签分组，归属后补扣费，或填写原因后忽略。 */
 export function AdminUnassignedPage({ identity }: { identity: Identity }) {
   const { search, update } = useUnassignedSearch();
+  const isDesktop = useIsDesktop();
   const queryClient = useQueryClient();
   const unignoreMutation = useApiMutation('adminUnassignedUnignore');
   const tab: 'pending' | 'ignored' =
@@ -260,18 +262,21 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
   }
 
   const pendingEmpty = summary.data?.pending === 0 && tab === 'pending';
+  // 手机操作栏与页面底部留白共用这一个条件：只有操作栏真的渲染时才留白。
+  const showBar =
+    !isDesktop &&
+    tab === 'pending' &&
+    summary.data !== undefined &&
+    summary.data.pending > 0 &&
+    selection.kind !== 'none';
 
   const panelContent = (
     <>
       <PageStatus notice={notice} onDismiss={() => setNotice(null)} />
+      <BillingTenantHint />
       {pendingEmpty ? <PendingEmpty /> : null}
       {tab === 'pending' && summary.data && summary.data.pending > 0 ? (
         <>
-          <Alert variant="warning" className="m-0 px-3.5 text-foreground">
-            <span className="font-semibold text-warn">提示</span> 请同时检查
-            FreeSWITCH 中的 <code className="font-mono">billing_tenant</code>{' '}
-            配置，否则新话单会继续进入此处。
-          </Alert>
           {groups.isError && !groups.data ? (
             <QueryError
               title="分组加载失败"
@@ -339,15 +344,26 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
               >
                 清除选择
               </Button>
-              <span className="hidden flex-1 md:block" />
-              <Button variant="outline" size="sm" onClick={openIgnore}>
-                忽略
-              </Button>
-              <Button size="sm" onClick={openAssign}>
-                归属到租户
-              </Button>
+              {isDesktop ? (
+                <>
+                  <span className="flex-1" />
+                  <Button variant="outline" size="sm" onClick={openIgnore}>
+                    忽略
+                  </Button>
+                  <Button size="sm" onClick={openAssign}>
+                    归属到租户
+                  </Button>
+                </>
+              ) : null}
             </div>
           )}
+          {showBar ? (
+            <SelectionBar
+              count={selectedCount}
+              onIgnore={openIgnore}
+              onAssign={openAssign}
+            />
+          ) : null}
         </>
       ) : null}
       {showList && !listed && list.isError ? (
@@ -446,7 +462,13 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
                 value={value}
                 forceMount
                 hidden={value !== tab}
-                className="mt-5 flex flex-col gap-5"
+                className={cn(
+                  'mt-5 flex flex-col gap-5',
+                  // 手机的操作栏固定在底部：给列表末尾留出它的高度（含底部安全区），最后一张卡片不被盖住。
+                  value === tab &&
+                    showBar &&
+                    'pb-[calc(6rem+env(safe-area-inset-bottom))]',
+                )}
               >
                 {value === tab ? panelContent : null}
               </TabsContent>
@@ -491,6 +513,53 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
         />
       ) : null}
     </AppShell>
+  );
+}
+
+/**
+ * 手机的操作栏（运营稿 4a）：固定在视口底部，「忽略」占一份、「归属到租户 (n)」占两份。
+ * 底部留白取 24 px 与系统安全区里较大的一个。对话框（z-50）盖在它上面。
+ */
+function SelectionBar({
+  count,
+  onIgnore,
+  onAssign,
+}: {
+  count: number;
+  onIgnore: () => void;
+  onAssign: () => void;
+}) {
+  return (
+    <section
+      aria-label="批量操作"
+      className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-[1fr_2fr] gap-2 border-t border-border bg-card px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+    >
+      <Button variant="outline" className="h-11 text-[15px]" onClick={onIgnore}>
+        忽略
+      </Button>
+      <Button className="h-11 text-[15px]" onClick={onAssign}>
+        归属到租户 ({countText(count)})
+      </Button>
+    </section>
+  );
+}
+
+/**
+ * 提示条（运营稿 3a、3g、3h）：待处理、已忽略与清空后都显示。
+ * 文字、行内编码和后续文字必须在同一个 AlertDescription 里一起排版，不能各自作为 Alert 的直接子元素（会各占一行）。
+ */
+function BillingTenantHint() {
+  return (
+    <Alert variant="warning" className="m-0 px-3.5">
+      <AlertDescription className="text-foreground!">
+        <span className="font-semibold text-warn">提示</span> 请同时检查
+        FreeSWITCH 中的{' '}
+        <code className="rounded border border-warn-border bg-background px-1.5 py-px font-mono">
+          billing_tenant
+        </code>{' '}
+        配置，否则新话单会继续进入此处。
+      </AlertDescription>
+    </Alert>
   );
 }
 

@@ -36,6 +36,7 @@ export function ModalDialog({
   returnFocus,
   fallbackFocus,
   plainOnDesktop = false,
+  showClose = true,
 }: {
   open: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -50,6 +51,8 @@ export function ModalDialog({
    * 关闭靠「取消」。手机底部面板保留遮罩与 ×。默认关闭，其他对话框不变。
    */
   plainOnDesktop?: boolean;
+  /** 设为 false 不显示标题栏 ×（完成页只留「完成」按钮）；Esc 与点击遮罩仍照常关闭。 */
+  showClose?: boolean;
 }) {
   const dismissible = onOpenChange !== undefined;
   // 每次打开时（首次挂载即打开，或 open 由 false 变 true）在渲染中记下打开者，此时焦点尚未移入对话框。
@@ -103,7 +106,7 @@ export function ModalDialog({
           </DialogDescription>
         ) : null}
         {children}
-        {dismissible ? (
+        {dismissible && showClose ? (
           // 放在内容之后：打开时焦点仍落在第一个字段或按钮上。
           <DialogClose
             aria-label="关闭对话框"

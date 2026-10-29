@@ -223,14 +223,8 @@ describe('admin tenant CDR tab', () => {
     await screen.findByRole('table');
     await user.click(screen.getAllByRole('button', { name: '删除话单' })[0]!);
     const dialog = await screen.findByRole('dialog', { name: '删除话单' });
-    await user.click(
-      within(dialog).getByRole('button', { name: '开始月份：选择月份' }),
-    );
-    await user.click(
-      await within(dialog).findByRole('button', {
-        name: '2026年8月，9,642 条',
-      }),
-    );
+    // 打开时预选最近一个可删除的月份，预览随即显示。
+    await within(dialog).findByRole('button', { name: '开始月份：2026年8月' });
     await user.type(
       within(dialog).getByRole('textbox', { name: /请输入租户编码/ }),
       'ABC001',
@@ -259,7 +253,7 @@ describe('admin tenant CDR tab', () => {
       await screen.findByRole('dialog', { name: '删除话单' }),
     ).toBeVisible();
     expect(
-      screen.getByRole('button', { name: '开始月份：选择月份' }),
+      await screen.findByRole('button', { name: '开始月份：2026年8月' }),
     ).toBeVisible();
   });
 
