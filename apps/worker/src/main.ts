@@ -6,7 +6,7 @@ import { startRawArchive } from './archive.js';
 import { mailSettingsOf, workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeCdr } from './charge.js';
-import { startNotifyJobs } from './mail.js';
+import { startNotifyJobs } from './notify.js';
 import { startPartitionMaintenance } from './maintenance.js';
 import { requestStatementCatchUp, startStatementJobs } from './statements.js';
 

@@ -29,14 +29,16 @@ import {
 } from '../../../packages/db/test/support.js';
 import type { MailSettings } from './config.js';
 import {
-  NOTIFY_CRON,
-  NOTIFY_TIMEZONE,
   createMailTransport,
   dispatchOutbox,
-  runNotifyTick,
-  startNotifyJobs,
   type MailTransport,
 } from './mail.js';
+import {
+  NOTIFY_CRON,
+  NOTIFY_TIMEZONE,
+  runNotifyTick,
+  startNotifyJobs,
+} from './notify.js';
 import { runMailRequeue, runMailTest } from './mail-cli.js';
 import { NOTIFY_QUEUE, createBoss, installQueue } from './queue.js';
 import {
@@ -802,6 +804,9 @@ describe('notify-tick', () => {
         at: T0,
       });
     });
+    // 本用例只测静默窗口和分发：让这条告警不发通知邮件（告警邮件的行为在 notify.db.test.ts），
+    // 认领数就只取决于这里入队的那一封。
+    await owner.pool.query('update system_alerts set notify = false');
     const queued = await enqueue();
     const tick = (minutes: number, quietMinutes: number, mail = settings()) => {
       now = after(T0, minutes * 60);

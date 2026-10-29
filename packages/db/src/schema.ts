@@ -474,6 +474,16 @@ export const systemAlerts = pgTable('system_alerts', {
   notifiedRecoveredAt: at('notified_recovered_at'),
 });
 
+/** 故障告警设置（阶段 9）：单行表（id 恒为 true）。空的 recipients 表示发给所有 active 管理员的登录邮箱。 */
+export const alertSettings = pgTable('alert_settings', {
+  id: boolean('id').primaryKey().default(true),
+  recipients: text('recipients').array().notNull().default([]),
+  digestMinutes: integer('digest_minutes').notNull().default(15),
+  version: integer('version').notNull().default(1),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by'),
+});
+
 export const balanceAlertSettings = pgTable('balance_alert_settings', {
   tenantId: uuid('tenant_id').primaryKey(),
   threshold: numeric('threshold').notNull(),

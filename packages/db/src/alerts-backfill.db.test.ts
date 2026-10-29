@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
+import { queueAlertNotices } from './alert-notify.js';
 import { AlertKeys, raiseAlert, recoverAlert } from './alerts.js';
 import { connect, withSystem, type Connection } from './client.js';
 import { seedDatabase } from './seed.js';
@@ -248,6 +249,62 @@ describe('迁移 0020 的回填', () => {
     ).toEqual([{ occurrences: 2 }]);
   });
 
+  it('a backfilled open alert recovers without a recovery mail', async () => {
+    // 接上一个用例：迁移后的库里还有 notify = false 的未恢复旧告警，开始邮件已标记发过、恢复邮件未发。
+    const at = new Date('2026-10-29T03:00:00.000Z');
+    const tick = (moment: Date) =>
+      withSystem(scratch.db, (tx) => queueAlertNotices(tx, { at: moment }));
+    const outbox = () =>
+      scratch.pool.query<{ template: string }>(
+        "select template from email_outbox where template like 'alert\\_%' order by created_at",
+      );
+    const open = await scratch.pool.query<{ n: number }>(
+      'select count(*)::int as n from system_alerts where recovered_at is null and notify = false',
+    );
+    expect(open.rows[0]!.n).toBeGreaterThan(0);
+    expect(await tick(at)).toMatchObject({ started: 0, digested: 0 });
+    // 把能恢复的旧告警都恢复掉（有键的两条走新逻辑），再多个 tick：一封恢复邮件也没有。
+    for (const [kind, subjectKey] of await scratch.pool
+      .query<{
+        kind: 'statement_mismatch' | 'raw_archive_failed';
+        subject_key: string;
+      }>(
+        'select kind, subject_key from system_alerts where recovered_at is null and subject_key is not null',
+      )
+      .then((result) =>
+        result.rows.map((row) => [row.kind, row.subject_key] as const),
+      ))
+      await withSystem(scratch.db, (tx) =>
+        recoverAlert(tx, { kind, subjectKey, at }),
+      );
+    expect(await tick(new Date(at.getTime() + 60_000))).toMatchObject({
+      recovered: 0,
+    });
+    expect((await outbox()).rows).toEqual([]);
+    // 对照：迁移后新开的告警走完整的开始与恢复邮件。
+    await withSystem(scratch.db, (tx) =>
+      raiseAlert(tx, {
+        kind: 'partition_failed',
+        subjectKey: AlertKeys.partitionMaintenance,
+        description: '分区维护失败',
+        at,
+      }),
+    );
+    await tick(new Date(at.getTime() + 120_000));
+    await withSystem(scratch.db, (tx) =>
+      recoverAlert(tx, {
+        kind: 'partition_failed',
+        subjectKey: AlertKeys.partitionMaintenance,
+        at: new Date(at.getTime() + 180_000),
+      }),
+    );
+    await tick(new Date(at.getTime() + 240_000));
+    expect((await outbox()).rows.map((row) => row.template)).toEqual([
+      'alert_start',
+      'alert_recovered',
+    ]);
+  });
+
   it('migrates an empty database from scratch', async () => {
     const empty = 'fs_billing_alerts_empty';
     await admin.pool.query(`DROP DATABASE IF EXISTS ${empty} WITH (FORCE)`);
@@ -268,8 +325,17 @@ describe('迁移 0020 的回填', () => {
         'system_alerts_open',
         'system_alerts_open_subject',
         'system_alerts_pkey',
+        'system_alerts_recovery_notice',
         'system_alerts_started_at',
       ]);
+      // 迁移 0022：告警设置的默认行，和管理员邮箱函数的授权。
+      expect(
+        (
+          await connection.pool.query(
+            'select recipients, digest_minutes, version from alert_settings',
+          )
+        ).rows,
+      ).toEqual([{ recipients: [], digest_minutes: 15, version: 1 }]);
     } finally {
       await connection.pool.end();
       await admin.pool.query(`DROP DATABASE IF EXISTS ${empty} WITH (FORCE)`);
