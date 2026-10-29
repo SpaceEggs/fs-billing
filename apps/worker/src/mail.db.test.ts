@@ -29,14 +29,16 @@ import {
 } from '../../../packages/db/test/support.js';
 import type { MailSettings } from './config.js';
 import {
-  NOTIFY_CRON,
-  NOTIFY_TIMEZONE,
   createMailTransport,
   dispatchOutbox,
-  runNotifyTick,
-  startNotifyJobs,
   type MailTransport,
 } from './mail.js';
+import {
+  NOTIFY_CRON,
+  NOTIFY_TIMEZONE,
+  runNotifyTick,
+  startNotifyJobs,
+} from './notify.js';
 import { runMailRequeue, runMailTest } from './mail-cli.js';
 import { NOTIFY_QUEUE, createBoss, installQueue } from './queue.js';
 import {
@@ -808,7 +810,8 @@ describe('notify-tick', () => {
       return runNotifyTick(app.db, { mail, quietMinutes, now: clock });
     };
     // 差一分钟不到窗口：不恢复，但邮件照发。
-    expect(await tick(9, 10)).toMatchObject({ claimed: 1, sent: 1 });
+    // 认领 2 封：测试里入队的那封，加上 PR 4 起 tick 为这条要发邮件的告警入队的开始邮件。
+    expect(await tick(9, 10)).toMatchObject({ claimed: 2, sent: 2 });
     expect((await alerts('auth_timeout'))[0]!.recovered_at).toBeNull();
     expect((await row(queued.id)).status).toBe('sent');
     // 窗口 15 分钟时第 10 分钟仍不恢复（配置真的生效），第 15 分钟恢复。

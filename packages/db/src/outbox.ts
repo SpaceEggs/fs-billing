@@ -390,7 +390,7 @@ export function recoverRecipientAlert(
 
 /**
  * `recipient:admin` 告警：管理员告警接收邮箱被修改后恢复。
- * TODO(PR 4 / PR 6)：保存告警设置（`alert_settings`）时调用；在那之前只靠 7 天窗口恢复。
+ * 由 `saveAlertSettings`（alert-notify.ts）在接收邮箱列表变化时同事务调用；列表没变则只靠 7 天窗口恢复。
  */
 export function recoverAdminRecipientAlert(tx: Tx, at?: Date): Promise<number> {
   return recoverAlert(tx, {

@@ -241,6 +241,7 @@ function pendingRowsOfKey(key: string): SQL | undefined {
 /**
  * 同键的 pending 未归属行清零（分配、忽略、修正稿使旧行 superseded 都算）就恢复对应的告警。
  * `rows` 是刚离开 pending 的行时只检查它们的键（在同一事务里调用）；不传则检查全部进行中的未归属类告警（定时任务兜底）。
+ * `at` 是恢复时间，默认数据库 now()（notify-tick 传入自己的时钟）。
  *
  * 先拿这一族告警的互斥锁（lockUnassignedAlerts），再给告警行加锁、判断：并发入库的停放与校验失败路径也先拿同一把锁，
  * 所以不会出现「先判断没有待处理行、随后入库新插入待处理行并累加告警、再被恢复掉」。
@@ -252,6 +253,7 @@ export async function recoverClearedUnassignedAlerts(
     readonly reason: string;
     readonly tenantTag: string;
   }[],
+  at?: Date,
 ): Promise<number> {
   const keys = rows ? [...new Set(rows.map(unassignedRowAlertKey))] : undefined;
   if (keys?.length === 0) return 0;
@@ -281,7 +283,11 @@ export async function recoverClearedUnassignedAlerts(
       .where(and(eq(unassignedCdrs.status, 'pending'), match))
       .limit(1);
     if (pending) continue;
-    recovered += await recoverAlertsWhere(tx, eq(systemAlerts.id, alert.id));
+    recovered += await recoverAlertsWhere(
+      tx,
+      eq(systemAlerts.id, alert.id),
+      at,
+    );
   }
   return recovered;
 }
@@ -292,6 +298,7 @@ export async function recoverClearedUnassignedAlerts(
  */
 export async function recoverPaidChargeReconcileAlerts(
   tx: Tx,
+  at?: Date,
 ): Promise<number> {
   const prefix = AlertKeys.chargeReconcile('');
   return recoverAlertsWhere(
@@ -303,5 +310,6 @@ export async function recoverPaidChargeReconcileAlerts(
         WHERE l.tenant_id = ${systemAlerts.tenantId} AND l.kind = 'call_charge'
           AND l.idempotency_key = 'call:' || substring(${systemAlerts.subjectKey} FROM ${prefix.length + 1}::int))`,
     )!,
+    at,
   );
 }
