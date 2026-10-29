@@ -24,7 +24,8 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 阶段 9 PR 5 起 test:db 含两个等真实分钟的文件（约 +4.5 分钟）；原来的 15 分钟会在 IDOR 步骤前后超时。
+    timeout-minutes: 25
     env:
       DATABASE_URL: postgresql://fs_billing:local-development-only@127.0.0.1:5432/fs_billing
       APP_DATABASE_URL: postgresql://fs_billing_app:local-app-only@127.0.0.1:5432/fs_billing
