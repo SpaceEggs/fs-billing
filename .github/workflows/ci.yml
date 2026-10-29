@@ -29,6 +29,12 @@ jobs:
       DATABASE_URL: postgresql://fs_billing:local-development-only@127.0.0.1:5432/fs_billing
       APP_DATABASE_URL: postgresql://fs_billing_app:local-app-only@127.0.0.1:5432/fs_billing
       AUTH_DATABASE_URL: postgresql://fs_billing_auth:local-auth-only@127.0.0.1:5432/fs_billing
+      # 邮件（阶段 9）：docker compose 起的 Mailpit；这是 .env.example 的同一组值，没有任何真实凭据。
+      # 邮件测试自己连 Mailpit（MAILPIT_* 的默认值就是这里的地址），不读 SMTP_*，免得开发机上的真实配置被测试用到。
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: 1025
+      SMTP_SECURE: 'false'
+      MAIL_FROM: billing@example.test
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: pnpm/action-setup@v6.1.0

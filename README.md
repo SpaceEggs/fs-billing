@@ -96,13 +96,14 @@ pnpm --filter @fs-billing/worker queue:migrate
 pnpm dev
 ```
 
-| 服务       | 地址                              |
-| ---------- | --------------------------------- |
-| 客户门户   | http://127.0.0.1:5173/login       |
-| 管理后台   | http://127.0.0.1:5173/admin/login |
-| API        | http://127.0.0.1:3000/api/health  |
-| Worker     | http://127.0.0.1:3001/health      |
-| PostgreSQL | 127.0.0.1:5432                    |
+| 服务       | 地址                               |
+| ---------- | ---------------------------------- |
+| 客户门户   | http://127.0.0.1:5173/login        |
+| 管理后台   | http://127.0.0.1:5173/admin/login  |
+| API        | http://127.0.0.1:3000/api/health   |
+| Worker     | http://127.0.0.1:3001/health       |
+| PostgreSQL | 127.0.0.1:5432                     |
+| Mailpit    | http://127.0.0.1:8025（SMTP 1025） |
 
 种子账号邮箱见 `packages/db/src/seed.ts`，密码为上面设置的 `SEED_AUTH_PASSWORD`。
 
@@ -111,8 +112,10 @@ pnpm dev
 | `pnpm dev`      | 同时启动 Web、API 和 Worker                                   |
 | `pnpm check`    | lint、格式、类型、单元测试和 Web 构建，与 CI 一致             |
 | `pnpm test`     | 单元测试，不连接数据库                                        |
-| `pnpm test:db`  | 数据库验收测试，需要先 `pnpm db:up`                           |
+| `pnpm test:db`  | 数据库验收测试，需要先 `pnpm db:up`（PostgreSQL 与 Mailpit）  |
 | `pnpm test:e2e` | Playwright e2e，需要已迁移、写种子的库和 `SEED_AUTH_PASSWORD` |
+
+邮件（阶段 9）：`pnpm db:up` 一并启动 Mailpit，`.env.example` 的 `SMTP_*` 指向它，发出的邮件在 http://127.0.0.1:8025 查看；`mail:test` 与 `mail:requeue` 命令、`SMTP_*`、`MAIL_*` 配置键见 [开发指南](docs/development.md#邮件阶段-9)。
 
 完整命令、视觉对照、租户隔离、金额保护规则和 CI 见 [开发指南](docs/development.md)。
 

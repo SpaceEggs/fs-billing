@@ -24,6 +24,14 @@ export const ARCHIVE_QUEUE_OPTIONS = {
   retryBackoff: true,
   expireInSeconds: 6 * 3600,
 } as const;
+// 通知：每分钟一次的 notify-tick（阶段 9）：告警恢复、邮件分发。exclusive：上一轮还在发送时下一分钟的触发被丢掉，
+// 分发始终单实例串行；重试靠下一分钟的 tick 自己认领到期的邮件，所以任务本身不重试。
+export const NOTIFY_QUEUE = 'notify-tick';
+export const NOTIFY_QUEUE_POLICY = 'exclusive';
+export const NOTIFY_QUEUE_OPTIONS = {
+  retryLimit: 0,
+  expireInSeconds: 600,
+} as const;
 // 月账单：每日父任务扇出成每个 (租户, 月份) 一个子任务；核对任务每日一次。
 export const GENERATE_STATEMENTS_QUEUE = 'generate-statements';
 export const GENERATE_STATEMENT_QUEUE = 'generate-statement';
@@ -132,6 +140,12 @@ export async function installQueue({ pool }: Connection): Promise<void> {
       ...ARCHIVE_QUEUE_OPTIONS,
     });
     await boss.updateQueue(ARCHIVE_QUEUE, ARCHIVE_QUEUE_OPTIONS);
+    // 通知队列同归档：策略（exclusive）只能在建队列时设定，其余选项变化时重复执行本脚本即可生效。
+    await boss.createQueue(NOTIFY_QUEUE, {
+      policy: NOTIFY_QUEUE_POLICY,
+      ...NOTIFY_QUEUE_OPTIONS,
+    });
+    await boss.updateQueue(NOTIFY_QUEUE, NOTIFY_QUEUE_OPTIONS);
     await boss.createQueue('__pgboss__send-it');
   } finally {
     await boss.stop();

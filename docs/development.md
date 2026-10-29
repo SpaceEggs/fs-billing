@@ -24,17 +24,37 @@ pnpm dev
 
 `pnpm dev:setup` 执行 `pnpm check` 并启动 PostgreSQL。`auth:seed` 为种子账号设置登录密码，已有密码保持不变，账号邮箱见 `packages/db/src/seed.ts`。`pnpm dev` 同时启动 Web、API 和 Worker。
 
-| 服务       | 地址                              | 验证                                      |
-| ---------- | --------------------------------- | ----------------------------------------- |
-| 客户门户   | http://127.0.0.1:5173/login       | 用门户种子账号登录后进入门户首页          |
-| 管理后台   | http://127.0.0.1:5173/admin/login | 用管理员种子账号登录后进入后台首页        |
-| API        | http://127.0.0.1:3000/api/health  | 返回 `{"status":"ok","service":"api"}`    |
-| Worker     | http://127.0.0.1:3001/health      | 返回 `{"status":"ok","service":"worker"}` |
-| PostgreSQL | 127.0.0.1:5432                    | `docker compose ps` 显示 healthy          |
+| 服务       | 地址                               | 验证                                      |
+| ---------- | ---------------------------------- | ----------------------------------------- |
+| 客户门户   | http://127.0.0.1:5173/login        | 用门户种子账号登录后进入门户首页          |
+| 管理后台   | http://127.0.0.1:5173/admin/login  | 用管理员种子账号登录后进入后台首页        |
+| API        | http://127.0.0.1:3000/api/health   | 返回 `{"status":"ok","service":"api"}`    |
+| Worker     | http://127.0.0.1:3001/health       | 返回 `{"status":"ok","service":"worker"}` |
+| PostgreSQL | 127.0.0.1:5432                     | `docker compose ps` 显示 healthy          |
+| Mailpit    | http://127.0.0.1:8025（SMTP 1025） | `docker compose ps` 显示 healthy          |
 
 Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `http://127.0.0.1:3000`。API 校验 POST 请求的 Origin，所以 `.env` 的 `BETTER_AUTH_TRUSTED_ORIGINS` 必须包含 Web 的地址。健康接口不检查数据库。Worker 的授权、话单与扣费接口见 [Worker 接口](worker-api.md)，FreeSWITCH 侧配置见 [FreeSWITCH 配置](../freeswitch/README.md)。
 
-数据库数据保存在 Docker 命名卷中。`pnpm db:down` 停止 PostgreSQL 并保留数据。
+数据库数据保存在 Docker 命名卷中。`pnpm db:down` 停止 PostgreSQL 与 Mailpit 并保留数据。
+
+### 邮件（阶段 9）
+
+`pnpm db:up` 同时启动 Mailpit（`axllent/mailpit`，固定版本见 `compose.yaml`）：SMTP 在 `127.0.0.1:1025`，网页收件箱与 HTTP API 在 `http://127.0.0.1:8025`。`.env.example` 里的 `SMTP_HOST=127.0.0.1`、`SMTP_PORT=1025`、`SMTP_SECURE=false`、`MAIL_FROM=billing@example.test` 就指向它，复制成 `.env` 后 Worker 发出的邮件都落在 Mailpit，不会发到外面。
+
+| 键                                         | 默认      | 说明                                                                                               |
+| ------------------------------------------ | --------- | -------------------------------------------------------------------------------------------------- |
+| `SMTP_HOST`                                | 无        | 不设置则邮件发送未启用：发件箱照常入队，Worker 启动时告警                                          |
+| `SMTP_PORT`、`SMTP_SECURE`                 | 465、true | `true` 隐式 TLS（465）；`false` 为 STARTTLS，只有回环地址（Mailpit）允许不加密                     |
+| `SMTP_USER`、`SMTP_PASS`                   | 无        | 同有或同无；非回环主机必须认证。QQ 邮箱的 `SMTP_PASS` 是授权码；只放运行环境，不进仓库、日志、文档 |
+| `MAIL_FROM`                                | 无        | 设置了 `SMTP_HOST` 就必填；QQ 邮箱要求与 `SMTP_USER` 相同                                          |
+| `SMTP_TIMEOUT_MS`、`MAIL_RATE_PER_MINUTE`  | 15000、20 | 连接/问候/套接字超时；每次分发（每分钟）最多发送封数                                               |
+| `MAIL_MAX_ATTEMPTS`、`ALERT_QUIET_MINUTES` | 6、10     | 单封最多尝试次数（退避 1 分、5 分、15 分、1 小时、3 小时）；事件型告警的静默恢复窗口               |
+| `APP_PUBLIC_URL`                           | 无        | 邮件里链接的站点根地址（`https://…`，本机回环可用 `http://`）                                      |
+
+- `pnpm --filter @fs-billing/worker mail:test -- --to <地址>`：用当前 `SMTP_*` 直接发一封测试邮件并打印响应码，不经过发件箱（核实 SMTP 配置，真实 QQ 账号的核实步骤见 [运行手册](evidence/phase-9/qq-smtp-check.md)）。
+- `pnpm --filter @fs-billing/worker mail:requeue -- --id <uuid>` 或 `--since <时间>`：把 `failed` 的邮件放回待发（额度恢复后补发）。
+- **`pnpm test:db` 需要 Mailpit 在运行**（`pnpm db:up`）：邮件测试经 Mailpit 的 HTTP API 断言收到的邮件。测试只认 `MAILPIT_SMTP_HOST`、`MAILPIT_SMTP_PORT`、`MAILPIT_API_URL`（默认就是 compose 的端口，且必须是回环地址），**不读 `SMTP_*`**，所以 `.env` 里是真实邮箱也不会被测试用到。
+- 新增队列后（阶段 9 的 `notify-tick`）要重新执行 `pnpm --filter @fs-billing/worker queue:migrate`。
 
 ## 常用命令
 
@@ -42,7 +62,7 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm check`                                                                       | lint、格式检查、类型检查、单元测试和 Web 构建，与 CI 的 `check` job 一致                                                            |
 | `pnpm test`                                                                        | 单元测试，不连接数据库                                                                                                              |
-| `pnpm test:db`                                                                     | 在全新的 `fs_billing_test` 库上迁移、写种子并运行数据库验收测试。需要先 `pnpm db:up`                                                |
+| `pnpm test:db`                                                                     | 在全新的 `fs_billing_test` 库上迁移、写种子并运行数据库验收测试。需要先 `pnpm db:up`（PostgreSQL 与 Mailpit）                       |
 | `pnpm test:idor`                                                                   | 只运行越权测试：用租户 A 的账号访问 OpenAPI 中每个客户端点的 B 租户数据，必须全部失败                                               |
 | `pnpm test:e2e`                                                                    | Playwright e2e，启动真实 API 和 Web，连接真实 PostgreSQL。需要已迁移、写种子的库和 `SEED_AUTH_PASSWORD`                             |
 | `pnpm coverage`                                                                    | 计费核心 `packages/rating` 的覆盖率，行覆盖率低于 95% 时失败                                                                        |
@@ -52,6 +72,8 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 | `pnpm db:seed`                                                                     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20）。可重复执行                                           |
 | `pnpm screenshots`                                                                 | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                                                  |
 | `pnpm --filter @fs-billing/worker raw:restore -- --id <uuid> --received-at <时间>` | 只读取回一条已归档的原始 JSON，核对哈希后把原文字节原样写到标准输出（阶段 8，见 [Worker 接口](worker-api.md#原始-json-归档阶段-8)） |
+| `pnpm --filter @fs-billing/worker mail:test -- --to <地址>`                        | 用当前 `SMTP_*` 直接发一封测试邮件（阶段 9，见上面的「邮件」）                                                                      |
+| `pnpm --filter @fs-billing/worker mail:requeue -- --id <uuid>`                     | 把 `failed` 的邮件放回待发；也可用 `--since <时间>`                                                                                 |
 | `pnpm --filter @fs-billing/worker raw:restore-month -- --month <YYYY-MM>`          | 整月恢复已归档的 `raw_cdrs` 分区（宽限期内挂回，已丢弃则从归档文件重建）                                                            |
 
 客户门户首页的视觉对照用 `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/portal-visual.spec.ts` 生成（环境同上），对照图写入 `docs/evidence/phase-6-web/visual/`，差异清单见 `docs/evidence/phase-6-web/visual-diff.md`。

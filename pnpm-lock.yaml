@@ -216,6 +216,9 @@ importers:
       fastify:
         specifier: ^5.0.0
         version: 5.12.5
+      nodemailer:
+        specifier: 10.1.1
+        version: 10.1.1
       pg-boss:
         specifier: 12.37.1
         version: 12.37.1(patch_hash=b2e03f9bebbbbd0180c4d76abe64e4ac6f68cee0623e235a56cf30b5b3f7f052)(@opentelemetry/api@1.9.1)
@@ -2638,6 +2641,10 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
+
+  nodemailer@10.1.1:
+    resolution: {integrity: sha512-pbqZRoeYUO+1E8TJ/11WeY4D2EVujj1hsYjz3qff/vUFDtGnmi7p3iqzTFslYOfQ6PnjVcWxx/CIUSHCSrO/QA==}
+    engines: {node: '>=20.0.0'}
 
   non-error@0.1.0:
     resolution: {integrity: sha512-TMB1uHiGsHRGv1uYclfhivcnf0/PdFp2pNqRxXjncaAsjYMoisaQJI+SSZCqRq+VliwRTC8tsMQfmrWjDMhkPQ==}
@@ -5346,6 +5353,8 @@ snapshots:
   nanostores@1.5.5: {}
 
   natural-compare@1.4.0: {}
+
+  nodemailer@10.1.1: {}
 
   non-error@0.1.0: {}
 

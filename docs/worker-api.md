@@ -10,7 +10,7 @@ pnpm --filter @fs-billing/worker queue:migrate
 pnpm --filter @fs-billing/worker start
 ```
 
-`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions`、月账单的 `generate-statements`、`generate-statement`、`reconcile-statements`、原始 JSON 归档的 `archive-raw-cdrs`（阶段 8，`exclusive` 策略）与内部调度队列并授权。**新增队列后必须重新执行**：运行时应用角色不能建队列，漏掉会让 Worker 在 `boss.work` 时失败。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
+`queue:migrate` 是部署操作，使用 `DATABASE_URL` 的 owner 安装 pg-boss schema、建 `charge-cdr`、`reconcile-cdr-charges`、`maintain-cdr-partitions`、月账单的 `generate-statements`、`generate-statement`、`reconcile-statements`、原始 JSON 归档的 `archive-raw-cdrs`（阶段 8，`exclusive` 策略）、通知的 `notify-tick`（阶段 9，`exclusive` 策略，见 [phase-3-worker.md](phase-3-worker.md#通知任务-notify-tick阶段-9-pr-2)）与内部调度队列并授权。**新增队列后必须重新执行**：运行时应用角色不能建队列，漏掉会让 Worker 在 `boss.work` 时失败。可重复执行；运行时关闭自动迁移与建 schema。当前固定 pg-boss 12.37.1，升级版本时需要单独迁移队列 schema。
 
 | 环境变量             | 要求                                               |
 | -------------------- | -------------------------------------------------- |

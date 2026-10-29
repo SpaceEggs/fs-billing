@@ -78,3 +78,12 @@ Claude Code 只读评审（`claude -p … --permission-mode plan`）：无 BLOCK
 - **手动触发**：`boss.send('generate-statements', { tenantId })` / `boss.send('reconcile-statements', { tenantId })` 只处理一个租户；定时触发没有数据。
 
 测试：`apps/worker/src/statements.test.ts`（纯逻辑）、`apps/worker/src/statements.db.test.ts`（调度注册、补缺、幂等、并发、核对、端到端）。真正的 cron 触发测试仍是阶段 9 的遗留项。
+
+## 通知任务 notify-tick（阶段 9 PR 2）
+
+实现在 `apps/worker/src/mail.ts`（`runNotifyTick`、`dispatchOutbox`、`startNotifyJobs`），队列 `notify-tick` 由 `queue:migrate` 预建（`exclusive`，`retryLimit` 0，`expireInSeconds` 600），**部署后需要重新执行 `queue:migrate`**，否则 Worker 在 `boss.work` 时失败。
+
+- **调度**：每分钟（`* * * * *`，`Asia/Shanghai`），不补发错过的分钟——下一分钟的 tick 会认领所有到期的邮件。`exclusive`：上一轮还在发送时下一次触发被丢掉，分发始终串行。
+- **每次运行**：事件型告警静默恢复（`recoverQuietAlerts`，窗口 `ALERT_QUIET_MINUTES`）→ `recipient:*` 告警 7 天窗口恢复 → 分发发件箱（`SMTP_HOST` 未设置则跳过这一步）；每天（北京时间）第一次运行清理满 180 天的发件箱行。PR 4 在分发之前加上告警的开始、汇总、恢复通知。
+- **分发**：认领最多 `MAIL_RATE_PER_MINUTE` 封（`FOR UPDATE SKIP LOCKED`），单连接串行发送，每封的结果各自一个事务；租约 `max(2 分钟, 3 × SMTP_TIMEOUT_MS + 60 秒)`，租约快到期或收到停止信号就停下并把没发的释放回待发。失败分类、退避、告警见 [阶段 9 设计](phase-9-design.md#邮件发送管线)。
+- 测试：`apps/worker/src/mail.test.ts`（分类、传输选项、CLI）、`mail.db.test.ts`（经 Mailpit 的发送、重试、租约、告警、定时任务注册）。真实 cron 触发与多实例仍是阶段 9 PR 5。

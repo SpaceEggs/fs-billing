@@ -487,4 +487,46 @@ export const balanceAlertDeliveries = pgTable('balance_alert_deliveries', {
   balance: numeric('balance').notNull(),
   recipients: text('recipients').array().notNull(),
   sentAt: at('sent_at').notNull().defaultNow(),
+  /** 实际发出这条通知的发件箱行（分发器在标记 sent 的同一事务里插入）；唯一，保证同一封邮件只记一次。 */
+  outboxId: uuid('outbox_id').unique(),
+});
+
+export const emailTemplates = [
+  'balance_low',
+  'balance_suspended',
+  'alert_start',
+  'alert_digest',
+  'alert_recovered',
+  'test',
+] as const;
+export type EmailTemplate = (typeof emailTemplates)[number];
+export const emailOutboxStatuses = [
+  'pending',
+  'sending',
+  'sent',
+  'failed',
+  'skipped',
+] as const;
+export type EmailOutboxStatus = (typeof emailOutboxStatuses)[number];
+
+/** 邮件发件箱（阶段 9）：不存渲染后的正文，只存模板名和快照；收件人是入队时的快照。 */
+export const emailOutbox = pgTable('email_outbox', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dedupeKey: text('dedupe_key').notNull().unique(),
+  template: text('template', { enum: emailTemplates }).notNull(),
+  params: jsonb('params').$type<Record<string, unknown>>().notNull(),
+  recipients: text('recipients').array().notNull(),
+  tenantId: uuid('tenant_id'),
+  status: text('status', { enum: emailOutboxStatuses }).notNull(),
+  skipReason: text('skip_reason'),
+  attempts: integer('attempts').notNull().default(0),
+  nextAttemptAt: at('next_attempt_at').notNull().defaultNow(),
+  /** 认领租约；进程崩溃后到期自动释放。 */
+  lockedUntil: at('locked_until'),
+  /** SMTP 响应码与首行，截断到 300 字符；不含收件人地址和正文。 */
+  lastError: text('last_error'),
+  accepted: text('accepted').array(),
+  rejected: text('rejected').array(),
+  createdAt: at('created_at').notNull().defaultNow(),
+  sentAt: at('sent_at'),
 });
