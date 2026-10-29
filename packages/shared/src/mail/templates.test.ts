@@ -77,6 +77,10 @@ describe('邮件模板', () => {
       expect(mail.text.length).toBeGreaterThan(0);
       expect(mail.html).toContain('<!doctype html>');
       expect(mail.html).toContain('lang="zh-CN"');
+      // 每个 style 属性都是完整的一对引号：字体名里的引号用单引号，不能提前截断属性（PR 3 修正）。
+      for (const [, value] of mail.html.matchAll(/ style="([^"]*)"/g))
+        expect(value).toMatch(/;$/);
+      expect(mail.html).not.toMatch(/style="[^"]*"[A-Za-z ]+"/);
     },
   );
 

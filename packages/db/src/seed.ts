@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { authAccounts, authUsers } from './auth-schema.js';
 import {
   beijingTime,
@@ -44,6 +44,7 @@ import {
   balanceAlertSettings,
   callUuids,
   cdrs,
+  emailOutbox,
   portalAccounts,
   rateVersions,
   tenants,
@@ -549,6 +550,22 @@ export async function seedDatabase(
     await seedCdrs(tx, idOf, registered);
     await chargeSampleCdrs(tx, idOf);
     await seedUnassigned(tx, registered, adminIds);
+    // 种子写的是历史，不是事件：余额触发器在播种时排进发件箱的余额通知（本事务的 created_at 就是 now()）一并清掉，
+    // 免得 Worker 起来后把种子租户的「余额不足」邮件真的发出去。状态行保留，标志已经跟上最终余额。
+    // 发件箱是 0021 才有的：迁移测试会在更早的结构上播种，那时没有触发器，也就没有什么可清。
+    const { rows: outbox } = await tx.execute<{ present: boolean }>(
+      sql`select to_regclass('public.email_outbox') is not null as present`,
+    );
+    if (outbox[0]?.present)
+      await tx
+        .delete(emailOutbox)
+        .where(
+          and(
+            eq(emailOutbox.createdAt, sql`now()`),
+            inArray(emailOutbox.template, ['balance_low', 'balance_suspended']),
+            inArray(emailOutbox.tenantId, [...tenantIds.values()]),
+          ),
+        );
   });
   await seedStatements(db, tenantIds);
 }
