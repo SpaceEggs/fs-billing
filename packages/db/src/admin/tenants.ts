@@ -24,6 +24,8 @@ import {
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
+import { syncBalanceNoticeState } from '../balance-notices.js';
+import { recoverRecipientAlert } from '../outbox.js';
 import { readTenantUsageOverview, tenantMonthSpendSql } from '../usage.js';
 import { NotFoundError } from '../errors.js';
 import {
@@ -290,6 +292,8 @@ export async function createTenant({
         threshold: settings.lowBalanceThreshold,
         emails: settings.emails,
       });
+      // 状态行随租户创建；设置写完后按余额 0 静默同步，开户当刻不发邮件（决定 29）。
+      await syncBalanceNoticeState(tx, id);
       const version = await createRateVersion(tx, id, entries, {
         adminId: actor.id,
       });
@@ -461,6 +465,11 @@ export function updateTenantSettings({
         target: balanceAlertSettings.tenantId,
         set: { threshold: input.lowBalanceThreshold, emails: input.emails },
       });
+    // 阈值、透支额度变了：按当前余额静默重算余额通知状态，不补发邮件（决定 29）。
+    await syncBalanceNoticeState(tx, tenantId);
+    // 通知邮箱变了：之前「收件人被拒」的 email_failed 告警随之恢复。
+    if (changes.some((change) => change.field === 'emails'))
+      await recoverRecipientAlert(tx, tenantId);
     return auditTenant(tx, actor, before.id, 'tenant_settings_update', changes);
   });
 }

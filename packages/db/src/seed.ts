@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { authAccounts, authUsers } from './auth-schema.js';
 import {
   beijingTime,
@@ -44,6 +44,7 @@ import {
   balanceAlertSettings,
   callUuids,
   cdrs,
+  emailOutbox,
   portalAccounts,
   rateVersions,
   tenants,
@@ -470,6 +471,19 @@ export async function seedDatabase(
     });
   await withAdmin(db, async (tx) => {
     await lockTenants(tx, [...tenantIds.values()]);
+    // 发件箱是 0021 才有的：迁移测试会在更早的结构上播种，那时没有触发器，也就没有什么可清。
+    const { rows: outbox } = await tx.execute<{ present: boolean }>(
+      sql`select to_regclass('public.email_outbox') is not null as present`,
+    );
+    // 播种写流水之前发件箱里已有的行：之后只清这些之外新排的余额通知。
+    const hasOutbox = outbox[0]?.present === true;
+    const outboxBefore = new Set(
+      hasOutbox
+        ? (await tx.select({ id: emailOutbox.id }).from(emailOutbox)).map(
+            (row) => row.id,
+          )
+        : [],
+    );
     const seeded = new Set(
       (
         await tx
@@ -549,6 +563,25 @@ export async function seedDatabase(
     await seedCdrs(tx, idOf, registered);
     await chargeSampleCdrs(tx, idOf);
     await seedUnassigned(tx, registered, adminIds);
+    // 种子写的是历史，不是事件：余额触发器在播种时为越线的种子租户排进发件箱的余额通知，只清掉这些
+    // （开始播种流水前的发件箱快照之外、种子租户的 balance_* 行），免得 Worker 起来后把「余额不足」邮件真的发出去。
+    // 状态行保留，标志已经跟上最终余额。不依赖事务开始时间或事务号。
+    if (hasOutbox) {
+      const queued = await tx
+        .select({ id: emailOutbox.id })
+        .from(emailOutbox)
+        .where(
+          and(
+            inArray(emailOutbox.template, ['balance_low', 'balance_suspended']),
+            inArray(emailOutbox.tenantId, [...tenantIds.values()]),
+          ),
+        );
+      const fresh = queued
+        .map((row) => row.id)
+        .filter((id) => !outboxBefore.has(id));
+      if (fresh.length > 0)
+        await tx.delete(emailOutbox).where(inArray(emailOutbox.id, fresh));
+    }
   });
   await seedStatements(db, tenantIds);
 }

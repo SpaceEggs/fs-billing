@@ -193,7 +193,7 @@ interface Section {
 }
 
 const STYLE = {
-  body: 'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6;color:#1f2933;',
+  body: "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;line-height:1.6;color:#1f2933;",
   h2: 'font-size:16px;margin:16px 0 4px;',
   p: 'margin:2px 0;',
   foot: 'margin-top:20px;color:#6b7785;font-size:12px;',

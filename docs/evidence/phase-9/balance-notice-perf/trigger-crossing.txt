@@ -1,0 +1,10 @@
+before round 1 per_crossing_pair_us=65.28 outbox_rows=0
+after round 1 per_crossing_pair_us=262.66 outbox_rows=3000
+before round 3 per_crossing_pair_us=65.41 outbox_rows=0
+after round 3 per_crossing_pair_us=271.22 outbox_rows=3000
+before round 5 per_crossing_pair_us=63.77 outbox_rows=0
+after round 5 per_crossing_pair_us=268.07 outbox_rows=3000
+after round 2 per_crossing_pair_us=280.92 outbox_rows=3000
+before round 2 per_crossing_pair_us=68.74 outbox_rows=0
+after round 4 per_crossing_pair_us=279.57 outbox_rows=3000
+before round 4 per_crossing_pair_us=65.55 outbox_rows=0

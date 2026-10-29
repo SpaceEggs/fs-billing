@@ -315,6 +315,21 @@ plan 阶段 9 验收里有一条（`plan.md:347`）已被阶段 8 缩小（[phas
 
 写入的测试：费率 0.05/分钟，`a = 0.03` 时 `authorize` 返回 `余额不足`，但发件箱没有 `balance_suspended`；`a = 0` 时有。窗口里的提醒完全靠低余额通知，所以[决定 24](#已决定)的阈值为 0（关闭提醒）的租户在这个窗口里没有任何通知——写入风险。
 
+**PR 3 实现时对本章的补充与更正：**
+
+- **迁移 0023 的构成。** 表 `balance_notice_state`；`tenant_balances` 上的 `AFTER UPDATE OF balance … WHEN (OLD.balance IS DISTINCT FROM NEW.balance)` 触发器 `tenant_balances_notice`（`SECURITY DEFINER`，`search_path = public, pg_temp`）；它在越线时调用内部函数 `enqueue_balance_notice`（写发件箱）和 `balance_notice_recipients`（收件人规范化）；`tenants` 上的 `AFTER INSERT` 触发器 `tenants_open_balance_notice`（开户时按余额 0 初始化状态行）；对外的 `sync_balance_notice_state(tenant_id)`。内部函数和两个触发器函数都 `REVOKE ALL … FROM PUBLIC` 且没有授予应用角色，只有 `sync_balance_notice_state` 授予 `fs_billing_app`，并在函数里要求 `app_is_operator()`（它绕过状态表的 RLS，所以不能让租户身份调用）。触发器函数不做操作员检查：`rebuild_tenant_balances` 由 owner 无作用域地执行，同样要走判定。
+- **状态判定的写法。** 两个标志每次都按新余额重算（`low_now = T > 0 且 b < T`，`suspended_now = b + O <= 0`），与状态行里的值比较：相同就什么都不写（热路径上只多一次 `tenants ⨝ balance_alert_settings ⨝ balance_notice_state` 的主键连接读）；不同才 upsert 状态行，并且仅在「由假变真」时发邮件。这与设计表里四行的写法等价，但把「重新上膛」和「保持」合成同一个赋值，没有漏掉的组合。两条线同时被越过时只入队 `balance_suspended`，`low_active` 置真，`low_seq` 不加（决定 28）。
+- **没有状态行的租户。** 正常路径不会出现（开户触发器与迁移回填保证每个租户一行）；手工插入的旧数据兜底：把变化前的余额当作上一次状态来推，补写状态行。
+- **收件人在 SQL 里规范化。** 触发器直接写发件箱，不经过 `enqueueEmail`，所以 `balance_notice_recipients` 在 SQL 里复刻同样的规则：去空白、小写、去重（保持顺序）、只留单个纯邮箱地址（正则取自 zod 的 `z.email()` 默认规则，测试 `the SQL recipient filter agrees with the settings validation` 用一组正反例与 `z.email()` 逐条对照）。全部被丢弃入队为 `skipped / invalid_recipients`，原本为空是 `no_recipients`，停用租户是 `tenant_disabled`（优先）。丢弃而不是抛错，理由同 PR 2：抛错会回滚扣费。
+- **params 的形状。** `balance_low`：`tenantCode / tenantName / currency / balance / overdraftLimit / threshold / available`；`balance_suspended`：前五个，没有 `threshold`、`available`（模板的 strict 校验会拒绝多余字段）。金额全部 `numeric::text`，保持库里的小数位数（与 `tenantBalanceText` 一致，所以邮件和页面是同一个数字）；`completeEmail` 据此写 `balance_alert_deliveries.balance`。幂等键 `balance_low:<租户>:<序号>`、`balance_suspended:<租户>:<序号>`（TS 侧 `balanceNoticeDedupeKey`）。
+- **同步函数锁余额行。** `sync_balance_notice_state` 在保存设置的事务里（已持租户锁）先对 `tenant_balances` 行 `FOR UPDATE` 再读写状态行：流水路径持租户锁，同步路径同样持租户锁，所以它们已经串行；多出来的这一把行锁是为了与只持余额行锁的 `rebuild_tenant_balances` 串行。加锁顺序「租户锁 → 余额行」与流水路径一致，重算只拿余额行，不会成环。
+- **谁调用同步。** `createTenant`（写完 `balance_alert_settings` 之后：开户余额 0，阈值大于 0 时 `low_active` 置真，不发邮件）、`updateTenantSettings`（有任何设置变化时；通知邮箱有变化时另调 `recoverRecipientAlert`，恢复该租户的 `recipient:<租户>` 告警）。停用、启用租户不碰状态：状态始终按余额维护，所以重新启用不补发（决定 27）。
+- **迁移顺序与回填。** 先建触发器（`CREATE TRIGGER` 取 `SHARE ROW EXCLUSIVE`，等在途写入提交并挡住新写入，直到迁移提交），再回填：已有租户按当前余额写状态行，`low_active` / `suspended_active` 取真值，序号为 0，**不写 `email_outbox`**。测试在一个迁到 0023 之前（即 PR 4 的 0022 已应用，与合并后的 main 一致）的、灌了种子的库上执行 0023，断言发件箱仍为空、每个租户一行、标志与口径逐租户一致（`balance-notices-backfill.db.test.ts`）。
+- **种子不排邮件。** 种子的流水是历史，不是事件，但 owner 连接写流水同样会触发判定。`seedDatabase` 在写完流水的同一事务末尾删除本事务排进发件箱的余额通知（开始写流水前先取发件箱现有行的 id 快照，只删快照之外、模板为 `balance_*`、租户为种子租户的行，不依赖事务开始时间），状态行保留（标志已跟上最终余额）。否则 Worker 起来后会把种子租户的「余额不足」邮件真的发到 `billing-ops@example.com`。
+- **并发测试。** 租户锁已经让两笔扣费互相串行，所以光测「两笔扣费并发」对触发器是否正确没有区分力。真正会交错的是只持余额行锁的 `rebuild_tenant_balances`（以及保存设置时的 `sync_balance_notice_state`）与流水路径：测试用 `pg_blocking_pids` 轮询确认被堵的后端，再放行，断言标志与最终余额、设置一致，邮件数符合预期。
+- **测试位置。** 设计把 Mailpit 的验收测试（1、2）写在 `notify.db.test.ts`，但那个文件属于 PR 4（`notify-tick`），避免两个 PR 同时改它，PR 3 的 Worker 测试放在 `apps/worker/src/balance-notices.db.test.ts`，测试名沿用设计里的计划名。
+- **吞吐。** 见 [`docs/evidence/phase-9/balance-notice-perf.md`](evidence/phase-9/balance-notice-perf.md)。
+
 ## 故障告警邮件：开始、汇总、恢复
 
 ### 告警设置

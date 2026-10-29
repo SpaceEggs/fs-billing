@@ -1,0 +1,14 @@
+Subject: 【余额不足】Lion City Telecom Pte Ltd 余额 USD 12.30
+
+余额不足：Lion City Telecom Pte Ltd
+
+租户：SGN011（Lion City Telecom Pte Ltd）
+当前余额：USD 12.30
+提醒阈值：USD 20.00
+透支额度：USD 15.00
+可用额度：USD 27.30
+充值后恢复；可用额度用完后将无法呼出。
+
+查看详情：https://billing.example.test
+
+此邮件由 FS-Billing 计费系统自动发送，请勿直接回复。

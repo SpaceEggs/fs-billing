@@ -4,6 +4,7 @@ export { withBoundedExportClient } from './bounded-export-client.js';
 export * from './alerts.js';
 export * from './alert-notify.js';
 export * from './outbox.js';
+export * from './balance-notices.js';
 export * from './clock.js';
 export * from './ledger.js';
 export * from './cdr-intake.js';

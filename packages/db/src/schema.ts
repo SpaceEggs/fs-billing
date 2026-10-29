@@ -490,6 +490,20 @@ export const balanceAlertSettings = pgTable('balance_alert_settings', {
   emails: text('emails').array().notNull().default([]),
 });
 
+/**
+ * 余额通知状态（阶段 9）：每个租户一行，由 tenant_balances 的触发器与 sync_balance_notice_state 维护，
+ * 应用代码只读。`lowActive` / `suspendedActive` 为真表示这一轮已通知过，回到线上之前不再发（滞回）；
+ * `*Seq` 是已入队的通知序号，拼发件箱幂等键 `balance_low:<租户>:<序号>`。
+ */
+export const balanceNoticeState = pgTable('balance_notice_state', {
+  tenantId: uuid('tenant_id').primaryKey(),
+  lowActive: boolean('low_active').notNull().default(false),
+  lowSeq: integer('low_seq').notNull().default(0),
+  suspendedActive: boolean('suspended_active').notNull().default(false),
+  suspendedSeq: integer('suspended_seq').notNull().default(0),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+});
+
 export const balanceAlertDeliveries = pgTable('balance_alert_deliveries', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull(),
