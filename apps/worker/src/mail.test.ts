@@ -256,6 +256,24 @@ describe('失败分类', () => {
       expected: { class: 'permanent', scope: 'recipient' },
     },
     {
+      // QQ 邮箱实测（PR #79，docs/evidence/phase-9/qq-item7-bounce.txt）：收件人不存在在 DATA 之后以 EMESSAGE 550 返回。
+      name: 'QQ rejecting a non-existent recipient after DATA',
+      script: {
+        data: '550 The recipient may contain a non-existent account, please check the recipient address.',
+      },
+      expected: { class: 'permanent', scope: 'recipient' },
+    },
+    {
+      name: 'a daily quota 5xx after DATA',
+      script: { data: '550 Daily quota exceeded, try again tomorrow' },
+      expected: { class: 'retry', scope: 'smtp' },
+    },
+    {
+      name: 'a daily sending limit in Chinese after DATA',
+      script: { data: '550 已达到当日发送上限' },
+      expected: { class: 'retry', scope: 'smtp' },
+    },
+    {
       name: 'service closing with 421 at the greeting',
       script: { greeting: '421 4.3.2 service not available' },
       expected: { class: 'retry', scope: 'smtp' },
@@ -331,6 +349,32 @@ describe('失败分类', () => {
       'alice@example.test',
       'bob@example.test',
     ]);
+  });
+
+  it('names the single recipient when the whole message is refused after DATA for that recipient', () => {
+    const failure = classifySmtpError({
+      code: 'EMESSAGE',
+      command: 'DATA',
+      responseCode: 550,
+      response:
+        '550 The recipient may contain a non-existent account, please check the recipient address.',
+    });
+    expect(failure).toMatchObject({ class: 'permanent', scope: 'recipient' });
+    // 措辞必须点名收件人 / 账号不存在：其余 5xx 仍是全局 smtp 问题。
+    for (const response of [
+      '554 5.7.1 spam suspected',
+      '552 message size exceeds fixed limit',
+      '552 mailbox full, quota exceeded',
+      '550 Mail content rejected',
+    ])
+      expect(
+        classifySmtpError({
+          code: 'EMESSAGE',
+          command: 'DATA',
+          responseCode: 550,
+          response,
+        }),
+      ).toMatchObject({ class: 'permanent', scope: 'smtp' });
   });
 
   it('treats a local oversize or empty message as permanent, not unknown', () => {

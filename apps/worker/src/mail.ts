@@ -174,10 +174,17 @@ const CONNECTION_CODES = new Set([
 const AUTH_CODES = new Set(['EAUTH', 'ENOAUTH']);
 /**
  * 5xx 但其实是限流 / 发送频率限制：按可重试处理。只留明确的限流措辞——「exceed」「超过」「限制」
- * 会误伤 552「message size exceeds」「mailbox full」这类永久失败。QQ 的实际措辞待运行手册第 3 项实测补充。
+ * 会误伤 552「message size exceeds」「mailbox full, quota exceeded」这类永久失败；所以 quota 只在带「每日」语义时才算
+ * （daily quota、quota … per day / today），单独的 quota 不算。
  */
 const RATE_LIMIT_TEXT =
-  /frequen|too many|too fast|rate.?limit|throttl|try again later|频繁|频率|发送过快|请稍后再试/i;
+  /frequen|too many|too fast|rate.?limit|throttl|try again later|daily.{0,10}quota|quota.{0,30}(?:per day|daily|today)|daily limit|sending limit|发送上限|当日|频繁|频率|发送过快|请稍后再试/i;
+/**
+ * DATA 阶段的 5xx 其实是收件人被拒（QQ：`550 The recipient may contain a non-existent account…`，nodemailer 报
+ * `EMESSAGE`，不是 EENVELOPE）。只认明确点名收件人 / 账号不存在的措辞，宁可归 smtp 也不误报成收件人问题。
+ */
+const RECIPIENT_REJECT_TEXT =
+  /recipient|non-?existent|no such user|mailbox unavailable|不存在/i;
 const EMAIL_ADDRESS = /<?[^\s<>()"',;:]+@[^\s<>()"',;:]+>?/g;
 
 /** 响应码与首行，抹掉邮箱地址（服务器常把被拒地址写进响应），折成单行并截断。 */
@@ -251,8 +258,14 @@ export function classifySmtpError(error: unknown): SmtpFailure {
   }
   if (code === 'ECONFIG') return result('permanent');
   if (responseCode >= 400 && responseCode < 500) return result('retry');
-  if (responseCode >= 500)
-    return RATE_LIMIT_TEXT.test(text) ? result('retry') : result('permanent');
+  if (responseCode >= 500) {
+    if (RATE_LIMIT_TEXT.test(text)) return result('retry');
+    // 点名收件人的 5xx（EMESSAGE / DATA 阶段）：永久失败，告警归收件人而不是全局 smtp。
+    return (code === 'EMESSAGE' || e.command === 'DATA') &&
+      RECIPIENT_REJECT_TEXT.test(text)
+      ? result('permanent', 'recipient')
+      : result('permanent');
+  }
   // 没见过的错误：宁可重试，也不丢通知。
   return result('retry');
 }
@@ -440,12 +453,25 @@ export async function dispatchOutbox(
             : `SMTP 认证失败，请检查 SMTP_USER / SMTP_PASS：${failure.summary}`,
         });
       } else if (failure.class === 'permanent' || exhausted) {
-        await settle(email, failure, 'fail', {
-          description:
-            failure.scope === 'recipient'
-              ? `${recipients}邮件（${label}）的收件人被邮件服务器拒绝，已放弃：${failure.summary}`
-              : `${label}发送失败，已放弃：${failure.summary}`,
-        });
+        // 服务器没有逐个点名被拒收件人（DATA 阶段拒绝）时，只有一个收件人就能确定是它。
+        const rejected =
+          failure.scope === 'recipient' &&
+          (failure.rejected?.length ?? 0) === 0 &&
+          mail.to.length === 1
+            ? mail.to
+            : undefined;
+        await settle(
+          email,
+          failure,
+          'fail',
+          {
+            description:
+              failure.scope === 'recipient'
+                ? `${recipients}邮件（${label}）的收件人被邮件服务器拒绝，已放弃：${failure.summary}`
+                : `${label}发送失败，已放弃：${failure.summary}`,
+          },
+          rejected,
+        );
       } else {
         await settle(email, failure, 'retry', undefined);
       }

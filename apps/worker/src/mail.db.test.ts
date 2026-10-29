@@ -542,6 +542,27 @@ describe('收件人被拒', () => {
     expect(rows).toEqual([]);
   });
 
+  it('fails a single-recipient tenant mail refused after DATA as a recipient problem and records that recipient', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const queued = await enqueue({
+      template: 'balance_low',
+      tenantId: tenant.id,
+      params: balanceParams(tenant.code),
+      recipients: ['gone@example.test'],
+    });
+    const summary = await viaFake({
+      data: '550 The recipient may contain a non-existent account, please check the recipient address.',
+    });
+    expect(summary).toMatchObject({ claimed: 1, sent: 0, failed: 1 });
+    expect(await row(queued.id)).toMatchObject({
+      status: 'failed',
+      rejected: ['gone@example.test'],
+    });
+    expect(await alerts()).toMatchObject([
+      { subject_key: `recipient:${tenant.id}`, tenant_id: tenant.id },
+    ]);
+  });
+
   it('delivers to the accepted recipients, records the rejected ones and alerts the tenant', async () => {
     const tenant = await createTenant(app, 'CNY');
     const queued = await enqueue({
