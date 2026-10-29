@@ -696,6 +696,38 @@ describe('cdr delete dialog', () => {
     expect(gets()).toBe(1);
   });
 
+  it('looks back at most two earlier years, then opens with nothing preselected instead of loading on', async () => {
+    const old = { ...tenant, createdAt: '2015-03-02T02:31:02.000Z' };
+    const years: number[] = [];
+    const { gets } = renderDialog(
+      {
+        months: (year) => {
+          years.push(year);
+          return Array.from({ length: 12 }, (_, index) =>
+            monthRow(
+              `${year}-${String(index + 1).padStart(2, '0')}`,
+              'deleted',
+              { deleted: { at: null, by: null } },
+            ),
+          );
+        },
+      },
+      { tenant: old },
+    );
+    // 当年、前一年、再前一年；2015 年开户也不再往前翻。
+    expect(
+      await screen.findByText(
+        '请选择开始和结束月份，选择后显示将删除的话单数量',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText('正在加载可删除的月份…')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: '开始月份：选择月份' }),
+    ).toBeVisible();
+    expect(gets()).toBe(3);
+    expect([...new Set(years)].sort()).toEqual([2024, 2025, 2026]);
+  });
+
   it('explains the months that cannot be chosen under the grid', async () => {
     const user = userEvent.setup();
     renderDialog();

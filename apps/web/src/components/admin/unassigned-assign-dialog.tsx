@@ -345,6 +345,7 @@ function AssignForm({
         tagLabel={tagLabel}
         suggested={suggested}
         tenantId={flow.tenantId}
+        previewTenant={preview?.tenant ?? null}
         disabled={submitting}
         onPick={onPick}
       />
@@ -587,12 +588,15 @@ function TenantPicker({
   tagLabel,
   suggested,
   tenantId,
+  previewTenant,
   disabled,
   onPick,
 }: {
   tagLabel: string | null;
   suggested: readonly SuggestedTenant[];
   tenantId: string | null;
+  /** 预览返回的租户（含币种）；相近租户自带的数据没有币种，触发器的币种以它为准补上。 */
+  previewTenant: { id: string; currency: string } | null;
   disabled: boolean;
   onPick: (tenantId: string) => void;
 }) {
@@ -632,7 +636,12 @@ function TenantPicker({
     // 再点一次已选的租户不重新预览。
     if (id !== tenantId) onPick(id);
   };
-  const value = tenantId && picked ? pickedText(picked) : null;
+  const currency =
+    picked?.currency ??
+    (previewTenant && previewTenant.id === tenantId
+      ? previewTenant.currency
+      : null);
+  const value = tenantId && picked ? pickedText({ ...picked, currency }) : null;
   return (
     <div className="flex flex-col gap-1.5 text-[13px] font-medium">
       <span>归属到租户</span>

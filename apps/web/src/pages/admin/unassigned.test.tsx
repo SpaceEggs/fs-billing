@@ -464,6 +464,40 @@ describe('unassigned calls', () => {
     ).toMatchObject({ tenantId });
   });
 
+  it('shows the currency of a similar tenant picked before the tenant list has it', async () => {
+    const user = userEvent.setup();
+    const { calls } = renderUnassigned({
+      // 租户列表里没有相近租户 ABC001（例如排在前 100 个之外）：币种只能等预览补上。
+      'GET /api/admin/tenants': () => ({
+        status: 200,
+        body: {
+          items: [
+            { ...tenant, id: id(901), code: 'BJH003', name: 'BJH003 有限公司' },
+          ],
+          pagination: { page: 1, pageSize: 100, total: 130 },
+        },
+      }),
+      'POST /api/admin/unassigned-cdrs/assign-preview': () => ({
+        status: 200,
+        body: previewBody(),
+      }),
+    });
+    await chooseAbcGroup(user);
+    await user.click(screen.getByRole('button', { name: '归属到租户' }));
+    const dialog = await screen.findByRole('dialog', { name: '归属到租户' });
+    await pickTenant(user, dialog, /ABC001/);
+    await waitFor(() =>
+      expect(
+        posts(calls, '/api/admin/unassigned-cdrs/assign-preview'),
+      ).toHaveLength(1),
+    );
+    expect(
+      await within(dialog).findByRole('combobox', {
+        name: `归属到租户：ABC001${String.fromCharCode(0x3000)}深圳市某某科技有限公司（CNY）`,
+      }),
+    ).toBeVisible();
+  });
+
   it('re-previews after a stale conflict and retries with the same idempotency key', async () => {
     const user = userEvent.setup();
     let previews = 0;
@@ -728,6 +762,10 @@ describe('unassigned calls', () => {
     const table = await screen.findByRole('table');
     // 没有选择时没有操作栏。
     expect(screen.queryByRole('region', { name: '批量操作' })).toBeNull();
+    // 没有操作栏就没有为它留的底部空白。
+    expect(
+      screen.getByRole('tabpanel', { name: /待处理/ }).className,
+    ).not.toContain('safe-area-inset-bottom');
     await user.click(
       within(table).getByRole('checkbox', {
         name: '选择 13800000001 呼 18760000001',

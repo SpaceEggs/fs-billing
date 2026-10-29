@@ -262,6 +262,13 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
   }
 
   const pendingEmpty = summary.data?.pending === 0 && tab === 'pending';
+  // 手机操作栏与页面底部留白共用这一个条件：只有操作栏真的渲染时才留白。
+  const showBar =
+    !isDesktop &&
+    tab === 'pending' &&
+    summary.data !== undefined &&
+    summary.data.pending > 0 &&
+    selection.kind !== 'none';
 
   const panelContent = (
     <>
@@ -350,7 +357,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
               ) : null}
             </div>
           )}
-          {!isDesktop && selection.kind !== 'none' ? (
+          {showBar ? (
             <SelectionBar
               count={selectedCount}
               onIgnore={openIgnore}
@@ -459,8 +466,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
                   'mt-5 flex flex-col gap-5',
                   // 手机的操作栏固定在底部：给列表末尾留出它的高度（含底部安全区），最后一张卡片不被盖住。
                   value === tab &&
-                    !isDesktop &&
-                    selection.kind !== 'none' &&
+                    showBar &&
                     'pb-[calc(6rem+env(safe-area-inset-bottom))]',
                 )}
               >

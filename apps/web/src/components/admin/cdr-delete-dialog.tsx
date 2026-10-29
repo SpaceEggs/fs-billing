@@ -43,6 +43,9 @@ import { ProblemAlert } from './problem-alert';
 /** 与服务端一次删除的上限相同。契约里没有这个数，超过就不逐月请求。 */
 const maxDeleteMonths = 120;
 
+/** 打开时预选月份最多往前查几年（当年没有可删除的月份时）。 */
+const maxPreselectLookbackYears = 2;
+
 const blockedLabel = {
   reconcile_not_ok: '账单待重新生成',
   uncharged_calls: '有话单尚未扣费',
@@ -200,7 +203,7 @@ type Preselect =
 
 /**
  * 打开时的预选（设计稿 4b、4g 预选「最近一个可删除的月份」）：从当年往前，取最近一个 `deletable` 的月份。
- * 当年没有就查前一年，一直查到租户创建那一年为止（更早的月份是「未开户」）；年份还没加载完就等。
+ * 当年没有就往前查，最多再查两年且不早于租户创建那一年（更早的月份是「未开户」）；年份还没加载完就等。
  */
 function preselectMonth(
   currentYear: number,
@@ -436,9 +439,10 @@ function CdrDeleteForm({
   for (const query of yearQueries)
     for (const row of query.data?.months ?? []) byMonth.set(row.month, row);
   if (flow.step === 'pick') {
-    const floorYear = Math.min(
-      currentYear,
-      Number(formatDate(tenant.createdAt).slice(0, 4)),
+    // 最多往前查两年（共 3 次请求），也不早于租户创建年；找不到就不预选，不让对话框一直停在加载。
+    const floorYear = Math.max(
+      currentYear - maxPreselectLookbackYears,
+      Math.min(currentYear, Number(formatDate(tenant.createdAt).slice(0, 4))),
     );
     const decision = preselectMonth(
       currentYear,
