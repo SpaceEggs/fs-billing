@@ -1,5 +1,11 @@
 import { sql } from 'drizzle-orm';
-import { lockTenants, withSystem, type Db } from '@fs-billing/db';
+import {
+  AlertKeys,
+  lockTenants,
+  raiseAlert,
+  withSystem,
+  type Db,
+} from '@fs-billing/db';
 import type { PgBoss } from 'pg-boss';
 import type { FastifyBaseLogger } from 'fastify';
 import {
@@ -52,8 +58,14 @@ export async function reconcileCharges(
           cdr.reconcile_attempts >= options.alertAttempts &&
           !cdr.reconcile_alerted
         ) {
-          await tx.execute(sql`INSERT INTO system_alerts (tenant_id, kind, description, affected_calls)
-          VALUES (${candidate.tenant_id}, 'cdr_failed', ${`${candidate.call_uuid}: 扣费对账持续失败，请人工处理`}, 1)`);
+          // 一通话一条（reconcile_alerted 保证只告警一次）；流水写出时由 chargeCall 恢复。
+          await raiseAlert(tx, {
+            kind: 'cdr_failed',
+            subjectKey: AlertKeys.chargeReconcile(candidate.call_uuid),
+            tenantId: candidate.tenant_id,
+            description: `${candidate.call_uuid}: 扣费对账持续失败，请人工处理`,
+            calls: 1,
+          });
           await tx.execute(sql`UPDATE cdrs SET reconcile_alerted = true
           WHERE call_uuid = ${candidate.call_uuid} AND tenant_id = ${candidate.tenant_id}
             AND started_at = ${candidate.started_at}::timestamptz`);

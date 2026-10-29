@@ -483,8 +483,8 @@ it('真实扣费持续失败，补投次数持久保存且告警只写一次，�
     expect(
       (
         await owner.pool.query(
-          'select description from system_alerts where description = $1',
-          [`${uuid}: 扣费对账持续失败，请人工处理`],
+          'select description from system_alerts where subject_key = $1',
+          [`charge-reconcile:${uuid}`],
         )
       ).rows,
     ).toHaveLength(1);
@@ -510,6 +510,15 @@ it('真实扣费持续失败，补投次数持久保存且告警只写一次，�
       )
     ).rows,
   ).toEqual([{ amount: '-0.192' }]);
+  // 流水终于写出：对账告警在同一次扣费里标为已恢复（阶段 9 验收 6）。
+  expect(
+    (
+      await owner.pool.query(
+        'select recovered_at is not null as recovered from system_alerts where subject_key = $1',
+        [`charge-reconcile:${uuid}`],
+      )
+    ).rows,
+  ).toEqual([{ recovered: true }]);
 });
 
 it.each([
@@ -555,8 +564,8 @@ it.each([
   expect(
     (
       await owner.pool.query(
-        'select kind from system_alerts where description like $1',
-        [`${cdrResponseSchema.parse(response.json()).rawId}:%`],
+        'select kind from system_alerts where position($1 in description) > 0',
+        [cdrResponseSchema.parse(response.json()).rawId],
       )
     ).rows,
   ).toEqual([{ kind: 'cdr_failed' }]);

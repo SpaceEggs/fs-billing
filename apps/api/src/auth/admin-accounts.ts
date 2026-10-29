@@ -3,6 +3,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import { z } from 'zod';
 import {
+  AlertKeys,
+  raiseAlert,
   schema,
   withAdmin,
   lockTenants,
@@ -112,9 +114,10 @@ export function createAdminAccountService(deps: {
   ) {
     try {
       await withAdmin(db, (tx) =>
-        tx.insert(schema.systemAlerts).values({
-          tenantId,
+        raiseAlert(tx, {
           kind: 'audit_failed',
+          subjectKey: AlertKeys.auditResetPassword,
+          tenantId,
           description: `重置密码的审计写入失败，凭据与会话未变更（${kind === 'admin' ? '管理员' : '门户账号'} ${id}）`,
         }),
       );

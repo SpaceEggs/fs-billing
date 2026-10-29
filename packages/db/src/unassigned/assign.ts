@@ -8,6 +8,7 @@ import {
 } from '@fs-billing/rating';
 import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
+import { recoverClearedUnassignedAlerts } from '../alerts.js';
 import {
   chargeCall,
   loadDeletedMonths,
@@ -276,6 +277,11 @@ export async function assignUnassigned(
       .returning({ id: unassignedCdrs.id });
     if (updated.length !== assignable.length)
       throw new Error('分配时有待处理话单被其他操作改动');
+    // 同键的待处理行清零，对应的系统告警恢复（阶段 9）。
+    await recoverClearedUnassignedAlerts(
+      tx,
+      assignable.map((item) => item.row),
+    );
 
     const symbol = SYMBOL[target.currency];
     await writeAudit(tx, {

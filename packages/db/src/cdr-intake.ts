@@ -11,6 +11,7 @@ import {
   type RateEntry,
   type Tenant,
 } from '@fs-billing/rating';
+import { AlertKeys, recoverAlert } from './alerts.js';
 import type { Tx } from './client.js';
 import { appendLedgerEntry, callChargeKey } from './ledger.js';
 import { cdrs, monthlyStatements, tenants } from './schema.js';
@@ -219,6 +220,7 @@ export interface ChargeCallResult {
  * 幂等键 call:<UUID>，重复调用不重复扣费。调用方已持有租户锁（流水触发器会检查）。
  * 扣费前在锁内复核所属月份的话单是否已删除：删除话单持同一把租户锁，所以入库之后、扣费之前
  * 被删除的月份不会再写入新流水（抛 CdrMonthDeletedError，任务失败并由对账告警）。
+ * 该通话有对账告警（reconcile_alerted）时，写完流水在同一事务里恢复它。
  */
 export async function chargeCall(
   tx: Tx,
@@ -232,6 +234,7 @@ export async function chargeCall(
       durationSeconds: cdrs.durationSeconds,
       startedAt: cdrs.startedAt,
       answeredAt: cdrs.answeredAt,
+      reconcileAlerted: cdrs.reconcileAlerted,
       currency: tenants.currency,
     })
     .from(cdrs)
@@ -260,5 +263,11 @@ export async function chargeCall(
       idempotencyKey: callChargeKey(job.callUuid),
     },
   );
+  // 对账告警过这条通话：流水写出（或已存在）就在同一事务里把告警标为已恢复。
+  if (row.reconcileAlerted)
+    await recoverAlert(tx, {
+      kind: 'cdr_failed',
+      subjectKey: AlertKeys.chargeReconcile(job.callUuid),
+    });
   return { charge: priced.charge.value.toFixed(), occurredAt: row.answeredAt };
 }

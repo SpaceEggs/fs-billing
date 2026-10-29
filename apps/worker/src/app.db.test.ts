@@ -8,6 +8,7 @@ import {
   createTenant as onboardTenant,
   ensureCdrPartitions,
   lockTenants,
+  raiseAlert,
   withSystem,
   schema,
 } from '@fs-billing/db';
@@ -274,12 +275,17 @@ describe('Worker HTTP 与真实数据库', () => {
     expect(
       (
         await owner.pool.query(
-          "select kind, tenant_id, affected_calls from system_alerts where kind = 'auth_timeout' and description like $1",
-          [`${uuid}:%`],
+          "select kind, tenant_id, subject_key, recovered_at from system_alerts where kind = 'auth_timeout' and position($1 in description) > 0",
+          [uuid],
         )
       ).rows,
     ).toEqual([
-      { kind: 'auth_timeout', tenant_id: tenant.id, affected_calls: 1 },
+      {
+        kind: 'auth_timeout',
+        tenant_id: null,
+        subject_key: 'fs-authorize',
+        recovered_at: null,
+      },
     ]);
     expect(
       (
@@ -418,8 +424,8 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(
         (
           await owner.pool.query(
-            'select kind from system_alerts where description like $1 order by kind',
-            [`${uuid}:%`],
+            'select kind from system_alerts where position($1 in description) > 0 order by kind',
+            [uuid],
           )
         ).rows,
       ).toEqual([{ kind: 'auth_timeout' }, { kind: 'cdr_failed' }]);
@@ -471,8 +477,8 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(
         (
           await owner.pool.query(
-            'select kind from system_alerts where description = $1',
-            [`${uuid}: ${INVALID_NUMBER_REASON}`],
+            "select kind from system_alerts where kind = 'cdr_failed' and position($1 in description) > 0",
+            [uuid],
           )
         ).rows,
       ).toEqual([{ kind: 'cdr_failed' }]);
@@ -496,11 +502,11 @@ describe('Worker HTTP 与真实数据库', () => {
       expect(
         (
           await owner.pool.query(
-            'select kind from system_alerts where description like $1',
-            [`${result.rawId}:%`],
+            'select kind, subject_key from system_alerts where position($1 in description) > 0',
+            [result.rawId],
           )
         ).rows,
-      ).toEqual([{ kind: 'cdr_failed' }]);
+      ).toEqual([{ kind: 'cdr_failed', subject_key: 'invalid-json' }]);
     },
   );
 
@@ -966,8 +972,8 @@ describe('Worker HTTP 与真实数据库', () => {
     expect(
       (
         await owner.pool.query(
-          'select kind from system_alerts where description = $1',
-          [`${uuid}: 接通时无费率`],
+          "select kind from system_alerts where kind = 'cdr_failed' and position($1 in description) > 0",
+          [uuid],
         )
       ).rows,
     ).toEqual([{ kind: 'cdr_failed' }]);
@@ -1164,10 +1170,31 @@ describe('Worker HTTP 与真实数据库', () => {
     }
     expect(
       (
-        await owner.pool.query(`select kind from system_alerts
-      where description like '话单分区维护失败:%'`)
+        await owner.pool
+          .query(`select kind, occurrences >= 2 as merged from system_alerts
+      where subject_key = 'partition-maintenance' and recovered_at is null`)
       ).rows,
-    ).toEqual([{ kind: 'partition_failed' }, { kind: 'partition_failed' }]);
+    ).toEqual([{ kind: 'partition_failed', merged: true }]);
+  });
+
+  it('a successful partition maintenance recovers both partition alerts', async () => {
+    await withSystem(connection.db, async (tx) => {
+      for (const subjectKey of ['partition-missing', 'partition-maintenance'])
+        await raiseAlert(tx, {
+          kind: 'partition_failed',
+          subjectKey,
+          description: '测试',
+        });
+    });
+    await maintainPartitions(connection.db, worker.log);
+    expect(
+      (
+        await owner.pool.query(
+          `select count(*)::int as open from system_alerts
+           where kind = 'partition_failed' and recovered_at is null`,
+        )
+      ).rows,
+    ).toEqual([{ open: 0 }]);
   });
 
   it.each([
@@ -1341,8 +1368,8 @@ describe('Worker HTTP 与真实数据库', () => {
     expect(
       (
         await owner.pool.query(
-          'select kind from system_alerts where description = $1',
-          [`${rejected}: 计费号码不一致`],
+          "select kind from system_alerts where kind = 'cdr_failed' and position($1 in description) > 0",
+          [rejected],
         )
       ).rows,
     ).toEqual([{ kind: 'cdr_failed' }]);
@@ -1352,8 +1379,8 @@ describe('Worker HTTP 与真实数据库', () => {
     expect(
       (
         await owner.pool.query(
-          'select kind from system_alerts where description = $1',
-          [`${rejected}: 计费号码不一致`],
+          "select kind from system_alerts where kind = 'cdr_failed' and position($1 in description) > 0",
+          [rejected],
         )
       ).rows,
     ).toEqual([{ kind: 'cdr_failed' }]);
@@ -1401,8 +1428,8 @@ describe('Worker HTTP 与真实数据库', () => {
     expect(
       (
         await owner.pool.query(
-          'select kind from system_alerts where description like $1',
-          [`${result.rawId}: ${CDR_VALIDATION_FAILURE_PREFIX}%`],
+          'select kind from system_alerts where position($1 in description) > 0 and subject_key like $2',
+          [result.rawId, `invalid-cdr:${CDR_VALIDATION_FAILURE_PREFIX}%`],
         )
       ).rows,
     ).toEqual([{ kind: 'cdr_failed' }]);

@@ -1047,11 +1047,12 @@ const auditAlerts = async (needle: string) =>
   (
     await connections.owner.pool.query<{
       kind: string;
+      subject_key: string | null;
       description: string;
       tenant_id: string | null;
       recovered_at: Date | null;
     }>(
-      `SELECT kind,description,tenant_id,recovered_at FROM public.system_alerts
+      `SELECT kind,subject_key,description,tenant_id,recovered_at FROM public.system_alerts
        WHERE kind='audit_failed' AND description LIKE $1`,
       [`%${needle}%`],
     )
@@ -1098,6 +1099,10 @@ it('a failed audit write rolls the reset back and leaves credentials and session
 });
 
 it('a failed audit write opens one audit_failed alert without secrets', async () => {
+  // 告警按键合并成一条，租户取第一次事件的；先清掉别的用例留下的未恢复告警。
+  await connections.owner.pool.query(
+    "DELETE FROM public.system_alerts WHERE kind='audit_failed'",
+  );
   const cleanup = await failingResetAudit(fixture.a.profileId);
   const logged: object[] = [];
   const failing = createAdminAccountService({
@@ -1118,6 +1123,7 @@ it('a failed audit write opens one audit_failed alert without secrets', async ()
   expect(alerts).toHaveLength(1);
   expect(alerts[0]).toMatchObject({
     kind: 'audit_failed',
+    subject_key: 'audit:reset-password',
     tenant_id: fixture.a.tenantId,
     recovered_at: null,
   });

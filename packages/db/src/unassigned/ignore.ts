@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { inArray, sql } from 'drizzle-orm';
 import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
+import { recoverClearedUnassignedAlerts } from '../alerts.js';
 import { withAdmin, type Db, type Tx } from '../client.js';
 import { unassignedCdrs } from '../schema.js';
 import { databaseInstant } from '../statements/live.js';
@@ -26,6 +27,7 @@ const MAX_REASON_LENGTH = 2000;
  * 行锁与分配一致（FOR UPDATE，同一排序），所以与并发的分配不会互相死锁，被分配走的行不会被忽略。
  * 没有 call_uuid 的校验失败行、无费率行都可以忽略；已分配的行不在 pending，不受影响。
  * 影响 0 行时返回 changed: 0，不写日志（重复提交幂等）。
+ * 某个原因的待处理行因此清零时，同键的系统告警一并恢复。
  */
 export async function ignoreUnassigned(
   db: Db | Tx,
@@ -65,6 +67,8 @@ export async function ignoreUnassigned(
           rows.map((row) => row.id),
         ),
       );
+    // 同键的待处理行清零，对应的系统告警恢复（阶段 9）。
+    await recoverClearedUnassignedAlerts(tx, rows);
     const auditId = randomUUID();
     const sourceTag = selectionTag(input.selection);
     await writeAudit(tx, {

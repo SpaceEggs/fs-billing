@@ -1,8 +1,12 @@
-import { and, eq, isNull, like, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import type { PgBoss } from 'pg-boss';
 import {
+  AlertKeys,
   lockTenants,
+  raiseAlert,
+  recoverAlert,
+  recoverAlertsWhere,
   runRawArchive,
   schema,
   withSystem,
@@ -19,7 +23,8 @@ export const ARCHIVE_TIMEZONE = 'Asia/Shanghai';
 
 type Logger = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>;
 
-/** 一个月同时只开一条未恢复的告警，按描述前缀识别（同账单核对的做法）。 */
+/** 一个月同时只开一条未恢复的告警，键 archive:<YYYY-MM>。 */
+const alertKey = (month: string) => AlertKeys.archive(month.slice(0, 7));
 const alertPrefix = (month: string) => `原始话单归档 ${month.slice(0, 7)} `;
 
 /**
@@ -47,43 +52,27 @@ export async function syncArchiveAlerts(
   ].filter((month) => !failing.has(month));
   await withSystem(db, async (tx) => {
     await lockTenants(tx, []);
-    for (const [month, description] of failing) {
-      const updated = await tx
-        .update(schema.systemAlerts)
-        .set({ description })
-        .where(
-          and(
-            eq(schema.systemAlerts.kind, 'raw_archive_failed'),
-            isNull(schema.systemAlerts.recoveredAt),
-            like(schema.systemAlerts.description, `${alertPrefix(month)}%`),
-          ),
-        )
-        .returning({ id: schema.systemAlerts.id });
-      if (updated.length === 0)
-        await tx.insert(schema.systemAlerts).values({
-          kind: 'raw_archive_failed',
-          description,
-          affectedCalls: 0,
-        });
-    }
+    for (const [month, description] of failing)
+      await raiseAlert(tx, {
+        kind: 'raw_archive_failed',
+        subjectKey: alertKey(month),
+        description,
+      });
     for (const month of succeeded)
-      await tx
-        .update(schema.systemAlerts)
-        .set({ recoveredAt: sql`now()` })
-        .where(
-          and(
-            eq(schema.systemAlerts.kind, 'raw_archive_failed'),
-            isNull(schema.systemAlerts.recoveredAt),
-            like(schema.systemAlerts.description, `${alertPrefix(month)}%`),
-          ),
-        );
+      await recoverAlert(tx, {
+        kind: 'raw_archive_failed',
+        subjectKey: alertKey(month),
+      });
     // 已丢弃的月份没有什么可失败的了：残留的告警一并恢复（例如人工处理过）。
-    await tx.execute(sql`
-      UPDATE system_alerts a SET recovered_at = now()
-      WHERE a.kind = 'raw_archive_failed' AND a.recovered_at IS NULL
-        AND EXISTS (SELECT 1 FROM raw_cdr_archives m
+    await recoverAlertsWhere(
+      tx,
+      and(
+        eq(schema.systemAlerts.kind, 'raw_archive_failed'),
+        sql`EXISTS (SELECT 1 FROM raw_cdr_archives m
           WHERE m.dropped_at IS NOT NULL
-            AND a.description LIKE '原始话单归档 ' || to_char(m.month, 'YYYY-MM') || ' %')`);
+            AND ${schema.systemAlerts.subjectKey} = 'archive:' || to_char(m.month, 'YYYY-MM'))`,
+      )!,
+    );
   });
 }
 

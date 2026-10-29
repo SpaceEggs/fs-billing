@@ -1,12 +1,14 @@
 import type {} from '../../../packages/db/test/global-setup.js';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   CdrMonthDeletedError,
   createRateVersion,
   ensureCdrPartitions,
+  ignoreUnassigned,
+  recoverQuietAlerts,
   withSystem,
 } from '@fs-billing/db';
 import { beijingTime, rate } from '@fs-billing/rating';
@@ -119,8 +121,8 @@ const state = async (uuid: string) =>
       `select (select count(*)::int from cdrs where call_uuid = $1) as cdrs,
               (select count(*)::int from unassigned_cdrs where call_uuid = $1) as unassigned,
               (select count(*)::int from ledger_entries where idempotency_key = $2) as charges,
-              (select count(*)::int from system_alerts where description like $3) as alerts`,
-      [uuid, `call:${uuid}`, `${uuid}:%`],
+              (select count(*)::int from system_alerts where position($3 in description) > 0) as alerts`,
+      [uuid, `call:${uuid}`, uuid],
     )
   ).rows[0]!;
 
@@ -173,15 +175,15 @@ describe('话单所属月份的话单已删除（阶段 8 决定 38）', () => {
     expect(
       (
         await owner.pool.query(
-          `select kind, description, affected_calls from system_alerts where description like $1`,
-          [`${uuid}:%`],
+          `select kind, subject_key, description from system_alerts where position($1 in description) > 0`,
+          [uuid],
         )
       ).rows,
     ).toEqual([
       {
         kind: 'cdr_failed',
-        description: `${uuid}: 所属月份话单已删除`,
-        affected_calls: 1,
+        subject_key: 'unassigned:所属月份话单已删除',
+        description: `话单停放到未归属：所属月份话单已删除，最近一通 ${uuid}`,
       },
     ]);
     // 重推同一通话：已登记，判重复，不再停放、不再告警。
@@ -312,16 +314,34 @@ const invalidRows = async (tag: string) =>
     )
   ).rows;
 
-const alertsFor = async (...rawIds: string[]) =>
+async function clearAlertsAndPending() {
+  await owner.pool.query('delete from system_alerts');
+  await owner.pool.query(
+    "delete from unassigned_cdrs where status = 'pending'",
+  );
+}
+
+/** 无效输入告警（按结构化原因合并）：校验失败的原因相同则只有一条，不论多少份不同原文。 */
+const invalidAlerts = async (recovered = false) =>
   (
-    await owner.pool.query<{ kind: string; description: string }>(
-      `select kind, description from system_alerts where split_part(description, ':', 1) = any($1::text[])
-       order by description`,
-      [rawIds],
+    await owner.pool.query<{
+      kind: string;
+      subject_key: string;
+      description: string;
+      occurrences: number;
+      affected_calls: number;
+    }>(
+      `select kind, subject_key, description, occurrences, affected_calls from system_alerts
+       where subject_key like 'invalid-cdr:%' and (recovered_at is not null) = $1
+       order by started_at, id`,
+      [recovered],
     )
   ).rows;
 
 describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => {
+  // 告警按原因合并，各用例的失败原因相同；每个用例从没有告警、没有待处理行开始（恢复要看同原因的待处理行是否清零）。
+  beforeEach(clearAlertsAndPending);
+
   it('stores a short structured reason for a failed validation', async () => {
     const tag = tagOf();
     const secret = 'SECRET-INPUT-VALUE';
@@ -348,9 +368,15 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
     expect(row?.reason).toContain('variables.billsec(');
     expect(row?.reason).not.toContain(secret);
     expect(row?.reason).not.toContain('Invalid');
-    // 告警是同一个字符串加原文 id。
-    expect(await alertsFor(result.rawId)).toEqual([
-      { kind: 'cdr_failed', description: `${result.rawId}: ${row?.reason}` },
+    // 告警的键是结构化原因，描述是原因加最近一份原文 id。
+    expect(await invalidAlerts()).toEqual([
+      {
+        kind: 'cdr_failed',
+        subject_key: `invalid-cdr:${row?.reason}`,
+        description: `${row?.reason}（最近一份原文 ${result.rawId}）`,
+        occurrences: 1,
+        affected_calls: 1,
+      },
     ]);
   });
 
@@ -400,10 +426,9 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
       },
     ]);
     // 只有第一次写告警（决定 42）。
-    expect(
-      await alertsFor(first.rawId, second.rawId, third.rawId),
-    ).toHaveLength(1);
-    expect(await alertsFor(first.rawId)).toHaveLength(1);
+    expect(await invalidAlerts()).toMatchObject([
+      { occurrences: 1, affected_calls: 1 },
+    ]);
   });
 
   it('merges only byte-identical bodies', async () => {
@@ -429,7 +454,12 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
     const rows = await invalidRows(tag);
     expect(rows.map((row) => row.push_count)).toEqual([1, 1, 1]);
     expect(new Set(rows.map((row) => row.raw_sha256)).size).toBe(3);
-    expect(await alertsFor(a.rawId, b.rawId, c.rawId)).toHaveLength(3);
+    // 三份不同原文、同一个失败原因：合并成一条告警，affected_calls 是不同原文的份数。
+    expect(await invalidAlerts()).toMatchObject([
+      { occurrences: 3, affected_calls: 3 },
+    ]);
+    expect((await invalidAlerts())[0]?.description).toContain(c.rawId);
+    expect(a.rawId).not.toBe(b.rawId);
   });
 
   it('concurrent pushes of one invalid body keep one row', async () => {
@@ -442,7 +472,10 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
     expect(await invalidRows(tag)).toMatchObject([
       { status: 'pending', push_count: 8 },
     ]);
-    expect(await alertsFor(...results.map((r) => r.rawId))).toHaveLength(1);
+    expect(results).toHaveLength(8);
+    expect(await invalidAlerts()).toMatchObject([
+      { occurrences: 1, affected_calls: 1 },
+    ]);
   });
 
   it('an ignored invalid body does not come back', async () => {
@@ -461,7 +494,8 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
     expect(await invalidRows(tag)).toMatchObject([
       { id: row?.id, status: 'ignored', push_count: 2 },
     ]);
-    expect(await alertsFor(first.rawId, again.rawId)).toHaveLength(1);
+    expect(first.rawId).not.toBe(again.rawId);
+    expect(await invalidAlerts()).toMatchObject([{ occurrences: 1 }]);
   });
 
   it('a body whose earlier row was resolved starts a new pending row', async () => {
@@ -477,13 +511,18 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
       body(tenant.code, uuid, { billing_unverified: 'false' }),
     );
     expect(await invalidRows(tag)).toMatchObject([{ status: 'superseded' }]);
-    // 已解决的行不再占用去重索引：同一份坏原文再来，是新的待处理行，并且写告警。
+    // 修正稿入库后，该原因的待处理行清零，告警恢复。
+    expect(await invalidAlerts()).toEqual([]);
+    expect(await invalidAlerts(true)).toHaveLength(1);
+    // 已解决的行不再占用去重索引：同一份坏原文再来，是新的待处理行，并且写告警（新开一条）。
     const again = await ingestCdr(connection.db, queue, text);
     expect(await invalidRows(tag)).toMatchObject([
       { status: 'superseded', push_count: 1 },
       { status: 'pending', push_count: 1 },
     ]);
-    expect(await alertsFor(again.rawId)).toHaveLength(1);
+    const open = await invalidAlerts();
+    expect(open).toMatchObject([{ occurrences: 1 }]);
+    expect(open[0]?.description).toContain(again.rawId);
   });
 
   it('a corrected push resolves the earlier invalid row as superseded', async () => {
@@ -663,5 +702,184 @@ describe('话单校验失败（阶段 3 评审遗留，阶段 8 PR 2）', () => 
         )
       ).rows,
     ).toEqual([{ hangup_cause: 'NORMAL_CLEARING', unverified: false }]);
+  });
+});
+
+/** 全部告警（按键合并后的条数与累计），用来断言写入点的合并行为。 */
+const alertsByKey = async (like: string) =>
+  (
+    await owner.pool.query<{
+      kind: string;
+      subject_key: string;
+      tenant_id: string | null;
+      occurrences: number;
+      affected_calls: number;
+      description: string;
+      recovered: boolean;
+    }>(
+      `select kind, subject_key, tenant_id, occurrences, affected_calls, description,
+              recovered_at is not null as recovered
+       from system_alerts where subject_key like $1 order by started_at, id`,
+      [like],
+    )
+  ).rows;
+
+describe('告警按键合并（阶段 9 PR 1）', () => {
+  beforeEach(clearAlertsAndPending);
+
+  it('broken json pushes keep one invalid-json alert and recover after the quiet window', async () => {
+    const { queue } = recordingQueue();
+    const results = [];
+    for (let i = 0; i < 3; i++)
+      results.push(await ingestCdr(connection.db, queue, `{ "broken": ${i}`));
+    expect(results.map((r) => r.status)).toEqual([
+      'invalid',
+      'invalid',
+      'invalid',
+    ]);
+    // 没有待处理行，也没有 UUID：只有一条全局告警，每次推送累加，描述只写最近一次的原文 id。
+    expect(
+      (
+        await owner.pool.query(
+          'select count(*)::int as n from unassigned_cdrs where raw_id = any($1::uuid[])',
+          [results.map((r) => r.rawId)],
+        )
+      ).rows,
+    ).toEqual([{ n: 0 }]);
+    expect(await alertsByKey('invalid-json')).toEqual([
+      {
+        kind: 'cdr_failed',
+        subject_key: 'invalid-json',
+        tenant_id: null,
+        occurrences: 3,
+        affected_calls: 3,
+        description: `话单 JSON 格式错误，最近一次原文 ${results[2]!.rawId}`,
+        recovered: false,
+      },
+    ]);
+    // 静默窗口内不恢复；满 ALERT_QUIET_MINUTES 没有新事件才恢复。
+    const at = (minutes: number) => new Date(Date.now() + minutes * 60_000);
+    const quiet = (when: Date) =>
+      withSystem(connection.db, (tx) =>
+        recoverQuietAlerts(tx, { quietMinutes: 10, at: when }),
+      );
+    expect(await quiet(at(9))).toBe(0);
+    expect(await quiet(at(11))).toBe(1);
+    expect((await alertsByKey('invalid-json'))[0]?.recovered).toBe(true);
+    // 恢复之后再有损坏的推送，开新的一条。
+    await ingestCdr(connection.db, queue, '{ "broken": again');
+    expect(await alertsByKey('invalid-json')).toMatchObject([
+      { recovered: true, occurrences: 3 },
+      { recovered: false, occurrences: 1 },
+    ]);
+  });
+
+  it('unverified calls keep one global auth_timeout alert', async () => {
+    const tenant = await tenantWithRates();
+    const { queue } = recordingQueue();
+    const uuids = [randomUUID(), randomUUID(), randomUUID()];
+    for (const uuid of uuids)
+      await ingestCdr(connection.db, queue, body(tenant.code, uuid));
+    // 重推同一通话（去重）不再累加。
+    await ingestCdr(connection.db, queue, body(tenant.code, uuids[0]!));
+    expect(await alertsByKey('fs-authorize')).toMatchObject([
+      {
+        kind: 'auth_timeout',
+        tenant_id: null,
+        occurrences: 3,
+        affected_calls: 3,
+        recovered: false,
+      },
+    ]);
+    expect((await alertsByKey('fs-authorize'))[0]?.description).toContain(
+      uuids[2]!,
+    );
+  });
+
+  it('parked calls merge by reason, and by tag when the tenant does not exist', async () => {
+    const tagA = tagOf();
+    const tagB = tagOf();
+    const tenant = await tenantWithRates();
+    const { queue } = recordingQueue();
+    const push = (tenantCode: string, extra = {}) =>
+      ingestCdr(
+        connection.db,
+        queue,
+        body(tenantCode, randomUUID(), {
+          billing_unverified: 'false',
+          ...extra,
+        }),
+      );
+    await push(tagA);
+    await push(tagA);
+    await push(tagB);
+    // 无费率：接通早于第一个费率版本。
+    await push(tenant.code, timing('2026-01-10 10:00:00'));
+    await push(tenant.code, timing('2026-01-11 10:00:00'));
+    expect(await alertsByKey('unassigned:%')).toMatchObject([
+      {
+        subject_key: `unassigned:租户不存在:${tagA}`,
+        occurrences: 2,
+        affected_calls: 2,
+      },
+      {
+        subject_key: `unassigned:租户不存在:${tagB}`,
+        occurrences: 1,
+        affected_calls: 1,
+      },
+      {
+        subject_key: 'unassigned:接通时无费率',
+        occurrences: 2,
+        affected_calls: 2,
+      },
+    ]);
+  });
+
+  it('a corrected push recovers the invalid-input alert only when no pending row of that reason is left', async () => {
+    const tenant = await tenantWithRates();
+    const { queue } = recordingQueue();
+    const uuidA = randomUUID();
+    const uuidB = randomUUID();
+    const bad = (uuid: string) =>
+      body(tenant.code, uuid, {
+        billing_unverified: 'false',
+        end_epoch: 'bad',
+      });
+    await ingestCdr(connection.db, queue, bad(uuidA));
+    await ingestCdr(connection.db, queue, bad(uuidB));
+    expect(await alertsByKey('invalid-cdr:%')).toMatchObject([
+      { occurrences: 2, affected_calls: 2, recovered: false },
+    ]);
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuidA, { billing_unverified: 'false' }),
+    );
+    // 还剩 uuidB 的待处理行：告警不恢复。
+    expect((await alertsByKey('invalid-cdr:%'))[0]?.recovered).toBe(false);
+    await ingestCdr(
+      connection.db,
+      queue,
+      body(tenant.code, uuidB, { billing_unverified: 'false' }),
+    );
+    expect((await alertsByKey('invalid-cdr:%'))[0]?.recovered).toBe(true);
+  });
+
+  it('an ignored last pending row recovers it', async () => {
+    const tag = tagOf();
+    const { queue } = recordingQueue();
+    await ingestCdr(connection.db, queue, invalidBody(tag, undefined));
+    await ingestCdr(connection.db, queue, invalidBody(tag, undefined, 'b'));
+    expect(await alertsByKey('invalid-cdr:%')).toMatchObject([
+      { occurrences: 2, recovered: false },
+    ]);
+    await ignoreUnassigned(connection.db, {
+      actor: { id: await adminId(owner), name: '王敏' },
+      selection: { group: { tag } },
+      reason: '测试呼叫',
+    });
+    expect(await alertsByKey('invalid-cdr:%')).toMatchObject([
+      { recovered: true },
+    ]);
   });
 });

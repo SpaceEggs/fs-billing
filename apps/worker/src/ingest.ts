@@ -1,13 +1,17 @@
 import { createHash } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import {
+  AlertKeys,
   CDR_MONTH_DELETED_REASON,
   lockTenants,
   loadRatingTenant,
   priceAndInsertCdr,
+  raiseAlert,
+  recoverClearedUnassignedAlerts,
   schema,
   withSystem,
   type Db,
+  type RaiseAlertInput,
   type Tx,
 } from '@fs-billing/db';
 import { resolveBillingNumber } from '@fs-billing/rating';
@@ -35,16 +39,14 @@ export function postgresError(
   return undefined;
 }
 
+/** 自成事务的告警写入（入库之外的写入点用）；同一 kind + subjectKey 合并成一条。 */
 export async function recordAlert(
   db: Db,
-  kind: 'cdr_failed' | 'partition_failed',
-  description: string,
+  input: RaiseAlertInput,
 ): Promise<void> {
   await withSystem(db, async (tx) => {
     await lockTenants(tx, []);
-    await tx
-      .insert(schema.systemAlerts)
-      .values({ kind, description, affectedCalls: 1 });
+    await raiseAlert(tx, input);
   });
 }
 
@@ -60,17 +62,24 @@ async function park(
     durationSeconds: cdr.billsec,
     reason,
   });
-  await tx.insert(schema.systemAlerts).values({
+  // 同原因（租户不存在再加标签）合并成一条告警，不是每个 UUID 一条。
+  await raiseAlert(tx, {
     kind: 'cdr_failed',
-    description: `${cdr.callUuid}: ${reason}`,
-    affectedCalls: 1,
+    subjectKey: AlertKeys.unassigned(reason, cdr.tenantTag),
+    description: `话单停放到未归属：${reason}${
+      reason === '租户不存在' ? `（标签 ${cdr.tenantTag}）` : ''
+    }，最近一通 ${cdr.callUuid}`,
+    calls: 1,
   });
   return 'unassigned' as const;
 }
 
-/** 修正重推通过校验后，原文里能解析出同一 UUID 的待处理校验失败行标为已解决（superseded）。 */
+/**
+ * 修正重推通过校验后，原文里能解析出同一 UUID 的待处理校验失败行标为已解决（superseded）；
+ * 某个原因的待处理行因此清零时，同原因的无效输入告警恢复（同一事务）。
+ */
 async function supersedeInvalidRows(tx: Tx, callUuid: string) {
-  await tx
+  const superseded = await tx
     .update(schema.unassignedCdrs)
     .set({
       status: 'superseded',
@@ -83,7 +92,15 @@ async function supersedeInvalidRows(tx: Tx, callUuid: string) {
         eq(schema.unassignedCdrs.status, 'pending'),
         eq(schema.unassignedCdrs.candidateCallUuid, callUuid),
       ),
-    );
+    )
+    .returning({
+      reason: schema.unassignedCdrs.reason,
+      tenantTag: schema.unassignedCdrs.tenantTag,
+    });
+  await recoverClearedUnassignedAlerts(
+    tx,
+    superseded.map((row) => ({ ...row, callUuid: null })),
+  );
 }
 
 export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
@@ -102,7 +119,13 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
     payload = JSON.parse(body);
   } catch (error) {
     if (!(error instanceof SyntaxError)) throw error;
-    await recordAlert(db, 'cdr_failed', `${raw.id}: 话单 JSON 格式错误`);
+    // JSON 损坏没有 UUID，也不写待处理行：全局一条，每次推送累加，描述只写最近一次的原文 id。
+    await recordAlert(db, {
+      kind: 'cdr_failed',
+      subjectKey: AlertKeys.invalidJson,
+      description: `话单 JSON 格式错误，最近一次原文 ${raw.id}`,
+      calls: 1,
+    });
     return { status: 'invalid' as const, rawId: raw.id };
   }
   const parsed = modJsonCdrSchema.safeParse(payload);
@@ -138,12 +161,14 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
           },
         })
         .returning({ inserted: sql<boolean>`(xmax = 0)` });
-      // 再次推送同一原文不写第二条告警（阶段 8 决定 42）。
+      // 再次推送同一原文不写第二条告警（阶段 8 决定 42）。新的一份原文按结构化原因合并：
+      // 同一种校验失败无论多少份不同原文，只有一条告警，affected_calls 为不同原文份数。
       if (row?.inserted) {
-        await tx.insert(schema.systemAlerts).values({
+        await raiseAlert(tx, {
           kind: 'cdr_failed',
-          description: `${raw.id}: ${reason}`,
-          affectedCalls: 1,
+          subjectKey: AlertKeys.invalidCdr(reason),
+          description: `${reason}（最近一份原文 ${raw.id}）`,
+          calls: 1,
         });
       }
     });
@@ -174,12 +199,13 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         .where(eq(schema.callUuids.callUuid, cdr.callUuid));
       if (registered) return 'duplicate' as const;
       // FreeSWITCH 超时放行的信号随首次有效话单到达；去重后告警，重推不重复记。
+      // 全局一条（租户为空），事件累加；各租户的受影响数从 cdrs 的 unverified 取。
       if (cdr.unverified) {
-        await tx.insert(schema.systemAlerts).values({
-          tenantId: tenant?.id ?? null,
+        await raiseAlert(tx, {
           kind: 'auth_timeout',
-          description: `${cdr.callUuid}: FreeSWITCH 授权未验证，按 1800 秒放行`,
-          affectedCalls: 1,
+          subjectKey: AlertKeys.authTimeout,
+          description: `FreeSWITCH 授权未验证，按 1800 秒放行，最近一通 ${cdr.callUuid}（按话单到达时间记录）`,
+          calls: 1,
         });
       }
       if ('error' in resolved)

@@ -71,10 +71,11 @@ const attached = async (month: string) =>
 const alerts = () =>
   query<{
     description: string;
+    subject_key: string;
     recovered_at: Date | null;
     affected_calls: number;
   }>(
-    `select description, recovered_at, affected_calls from system_alerts
+    `select description, subject_key, recovered_at, affected_calls from system_alerts
      where kind = 'raw_archive_failed' order by started_at, description`,
   );
 
@@ -275,6 +276,8 @@ describe('归档任务', () => {
     expect((await alerts())[0]!.description).toBe(
       '原始话单归档 2022-05 状态矛盾：清单记着已分离，分区却仍挂在 raw_cdrs 下',
     );
+    // 每月一条，按键 archive:<YYYY-MM> 识别。
+    expect((await alerts())[0]!.subject_key).toBe('archive:2022-05');
 
     // 一条已丢弃月份的残留告警，下一次运行时恢复。
     await db.owner.pool.query('delete from raw_cdr_archives');
@@ -283,7 +286,7 @@ describe('归档任务', () => {
        values ('2022-06-01', 'dropped', now(), now(), now(), 'x/y', 0, 0, 0, repeat('a', 64), repeat('b', 64), '{}', '[]')`,
     );
     await db.owner.pool.query(
-      `insert into system_alerts (kind, description) values ('raw_archive_failed', '原始话单归档 2022-06 失败（drop）：x')`,
+      `insert into system_alerts (kind, subject_key, description) values ('raw_archive_failed', 'archive:2022-06', '原始话单归档 2022-06 失败（drop）：x')`,
     );
     await syncArchiveAlerts(db.app.db, {
       advanced: null,
