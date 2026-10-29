@@ -21,8 +21,8 @@ packages/rating typecheck$ tsc -p tsconfig.json
 packages/shared typecheck$ tsc -p tsconfig.json
 packages/rating typecheck: Done
 packages/shared typecheck: Done
-packages/db typecheck$ tsc -p tsconfig.json
 apps/web typecheck$ tsc -p tsconfig.json
+packages/db typecheck$ tsc -p tsconfig.json
 packages/db typecheck: Done
 apps/web typecheck: Done
 apps/worker typecheck$ tsc -p tsconfig.json
@@ -39,11 +39,11 @@ apps/api typecheck: Done
 
  Test Files  50 passed | 1 skipped (51)
       Tests  1006 passed | 3 skipped (1009)
-   Start at  21:44:18
-   Duration  3.46s (import 60%, tests 31%, transform 8%, worker 1%)
+   Start at  22:22:57
+   Duration  2.97s (import 59%, tests 32%, transform 9%, worker 1%)
 
-    Isolate  51 workers spawned · ~95ms startup each (spawn + environment, per file)
-             at least ~445ms faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  51 workers spawned · ~84ms startup each (spawn + environment, per file)
+             at least ~392ms faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ test /Volumes/Dev/FS-Billing/.claude/worktrees/agent-a819a28bcd6ff58ef/apps/web
@@ -55,11 +55,11 @@ apps/api typecheck: Done
 
  Test Files  50 passed (50)
       Tests  656 passed (656)
-   Start at  21:44:22
-   Duration  25.44s (tests 74%, environment 14%, import 8%, setup 2%, transform 2%)
+   Start at  22:23:00
+   Duration  25.28s (tests 75%, environment 13%, import 8%, setup 2%, transform 1%)
 
-    Isolate  50 workers spawned · ~449ms startup each (spawn + environment, per file)
-             at least ~2.05s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  50 workers spawned · ~423ms startup each (spawn + environment, per file)
+             at least ~1.93s faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ build /Volumes/Dev/FS-Billing/.claude/worktrees/agent-a819a28bcd6ff58ef/apps/web
@@ -139,4 +139,4 @@ dist/assets/index-B43MODte.js                   131.20 kB │ gzip: 43.44 kB
 dist/assets/return-to-F8yQDIM_.js               195.38 kB │ gzip: 59.03 kB
 dist/assets/react-BPWasKn7.js                   218.76 kB │ gzip: 68.27 kB
 
-✓ built in 271ms
+✓ built in 248ms

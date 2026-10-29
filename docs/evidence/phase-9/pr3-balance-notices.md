@@ -7,12 +7,12 @@
 | 命令             | 结果                                                                                                                             | 输出                                             |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `pnpm check`     | 退出 0：lint、格式检查、类型检查全过；根目录单元测试 50 个文件、1006 通过 3 跳过；Web 单元测试 50 个文件、656 通过；Web 构建成功 | [pr3-pnpm-check.txt](pr3-pnpm-check.txt)         |
-| `pnpm test:db`   | 退出 0：63 个文件、881 个测试全部通过                                                                                            | [pr3-pnpm-test-db.txt](pr3-pnpm-test-db.txt)     |
+| `pnpm test:db`   | 退出 0：65 个文件、921 个测试全部通过（变基到含 PR 4 的 main 之后连跑两次，都通过）                                              | [pr3-pnpm-test-db.txt](pr3-pnpm-test-db.txt)     |
 | `pnpm test:idor` | 退出 0：1 个文件、36 个测试全部通过                                                                                              | [pr3-pnpm-test-idor.txt](pr3-pnpm-test-idor.txt) |
 
 `pnpm check` 第一次跑时 Web 的 `statements-tab.test.tsx` 有一个用例超时（机器上同时在跑性能测量，负载平均 8 以上）；单独重跑 20 个用例全过，负载降下来后整套重跑通过，输出里是通过的那次。本 PR 没有改 Web。
 
-新增测试：`packages/db/src/balance-notices.db.test.ts` 26 个、`packages/db/src/balance-notices-backfill.db.test.ts` 3 个、`apps/worker/src/balance-notices.db.test.ts` 3 个，`packages/shared/src/mail/templates.test.ts` 里的 HTML 属性断言；改动的既有测试：`admin/rates.db.test.ts` 的 `snapshot` 补上 `ORDER BY created_at`（`logs.at(-1)` 原来依赖堆的物理顺序，本 PR 新增用例之后整套运行连续两次取到 `tenant_create`，单文件运行不受影响，具体触发原因没有深究）、`migrate.db.test.ts` 的迁移条数（22 → 23）与 Drizzle 表数（25 → 26）。
+新增测试：`packages/db/src/balance-notices.db.test.ts` 26 个、`packages/db/src/balance-notices-backfill.db.test.ts` 3 个、`apps/worker/src/balance-notices.db.test.ts` 3 个，`packages/shared/src/mail/templates.test.ts` 里的 HTML 属性断言；改动的既有测试：`admin/rates.db.test.ts` 的 `snapshot` 补上 `ORDER BY created_at`（`logs.at(-1)` 原来依赖堆的物理顺序，本 PR 新增用例之后整套运行连续两次取到 `tenant_create`，单文件运行不受影响，具体触发原因没有深究）、`migrate.db.test.ts` 的迁移条数与 Drizzle 表数（变基到含 PR 4 的 main 之后是 24 与 27）。
 
 ## 验收 1–3 与决定 24–30
 
@@ -35,7 +35,7 @@
 
 ## 迁移与回填
 
-`balance-notices-backfill.db.test.ts`：在停在 0023 之前、灌了种子的库上执行 0023（`backfilled tenants queue no email`）：发件箱仍为 0 行；每个租户一行状态，标志与余额口径逐租户一致（HZX014、GLB009 已停机；ABC001、GZT007 低余额未停机；没有提醒设置的租户不记低余额），序号全为 0；升级后已在线下的租户继续扣费不再通知。`seeding a migrated database queues no balance notice and keeps the states`：迁移后的库上播种，触发器确实跑过（HZX014 的序号为 1），但发件箱为空，再播一次仍为空。`migrates an empty database from scratch`：空库从头迁移，状态表为空，两个触发器存在。共享测试库（`pnpm test:db` 的全局准备）同样是「空库迁移再播种」。
+`balance-notices-backfill.db.test.ts`：在停在 0023 之前（0022 已应用，与 main 一致）、灌了种子的库上执行 0023（`backfilled tenants queue no email`）：发件箱仍为 0 行；每个租户一行状态，标志与余额口径逐租户一致（HZX014、GLB009 已停机；ABC001、GZT007 低余额未停机；没有提醒设置的租户不记低余额），序号全为 0；升级后已在线下的租户继续扣费不再通知。`seeding a migrated database queues no balance notice and keeps the states`：迁移后的库上播种，触发器确实跑过（HZX014 的序号为 1），但发件箱为空，再播一次仍为空。`migrates an empty database from scratch`：空库从头迁移，状态表为空，两个触发器存在。共享测试库（`pnpm test:db` 的全局准备）同样是「空库迁移再播种」。
 
 ## 吞吐
 

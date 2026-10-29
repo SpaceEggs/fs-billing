@@ -1,6 +1,6 @@
 import type {} from '../../../packages/db/test/global-setup.js';
 import { randomUUID } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendLedgerEntry, createTenant, withAdmin } from '@fs-billing/db';
 import { money } from '@fs-billing/rating';
 import { adminId, connections } from '../../../packages/db/test/support.js';
@@ -24,9 +24,18 @@ beforeEach(async () => {
     "update email_outbox set status = 'skipped', skip_reason = 'test cleanup', sent_at = null, locked_until = null where status in ('pending', 'sending', 'failed', 'sent')",
   );
 });
-afterEach(async () => {
+/** 本文件造的余额通知：共用的测试库里不留给后面的文件（被 balance_alert_deliveries 引用的已发送行删不掉，保留）。 */
+async function cleanUp() {
   await clearMailpit();
-});
+  await owner.pool.query(
+    "update email_outbox set status = 'skipped', skip_reason = 'test cleanup', sent_at = null, locked_until = null where template like 'balance\\_%' and status in ('pending', 'sending', 'failed')",
+  );
+  await owner.pool.query(
+    "delete from email_outbox o where o.template like 'balance\\_%' and not exists (select 1 from balance_alert_deliveries d where d.outbox_id = o.id)",
+  );
+}
+afterEach(cleanUp);
+afterAll(cleanUp);
 
 async function tenantWith(options: {
   threshold: string;
