@@ -111,6 +111,10 @@ beforeAll(async () => {
   await owner.pool.query('delete from pgboss.job where name = any($1)', [
     [NOTIFY_QUEUE, ARCHIVE_QUEUE],
   ]);
+  // 离分钟边界太近时先让它过去：启动补扫的任务和「第一个边界」的任务不能混在一起。
+  const toBoundary = MINUTE - (Date.now() % MINUTE);
+  if (toBoundary < 5000)
+    await new Promise((resolve) => setTimeout(resolve, toBoundary + 500));
   await Promise.all(bosses.map((boss) => boss.start()));
   await startNotifyJobs(bossA, businessA.db, tickOptions(0));
   await startNotifyJobs(bossB, businessB.db, tickOptions(1));
@@ -366,18 +370,31 @@ describe('两个 PgBoss 实例', () => {
     ]);
     // 分钟边界上的 notify-tick 也可能同时在发，所以认领数只能是不超过总数的和；关键是不重复。
     expect(one.sent + two.sent).toBeLessThanOrEqual(emails);
-    await expect
-      .poll(
-        async () =>
-          (
-            await owner.pool.query<{ n: number }>(
-              `select count(*)::int as n from email_outbox where dedupe_key like $1 and status = 'sent'`,
-              [`${mark}:%`],
-            )
-          ).rows[0]!.n,
-        { timeout: 20_000, interval: 250 },
-      )
-      .toBe(emails);
+    try {
+      await expect
+        .poll(
+          async () =>
+            (
+              await owner.pool.query<{ n: number }>(
+                `select count(*)::int as n from email_outbox where dedupe_key like $1 and status = 'sent'`,
+                [`${mark}:%`],
+              )
+            ).rows[0]!.n,
+          { timeout: 20_000, interval: 250 },
+        )
+        .toBe(emails);
+    } catch (error) {
+      // 偶发失败时留下现场：每封的状态、次数、最后的错误，以及两个分发器的返回。
+      const { rows: state } = await owner.pool.query(
+        `select status, attempts, last_error, next_attempt_at, locked_until, now() as db_now
+           from email_outbox where dedupe_key like $1 order by dedupe_key`,
+        [`${mark}:%`],
+      );
+      throw new Error(
+        `发件箱未全部发出：${JSON.stringify({ one, two, state })}`,
+        { cause: error },
+      );
+    }
     const { rows } = await owner.pool.query(
       `select distinct attempts from email_outbox where dedupe_key like $1`,
       [`${mark}:%`],

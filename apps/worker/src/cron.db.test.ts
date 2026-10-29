@@ -86,7 +86,8 @@ describe('real cron', () => {
     // 带上 mail 设置，处理函数每次运行恰好建一次传输：用它数「处理函数被调用了几次」。
     mail: mailpitSettings(),
     createTransport: (settings) => {
-      handlerRuns++;
+      // 启动时补扫出的任务（早于第一个边界）不算。
+      if (Date.now() >= firstBoundary) handlerRuns++;
       return createMailTransport(settings);
     },
     quietMinutes: 10,
@@ -98,6 +99,10 @@ describe('real cron', () => {
     await owner.pool.query('delete from pgboss.job where name = $1', [
       NOTIFY_QUEUE,
     ]);
+    // 离分钟边界太近时先让它过去：启动补扫的任务和「第一个边界」的任务不能混在一起。
+    const toBoundary = MINUTE - (Date.now() % MINUTE);
+    if (toBoundary < 5000)
+      await new Promise((resolve) => setTimeout(resolve, toBoundary + 500));
     await boss.start();
     await startNotifyJobs(boss, businessConnection.db, options);
     // 注册完成之后的第一个分钟边界：之前的触发（启动时的补扫）不算。
