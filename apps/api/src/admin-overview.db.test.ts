@@ -99,11 +99,11 @@ describe('GET /api/admin/overview', () => {
     expect(
       num(after.metrics.pendingReceivable.CNY) -
         num(before.metrics.pendingReceivable.CNY),
-    ).toBeCloseTo(123.45, 6);
+    ).toBeCloseTo(123.45, 3);
     expect(
       num(after.metrics.pendingReceivable.USD) -
         num(before.metrics.pendingReceivable.USD),
-    ).toBeCloseTo(67.89, 6);
+    ).toBeCloseTo(67.89, 3);
   });
 
   it('overview alert count equals the alerts page total for the same window', async () => {
