@@ -10,6 +10,18 @@ afterEach(() => {
   passwordGate.clear();
 });
 
+/** 「提示」警示条：文字、行内编码和后续文字是同一个说明的内容，不是 Alert 的并列子元素（会各占一行）。 */
+function expectBillingTenantHint() {
+  const code = screen.getByText('billing_tenant');
+  const description = code.closest('[data-slot="alert-description"]');
+  expect(description).not.toBeNull();
+  expect(description?.parentElement).toHaveAttribute('data-slot', 'alert');
+  expect(description?.parentElement?.children).toHaveLength(1);
+  expect(description).toHaveTextContent(
+    '提示 请同时检查 FreeSWITCH 中的 billing_tenant 配置，否则新话单会继续进入此处。',
+  );
+}
+
 const tenantId = '00000000-0000-4000-8000-00000000a001';
 const auditId = '00000000-0000-4000-8000-00000000c001';
 const assignmentId = '00000000-0000-4000-8000-00000000c002';
@@ -246,6 +258,7 @@ describe('unassigned calls', () => {
       }),
     });
     const table = await screen.findByRole('table');
+    expectBillingTenantHint();
     expect(
       screen.getByRole('button', { name: /话单未携带租户标签/ }),
     ).toBeVisible();
@@ -590,6 +603,8 @@ describe('unassigned calls', () => {
       expect(location()).toBe('/admin/unassigned?tab=ignored'),
     );
     const table = await screen.findByRole('table');
+    // 运营稿 3g：已忽略页签同样显示「提示」警示条，且一句话在同一个说明里排版。
+    expectBillingTenantHint();
     expect(within(table).getByText('测试呼叫，不属于任何客户')).toBeVisible();
     expect(within(table).getByText('王敏 · 2026-10-01 10:00:00')).toBeVisible();
     await user.click(within(table).getByRole('button', { name: '撤销忽略' }));
@@ -643,6 +658,8 @@ describe('unassigned calls', () => {
     });
     expect(await screen.findByText('所有话单都已归属')).toBeVisible();
     expect(screen.getByText('没有待处理的未归属话单')).toBeVisible();
+    // 运营稿 3h：清空后提示条仍在。
+    expectBillingTenantHint();
     expect(calls.some((call) => call.path.includes('/groups'))).toBe(false);
     const nav = screen.getAllByRole('navigation', { name: '主导航' })[0]!;
     expect(

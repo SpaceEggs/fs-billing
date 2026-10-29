@@ -19,7 +19,7 @@ import {
   TabsTrigger,
 } from '../../components/ui/tabs';
 import { Checkbox } from '../../components/ui/checkbox';
-import { Alert } from '../../components/ui/alert';
+import { Alert, AlertDescription } from '../../components/ui/alert';
 import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign-dialog';
 import { UnassignedIgnoreDialog } from '../../components/admin/unassigned-ignore-dialog';
 import { RequestFailure } from '../../components/admin/problem-alert';
@@ -264,14 +264,10 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
   const panelContent = (
     <>
       <PageStatus notice={notice} onDismiss={() => setNotice(null)} />
+      <BillingTenantHint />
       {pendingEmpty ? <PendingEmpty /> : null}
       {tab === 'pending' && summary.data && summary.data.pending > 0 ? (
         <>
-          <Alert variant="warning" className="m-0 px-3.5 text-foreground">
-            <span className="font-semibold text-warn">提示</span> 请同时检查
-            FreeSWITCH 中的 <code className="font-mono">billing_tenant</code>{' '}
-            配置，否则新话单会继续进入此处。
-          </Alert>
           {groups.isError && !groups.data ? (
             <QueryError
               title="分组加载失败"
@@ -491,6 +487,25 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
         />
       ) : null}
     </AppShell>
+  );
+}
+
+/**
+ * 提示条（运营稿 3a、3g、3h）：待处理、已忽略与清空后都显示。
+ * 文字、行内编码和后续文字必须在同一个 AlertDescription 里一起排版，不能各自作为 Alert 的直接子元素（会各占一行）。
+ */
+function BillingTenantHint() {
+  return (
+    <Alert variant="warning" className="m-0 px-3.5">
+      <AlertDescription className="text-foreground!">
+        <span className="font-semibold text-warn">提示</span> 请同时检查
+        FreeSWITCH 中的{' '}
+        <code className="rounded border border-warn-border bg-background px-1.5 py-px font-mono">
+          billing_tenant
+        </code>{' '}
+        配置，否则新话单会继续进入此处。
+      </AlertDescription>
+    </Alert>
   );
 }
 
