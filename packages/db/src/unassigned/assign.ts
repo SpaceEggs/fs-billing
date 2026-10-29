@@ -9,6 +9,10 @@ import {
 import type { AuditActor } from '@fs-billing/shared';
 import { writeAudit } from '../admin/audit.js';
 import {
+  lockUnassignedAlerts,
+  recoverClearedUnassignedAlerts,
+} from '../alerts.js';
+import {
   chargeCall,
   loadDeletedMonths,
   priceAndInsertCdr,
@@ -178,6 +182,8 @@ export async function assignUnassigned(
     }
 
     const target = await loadAssignmentTarget(tx, input.tenantId);
+    // 租户锁之后、锁待处理行之前：未归属告警族的互斥锁（与入库停放、修正稿、忽略同序）。
+    await lockUnassignedAlerts(tx);
     const rows = await selectRows(tx, input.selection, {
       status: 'pending',
       lock: true,
@@ -276,6 +282,11 @@ export async function assignUnassigned(
       .returning({ id: unassignedCdrs.id });
     if (updated.length !== assignable.length)
       throw new Error('分配时有待处理话单被其他操作改动');
+    // 同键的待处理行清零，对应的系统告警恢复（阶段 9）。
+    await recoverClearedUnassignedAlerts(
+      tx,
+      assignable.map((item) => item.row),
+    );
 
     const symbol = SYMBOL[target.currency];
     await writeAudit(tx, {

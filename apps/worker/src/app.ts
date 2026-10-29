@@ -6,7 +6,12 @@ import {
   cdrResponseSchema,
   healthResponseSchema,
 } from '@fs-billing/shared';
-import { loadRatingTenant, withSystem, type Db } from '@fs-billing/db';
+import {
+  AlertKeys,
+  loadRatingTenant,
+  withSystem,
+  type Db,
+} from '@fs-billing/db';
 import {
   authorize,
   resolveBillingNumber,
@@ -142,11 +147,14 @@ export function createWorker(dependencies?: WorkerDependencies) {
             /no partition of relation .* found for row/.test(pg.message);
           request.log.error({ err: error }, '话单入库失败');
           try {
-            await recordAlert(
-              db,
-              partitionFailed ? 'partition_failed' : 'cdr_failed',
-              pg?.message ?? '话单入库或任务入队失败',
-            );
+            await recordAlert(db, {
+              kind: partitionFailed ? 'partition_failed' : 'cdr_failed',
+              subjectKey: partitionFailed
+                ? AlertKeys.partitionMissing
+                : AlertKeys.cdrSave,
+              description: pg?.message ?? '话单入库或任务入队失败',
+              calls: 1,
+            });
           } catch (alertError) {
             request.log.error({ err: alertError }, '话单失败告警保存失败');
           }

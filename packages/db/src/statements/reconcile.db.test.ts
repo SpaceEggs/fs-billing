@@ -135,6 +135,17 @@ describe('账单核对（验收标准 2）', () => {
         recovered: false,
       },
     ]);
+    // 告警靠键识别，不靠描述前缀：statement:<租户 id>:<YYYY-MM>。
+    expect(
+      (
+        await owner.pool.query(
+          `select subject_key, notify from system_alerts where tenant_id = $1 and kind = 'statement_mismatch'`,
+          [tenant.id],
+        )
+      ).rows,
+    ).toEqual([
+      { subject_key: `statement:${tenant.id}:2026-09`, notify: true },
+    ]);
   });
 
   it('marks the following month stale when its opening balance no longer matches', async () => {

@@ -3,6 +3,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyBaseLogger } from 'fastify';
 import { z } from 'zod';
 import {
+  AlertKeys,
+  raiseAlert,
   schema,
   withAdmin,
   lockTenants,
@@ -104,17 +106,16 @@ export function createAdminAccountService(deps: {
     if (!row) throw new AdminServiceError('NOT_FOUND', '账号不存在');
     return row;
   }
-  /** 描述只有动作与对象 id，不含密码、邮箱或异常原文。写不进去只记日志，不影响响应。 */
-  async function alertAuditFailed(
-    kind: 'admin' | 'portal',
-    id: string,
-    tenantId: string | null,
-  ) {
+  /**
+   * 描述只有动作与对象 id，不含密码、邮箱或异常原文。写不进去只记日志，不影响响应。
+   * 全局键：不带租户（多个租户的事件并成一条，对象 id 在描述里）。
+   */
+  async function alertAuditFailed(kind: 'admin' | 'portal', id: string) {
     try {
       await withAdmin(db, (tx) =>
-        tx.insert(schema.systemAlerts).values({
-          tenantId,
+        raiseAlert(tx, {
           kind: 'audit_failed',
+          subjectKey: AlertKeys.auditResetPassword,
           description: `重置密码的审计写入失败，凭据与会话未变更（${kind === 'admin' ? '管理员' : '门户账号'} ${id}）`,
         }),
       );
@@ -425,7 +426,7 @@ export function createAdminAccountService(deps: {
           failedAudit = undefined;
         });
       } catch (error) {
-        if (failedAudit) await alertAuditFailed(kind, id, failedAudit.tenantId);
+        if (failedAudit) await alertAuditFailed(kind, id);
         throw error;
       }
       return { temporaryPassword };

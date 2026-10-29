@@ -460,6 +460,18 @@ export const systemAlerts = pgTable('system_alerts', {
   startedAt: at('started_at').notNull().defaultNow(),
   recoveredAt: at('recovered_at'),
   affectedCalls: integer('affected_calls').notNull().default(0),
+  /** 告警身份：同一 kind 内同一时刻只有一条未恢复（局部唯一索引）。旧行可空，不参与合并与自动恢复。 */
+  subjectKey: text('subject_key'),
+  /** 最近一次事件的数据库时间；静默窗口恢复按它判断。 */
+  lastSeenAt: at('last_seen_at').notNull().defaultNow(),
+  /** 事件次数；affected_calls 仍是影响的通话数。 */
+  occurrences: integer('occurrences').notNull().default(1),
+  /** 新开时按 kind 策略定下是否发邮件；之后改策略不回头影响旧告警。 */
+  notify: boolean('notify').notNull().default(false),
+  notifiedStartAt: at('notified_start_at'),
+  lastDigestAt: at('last_digest_at'),
+  digestCursor: integer('digest_cursor').notNull().default(0),
+  notifiedRecoveredAt: at('notified_recovered_at'),
 });
 
 export const balanceAlertSettings = pgTable('balance_alert_settings', {

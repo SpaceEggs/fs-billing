@@ -1,6 +1,7 @@
 export * from './client.js';
 export * from './cancel-postgres.js';
 export { withBoundedExportClient } from './bounded-export-client.js';
+export * from './alerts.js';
 export * from './clock.js';
 export * from './ledger.js';
 export * from './cdr-intake.js';

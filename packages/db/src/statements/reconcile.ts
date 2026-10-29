@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { decimal } from '@fs-billing/rating';
+import { AlertKeys, raiseAlert, recoverAlertsWhere } from '../alerts.js';
 import type { Tx } from '../client.js';
 import { NotFoundError } from '../errors.js';
 import { monthlyStatements, systemAlerts, tenants } from '../schema.js';
@@ -146,7 +147,7 @@ function alertPrefix(code: string, month: string): string {
 }
 
 /**
- * 一个 (租户, 月份) 同时只开一条未恢复的告警，按描述前缀「<租户编码> <YYYY-MM> 」识别。
+ * 一个 (租户, 月份) 同时只开一条未恢复的告警，键 statement:<租户 id>:<YYYY-MM>。
  * 状态或差额变了就更新这一条的描述，核对通过（或账单补建）后置 recovered_at。
  */
 async function syncAlerts(
@@ -163,20 +164,24 @@ async function syncAlerts(
   const desired = new Map<string, { description: string; affected: number }>();
   for (const result of results) {
     if (result.status === 'ok') continue;
-    desired.set(alertPrefix(code, result.month), {
+    desired.set(AlertKeys.statement(tenantId, monthKey(result.month)), {
       description: `${alertPrefix(code, result.month)}${ALERT_SUFFIX}（${result.status}），差额 ${result.diff}`,
       affected: result.lateEntries,
     });
   }
   for (const month of missing) {
-    desired.set(alertPrefix(code, month), {
+    desired.set(AlertKeys.statement(tenantId, monthKey(month)), {
       description: `${alertPrefix(code, month)}${ALERT_SUFFIX}（missing）`,
       affected: 0,
     });
   }
 
   const open = await tx
-    .select({ id: systemAlerts.id, description: systemAlerts.description })
+    .select({
+      id: systemAlerts.id,
+      subjectKey: systemAlerts.subjectKey,
+      description: systemAlerts.description,
+    })
     .from(systemAlerts)
     .where(
       and(
@@ -192,37 +197,35 @@ async function syncAlerts(
   let alertsRecovered = 0;
   const kept = new Set<string>();
   for (const alert of open) {
-    const prefix = [...desired.keys()].find((key) =>
-      alert.description.startsWith(key),
-    );
-    if (prefix === undefined || kept.has(prefix)) {
-      await tx
-        .update(systemAlerts)
-        .set({ recoveredAt: sql`now()` })
-        .where(eq(systemAlerts.id, alert.id));
+    const wanted =
+      alert.subjectKey === null ? undefined : desired.get(alert.subjectKey);
+    if (alert.subjectKey === null || !wanted || kept.has(alert.subjectKey)) {
+      await recoverAlertsWhere(tx, eq(systemAlerts.id, alert.id));
       alertsRecovered++;
       continue;
     }
-    kept.add(prefix);
-    const wanted = desired.get(prefix)!;
+    kept.add(alert.subjectKey);
     if (alert.description !== wanted.description) {
-      await tx
-        .update(systemAlerts)
-        .set({
-          description: wanted.description,
-          affectedCalls: wanted.affected,
-        })
-        .where(eq(systemAlerts.id, alert.id));
+      await raiseAlert(tx, {
+        kind: 'statement_mismatch',
+        subjectKey: alert.subjectKey,
+        tenantId,
+        description: wanted.description,
+        calls: wanted.affected,
+        callsMode: 'set',
+      });
       alertsUpdated++;
     }
   }
-  for (const [prefix, wanted] of desired) {
-    if (kept.has(prefix)) continue;
-    await tx.insert(systemAlerts).values({
-      tenantId,
+  for (const [subjectKey, wanted] of desired) {
+    if (kept.has(subjectKey)) continue;
+    await raiseAlert(tx, {
       kind: 'statement_mismatch',
+      subjectKey,
+      tenantId,
       description: wanted.description,
-      affectedCalls: wanted.affected,
+      calls: wanted.affected,
+      callsMode: 'set',
     });
     alertsOpened++;
   }
