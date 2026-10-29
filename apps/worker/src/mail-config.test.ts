@@ -78,6 +78,7 @@ describe('邮件配置', () => {
     });
     expect(parse({ ...mailpit, SMTP_HOST: 'localhost' }).success).toBe(true);
     expect(parse({ ...mailpit, SMTP_HOST: '::1' }).success).toBe(true);
+    expect(parse({ ...mailpit, SMTP_HOST: '[::1]' }).success).toBe(true);
   });
 
   it('accepts implicit tls on 465 and starttls on 587', () => {

@@ -77,6 +77,14 @@ describe('SMTP 连接选项', () => {
     ).toMatchObject({ secure: true, requireTLS: false });
   });
 
+  it('strips the brackets of an IPv6 literal host', () => {
+    expect(smtpTransportOptions({ ...base, host: '[::1]' }).host).toBe('::1');
+    expect(smtpTransportOptions({ ...base, host: '::1' }).host).toBe('::1');
+    expect(smtpTransportOptions({ ...base, host: 'localhost' }).host).toBe(
+      'localhost',
+    );
+  });
+
   it('keeps certificate checks, auth and timeouts as configured and never turns on logging', () => {
     const options = smtpTransportOptions({
       ...base,
@@ -228,6 +236,26 @@ describe('失败分类', () => {
       expected: { class: 'retry', scope: 'smtp' },
     },
     {
+      name: 'the DATA command refused with 451',
+      script: { dataCommand: '451 4.3.0 temporary local problem' },
+      expected: { class: 'retry', scope: 'smtp' },
+    },
+    {
+      name: 'the DATA command refused with 554',
+      script: { dataCommand: '554 5.5.1 no valid recipients' },
+      expected: { class: 'permanent', scope: 'smtp' },
+    },
+    {
+      name: 'a 552 size error after DATA that says exceeds',
+      script: { data: '552 5.3.4 message size exceeds fixed limit' },
+      expected: { class: 'permanent', scope: 'smtp' },
+    },
+    {
+      name: 'a 552 mailbox full at RCPT that says exceeded',
+      script: { rcpt: () => '552 5.2.2 mailbox full, quota exceeded' },
+      expected: { class: 'permanent', scope: 'recipient' },
+    },
+    {
       name: 'service closing with 421 at the greeting',
       script: { greeting: '421 4.3.2 service not available' },
       expected: { class: 'retry', scope: 'smtp' },
@@ -282,6 +310,63 @@ describe('失败分类', () => {
     expect(result.accepted).toEqual(['alice@example.test']);
     expect(result.rejected).toEqual(['bob@example.test']);
     expect(server.messages()).toBe(1);
+  });
+
+  it('puts the rejected recipients of a thrown envelope error on the failure', async () => {
+    const server = await startFakeSmtp({
+      rcpt: () => '550 5.1.1 no such user',
+    });
+    servers.push(server);
+    const transport = createMailTransport(
+      mailpitSettings({ port: server.port }),
+      { pool: false },
+    );
+    const failure = await transport.send(mail).then(
+      () => undefined,
+      (error: unknown) => classifySmtpError(error),
+    );
+    transport.close();
+    expect(failure).toMatchObject({ class: 'permanent', scope: 'recipient' });
+    expect([...(failure?.rejected ?? [])].sort()).toEqual([
+      'alice@example.test',
+      'bob@example.test',
+    ]);
+  });
+
+  it('treats a local oversize or empty message as permanent, not unknown', () => {
+    expect(
+      classifySmtpError({
+        code: 'EMESSAGE',
+        command: 'MAIL FROM',
+        message: 'Message size larger than allowed 1000',
+      }),
+    ).toMatchObject({ class: 'permanent', scope: 'smtp' });
+    // 有响应码的 EMESSAGE 按响应码走：DATA 之后的 4xx 重试。
+    expect(
+      classifySmtpError({
+        code: 'EMESSAGE',
+        command: 'DATA',
+        responseCode: 451,
+      }),
+    ).toMatchObject({ class: 'retry' });
+  });
+
+  it('only clear rate limit wording turns a 5xx into a retry', () => {
+    const permanent = (response: string, responseCode = 552) =>
+      classifySmtpError({
+        code: 'EMESSAGE',
+        command: 'DATA',
+        responseCode,
+        response,
+      });
+    expect(permanent('552 message size exceeds limit').class).toBe('permanent');
+    expect(permanent('552 mailbox full').class).toBe('permanent');
+    expect(permanent('552 收件人超过限制').class).toBe('permanent');
+    expect(permanent('550 Mail frequency limited').class).toBe('retry');
+    expect(permanent('554 too many messages, rate limited').class).toBe(
+      'retry',
+    );
+    expect(permanent('550 发送过于频繁，请稍后再试').class).toBe('retry');
   });
 
   it('retries errors it does not recognise, never drops the mail', () => {

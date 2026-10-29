@@ -1,4 +1,5 @@
-import { and, asc, eq, gte, inArray, lt, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { raiseAlert, recoverAlert, recoverAlertsWhere } from './alerts.js';
 import type { Tx } from './client.js';
 import {
@@ -39,10 +40,15 @@ export function mailBackoffSeconds(attempts: number): number {
 /** 收件人被拒的 `recipient:<租户>` 告警：这么多天没有新拒收就恢复。 */
 export const RECIPIENT_ALERT_WINDOW_DAYS = 7;
 
-/** `email_failed` 告警的键。`smtp`：传输层（连接、认证、整封被拒）；`recipient:<租户>`：租户的收件人被拒。 */
+/**
+ * `email_failed` 告警的键。`smtp`：传输层（连接、认证、整封被拒）；`recipient:<租户>`：租户的收件人被拒；
+ * `recipient:admin`：管理员告警邮件（没有租户）的收件人被拒——它不能挂在 `smtp` 上，否则下一封成功的邮件
+ * 会把它恢复掉，下一次拒收又重开，告警来回开关。
+ */
 export const EmailAlertKeys = {
   smtp: 'smtp',
   recipient: (tenantId: string) => `recipient:${tenantId}`,
+  recipientAdmin: 'recipient:admin',
 } as const;
 const RECIPIENT_PREFIX = EmailAlertKeys.recipient('');
 
@@ -52,7 +58,7 @@ export interface EnqueueEmailInput {
   readonly template: EmailTemplate;
   /** 渲染所需的快照；不存渲染后的正文。 */
   readonly params: Record<string, unknown>;
-  /** 入队时的收件人快照；之后改设置不影响已入队的邮件。空列表入队为 skipped。 */
+  /** 入队时的收件人快照；之后改设置不影响已入队的邮件。空列表（或全部无效）入队为 skipped。 */
   readonly recipients: readonly string[];
   readonly tenantId?: string | null | undefined;
   /** 显式跳过（例如 `tenant_disabled`）；不给且收件人为空时记 `no_recipients`。 */
@@ -66,15 +72,30 @@ export interface EnqueuedEmail {
   /** false：同一个 dedupeKey 已经入过队，这次没有写入。 */
   readonly created: boolean;
   readonly status: 'pending' | 'skipped' | 'sending' | 'sent' | 'failed';
+  /** 因为不是单个纯邮箱地址而被丢弃的收件人条数。 */
+  readonly droppedRecipients: number;
 }
 
-/** 去掉空白、统一小写、去重（租户与告警设置的邮箱规则也是小写、去重）。 */
-function normalizeRecipients(recipients: readonly string[]): string[] {
-  return [
-    ...new Set(
-      recipients.map((entry) => entry.trim().toLowerCase()).filter(Boolean),
-    ),
-  ];
+const recipientSchema = z.email();
+
+/**
+ * 去掉空白、统一小写、去重，并且每个收件人必须是单个纯邮箱地址（zod email）：带逗号、显示名（`A <a@b.c>`）、
+ * 尖括号、空格的条目丢弃。丢弃而不是抛错——入队通常和余额变动在同一个事务里，抛错会回滚业务事务；
+ * 全部被丢弃的邮件和没有收件人一样入队为 skipped（原因 `invalid_recipients`），状态机照常前进（决定 26）。
+ */
+function normalizeRecipients(recipients: readonly string[]): {
+  valid: string[];
+  dropped: number;
+} {
+  const seen = new Set<string>();
+  let dropped = 0;
+  for (const entry of recipients) {
+    const address = entry.trim().toLowerCase();
+    if (address === '') continue;
+    if (recipientSchema.safeParse(address).success) seen.add(address);
+    else dropped++;
+  }
+  return { valid: [...seen], dropped };
 }
 
 /** 入队一封邮件；与调用方的状态变化在同一事务。`INSERT … ON CONFLICT (dedupe_key) DO NOTHING`。 */
@@ -82,9 +103,14 @@ export async function enqueueEmail(
   tx: Tx,
   input: EnqueueEmailInput,
 ): Promise<EnqueuedEmail> {
-  const recipients = normalizeRecipients(input.recipients);
+  const { valid: recipients, dropped } = normalizeRecipients(input.recipients);
   const skipReason =
-    input.skipReason ?? (recipients.length === 0 ? 'no_recipients' : undefined);
+    input.skipReason ??
+    (recipients.length === 0
+      ? dropped > 0
+        ? 'invalid_recipients'
+        : 'no_recipients'
+      : undefined);
   const [inserted] = await tx
     .insert(emailOutbox)
     .values({
@@ -99,12 +125,13 @@ export async function enqueueEmail(
     })
     .onConflictDoNothing({ target: emailOutbox.dedupeKey })
     .returning({ id: emailOutbox.id, status: emailOutbox.status });
-  if (inserted) return { ...inserted, created: true };
+  if (inserted)
+    return { ...inserted, created: true, droppedRecipients: dropped };
   const [existing] = await tx
     .select({ id: emailOutbox.id, status: emailOutbox.status })
     .from(emailOutbox)
     .where(eq(emailOutbox.dedupeKey, input.dedupeKey));
-  return { ...existing!, created: false };
+  return { ...existing!, created: false, droppedRecipients: dropped };
 }
 
 export type ClaimedEmail = typeof emailOutbox.$inferSelect;
@@ -112,6 +139,8 @@ export type ClaimedEmail = typeof emailOutbox.$inferSelect;
 /**
  * 认领到期的邮件：`pending` 且到了重试时间，或 `sending` 但租约已过期（上一个分发器崩溃了）。
  * `FOR UPDATE SKIP LOCKED` 让多个分发器各拿不同的行；认领即 attempts + 1 并续租。
+ * 选行放在 `MATERIALIZED` 的 CTE 里：带 LIMIT 的 SKIP LOCKED 子查询若被计划器并入外层 UPDATE，
+ * 可能认领超过 LIMIT 的行，或在重新执行时拿到别的行。
  */
 export async function claimDueEmails(
   tx: Tx,
@@ -121,33 +150,29 @@ export async function claimDueEmails(
   const leaseEnd = new Date(
     now.getTime() + (options.leaseSeconds ?? OUTBOX_LEASE_SECONDS) * 1000,
   );
-  const due = tx
-    .select({ id: emailOutbox.id })
+  const { rows } = await tx.execute<{ id: string }>(sql`
+    WITH due AS MATERIALIZED (
+      SELECT id FROM email_outbox
+      WHERE (status = 'pending' AND next_attempt_at <= ${now}::timestamptz)
+         OR (status = 'sending' AND locked_until < ${now}::timestamptz)
+      ORDER BY next_attempt_at, created_at
+      LIMIT ${limit}
+      FOR UPDATE SKIP LOCKED
+    )
+    UPDATE email_outbox o
+    SET status = 'sending', locked_until = ${leaseEnd}::timestamptz, attempts = o.attempts + 1
+    FROM due WHERE o.id = due.id
+    RETURNING o.id`);
+  if (rows.length === 0) return [];
+  const claimed = await tx
+    .select()
     .from(emailOutbox)
     .where(
-      or(
-        and(
-          eq(emailOutbox.status, 'pending'),
-          lte(emailOutbox.nextAttemptAt, now),
-        ),
-        and(
-          eq(emailOutbox.status, 'sending'),
-          lt(emailOutbox.lockedUntil, now),
-        ),
+      inArray(
+        emailOutbox.id,
+        rows.map((row) => row.id),
       ),
-    )
-    .orderBy(asc(emailOutbox.nextAttemptAt), asc(emailOutbox.createdAt))
-    .limit(limit)
-    .for('update', { skipLocked: true });
-  const claimed = await tx
-    .update(emailOutbox)
-    .set({
-      status: 'sending',
-      lockedUntil: leaseEnd,
-      attempts: sql`${emailOutbox.attempts} + 1`,
-    })
-    .where(inArray(emailOutbox.id, due))
-    .returning();
+    );
   return claimed.sort(
     (a, b) =>
       a.nextAttemptAt.getTime() - b.nextAttemptAt.getTime() ||
@@ -155,9 +180,40 @@ export async function claimDueEmails(
   );
 }
 
-/** 只有仍是 `sending` 的行才会被改：租约被别人接走并已完成时，这次写入落空（返回 false）。 */
-const stillSending = (id: string) =>
-  and(eq(emailOutbox.id, id), eq(emailOutbox.status, 'sending'));
+/**
+ * 结果写入的守卫：仍是 `sending`，**并且 attempts 等于认领时的值**。租约到期后别的分发器重新认领会把 attempts + 1，
+ * 所以迟到的旧处理者（慢发送、进程冻结后恢复）的写入落空（返回 false），不会覆盖更新的认领或已完成的结果。
+ */
+const stillClaimed = (email: { id: string; attempts: number }) =>
+  and(
+    eq(emailOutbox.id, email.id),
+    eq(emailOutbox.status, 'sending'),
+    eq(emailOutbox.attempts, email.attempts),
+  );
+
+/**
+ * 释放还没开始发送的认领（租约快到期、收到停止信号）：回到 `pending`、次数退回（这次没有真的尝试），
+ * `next_attempt_at` 不变所以下一个 tick 马上能再认领。同样受 {@link stillClaimed} 守卫。
+ */
+export async function releaseClaims(
+  tx: Tx,
+  emails: readonly { id: string; attempts: number }[],
+): Promise<number> {
+  let released = 0;
+  for (const email of emails) {
+    const rows = await tx
+      .update(emailOutbox)
+      .set({
+        status: 'pending',
+        lockedUntil: null,
+        attempts: sql`${emailOutbox.attempts} - 1`,
+      })
+      .where(stillClaimed(email))
+      .returning({ id: emailOutbox.id });
+    released += rows.length;
+  }
+  return released;
+}
 
 /**
  * 标记发送成功：`sent`、`sent_at`、SMTP 返回的收件人分类；余额类通知同事务记一行 `balance_alert_deliveries`
@@ -165,7 +221,7 @@ const stillSending = (id: string) =>
  */
 export async function completeEmail(
   tx: Tx,
-  email: Pick<ClaimedEmail, 'id' | 'template' | 'tenantId'>,
+  email: Pick<ClaimedEmail, 'id' | 'attempts' | 'template' | 'tenantId'>,
   result: {
     accepted: readonly string[];
     rejected: readonly string[];
@@ -184,7 +240,7 @@ export async function completeEmail(
       rejected: [...result.rejected],
       lastError: null,
     })
-    .where(stillSending(email.id))
+    .where(stillClaimed(email))
     .returning({ id: emailOutbox.id });
   if (updated.length === 0) return false;
   const kind =
@@ -225,7 +281,7 @@ export async function retryEmailLater(
       lockedUntil: null,
       lastError: options.error,
     })
-    .where(stillSending(email.id))
+    .where(stillClaimed(email))
     .returning({ id: emailOutbox.id });
   return updated.length > 0;
 }
@@ -233,7 +289,7 @@ export async function retryEmailLater(
 /** 永久失败：`failed`，不再自动重试；`mail:requeue` 可以把它放回去。 */
 export async function failEmail(
   tx: Tx,
-  id: string,
+  email: Pick<ClaimedEmail, 'id' | 'attempts'>,
   options: { error: string; rejected?: readonly string[] | undefined },
 ): Promise<boolean> {
   const updated = await tx
@@ -244,7 +300,7 @@ export async function failEmail(
       lastError: options.error,
       ...(options.rejected ? { rejected: [...options.rejected] } : {}),
     })
-    .where(stillSending(id))
+    .where(stillClaimed(email))
     .returning({ id: emailOutbox.id });
   return updated.length > 0;
 }
@@ -284,13 +340,15 @@ export async function purgeEmailOutbox(tx: Tx): Promise<number> {
 }
 
 /**
- * 记一次 `email_failed` 告警（`notify = false`，只出现在页面和概览，不发邮件）。
- * `tenantId` 有值用 `recipient:<租户>` 键并带租户，否则用 `smtp`。
+ * 记一次 `email_failed` 告警（`notify = false`，只出现在页面和概览，不发邮件）。键：
+ * `tenantId` 有值 → `recipient:<租户>`（带租户）；`adminRecipients` → `recipient:admin`；否则 `smtp`。
  */
 export async function raiseEmailFailed(
   tx: Tx,
   input: {
     tenantId?: string | null | undefined;
+    /** 管理员告警邮件（没有租户）的收件人被拒。 */
+    adminRecipients?: boolean | undefined;
     description: string;
     at?: Date | undefined;
   },
@@ -299,7 +357,9 @@ export async function raiseEmailFailed(
     kind: 'email_failed',
     subjectKey: input.tenantId
       ? EmailAlertKeys.recipient(input.tenantId)
-      : EmailAlertKeys.smtp,
+      : input.adminRecipients
+        ? EmailAlertKeys.recipientAdmin
+        : EmailAlertKeys.smtp,
     tenantId: input.tenantId ?? null,
     description: input.description,
     at: input.at,
@@ -328,7 +388,19 @@ export function recoverRecipientAlert(
   });
 }
 
-/** `recipient:<租户>` 告警：7 天内没有新的拒收就恢复（按最近一次拒收的时间）。 */
+/**
+ * `recipient:admin` 告警：管理员告警接收邮箱被修改后恢复。
+ * TODO(PR 4 / PR 6)：保存告警设置（`alert_settings`）时调用；在那之前只靠 7 天窗口恢复。
+ */
+export function recoverAdminRecipientAlert(tx: Tx, at?: Date): Promise<number> {
+  return recoverAlert(tx, {
+    kind: 'email_failed',
+    subjectKey: EmailAlertKeys.recipientAdmin,
+    at,
+  });
+}
+
+/** `recipient:*`（含 `recipient:admin`）告警：7 天内没有新的拒收就恢复（按最近一次拒收的时间）。 */
 export function recoverStaleRecipientAlerts(
   tx: Tx,
   options: { at?: Date; windowDays?: number } = {},

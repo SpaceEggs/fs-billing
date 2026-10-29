@@ -94,6 +94,8 @@ export interface FakeSmtpScript {
   mailFrom?: string;
   /** 逐个收件人的 RCPT TO 响应（参数是小写地址）；默认 250。 */
   rcpt?: (address: string) => string;
+  /** 对 DATA 命令本身的响应；给了就不进入 354（用来模拟 DATA 被拒）。 */
+  dataCommand?: string;
   /** DATA 结束后的响应；默认 `250 2.0.0 ok queued`。 */
   data?: string;
 }
@@ -143,8 +145,11 @@ export async function startFakeSmtp(
           const address = /<([^>]*)>/.exec(line)?.[1]?.toLowerCase() ?? '';
           reply(script.rcpt?.(address) ?? '250 2.1.5 ok');
         } else if (verb === 'DATA') {
-          inData = true;
-          reply('354 go ahead');
+          if (script.dataCommand) reply(script.dataCommand);
+          else {
+            inData = true;
+            reply('354 go ahead');
+          }
         } else if (verb === 'QUIT') {
           reply('221 bye');
           socket.end();

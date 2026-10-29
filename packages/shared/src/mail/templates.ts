@@ -55,12 +55,13 @@ export const alertStartParamsSchema = z.strictObject({
     .min(1)
     .max(200),
 });
+// 汇总邮件按决定 34 不含告警的自由文本说明（说明里可能有租户标签、原因文字），只有类型、时长、新增数、累计数、
+// 受影响最多的租户编码和链接；开始邮件保留经过净化的说明（抹掉通话 UUID）。
 export const alertDigestParamsSchema = z.strictObject({
   alerts: z
     .array(
       z.strictObject({
         kind: z.string().min(1).max(100),
-        description: text,
         startedAt: instant,
         durationMinutes: minutes,
         /** 距上次开始或汇总邮件新增的事件数。 */
@@ -149,9 +150,17 @@ function subjectOf(value: string): string {
     : line;
 }
 
-/** 告警说明：抹掉通话 UUID，折成单行。 */
+/**
+ * 告警说明：抹掉通话 UUID，折成单行。含 UUID 的整个子句一起去掉（「，最近一通 <uuid>」「，最近一次原文 <id>」），
+ * 不留下悬空的「最近一通 …」；剩下的零星 UUID 才替换成省略号。
+ */
 function describe(value: string): string {
-  return oneLine(value.replace(UUID, '…'));
+  const clause = new RegExp(
+    `\\s*[，,；;][^，,；;。]*${UUID.source}[^，,；;。]*`,
+    'gi',
+  );
+  const stripped = value.replace(clause, '').replace(UUID, '…');
+  return oneLine(stripped);
 }
 
 /** 北京时间 `2026-10-29 14:03`。 */
@@ -298,7 +307,8 @@ const renderers: {
           heading: kindLabel(alert.kind),
           lines: [
             describe(alert.description),
-            `开始时间：${at(alert.startedAt)}（按话单到达时间记录）`,
+            // 只有授权超时随话单到达，开始时间才是话单到达的时间；其余类型是事件发生的时间。
+            `开始时间：${at(alert.startedAt)}${alert.kind === 'auth_timeout' ? '（按话单到达时间记录）' : ''}`,
           ],
         })),
         alertsLink(context),
@@ -313,7 +323,6 @@ const renderers: {
         params.alerts.map((alert) => ({
           heading: kindLabel(alert.kind),
           lines: [
-            describe(alert.description),
             `持续 ${formatDuration(alert.durationMinutes)}（开始于 ${at(alert.startedAt)}）`,
             `距上次通知新增 ${alert.added} 次，累计 ${alert.total} 次`,
             ...(alert.topTenants.length > 0

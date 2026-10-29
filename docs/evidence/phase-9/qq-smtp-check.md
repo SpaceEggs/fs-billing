@@ -26,7 +26,17 @@
    MAIL_FROM=pbx3cx@qq.com
    ```
 
-4. 代码已部署到 `/opt/fs-billing`，依赖已安装（`nodemailer` 是 PR 2 新增的依赖）。
+4. 代码已部署到 `/opt/fs-billing`，并完成下面的「部署步骤」。
+
+## 部署步骤（PR 2 上线前）
+
+按顺序执行，每一步成功再做下一步（部署的通用步骤见阶段 10 运维手册，这里只列 PR 2 特有的）：
+
+1. `pnpm install --frozen-lockfile`：PR 2 新增依赖 `nodemailer@10.1.1`，漏掉会让 Worker 启动时找不到模块。
+2. `pnpm db:migrate`：迁移 0021 建 `email_outbox` 与 `balance_alert_deliveries.outbox_id`。
+3. `pnpm --filter @fs-billing/worker queue:migrate`：建 `notify-tick` 队列。**必须在重启 Worker 之前**，运行时应用角色不能建队列，漏掉会让 Worker 在 `boss.work` 时启动失败。
+4. 在两份环境文件里写好 `SMTP_*` 与 `MAIL_FROM`（见前置第 3 条），然后在**重启服务之前**校验配置的一致性规则能通过：运行一次 `mail:test`（下一节），它与 Worker 启动共用同一套校验，配置有误会立刻报错并指出是哪个键（不回显取值）。常见的一致性规则：`MAIL_FROM` 必须等于 `SMTP_USER`（QQ 邮箱）、465 必须 `SMTP_SECURE=true`、`SMTP_USER` 与 `SMTP_PASS` 同有或同无、有账号必须有主机。
+5. 重启 `fs-billing-worker`，确认日志里没有「未设置 SMTP_HOST」的告警，`select name, cron from pgboss.schedule` 里有 `notify-tick`。
 
 ## 执行方式
 

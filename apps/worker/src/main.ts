@@ -41,8 +41,11 @@ app.addHook('onClose', async () => {
   await queueConnection.pool.end();
   await connection.pool.end();
 });
+// 收到停止信号后，邮件分发在两封之间停下并释放没发的，而不是发完一封再让完成写入撞上关闭中的连接池。
+const shutdown = new AbortController();
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
+    shutdown.abort();
     void app.close().catch((error: unknown) => {
       app.log.error({ err: error }, '关闭 Worker 失败');
       process.exitCode = 1;
@@ -105,6 +108,7 @@ try {
     mail,
     quietMinutes: config.ALERT_QUIET_MINUTES,
     logger: app.log,
+    signal: shutdown.signal,
   });
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,

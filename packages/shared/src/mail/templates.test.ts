@@ -38,7 +38,6 @@ const digestParams = {
   alerts: [
     {
       kind: 'auth_timeout',
-      description: '授权接口超时放行',
       startedAt,
       durationMinutes: 95,
       added: 10,
@@ -166,7 +165,10 @@ describe('邮件模板', () => {
     });
     expect(mail.text).not.toContain(uuid);
     expect(mail.html).not.toContain(uuid);
-    expect(mail.text).toContain('话单停放到未归属：号码不一致，最近一通 …');
+    // 含 UUID 的整个子句一起去掉，不留悬空的「最近一通 …」。
+    expect(mail.text).toContain('话单停放到未归属：号码不一致\n');
+    expect(mail.text).not.toContain('最近一通');
+    expect(mail.text).not.toContain('…');
   });
 
   it('never prints numbers, accounts or other tenants', () => {
@@ -229,5 +231,39 @@ describe('邮件模板', () => {
     expect(mail.subject).toBe(
       '【故障恢复】2 项告警已恢复：授权超时、话单处理失败',
     );
+  });
+
+  it('scrubs a bare UUID that is not in a trailing clause', () => {
+    const uuid = '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b';
+    const mail = renderMail('alert_start', {
+      alerts: [
+        { kind: 'cdr_failed', description: `话单 ${uuid} 保存失败`, startedAt },
+      ],
+    });
+    expect(mail.text).not.toContain(uuid);
+    expect(mail.text).toContain('话单 … 保存失败');
+  });
+
+  it('digest carries no free-text alert description', () => {
+    expect(() =>
+      renderMail('alert_digest', {
+        alerts: [
+          { ...digestParams.alerts[0], description: '带租户标签 ABC01' },
+        ],
+      }),
+    ).toThrow();
+    const mail = renderMail('alert_digest', digestParams);
+    expect(mail.text).not.toContain('授权接口超时放行');
+    expect(mail.html).not.toContain('授权接口超时放行');
+  });
+
+  it('start mail notes arrival-time recording only for authorization timeouts', () => {
+    const { text } = renderMail('alert_start', startParams);
+    const lines = text
+      .split('\n')
+      .filter((line) => line.startsWith('开始时间：'));
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain('（按话单到达时间记录）');
+    expect(lines[1]).not.toContain('按话单到达时间记录');
   });
 });

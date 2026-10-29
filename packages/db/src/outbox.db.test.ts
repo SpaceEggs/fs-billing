@@ -17,7 +17,9 @@ import {
   mailBackoffSeconds,
   purgeEmailOutbox,
   raiseEmailFailed,
+  recoverAdminRecipientAlert,
   recoverRecipientAlert,
+  releaseClaims,
   recoverSmtpAlert,
   recoverStaleRecipientAlerts,
   requeueFailedEmails,
@@ -108,7 +110,12 @@ describe('入队', () => {
       dedupeKey,
       recipients: ['other@example.test'],
     });
-    expect(second).toEqual({ id: first.id, created: false, status: 'pending' });
+    expect(second).toEqual({
+      id: first.id,
+      created: false,
+      status: 'pending',
+      droppedRecipients: 0,
+    });
     const { rows } = await owner.pool.query(
       'select recipients from email_outbox where dedupe_key = $1',
       [dedupeKey],
@@ -268,10 +275,10 @@ describe('认领与结果', () => {
       now = state.next_attempt_at;
     }
     expect(offsets).toEqual([1, 5, 15, 60, 180]);
-    await system((tx) => claimDueEmails(tx, { limit: 1, now }));
+    const [last] = await system((tx) => claimDueEmails(tx, { limit: 1, now }));
     expect(
       await system((tx) =>
-        failEmail(tx, queued.id, {
+        failEmail(tx, last!, {
           error: 'gave up',
           rejected: ['x@example.test'],
         }),
@@ -314,9 +321,9 @@ describe('认领与结果', () => {
         }),
       ),
     ).toBe(false);
-    expect(
-      await system((tx) => failEmail(tx, queued.id, { error: 'late' })),
-    ).toBe(false);
+    expect(await system((tx) => failEmail(tx, email!, { error: 'late' }))).toBe(
+      false,
+    );
     expect(
       await system((tx) =>
         retryEmailLater(tx, email!, { error: 'late', now: T0 }),
@@ -511,6 +518,166 @@ describe('email_failed 告警', () => {
     expect(
       await system((tx) => recoverRecipientAlert(tx, tenant.id, after(T0, 10))),
     ).toBe(1);
+  });
+});
+
+describe('收件人校验', () => {
+  it('drops entries that are not a single plain address and keeps the valid ones', async () => {
+    const queued = await enqueue({
+      recipients: [
+        'ok@example.test',
+        'a@example.test, b@example.test',
+        'Alice <alice@example.test>',
+        '<bare@example.test>',
+        'no-at-sign',
+        'two words@example.test',
+      ],
+    });
+    expect(queued).toMatchObject({ status: 'pending', droppedRecipients: 5 });
+    expect((await row(queued.id)).recipients).toEqual(['ok@example.test']);
+  });
+
+  it('skips a mail whose recipients are all invalid instead of throwing', async () => {
+    const queued = await enqueue({
+      recipients: ['a@example.test,b@example.test', 'Bob <bob@example.test>'],
+    });
+    expect(queued).toMatchObject({ status: 'skipped', droppedRecipients: 2 });
+    expect(await row(queued.id)).toMatchObject({
+      status: 'skipped',
+      skip_reason: 'invalid_recipients',
+      recipients: [],
+    });
+    // 没有收件人（不是无效）仍然是 no_recipients。
+    expect(
+      (await row((await enqueue({ recipients: [] })).id)).skip_reason,
+    ).toBe('no_recipients');
+  });
+});
+
+describe('认领守卫与释放', () => {
+  it('a stale handler cannot overwrite a newer claim or a finished mail', async () => {
+    const queued = await enqueue();
+    const [stale] = await system((tx) =>
+      claimDueEmails(tx, { limit: 1, now: T0 }),
+    );
+    // 慢处理者的租约到期，另一个分发器重新认领（attempts 2）。
+    const [fresh] = await system((tx) =>
+      claimDueEmails(tx, { limit: 1, now: after(T0, 121) }),
+    );
+    expect([stale!.attempts, fresh!.attempts]).toEqual([1, 2]);
+    const late = after(T0, 130);
+    expect(
+      await system((tx) =>
+        completeEmail(tx, stale!, {
+          accepted: ['x@example.test'],
+          rejected: [],
+          now: late,
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      await system((tx) =>
+        retryEmailLater(tx, stale!, { error: 'stale', now: late }),
+      ),
+    ).toBe(false);
+    expect(
+      await system((tx) => failEmail(tx, stale!, { error: 'stale' })),
+    ).toBe(false);
+    expect(await system((tx) => releaseClaims(tx, [stale!]))).toBe(0);
+    expect(await row(queued.id)).toMatchObject({
+      status: 'sending',
+      attempts: 2,
+      last_error: null,
+    });
+    // 新的认领者照常完成。
+    expect(
+      await system((tx) =>
+        completeEmail(tx, fresh!, {
+          accepted: ['ops@example.test'],
+          rejected: [],
+          now: late,
+        }),
+      ),
+    ).toBe(true);
+    // 完成之后，旧处理者仍然写不进去。
+    expect(
+      await system((tx) => failEmail(tx, stale!, { error: 'stale' })),
+    ).toBe(false);
+    expect((await row(queued.id)).status).toBe('sent');
+  });
+
+  it('releases unsent claims back to pending without counting the attempt', async () => {
+    const a = await enqueue({ at: T0 });
+    const b = await enqueue({ at: after(T0, 1) });
+    const claimed = await system((tx) =>
+      claimDueEmails(tx, { limit: 10, now: after(T0, 5) }),
+    );
+    expect(claimed.map((email) => email.attempts)).toEqual([1, 1]);
+    expect(await system((tx) => releaseClaims(tx, claimed))).toBe(2);
+    expect(await row(a.id)).toMatchObject({
+      status: 'pending',
+      attempts: 0,
+      locked_until: null,
+      next_attempt_at: T0,
+    });
+    // 马上又能被认领，次数从 1 开始。
+    const again = await system((tx) =>
+      claimDueEmails(tx, { limit: 10, now: after(T0, 6) }),
+    );
+    expect(again.map((email) => [email.id, email.attempts])).toEqual([
+      [a.id, 1],
+      [b.id, 1],
+    ]);
+  });
+});
+
+describe('recipient:admin 告警', () => {
+  it('is separate from smtp: a successful send does not clear it, the seven day window does', async () => {
+    const day = 86400;
+    await system(async (tx) => {
+      await raiseEmailFailed(tx, {
+        adminRecipients: true,
+        description: '管理员邮箱被拒',
+        at: T0,
+      });
+      await raiseEmailFailed(tx, { description: '连接失败', at: T0 });
+    });
+    expect(await alerts()).toMatchObject([
+      { subject_key: 'recipient:admin', tenant_id: null, notify: false },
+      { subject_key: 'smtp', tenant_id: null, notify: false },
+    ]);
+    // 下一封成功的邮件恢复 smtp，不恢复 recipient:admin。
+    expect(await system((tx) => recoverSmtpAlert(tx, after(T0, 60)))).toBe(1);
+    const [admin, smtp] = await alerts();
+    expect(admin!.recovered_at).toBeNull();
+    expect(smtp!.recovered_at).not.toBeNull();
+    expect(
+      await system((tx) =>
+        recoverStaleRecipientAlerts(tx, { at: after(T0, 7 * day - 1) }),
+      ),
+    ).toBe(0);
+    expect(
+      await system((tx) =>
+        recoverStaleRecipientAlerts(tx, { at: after(T0, 7 * day) }),
+      ),
+    ).toBe(1);
+    expect((await alerts())[0]!.recovered_at).toEqual(after(T0, 7 * day));
+  });
+
+  it('recovers when the administrator recipients are changed', async () => {
+    await system((tx) =>
+      raiseEmailFailed(tx, {
+        adminRecipients: true,
+        description: '拒收',
+        at: T0,
+      }),
+    );
+    expect(
+      await system((tx) => recoverAdminRecipientAlert(tx, after(T0, 5))),
+    ).toBe(1);
+    expect(
+      await system((tx) => recoverAdminRecipientAlert(tx, after(T0, 6))),
+    ).toBe(0);
   });
 });
 

@@ -150,6 +150,7 @@ describe('经 Mailpit 发送', () => {
       sent: 1,
       retried: 0,
       failed: 0,
+      released: 0,
     });
     const [message] = await mailpitMessages();
     expect(message).toMatchObject({
@@ -225,7 +226,7 @@ describe('经 Mailpit 发送', () => {
           alerts: [
             {
               kind: 'auth_timeout',
-              description: '授权超时放行',
+
               startedAt: at,
               durationMinutes: 10,
               added: 9,
@@ -568,12 +569,47 @@ describe('收件人被拒', () => {
     expect(rows).toEqual([{ recipients: ['ok@example.test'] }]);
   });
 
-  it('a rejected administrator mail has no tenant, so it is a smtp alert', async () => {
-    await enqueue({ recipients: ['gone@example.test'] });
+  it('a rejected administrator mail has no tenant: recipient:admin, not smtp', async () => {
+    const queued = await enqueue({ recipients: ['gone@example.test'] });
     await viaFake({ rcpt: () => '550 5.1.1 no such user' });
     expect(await alerts()).toMatchObject([
-      { subject_key: 'smtp', tenant_id: null },
+      { subject_key: 'recipient:admin', tenant_id: null, notify: false },
     ]);
+    // 被拒的地址记在 rejected 列（nodemailer 抛的 EENVELOPE 上带着）。
+    expect((await row(queued.id)).rejected).toEqual(['gone@example.test']);
+  });
+
+  it('a partly rejected administrator mail is sent, alerts recipient:admin and survives later successes', async () => {
+    const partial = await enqueue({
+      recipients: ['ok@example.test', 'gone@example.test'],
+    });
+    const summary = await viaFake({
+      rcpt: (address) =>
+        address === 'gone@example.test' ? '550 5.1.1 no such user' : '250 ok',
+    });
+    expect(summary).toMatchObject({ sent: 1, failed: 0 });
+    expect(await row(partial.id)).toMatchObject({
+      status: 'sent',
+      rejected: ['gone@example.test'],
+    });
+    expect(await alerts()).toMatchObject([{ subject_key: 'recipient:admin' }]);
+    // 下一封成功的邮件恢复 smtp 告警，但不会清掉 recipient:admin。
+    now = after(T0, 60);
+    await enqueue({ at: now });
+    await toMailpit();
+    const [alert] = await alerts();
+    expect(alert).toMatchObject({
+      subject_key: 'recipient:admin',
+      recovered_at: null,
+    });
+    // 7 天后由 tick 恢复。
+    now = after(T0, 7 * 86400);
+    await runNotifyTick(app.db, {
+      mail: undefined,
+      quietMinutes: 10,
+      now: clock,
+    });
+    expect((await alerts())[0]!.recovered_at).toEqual(now);
   });
 
   it('retries a recipient the server only deferred', async () => {
@@ -591,6 +627,167 @@ describe('收件人被拒', () => {
     expect(summary).toMatchObject({ failed: 1 });
     expect(await row(queued.id)).toMatchObject({ status: 'failed' });
     expect(await alerts()).toMatchObject([{ subject_key: 'smtp' }]);
+  });
+});
+
+describe('租约与停止', () => {
+  const okResult = (to: readonly string[]) => ({
+    accepted: to,
+    rejected: [],
+    response: '250 ok',
+  });
+
+  it('stops sending before the lease runs out and releases the rest without counting the attempt', async () => {
+    const queued = [];
+    for (let i = 0; i < 5; i++)
+      queued.push(await enqueue({ at: after(T0, i) }));
+    const viaSlow: string[] = [];
+    // 每封要 60 秒（假时钟）；租约 120 秒、预算 3 × 5 秒：第三封开始前 120 + 15 ≥ 120，停。
+    const slow: MailTransport = {
+      send: (message) => {
+        viaSlow.push(message.messageId);
+        now = after(now, 60);
+        return Promise.resolve(okResult(message.to));
+      },
+      close: () => undefined,
+    };
+    now = after(T0, 10);
+    const summary = await dispatch(slow, { ratePerTick: 5 });
+    expect(summary).toEqual({
+      claimed: 5,
+      sent: 2,
+      retried: 0,
+      failed: 0,
+      released: 3,
+    });
+    const states = await Promise.all(queued.map((q) => row(q.id)));
+    expect(states.map((state) => [state.status, state.attempts])).toEqual([
+      ['sent', 1],
+      ['sent', 1],
+      ['pending', 0],
+      ['pending', 0],
+      ['pending', 0],
+    ]);
+    // 下一轮把释放的三封发完，Mailpit 里恰好这三封：没有重复发送。
+    expect(await toMailpit()).toMatchObject({ claimed: 3, sent: 3 });
+    const delivered = (await mailpitMessages()).map((m) => m.MessageID);
+    expect(delivered.sort()).toEqual(
+      queued
+        .slice(2)
+        .map((q) => `${q.id}@fs-billing`)
+        .sort(),
+    );
+    expect(viaSlow).toEqual(
+      queued.slice(0, 2).map((q) => `<${q.id}@fs-billing>`),
+    );
+  });
+
+  it('the lease grows with SMTP_TIMEOUT_MS so one slow send still fits', async () => {
+    const queued = await enqueue();
+    let seenLease = 0;
+    const probe: MailTransport = {
+      send: async (message) => {
+        const state = await row(queued.id);
+        const { rows } = await owner.pool.query<{ lease: number }>(
+          'select extract(epoch from locked_until - $2::timestamptz)::int as lease from email_outbox where id = $1',
+          [queued.id, T0],
+        );
+        seenLease = rows[0]!.lease;
+        expect(state.status).toBe('sending');
+        return okResult(message.to);
+      },
+      close: () => undefined,
+    };
+    await dispatch(probe, { timeoutMs: 120_000 });
+    // 3 × 120 秒预算 + 60 秒 = 420 秒，小于 notify-tick 任务的 600 秒过期。
+    expect(seenLease).toBe(420);
+  });
+
+  it('a send that outlives its lease does not overwrite the newer claim that sent the mail', async () => {
+    const queued = await enqueue();
+    // 旧处理者发送得很慢：期间租约到期，另一个分发器重新认领并真的发给了 Mailpit。
+    const slow: MailTransport = {
+      send: async (message) => {
+        now = after(T0, 121);
+        expect(await toMailpit()).toMatchObject({ claimed: 1, sent: 1 });
+        return {
+          accepted: ['stale-writer@example.test'],
+          rejected: [],
+          response: `250 ${message.messageId}`,
+        };
+      },
+      close: () => undefined,
+    };
+    const summary = await dispatch(slow);
+    expect(summary).toMatchObject({ claimed: 1, sent: 0 });
+    expect(await row(queued.id)).toMatchObject({
+      status: 'sent',
+      attempts: 2,
+      accepted: ['ops@example.test'],
+    });
+    expect(await mailpitMessages()).toHaveLength(1);
+  });
+
+  it('a stale failure does not raise an alert or touch the newer claim', async () => {
+    const queued = await enqueue();
+    const slow: MailTransport = {
+      send: async () => {
+        now = after(T0, 121);
+        await toMailpit();
+        throw Object.assign(new Error('late'), {
+          code: 'EAUTH',
+          responseCode: 535,
+        });
+      },
+      close: () => undefined,
+    };
+    const summary = await dispatch(slow);
+    expect(summary).toMatchObject({ claimed: 1, sent: 0 });
+    expect(await row(queued.id)).toMatchObject({ status: 'sent', attempts: 2 });
+    expect(await alerts()).toEqual([]);
+  });
+
+  it('stops between mails on the shutdown signal and releases the unsent claims', async () => {
+    const queued = [];
+    for (let i = 0; i < 3; i++)
+      queued.push(await enqueue({ at: after(T0, i) }));
+    const controller = new AbortController();
+    const stopping: MailTransport = {
+      send: (message) => {
+        controller.abort();
+        return Promise.resolve(okResult(message.to));
+      },
+      close: () => undefined,
+    };
+    now = after(T0, 10);
+    const summary = await dispatchOutbox(app.db, {
+      transport: stopping,
+      settings: settings(),
+      now: clock,
+      signal: controller.signal,
+    });
+    expect(summary).toEqual({
+      claimed: 3,
+      sent: 1,
+      retried: 0,
+      failed: 0,
+      released: 2,
+    });
+    const states = await Promise.all(queued.map((q) => row(q.id)));
+    expect(states.map((state) => [state.status, state.attempts])).toEqual([
+      ['sent', 1],
+      ['pending', 0],
+      ['pending', 0],
+    ]);
+    // 已经收到停止信号时一封也不发。
+    expect(
+      await dispatchOutbox(app.db, {
+        transport: stopping,
+        settings: settings(),
+        now: clock,
+        signal: controller.signal,
+      }),
+    ).toMatchObject({ claimed: 2, sent: 0, released: 2 });
   });
 });
 
