@@ -8,15 +8,15 @@
 
 ## 运行信息
 
-| 项目     | 值                                                                                                                                                                                 |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 日期     | 2026-10-29（运行日；图表窗口、「当月」不可选等随运行日变化）                                                                                                                       |
-| 基线     | 第一次对照：`main` 的 `c5d0964`（PR #71 合并之后），分支 `phase-8-pr6-acceptance`；复拍：`main` 的 `e115bf4`（PR #72）之上的分支 `phase-8-design-followup`（2026-10-29）           |
-| 数据库   | 隔离的 PostgreSQL 17.9 容器（独立端口，用后删除），新迁移、新播种；复拍前先在同一个库上跑过本次改动相关的 e2e（夹具租户的未归属话单使待处理变为 341 条，种子的 ABC01 仍是 326 条） |
-| 脚本     | `apps/web/e2e/admin-ops-visual.spec.ts`（复用 `statement-visual.ts`），1 passed，`visual/index-admin-ops.json` 共 54 项均无 error                                                  |
-| 命令     | `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/admin-ops-visual.spec.ts`（未设 `FSB_EVIDENCE_DIR` 时输出到 `docs/evidence/phase-8-web/visual/`）             |
-| 截图方式 | 电脑 1440×900、手机 375×812，浅色与深色（`colorScheme`）；整页截图，对话框只截视口；`animations: 'disabled'`，所以对话框、底部面板、菜单的进出动画**没有**被比较                   |
-| 夹具     | 会写库的画面（分配完成、删除完成）每次都在新建的夹具租户上做；ABC01 → ABC001 的分配对话框只预览不提交，所以 338 条待处理、326 条 ABC01、¥58.35、324/2 的数字与稿一致               |
+| 项目     | 值                                                                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 日期     | 2026-10-29（运行日；图表窗口、「当月」不可选等随运行日变化）                                                                                                                             |
+| 基线     | 第一次对照：`main` 的 `c5d0964`（PR #71 合并之后），分支 `phase-8-pr6-acceptance`；复拍：`main` 的 `e115bf4`（PR #72）之上的分支 `phase-8-design-followup`（2026-10-29）                 |
+| 数据库   | 隔离的 PostgreSQL 17.9 容器（独立端口，用后删除），**新迁移、新播种后第一个运行的就是复拍脚本**，没有任何 e2e 用例先动过它：待处理 338 条（ABC01 326、空标签 12）、已忽略 5 条，与稿一致 |
+| 脚本     | `apps/web/e2e/admin-ops-visual.spec.ts`（复用 `statement-visual.ts`），1 passed，`visual/index-admin-ops.json` 共 54 项均无 error                                                        |
+| 命令     | `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/admin-ops-visual.spec.ts`（未设 `FSB_EVIDENCE_DIR` 时输出到 `docs/evidence/phase-8-web/visual/`）                   |
+| 截图方式 | 电脑 1440×900、手机 375×812，浅色与深色（`colorScheme`）；整页截图，对话框只截视口；`animations: 'disabled'`，所以对话框、底部面板、菜单的进出动画**没有**被比较                         |
+| 夹具     | 会写库的画面（分配完成、删除完成）每次都在新建的夹具租户上做；ABC01 → ABC001 的分配对话框只预览不提交，所以 338 条待处理、326 条 ABC01、¥58.35、324/2 的数字与稿一致                     |
 
 `visual/` 下共 147 个文件：`design-*.png` 是设计稿画框（46 张），`app-*.png` 是实现（54 张），`compare-*.png` 左侧为设计稿、右侧为实现（46 张），另有 `index-admin-ops.json`。
 
@@ -69,7 +69,7 @@
 - P7：`components/admin/unassigned-assign-dialog.tsx`、新增 shadcn `ui/popover.tsx`、`ui/command.tsx`（`cmdk` 1.1.1，精确版本）；单元测试 `unassigned.test.tsx`（相近租户置顶、服务端搜索、重新预览）；e2e `admin-unassigned.spec.ts`、`admin-unassigned-abc01.spec.ts`。
 - 复拍脚本 `admin-ops-visual.spec.ts` 随之更新：删除话单一打开就预选 8 月；租户下拉用 combobox；手机列表 4a 截一屏视口（固定的操作栏在整页截图里会落在页面中段）。
 
-复拍后逐张看过的对照图（浅色）：`compare-cdr-delete-pick-desktop`、`-preview-desktop`、`-done-desktop`、`-pick-phone`、`-done-phone`，`compare-unassigned-list-desktop`、`-list-phone`、`-ignored-desktop`、`-assign-pick-desktop`、`-assign-preview-phone`；深色看了 `compare-cdr-delete-done-phone-dark`。复拍后仍存在的小差异（接受）：
+复拍后逐张看过的对照图（浅色）：`compare-cdr-delete-pick-desktop`、`-preview-desktop`、`-done-desktop`、`-pick-phone`、`-done-phone`，`compare-unassigned-list-desktop`、`-list-phone`、`-ignored-desktop`、`-assign-pick-desktop`、`-assign-preview-phone`；深色看了 `compare-cdr-delete-done-phone-dark`。复拍图里只有脚本自己建的夹具：操作日志里的 9 条（夹具租户的创建、补建账单、删除话单、归属话单）、租户下拉里的夹具租户、删除完成页的夹具租户（见 A9、A10），没有其他 e2e 的残留（没有额外的标签分组、没有 2026-10-29 的未归属话单）。复拍后仍存在的小差异（接受）：
 
 - 删除话单电脑端的月份格仍嵌在对话框里、把预览与编码输入框往下推（稿是浮在字段下方的弹层），加上格子下方的原因行，对话框在 1440×900 下比视口略高，内部滚动，4a 对照图的底部按钮被截；手机的月份面板标题与年份分两行（稿同一行，年份在右）。
 - 手机完成页（4h）稿是一句话「已自动记入操作日志（王敏 · …）。余额和月账单不受影响。」，实现与电脑端一样用三行信息行（信息相同）。
