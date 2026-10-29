@@ -1,0 +1,9 @@
+## item1 correct
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 681 ms
+服务器响应：250 OK: queued as.
+exit=0
+## item1 wrong pass (SMTP_PASS=wrong-placeholder)
+发送失败：认证失败（检查 SMTP_USER / SMTP_PASS，QQ 邮箱要用授权码）
+EAUTH 535: 535 Login fail. Account is abnormal, service is not open, password is incorrect, login frequency limited, or system is busy. More information at https://help.mail.qq.com/detail/108/1023
+用时 262 ms
+exit=1

@@ -1,0 +1,8 @@
+## item4 3 recipients (same addr x3)
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 720 ms
+服务器响应：250 OK: queued as.
+exit=0
+## item4 5 recipients (same addr x5)
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 645 ms
+服务器响应：250 OK: queued as.
+exit=0

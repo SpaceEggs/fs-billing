@@ -1,0 +1,60 @@
+#1 t=14:05:40 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 694 ms
+服务器响应：250 OK: queued as.
+#2 t=14:05:53 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 670 ms
+服务器响应：250 OK: queued as.
+#3 t=14:06:08 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 710 ms
+服务器响应：250 OK: queued as.
+#4 t=14:06:22 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 729 ms
+服务器响应：250 OK: queued as.
+#5 t=14:06:35 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 703 ms
+服务器响应：250 OK: queued as.
+#6 t=14:06:49 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 756 ms
+服务器响应：250 OK: queued as.
+#7 t=14:07:03 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 671 ms
+服务器响应：250 OK: queued as.
+#8 t=14:07:17 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 649 ms
+服务器响应：250 OK: queued as.
+#9 t=14:07:31 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 658 ms
+服务器响应：250 OK: queued as.
+#10 t=14:07:46 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 721 ms
+服务器响应：250 OK: queued as.
+#11 t=14:08:00 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 684 ms
+服务器响应：250 OK: queued as.
+#12 t=14:08:14 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 684 ms
+服务器响应：250 OK: queued as.
+#13 t=14:08:28 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 729 ms
+服务器响应：250 OK: queued as.
+#14 t=14:08:42 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 607 ms
+服务器响应：250 OK: queued as.
+#15 t=14:08:57 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 809 ms
+服务器响应：250 OK: queued as.
+#16 t=14:09:11 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 643 ms
+服务器响应：250 OK: queued as.
+#17 t=14:09:25 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 691 ms
+服务器响应：250 OK: queued as.
+#18 t=14:09:39 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 629 ms
+服务器响应：250 OK: queued as.
+#19 t=14:09:53 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 642 ms
+服务器响应：250 OK: queued as.
+#20 t=14:10:07 exit=0
+发送成功：smtp.qq.com:465（隐式 TLS），接受 1 个收件人，拒绝 0 个，用时 744 ms
+服务器响应：250 OK: queued as.
