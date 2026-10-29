@@ -303,8 +303,9 @@ sip_assert none 8607551234567 >> "$FS_LOG_DIR/assertions.log"
 identify
 wait_sql "SELECT count(*)>=1 AND bool_and(payload->'variables'->>'billing_dialed_number'='07551234567' AND payload->'variables'->>'billing_number'='8607551234567' AND payload->'variables'->>'hangup_cause'='NORMAL_TEMPORARY_FAILURE' AND (payload->'variables'->>'billing_unverified') IS DISTINCT FROM 'true') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';"
 wait_sql "SELECT count(*)=1 AND bool_and(reason='计费号码不一致' AND billing_number='867551234567' AND call_uuid IS NOT NULL AND answered_at IS NULL AND duration_seconds=0) FROM unassigned_cdrs WHERE call_uuid::text IN ($uuids);"
-wait_sql "SELECT count(*)=1 FROM system_alerts WHERE kind='cdr_failed' AND description IN (SELECT (payload->'variables'->>'uuid') || ': 计费号码不一致' FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid');"
-wait_sql "SELECT NOT EXISTS (SELECT 1 FROM cdrs WHERE call_uuid::text IN ($uuids)) AND NOT EXISTS (SELECT 1 FROM pgboss.job WHERE name='charge-cdr' AND data->>'callUuid' IN ($uuids)) AND NOT EXISTS (SELECT 1 FROM ledger_entries WHERE idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid')) AND NOT EXISTS (SELECT 1 FROM system_alerts WHERE kind='auth_timeout' AND split_part(description, ':', 1) IN ($uuids));"
+# 告警按原因合并（阶段 9）：一条未恢复的 unassigned:计费号码不一致，描述含最近一通话的 UUID。
+wait_sql "SELECT count(*)=1 FROM system_alerts a WHERE kind='cdr_failed' AND subject_key='unassigned:计费号码不一致' AND recovered_at IS NULL AND EXISTS (SELECT 1 FROM raw_cdrs r WHERE r.payload->'variables'->>'sip_call_id'='$cid' AND position(r.payload->'variables'->>'uuid' IN a.description) > 0);"
+wait_sql "SELECT NOT EXISTS (SELECT 1 FROM cdrs WHERE call_uuid::text IN ($uuids)) AND NOT EXISTS (SELECT 1 FROM pgboss.job WHERE name='charge-cdr' AND data->>'callUuid' IN ($uuids)) AND NOT EXISTS (SELECT 1 FROM ledger_entries WHERE idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid')) AND NOT EXISTS (SELECT 1 FROM system_alerts a WHERE kind='auth_timeout' AND EXISTS (SELECT 1 FROM raw_cdrs r WHERE r.payload->'variables'->>'sip_call_id'='$cid' AND position(r.payload->'variables'->>'uuid' IN a.description) > 0));"
 python3 - "$FS_LOG_DIR/worker.log" "$(q "$uuids")" <<'PY'
 import json, pathlib, sys
 uuids = set(sys.argv[2].splitlines())
@@ -326,7 +327,7 @@ assert responses[0]['res'].get('statusCode') == 400, f'Expected authorize HTTP 4
 PY
 q "SELECT payload FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid';" > "$FS_LOG_DIR/$case_name.raw.json"
 q "SELECT row_to_json(u) FROM unassigned_cdrs u WHERE call_uuid::text IN ($uuids);" > "$FS_LOG_DIR/$case_name.unassigned.json"
-q "SELECT row_to_json(a) FROM system_alerts a WHERE split_part(description, ':', 1) IN ($uuids);" > "$FS_LOG_DIR/$case_name.alerts.json"
+q "SELECT row_to_json(a) FROM system_alerts a WHERE EXISTS (SELECT 1 FROM raw_cdrs r WHERE r.payload->'variables'->>'sip_call_id'='$cid' AND position(r.payload->'variables'->>'uuid' IN a.description) > 0);" > "$FS_LOG_DIR/$case_name.alerts.json"
 restore_authorize
 if command -v git >/dev/null 2>&1; then
   git diff --quiet -- freeswitch/scripts/billing_authorize.lua || fail '号码漂移测试后 Lua 脚本仍有改动'
