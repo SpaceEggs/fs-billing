@@ -590,6 +590,43 @@ describe('unassigned calls', () => {
     });
   });
 
+  it('on a phone puts the actions in a bar fixed at the bottom, with room under the last card', async () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const user = userEvent.setup();
+    const { calls } = renderUnassigned();
+    const table = await screen.findByRole('table');
+    // 没有选择时没有操作栏。
+    expect(screen.queryByRole('region', { name: '批量操作' })).toBeNull();
+    await user.click(
+      within(table).getByRole('checkbox', {
+        name: '选择 13800000001 呼 18760000001',
+      }),
+    );
+    // 运营稿 4a：「忽略」「归属到租户 (n)」固定在视口底部，并避开系统安全区。
+    const bar = await screen.findByRole('region', { name: '批量操作' });
+    expect(bar).toHaveClass('fixed', 'inset-x-0', 'bottom-0');
+    expect(bar.className).toContain('env(safe-area-inset-bottom)');
+    expect(within(bar).getByRole('button', { name: '忽略' })).toBeVisible();
+    expect(
+      within(bar).getByRole('button', { name: '归属到租户 (1)' }),
+    ).toBeVisible();
+    // 列表里的选择条不再带这两个按钮，页面底部留出操作栏的高度。
+    expect(screen.getAllByRole('button', { name: '忽略' })).toHaveLength(1);
+    const panel = screen.getByRole('tabpanel', { name: /待处理/ });
+    expect(panel.className).toContain(
+      'pb-[calc(6rem+env(safe-area-inset-bottom))]',
+    );
+    await user.click(within(bar).getByRole('button', { name: '忽略' }));
+    expect(
+      await screen.findByRole('dialog', { name: '忽略 1 条话单' }),
+    ).toBeVisible();
+    expect(posts(calls, '/api/admin/unassigned-cdrs/ignore')).toHaveLength(0);
+  });
+
   it('lists ignored calls and undoes one', async () => {
     const user = userEvent.setup();
     const { calls, location } = renderUnassigned({
