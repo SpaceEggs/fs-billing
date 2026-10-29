@@ -21,12 +21,12 @@ packages/rating typecheck$ tsc -p tsconfig.json
 packages/shared typecheck$ tsc -p tsconfig.json
 packages/rating typecheck: Done
 packages/shared typecheck: Done
-apps/web typecheck$ tsc -p tsconfig.json
 packages/db typecheck$ tsc -p tsconfig.json
+apps/web typecheck$ tsc -p tsconfig.json
 packages/db typecheck: Done
 apps/web typecheck: Done
-apps/api typecheck$ tsc -p tsconfig.json
 apps/worker typecheck$ tsc -p tsconfig.json
+apps/api typecheck$ tsc -p tsconfig.json
 apps/worker typecheck: Done
 apps/api typecheck: Done
 
@@ -39,11 +39,11 @@ apps/api typecheck: Done
 
  Test Files  50 passed | 1 skipped (51)
       Tests  1006 passed | 3 skipped (1009)
-   Start at  17:50:25
-   Duration  6.09s (import 62%, tests 30%, transform 7%, worker 1%)
+   Start at  21:44:18
+   Duration  3.46s (import 60%, tests 31%, transform 8%, worker 1%)
 
-    Isolate  51 workers spawned · ~160ms startup each (spawn + environment, per file)
-             at least ~749ms faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  51 workers spawned · ~95ms startup each (spawn + environment, per file)
+             at least ~445ms faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ test /Volumes/Dev/FS-Billing/.claude/worktrees/agent-a819a28bcd6ff58ef/apps/web
@@ -55,11 +55,11 @@ apps/api typecheck: Done
 
  Test Files  50 passed (50)
       Tests  656 passed (656)
-   Start at  17:50:32
-   Duration  30.11s (tests 68%, environment 17%, import 11%, setup 3%, transform 2%)
+   Start at  21:44:22
+   Duration  25.44s (tests 74%, environment 14%, import 8%, setup 2%, transform 2%)
 
-    Isolate  50 workers spawned · ~883ms startup each (spawn + environment, per file)
-             at least ~4.02s faster with isolate: false — reuses workers across files instead of one per file
+    Isolate  50 workers spawned · ~449ms startup each (spawn + environment, per file)
+             at least ~2.05s faster with isolate: false — reuses workers across files instead of one per file
 
 
 > @fs-billing/web@ build /Volumes/Dev/FS-Billing/.claude/worktrees/agent-a819a28bcd6ff58ef/apps/web
@@ -139,4 +139,4 @@ dist/assets/index-B43MODte.js                   131.20 kB │ gzip: 43.44 kB
 dist/assets/return-to-F8yQDIM_.js               195.38 kB │ gzip: 59.03 kB
 dist/assets/react-BPWasKn7.js                   218.76 kB │ gzip: 68.27 kB
 
-✓ built in 456ms
+✓ built in 271ms

@@ -7,9 +7,11 @@ import { renderMail } from '@fs-billing/shared';
 import {
   adminId,
   adminTransaction,
+  backendPid,
   connections,
   deferred,
   pgError,
+  waitForTenantLock,
 } from '../test/support.js';
 import {
   balanceNoticeDedupeKey,
@@ -624,45 +626,214 @@ describe('并发与幂等', () => {
     expect(await flags(tenant.id)).toMatchObject({ low: true, lowSeq: 1 });
   });
 
+  /** 等到有别的后端被 `blockerPid` 堵住（pg_blocking_pids），返回被堵的后端；轮询，不靠睡眠猜时机。 */
+  async function waitForBlockedBy(blockerPid: number): Promise<number> {
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const { rows } = await owner.pool.query<{ pid: number }>(
+        'select pid from pg_stat_activity where $1 = any (pg_blocking_pids(pid))',
+        [blockerPid],
+      );
+      if (rows[0]) return rows[0].pid;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error(`没有后端被连接 ${blockerPid} 堵住`);
+  }
+
+  /** 两个标志与「最终余额 + 最终设置」重新算出来的一致（序号另行断言）。 */
+  async function expectFlagsMatchBalance(tenantId: string) {
+    const { rows } = await owner.pool.query<{
+      low: boolean;
+      suspended: boolean;
+    }>(
+      `select coalesce(s.threshold, 0) > 0 and b.balance < coalesce(s.threshold, 0) as low,
+              b.balance + t.overdraft_limit <= 0 as suspended
+       from tenants t join tenant_balances b on b.tenant_id = t.id
+       left join balance_alert_settings s on s.tenant_id = t.id
+       where t.id = $1`,
+      [tenantId],
+    );
+    expect(await flags(tenantId)).toMatchObject(rows[0]!);
+  }
+
+  const chargeIn = (
+    tx: Parameters<Parameters<typeof adminTransaction>[1]>[0],
+    tenantId: string,
+    amount: string,
+    key: string,
+  ) =>
+    appendLedgerEntry(
+      tx,
+      { id: tenantId, currency: 'CNY' },
+      {
+        kind: 'call_charge',
+        amount: money('CNY', amount),
+        occurredAt: new Date('2026-10-29T01:00:00Z'),
+        note: key,
+        idempotencyKey: `${key}:${tenantId}`,
+      },
+    );
+
   it('concurrent charges crossing the threshold queue one notice', async () => {
     const tenant = await setup({ balance: '105' });
     const first = deferred();
     const release = deferred();
     const slow = adminTransaction(app.db, async (tx) => {
-      await appendLedgerEntry(
-        tx,
-        { id: tenant.id, currency: 'CNY' },
-        {
-          kind: 'call_charge',
-          amount: money('CNY', '-10'),
-          occurredAt: new Date('2026-10-29T01:00:00Z'),
-          note: 'slow',
-          idempotencyKey: `slow:${tenant.id}`,
-        },
-      );
+      await chargeIn(tx, tenant.id, '-10', 'slow');
       first.resolve();
       await release.promise;
     });
     await first.promise;
     // 第二笔在租户锁上排队，等第一笔提交后看到 low_active = true。
-    const second = adminTransaction(app.db, (tx) =>
-      appendLedgerEntry(
-        tx,
-        { id: tenant.id, currency: 'CNY' },
-        {
-          kind: 'call_charge',
-          amount: money('CNY', '-10'),
-          occurredAt: new Date('2026-10-29T01:00:00Z'),
-          note: 'fast',
-          idempotencyKey: `fast:${tenant.id}`,
-        },
-      ),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const secondPid = deferred<number>();
+    const second = adminTransaction(app.db, async (tx) => {
+      secondPid.resolve(await backendPid(tx));
+      await chargeIn(tx, tenant.id, '-10', 'fast');
+    });
+    await waitForTenantLock(owner, await secondPid.promise, tenant.id);
     release.resolve();
     await Promise.all([slow, second]);
     expect(await templates(tenant.id)).toEqual(['balance_low']);
     expect(await flags(tenant.id)).toMatchObject({ low: true, lowSeq: 1 });
+  });
+
+  it('a settings save waits for a transaction holding the balance row and then sees its balance', async () => {
+    const tenant = await setup({ balance: '120' }); // 阈值 100
+    // A 是只持余额行锁、不持租户锁的写入者（rebuild_tenant_balances 就是这样）：先锁住余额行，再把余额改到 50。
+    const a = await owner.pool.connect();
+    try {
+      await a.query('begin');
+      const {
+        rows: [self],
+      } = await a.query<{ pid: number }>('select pg_backend_pid() as pid');
+      await a.query(
+        'select balance from tenant_balances where tenant_id = $1 for update',
+        [tenant.id],
+      );
+      await a.query(
+        'update tenant_balances set balance = 50 where tenant_id = $1',
+        [tenant.id],
+      );
+      // B 把阈值改成 80：同步函数要对同一行 FOR UPDATE，必须等 A 提交。
+      let finished = false;
+      const save = updateTenantSettings({
+        db: app.db,
+        actor: await actor(),
+        tenantId: tenant.id,
+        request: {
+          overdraftLimit: '100',
+          lowBalanceThreshold: '80',
+          emails: [RECIPIENT],
+        },
+      }).finally(() => {
+        finished = true;
+      });
+      const blocked = await waitForBlockedBy(self!.pid);
+      expect(blocked).not.toBe(self!.pid);
+      expect(finished).toBe(false);
+      await a.query('commit');
+      await save;
+      // B 读到的是 A 提交后的余额 50（陈旧的 120 会得到 low = false）：低于新阈值 80，静默记为已通知；
+      // 邮件只有 A 的触发器在旧阈值 100 下发的那一封。
+      expect(await flags(tenant.id)).toMatchObject({
+        low: true,
+        suspended: false,
+        lowSeq: 1,
+      });
+      expect(await templates(tenant.id)).toEqual(['balance_low']);
+      await expectFlagsMatchBalance(tenant.id);
+    } finally {
+      await a.query('rollback').catch(() => undefined);
+      a.release();
+    }
+  });
+
+  it('a charge and a settings save in either order end with flags matching the final balance and settings', async () => {
+    const request = {
+      overdraftLimit: '100',
+      lowBalanceThreshold: '200',
+      emails: [RECIPIENT],
+    };
+    // 设置先拿租户锁：同步后 120 < 200，低余额记为已通知（静默）；扣费排队，随后 80 不再通知。
+    const first = await setup({ balance: '120' });
+    const saved = deferred();
+    const releaseSave = deferred();
+    const settingsFirst = adminTransaction(app.db, async (tx) => {
+      await updateTenantSettings({
+        db: tx,
+        actor: await actor(),
+        tenantId: first.id,
+        request,
+      });
+      saved.resolve();
+      await releaseSave.promise;
+    });
+    await saved.promise;
+    const chargePid = deferred<number>();
+    const chargeSecond = adminTransaction(app.db, async (tx) => {
+      chargePid.resolve(await backendPid(tx));
+      await chargeIn(tx, first.id, '-40', 'after-save');
+    });
+    await waitForTenantLock(owner, await chargePid.promise, first.id);
+    releaseSave.resolve();
+    await Promise.all([settingsFirst, chargeSecond]);
+    expect(await notices(first.id)).toEqual([]);
+    expect(await flags(first.id)).toMatchObject({ low: true, lowSeq: 0 });
+    await expectFlagsMatchBalance(first.id);
+
+    // 扣费先拿租户锁：120 → 80 在阈值 100 下越线发一封；设置排队，随后把阈值改成 200，状态仍是已通知，不再发。
+    const second = await setup({ balance: '120' });
+    const charged = deferred();
+    const releaseCharge = deferred();
+    const chargeHolderPid = deferred<number>();
+    const chargeFirst = adminTransaction(app.db, async (tx) => {
+      chargeHolderPid.resolve(await backendPid(tx));
+      await chargeIn(tx, second.id, '-40', 'before-save');
+      charged.resolve();
+      await releaseCharge.promise;
+    });
+    await charged.promise;
+    const settingsSecond = updateTenantSettings({
+      db: app.db,
+      actor: await actor(),
+      tenantId: second.id,
+      request,
+    });
+    // 设置保存被扣费事务堵住：被堵的后端等的是它持有的租户锁。
+    await waitForBlockedBy(await chargeHolderPid.promise);
+    releaseCharge.resolve();
+    await Promise.all([chargeFirst, settingsSecond]);
+    expect(await templates(second.id)).toEqual(['balance_low']);
+    expect(await flags(second.id)).toMatchObject({ low: true, lowSeq: 1 });
+    await expectFlagsMatchBalance(second.id);
+  });
+
+  it('rebuild_tenant_balances waits for an in-flight charge and leaves one notice and consistent flags', async () => {
+    const tenant = await setup({ balance: '120' });
+    const written = deferred();
+    const release = deferred();
+    const holderPid = deferred<number>();
+    // 扣费事务写完流水（缓存余额行被它的触发器更新并加锁，已越线入队）后先不提交。
+    const inFlight = adminTransaction(app.db, async (tx) => {
+      holderPid.resolve(await backendPid(tx));
+      await chargeIn(tx, tenant.id, '-40', 'in-flight');
+      written.resolve();
+      await release.promise;
+    });
+    await written.promise;
+    // 重算只持余额行锁、不持租户锁：处理到这个租户时在余额行上排队。
+    const rebuild = owner.pool.query('call rebuild_tenant_balances(NULL)');
+    await waitForBlockedBy(await holderPid.promise);
+    release.resolve();
+    await Promise.all([inFlight, rebuild]);
+    expect(await templates(tenant.id)).toEqual(['balance_low']);
+    expect(await flags(tenant.id)).toMatchObject({ low: true, lowSeq: 1 });
+    await expectFlagsMatchBalance(tenant.id);
+    // 重算看到了这笔流水：缓存余额与流水合计一致。
+    const { rows } = await owner.pool.query(
+      'select count(*)::int as n from balance_discrepancies where tenant_id = $1',
+      [tenant.id],
+    );
+    expect(rows).toEqual([{ n: 0 }]);
   });
 
   it('rebuild_tenant_balances queues notices like any other balance change', async () => {

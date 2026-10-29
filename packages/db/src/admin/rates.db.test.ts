@@ -88,7 +88,9 @@ async function snapshot(tenantId: string) {
     logs: await tx
       .select()
       .from(operationLogs)
-      .where(eq(operationLogs.tenantId, tenantId)),
+      .where(eq(operationLogs.tenantId, tenantId))
+      // 不排序时是堆里的物理顺序，会随空闲空间复用变化，`logs.at(-1)` 就不是最新的一条。
+      .orderBy(operationLogs.createdAt),
   }));
 }
 

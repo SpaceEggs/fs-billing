@@ -6,10 +6,10 @@
  RUN  v5.0.4 /Volumes/Dev/FS-Billing/.claude/worktrees/agent-a819a28bcd6ff58ef
 
 
-PR3_PREPARE_ABORT {"backendPid":5481,"before":{"state":"active","waitEventType":"Lock","waitEvent":"relation"},"after":{"state":"idle","waitEventType":"Client","waitEvent":"ClientRead"},"elapsedMs":12}
+PR3_PREPARE_ABORT {"backendPid":1640,"before":{"state":"active","waitEventType":"Lock","waitEvent":"relation"},"after":{"state":"idle","waitEventType":"Client","waitEvent":"ClientRead"},"elapsedMs":10}
 
  Test Files  63 passed (63)
-      Tests  878 passed (878)
-   Start at  17:51:09
-   Duration  213.71s (tests 89%, import 11%)
+      Tests  881 passed (881)
+   Start at  21:52:54
+   Duration  327.04s (tests 86%, import 13%)
 
