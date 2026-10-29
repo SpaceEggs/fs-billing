@@ -274,6 +274,31 @@ describe('失败分类', () => {
       expected: { class: 'retry', scope: 'smtp' },
     },
     {
+      name: 'a daily sending limit in English after DATA',
+      script: { data: '550 Daily sending limit reached' },
+      expected: { class: 'retry', scope: 'smtp' },
+    },
+    {
+      name: 'a quota that says try again tomorrow after DATA',
+      script: { data: '550 quota used up today, try again tomorrow' },
+      expected: { class: 'retry', scope: 'smtp' },
+    },
+    {
+      name: 'a message size error that mentions the sending limit',
+      script: { data: '552 Message size exceeds sending limit' },
+      expected: { class: 'permanent', scope: 'smtp' },
+    },
+    {
+      name: 'a Chinese mailbox-full error that mentions the day',
+      script: { data: '550 当日收件箱已满' },
+      expected: { class: 'permanent', scope: 'smtp' },
+    },
+    {
+      name: 'a mailbox-full error whose quota text mentions today',
+      script: { data: '552 mailbox full, quota exceeded today' },
+      expected: { class: 'permanent', scope: 'smtp' },
+    },
+    {
       name: 'service closing with 421 at the greeting',
       script: { greeting: '421 4.3.2 service not available' },
       expected: { class: 'retry', scope: 'smtp' },

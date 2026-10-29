@@ -174,11 +174,13 @@ const CONNECTION_CODES = new Set([
 const AUTH_CODES = new Set(['EAUTH', 'ENOAUTH']);
 /**
  * 5xx 但其实是限流 / 发送频率限制：按可重试处理。只留明确的限流措辞——「exceed」「超过」「限制」
- * 会误伤 552「message size exceeds」「mailbox full, quota exceeded」这类永久失败；所以 quota 只在带「每日」语义时才算
- * （daily quota、quota … per day / today），单独的 quota 不算。
+ * 会误伤 552「message size exceeds」「mailbox full, quota exceeded」这类永久失败。每日限额只认带「每日发送」语义的措辞：
+ * `daily quota`、`quota … per day / daily`、`quota … today … tomorrow / try again`、`daily limit`、`daily sending limit`、
+ * `发送上限`、`当日…发送 / 上限 / 限额`。单独的 `sending limit`、`当日`、`quota`、`today` 都不算
+ * （「message size exceeds sending limit」「当日收件箱已满」仍是永久失败）。
  */
 const RATE_LIMIT_TEXT =
-  /frequen|too many|too fast|rate.?limit|throttl|try again later|daily.{0,10}quota|quota.{0,30}(?:per day|daily|today)|daily limit|sending limit|发送上限|当日|频繁|频率|发送过快|请稍后再试/i;
+  /frequen|too many|too fast|rate.?limit|throttl|try again later|daily.{0,10}quota|quota.{0,30}(?:per day|daily)|quota.{0,30}today.{0,40}(?:tomorrow|try again)|daily limit|daily sending limit|发送上限|当日.{0,6}(?:发送|上限|限额)|频繁|频率|发送过快|请稍后再试/i;
 /**
  * DATA 阶段的 5xx 其实是收件人被拒（QQ：`550 The recipient may contain a non-existent account…`，nodemailer 报
  * `EMESSAGE`，不是 EENVELOPE）。只认明确点名收件人 / 账号不存在的措辞，宁可归 smtp 也不误报成收件人问题。
@@ -453,7 +455,7 @@ export async function dispatchOutbox(
             : `SMTP 认证失败，请检查 SMTP_USER / SMTP_PASS：${failure.summary}`,
         });
       } else if (failure.class === 'permanent' || exhausted) {
-        // 服务器没有逐个点名被拒收件人（DATA 阶段拒绝）时，只有一个收件人就能确定是它。
+        // DATA 阶段的拒绝没有逐个点名收件人；邮件只有一个收件人时，被点名的只可能是它。
         const rejected =
           failure.scope === 'recipient' &&
           (failure.rejected?.length ?? 0) === 0 &&
