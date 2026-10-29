@@ -9,6 +9,7 @@ import {
 import {
   AlertKeys,
   loadRatingTenant,
+  postgresErrorFields,
   withSystem,
   type Db,
 } from '@fs-billing/db';
@@ -125,7 +126,10 @@ export function createWorker(dependencies?: WorkerDependencies) {
               },
         );
       } catch (error) {
-        request.log.error({ err: error }, '授权失败');
+        request.log.error(
+          { err: error, pg: postgresErrorFields(error) },
+          '授权失败',
+        );
         return reply.code(503).send({ error: '授权服务暂不可用' });
       }
     });
@@ -147,7 +151,10 @@ export function createWorker(dependencies?: WorkerDependencies) {
           const partitionFailed =
             pg?.code === '23514' &&
             /no partition of relation .* found for row/.test(pg.message);
-          request.log.error({ err: error }, '话单入库失败');
+          request.log.error(
+            { err: error, pg: postgresErrorFields(error) },
+            '话单入库失败',
+          );
           try {
             await recordAlert(db, {
               kind: partitionFailed ? 'partition_failed' : 'cdr_failed',

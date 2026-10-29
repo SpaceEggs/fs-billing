@@ -1,4 +1,5 @@
-import { pino, type DestinationStream } from 'pino';
+import { pino, stdSerializers, type DestinationStream } from 'pino';
+import { scrubErrorForLog } from '@fs-billing/db';
 
 /**
  * Worker 日志脱敏（阶段 9 PR 5，决定 37）。
@@ -50,10 +51,15 @@ export interface BillingMismatchInput {
   readonly billingNumber: string;
 }
 
-/** 「授权计费号码不一致」的日志对象：号码全部掩码，另加结构性对比字段。 */
+/**
+ * 「授权计费号码不一致」的日志对象：号码全部掩码，另加结构性对比字段。
+ *
+ * 对比字段比较的是 Lua 送来的值与 **Worker 按原拨号算出的计费号码**（`resolveBillingNumber` 做的正是这两个比较），
+ * 不是与原始拨号比：被叫是国际号码投影（`13800138000` → `8613800138000`），和原始拨号本来就不相等。
+ */
 export function billingMismatchLog(input: BillingMismatchInput) {
   const { callee, luaBillingNumber } = input;
-  const calleeEqualsDialed =
+  const calleeEqualsWorker =
     callee === undefined ? null : callee === input.billingNumber;
   const luaEqualsWorker =
     luaBillingNumber === undefined
@@ -67,7 +73,7 @@ export function billingMismatchLog(input: BillingMismatchInput) {
     luaBillingNumber:
       luaBillingNumber === undefined ? null : maskNumber(luaBillingNumber),
     billingNumber: maskNumber(input.billingNumber),
-    calleeEqualsDialed,
+    calleeEqualsWorker,
     luaEqualsWorker,
     shapes: {
       dialedNumber: numberShape(input.dialedNumber),
@@ -76,8 +82,13 @@ export function billingMismatchLog(input: BillingMismatchInput) {
         luaBillingNumber === undefined ? null : numberShape(luaBillingNumber),
       billingNumber: numberShape(input.billingNumber),
     },
+    // 被叫不一致优先；被叫缺失或一致而 Lua 的计费号码不一致是 only-lua-differs；两者都没有不一致证据时是 unknown。
     reason:
-      calleeEqualsDialed === false ? 'callee-differs' : 'only-lua-differs',
+      calleeEqualsWorker === false
+        ? 'callee-differs'
+        : luaEqualsWorker === false
+          ? 'only-lua-differs'
+          : 'unknown',
   };
 }
 
@@ -93,6 +104,16 @@ export const WORKER_LOG_REDACT = [
   'err.cause.cause.detail',
 ];
 
+/**
+ * 错误序列化：pino 标准序列化之后，去掉 `params`/`query`/`detail`/`where`（含各层 `cause`），
+ * 并截掉 message / stack 里 `\nparams:` 之后的内容（drizzle 的 `DrizzleQueryError` 把绑定实参写在那里）。
+ */
+export const safeErrorSerializer = (error: unknown) =>
+  scrubErrorForLog(stdSerializers.err(error as Error));
+
 export function createWorkerLogger(destination?: DestinationStream) {
-  return pino({ redact: WORKER_LOG_REDACT }, destination);
+  return pino(
+    { redact: WORKER_LOG_REDACT, serializers: { err: safeErrorSerializer } },
+    destination,
+  );
 }

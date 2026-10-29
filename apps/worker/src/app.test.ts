@@ -1,4 +1,5 @@
 import { Writable } from 'node:stream';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
 import { connect } from '@fs-billing/db';
 import { pino } from 'pino';
 import { INVALID_NUMBER_REASON, modJsonCdrSchema } from '@fs-billing/shared';
@@ -300,7 +301,7 @@ test('the mismatch log masks every number and keeps the comparison fields', asyn
     callee: '1380*****00(11)',
     luaBillingNumber: '1305*****34(11)',
     billingNumber: '8613*******00(13)',
-    calleeEqualsDialed: false,
+    calleeEqualsWorker: false,
     luaEqualsWorker: false,
     reason: 'callee-differs',
     shapes: {
@@ -325,3 +326,64 @@ test('a consistent request writes no mismatch log', async () => {
   expect(text).toContain('授权失败');
   expect(text).not.toContain('8613800138000');
 });
+
+test.each([
+  { url: '/cdr', payload: '{}' },
+  {
+    url: '/authorize',
+    payload: JSON.stringify({
+      tenant: 'ABC01',
+      callee: '8613800138000',
+      dialedNumber: '13800138000',
+      uuid: 'debf1234-1234-4234-8234-123456789abc',
+    }),
+  },
+])(
+  '$url failure logs never contain the bound phone numbers of a drizzle error',
+  async ({ url, payload }) => {
+    const lines: string[] = [];
+    const stream = new Writable({
+      write(chunk: Buffer, _encoding, callback) {
+        lines.push(chunk.toString('utf8'));
+        callback();
+      },
+    });
+    const connection = connect('postgresql://localhost/unused');
+    const failure = new DrizzleQueryError(
+      'select 1 from cdrs where callee = $1',
+      ['8613800138000', '{"callee":"8613900139000"}'],
+      Object.assign(new Error('canceling statement due to statement timeout'), {
+        code: '57014',
+        detail: 'Failing row contains (8613800138000).',
+      }),
+    );
+    const transaction = vi
+      .spyOn(connection.db, 'transaction')
+      .mockRejectedValue(failure);
+    const app = createWorker({
+      loggerInstance: createWorkerLogger(stream),
+      db: connection.db,
+      queue: { enqueue: async () => {} },
+      security: { secret: 'test-worker-key', allowedIps: ['127.0.0.1'] },
+    });
+    try {
+      await app.inject({
+        method: 'POST',
+        url,
+        headers: {
+          'x-billing-key': 'test-worker-key',
+          'content-type': 'application/json',
+        },
+        payload,
+      });
+    } finally {
+      transaction.mockRestore();
+      await app.close();
+      await connection.pool.end();
+    }
+    const text = lines.join('');
+    expect(text).toContain('DrizzleQueryError');
+    expect(text).toContain('"code":"57014"');
+    expect(text).not.toMatch(/8613800138000|8613900139000|13800138000|params/);
+  },
+);
