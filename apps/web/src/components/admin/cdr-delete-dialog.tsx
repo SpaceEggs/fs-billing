@@ -1,4 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import {
   useQueries,
   useQueryClient,
@@ -18,13 +19,14 @@ import {
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatCount } from '../cdr/cdr-format';
-import { formatDate, formatMoney } from '../../lib/format';
+import { formatDate, formatDateTime, formatMoney } from '../../lib/format';
 import { shiftStatementMonth } from '../../lib/admin-statements';
 import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 import { QueryError } from '../query-error';
 import { MonthGrid, type MonthCellState } from '../month-field';
 import { ChevronDownIcon, TriangleAlertIcon, CheckIcon } from 'lucide-react';
+import { useIsDesktop } from '../../lib/use-is-desktop';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ModalDialog } from '../modal-dialog';
@@ -49,10 +51,20 @@ const blockedLabel = {
   string
 >;
 
-type OpenGrid = { which: 'from' | 'to'; year: number };
+/** `draft` 只在手机的月份面板里用：点月份先记下，点「确定」才生效。 */
+type OpenGrid = {
+  which: 'from' | 'to';
+  year: number;
+  draft: string | null;
+};
 
 type CdrDeleteFlow =
-  | { step: 'pick'; grid: OpenGrid | null }
+  | {
+      step: 'pick';
+      grid: OpenGrid | null;
+      /** 自动预选时已查到的最早年份（从当年往前找最近一个可删除的月份）。 */
+      searchYear: number;
+    }
   | {
       step: 'confirm';
       from: string;
@@ -180,6 +192,109 @@ function rangeVerdict(
   return { status: 'ready', count, months };
 }
 
+type Preselect =
+  | { kind: 'wait' }
+  | { kind: 'found'; month: string }
+  | { kind: 'deeper' }
+  | { kind: 'none' };
+
+/**
+ * 打开时的预选（设计稿 4b、4g 预选「最近一个可删除的月份」）：从当年往前，取最近一个 `deletable` 的月份。
+ * 当年没有就查前一年，一直查到租户创建那一年为止（更早的月份是「未开户」）；年份还没加载完就等。
+ */
+function preselectMonth(
+  currentYear: number,
+  searchYear: number,
+  floorYear: number,
+  monthsOf: (year: number) => readonly AdminCdrDeletionMonth[] | undefined,
+): Preselect {
+  for (let year = currentYear; year >= searchYear; year -= 1) {
+    const rows = monthsOf(year);
+    if (!rows) return { kind: 'wait' };
+    const latest = rows
+      .filter((row) => row.state === 'deletable' && row.cdrCount !== null)
+      .map((row) => row.month)
+      .sort()
+      .pop();
+    if (latest) return { kind: 'found', month: latest };
+  }
+  return searchYear > floorYear ? { kind: 'deeper' } : { kind: 'none' };
+}
+
+/** 月份格下方的「不可选原因」（设计稿 4a、4f）：只列需要解释的月份，「未开户」「尚未到达」由格子里的小字说明。 */
+function monthReasonLines(
+  year: number,
+  byMonth: ReadonlyMap<string, AdminCdrDeletionMonth>,
+  currentMonth: string,
+) {
+  const lines: Array<{ title: string; text: string }> = [];
+  for (let month = 1; month <= 12; month += 1) {
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const row = byMonth.get(key);
+    if (!row) continue;
+    const title = `${month}月不可选：`;
+    if (row.state === 'no_statement')
+      lines.push({
+        title,
+        text:
+          key === currentMonth
+            ? `本月账单尚未生成（${shiftStatementMonth(key, 1)}-01 生成后可选）。`
+            : '账单未生成。',
+      });
+    else if (row.state === 'deleted')
+      lines.push({ title, text: '该月话单已删除。' });
+    else if (row.state === 'blocked')
+      lines.push({
+        title,
+        text: `${blockedSub(row.blockedReasons) || '不可选'}。`,
+      });
+  }
+  return lines;
+}
+
+function MonthReasons({
+  year,
+  byMonth,
+  currentMonth,
+  openingDay,
+  sheet,
+}: {
+  year: number;
+  byMonth: ReadonlyMap<string, AdminCdrDeletionMonth>;
+  currentMonth: string;
+  /** 租户创建日；有「未开户」的月份时说明开户前没有话单。 */
+  openingDay: string;
+  /** 手机底部面板里是灰底圆角块，电脑上是格子下方带分隔线的小字。 */
+  sheet: boolean;
+}) {
+  const lines = monthReasonLines(year, byMonth, currentMonth);
+  const beforeOpening = [...byMonth.values()].some(
+    (row) => row.state === 'before_opening' && row.month.startsWith(`${year}-`),
+  );
+  return (
+    <div
+      data-testid="month-reasons"
+      className={cn(
+        'flex flex-col gap-1 text-muted-foreground',
+        sheet
+          ? 'rounded-lg bg-muted px-3 py-2.5 text-[13px] leading-relaxed'
+          : 'mt-3 border-t border-border pt-2.5 text-xs leading-relaxed',
+      )}
+    >
+      {lines.map((line) => (
+        <span key={line.title}>
+          <span className="font-medium text-foreground">{line.title}</span>
+          {line.text}
+        </span>
+      ))}
+      <span>
+        只能选择已生成月账单的月份
+        {beforeOpening ? `；${openingDay} 开户前无话单` : ''}。
+      </span>
+    </div>
+  );
+}
+
 function codeHint(code: string, tenantCode: string) {
   if (code.length === 0) return '区分大小写';
   if (code === tenantCode) return '✓ 编码正确';
@@ -191,7 +306,12 @@ function collectYears(flow: CdrDeleteFlow, currentYear: number) {
   const found = new Set<number>([currentYear]);
   if (flow.step !== 'done' && flow.grid) found.add(flow.grid.year);
   const ranges: Array<[string, string]> = [];
-  if (flow.step !== 'pick') ranges.push([flow.from, flow.to]);
+  if (flow.step === 'pick') {
+    for (let year = flow.searchYear; year < currentYear; year += 1)
+      found.add(year);
+  } else {
+    ranges.push([flow.from, flow.to]);
+  }
   if (flow.step === 'done' && flow.result.remaining.length > 0) {
     const first = flow.result.remaining[0];
     const last = flow.result.remaining[flow.result.remaining.length - 1];
@@ -251,11 +371,15 @@ export function CdrDeleteDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [locked, setLocked] = useState(false);
+  const [done, setDone] = useState(false);
   if (!open && locked) setLocked(false);
+  if (!open && done) setDone(false);
   return (
     <ModalDialog
       open={open}
       {...(locked ? {} : { onOpenChange })}
+      // 设计稿 4e、4h：完成页没有 ×，靠「完成」按钮关闭（Esc 与点击遮罩照常）。
+      showClose={!done}
       title="删除话单"
       className="md:w-[560px]"
     >
@@ -264,6 +388,7 @@ export function CdrDeleteDialog({
           tenant={tenant}
           onClose={() => onOpenChange(false)}
           onLockedChange={setLocked}
+          onDoneChange={setDone}
         />
       ) : null}
     </ModalDialog>
@@ -274,16 +399,24 @@ function CdrDeleteForm({
   tenant,
   onClose,
   onLockedChange,
+  onDoneChange,
 }: {
   tenant: Tenant;
   onClose: () => void;
   onLockedChange: (locked: boolean) => void;
+  onDoneChange: (done: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const remove = useApiMutation('adminTenantCdrDelete');
-  const [flow, setFlow] = useState<CdrDeleteFlow>({ step: 'pick', grid: null });
-  const busy = useRef(false);
+  const isDesktop = useIsDesktop();
   const currentYear = Number(formatDate(new Date()).slice(0, 4));
+  const currentMonth = formatDate(new Date()).slice(0, 7);
+  const [flow, setFlow] = useState<CdrDeleteFlow>({
+    step: 'pick',
+    grid: null,
+    searchYear: currentYear,
+  });
+  const busy = useRef(false);
   const years = useMemo(
     () => collectYears(flow, currentYear),
     [flow, currentYear],
@@ -302,6 +435,29 @@ function CdrDeleteForm({
   );
   for (const query of yearQueries)
     for (const row of query.data?.months ?? []) byMonth.set(row.month, row);
+  if (flow.step === 'pick') {
+    const floorYear = Math.min(
+      currentYear,
+      Number(formatDate(tenant.createdAt).slice(0, 4)),
+    );
+    const decision = preselectMonth(
+      currentYear,
+      flow.searchYear,
+      floorYear,
+      (year) => queryByYear.get(year)?.data?.months,
+    );
+    if (decision.kind === 'found')
+      setFlow({
+        step: 'confirm',
+        from: decision.month,
+        to: decision.month,
+        code: '',
+        grid: flow.grid,
+        submit: 'idle',
+      });
+    else if (decision.kind === 'deeper')
+      setFlow({ ...flow, searchYear: flow.searchYear - 1 });
+  }
   const verdict =
     flow.step === 'pick'
       ? ({ status: 'incomplete' } as const)
@@ -346,6 +502,7 @@ function CdrDeleteForm({
       } catch {
         // 刷新失败不能把已经删掉的月份说成没删。
       }
+      onDoneChange(true);
       setFlow((current) =>
         current.step === 'done'
           ? {
@@ -407,12 +564,32 @@ function CdrDeleteForm({
             : current.to
           : null;
       const year = selected ? Number(selected.slice(0, 4)) : currentYear;
-      const grid = current.grid?.which === which ? null : { which, year };
+      const grid =
+        current.grid?.which === which ? null : { which, year, draft: selected };
       return { ...current, grid };
     });
   }
 
+  function closeGrid() {
+    setFlow((current) =>
+      current.step === 'done' || !current.grid
+        ? current
+        : { ...current, grid: null },
+    );
+  }
+
+  /** 电脑上点月份立即生效；手机的底部面板里只记下，点「确定」才生效。 */
   function onPick(month: string) {
+    if (isDesktop) commitMonth(month);
+    else
+      setFlow((current) =>
+        current.step === 'done' || !current.grid
+          ? current
+          : { ...current, grid: { ...current.grid, draft: month } },
+      );
+  }
+
+  function commitMonth(month: string) {
     setFlow((current) => {
       if (current.step === 'done' || !current.grid) return current;
       if (current.step === 'confirm' && current.submit === 'pending')
@@ -450,15 +627,60 @@ function CdrDeleteForm({
 
   const grid = flow.grid;
   const gridQuery = grid ? queryByYear.get(grid.year) : undefined;
-  const selected =
-    grid && flow.step === 'confirm'
-      ? grid.which === 'from'
-        ? flow.from
-        : flow.to
-      : null;
+  const selected = grid
+    ? isDesktop
+      ? flow.step === 'confirm'
+        ? grid.which === 'from'
+          ? flow.from
+          : flow.to
+        : null
+      : grid.draft
+    : null;
   const failedQuery = yearQueries.find((query) => query.isError && !query.data);
   const monthsPending = yearQueries.some((query) => query.isPending);
   const submitError = flow.step === 'confirm' ? flow.submit : 'idle';
+  const gridBody = grid ? (
+    gridQuery?.isPending ? (
+      <p role="status" className="m-0 text-sm text-muted-foreground">
+        正在加载可删除的月份…
+      </p>
+    ) : gridQuery?.isError && !gridQuery.data ? (
+      <QueryError
+        title="可删除月份加载失败"
+        error={gridQuery.error}
+        retrying={gridQuery.isFetching}
+        onRetry={() => void gridQuery.refetch()}
+      />
+    ) : (
+      <>
+        <MonthGrid
+          year={grid.year}
+          minYear={1}
+          maxYear={currentYear}
+          onYearChange={(year) =>
+            setFlow((current) =>
+              current.step === 'done' || !current.grid
+                ? current
+                : { ...current, grid: { ...current.grid, year } },
+            )
+          }
+          value={selected}
+          columnsClassName="grid-cols-3 md:grid-cols-4"
+          onPick={onPick}
+          cell={(month) => monthCell(byMonth.get(month))}
+          // 手机的底部面板有关闭按钮盖在右上角。
+          {...(isDesktop ? {} : { yearRowClassName: 'mr-9' })}
+        />
+        <MonthReasons
+          year={grid.year}
+          byMonth={byMonth}
+          currentMonth={currentMonth}
+          openingDay={formatDate(tenant.createdAt)}
+          sheet={!isDesktop}
+        />
+      </>
+    )
+  ) : null;
 
   return (
     <form
@@ -511,38 +733,30 @@ function CdrDeleteForm({
           );
         })}
       </div>
-      {grid ? (
+      {grid && isDesktop ? (
         <div className="rounded-[10px] border border-border p-3">
-          {gridQuery?.isPending ? (
-            <p role="status" className="m-0 text-sm text-muted-foreground">
-              正在加载可删除的月份…
-            </p>
-          ) : gridQuery?.isError && !gridQuery.data ? (
-            <QueryError
-              title="可删除月份加载失败"
-              error={gridQuery.error}
-              retrying={gridQuery.isFetching}
-              onRetry={() => void gridQuery.refetch()}
-            />
-          ) : (
-            <MonthGrid
-              year={grid.year}
-              minYear={1}
-              maxYear={currentYear}
-              onYearChange={(year) =>
-                setFlow((current) =>
-                  current.step === 'done' || !current.grid
-                    ? current
-                    : { ...current, grid: { ...current.grid, year } },
-                )
-              }
-              value={selected}
-              columnsClassName="grid-cols-3 md:grid-cols-4"
-              onPick={onPick}
-              cell={(month) => monthCell(byMonth.get(month))}
-            />
-          )}
+          {gridBody}
         </div>
+      ) : null}
+      {grid && !isDesktop ? (
+        <ModalDialog
+          open
+          onOpenChange={(next) => next || closeGrid()}
+          title={`选择${grid.which === 'from' ? '开始' : '结束'}月份`}
+          className="gap-3"
+        >
+          <h2 className="m-0 pr-8 text-[17px] font-semibold">
+            选择{grid.which === 'from' ? '开始' : '结束'}月份
+          </h2>
+          {gridBody}
+          <Button
+            className="h-12"
+            disabled={grid.draft === null}
+            onClick={() => grid.draft !== null && commitMonth(grid.draft)}
+          >
+            确定
+          </Button>
+        </ModalDialog>
       ) : null}
       <Preview
         tenant={tenant}
@@ -827,6 +1041,13 @@ function DoneView({
   }
   const shown = displayWindow(flow.from, flow.to, tenant.createdAt);
   const span = rangeTitle(flow.from, flow.to);
+  // 操作人与时间取自刷新后的月份列表（服务端记录的删除人与时间）；删除响应本身不带这两项，没有取到就不写这一行。
+  const meta = [...result.months]
+    .reverse()
+    .map((row) => byMonth.get(row.month)?.deleted)
+    .find((deleted) => deleted?.by && deleted.at);
+  const operator =
+    meta?.by && meta.at ? `${meta.by.name} · ${formatDateTime(meta.at)}` : null;
   return (
     <div className="flex flex-col items-center gap-3 pt-4 text-center">
       <span
@@ -841,22 +1062,40 @@ function DoneView({
       <p className="m-0 text-sm text-muted-foreground tabular-nums">
         {tenant.code} · {span}（{shown.start} 至 {shown.end}）
       </p>
-      <p
+      <dl
         role="status"
-        className="m-0 text-[13px] leading-relaxed text-muted-foreground"
+        className="m-0 mt-2 grid w-full grid-cols-[110px_1fr] rounded-[10px] border border-border px-4 py-1 text-left text-[13px] tabular-nums [&>*:nth-last-child(-n+2)]:border-b-0"
       >
-        已自动记入操作日志
-        {' · '}
-        <a
-          href={`/admin/audit-logs?tenantId=${tenant.id}&label=cdr_delete`}
-          className="text-primary underline"
-        >
-          查看
-        </a>
-        。余额{' '}
-        {formatMoney({ currency: tenant.currency, amount: tenant.balance })} 和{' '}
-        {span} 月账单不受影响。
-      </p>
+        <dt className="border-b border-border py-2.5 text-muted-foreground">
+          操作日志
+        </dt>
+        <dd className="m-0 border-b border-border py-2.5">
+          已自动记入 ·{' '}
+          <Link
+            to="/admin/audit-logs"
+            search={{ tenantId: tenant.id, label: 'cdr_delete' }}
+            className="text-primary underline"
+          >
+            查看
+          </Link>
+        </dd>
+        {operator ? (
+          <>
+            <dt className="border-b border-border py-2.5 text-muted-foreground">
+              操作人
+            </dt>
+            <dd className="m-0 border-b border-border py-2.5">{operator}</dd>
+          </>
+        ) : null}
+        <dt className="border-b border-border py-2.5 text-muted-foreground">
+          不受影响
+        </dt>
+        <dd className="m-0 border-b border-border py-2.5">
+          余额{' '}
+          {formatMoney({ currency: tenant.currency, amount: tenant.balance })}、
+          {span} 月账单
+        </dd>
+      </dl>
       <Button className="mt-2 h-12 w-full md:h-10" onClick={onClose}>
         完成
       </Button>

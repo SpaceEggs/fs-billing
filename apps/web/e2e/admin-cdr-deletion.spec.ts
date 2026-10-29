@@ -54,13 +54,25 @@ test('disables the current month, deletes August after the typed code, and shows
 
   await page.goto(cdrTabUrl(tenant.id));
   const dialog = await openDialog(page);
-  await dialog.getByRole('button', { name: '开始月份：选择月份' }).click();
-  // 当月不可选：在当前年的格子里先看当月，再翻到 2026 年。
+  // 一打开就预选最近一个可删除的月份（9 月：8、9 月可删，当月和之后不可删），预览立即显示。
+  await expect(
+    dialog.getByRole('button', { name: '开始月份：2026年9月' }),
+  ).toBeVisible();
+  await expect(dialog).toContainText(
+    `将删除 ${tenant.code} 在 2026年9月 的 1 条话单`,
+  );
+  // 当月不可选：格子下方写明原因；先看当月所在年，再翻到 2026 年。
+  await dialog.getByRole('button', { name: /^结束月份：/ }).click();
   const current = currentMonth();
+  await showYear(dialog, Number(current.slice(0, 4)));
   await expect(monthCell(dialog, monthLabel(current))).toBeDisabled();
+  await expect(dialog.getByTestId('month-reasons')).toContainText(
+    `${Number(current.slice(5))}月不可选：本月账单尚未生成`,
+  );
   await showYear(dialog, 2026);
   await expect(monthCell(dialog, '2026年9月')).toContainText('1 条');
   await expect(monthCell(dialog, '2026年9月')).toBeEnabled();
+  // 开始、结束都预选 9 月；结束月份改选 8 月（早于开始月份时两端都收成 8 月）。
   await monthCell(dialog, '2026年8月').click();
 
   // 预览条数与时间范围（起点取开户日，终点取月末）。
@@ -91,17 +103,28 @@ test('disables the current month, deletes August after the typed code, and shows
   await expect(submit).toBeEnabled();
   await submit.click();
 
-  // 完成页：条数、范围、流水与账单不受影响的说明，以及操作日志链接。
+  // 完成页：条数、范围、信息行（操作日志、操作人与时间、不受影响）、操作日志链接；没有标题栏 ×。
   await expect(
     dialog.getByRole('heading', { name: '已删除 1 条话单' }),
   ).toBeVisible();
   await expect(dialog).toContainText(
     `${tenant.code} · 2026年8月（2026-08-05 至 2026-08-31）`,
   );
-  await expect(dialog).toContainText('2026年8月 月账单不受影响');
+  const info = dialog.getByRole('status');
+  await expect(info).toContainText('操作日志已自动记入 · 查看');
+  await expect(info).toContainText(
+    new RegExp(
+      `操作人${adminName} · \\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}`,
+    ),
+  );
+  await expect(info).toContainText('不受影响余额');
+  await expect(info).toContainText('、2026年8月 月账单');
   await expect(dialog.getByRole('link', { name: '查看' })).toHaveAttribute(
     'href',
     `/admin/audit-logs?tenantId=${tenant.id}&label=cdr_delete`,
+  );
+  await expect(dialog.getByRole('button', { name: '关闭对话框' })).toHaveCount(
+    0,
   );
   await dialog.getByRole('button', { name: '完成' }).click();
   await expect(dialog).toBeHidden();
@@ -136,7 +159,8 @@ test('disables the current month, deletes August after the typed code, and shows
   // 再次打开对话框：8 月标为已删除不可选，9 月仍可删。
   await page.goto(cdrTabUrl(tenant.id));
   const again = await openDialog(page);
-  await again.getByRole('button', { name: '开始月份：选择月份' }).click();
+  // 8 月已删除，预选的是仍可删的 9 月。
+  await again.getByRole('button', { name: '开始月份：2026年9月' }).click();
   await showYear(again, 2026);
   await expect(monthCell(again, '2026年8月')).toBeDisabled();
   await expect(monthCell(again, '2026年8月')).toContainText('已删除');
@@ -161,12 +185,10 @@ test('deletes a two-month range one month at a time and audits each month', asyn
   const before = await ledgerAndStatementSnapshot(tenant.id);
   await page.goto(cdrTabUrl(tenant.id));
   const dialog = await openDialog(page);
-  await dialog.getByRole('button', { name: '开始月份：选择月份' }).click();
+  // 开始、结束都预选 9 月；开始月份改选 8 月，范围是 8 月至 9 月。
+  await dialog.getByRole('button', { name: '开始月份：2026年9月' }).click();
   await showYear(dialog, 2026);
   await monthCell(dialog, '2026年8月').click();
-  await dialog.getByRole('button', { name: /^结束月份：/ }).click();
-  await showYear(dialog, 2026);
-  await monthCell(dialog, '2026年9月').click();
   await expect(dialog).toContainText(
     `将删除 ${tenant.code} 在 2026年8月 至 2026年9月 的 2 条话单`,
   );
@@ -175,7 +197,18 @@ test('deletes a two-month range one month at a time and audits each month', asyn
   await expect(
     dialog.getByRole('heading', { name: '已删除 2 条话单' }),
   ).toBeVisible();
-  await dialog.getByRole('button', { name: '完成' }).click();
+  // 完成页的「查看」带租户与操作类型进操作日志（前端路由，不整页刷新）。
+  await dialog.getByRole('link', { name: '查看' }).click();
+  await expect(page).toHaveURL(
+    `/admin/audit-logs?tenantId=${tenant.id}&label=cdr_delete`,
+  );
+  await expect(
+    page.getByRole('heading', { name: '操作日志', level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '操作类型' })).toHaveValue(
+    'cdr_delete',
+  );
+  await expect(dialog).toBeHidden();
 
   expect(await ledgerAndStatementSnapshot(tenant.id)).toEqual(before);
   expect((await cdrTotals(tenant.id)).count).toBe(0);
