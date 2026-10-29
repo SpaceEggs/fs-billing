@@ -45,6 +45,7 @@ import {
   mailpitMessages,
   mailpitSettings,
 } from '../test/mail-support.js';
+import { countStatements, recordingBoss } from '../test/pgboss-support.js';
 
 /**
  * 多实例安全（阶段 9 验收 9）。
@@ -64,6 +65,9 @@ const businessB = connect(inject('appUrl'), poolOptions);
 const bossA: PgBoss = createBoss(queueA.db);
 const bossB: PgBoss = createBoss(queueB.db);
 const bosses = [bossA, bossB];
+// 每个实例的池各数各的「监控认领」语句条数：证明 supervise 时两个实例都真的参与了争抢（必须在池第一次使用之前挂上）。
+const claimsA = countStatements(queueA.pool, /SET monitor_claim_on/i);
+const claimsB = countStatements(queueB.pool, /SET monitor_claim_on/i);
 const errors: unknown[] = [];
 for (const boss of bosses) boss.on('error', (error) => errors.push(error));
 
@@ -86,49 +90,69 @@ const template = z
   );
 
 const MINUTE = 60_000;
-const tickRuns = [0, 0];
-const tickOptions = (index: number): NotifyTickOptions => ({
-  // 带上 mail 设置，处理函数每次运行恰好建一次传输：用它数每个实例的处理函数调用次数。
-  mail: mailpitSettings(),
-  createTransport: (settings) => {
-    // 启动时补扫出的任务（早于第一个边界）不算。
-    if (Date.now() >= firstBoundary) tickRuns[index]!++;
-    return createMailTransport(settings);
-  },
+// 不带 mail 设置：处理函数仍是真实的（告警恢复、入发件箱），只是不分发——发件箱的分发由下面的专门用例控制，
+// 不会有第三个分发器在同一时刻抢邮件。
+const tickOptions = (): NotifyTickOptions => ({
+  mail: undefined,
   quietMinutes: 10,
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 });
+/** 每个实例的 notify-tick 处理函数处理过的任务 id。 */
+const handledA: string[] = [];
+const handledB: string[] = [];
 
+let testStart = 0;
 let firstBoundary = 0;
+const databaseNowMs = async () =>
+  Number(
+    (
+      await owner.pool.query<{ ms: string }>(
+        'select extract(epoch from clock_timestamp()) * 1000 as ms',
+      )
+    ).rows[0]!.ms,
+  );
 
 beforeAll(async () => {
   await ensureCdrPartitions(app.db, {
     moment: new Date(Date.now() - 3600000),
   });
   await installQueue(owner);
-  // 其他测试文件留下的调度和任务不属于本文件；本文件自己注册要用的。
+  // 其他测试文件留下的调度、任务、告警和待发邮件不属于本文件；本文件自己注册要用的。
   await owner.pool.query('delete from pgboss.schedule');
   await owner.pool.query('delete from pgboss.job where name = any($1)', [
-    [NOTIFY_QUEUE, ARCHIVE_QUEUE],
+    [NOTIFY_QUEUE, ARCHIVE_QUEUE, '__pgboss__send-it'],
   ]);
+  await owner.pool.query('delete from system_alerts');
+  await owner.pool.query(
+    "update email_outbox set status = 'skipped', skip_reason = 'test cleanup', sent_at = null, locked_until = null where status in ('pending', 'sending', 'failed')",
+  );
   // 离分钟边界太近时先让它过去：启动补扫的任务和「第一个边界」的任务不能混在一起。
   const toBoundary = MINUTE - (Date.now() % MINUTE);
   if (toBoundary < 5000)
     await new Promise((resolve) => setTimeout(resolve, toBoundary + 500));
+  testStart = await databaseNowMs();
   await Promise.all(bosses.map((boss) => boss.start()));
-  await startNotifyJobs(bossA, businessA.db, tickOptions(0));
-  await startNotifyJobs(bossB, businessB.db, tickOptions(1));
-  const { rows } = await owner.pool.query<{ ms: string }>(
-    'select extract(epoch from clock_timestamp()) * 1000 as ms',
+  await startNotifyJobs(
+    recordingBoss(bossA, handledA),
+    businessA.db,
+    tickOptions(),
+  );
+  await startNotifyJobs(
+    recordingBoss(bossB, handledB),
+    businessB.db,
+    tickOptions(),
   );
   // 注册完成之后的第一个分钟边界：此前的触发（启动时的补扫）不算。
-  firstBoundary = Math.ceil(Number(rows[0]!.ms) / MINUTE) * MINUTE;
+  firstBoundary = Math.ceil((await databaseNowMs()) / MINUTE) * MINUTE;
 }, 60_000);
 afterAll(async () => {
   await owner.pool.query('delete from pgboss.schedule where name = $1', [
     NOTIFY_QUEUE,
   ]);
   await Promise.all(bosses.map((boss) => boss.stop()));
+  await owner.pool.query('delete from pgboss.job where name = any($1)', [
+    [NOTIFY_QUEUE, '__pgboss__send-it'],
+  ]);
   await Promise.all(
     [queueA, queueB, businessA, businessB].map(({ pool }) => pool.end()),
   );
@@ -161,22 +185,25 @@ describe('两个 PgBoss 实例', () => {
       CHARGE_QUEUE,
     ]);
     const runs = new Map<string, string[]>();
+    // 两个实例都参与是确定的，不是碰运气：两边的工作者都在发送之前启动，每次只取 1 个任务、每个任务处理 200 毫秒，
+    // 40 个任务要两边合起来约 4 秒才处理完，而每个实例每 0.5 秒就轮询一次。
     const handler = (instance: string) => async (jobs: { data: unknown }[]) => {
       for (const job of jobs) {
         const data = z.object({ callUuid: z.string() }).parse(job.data);
         runs.set(data.callUuid, [...(runs.get(data.callUuid) ?? []), instance]);
         await chargeCdr(app.db, job.data);
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
     };
     await Promise.all([
       bossA.work(
         CHARGE_QUEUE,
-        { batchSize: 3, pollingIntervalSeconds: 0.5 },
+        { batchSize: 1, pollingIntervalSeconds: 0.5 },
         handler('A'),
       ),
       bossB.work(
         CHARGE_QUEUE,
-        { batchSize: 3, pollingIntervalSeconds: 0.5 },
+        { batchSize: 1, pollingIntervalSeconds: 0.5 },
         handler('B'),
       ),
     ]);
@@ -235,6 +262,9 @@ describe('两个 PgBoss 实例', () => {
     // 每个任务恰好执行一次，没有重试。
     expect([...runs.keys()].sort()).toEqual([...uuids].sort());
     expect([...runs.values()].every((who) => who.length === 1)).toBe(true);
+    const who = [...runs.values()].flat();
+    expect(who).toContain('A');
+    expect(who).toContain('B');
     const { rows: jobs } = await owner.pool.query(
       `select distinct retry_count from pgboss.job where name = $1 and data->>'callUuid' = any($2::text[])`,
       [CHARGE_QUEUE, uuids],
@@ -260,6 +290,7 @@ describe('两个 PgBoss 实例', () => {
 
   it('concurrent supervise passes time out each expired job once', async () => {
     const tag = randomUUID();
+    const claimsBefore = [claimsA(), claimsB()];
     const ids = (
       await Promise.all(
         Array.from({ length: 20 }, (_, index) =>
@@ -325,6 +356,9 @@ describe('两个 PgBoss 实例', () => {
           ids: ids.length,
         },
       ]);
+      // 三轮里两个实例都发出了认领语句（一个拿到，另一个被拒），不是只有一个实例在做事。
+      expect(claimsA() - claimsBefore[0]!).toBeGreaterThanOrEqual(3);
+      expect(claimsB() - claimsBefore[1]!).toBeGreaterThanOrEqual(3);
       expect(errors).toEqual([]);
     } finally {
       await owner.pool.query(
@@ -341,6 +375,10 @@ describe('两个 PgBoss 实例', () => {
       "update email_outbox set status = 'skipped', skip_reason = 'test cleanup', sent_at = null, locked_until = null where status in ('pending', 'sending', 'failed')",
     );
     const mark = `multi-${randomUUID()}`;
+    const recipient = (index: number) => `${mark}-${index}@example.test`;
+    // 到期时间放在过去：next_attempt_at 默认取数据库的 now()，而认领用的是 Node 的时钟，
+    // 两个时钟（尤其是 Docker Desktop 的虚拟机）相差几秒就会让刚入队的邮件「还没到期」。
+    const at = new Date(Date.now() - 60_000);
     const queued = await withSystem(app.db, async (tx) => {
       const rows = [];
       for (let index = 0; index < emails; index++)
@@ -348,13 +386,15 @@ describe('两个 PgBoss 实例', () => {
           await enqueueEmail(tx, {
             dedupeKey: `${mark}:${index}`,
             template: 'test',
-            params: { sentAt: new Date().toISOString() },
-            recipients: ['ops@example.test'],
+            params: { sentAt: at.toISOString() },
+            recipients: [recipient(index)],
+            at,
           }),
         );
       return rows;
     });
-    // 每个分发器一次最多 8 封：两个加起来够发完，但任何重复认领都会让 Mailpit 收到多于 12 封。
+    // 每个分发器一次最多 8 封：12 封分在两个分发器手里（一个 8，另一个至少 4），所以两边都参与是确定的；
+    // 任何重复认领都会让认领数之和超过 12、让 Mailpit 收到多于 12 封。
     const settings = mailpitSettings({ ratePerTick: 8 });
     const dispatch = async (db: typeof businessA.db) => {
       const transport = createMailTransport(settings);
@@ -368,40 +408,41 @@ describe('两个 PgBoss 实例', () => {
       dispatch(businessA.db),
       dispatch(businessB.db),
     ]);
-    // 分钟边界上的 notify-tick 也可能同时在发，所以认领数只能是不超过总数的和；关键是不重复。
-    expect(one.sent + two.sent).toBeLessThanOrEqual(emails);
-    try {
-      await expect
-        .poll(
-          async () =>
-            (
-              await owner.pool.query<{ n: number }>(
-                `select count(*)::int as n from email_outbox where dedupe_key like $1 and status = 'sent'`,
-                [`${mark}:%`],
-              )
-            ).rows[0]!.n,
-          { timeout: 20_000, interval: 250 },
+    const state = async () =>
+      (
+        await owner.pool.query<Record<string, unknown>>(
+          `select status, attempts, last_error, next_attempt_at, locked_until, now() as db_now
+             from email_outbox where dedupe_key like $1 order by dedupe_key`,
+          [`${mark}:%`],
         )
-        .toBe(emails);
+      ).rows;
+    try {
+      expect(one.claimed).toBeGreaterThan(0);
+      expect(two.claimed).toBeGreaterThan(0);
+      expect(one.claimed + two.claimed).toBe(emails);
+      expect(one.retried + one.failed + two.retried + two.failed).toBe(0);
+      expect(one.sent + two.sent).toBe(emails);
     } catch (error) {
       // 偶发失败时留下现场：每封的状态、次数、最后的错误，以及两个分发器的返回。
-      const { rows: state } = await owner.pool.query(
-        `select status, attempts, last_error, next_attempt_at, locked_until, now() as db_now
-           from email_outbox where dedupe_key like $1 order by dedupe_key`,
-        [`${mark}:%`],
-      );
       throw new Error(
-        `发件箱未全部发出：${JSON.stringify({ one, two, state })}`,
+        `发件箱分发异常：${JSON.stringify({ one, two, state: await state() })}`,
         { cause: error },
       );
     }
     const { rows } = await owner.pool.query(
-      `select distinct attempts from email_outbox where dedupe_key like $1`,
+      `select count(*)::int as n, count(distinct attempts)::int as attempt_values, min(attempts) as attempts
+         from email_outbox where dedupe_key like $1 and status = 'sent'`,
       [`${mark}:%`],
     );
-    expect(rows).toEqual([{ attempts: 1 }]);
+    expect(rows).toEqual([{ n: emails, attempt_values: 1, attempts: 1 }]);
     expect(queued).toHaveLength(emails);
-    expect(await mailpitMessages()).toHaveLength(emails);
+    // Mailpit 只数本用例的收件人：每个收件人恰好一封。
+    const mine = (await mailpitMessages())
+      .flatMap((message) => message.To.map((to) => to.Address))
+      .filter((address) => address.startsWith(mark));
+    expect(mine.sort()).toEqual(
+      Array.from({ length: emails }, (_, index) => recipient(index)).sort(),
+    );
     expect(errors).toEqual([]);
   }, 60_000);
 
@@ -457,32 +498,48 @@ describe('两个 PgBoss 实例', () => {
 
   // 放在最后：等真实时钟越过分钟边界，其余检查已经在等待期间做完。
   it('both instances schedule notify-tick but one real minute yields one job run once', async () => {
+    const tickJobs = async (since: number) =>
+      (
+        await owner.pool.query<{
+          id: string;
+          state: string;
+          created_ms: string;
+        }>(
+          `select id, state, extract(epoch from created_on) * 1000 as created_ms from pgboss.job
+            where name = $1 and created_on >= to_timestamp($2 / 1000.0) order by created_on`,
+          [NOTIFY_QUEUE, since],
+        )
+      ).rows;
+    await expect
+      .poll(async () => (await tickJobs(firstBoundary)).length, {
+        timeout: 150_000,
+        interval: 1000,
+      })
+      .toBeGreaterThanOrEqual(1);
+    // 之后才核对 id：表里没有 created / active / retry 的任务了。
     await expect
       .poll(
         async () =>
-          (
-            await owner.pool.query<{ n: number }>(
-              `select count(*)::int as n from pgboss.job
-                where name = $1 and created_on >= to_timestamp($2 / 1000.0) and state = 'completed'`,
-              [NOTIFY_QUEUE, firstBoundary],
-            )
-          ).rows[0]!.n,
-        { timeout: 150_000, interval: 1000 },
+          (await tickJobs(testStart)).filter((job) =>
+            ['created', 'active', 'retry'].includes(job.state),
+          ).length,
+        { timeout: 30_000, interval: 500 },
       )
-      .toBeGreaterThanOrEqual(1);
-    const { rows } = await owner.pool.query<{
-      minute: string;
-      jobs: number;
-    }>(
-      `select floor(extract(epoch from created_on) / 60)::text as minute, count(*)::int as jobs
-         from pgboss.job where name = $1 and created_on >= to_timestamp($2 / 1000.0)
-        group by 1 order by 1`,
-      [NOTIFY_QUEUE, firstBoundary],
-    );
+      .toBe(0);
+    const all = await tickJobs(testStart);
+    const atBoundary = await tickJobs(firstBoundary);
+    expect(all.every((job) => job.state === 'completed')).toBe(true);
     // 两个实例都注册了调度，每个分钟仍只有一个任务。
-    expect(rows.every((row) => row.jobs === 1)).toBe(true);
-    // 处理函数在两个实例合起来只运行任务数那么多次。
-    expect(tickRuns[0]! + tickRuns[1]!).toBe(rows.length);
+    const perMinute = new Map<number, number>();
+    for (const job of atBoundary) {
+      const minute = Math.floor(Number(job.created_ms) / MINUTE);
+      perMinute.set(minute, (perMinute.get(minute) ?? 0) + 1);
+    }
+    expect([...perMinute.values()].every((count) => count === 1)).toBe(true);
+    // 恰好执行一次：两个实例处理过的 id 合起来 = 已完成任务的 id，每个 id 只出现一次（不论落在哪个实例）。
+    const handled = [...handledA, ...handledB];
+    expect([...handled].sort()).toEqual(all.map((job) => job.id).sort());
+    expect(new Set(handled).size).toBe(handled.length);
     const { rows: schedules } = await owner.pool.query(
       'select count(*)::int as n from pgboss.schedule where name = $1',
       [NOTIFY_QUEUE],
