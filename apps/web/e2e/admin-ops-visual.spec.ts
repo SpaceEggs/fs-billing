@@ -131,11 +131,30 @@ async function openDeleteDialog(page: Page, tenantId: string) {
 
 async function pickAugust(page: Page, tenantId: string) {
   const dialog = await openDeleteDialog(page, tenantId);
-  await dialog.getByRole('button', { name: '开始月份：选择月份' }).click();
-  await showYear(dialog, 2026);
-  await dialog.getByRole('button', { name: /^2026年8月，/ }).click();
+  // 打开即预选最近一个可删除的月份（8 月），预览立刻显示（稿 4b、4g）。
+  await expect(
+    dialog.getByRole('button', { name: '开始月份：2026年8月' }),
+  ).toBeVisible();
   await expect(dialog).toContainText('将删除');
   return dialog;
+}
+
+/** 点开租户下拉（单行，稿 3d、3e、4b），可选再选一个租户；列表挂在对话框之外。 */
+async function openTenantPicker(
+  page: Page,
+  dialog: ReturnType<Page['locator']>,
+) {
+  await dialog.getByRole('combobox', { name: /^归属到租户/ }).click();
+  await expect(page.getByRole('option').first()).toBeVisible();
+}
+
+async function pickTenant(
+  page: Page,
+  dialog: ReturnType<Page['locator']>,
+  name: RegExp,
+) {
+  await openTenantPicker(page, dialog);
+  await page.getByRole('option', { name }).click();
 }
 
 async function openAssignDialog(page: Page) {
@@ -248,7 +267,7 @@ test('matches admin operations frames in light and dark', async ({
         await page.goto('/admin/unassigned?tag=ABC01');
         await expect(table(page)).toBeVisible();
         const dialog = await openAssignDialog(page);
-        await expect(dialog.getByRole('radio').first()).toBeVisible();
+        await openTenantPicker(page, dialog);
       },
     },
     {
@@ -262,7 +281,7 @@ test('matches admin operations frames in light and dark', async ({
         await page.goto('/admin/unassigned?tag=ABC01');
         await expect(table(page)).toBeVisible();
         const dialog = await openAssignDialog(page);
-        await dialog.getByRole('radio', { name: /ABC001/ }).check();
+        await pickTenant(page, dialog, /ABC001/);
         await expect(dialog).toContainText('扣费合计¥58.35');
       },
     },
@@ -329,7 +348,8 @@ test('matches admin operations frames in light and dark', async ({
       session: 'admin',
       viewport: phoneViewport,
       frame: unassignedPhone('4a 手机 · 列表（分组 + 勾选）'),
-      note: null,
+      note: '截一屏视口：操作栏固定在底部（整页截图会把固定的操作栏放在页面中段）。',
+      fullPage: false,
       open: async (page) => {
         await page.goto('/admin/unassigned?tag=ABC01');
         await expect(page.getByRole('article').first()).toBeVisible();
@@ -338,6 +358,11 @@ test('matches admin operations frames in light and dark', async ({
         await expect(
           page.getByText('已选 2 条', { exact: true }),
         ).toBeVisible();
+        await expect(
+          page.getByRole('region', { name: '批量操作' }),
+        ).toBeVisible();
+        // 勾选时页面滚到了列表中段；回到顶部，和稿 4a 一样从提示条与分组开始。
+        await page.evaluate(() => window.scrollTo(0, 0));
       },
     },
     {
@@ -351,7 +376,7 @@ test('matches admin operations frames in light and dark', async ({
         await page.goto('/admin/unassigned?tag=ABC01');
         await expect(page.getByRole('article').first()).toBeVisible();
         const dialog = await openAssignDialog(page);
-        await dialog.getByRole('radio', { name: /ABC001/ }).check();
+        await pickTenant(page, dialog, /ABC001/);
         await expect(dialog).toContainText('扣费合计¥58.35');
       },
     },
@@ -386,9 +411,7 @@ test('matches admin operations frames in light and dark', async ({
         await page.getByRole('checkbox', { name: '选择本页' }).check();
         await page.getByRole('button', { name: '归属到租户' }).click();
         const dialog = page.getByRole('dialog', { name: '归属到租户' });
-        await dialog
-          .getByRole('radio', { name: new RegExp(tenant.code) })
-          .check();
+        await pickTenant(page, dialog, new RegExp(tenant.code));
         await dialog
           .getByRole('button', {
             name: `确认归属 ${assignRowsAssignable} 条并扣费`,
@@ -423,9 +446,7 @@ test('matches admin operations frames in light and dark', async ({
           .check();
         await page.getByRole('button', { name: '归属到租户' }).click();
         const dialog = page.getByRole('dialog', { name: '归属到租户' });
-        await dialog
-          .getByRole('radio', { name: new RegExp(tenant.code) })
-          .check();
+        await pickTenant(page, dialog, new RegExp(tenant.code));
         await dialog
           .getByRole('button', {
             name: `确认归属 ${assignRowsAssignable} 条并扣费`,
@@ -505,18 +526,19 @@ test('matches admin operations frames in light and dark', async ({
       session: 'admin',
       viewport: desktopViewport,
       frame: deleteDialog('4a 选择月份 · 月份选择器展开（9月不可选）'),
-      note: '夹具租户：8 月有 3 条话单、账单已生成，9 月没有账单（不可选，与稿一致）。当月（运行日所在月）同样置灰。',
+      note: '夹具租户：8 月有 3 条话单、账单已生成，9 月没有账单（不可选，与稿一致）。当月（运行日所在月）同样置灰，格子下方写明原因。',
       fullPage: false,
       open: async (page) => {
         const tenant = await augustTenant(page);
         const dialog = await openDeleteDialog(page, tenant.id);
         await dialog
-          .getByRole('button', { name: '开始月份：选择月份' })
+          .getByRole('button', { name: '开始月份：2026年8月' })
           .click();
         await showYear(dialog, 2026);
         await expect(
           dialog.getByRole('button', { name: /^2026年8月，/ }),
         ).toBeEnabled();
+        await expect(dialog.getByTestId('month-reasons')).toBeVisible();
       },
     },
     {
@@ -595,12 +617,16 @@ test('matches admin operations frames in light and dark', async ({
         const tenant = await augustTenant(page);
         const dialog = await openDeleteDialog(page, tenant.id);
         await dialog
-          .getByRole('button', { name: '开始月份：选择月份' })
+          .getByRole('button', { name: '开始月份：2026年8月' })
           .click();
-        await showYear(dialog, 2026);
+        // 手机：单独的「选择开始月份」底部面板，带不可选原因和「确定」。
+        const sheet = page.getByRole('dialog', { name: '选择开始月份' });
+        await showYear(sheet, 2026);
         await expect(
-          dialog.getByRole('button', { name: /^2026年8月，/ }),
+          sheet.getByRole('button', { name: /^2026年8月，/ }),
         ).toBeEnabled();
+        await expect(sheet.getByTestId('month-reasons')).toBeVisible();
+        await expect(sheet.getByRole('button', { name: '确定' })).toBeVisible();
       },
     },
     {

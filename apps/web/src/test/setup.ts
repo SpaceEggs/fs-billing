@@ -11,8 +11,11 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
-if (!('scrollIntoView' in Element.prototype))
-  Element.prototype.scrollIntoView = () => {};
+Object.defineProperty(Element.prototype, 'scrollIntoView', {
+  value: () => {},
+  configurable: true,
+  writable: true,
+});
 
 afterEach(() => {
   cleanup();

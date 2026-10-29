@@ -1093,7 +1093,7 @@ function DoneView({
         <dd className="m-0 border-b border-border py-2.5">
           余额{' '}
           {formatMoney({ currency: tenant.currency, amount: tenant.balance })}、
-          {span} 月账单
+          {span} <span className="whitespace-nowrap">月账单</span>
         </dd>
       </dl>
       <Button className="mt-2 h-12 w-full md:h-10" onClick={onClose}>
