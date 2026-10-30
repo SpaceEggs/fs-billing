@@ -22,6 +22,9 @@ const attentionTenantSchema = tenantIdentitySchema.extend({
   health: tenantHealthSchema,
   balance: moneyAmountSchema,
   availableBalance: moneyAmountSchema,
+  overdraftLimit: moneyAmountSchema,
+  threshold: moneyAmountSchema.nullable(),
+  suspendedAt: adminTimestampSchema.nullable(),
 });
 const tenantAttentionSchema = z.strictObject({
   total: z.int().nonnegative(),
@@ -36,6 +39,14 @@ export const adminOverviewResponseSchema = z.strictObject({
     tenantCount: z.int().nonnegative(),
     /** 今日已接通话单的计费分钟（所有租户，北京日，按接通时间）。 */
     todayCallMinutes: z.string().regex(/^\d+(?:\.\d+)?$/),
+    todayCallMinutesByCurrency: z.strictObject({
+      CNY: z.string().regex(/^\d+(?:\.\d+)?$/),
+      USD: z.string().regex(/^\d+(?:\.\d+)?$/),
+    }),
+    suspendedTenantsByCurrency: z.strictObject({
+      CNY: z.int().nonnegative(),
+      USD: z.int().nonnegative(),
+    }),
     todaySpend: adminCurrencyTotalsSchema,
     monthSpend: adminCurrencyTotalsSchema,
     /** `adminReceivables` 在 `status=pending` 时的 `totals`。 */
@@ -47,7 +58,10 @@ export const adminOverviewResponseSchema = z.strictObject({
     suspended: tenantAttentionSchema,
     /** 余额不足含透支中（`overdraft` + `low_balance`），等于两个状态筛选的 `total` 之和。 */
     lowBalance: tenantAttentionSchema,
-    unassigned: z.strictObject({ pending: z.int().nonnegative() }),
+    unassigned: z.strictObject({
+      pending: z.int().nonnegative(),
+      latestAt: adminTimestampSchema.nullable(),
+    }),
     alerts: z.strictObject({
       /** 进行中的告警（红色），等于告警汇总端点的 `open`。 */
       open: z.int().nonnegative(),

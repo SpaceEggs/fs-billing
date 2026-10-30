@@ -15,6 +15,8 @@ test('shows the same receivable totals and alert count as their pages', async ({
 }) => {
   await page.goto('/admin');
   await expect(page.getByRole('heading', { name: '需要关注' })).toBeVisible();
+  await expect(page.getByText('CNY 租户', { exact: true })).toBeVisible();
+  await expect(page.getByText('USD 租户', { exact: true })).toBeVisible();
 
   // 待收款总额卡片（CNY 与 USD 分行，不相加）。
   const card = page
@@ -59,7 +61,7 @@ test('each alert row on the overview opens the 24 hour list', async ({
 }) => {
   await page.goto('/admin');
   const rows = page
-    .locator('a[href*="/admin/system-alerts"]')
+    .locator('a[href*="/admin/system-alerts"]:visible')
     .filter({ hasText: /授权超时|话单处理失败|邮件发送失败/ });
   await expect(rows.first()).toBeVisible();
   await rows.first().click();
@@ -107,4 +109,19 @@ test('the daily spend chart is driven by the keyboard and switches currency', as
   await chart.press('Home');
   await expect(bubble).toContainText('$');
   await expect(bubble).not.toContainText('¥');
+});
+
+test('shows the phone attention cards and tenant balance context', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/admin');
+  await expect(page.getByRole('link', { name: /HZX014/ })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: /未归属话单.*未计费/ }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: /余额不足.*个/ })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: /系统告警.*授权超时/ }),
+  ).toBeVisible();
 });

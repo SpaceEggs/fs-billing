@@ -120,7 +120,9 @@ it('expands alert details and links to the matching unassigned reason', async ()
   const table = await screen.findByRole('table', { name: '系统告警' });
   await user.click(within(table).getByRole('button'));
   expect(await screen.findByText('暂无通知记录')).toBeVisible();
-  const href = screen.getByRole('link', { name: '0 通' }).getAttribute('href');
+  const href = screen
+    .getByRole('link', { name: '查看这 0 通话单 ›' })
+    .getAttribute('href');
   expect(new URL(href!, 'http://localhost').searchParams.get('reason')).toBe(
     '缺少 billsec',
   );

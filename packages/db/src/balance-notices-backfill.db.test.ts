@@ -118,6 +118,13 @@ describe('迁移 0023 的回填', () => {
     expect(await outboxCount(scratch)).toBe(0);
 
     await migrate(scratch.db, { migrationsFolder });
+    expect(
+      (
+        await scratch.pool.query<{ n: number }>(
+          'select count(*)::int as n from balance_notice_state where suspended_active and suspended_at is not null',
+        )
+      ).rows[0]?.n,
+    ).toBe(0);
 
     // 没有补发：发件箱仍是空的；每个租户一行状态，标志取当前余额的真值，序号为 0。
     expect(await outboxCount(scratch)).toBe(0);

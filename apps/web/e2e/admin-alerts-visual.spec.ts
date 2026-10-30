@@ -65,7 +65,7 @@ const overviewAllClear = async (page: Page) => {
     body.attention = {
       suspended: { total: 0, items: [] },
       lowBalance: { total: 0, items: [] },
-      unassigned: { pending: 0 },
+      unassigned: { pending: 0, latestAt: null },
       alerts: { open: 0, last24h: 0, items: [] },
     };
     await route.fulfill({ response, json: body });
@@ -78,7 +78,8 @@ const overviewAllClear = async (page: Page) => {
 const alertsOpen = async (page: Page) => {
   await page.goto('/admin/system-alerts');
   // 列表加载完（「共 N 条」只在有数据时出现）；桌面是表格、其余宽度是卡片，状态徽章的文字相同；筛选分段里也有一个「进行中」，所以取最后一个。
-  await expect(page.getByText(/^共 \d+ 条$/)).toBeVisible();
+  if ((page.viewportSize()?.width ?? 0) >= 768)
+    await expect(page.getByText(/^共 \d+ 条$/)).toBeVisible();
   await expect(page.getByText('进行中', { exact: true }).last()).toBeVisible();
 };
 
@@ -104,7 +105,9 @@ const alertDetailOpen = async (page: Page) => {
 
 const settingsOpen = async (page: Page) => {
   await page.goto('/admin/system-alerts');
-  await page.getByRole('tab', { name: '设置' }).click();
+  if ((page.viewportSize()?.width ?? 0) < 768)
+    await page.getByRole('button', { name: '告警设置' }).click();
+  else await page.getByRole('tab', { name: '设置' }).click();
   await expect(page.getByText('告警接收邮箱', { exact: true })).toBeVisible();
 };
 

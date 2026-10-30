@@ -37,6 +37,10 @@ type AggregateRow = {
   as_of: string;
   tenant_count: number;
   today_minutes: string;
+  minutes_cny: string;
+  minutes_usd: string;
+  suspended_cny: number;
+  suspended_usd: number;
   today_cny: string;
   today_usd: string;
   month_cny: string;
@@ -75,8 +79,10 @@ export async function readAdminOverview(
       from generate_series(0, ${OVERVIEW_DAILY_DAYS - 1}::int) n
     ),
     minutes as (
-      select coalesce(sum(c.billed_minutes), 0)::text as total
-      from cdrs c
+      select coalesce(sum(c.billed_minutes), 0)::text as total,
+        coalesce(sum(c.billed_minutes) filter (where t.currency = 'CNY'), 0)::text as cny,
+        coalesce(sum(c.billed_minutes) filter (where t.currency = 'USD'), 0)::text as usd
+      from cdrs c join tenants t on t.id = c.tenant_id
       where c.answered_at >= (select today::timestamp at time zone 'Asia/Shanghai' from bounds)
         and c.answered_at < (select (today + 1)::timestamp at time zone 'Asia/Shanghai' from bounds)
         and c.started_at >= (select today::timestamp at time zone 'Asia/Shanghai' - interval '1 day' from bounds)
@@ -85,6 +91,10 @@ export async function readAdminOverview(
     select ${cdrTimestamp(sql`b.as_of`)} as as_of,
       (select count(*)::int from tenants) as tenant_count,
       (select total from minutes) as today_minutes,
+      (select cny from minutes) as minutes_cny,
+      (select usd from minutes) as minutes_usd,
+      (select count(*)::int from tenants t left join tenant_balances tb on tb.tenant_id = t.id where t.status <> 'disabled' and coalesce(tb.balance, 0) + t.overdraft_limit <= 0 and t.currency = 'CNY') as suspended_cny,
+      (select count(*)::int from tenants t left join tenant_balances tb on tb.tenant_id = t.id where t.status <> 'disabled' and coalesce(tb.balance, 0) + t.overdraft_limit <= 0 and t.currency = 'USD') as suspended_usd,
       coalesce((select sum(spend) from daily_spend where day = b.today and currency = 'CNY'), 0)::text as today_cny,
       coalesce((select sum(spend) from daily_spend where day = b.today and currency = 'USD'), 0)::text as today_usd,
       coalesce((select sum(spend) from daily_spend where day >= b.month_first and currency = 'CNY'), 0)::text as month_cny,
@@ -111,6 +121,45 @@ export async function readAdminOverview(
     OVERVIEW_ATTENTION_ITEMS,
   );
   const unassigned = await readUnassignedSummary(tx);
+  const ids = [...suspended.items, ...lowBalance.items].map((item) => item.id);
+  const details = ids.length
+    ? (
+        await tx.execute<{
+          id: string;
+          overdraft: string;
+          threshold: string | null;
+          suspended_at: string | null;
+        }>(sql`
+    select t.id, t.overdraft_limit::text as overdraft, s.threshold::text as threshold,
+      ${cdrTimestamp(sql`n.suspended_at`)} as suspended_at
+    from tenants t left join balance_alert_settings s on s.tenant_id = t.id
+    left join balance_notice_state n on n.tenant_id = t.id
+    where t.id in (${sql.join(
+      ids.map((id) => sql`${id}::uuid`),
+      sql`, `,
+    )})`)
+      ).rows
+    : [];
+  const enrich = (group: typeof suspended) => ({
+    ...group,
+    items: group.items.map((item) => {
+      const detail = details.find((d) => d.id === item.id);
+      if (!detail) throw new Error('概览租户详情缺失');
+      return {
+        ...item,
+        overdraftLimit: detail.overdraft,
+        threshold: detail.threshold,
+        suspendedAt: detail.suspended_at,
+      };
+    }),
+  });
+  const latest = unassigned.pending
+    ? ((
+        await tx.execute<{ latest_at: string | null }>(sql`
+    select ${cdrTimestamp(sql`coalesce(answered_at, started_at)`)} as latest_at from unassigned_cdrs
+    where status = 'pending' order by coalesce(answered_at, started_at) desc, id limit 1`)
+      ).rows[0]?.latest_at ?? null)
+    : null;
   const alerts = await alertsInWindow(tx, {
     window: '24h',
     pageSize: OVERVIEW_ATTENTION_ITEMS,
@@ -122,15 +171,23 @@ export async function readAdminOverview(
     metrics: {
       tenantCount: row.tenant_count,
       todayCallMinutes: row.today_minutes,
+      todayCallMinutesByCurrency: {
+        CNY: row.minutes_cny,
+        USD: row.minutes_usd,
+      },
+      suspendedTenantsByCurrency: {
+        CNY: row.suspended_cny,
+        USD: row.suspended_usd,
+      },
       todaySpend: { CNY: row.today_cny, USD: row.today_usd },
       monthSpend: { CNY: row.month_cny, USD: row.month_usd },
       pendingReceivable: receivable.totals,
       suspendedTenants: suspended.total,
     },
     attention: {
-      suspended,
-      lowBalance,
-      unassigned: { pending: unassigned.pending },
+      suspended: enrich(suspended),
+      lowBalance: enrich(lowBalance),
+      unassigned: { pending: unassigned.pending, latestAt: latest },
       alerts: { open, last24h: alerts.total, items: alerts.items },
     },
     dailySpend: row.daily,

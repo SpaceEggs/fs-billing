@@ -135,6 +135,8 @@ describe('phase 9 contract', () => {
       metrics: {
         tenantCount: 1,
         todayCallMinutes: '0',
+        todayCallMinutesByCurrency: { CNY: '0', USD: '0' },
+        suspendedTenantsByCurrency: { CNY: 0, USD: 0 },
         todaySpend: money,
         monthSpend: money,
         pendingReceivable: money,
@@ -143,7 +145,7 @@ describe('phase 9 contract', () => {
       attention: {
         suspended: { total: 0, items: [] },
         lowBalance: { total: 0, items: [] },
-        unassigned: { pending: 0 },
+        unassigned: { pending: 0, latestAt: null },
         alerts: { open: 0, last24h: 0, items: [] },
       },
       dailySpend: days,

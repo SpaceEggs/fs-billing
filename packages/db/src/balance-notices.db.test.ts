@@ -82,6 +82,28 @@ async function setup(options: Options = {}) {
   return { id: tenant.id, code };
 }
 
+it('records suspension transitions and clears the time on recovery', async () => {
+  const tenant = await setup({ balance: '10' });
+  const read = async () =>
+    (
+      await owner.pool.query<{ suspended_at: Date | null }>(
+        'select suspended_at from balance_notice_state where tenant_id = $1',
+        [tenant.id],
+      )
+    ).rows[0]!.suspended_at;
+  expect(await read()).toBeNull();
+  await move(tenant.id, '-110');
+  const first = await read();
+  expect(first).toBeInstanceOf(Date);
+  await move(tenant.id, '1');
+  expect(await read()).toBeNull();
+  await owner.pool.query('select pg_sleep(0.01)');
+  await move(tenant.id, '-1');
+  const second = await read();
+  expect(second).toBeInstanceOf(Date);
+  expect(second!.getTime()).toBeGreaterThan(first!.getTime());
+});
+
 let sequence = 0;
 /** 一笔流水：正数是充值，负数是通话扣费。 */
 async function move(tenantId: string, amount: string) {

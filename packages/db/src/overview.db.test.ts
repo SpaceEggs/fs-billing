@@ -83,7 +83,11 @@ beforeAll(async () => {
   await call(cny.id, '2027-03-14 23:59:00', '7'); // 昨天接通
   await call(cny.id, null, '9'); // 未接通
   await call(cny.id, '2027-03-16 00:00:00', '11'); // 明天
-  await insertUnassigned(owner, [{}, {}, {}]);
+  await insertUnassigned(owner, [
+    { answeredAt: '2027-03-15 10:00:00' },
+    { answeredAt: '2027-03-15 11:00:00' },
+    {},
+  ]);
   expect(app).toBeDefined();
 });
 
@@ -100,6 +104,8 @@ describe('聚合口径', () => {
     expect(num(result.metrics.monthSpend.USD)).toBe(0.75);
     // 今日分钟 = 2 + 2 + 3 + 5（昨天 23:58 开始、今天 00:01 接通的算今天）。
     expect(num(result.metrics.todayCallMinutes)).toBe(12);
+    expect(num(result.metrics.todayCallMinutesByCurrency.CNY)).toBe(9);
+    expect(num(result.metrics.todayCallMinutesByCurrency.USD)).toBe(3);
     expect(result.metrics.tenantCount).toBe(6);
 
     expect(result.dailySpend).toHaveLength(30);
@@ -197,6 +203,10 @@ describe('与对应页面同源', () => {
         ).pagination.total;
       expect(await status('suspended')).toBe(1);
       expect(result.metrics.suspendedTenants).toBe(1);
+      expect(
+        result.metrics.suspendedTenantsByCurrency.CNY +
+          result.metrics.suspendedTenantsByCurrency.USD,
+      ).toBe(1);
       expect(result.attention.suspended.total).toBe(1);
       expect(result.attention.suspended.items.map((item) => item.id)).toEqual([
         suspended.id,
@@ -213,6 +223,14 @@ describe('与对应页面同源', () => {
         (await readUnassignedSummary(tx)).pending,
       );
       expect(result.attention.unassigned.pending).toBe(3);
+      expect(result.attention.unassigned.latestAt).toBe(
+        '2027-03-15T03:00:00.000000Z',
+      );
+      expect(result.attention.suspended.items[0]?.suspendedAt).not.toBeNull();
+      expect(
+        result.attention.lowBalance.items.find((item) => item.id === low.id)
+          ?.threshold,
+      ).toBe('50');
 
       const day = await alertsInWindow(tx, {
         window: '24h',

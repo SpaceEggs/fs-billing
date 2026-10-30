@@ -68,6 +68,10 @@ test('opens alert details in a phone bottom sheet', async ({ page }) => {
   try {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/admin/system-alerts');
+    await expect(page.getByRole('tab', { name: '设置' })).toBeHidden();
+    await page.getByRole('button', { name: '告警设置' }).click();
+    await expect(page).toHaveURL(/tab=settings/);
+    await page.getByRole('button', { name: '返回告警列表' }).click();
     await page.getByRole('button', { name: /端到端授权超时/ }).click();
     const sheet = page.getByRole('dialog', { name: '告警详情' });
     await expect(sheet.getByText('影响的通话', { exact: true })).toBeVisible();
@@ -88,7 +92,7 @@ test('shows merged invalid-input alerts', async ({ page }) => {
     await expect(rows).toContainText('话单处理失败');
     await expect(rows).toContainText('进行中');
     await rows.getByRole('button').click();
-    await page.getByRole('link', { name: '7 通' }).click();
+    await page.getByRole('link', { name: '查看这 7 通话单 ›' }).click();
     await expect
       .poll(() => new URL(page.url()).searchParams.get('reason'))
       .toBe(reason);
