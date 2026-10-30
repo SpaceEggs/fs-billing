@@ -21,6 +21,7 @@ import {
   type AdminTenantsResponse,
   type AuditActor,
   type AuditChange,
+  type TenantHealth,
 } from '@fs-billing/shared';
 import { lockTenants, withAdmin, type Db, type Tx } from '../client.js';
 import { databaseNow } from '../clock.js';
@@ -136,6 +137,8 @@ export async function getTenantOverview({
     throw error;
   }
 }
+/** 租户列表的状态排序：已停机、透支中、余额不足、正常、已停用。 */
+const healthOrder = sql`case ${tenantHealth} when 'suspended' then 0 when 'overdraft' then 1 when 'low_balance' then 2 when 'normal' then 3 else 4 end`;
 export function listTenants({
   db,
   query,
@@ -167,7 +170,7 @@ export function listTenants({
     const rows = await tenantRows(tx)
       .where(filter)
       .orderBy(
-        sql`case ${tenantHealth} when 'suspended' then 0 when 'overdraft' then 1 when 'low_balance' then 2 when 'normal' then 3 else 4 end`,
+        healthOrder,
         tenants.currency,
         sql`coalesce(${tenantBalances.balance},0)`,
         tenants.code,
@@ -184,6 +187,67 @@ export function listTenants({
       },
     };
   });
+}
+
+/**
+ * 概览页的「已停机」「余额不足」：按租户状态（`tenantHealth`）取总数和前 N 个，排序同 `listTenants`。
+ * 总数的谓词与列表的 `status` 筛选是同一个 SQL 片段，所以等于列表按这些状态筛选的 `total`（之和）。
+ */
+export async function readTenantsByHealth(
+  tx: Tx,
+  health: readonly TenantHealth[],
+  limit: number,
+): Promise<{
+  total: number;
+  items: {
+    id: string;
+    code: string;
+    name: string;
+    currency: 'CNY' | 'USD';
+    health: TenantHealth;
+    balance: string;
+    availableBalance: string;
+  }[];
+}> {
+  const filter = sql`${tenantHealth} in (${sql.join(
+    health.map((value) => sql`${value}`),
+    sql`, `,
+  )})`;
+  const [count] = await tx
+    .select({ total: sql<number>`count(*)::int` })
+    .from(tenants)
+    .leftJoin(tenantBalances, eq(tenantBalances.tenantId, tenants.id))
+    .leftJoin(
+      balanceAlertSettings,
+      eq(balanceAlertSettings.tenantId, tenants.id),
+    )
+    .where(filter);
+  const rows = await tx
+    .select({
+      id: tenants.id,
+      code: tenants.code,
+      name: tenants.name,
+      currency: tenants.currency,
+      health: tenantHealth,
+      balance: tenantBalanceText,
+      availableBalance: tenantAvailableText,
+    })
+    .from(tenants)
+    .leftJoin(tenantBalances, eq(tenantBalances.tenantId, tenants.id))
+    .leftJoin(
+      balanceAlertSettings,
+      eq(balanceAlertSettings.tenantId, tenants.id),
+    )
+    .where(filter)
+    .orderBy(
+      healthOrder,
+      tenants.currency,
+      sql`coalesce(${tenantBalances.balance},0)`,
+      tenants.code,
+      tenants.id,
+    )
+    .limit(limit);
+  return { total: count?.total ?? 0, items: rows };
 }
 
 export async function createTenant({

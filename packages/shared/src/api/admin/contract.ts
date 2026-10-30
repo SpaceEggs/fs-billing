@@ -14,6 +14,8 @@ import * as balance from './balance.js';
 import * as auditLogs from './audit-logs.js';
 import * as cdrDeletions from './cdr-deletions.js';
 import * as ledger from './ledger.js';
+import * as overview from './overview.js';
+import * as systemAlerts from './system-alerts.js';
 import * as rates from './rates.js';
 import * as receivables from './receivables.js';
 import * as statements from './statements.js';
@@ -590,3 +592,68 @@ export const adminAuditLogApiContract = {
   ),
 } satisfies Record<string, ApiOperation>;
 export type AdminAuditLogApiOperationId = keyof typeof adminAuditLogApiContract;
+
+/** 阶段 9 概览：只读，聚合口径与对应页面同源（见 overview.ts）。 */
+export const adminOverviewApiContract = {
+  adminOverview: operation(
+    'adminOverview',
+    'GET',
+    '/api/admin/overview',
+    globalRequest,
+    overview.adminOverviewResponseSchema,
+    {},
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminOverviewApiOperationId = keyof typeof adminOverviewApiContract;
+
+/**
+ * 阶段 9 系统告警：列表、详情、汇总只读；设置读 GET、写 PUT（带 expectedVersion，版本不符 409，
+ * 写 alert_settings_update 操作日志）。
+ */
+export const adminSystemAlertApiContract = {
+  adminSystemAlertsSummary: operation(
+    'adminSystemAlertsSummary',
+    'GET',
+    '/api/admin/system-alerts/summary',
+    globalRequest,
+    systemAlerts.adminSystemAlertsSummaryResponseSchema,
+    {},
+  ),
+  adminSystemAlerts: operation(
+    'adminSystemAlerts',
+    'GET',
+    '/api/admin/system-alerts',
+    { ...globalRequest, query: systemAlerts.adminSystemAlertsQuerySchema },
+    systemAlerts.adminSystemAlertsResponseSchema,
+    {},
+  ),
+  adminSystemAlertDetail: operation(
+    'adminSystemAlertDetail',
+    'GET',
+    '/api/admin/system-alerts/{alertId}',
+    { ...globalRequest, params: systemAlerts.adminAlertIdParamsSchema },
+    systemAlerts.adminSystemAlertDetailSchema,
+    {},
+  ),
+  adminAlertSettings: operation(
+    'adminAlertSettings',
+    'GET',
+    '/api/admin/alert-settings',
+    globalRequest,
+    systemAlerts.adminAlertSettingsResponseSchema,
+    {},
+  ),
+  adminAlertSettingsUpdate: operation(
+    'adminAlertSettingsUpdate',
+    'PUT',
+    '/api/admin/alert-settings',
+    {
+      ...globalRequest,
+      body: systemAlerts.adminAlertSettingsUpdateRequestSchema,
+    },
+    systemAlerts.adminAlertSettingsUpdateResponseSchema,
+    conflicts(['ALERT_SETTINGS_VERSION_CONFLICT']),
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminSystemAlertApiOperationId =
+  keyof typeof adminSystemAlertApiContract;

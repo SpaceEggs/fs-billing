@@ -80,6 +80,8 @@ const changeFieldText = {
   currency: '币种',
   balance: '余额',
   callCount: '条数',
+  alertRecipients: '告警接收邮箱',
+  digestMinutes: '汇总间隔（分钟）',
 } as const satisfies Record<AdminAuditLog['changes'][number]['field'], string>;
 
 const targetKindText = {
@@ -91,6 +93,7 @@ const targetKindText = {
   admin: '管理员',
   statement: '账单',
   unassigned_batch: '未归属批次',
+  alert_settings: '告警设置',
 } as const satisfies Record<
   NonNullable<AdminAuditLog['target']>['kind'],
   string

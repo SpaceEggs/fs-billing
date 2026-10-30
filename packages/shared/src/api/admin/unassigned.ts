@@ -70,6 +70,8 @@ export const adminUnassignedListQuerySchema = adminPageQuerySchema.extend({
   status: adminUnassignedListStatusSchema.default('pending'),
   /** 不传表示全部标签；传空串表示标签为空的分组。 */
   tag: z.string().max(200).optional(),
+  /** 精确匹配原因（系统告警详情的跳转：告警键里的原因）。 */
+  reason: z.string().min(1).max(500).optional(),
 });
 export type AdminUnassignedListQuery = z.infer<
   typeof adminUnassignedListQuerySchema

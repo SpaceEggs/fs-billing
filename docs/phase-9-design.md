@@ -380,6 +380,18 @@ N 取自 `alert_settings.digest_minutes`。函数 `runNotifyTick(db, { now })` �
 - **汇总节拍的取整（评审后修订）。** `notified_start_at`、`last_digest_at`、`notified_recovered_at` 和到期比较都用向下取整到分钟的 tick 时间（`noticeSlot`）。否则 tick 每次启动的秒数有抖动（上一次 12:00:03，这一次 12:15:01.8 差 1.2 秒不到 N = 15），汇总会无端推迟一分钟。发件箱行和持续时长仍用原始时间。
 - **`recipient:admin` 的恢复按集合比较**：只是调换接收邮箱的顺序不算改了，不恢复。
 
+**PR 6 实现时对「系统告警页与概览页」「端点与契约」的补充与更正：**
+
+- **契约方法加 `PUT`。** `ApiOperation.method` 原只有 `GET`、`POST`；设置写入按设计用 `PUT /api/admin/alert-settings`，所以加上 `PUT`，来源检查（`Origin` / `Sec-Fetch-Site`）从「仅 POST」改为「所有非 GET」。`web/src/lib/api.ts` 的契约登记留给 PR 7。
+- **口径。** 告警窗口谓词 `alertWindowPredicate`（`packages/db/src/alert-list.ts`）：`recovered_at IS NULL OR started_at >= T − 窗口 OR recovered_at >= T − 窗口`，`T` 默认事务的 `now()`；列表的 `total`、概览的 `last24h`、汇总的 `last24h` 都经 `countAlertsInWindow`。进行中条数 `countOpenAlerts`（列表 `openCount`、汇总 `open`、概览 `open`）。概览的待收款是 `readReceivableTotals`（`listReceivables` 也改用它），已停机 / 余额不足是 `readTenantsByHealth`（与列表同一个 `tenantHealth` 片段和排序），未归属是 `readUnassignedSummary`。概览整体在一个 `repeatable read` 只读事务里（`getAdminOverview`）。
+- **消费与分钟的聚合。** 流水一次扫描（本月 1 日与 29 天前较早者起），按北京日、币种分组，今日 / 本月 / 近 30 天都从这一组取；今日分钟按接通时间，`started_at` 下界取今天零点前一天，只为分区剪枝。租户总数含已停用租户（PR 7 的指标卡片标签写「含已停用」）。
+- **`lastOpenedAt`** 取进行中告警里最近一条的开始时间（没有进行中的为 null）。
+- **详情。** `auth_timeout` 的受影响租户与话单时间范围取 `received_at` 在 [开始, 恢复或现在] 的未验证话单，一次扫描；30 天上限从告警的结束往前数（`hi` = 恢复时间或现在，`lo = max(开始, hi − 30 天)`，`truncated = hi − 开始 > 30 天`），所以很久以前恢复的短告警照样统计得到；`cdrRange` 给最早、最晚 `started_at` 及其北京日，页面据此拼租户话单标签页的链接。`cdr_failed` 的未归属 / 校验失败类由告警键反推 `unassignedFilter`（`reason`，租户不存在时再加 `tag`），未归属列表因此加了精确匹配的 `reason` 筛选。通知记录按发件箱快照里的告警 `id` 关联（PR 6 起 `queueAlertNotices` 把告警 id 写进快照的每个告警对象；模板 schema 接受它，从不渲染）；此前入队、没有 id 的行退回 `(kind, startedAt)`。返回最新的 50 封，从旧到新显示；响应不含收件人地址。5 万行发件箱上 13.7 ms，不加索引。
+- **设置。** `updateAlertSettings`（`packages/db/src/admin/alert-settings.ts`）调用 `saveAlertSettings`，同一事务写 `alert_settings_update`；版本不符的 `AlertSettingsVersionConflictError` 经 `mapBusinessErrors` 变成 409。内容没变（接收邮箱按集合比较，汇总间隔相同）的保存什么也不做：`expectedVersion` 仍要匹配（否则 409），但不加版本、不写日志，返回当前设置和 `auditId: null`（同 `updateTenantSettings`）。操作日志标签新增 `settings`（「修改设置」），对象类型 `alert_settings`（全局单行没有 uuid，对象取审计自身的 id），变更字段 `alertRecipients`、`digestMinutes`。邮箱规则同租户邮箱：不去空白，带空白的地址按格式错误拒绝。
+- **`mailEnabled` 不另设开关（评审后修订）。** 原设计加一个 `MAIL_ENABLED`，但两个开关会各说各话：Worker 看 `SMTP_HOST` 与 `MAIL_FROM`，页面却看另一个键，忘了同步时设置页会说谎。所以 API 直接读与 Worker 同一个信号：`SMTP_HOST` 与 `MAIL_FROM` 都已设置（空串等同于没设置，同 `apps/worker/src/config.ts`）。API 只读这两个非秘密的键，不读也不校验 `SMTP_USER` / `SMTP_PASS`。没有新的环境变量。
+- **web 的最小改动。** 新的冲突码、审计字段和对象类型让 web 里的穷尽映射无法通过类型检查，所以 `lib/api-problem.ts`、`pages/admin/audit-logs.tsx` 各补了中文文案；页面本身留给 PR 7。
+- **性能。** 见 [overview-perf.md](evidence/phase-9/overview-perf.md)：PORTALBIG 形状的库上概览中位数约 195 ms，`auth_timeout` 详情约 290 ms，没有加缓存或索引。
+
 ## 定时任务：真实 cron 与多实例
 
 ### 真实每分钟 cron 触发测试（验收 8）
@@ -450,7 +462,7 @@ N 取自 `alert_settings.digest_minutes`。函数 `runNotifyTick(db, { now })` �
 - 列表端点：`status`（`all` 默认 / `open` / `recovered`）、`kind`、`window`（`24h` / `30d` / `all`，默认 `30d`）、`page`、`pageSize`（沿用 `adminPageQuerySchema`）。排序：进行中在前，然后按 `started_at DESC`。
 - 详情：基础字段加上 (1) 涉及时间范围；(2) `auth_timeout`：受影响最多的 5 个租户（编码、条数）和跳转到该租户话单标签页、筛选「仅看未经验证」加时间范围的链接（设计稿「可跳转查看」）；(3) `cdr_failed` 的未归属类：跳转未归属话单页并带 `reason` 筛选；(4) 通知记录：这条告警相关的开始、汇总、恢复邮件的时间与状态（取自 `email_outbox`，不显示收件人地址）。
 - `auth_timeout` 的受影响租户统计从 `cdrs` 取（`unverified = true` 且 `started_at` 在告警涉及时间范围内，分区剪枝）；范围上限 30 天，更长的进行中告警只统计最近 30 天并注明。性能待测。
-- 设置页：接收邮箱（≤ 20，规则同租户邮箱）与汇总间隔；保存带 `expectedVersion`；未配置接收邮箱时的提示见[决定 33](#已决定)。邮件发送是否启用由 Worker 读取 `SMTP_HOST` 决定，API 没有 SMTP 凭据；页面要显示「邮件发送未配置，告警和提醒不会发出」，所以 API 的配置里加一个只表示开关的布尔值 `MAIL_ENABLED`（不含任何凭据，与 Worker 的 `SMTP_HOST` 在同一环境文件里一起设置），`adminAlertSettings` 的 `mailEnabled` 取自它。
+- 设置页：接收邮箱（≤ 20，规则同租户邮箱）与汇总间隔；保存带 `expectedVersion`；未配置接收邮箱时的提示见[决定 33](#已决定)。邮件发送是否启用由 Worker 读取 `SMTP_HOST` 决定，API 没有 SMTP 凭据；页面要显示「邮件发送未配置，告警和提醒不会发出」，所以 API 读与 Worker 同一个信号（`SMTP_HOST` 与 `MAIL_FROM` 都已设置，不读凭据；PR 6 评审后不再另设 `MAIL_ENABLED`），`adminAlertSettings` 的 `mailEnabled` 取自它。
 
 ## 端点与契约
 

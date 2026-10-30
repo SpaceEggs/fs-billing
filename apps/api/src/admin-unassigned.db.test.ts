@@ -285,6 +285,48 @@ describe('GET /api/admin/unassigned-cdrs', () => {
     ).toEqual([]);
   });
 
+  it('filters by an exact reason, together with the tag (system alert detail link)', async () => {
+    const tag = newTag();
+    await insertUnassigned(connections.owner, [
+      { tag, reason: '租户不存在' },
+      { tag, reason: '租户不存在' },
+      { tag, reason: '号码不一致' },
+    ]);
+    const filtered = adminUnassignedListResponseSchema.parse(
+      (
+        await get(
+          `/api/admin/unassigned-cdrs?tag=${tag}&reason=${encodeURIComponent('租户不存在')}`,
+        )
+      ).json(),
+    );
+    expect(filtered.pagination.total).toBe(2);
+    expect(filtered.items.every((row) => row.reason === '租户不存在')).toBe(
+      true,
+    );
+    // 原因精确匹配，不是前缀或包含。
+    expect(
+      adminUnassignedListResponseSchema.parse(
+        (
+          await get(
+            `/api/admin/unassigned-cdrs?tag=${tag}&reason=${encodeURIComponent('租户')}`,
+          )
+        ).json(),
+      ).items,
+    ).toEqual([]);
+    // 不带标签时只按原因。
+    expect(
+      adminUnassignedListResponseSchema
+        .parse(
+          (
+            await get(
+              `/api/admin/unassigned-cdrs?reason=${encodeURIComponent('号码不一致')}&pageSize=100`,
+            )
+          ).json(),
+        )
+        .items.some((row) => row.tag === tag),
+    ).toBe(true);
+  });
+
   it('refuses an unknown status and an oversized page', async () => {
     for (const query of ['status=assigned', 'pageSize=101', 'page=0', 'x=1'])
       expect(

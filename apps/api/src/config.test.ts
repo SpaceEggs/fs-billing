@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { apiEnvironmentSchema } from './config.js';
+import { apiEnvironmentSchema, mailEnabled } from './config.js';
 
 const environment = {
   APP_DATABASE_URL: 'postgresql://fs_billing_app@localhost/db',
@@ -110,3 +110,45 @@ test.each([
     ).toThrow();
   },
 );
+
+test.each([
+  ['SMTP_HOST unset', {}, false],
+  [
+    'SMTP_HOST blank',
+    { SMTP_HOST: '', MAIL_FROM: 'billing@example.test' },
+    false,
+  ],
+  [
+    'SMTP_HOST set without MAIL_FROM',
+    { SMTP_HOST: 'smtp.example.test' },
+    false,
+  ],
+  [
+    'SMTP_HOST set with a blank MAIL_FROM',
+    { SMTP_HOST: 'smtp.example.test', MAIL_FROM: '' },
+    false,
+  ],
+  [
+    'SMTP_HOST and MAIL_FROM set',
+    { SMTP_HOST: '127.0.0.1', MAIL_FROM: 'billing@example.test' },
+    true,
+  ],
+])('mail is enabled like the worker: %s', (_label, mail, expected) => {
+  expect(
+    mailEnabled(apiEnvironmentSchema.parse({ ...environment, ...mail })),
+  ).toBe(expected);
+});
+
+test('the API neither needs nor validates SMTP credentials', () => {
+  const parsed = apiEnvironmentSchema.parse({
+    ...environment,
+    SMTP_HOST: 'smtp.qq.com',
+    MAIL_FROM: 'billing@example.test',
+    SMTP_USER: 'someone',
+    SMTP_PASS: '',
+    SMTP_PORT: 'not-a-port',
+  });
+  expect(mailEnabled(parsed)).toBe(true);
+  expect(parsed).not.toHaveProperty('SMTP_PASS');
+  expect(parsed).not.toHaveProperty('SMTP_USER');
+});

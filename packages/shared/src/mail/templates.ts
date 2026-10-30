@@ -26,6 +26,11 @@ const instant = z.iso.datetime({ offset: true });
 const minutes = z.number().int().min(0);
 const count = z.number().int().min(0);
 const text = z.string().max(2000);
+/**
+ * 告警 id（PR 6 起写进快照）：只用来把发件箱行关联回告警（系统告警详情的通知记录），从不渲染进邮件。
+ * 可选：此前入队的行没有它。
+ */
+const alertId = z.uuid().optional();
 
 const tenantFields = {
   tenantCode: z.string().min(1).max(200),
@@ -47,6 +52,7 @@ export const alertStartParamsSchema = z.strictObject({
   alerts: z
     .array(
       z.strictObject({
+        id: alertId,
         kind: z.string().min(1).max(100),
         description: text,
         startedAt: instant,
@@ -61,6 +67,7 @@ export const alertDigestParamsSchema = z.strictObject({
   alerts: z
     .array(
       z.strictObject({
+        id: alertId,
         kind: z.string().min(1).max(100),
         startedAt: instant,
         durationMinutes: minutes,
@@ -78,6 +85,7 @@ export const alertRecoveredParamsSchema = z.strictObject({
   alerts: z
     .array(
       z.strictObject({
+        id: alertId,
         kind: z.string().min(1).max(100),
         startedAt: instant,
         recoveredAt: instant,

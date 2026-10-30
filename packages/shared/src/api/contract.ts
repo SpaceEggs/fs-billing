@@ -25,7 +25,7 @@ export type IsolationCase =
 
 export type ApiOperation = {
   operationId: string;
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PUT';
   path: `/api/${string}`;
   access: RouteAccess;
   isolationCase: IsolationCase;

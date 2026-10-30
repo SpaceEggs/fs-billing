@@ -847,6 +847,11 @@ const adminProbeBodies: Partial<Record<string, object>> = {
     tenantCode: 'ABC001',
     expectedCount: 1,
   },
+  adminAlertSettingsUpdate: {
+    recipients: ['probe@example.com'],
+    digestMinutes: 5,
+    expectedVersion: 1,
+  },
   adminAccountCreate: { name: 'probe', email: 'probe@example.com' },
   adminPortalAccountCreate: { email: 'probe@example.com' },
 };
@@ -895,6 +900,39 @@ it('registers the ten phase 8 operations as admin-only', () => {
       'admin-only',
     );
   }
+});
+
+it('registers the six phase 9 operations as admin-only', () => {
+  const phase9 = [
+    'adminOverview',
+    'adminSystemAlertsSummary',
+    'adminSystemAlerts',
+    'adminSystemAlertDetail',
+    'adminAlertSettings',
+    'adminAlertSettingsUpdate',
+  ];
+  const registered = operations.filter((operation) =>
+    phase9.includes(operation.operationId),
+  );
+  expect(registered.map((operation) => operation.operationId).sort()).toEqual(
+    [...phase9].sort(),
+  );
+  for (const operation of registered) {
+    expect(operation['x-access'], operation.operationId).toBe('admin');
+    expect(operation['x-isolation-case'], operation.operationId).toBe(
+      'admin-only',
+    );
+  }
+  // 设置的写入用 PUT，其余只读。
+  expect(
+    Object.fromEntries(
+      registered.map((operation) => [operation.operationId, operation.method]),
+    ),
+  ).toMatchObject({
+    adminOverview: 'get',
+    adminAlertSettings: 'get',
+    adminAlertSettingsUpdate: 'put',
+  });
 });
 
 it('covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case', () => {
@@ -952,7 +990,8 @@ for (const lane of lanes) {
         let url = operation.path
           .replace('{id}', fixture.b.profileId)
           .replace('{tenantId}', fixture.b.tenantId ?? '')
-          .replace('{month}', '2026-09');
+          .replace('{month}', '2026-09')
+          .replace('{alertId}', fixture.b.profileId);
         if (
           [
             'portalLedger',
@@ -967,7 +1006,7 @@ for (const lane of lanes) {
         if (operation.operationId === 'adminTenantCdrDeletionMonths')
           url += '?year=2026';
         const method = z
-          .enum(['GET', 'POST'])
+          .enum(['GET', 'POST', 'PUT'])
           .parse(operation.method.toUpperCase());
         const payload =
           operation.operationId === 'changePassword'
@@ -1061,6 +1100,150 @@ for (const lane of lanes) {
         Object.assign(result, { status: 'passed' });
       });
     }
+    it('a customer gets nothing from the phase 9 operations, even for a real alert', async () => {
+      const probe = `idor-alert-${randomUUID()}`;
+      const alert = await connections.owner.pool.query<{ id: string }>(
+        `insert into public.system_alerts (kind, subject_key, tenant_id, description)
+         values ('statement_mismatch', $1, $2, $3) returning id`,
+        [probe, fixture.a.tenantId, `告警说明 ${probe}`],
+      );
+      const alertId = alert.rows[0]!.id;
+      const settingsBefore = await connections.owner.pool.query<{
+        version: number;
+        recipients: string[];
+      }>('select version, recipients from public.alert_settings');
+      try {
+        for (const user of [fixture.a, fixture.b]) {
+          const session = await login(api, user);
+          const requests: [string, string, object?][] = [
+            ['GET', '/api/admin/overview'],
+            ['GET', '/api/admin/system-alerts'],
+            ['GET', '/api/admin/system-alerts?window=all&status=open'],
+            ['GET', '/api/admin/system-alerts/summary'],
+            ['GET', `/api/admin/system-alerts/${alertId}`],
+            ['GET', '/api/admin/alert-settings'],
+            [
+              'PUT',
+              '/api/admin/alert-settings',
+              {
+                recipients: ['customer-write@example.com'],
+                digestMinutes: 1,
+                expectedVersion: settingsBefore.rows[0]!.version,
+              },
+            ],
+          ];
+          for (const [method, url, payload] of requests) {
+            const response = await api.inject({
+              method: z.enum(['GET', 'PUT']).parse(method),
+              url,
+              headers: forgedHeaders(session.cookie, fixture),
+              ...(payload ? { payload } : {}),
+            });
+            expect({ url, status: response.statusCode }).toEqual({
+              url,
+              status: 403,
+            });
+            expect(apiErrorSchema.parse(response.json()).error.code).toBe(
+              'FORBIDDEN',
+            );
+            expect(response.body).not.toContain(probe);
+          }
+        }
+        // 客户的写请求没有改动设置，也没有写操作日志。
+        expect(
+          (
+            await connections.owner.pool.query<{
+              version: number;
+              recipients: string[];
+            }>('select version, recipients from public.alert_settings')
+          ).rows,
+        ).toEqual(settingsBefore.rows);
+        // 未登录同样得到 401，不带出数据。
+        for (const url of [
+          '/api/admin/overview',
+          '/api/admin/system-alerts',
+          `/api/admin/system-alerts/${alertId}`,
+          '/api/admin/alert-settings',
+        ]) {
+          const response = await api.inject({ url });
+          expect(response.statusCode, url).toBe(401);
+          expect(response.body).not.toContain(probe);
+        }
+      } finally {
+        await connections.owner.pool.query(
+          'delete from public.system_alerts where id = $1',
+          [alertId],
+        );
+      }
+    });
+
+    it('portal responses carry no notification, recipient or alert fields', async () => {
+      const probeAddress = `idor-recipient-${randomUUID()}@example.test`;
+      const probeAlert = `idor-alert-${randomUUID()}`;
+      const tenantId = fixture.a.tenantId!;
+      // 本租户有发件箱、送达记录、告警（含收件人地址）：门户的任何响应都不应带出。
+      await connections.owner.pool.query(
+        `insert into public.email_outbox (dedupe_key, template, params, recipients, tenant_id, status, skip_reason)
+         values ($1, 'balance_low', '{}'::jsonb, array[$2]::text[], $3, 'skipped', 'idor_probe')`,
+        [`idor-probe:${randomUUID()}`, probeAddress, tenantId],
+      );
+      await connections.owner.pool.query(
+        `insert into public.balance_alert_deliveries (tenant_id, kind, balance, recipients)
+         values ($1, 'low_balance', 1, array[$2]::text[])`,
+        [tenantId, probeAddress],
+      );
+      const alert = await connections.owner.pool.query<{ id: string }>(
+        `insert into public.system_alerts (kind, subject_key, tenant_id, description, recovered_at)
+         values ('statement_mismatch', $1, $2, $3, now()) returning id`,
+        [probeAlert, tenantId, probeAlert],
+      );
+      const day = new Date(Date.now() + 8 * 3600_000)
+        .toISOString()
+        .slice(0, 10);
+      const keys = (value: unknown): string[] =>
+        Array.isArray(value)
+          ? value.flatMap(keys)
+          : value !== null && typeof value === 'object'
+            ? Object.entries(value).flatMap(([key, child]) => [
+                key,
+                ...keys(child),
+              ])
+            : [];
+      try {
+        const session = await login(api, fixture.a);
+        for (const url of [
+          '/api/portal/home',
+          '/api/portal/context',
+          `/api/portal/ledger?from=${day.slice(0, 7)}-01&to=${day}`,
+          '/api/portal/statements',
+        ]) {
+          const response = await api.inject({
+            url,
+            headers: forgedHeaders(session.cookie, fixture),
+          });
+          expect({ url, status: response.statusCode }).toEqual({
+            url,
+            status: 200,
+          });
+          const body: unknown = response.json();
+          expect(response.body).not.toContain(probeAddress);
+          expect(response.body).not.toContain(probeAlert);
+          expect(
+            keys(body).filter((key) =>
+              /notice|outbox|recipient|alert|digest|notify|dedupe|smtp|skip/i.test(
+                key,
+              ),
+            ),
+            url,
+          ).toEqual([]);
+        }
+      } finally {
+        await connections.owner.pool.query(
+          'delete from public.system_alerts where id = $1',
+          [alert.rows[0]!.id],
+        );
+      }
+    });
     it('unfiltered SQL proves the owner bypass and the app RLS boundary', async () => {
       const db = lane === 'owner' ? connections.owner.db : connections.app.db;
       const rows = await withTenant(db, fixture.a.tenantId ?? '', (tx) =>

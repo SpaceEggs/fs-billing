@@ -90,7 +90,8 @@ export function registerRoutes(
         : {}),
       ...(credential ? { onRequest: credentialRateLimit } : {}),
       preValidation: (request, _reply, done) => {
-        if (operation.method === 'POST') {
+        // 会改数据的方法（POST、PUT）都要过来源检查；GET 只读。
+        if (operation.method !== 'GET') {
           const origin = request.headers.origin;
           const fetchSite = request.headers['sec-fetch-site'];
           if (

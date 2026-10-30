@@ -131,13 +131,16 @@ export function listUnassigned(
   input: {
     status: 'pending' | 'ignored' | 'superseded';
     tag?: string | undefined;
+    /** 精确匹配原因（系统告警详情的跳转）。 */
+    reason?: string | undefined;
     page: number;
     pageSize: number;
   },
 ): Promise<UnassignedList> {
   return withAdmin(db, async (tx) => {
-    const tagFilter =
-      input.tag === undefined ? sql`` : sql`and u.tenant_tag = ${input.tag}`;
+    const tagFilter = sql`${
+      input.tag === undefined ? sql`` : sql`and u.tenant_tag = ${input.tag}`
+    } ${input.reason === undefined ? sql`` : sql`and u.reason = ${input.reason}`}`;
     const total = await tx.execute<{ count: number }>(sql`
       select count(*)::int as count from unassigned_cdrs u
       where u.status = ${input.status} ${tagFilter}`);

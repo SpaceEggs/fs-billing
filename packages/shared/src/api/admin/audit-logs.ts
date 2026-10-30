@@ -27,6 +27,7 @@ export const auditLabelSchema = z.enum([
   'unassigned_assign',
   'unassigned_ignore',
   'cdr_delete',
+  'settings',
 ]);
 export type AuditLabel = z.infer<typeof auditLabelSchema>;
 
@@ -71,6 +72,7 @@ export const auditLabelActions = {
   unassigned_assign: ['unassigned_assign'],
   unassigned_ignore: ['unassigned_ignore', 'unassigned_unignore'],
   cdr_delete: ['cdr_delete'],
+  settings: ['alert_settings_update'],
 } as const satisfies Record<AuditLabel, readonly AuditAction[]>;
 
 /** 页面上的中文标签（设计稿「第三批 · 运营」）。 */
@@ -86,6 +88,7 @@ export const auditLabelText = {
   unassigned_assign: '归属话单',
   unassigned_ignore: '忽略话单',
   cdr_delete: '删除话单',
+  settings: '修改设置',
 } as const satisfies Record<AuditLabel, string>;
 
 const labelByAction = new Map<AuditAction, AuditLabel>(
