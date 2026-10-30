@@ -169,6 +169,13 @@
       "when": 1793836800000,
       "tag": "0023_balance_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793923200000,
+      "tag": "0024_suspended_at",
+      "breakpoints": true
     }
   ]
 }

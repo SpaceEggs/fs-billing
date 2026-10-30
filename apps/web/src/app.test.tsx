@@ -298,6 +298,8 @@ describe('home load errors', () => {
             metrics: {
               tenantCount: 2,
               todayCallMinutes: '0',
+              todayCallMinutesByCurrency: { CNY: '0', USD: '0' },
+              suspendedTenantsByCurrency: { CNY: 0, USD: 0 },
               todaySpend: { CNY: '0', USD: '0' },
               monthSpend: { CNY: '0', USD: '0' },
               pendingReceivable: { CNY: '0', USD: '0' },
@@ -306,7 +308,7 @@ describe('home load errors', () => {
             attention: {
               suspended: { total: 0, items: [] },
               lowBalance: { total: 0, items: [] },
-              unassigned: { pending: 0 },
+              unassigned: { pending: 0, latestAt: null },
               alerts: { open: 0, last24h: 0, items: [] },
             },
             dailySpend: Array.from({ length: 30 }, (_, i) => ({
@@ -454,6 +456,8 @@ it('links the overview alert group and each item to the 24-hour window', async (
           metrics: {
             tenantCount: 0,
             todayCallMinutes: '0',
+            todayCallMinutesByCurrency: { CNY: '0', USD: '0' },
+            suspendedTenantsByCurrency: { CNY: 0, USD: 0 },
             todaySpend: { CNY: '0', USD: '0' },
             monthSpend: { CNY: '0', USD: '0' },
             pendingReceivable: { CNY: '0', USD: '0' },
@@ -462,7 +466,7 @@ it('links the overview alert group and each item to the 24-hour window', async (
           attention: {
             suspended: { total: 0, items: [] },
             lowBalance: { total: 0, items: [] },
-            unassigned: { pending: 0 },
+            unassigned: { pending: 0, latestAt: null },
             alerts: { open: 1, last24h: 1, items: [alert] },
           },
           dailySpend: Array.from({ length: 30 }, (_, i) => ({
@@ -481,12 +485,33 @@ it('links the overview alert group and each item to the 24-hour window', async (
       };
     throw new Error(`unexpected ${path}`);
   });
-  const item = await screen.findByRole('link', { name: /授权超时测试/ });
+  const items = await screen.findAllByRole('link', { name: /开始于 09:00:00/ });
+  expect(screen.queryByText('授权超时测试')).not.toBeInTheDocument();
+  expect(items).toHaveLength(2);
+  for (const item of items)
+    expect(item).toHaveTextContent('开始于 09:00:00 · 已持续 1 分钟');
   const group = screen.getByRole('link', { name: /系统告警 最近 24 小时/ });
-  for (const link of [group, item])
+  for (const link of [group, ...items])
     expect(
       new URL(link.getAttribute('href')!, 'http://localhost').searchParams.get(
         'window',
       ),
     ).toBe('24h');
+});
+
+it('shows the overview skeleton while the snapshot is loading', async () => {
+  renderApp('/admin', (path) => {
+    if (path === '/api/auth/session')
+      return { status: 200, body: adminSession };
+    if (path === '/api/admin/overview') return new Promise<never>(() => {});
+    if (path === '/api/admin/unassigned-cdrs/summary')
+      return { status: 200, body: { pending: 0, ignored: 0 } };
+    if (path === '/api/admin/system-alerts/summary')
+      return { status: 200, body: { open: 0, last24h: 0, lastOpenedAt: null } };
+    throw new Error(`unexpected ${path}`);
+  });
+  const skeleton = await screen.findByRole('status', { name: '加载概览' });
+  expect(
+    skeleton.querySelectorAll('[data-slot="skeleton"]').length,
+  ).toBeGreaterThan(30);
 });

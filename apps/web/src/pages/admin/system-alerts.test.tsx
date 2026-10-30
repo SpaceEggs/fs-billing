@@ -120,11 +120,96 @@ it('expands alert details and links to the matching unassigned reason', async ()
   const table = await screen.findByRole('table', { name: '系统告警' });
   await user.click(within(table).getByRole('button'));
   expect(await screen.findByText('暂无通知记录')).toBeVisible();
-  const href = screen.getByRole('link', { name: '0 通' }).getAttribute('href');
+  const href = screen
+    .getByRole('link', { name: '查看这 0 通话单 ›' })
+    .getAttribute('href');
   expect(new URL(href!, 'http://localhost').searchParams.get('reason')).toBe(
     '缺少 billsec',
   );
 });
+
+it.each([1, 2])(
+  'only offers the primary CDR button for one affected tenant (%i)',
+  async (count) => {
+    const user = userEvent.setup();
+    const instant = new Date();
+    const timestamp = instant.toISOString();
+    const day = timestamp.slice(0, 10);
+    const tenants = [
+      {
+        id: '00000000-0000-4000-8000-000000000021',
+        code: 'ABC001',
+        name: '租户甲',
+        count: 4,
+      },
+      {
+        id: '00000000-0000-4000-8000-000000000022',
+        code: 'XYZ002',
+        name: '租户乙',
+        count: 11,
+      },
+    ].slice(0, count);
+    const alert = {
+      id: '00000000-0000-4000-8000-000000000010',
+      kind: 'auth_timeout',
+      kindLabel: '授权超时',
+      description: '授权超时',
+      startedAt: timestamp,
+      lastSeenAt: timestamp,
+      recoveredAt: null,
+      status: 'open',
+      durationSeconds: 60,
+      affectedCalls: 23,
+      occurrences: 1,
+      tenant: null,
+    };
+    const { handler } = adminApi({
+      'GET /api/admin/system-alerts': () => ({
+        status: 200,
+        body: {
+          items: [alert],
+          pagination: { page: 1, pageSize: 25, total: 1 },
+          openCount: 1,
+        },
+      }),
+      [`GET /api/admin/system-alerts/${alert.id}`]: () => ({
+        status: 200,
+        body: {
+          ...alert,
+          notify: true,
+          affectedTenants: { items: tenants, truncated: false },
+          cdrRange: {
+            from: timestamp,
+            to: timestamp,
+            fromDay: day,
+            toDay: day,
+          },
+          unassignedFilter: null,
+          notices: [],
+        },
+      }),
+    });
+    renderApp('/admin/system-alerts', handler);
+    const table = await screen.findByRole('table', { name: '系统告警' });
+    await user.click(within(table).getByRole('button'));
+    expect(await screen.findByText('暂无通知记录')).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: /ABC001 · 租户甲 · 4 通/ }),
+    ).toBeVisible();
+    if (count === 1) {
+      expect(
+        screen.getByRole('link', { name: '查看这 4 通话单 ›' }),
+      ).toHaveAttribute('href', expect.stringContaining(tenants[0]!.id));
+    } else {
+      expect(
+        screen.getByRole('link', { name: /XYZ002 · 租户乙 · 11 通/ }),
+      ).toBeVisible();
+      expect(
+        screen.queryByRole('link', { name: /查看这 .* 通话单/ }),
+      ).not.toBeInTheDocument();
+    }
+  },
+);
 
 it('clears a filtered empty state', async () => {
   const user = userEvent.setup();

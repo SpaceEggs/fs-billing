@@ -1,4 +1,5 @@
 import { Fragment, useState, useSyncExternalStore } from 'react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
@@ -72,7 +73,10 @@ function Detail({
       />
     );
   if (!d) return <p className="p-4">加载中…</p>;
-  const tenant = d.tenant ?? d.affectedTenants?.items[0];
+  const tenant =
+    d.affectedTenants?.items.length === 1
+      ? d.affectedTenants.items[0]
+      : undefined;
   const digestCount = d.notices.filter(
     (n) => n.template === 'alert_digest' && n.status === 'sent',
   ).length;
@@ -83,20 +87,6 @@ function Detail({
       search={{
         reason: d.unassignedFilter.reason,
         tag: d.unassignedFilter.tag ?? undefined,
-      }}
-    >
-      {d.affectedCalls} 通
-    </Link>
-  ) : tenant && d.cdrRange ? (
-    <Link
-      className="font-semibold text-primary"
-      to="/admin/tenants/$tenantId"
-      params={{ tenantId: tenant.id }}
-      search={{
-        tab: 'cdrs',
-        unverifiedOnly: d.kind === 'auth_timeout' ? true : undefined,
-        cdrFrom: d.cdrRange.fromDay,
-        cdrTo: d.cdrRange.toDay,
       }}
     >
       {d.affectedCalls} 通
@@ -223,9 +213,39 @@ function Detail({
         <span className="text-xs text-muted-foreground">
           已发送 {digestCount} 封汇总邮件
         </span>
-        <Button variant="outline" onClick={onClose}>
-          关闭
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose}>
+            关闭
+          </Button>
+          {d.unassignedFilter ? (
+            <Button asChild>
+              <Link
+                to="/admin/unassigned"
+                search={{
+                  reason: d.unassignedFilter.reason,
+                  tag: d.unassignedFilter.tag ?? undefined,
+                }}
+              >
+                查看这 {d.affectedCalls} 通话单 ›
+              </Link>
+            </Button>
+          ) : tenant && d.cdrRange ? (
+            <Button asChild>
+              <Link
+                to="/admin/tenants/$tenantId"
+                params={{ tenantId: tenant.id }}
+                search={{
+                  tab: 'cdrs',
+                  unverifiedOnly: d.kind === 'auth_timeout' ? true : undefined,
+                  cdrFrom: d.cdrRange.fromDay,
+                  cdrTo: d.cdrRange.toDay,
+                }}
+              >
+                查看这 {tenant.count} 通话单 ›
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -249,7 +269,7 @@ function AlertRow({
         onClick={onToggle}
       >
         <td className="p-3 whitespace-nowrap">
-          <button className="text-primary" aria-expanded={selected}>
+          <button aria-expanded={selected}>
             {formatDateTime(alert.startedAt)}
           </button>
         </td>
@@ -435,10 +455,10 @@ function SettingsForm({
   );
 }
 export function SystemAlertsPage({ identity }: { identity: Identity }) {
-  const [tab, setTab] = useState('list');
   const [status, setStatus] = useState<'all' | 'open' | 'recovered'>('all');
   const [kind, setKind] = useState('');
   const initialSearch = useSearch({ from: '/admin/system-alerts' });
+  const tab = initialSearch.tab === 'settings' ? 'settings' : 'list';
   const navigate = useNavigate({ from: '/admin/system-alerts' });
   const [window, setWindow] = useState<'24h' | '30d' | 'all'>(
     initialSearch.window ?? '30d',
@@ -472,13 +492,41 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
       title="系统告警"
       crumb="系统告警"
       activeNav="系统告警"
+      mobileActions={
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label={tab === 'list' ? '告警设置' : '返回告警列表'}
+          onClick={() =>
+            void navigate({
+              search: {
+                ...initialSearch,
+                tab: tab === 'list' ? 'settings' : undefined,
+              },
+            })
+          }
+        >
+          {tab === 'list' ? <SettingsIcon /> : '‹'}
+        </Button>
+      }
     >
       <PageBody
         title="系统告警"
         meta={query.data ? `进行中 ${query.data.openCount}` : undefined}
       >
-        <Tabs value={tab} onValueChange={setTab} className="gap-5">
-          <TabsList>
+        <Tabs
+          value={tab}
+          onValueChange={(value) =>
+            void navigate({
+              search: {
+                ...initialSearch,
+                tab: value === 'settings' ? 'settings' : undefined,
+              },
+            })
+          }
+          className="gap-5"
+        >
+          <TabsList className="max-md:hidden">
             <TabsTrigger value="list">告警列表</TabsTrigger>
             <TabsTrigger value="settings">设置</TabsTrigger>
           </TabsList>
@@ -572,7 +620,7 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
               </div>
             ) : (
               <>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground max-md:hidden">
                   共 {query.data.pagination.total} 条
                 </p>
                 {desktop ? (

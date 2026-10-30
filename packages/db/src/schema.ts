@@ -501,6 +501,7 @@ export const balanceNoticeState = pgTable('balance_notice_state', {
   lowSeq: integer('low_seq').notNull().default(0),
   suspendedActive: boolean('suspended_active').notNull().default(false),
   suspendedSeq: integer('suspended_seq').notNull().default(0),
+  suspendedAt: at('suspended_at'),
   updatedAt: at('updated_at').notNull().defaultNow(),
 });
 
