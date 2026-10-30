@@ -44,7 +44,7 @@ export function StatementCountries({
           <span className="hidden md:inline">按费用从高到低</span>
         </span>
       </div>
-      <table className="hidden w-full border-collapse text-[13px] md:table">
+      <table className="hidden w-full border-collapse whitespace-nowrap text-[13px] md:table">
         <thead>
           <tr className="bg-muted text-xs text-muted-foreground">
             <th className="px-5 py-[9px] text-left font-medium">国家</th>

@@ -83,12 +83,49 @@ describe('portal statement detail', () => {
     expect(screen.queryByText('本月（进行中）')).toBeNull();
   });
 
+  it('uses a stacked equation and tables until the wide layout fits', async () => {
+    renderDetail('2026-09', septemberDetail);
+    const equation = await screen.findByRole('region', { name: '账单汇总' });
+    expect(equation.children[0]).toHaveClass('hidden', 'xl:flex');
+    expect(equation.children[0]).not.toHaveClass('overflow-x-auto');
+    expect(equation.children[1]).toHaveClass('flex', 'xl:hidden');
+    const countries = screen.getByRole('region', { name: '按国家汇总' });
+    const days = screen.getByRole('region', { name: '按日汇总' });
+    expect(countries.parentElement).toBe(days.parentElement);
+    expect(countries.parentElement).toHaveClass('grid', 'xl:grid-cols-2');
+    expect(within(countries).getByRole('table')).toHaveClass(
+      'whitespace-nowrap',
+    );
+    expect(within(days).getByRole('table')).toHaveClass('whitespace-nowrap');
+    expect(screen.getByRole('heading', { name: '2026年9月' })).toHaveClass(
+      'whitespace-nowrap',
+    );
+  });
+
   it('shows the September equation with negative adjustment and closing in red', async () => {
     renderDetail('2026-09', septemberDetail);
     const equation = await screen.findByRole('region', { name: '账单汇总' });
     const desktop = equation.firstElementChild as HTMLElement;
     expect(desktop).toHaveTextContent(
       '期初余额¥1,176.60+充值¥1,300.00+赠送¥0.00±调账-¥25.50−通话扣费¥2,486.3012,804 通 · 49,726分钟=期末余额-¥35.20',
+    );
+    const operators = desktop.querySelectorAll('[aria-hidden="true"]');
+    expect(operators).toHaveLength(5);
+    const amount = within(desktop).getByText('¥2,486.30').parentElement;
+    for (const operator of operators) {
+      expect(operator).toHaveClass('flex', 'flex-col', 'gap-1.5');
+      expect(operator.firstElementChild).toHaveClass(
+        'invisible',
+        'text-[13px]',
+      );
+      expect(operator.lastElementChild).toHaveClass(
+        'text-[22px]',
+        'leading-normal',
+      );
+      expect(amount).toHaveClass('text-[22px]', 'leading-normal');
+    }
+    expect(within(desktop).getByText('12,804 通 · 49,726分钟')).toHaveClass(
+      'whitespace-nowrap',
     );
     expect(within(desktop).getByText('-¥25.50')).toHaveClass('text-neg');
     expect(within(desktop).getByText('-¥35.20')).toHaveClass('text-neg');

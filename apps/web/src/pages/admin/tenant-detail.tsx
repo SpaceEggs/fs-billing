@@ -152,10 +152,10 @@ function MobileActions({
 function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   return (
-    <div className="hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-[1.4fr_1fr_1fr_1fr] print:hidden">
+    <div className="hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] print:hidden">
       <section
         aria-label="当前余额"
-        className="flex flex-col gap-1.5 border-r border-border px-6 py-5"
+        className="flex flex-col gap-1.5 border-r border-b border-border px-6 py-5 lg:border-b-0"
       >
         <span className="text-[13px] text-muted-foreground">当前余额</span>
         <Money
@@ -163,7 +163,7 @@ function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
           className="text-[36px] leading-[1.1] font-semibold tracking-[-0.02em]"
         />
       </section>
-      <section className="flex flex-col gap-1.5 border-r border-border px-6 py-5">
+      <section className="flex flex-col gap-1.5 border-b border-border px-6 py-5 lg:border-r lg:border-b-0">
         <span className="text-[13px] text-muted-foreground">透支额度</span>
         <Money
           value={money(tenant.overdraftLimit)}
