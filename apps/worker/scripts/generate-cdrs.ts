@@ -49,6 +49,12 @@ export function callUuid(
   const h = b.subarray(0, 16).toString('hex');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
+export function syntheticCaller(seed: string, tenant: string): string {
+  const value = hash(
+    `fs-billing-synthetic-caller:${seed}:${tenant}`,
+  ).readBigUInt64BE(0);
+  return `1${(value % 10000000000n).toString().padStart(10, '0')}`;
+}
 function randomFor(key: string) {
   let n = 0;
   return () => hash(`${key}:${n++}`).readUInt32BE(0) / 0x100000000;
@@ -241,32 +247,32 @@ async function main() {
         )
       )
         throw new Error('Tenant not found or inactive');
-      return Promise.all(
-        selected.map(async (t) => {
-          const rating = await loadRatingTenant(tx, t.code);
-          const history = await tx
-            .select({
-              caller: schema.cdrs.caller,
-              startedAt: schema.cdrs.startedAt,
-            })
-            .from(schema.cdrs)
-            .where(eq(schema.cdrs.tenantId, t.id))
-            .orderBy(sql`${schema.cdrs.startedAt} desc`)
-            .limit(100);
-          const deleted = await loadDeletedMonths(tx, t.id);
-          return { ...t, rating, history, deleted };
-        }),
-      );
+      const tenants = [];
+      for (const t of selected) {
+        const rating = await loadRatingTenant(tx, t.code);
+        const history = await tx
+          .select({
+            caller: schema.cdrs.caller,
+            startedAt: schema.cdrs.startedAt,
+          })
+          .from(schema.cdrs)
+          .where(eq(schema.cdrs.tenantId, t.id))
+          .orderBy(sql`${schema.cdrs.startedAt} desc`)
+          .limit(100);
+        const deleted = await loadDeletedMonths(tx, t.id);
+        tenants.push({ ...t, rating, history, deleted });
+      }
+      return tenants;
     });
     const now = Date.now();
     const to = values.to ?? shanghaiDate(new Date(now));
     let failed = false;
     for (const t of tenants) {
-      const caller = t.history.find((h) => h.caller.trim())?.caller;
-      if (!t.rating || !caller) {
-        console.error(
-          `${t.code}: skipped (no balance or historical caller identity)`,
-        );
+      const caller =
+        t.history.find((h) => h.caller.trim())?.caller ??
+        syntheticCaller(values.seed, t.code);
+      if (!t.rating) {
+        console.error(`${t.code}: skipped (no rating or balance data)`);
         failed = true;
         continue;
       }
@@ -276,9 +282,13 @@ async function main() {
           ? shanghaiDate(
               new Date(dateMs(shanghaiDate(t.history[0].startedAt)) + DAY),
             )
-          : to);
-      const available = t.rating.balance.value.plus(t.rating.overdraft.value);
+          : `${shanghaiDate(new Date(now)).slice(0, 7)}-01`);
+      const available = t.rating.balance.value;
       const cap = available.isNegative() ? decimal('0') : available;
+      if (cap.isZero()) {
+        console.log(`${t.code}: skipped (balance <= 0)`);
+        continue;
+      }
       const requested =
         values['max-spend'] === undefined ? cap : decimal(values['max-spend']);
       const limit = requested.lt(cap) ? requested : cap;

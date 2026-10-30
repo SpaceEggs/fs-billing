@@ -6,6 +6,7 @@ import {
   callUuid,
   fitsSpend,
   shanghaiDate,
+  syntheticCaller,
   planDay,
 } from './generate-cdrs.js';
 
@@ -82,6 +83,13 @@ describe('synthetic CDRs', () => {
       expect((start.getUTCHours() + 8) % 24).toBeGreaterThanOrEqual(9);
       expect(modJsonCdrSchema.safeParse(call.body).success).toBe(true);
     }
+  });
+  it('derives a stable 11-digit caller from the seed and tenant', () => {
+    const caller = syntheticCaller('1', 'ABC');
+    expect(caller).toMatch(/^1\d{10}$/);
+    expect(caller).toBe(syntheticCaller('1', 'ABC'));
+    expect(caller).not.toBe(syntheticCaller('2', 'ABC'));
+    expect(caller).not.toBe(syntheticCaller('1', 'DEF'));
   });
   it('derives stable distinct UUIDs', () => {
     const uuid = callUuid('1', 'tenant', '2026-10-02', 0);
