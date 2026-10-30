@@ -223,6 +223,7 @@ describe('admin navigation', () => {
       ['待收款', '/admin/receivables'],
       ['未归属话单', '/admin/unassigned'],
       ['账单', '/admin/statements'],
+      ['系统告警', '/admin/system-alerts'],
       ['操作日志', '/admin/audit-logs'],
       ['管理员', '/admin/admins'],
     ]);
@@ -241,7 +242,7 @@ describe('admin navigation', () => {
       await screen.findAllByRole('navigation', { name: '主导航' })
     )[0]!;
     const links = within(nav).getAllByRole('link');
-    expect(links).toHaveLength(7);
+    expect(links).toHaveLength(8);
     for (const link of links) {
       const icon = link.firstElementChild;
       expect(icon?.tagName.toLowerCase()).toBe('svg');
@@ -1013,6 +1014,7 @@ describe('tenant create', () => {
     expect(calls.map((call) => call.path)).toEqual([
       '/api/auth/session',
       '/api/admin/unassigned-cdrs/summary',
+      '/api/admin/system-alerts/summary',
     ]);
   });
 

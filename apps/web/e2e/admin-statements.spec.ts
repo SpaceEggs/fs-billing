@@ -132,6 +132,7 @@ test('adds 账单 to the admin navigation after 待收款 and defaults to the pr
     '待收款',
     /^未归属话单(\d{1,3}(,\d{3})*)?$/,
     '账单',
+    '系统告警',
     '操作日志',
     '管理员',
   ]);

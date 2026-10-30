@@ -68,8 +68,17 @@ test('finds the deletion by admin, type and tenant, and expands the before and a
   await expect(table(page)).toBeVisible();
 
   await select(page, '租户').selectOption({ label: tenantOption(tenant) });
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('tenantId'))
+    .toBe(tenant.id);
   await select(page, '操作类型').selectOption({ label: '删除话单' });
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('label'))
+    .toBe('cdr_delete');
   await select(page, '管理员').selectOption({ label: adminName });
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('adminId'))
+    .toBeTruthy();
   const params = new URL(page.url()).searchParams;
   expect(params.get('tenantId')).toBe(tenant.id);
   expect(params.get('label')).toBe('cdr_delete');

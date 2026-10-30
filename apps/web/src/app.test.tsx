@@ -286,25 +286,51 @@ describe('home load errors', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   }, 10_000);
 
-  it('the admin overview links to the pages available now', async () => {
+  it('the admin overview shows metrics and the empty attention state', async () => {
     renderApp('/admin', (path) => {
       if (path === '/api/auth/session')
         return { status: 200, body: adminSession };
-      if (path === '/api/admin/context')
-        return { status: 200, body: { identity: adminSession.identity } };
+      if (path === '/api/admin/overview')
+        return {
+          status: 200,
+          body: {
+            asOf: '2026-09-30T00:00:00.000Z',
+            metrics: {
+              tenantCount: 2,
+              todayCallMinutes: '0',
+              todaySpend: { CNY: '0', USD: '0' },
+              monthSpend: { CNY: '0', USD: '0' },
+              pendingReceivable: { CNY: '0', USD: '0' },
+              suspendedTenants: 0,
+            },
+            attention: {
+              suspended: { total: 0, items: [] },
+              lowBalance: { total: 0, items: [] },
+              unassigned: { pending: 0 },
+              alerts: { open: 0, last24h: 0, items: [] },
+            },
+            dailySpend: Array.from({ length: 30 }, (_, i) => ({
+              date: `2026-09-${String(i + 1).padStart(2, '0')}`,
+              CNY: '0',
+              USD: '0',
+            })),
+          },
+        };
       if (path === '/api/admin/unassigned-cdrs/summary')
         return { status: 200, body: { pending: 0, ignored: 0 } };
+      if (path === '/api/admin/system-alerts/summary')
+        return {
+          status: 200,
+          body: { open: 0, last24h: 0, lastOpenedAt: null },
+        };
       throw new Error(`unexpected ${path}`);
     });
-    const main = await screen.findByRole('main');
-    await waitFor(() =>
-      expect(main).toHaveTextContent(
-        '欢迎，王敏。可在租户、待收款和管理员中开展工作；概览指标与需要关注的事项将在后续版本开放。',
-      ),
-    );
-    expect(within(main).getByRole('link', { name: '待收款' })).toHaveAttribute(
-      'href',
-      '/admin/receivables',
+    expect(await screen.findByText('含已停用')).toBeVisible();
+    expect(screen.getByText('一切正常')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'USD' }));
+    expect(screen.getByRole('button', { name: 'USD' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     );
   });
 
@@ -325,7 +351,7 @@ describe('home load errors', () => {
             passwordChangeRequired: false,
           },
         };
-      if (path === '/api/admin/context') {
+      if (path === '/api/admin/overview') {
         contextCalls += 1;
         throw new TypeError('network down');
       }

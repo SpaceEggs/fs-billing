@@ -264,6 +264,7 @@ function SettingsEditor({
               )}
             </Field>
           </div>
+          <p className="text-xs text-muted-foreground">停用租户不发送</p>
           <RecipientsInput
             stacked
             emails={form.emails}

@@ -1,6 +1,8 @@
 import type { z } from 'zod';
 import {
   adminApiContract,
+  adminOverviewApiContract,
+  adminSystemAlertApiContract,
   adminApiErrorSchema,
   adminCdrApiContract,
   adminStatementApiContract,
@@ -31,6 +33,8 @@ const {
 export const webApiContract = {
   ...apiContract,
   ...adminApiContract,
+  ...adminOverviewApiContract,
+  ...adminSystemAlertApiContract,
   ...adminCdrQueries,
   ...adminStatementQueries,
   ...adminUnassignedApiContract,

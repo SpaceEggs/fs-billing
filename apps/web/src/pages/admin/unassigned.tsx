@@ -74,6 +74,7 @@ type Listed = {
   items: AdminUnassignedRow[];
   pagination: { page: number; pageSize: number; total: number };
   requestedTag: string | null;
+  requestedReason: string | null;
 };
 
 function countText(value: number) {
@@ -106,6 +107,7 @@ function keptSearch(search: UnassignedSearch, page?: number): UnassignedSearch {
   return {
     ...(search.tab ? { tab: search.tab } : {}),
     ...(search.tag !== undefined ? { tag: search.tag } : {}),
+    ...(search.reason !== undefined ? { reason: search.reason } : {}),
     ...(page !== undefined && page > 1 ? { page } : {}),
   };
 }
@@ -139,21 +141,25 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
     page,
     pageSize,
     ...(search.tag !== undefined ? { tag: search.tag } : {}),
+    ...(search.reason !== undefined ? { reason: search.reason } : {}),
   } satisfies ApiQuery<'adminUnassignedList'>;
   const list = useQuery({
     queryKey: apiKey('adminUnassignedList', { query: listQuery }),
     queryFn: async (): Promise<Listed> => ({
       ...(await send('adminUnassignedList', { query: listQuery })),
       requestedTag: search.tag ?? null,
+      requestedReason: search.reason ?? null,
     }),
     placeholderData: keepPreviousData,
     enabled: showList,
   });
   const listed =
-    list.data?.status === tab && list.data.requestedTag === (search.tag ?? null)
+    list.data?.status === tab &&
+    list.data.requestedTag === (search.tag ?? null) &&
+    list.data.requestedReason === (search.reason ?? null)
       ? list.data
       : undefined;
-  const filterKey = `${tab}\0${search.tag ?? '\u0001'}`;
+  const filterKey = `${tab}\0${search.tag ?? '\u0001'}\0${search.reason ?? ''}`;
   const [seenFilter, setSeenFilter] = useState(filterKey);
   const [selection, setSelection] = useState<Selection>({ kind: 'none' });
   const [panel, setPanel] = useState<OpenPanel | null>(null);
@@ -190,6 +196,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
         ? selection.ids.size
         : 0;
   const canSelectGroup =
+    search.reason === undefined &&
     search.tag !== undefined &&
     selection.kind !== 'group' &&
     listed !== undefined &&
@@ -297,6 +304,20 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
               加载中
             </p>
           )}
+          {search.reason ? (
+            <p className="text-sm">
+              原因筛选：{search.reason}{' '}
+              <Button
+                variant="link"
+                size="inline"
+                onClick={() =>
+                  update({ ...keptSearch(search), reason: undefined })
+                }
+              >
+                清除筛选
+              </Button>
+            </p>
+          ) : null}
           {selection.kind === 'none' ? (
             <div className="flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
               <span>
