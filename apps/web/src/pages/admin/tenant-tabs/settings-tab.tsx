@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
@@ -196,115 +197,122 @@ function SettingsEditor({
 
   return (
     <>
-      <form
-        noValidate
-        aria-label="租户设置"
-        onSubmit={(event) => {
-          event.preventDefault();
-          review();
-        }}
-        className="flex max-w-[640px] flex-col rounded-xl border border-border"
+      <Card
+        asChild
+        className={cn(
+          'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+          'flex max-w-[640px] flex-col rounded-xl border border-border',
+        )}
       >
-        <div className="flex flex-col gap-[18px] px-4 py-5 md:px-6">
-          {saved ? (
-            <div
-              role="status"
-              className={cn(
-                'rounded-lg border px-3 py-2.5 text-[13px]',
-                saved.changed
-                  ? 'border-ok-border bg-ok-soft text-ok'
-                  : 'border-border bg-muted text-muted-foreground',
-              )}
-            >
-              {saved.changed
-                ? '设置已保存，已记入操作日志'
-                : '设置没有变化，未记入操作日志'}
+        <form
+          noValidate
+          aria-label="租户设置"
+          onSubmit={(event) => {
+            event.preventDefault();
+            review();
+          }}
+        >
+          <div className="flex flex-col gap-[18px] px-4 py-5 md:px-6">
+            {saved ? (
+              <div
+                role="status"
+                className={cn(
+                  'rounded-lg border px-3 py-2.5 text-[13px]',
+                  saved.changed
+                    ? 'border-ok-border bg-ok-soft text-ok'
+                    : 'border-border bg-muted text-muted-foreground',
+                )}
+              >
+                {saved.changed
+                  ? '设置已保存，已记入操作日志'
+                  : '设置没有变化，未记入操作日志'}
+              </div>
+            ) : null}
+            {errors.form ? (
+              <p role="alert" className="m-0 text-[13px] text-err">
+                {errors.form}
+              </p>
+            ) : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field
+                label="透支额度"
+                error={errors.overdraftLimit}
+                hint={errors.overdraftLimit ? undefined : overdraftHint}
+              >
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    currency={tenant.currency}
+                    error={errors.overdraftLimit}
+                    value={form.overdraftLimit}
+                    onChange={(overdraftLimit) => update({ overdraftLimit })}
+                  />
+                )}
+              </Field>
+              <Field
+                label="余额提醒阈值"
+                error={errors.lowBalanceThreshold}
+                hint={
+                  errors.lowBalanceThreshold
+                    ? undefined
+                    : '余额低于此值时发送提醒'
+                }
+              >
+                {(props) => (
+                  <MoneyInput
+                    {...props}
+                    currency={tenant.currency}
+                    error={errors.lowBalanceThreshold}
+                    value={form.lowBalanceThreshold}
+                    onChange={(lowBalanceThreshold) =>
+                      update({ lowBalanceThreshold })
+                    }
+                  />
+                )}
+              </Field>
             </div>
-          ) : null}
-          {errors.form ? (
-            <p role="alert" className="m-0 text-[13px] text-err">
-              {errors.form}
-            </p>
-          ) : null}
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="透支额度"
-              error={errors.overdraftLimit}
-              hint={errors.overdraftLimit ? undefined : overdraftHint}
-            >
-              {(props) => (
-                <MoneyInput
-                  {...props}
-                  currency={tenant.currency}
-                  error={errors.overdraftLimit}
-                  value={form.overdraftLimit}
-                  onChange={(overdraftLimit) => update({ overdraftLimit })}
-                />
-              )}
-            </Field>
-            <Field
-              label="余额提醒阈值"
-              error={errors.lowBalanceThreshold}
-              hint={
-                errors.lowBalanceThreshold
-                  ? undefined
-                  : '余额低于此值时发送提醒'
-              }
-            >
-              {(props) => (
-                <MoneyInput
-                  {...props}
-                  currency={tenant.currency}
-                  error={errors.lowBalanceThreshold}
-                  value={form.lowBalanceThreshold}
-                  onChange={(lowBalanceThreshold) =>
-                    update({ lowBalanceThreshold })
-                  }
-                />
-              )}
-            </Field>
+            <RecipientsInput
+              stacked
+              emails={form.emails}
+              error={errors.emails}
+              onChange={(emails) => update({ emails })}
+              {...(disabledAdmins.data ? { flagged: disabledAdmins.data } : {})}
+            />
           </div>
-          <RecipientsInput
-            stacked
-            emails={form.emails}
-            error={errors.emails}
-            onChange={(emails) => update({ emails })}
-            {...(disabledAdmins.data ? { flagged: disabledAdmins.data } : {})}
-          />
-        </div>
-        <div className="flex flex-col gap-3 border-t border-border px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-6">
-          <span
-            className={cn(
-              'text-xs',
-              errorCount ? 'text-err' : 'text-muted-foreground',
-            )}
-          >
-            {errorCount
-              ? `请修正 ${errorCount} 处错误后再保存`
-              : '保存前会显示变更摘要，所有修改记入操作日志'}
-          </span>
-          <div className="flex flex-col-reverse gap-2 md:flex-row">
-            <Button
-              variant="outline"
-              className="h-12 md:h-9"
-              disabled={!dirty}
-              onClick={() => {
-                setForm(loaded);
-                setErrors({});
-              }}
+          <div className="flex flex-col gap-3 border-t border-border px-4 py-3.5 md:flex-row md:items-center md:justify-between md:px-6">
+            <span
+              className={cn(
+                'text-xs',
+                errorCount ? 'text-err' : 'text-muted-foreground',
+              )}
             >
-              取消
-            </Button>
-            <Button
-              type="submit"
-              className="h-12 md:h-9"
-              disabled={!dirty || errorCount > 0}
-            >
-              保存修改
-            </Button>
+              {errorCount
+                ? `请修正 ${errorCount} 处错误后再保存`
+                : '保存前会显示变更摘要，所有修改记入操作日志'}
+            </span>
+            <div className="flex flex-col-reverse gap-2 md:flex-row">
+              <Button
+                variant="outline"
+                className="h-12 md:h-9"
+                disabled={!dirty}
+                onClick={() => {
+                  setForm(loaded);
+                  setErrors({});
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="submit"
+                className="h-12 md:h-9"
+                disabled={!dirty || errorCount > 0}
+              >
+                保存修改
+              </Button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </Card>
       <ModalDialog
         open={pending !== null}
         {...(save.isPending

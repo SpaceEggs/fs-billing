@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearch } from '@tanstack/react-router';
@@ -220,7 +221,7 @@ function CompactCard({
         ? '待生成'
         : null;
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-border p-3.5 tabular-nums">
+    <Card className="gap-0 bg-transparent py-0 text-inherit shadow-none flex flex-col gap-2.5 rounded-xl border border-border p-3.5 tabular-nums">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link
@@ -261,6 +262,6 @@ function CompactCard({
           <span className="text-xs text-muted-foreground">{reason}</span>
         ) : null}
       </div>
-    </div>
+    </Card>
   );
 }

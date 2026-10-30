@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -152,7 +153,7 @@ function MobileActions({
 function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   return (
-    <div className="hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] print:hidden">
+    <Card className="gap-0 bg-transparent py-0 text-inherit shadow-none hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] print:hidden">
       <section
         aria-label="当前余额"
         className="flex flex-col gap-1.5 border-r border-b border-border px-6 py-5 lg:border-b-0"
@@ -194,7 +195,7 @@ function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
           className="text-[22px] font-semibold text-warn"
         />
       </section>
-    </div>
+    </Card>
   );
 }
 

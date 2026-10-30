@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
@@ -545,23 +553,20 @@ function Rows({
       className={cn('flex flex-col gap-3', busy && 'opacity-60')}
     >
       <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-        <table
-          aria-label="操作记录"
-          className="w-full border-collapse text-[13px]"
-        >
-          <thead>
-            <tr className="bg-muted text-xs text-muted-foreground">
-              <th className="w-8">
+        <Table aria-label="操作记录">
+          <TableHeader>
+            <TableRow className="border-t-0">
+              <TableHead className="p-0 font-bold text-center w-8">
                 <span className="sr-only">展开</span>
-              </th>
-              <th className="px-3 py-2.5 text-left font-medium">时间</th>
-              <th className="px-3 py-2.5 text-left font-medium">管理员</th>
-              <th className="px-3 py-2.5 text-left font-medium">操作</th>
-              <th className="px-3 py-2.5 text-left font-medium">对象</th>
-              <th className="px-4 py-2.5 text-left font-medium">详情</th>
-            </tr>
-          </thead>
-          <tbody className="tabular-nums">
+              </TableHead>
+              <TableHead>时间</TableHead>
+              <TableHead>管理员</TableHead>
+              <TableHead>操作</TableHead>
+              <TableHead>对象</TableHead>
+              <TableHead className="px-4">详情</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="tabular-nums">
             {items.map((row) => {
               const open = openIds.has(row.id);
               return (
@@ -573,8 +578,8 @@ function Rows({
                 />
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <div className="flex flex-col gap-2.5 md:hidden">
         {items.map((row) => (
@@ -607,7 +612,7 @@ function LogRows({
 }) {
   return (
     <>
-      <tr
+      <TableRow
         tabIndex={0}
         aria-expanded={open}
         onClick={onToggle}
@@ -617,36 +622,38 @@ function LogRows({
           onToggle();
         }}
         className={cn(
-          'cursor-pointer border-t border-border hover:bg-row-hover',
+          'cursor-pointer hover:bg-row-hover',
           open && 'bg-brand-soft',
         )}
       >
-        <td className="py-3 pl-4 text-[11px] text-muted-foreground">
+        <TableCell className="pr-0 py-3 pl-4 text-[11px] text-muted-foreground">
           {open ? (
             <ChevronDownIcon aria-hidden className="size-3.5" />
           ) : (
             <ChevronRightIcon aria-hidden className="size-3.5" />
           )}
-        </td>
-        <td className="py-3 pr-3 whitespace-nowrap">
+        </TableCell>
+        <TableCell className="pl-0 py-3 pr-3 whitespace-nowrap">
           <DateTime value={row.occurredAt} />
-        </td>
-        <td className="px-3 py-3 whitespace-nowrap">{actorText(row.actor)}</td>
-        <td className="px-3 py-3 whitespace-nowrap">
+        </TableCell>
+        <TableCell className="py-3 whitespace-nowrap">
+          {actorText(row.actor)}
+        </TableCell>
+        <TableCell className="py-3 whitespace-nowrap">
           <OpBadge row={row} />
-        </td>
-        <td className="px-3 py-3 font-mono whitespace-nowrap">
+        </TableCell>
+        <TableCell className="py-3 font-mono whitespace-nowrap">
           {objectText(row)}
-        </td>
-        <td className="px-4 py-3">{row.summary}</td>
-      </tr>
+        </TableCell>
+        <TableCell className="px-4 py-3">{row.summary}</TableCell>
+      </TableRow>
       {open ? (
-        <tr className="bg-brand-soft">
-          <td />
-          <td colSpan={5} className="pr-4 pb-4">
+        <TableRow className="border-t-0 bg-brand-soft">
+          <TableCell className="p-0" />
+          <TableCell colSpan={5} className="pl-0 pt-0 pr-4 pb-4">
             <Detail row={row} layout="table" />
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       ) : null}
     </>
   );
@@ -715,46 +722,41 @@ function Detail({
   return (
     <div className="flex flex-col gap-2 border-t border-border pt-2 md:border-t-0 md:pt-0">
       {row.changes.length === 0 ? null : layout === 'table' ? (
-        <table
+        <Table
           aria-label="修改前后"
-          className="w-full max-w-[760px] border-collapse overflow-hidden rounded-lg border border-border bg-card text-[13px]"
+          className="max-w-[760px] overflow-hidden rounded-lg border border-border bg-card"
         >
-          <thead>
-            <tr className="bg-muted text-xs text-muted-foreground">
-              <th className="w-[140px] px-3 py-2 text-left font-medium">
-                字段
-              </th>
-              <th className="px-3 py-2 text-left font-medium">修改前</th>
-              <th className="px-3 py-2 text-left font-medium">修改后</th>
-            </tr>
-          </thead>
-          <tbody>
+          <TableHeader>
+            <TableRow className="border-t-0">
+              <TableHead className="w-[140px] py-2">字段</TableHead>
+              <TableHead className="py-2">修改前</TableHead>
+              <TableHead className="py-2">修改后</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {row.changes.map((change, index) => {
               const before = changeText(change.before);
               return (
-                <tr
-                  key={`${change.field}-${index}`}
-                  className="border-t border-border"
-                >
-                  <td className="px-3 py-2 text-muted-foreground">
+                <TableRow key={`${change.field}-${index}`}>
+                  <TableCell className="py-2 text-muted-foreground">
                     {changeFieldText[change.field]}
-                  </td>
-                  <td
+                  </TableCell>
+                  <TableCell
                     className={cn(
-                      'px-3 py-2 text-muted-foreground',
+                      'py-2 text-muted-foreground',
                       before !== '—' && 'line-through',
                     )}
                   >
                     {before}
-                  </td>
-                  <td className="px-3 py-2 font-medium">
+                  </TableCell>
+                  <TableCell className="py-2 font-medium">
                     {changeText(change.after)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       ) : (
         <div className="flex flex-col gap-1.5">
           {row.changes.map((change, index) => {

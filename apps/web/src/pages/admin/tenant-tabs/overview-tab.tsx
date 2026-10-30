@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -21,21 +22,28 @@ function StatCard({
   className?: string;
 }) {
   return (
-    <section
-      aria-label={label}
+    <Card
+      asChild
       className={cn(
-        'flex flex-col gap-1 rounded-xl border border-border p-3.5 tabular-nums md:gap-1.5 md:px-5 md:py-[18px]',
-        className,
+        'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+        cn(
+          'flex flex-col gap-1 rounded-xl border border-border p-3.5 tabular-nums md:gap-1.5 md:px-5 md:py-[18px]',
+          className,
+        ),
       )}
     >
-      <span className="text-xs text-muted-foreground md:text-[13px]">
-        {label}
-      </span>
-      <span className="text-[19px] font-semibold md:text-[26px]">{value}</span>
-      <span className="hidden text-xs text-muted-foreground md:block">
-        {sub}
-      </span>
-    </section>
+      <section aria-label={label}>
+        <span className="text-xs text-muted-foreground md:text-[13px]">
+          {label}
+        </span>
+        <span className="text-[19px] font-semibold md:text-[26px]">
+          {value}
+        </span>
+        <span className="hidden text-xs text-muted-foreground md:block">
+          {sub}
+        </span>
+      </section>
+    </Card>
   );
 }
 
@@ -90,34 +98,39 @@ export function OverviewTab({ tenantId }: { tenantId: string }) {
           className="hidden md:flex"
         />
       </div>
-      <section
-        aria-label="最近 30 天每日消费"
-        className="flex flex-col gap-2.5 rounded-xl border border-border p-3.5 md:gap-4 md:px-6 md:py-5"
+      <Card
+        asChild
+        className={cn(
+          'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+          'flex flex-col gap-2.5 rounded-xl border border-border p-3.5 md:gap-4 md:px-6 md:py-5',
+        )}
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold md:text-base">
-              <span className="md:hidden">最近 30 天消费</span>
-              <span className="hidden md:inline">最近 30 天每日消费</span>
-            </span>
-            <span className="hidden text-xs text-muted-foreground tabular-nums md:inline">
-              {days[0]?.date} 至 {today?.date} · 与客户门户首页一致
-            </span>
+        <section aria-label="最近 30 天每日消费">
+          <div className="flex items-baseline justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold md:text-base">
+                <span className="md:hidden">最近 30 天消费</span>
+                <span className="hidden md:inline">最近 30 天每日消费</span>
+              </span>
+              <span className="hidden text-xs text-muted-foreground tabular-nums md:inline">
+                {days[0]?.date} 至 {today?.date} · 与客户门户首页一致
+              </span>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="hidden text-xs text-muted-foreground md:inline">
+                合计
+              </span>
+              <span
+                aria-label={`合计 ${money(data.dailyTotal)}`}
+                className="text-sm font-semibold tabular-nums md:text-lg"
+              >
+                {money(data.dailyTotal)}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="hidden text-xs text-muted-foreground md:inline">
-              合计
-            </span>
-            <span
-              aria-label={`合计 ${money(data.dailyTotal)}`}
-              className="text-sm font-semibold tabular-nums md:text-lg"
-            >
-              {money(data.dailyTotal)}
-            </span>
-          </div>
-        </div>
-        <DailyChart currency={data.currency} days={days} />
-      </section>
+          <DailyChart currency={data.currency} days={days} />
+        </section>
+      </Card>
     </div>
   );
 }

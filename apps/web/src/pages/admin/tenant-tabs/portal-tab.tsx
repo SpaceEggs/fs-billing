@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
@@ -316,65 +317,75 @@ export function PortalTab({
           </AlertDescription>
         </Alert>
       ) : null}
-      <section
-        aria-label="客户门户账号"
-        className="rounded-xl border border-border"
-      >
-        <div className="hidden items-center justify-between gap-3 border-b border-border px-5 py-4 md:flex">
-          <div className="flex flex-col gap-1">
-            <span className="text-[15px] font-semibold">客户门户账号</span>
-            <span className="text-xs text-muted-foreground">
-              第一版每个租户一个门户账号
-            </span>
-          </div>
-          {actions ? <div className="flex gap-2">{actions}</div> : null}
-        </div>
-        {account ? (
-          // 手机（第三批 3j）标签在上、值在下，状态标签靠右；电脑为两列。
-          <dl className="m-0 px-3.5 py-1 text-sm tabular-nums md:px-5 md:pt-1 md:pb-2">
-            <div className={fieldRow}>
-              <dt className={fieldLabel}>登录邮箱</dt>
-              <dd className="m-0 break-all">{account.email}</dd>
-            </div>
-            <div
-              className={cn(fieldRow, 'flex-row items-center justify-between')}
-            >
-              <dt className={fieldLabel}>状态</dt>
-              <dd className="m-0">
-                <Badge variant={accountStatus[account.status].variant}>
-                  {accountStatus[account.status].label}
-                </Badge>
-              </dd>
-            </div>
-            <div className={fieldRow}>
-              <dt className={fieldLabel}>最后登录时间</dt>
-              <dd className="m-0">
-                {account.lastLoginAt ? (
-                  <DateTime value={account.lastLoginAt} />
-                ) : (
-                  <span className="text-muted-foreground">从未登录</span>
-                )}
-              </dd>
-            </div>
-            <div className={fieldRow}>
-              <dt className={fieldLabel}>开通时间</dt>
-              <dd className="m-0">
-                <DateTime value={account.createdAt} />
-              </dd>
-            </div>
-          </dl>
-        ) : (
-          <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
-            <span className="text-[15px] font-semibold">尚未开通门户账号</span>
-            <span className="text-[13px] text-muted-foreground">
-              开通后客户可登录客户门户查看余额、流水和话单
-            </span>
-            <Button className="mt-2" onClick={() => open('create')}>
-              开通门户账号
-            </Button>
-          </div>
+      <Card
+        asChild
+        className={cn(
+          'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+          'rounded-xl border border-border',
         )}
-      </section>
+      >
+        <section aria-label="客户门户账号">
+          <div className="hidden items-center justify-between gap-3 border-b border-border px-5 py-4 md:flex">
+            <div className="flex flex-col gap-1">
+              <span className="text-[15px] font-semibold">客户门户账号</span>
+              <span className="text-xs text-muted-foreground">
+                第一版每个租户一个门户账号
+              </span>
+            </div>
+            {actions ? <div className="flex gap-2">{actions}</div> : null}
+          </div>
+          {account ? (
+            // 手机（第三批 3j）标签在上、值在下，状态标签靠右；电脑为两列。
+            <dl className="m-0 px-3.5 py-1 text-sm tabular-nums md:px-5 md:pt-1 md:pb-2">
+              <div className={fieldRow}>
+                <dt className={fieldLabel}>登录邮箱</dt>
+                <dd className="m-0 break-all">{account.email}</dd>
+              </div>
+              <div
+                className={cn(
+                  fieldRow,
+                  'flex-row items-center justify-between',
+                )}
+              >
+                <dt className={fieldLabel}>状态</dt>
+                <dd className="m-0">
+                  <Badge variant={accountStatus[account.status].variant}>
+                    {accountStatus[account.status].label}
+                  </Badge>
+                </dd>
+              </div>
+              <div className={fieldRow}>
+                <dt className={fieldLabel}>最后登录时间</dt>
+                <dd className="m-0">
+                  {account.lastLoginAt ? (
+                    <DateTime value={account.lastLoginAt} />
+                  ) : (
+                    <span className="text-muted-foreground">从未登录</span>
+                  )}
+                </dd>
+              </div>
+              <div className={fieldRow}>
+                <dt className={fieldLabel}>开通时间</dt>
+                <dd className="m-0">
+                  <DateTime value={account.createdAt} />
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
+              <span className="text-[15px] font-semibold">
+                尚未开通门户账号
+              </span>
+              <span className="text-[13px] text-muted-foreground">
+                开通后客户可登录客户门户查看余额、流水和话单
+              </span>
+              <Button className="mt-2" onClick={() => open('create')}>
+                开通门户账号
+              </Button>
+            </div>
+          )}
+        </section>
+      </Card>
       <span className="text-xs text-muted-foreground md:hidden">
         第一版每个租户一个门户账号
       </span>

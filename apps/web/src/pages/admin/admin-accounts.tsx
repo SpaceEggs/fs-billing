@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useId, useState } from 'react';
 import {
   keepPreviousData,
@@ -178,41 +186,41 @@ function AdminTable({
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-      <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-        <thead>
-          <tr className="bg-muted text-xs text-muted-foreground">
-            <th className="px-4 py-2.5 text-left font-medium">姓名</th>
-            <th className="px-3 py-2.5 text-left font-medium">登录邮箱</th>
-            <th className="px-3 py-2.5 text-left font-medium">状态</th>
-            <th className="px-3 py-2.5 text-left font-medium">最后登录时间</th>
-            <th className="px-4 py-2.5 text-right font-medium">操作</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="whitespace-nowrap">
+        <TableHeader>
+          <TableRow className="border-t-0">
+            <TableHead className="px-4">姓名</TableHead>
+            <TableHead>登录邮箱</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead>最后登录时间</TableHead>
+            <TableHead className="px-4 text-right">操作</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {items.map((account) => {
             const self = account.id === selfId;
             return (
-              <tr key={account.id} className="border-t border-border">
-                <td className="px-4 py-3">
+              <TableRow key={account.id}>
+                <TableCell className="px-4 py-3">
                   <span className="flex items-center gap-2.5">
                     <Avatar name={account.name} />
                     <span className="text-sm font-medium">{account.name}</span>
                     {self ? <SelfMarker /> : null}
                   </span>
-                </td>
-                <td className="px-3 py-3">{account.email}</td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell className="py-3">{account.email}</TableCell>
+                <TableCell className="py-3">
                   <StatusTag status={account.status} />
-                </td>
-                <td
+                </TableCell>
+                <TableCell
                   className={cn(
-                    'px-3 py-3 tabular-nums',
+                    'py-3 tabular-nums',
                     account.status === 'disabled' && 'text-muted-foreground',
                   )}
                 >
                   <LastLogin value={account.lastLoginAt} />
-                </td>
-                <td className="px-4 py-1.5">
+                </TableCell>
+                <TableCell className="px-4 py-1.5">
                   <span className="flex justify-end gap-2">
                     <Button
                       variant="ghost"
@@ -235,12 +243,12 @@ function AdminTable({
                       }
                     />
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

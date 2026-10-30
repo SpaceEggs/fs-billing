@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
@@ -51,32 +52,37 @@ function StatCard({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      aria-label={label}
-      className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-3.5 tabular-nums md:gap-2 md:p-5"
+    <Card
+      asChild
+      className={cn(
+        'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+        'flex flex-col gap-1.5 rounded-xl border border-border bg-card p-3.5 tabular-nums md:gap-2 md:p-5',
+      )}
     >
-      <span className="text-xs text-muted-foreground md:text-[13px]">
-        {mobileLabel ? (
-          <>
-            <span className="md:hidden">{mobileLabel}</span>
-            <span className="hidden md:inline">{label}</span>
-          </>
-        ) : (
-          label
-        )}
-      </span>
-      <span
-        className={cn(
-          'text-[22px] leading-tight font-semibold tracking-[-0.02em] md:text-[30px]',
-          className,
-        )}
-      >
-        {children}
-      </span>
-      <span className="hidden text-xs text-muted-foreground md:block">
-        {sub}
-      </span>
-    </section>
+      <section aria-label={label}>
+        <span className="text-xs text-muted-foreground md:text-[13px]">
+          {mobileLabel ? (
+            <>
+              <span className="md:hidden">{mobileLabel}</span>
+              <span className="hidden md:inline">{label}</span>
+            </>
+          ) : (
+            label
+          )}
+        </span>
+        <span
+          className={cn(
+            'text-[22px] leading-tight font-semibold tracking-[-0.02em] md:text-[30px]',
+            className,
+          )}
+        >
+          {children}
+        </span>
+        <span className="hidden text-xs text-muted-foreground md:block">
+          {sub}
+        </span>
+      </section>
+    </Card>
   );
 }
 
@@ -132,39 +138,48 @@ function DailySpend({ home }: { home: PortalHomeResponse }) {
   const { daily, dailyTotal } = home.usage;
   const total = formatMoney({ currency: home.currency, amount: dailyTotal });
   return (
-    <section
-      aria-label="最近 30 天每日消费"
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card py-3.5 md:gap-4 md:px-6 md:py-5"
+    <Card
+      asChild
+      className={cn(
+        'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+        'flex flex-col gap-3 rounded-xl border border-border bg-card py-3.5 md:gap-4 md:px-6 md:py-5',
+      )}
     >
-      <div className="flex items-baseline justify-between gap-3 px-3.5 md:px-0">
-        <div className="flex flex-col gap-1">
-          <span className="text-[15px] font-semibold md:text-base">
-            <span className="md:hidden">最近 30 天消费</span>
-            <span className="hidden md:inline">最近 30 天每日消费</span>
-          </span>
-          <span className="hidden text-xs text-muted-foreground tabular-nums md:inline">
-            {daily[0]?.date} 至 {daily.at(-1)?.date}
+      <section aria-label="最近 30 天每日消费">
+        <div className="flex items-baseline justify-between gap-3 px-3.5 md:px-0">
+          <div className="flex flex-col gap-1">
+            <span className="text-[15px] font-semibold md:text-base">
+              <span className="md:hidden">最近 30 天消费</span>
+              <span className="hidden md:inline">最近 30 天每日消费</span>
+            </span>
+            <span className="hidden text-xs text-muted-foreground tabular-nums md:inline">
+              {daily[0]?.date} 至 {daily.at(-1)?.date}
+            </span>
+          </div>
+          <div className="hidden flex-col items-end gap-1 md:flex">
+            <span className="text-xs text-muted-foreground">合计</span>
+            <span
+              aria-label={`合计 ${total}`}
+              className="text-lg font-semibold tabular-nums"
+            >
+              {total}
+            </span>
+          </div>
+          <span className="text-xs text-muted-foreground md:hidden">
+            ← 左右滑动
           </span>
         </div>
-        <div className="hidden flex-col items-end gap-1 md:flex">
-          <span className="text-xs text-muted-foreground">合计</span>
-          <span
-            aria-label={`合计 ${total}`}
-            className="text-lg font-semibold tabular-nums"
-          >
-            {total}
-          </span>
+        <div className="overflow-x-auto px-3.5 md:overflow-visible md:px-0">
+          <div className="min-w-[620px] md:min-w-0">
+            <DailyChart
+              currency={home.currency}
+              days={daily}
+              variant="portal"
+            />
+          </div>
         </div>
-        <span className="text-xs text-muted-foreground md:hidden">
-          ← 左右滑动
-        </span>
-      </div>
-      <div className="overflow-x-auto px-3.5 md:overflow-visible md:px-0">
-        <div className="min-w-[620px] md:min-w-0">
-          <DailyChart currency={home.currency} days={daily} variant="portal" />
-        </div>
-      </div>
-    </section>
+      </section>
+    </Card>
   );
 }
 

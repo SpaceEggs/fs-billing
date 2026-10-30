@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import type { Currency } from '@fs-billing/shared';
 import { cn } from '../../lib/utils';
 import { formatCount, formatMinutes } from '../cdr/cdr-format';
@@ -110,9 +111,9 @@ export function StatementEquation({
   const usageNote = `${formatCount(figures.calls)} 通 · ${formatMinutes(figures.callMinutes)}`;
   return (
     <section aria-label="账单汇总">
-      <div
+      <Card
         style={{ gridTemplateColumns: columns }}
-        className="hidden items-baseline gap-y-1.5 rounded-xl border border-border px-7 py-6 tabular-nums xl:grid print:break-inside-avoid"
+        className="gap-0 bg-transparent py-0 text-inherit shadow-none hidden items-baseline gap-y-1.5 rounded-xl border border-border px-7 py-6 tabular-nums xl:grid print:break-inside-avoid"
       >
         <Term index={1} label="期初余额">
           <Money value={money(figures.openingBalance)} />
@@ -142,8 +143,8 @@ export function StatementEquation({
         <Term index={6} label="期末余额" className="text-[26px] font-bold">
           <Money value={money(figures.closingBalance)} />
         </Term>
-      </div>
-      <div className="flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums xl:hidden print:break-inside-avoid">
+      </Card>
+      <Card className="gap-0 bg-transparent py-0 text-inherit shadow-none flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums xl:hidden print:break-inside-avoid">
         <Row label="期初余额">
           <Money value={money(figures.openingBalance)} />
         </Row>
@@ -168,7 +169,7 @@ export function StatementEquation({
             <Money value={money(figures.closingBalance)} />
           </span>
         </div>
-      </div>
+      </Card>
     </section>
   );
 }

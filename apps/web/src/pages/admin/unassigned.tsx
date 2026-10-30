@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useEffect, useState } from 'react';
 import {
   keepPreviousData,
@@ -485,7 +493,6 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
                 hidden={value !== tab}
                 className={cn(
                   'mt-5 flex flex-col gap-5',
-                  // 手机的操作栏固定在底部：给列表末尾留出它的高度（含底部安全区），最后一张卡片不被盖住。
                   value === tab &&
                     showBar &&
                     'pb-[calc(6rem+env(safe-area-inset-bottom))]',
@@ -804,10 +811,10 @@ function PendingRows({
       ) : (
         <>
           <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-            <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-              <thead>
-                <tr className="bg-muted text-xs text-muted-foreground">
-                  <th className="w-11 py-2.5 pr-0 pl-4 text-left font-medium">
+            <Table className="whitespace-nowrap">
+              <TableHeader>
+                <TableRow className="border-t-0">
+                  <TableHead className="w-11 pr-0 pl-4">
                     <Checkbox
                       aria-label="选择本页"
                       checked={
@@ -819,61 +826,51 @@ function PendingRows({
                       }
                       onCheckedChange={onTogglePage}
                     />
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    接通时间
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    话单中的租户标签
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    主叫号码
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    被叫号码
-                  </th>
-                  <th className="px-3 py-2.5 text-right font-medium">
-                    通话时长
-                  </th>
+                  </TableHead>
+                  <TableHead>接通时间</TableHead>
+                  <TableHead>话单中的租户标签</TableHead>
+                  <TableHead>主叫号码</TableHead>
+                  <TableHead>被叫号码</TableHead>
+                  <TableHead className="text-right">通话时长</TableHead>
                   {/* 决定 9：原因单独一列；决定 35：不可分配的行标出来。 */}
-                  <th className="px-4 py-2.5 text-left font-medium">原因</th>
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
+                  <TableHead className="px-4">原因</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="tabular-nums">
                 {rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border">
-                    <td className="py-2.5 pr-0 pl-4">
+                  <TableRow key={row.id}>
+                    <TableCell className="py-2.5 pr-0 pl-4">
                       <Checkbox
                         aria-label={`选择 ${row.caller} 呼 ${row.callee}`}
                         checked={picked(row.id)}
                         disabled={selection.kind === 'group'}
                         onCheckedChange={() => onToggleRow(row.id)}
                       />
-                    </td>
-                    <td className="px-3 py-2.5">
+                    </TableCell>
+                    <TableCell className="py-2.5">
                       <CallTime row={row} />
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={cn(
-                        'px-3 py-2.5',
+                        'py-2.5',
                         row.tag ? 'font-mono' : 'text-muted-foreground',
                       )}
                     >
                       {tagLabel(row.tag)}
-                    </td>
-                    <td className="px-3 py-2.5">{row.caller}</td>
-                    <td className="px-3 py-2.5">{row.callee}</td>
-                    <td className="px-3 py-2.5 text-right">
+                    </TableCell>
+                    <TableCell className="py-2.5">{row.caller}</TableCell>
+                    <TableCell className="py-2.5">{row.callee}</TableCell>
+                    <TableCell className="py-2.5 text-right">
                       {formatDuration(row.durationSeconds)}
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-normal">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 whitespace-normal">
                       {row.reason}
                       {row.assignable ? '' : ' · 不可分配'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <div className="flex flex-col gap-2 md:hidden">
             {rows.map((row) => (
@@ -960,69 +957,55 @@ function IgnoredRows({
       ) : (
         <>
           <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-            <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-              <thead>
-                <tr className="bg-muted text-xs text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left font-medium">
-                    接通时间
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    租户标签
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    主叫号码
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    被叫号码
-                  </th>
-                  <th className="px-3 py-2.5 text-right font-medium">
-                    通话时长
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    忽略原因
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    操作人 · 时间
-                  </th>
-                  <th className="px-4 py-2.5 text-right font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
+            <Table className="whitespace-nowrap">
+              <TableHeader>
+                <TableRow className="border-t-0">
+                  <TableHead className="px-4">接通时间</TableHead>
+                  <TableHead>租户标签</TableHead>
+                  <TableHead>主叫号码</TableHead>
+                  <TableHead>被叫号码</TableHead>
+                  <TableHead className="text-right">通话时长</TableHead>
+                  <TableHead>忽略原因</TableHead>
+                  <TableHead>操作人 · 时间</TableHead>
+                  <TableHead className="px-4 text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="tabular-nums">
                 {rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border">
-                    <td className="px-4 py-2.5">
+                  <TableRow key={row.id}>
+                    <TableCell className="px-4 py-2.5">
                       <CallTime row={row} />
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={cn(
-                        'px-3 py-2.5',
+                        'py-2.5',
                         row.tag ? 'font-mono' : 'text-muted-foreground',
                       )}
                     >
                       {tagLabel(row.tag)}
-                    </td>
-                    <td className="px-3 py-2.5">{row.caller}</td>
-                    <td className="px-3 py-2.5">{row.callee}</td>
-                    <td className="px-3 py-2.5 text-right">
+                    </TableCell>
+                    <TableCell className="py-2.5">{row.caller}</TableCell>
+                    <TableCell className="py-2.5">{row.callee}</TableCell>
+                    <TableCell className="py-2.5 text-right">
                       {formatDuration(row.durationSeconds)}
-                    </td>
-                    <td className="max-w-[280px] px-3 py-2.5 whitespace-normal">
+                    </TableCell>
+                    <TableCell className="max-w-[280px] py-2.5 whitespace-normal">
                       {row.ignore?.reason ?? '—'}
-                    </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="py-2.5 text-muted-foreground">
                       {operatorText(row)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
+                    </TableCell>
+                    <TableCell className="px-4 py-2.5 text-right">
                       <UnignoreButton
                         row={row}
                         pending={unignoring === row.id}
                         onUnignore={onUnignore}
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <div className="flex flex-col gap-2 md:hidden">
             {rows.map((row) => (

@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -190,35 +191,51 @@ export function AdminHome({ identity }: { identity: Identity }) {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <section className="min-w-0 rounded-xl border bg-card p-4">
-                <div className="text-sm text-muted-foreground">租户总数</div>
-                <div className="mt-2 text-xl font-semibold">
-                  {home.metrics.tenantCount}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  含已停用
-                </div>
-              </section>
-              <section className="min-w-0 rounded-xl border bg-card p-4">
-                <div className="text-sm text-muted-foreground">
-                  今日通话分钟
-                </div>
-                <div className="mt-2 space-y-1 text-lg font-semibold tabular-nums">
-                  {(['CNY', 'USD'] as const).map((currency) => (
-                    <div
-                      key={currency}
-                      className="flex items-baseline justify-between gap-1"
-                    >
-                      <span>
-                        {home.metrics.todayCallMinutesByCurrency[currency]}
-                      </span>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {currency} 租户
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <Card
+                asChild
+                className={cn(
+                  'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                  'min-w-0 rounded-xl border bg-card p-4',
+                )}
+              >
+                <section>
+                  <div className="text-sm text-muted-foreground">租户总数</div>
+                  <div className="mt-2 text-xl font-semibold">
+                    {home.metrics.tenantCount}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    含已停用
+                  </div>
+                </section>
+              </Card>
+              <Card
+                asChild
+                className={cn(
+                  'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                  'min-w-0 rounded-xl border bg-card p-4',
+                )}
+              >
+                <section>
+                  <div className="text-sm text-muted-foreground">
+                    今日通话分钟
+                  </div>
+                  <div className="mt-2 space-y-1 text-lg font-semibold tabular-nums">
+                    {(['CNY', 'USD'] as const).map((currency) => (
+                      <div
+                        key={currency}
+                        className="flex items-baseline justify-between gap-1"
+                      >
+                        <span>
+                          {home.metrics.todayCallMinutesByCurrency[currency]}
+                        </span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {currency} 租户
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </Card>
               {(
                 [
                   ['今日消费', home.metrics.todaySpend],
@@ -226,42 +243,57 @@ export function AdminHome({ identity }: { identity: Identity }) {
                   ['待收款总额', home.metrics.pendingReceivable],
                 ] as const
               ).map(([label, value]) => (
-                <section
+                <Card
                   key={label}
+                  asChild
                   className={cn(
-                    'min-w-0 rounded-xl border bg-card p-4',
-                    label === '待收款总额' && 'border-warn-border bg-warn-soft',
+                    'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                    cn(
+                      'min-w-0 rounded-xl border bg-card p-4',
+                      label === '待收款总额' &&
+                        'border-warn-border bg-warn-soft',
+                    ),
                   )}
                 >
-                  <div className="text-sm text-muted-foreground">{label}</div>
-                  <CurrencyLines
-                    values={value}
-                    warning={label === '待收款总额'}
-                  />
-                </section>
+                  <section>
+                    <div className="text-sm text-muted-foreground">{label}</div>
+                    <CurrencyLines
+                      values={value}
+                      warning={label === '待收款总额'}
+                    />
+                  </section>
+                </Card>
               ))}
-              <section
+              <Card
+                asChild
                 className={cn(
-                  'min-w-0 rounded-xl border bg-card p-4',
-                  home.metrics.suspendedTenants > 0 &&
-                    'border-err-border bg-err-soft',
+                  'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                  cn(
+                    'min-w-0 rounded-xl border bg-card p-4',
+                    home.metrics.suspendedTenants > 0 &&
+                      'border-err-border bg-err-soft',
+                  ),
                 )}
               >
-                <div className="text-sm text-muted-foreground">已停机租户</div>
-                <div
-                  className={cn(
-                    'mt-2 text-xl font-semibold',
-                    home.metrics.suspendedTenants > 0 && 'text-err',
-                  )}
-                >
-                  {home.metrics.suspendedTenants}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {home.metrics.suspendedTenants > 0
-                    ? `CNY ${home.metrics.suspendedTenantsByCurrency.CNY} · USD ${home.metrics.suspendedTenantsByCurrency.USD}`
-                    : '没有因余额停机'}
-                </div>
-              </section>
+                <section>
+                  <div className="text-sm text-muted-foreground">
+                    已停机租户
+                  </div>
+                  <div
+                    className={cn(
+                      'mt-2 text-xl font-semibold',
+                      home.metrics.suspendedTenants > 0 && 'text-err',
+                    )}
+                  >
+                    {home.metrics.suspendedTenants}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {home.metrics.suspendedTenants > 0
+                      ? `CNY ${home.metrics.suspendedTenantsByCurrency.CNY} · USD ${home.metrics.suspendedTenantsByCurrency.USD}`
+                      : '没有因余额停机'}
+                  </div>
+                </section>
+              </Card>
             </div>
             <section>
               <div className="mb-3 flex flex-wrap items-baseline gap-2">
@@ -403,7 +435,12 @@ export function AdminHome({ identity }: { identity: Identity }) {
                   <div className="hidden grid-cols-1 gap-3 md:grid min-[1200px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
                     {home.attention.suspended.total ||
                     home.attention.lowBalance.total ? (
-                      <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
+                      <Card
+                        className={cn(
+                          'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                          'min-w-0 overflow-hidden rounded-xl border bg-card',
+                        )}
+                      >
                         <TenantAttention
                           title="已停机租户"
                           group={home.attention.suspended}
@@ -413,7 +450,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                           title="余额不足租户"
                           group={home.attention.lowBalance}
                         />
-                      </div>
+                      </Card>
                     ) : null}
                     <div className="grid min-w-0 grid-cols-1 content-start gap-3">
                       {home.attention.unassigned.pending > 0 ? (
@@ -440,7 +477,12 @@ export function AdminHome({ identity }: { identity: Identity }) {
                         </Link>
                       ) : null}
                       {home.attention.alerts.last24h > 0 ? (
-                        <div className="rounded-xl border border-err-border bg-card">
+                        <Card
+                          className={cn(
+                            'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                            'rounded-xl border border-err-border bg-card',
+                          )}
+                        >
                           <Link
                             to="/admin/system-alerts"
                             search={{ window: '24h' }}
@@ -480,50 +522,58 @@ export function AdminHome({ identity }: { identity: Identity }) {
                               <span>›</span>
                             </Link>
                           ))}
-                        </div>
+                        </Card>
                       ) : null}
                     </div>
                   </div>
                 </>
               )}
             </section>
-            <section className="rounded-xl border bg-card p-4 md:p-5">
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold">最近 30 天每日消费</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {home.dailySpend[0]?.date} 至 {home.dailySpend.at(-1)?.date}{' '}
-                    · 所有 {currency} 租户合计
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <span className="block text-xs text-muted-foreground">
-                      合计
-                    </span>
-                    <strong className="whitespace-nowrap tabular-nums">
-                      {formatMoney({ currency, amount: total })}
-                    </strong>
+            <Card
+              asChild
+              className={cn(
+                'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+                'rounded-xl border bg-card p-4 md:p-5',
+              )}
+            >
+              <section>
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">最近 30 天每日消费</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {home.dailySpend[0]?.date} 至{' '}
+                      {home.dailySpend.at(-1)?.date} · 所有 {currency} 租户合计
+                    </p>
                   </div>
-                  <Segmented
-                    label="消费币种"
-                    options={[
-                      { value: 'CNY', label: 'CNY' },
-                      { value: 'USD', label: 'USD' },
-                    ]}
-                    value={currency}
-                    onChange={setCurrency}
-                  />
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <span className="block text-xs text-muted-foreground">
+                        合计
+                      </span>
+                      <strong className="whitespace-nowrap tabular-nums">
+                        {formatMoney({ currency, amount: total })}
+                      </strong>
+                    </div>
+                    <Segmented
+                      label="消费币种"
+                      options={[
+                        { value: 'CNY', label: 'CNY' },
+                        { value: 'USD', label: 'USD' },
+                      ]}
+                      value={currency}
+                      onChange={setCurrency}
+                    />
+                  </div>
                 </div>
-              </div>
-              <DailyChart
-                currency={currency}
-                days={home.dailySpend.map((day) => ({
-                  date: day.date,
-                  spend: day[currency],
-                }))}
-              />
-            </section>
+                <DailyChart
+                  currency={currency}
+                  days={home.dailySpend.map((day) => ({
+                    date: day.date,
+                    spend: day[currency],
+                  }))}
+                />
+              </section>
+            </Card>
           </>
         )}
       </PageBody>

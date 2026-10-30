@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useId } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -248,25 +256,25 @@ function TenantTable({ items }: { items: AdminTenantSummary[] }) {
   const navigate = useNavigate();
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-      <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-        <thead>
-          <tr className="bg-muted text-xs text-muted-foreground">
-            <th className="px-4 py-2.5 text-left font-medium">租户编码</th>
-            <th className="px-3 py-2.5 text-left font-medium">名称</th>
-            <th className="px-3 py-2.5 text-left font-medium">币种</th>
-            <th className="px-3 py-2.5 text-left font-medium">状态</th>
-            <th className="px-3 py-2.5 text-right font-medium">当前余额</th>
-            <th className="px-3 py-2.5 text-right font-medium">透支额度</th>
-            <th className="px-3 py-2.5 text-right font-medium">本月消费</th>
-            <th className="px-3 py-2.5 text-right font-medium">待收款</th>
-            <th className="px-4 py-2.5">
+      <Table className="whitespace-nowrap">
+        <TableHeader>
+          <TableRow className="border-t-0">
+            <TableHead className="px-4">租户编码</TableHead>
+            <TableHead>名称</TableHead>
+            <TableHead>币种</TableHead>
+            <TableHead>状态</TableHead>
+            <TableHead className="text-right">当前余额</TableHead>
+            <TableHead className="text-right">透支额度</TableHead>
+            <TableHead className="text-right">本月消费</TableHead>
+            <TableHead className="text-right">待收款</TableHead>
+            <TableHead className="font-bold text-center px-4">
               <span className="sr-only">操作</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="tabular-nums">
           {items.map((tenant) => (
-            <tr
+            <TableRow
               key={tenant.id}
               onClick={() =>
                 void navigate({
@@ -275,11 +283,11 @@ function TenantTable({ items }: { items: AdminTenantSummary[] }) {
                 })
               }
               className={cn(
-                'cursor-pointer border-t border-border hover:bg-row-hover',
+                'cursor-pointer hover:bg-row-hover',
                 tenant.status === 'disabled' && 'text-muted-foreground',
               )}
             >
-              <td className="px-4 py-2.5 font-mono text-[12.5px] font-medium">
+              <TableCell className="px-4 py-2.5 font-mono text-[12.5px] font-medium">
                 <Link
                   to="/admin/tenants/$tenantId"
                   params={{ tenantId: tenant.id }}
@@ -288,36 +296,36 @@ function TenantTable({ items }: { items: AdminTenantSummary[] }) {
                 >
                   {tenant.code}
                 </Link>
-              </td>
-              <td className="px-3 py-2.5 text-sm">{tenant.name}</td>
-              <td className="px-3 py-2.5 text-muted-foreground">
+              </TableCell>
+              <TableCell className="py-2.5 text-sm">{tenant.name}</TableCell>
+              <TableCell className="py-2.5 text-muted-foreground">
                 {tenant.currency}
-              </td>
-              <td className="px-3 py-2.5">
+              </TableCell>
+              <TableCell className="py-2.5">
                 <TenantStatus
                   health={tenant.health}
                   settingsConfigured={tenant.settingsConfigured}
                 />
-              </td>
-              <td className="px-3 py-2.5 text-right font-semibold">
+              </TableCell>
+              <TableCell className="py-2.5 text-right font-semibold">
                 <Money value={money(tenant, tenant.balance)} />
-              </td>
-              <td className="px-3 py-2.5 text-right text-muted-foreground">
+              </TableCell>
+              <TableCell className="py-2.5 text-right text-muted-foreground">
                 <Money
                   value={money(tenant, tenant.overdraftLimit)}
                   tone="plain"
                 />
-              </td>
-              <td className="px-3 py-2.5 text-right">
+              </TableCell>
+              <TableCell className="py-2.5 text-right">
                 <Money
                   value={money(tenant, tenant.monthConsumption)}
                   tone="plain"
                 />
-              </td>
-              <td className="px-3 py-2.5 text-right">
+              </TableCell>
+              <TableCell className="py-2.5 text-right">
                 <PendingReceivable tenant={tenant} />
-              </td>
-              <td className="px-4 py-1.5 text-right">
+              </TableCell>
+              <TableCell className="px-4 py-1.5 text-right">
                 <Link
                   to="/admin/tenants/$tenantId"
                   params={{ tenantId: tenant.id }}
@@ -331,11 +339,11 @@ function TenantTable({ items }: { items: AdminTenantSummary[] }) {
                 >
                   充值
                 </Link>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

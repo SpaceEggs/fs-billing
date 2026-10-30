@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import type {
   AdminRateChange,
   AdminRateEntry,
@@ -47,39 +55,39 @@ export function RateChangesTable({
 }) {
   const unit = rateUnit[currency];
   return (
-    <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-      <thead
+    <Table className="whitespace-nowrap">
+      <TableHeader
         className={
           showHeader
-            ? 'sticky top-0 bg-muted text-xs text-muted-foreground'
-            : 'sr-only'
+            ? 'sticky top-0'
+            : 'sr-only bg-transparent text-inherit text-[length:inherit]'
         }
       >
-        <tr>
-          <th className="py-2 pr-2 pl-3.5 text-left font-medium">变动</th>
+        <TableRow className="border-t-0">
+          <TableHead className="py-2 pr-2 pl-3.5">变动</TableHead>
           {rateEntryFields.map(({ key, label }) => (
-            <th key={key} className="px-2 py-2 text-left font-medium">
+            <TableHead key={key} className="px-2 py-2">
               {label}
-            </th>
+            </TableHead>
           ))}
-          <th className="px-2 py-2 text-right font-medium">
+          <TableHead className="px-2 py-2 text-right">
             {columns.before}（{unit}）
-          </th>
-          <th className="px-2 py-2 text-right font-medium">
+          </TableHead>
+          <TableHead className="px-2 py-2 text-right">
             {columns.after}（{unit}）
-          </th>
-          <th className="py-2 pr-3.5 pl-2 text-right font-medium">涨跌</th>
-        </tr>
-      </thead>
-      <tbody className="tabular-nums">
+          </TableHead>
+          <TableHead className="py-2 pr-3.5 pl-2 text-right">涨跌</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody className="tabular-nums">
         {changes.map((change) => (
           <ChangeRow
             key={`${change.kind}-${(change.kind === 'added' ? change.after : change.before).prefix}`}
             change={change}
           />
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -90,8 +98,8 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
   const percent =
     before && after ? rateChangePercent(before.rate, after.rate) : null;
   return (
-    <tr className="border-t border-border first:border-t-0">
-      <td className="py-2 pr-2 pl-3.5">
+    <TableRow className="first:border-t-0">
+      <TableCell className="py-2 pr-2 pl-3.5">
         <span
           className={cn(
             'inline-flex h-5 items-center rounded-[5px] border px-1.5 text-[11px] font-medium',
@@ -100,7 +108,7 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
         >
           {tag.label}
         </span>
-      </td>
+      </TableCell>
       {rateEntryFields.map(({ key }) => (
         <FieldCell
           key={key}
@@ -109,7 +117,7 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
           className={cellClass[key]}
         />
       ))}
-      <td
+      <TableCell
         className={cn(
           'px-2 py-2 text-right text-muted-foreground',
           change.kind === 'deleted' && 'line-through',
@@ -121,19 +129,19 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
             →
           </span>
         ) : null}
-      </td>
-      <td className="px-2 py-2 text-right font-semibold">
+      </TableCell>
+      <TableCell className="px-2 py-2 text-right font-semibold">
         {after ? formatRate(after.rate) : '—'}
-      </td>
-      <td
+      </TableCell>
+      <TableCell
         className={cn(
           'py-2 pr-3.5 pl-2 text-right',
           percent?.rising ? 'text-neg' : 'text-pos',
         )}
       >
         {percent?.text ?? ''}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -152,7 +160,7 @@ function FieldCell({
   ];
   const changed = change.kind === 'modified' && change.before[field] !== shown;
   return (
-    <td className={cn('px-2 py-2', className)}>
+    <TableCell className={cn('px-2 py-2', className)}>
       {changed ? (
         <>
           <span className="text-muted-foreground line-through">
@@ -166,6 +174,6 @@ function FieldCell({
       ) : (
         shown
       )}
-    </td>
+    </TableCell>
   );
 }
