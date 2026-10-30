@@ -525,8 +525,15 @@ export async function seedDatabase(
                 : undefined,
             )
           : summaryLedger(t);
+      // 阶段 9 PR 8 之前的种子里，这些租户没有赊账：预存 = 余额 + 本月消费。流水只能新增、不能改，旧库里那笔预存的金额
+      // 留不回来；此时再补赊账会让余额凭空多出赊账额（随后账单核对也会报不一致）。所以旧库上跳过新增的赊账，
+      // 保持原样（待收款合计不会是稿上的 ¥6,300 / $1,700，要对上稿得重置库）。
+      const legacy =
+        t.code !== 'ABC001' &&
+        (await hasLegacySeedRecharge(tx, tenantId, ledger));
       // 历史时间只有 owner 连接能写。应用角色没有 created_at 的 INSERT 权限。
       for (const e of ledger) {
+        if (legacy && e.kind === 'credit_recharge') continue;
         const createdAt = beijingTime(e.at);
         const occurredAt =
           e.kind === 'call_charge' ? beijingTime(e.occurredAt) : createdAt;
@@ -586,6 +593,25 @@ export async function seedDatabase(
     }
   });
   await seedStatements(db, tenantIds);
+}
+
+/**
+ * 旧版种子（阶段 9 PR 8 之前）写下的预存：同一个幂等键、金额不同于现在要写的金额。
+ * 只在租户有「预存 + 赊账」两条汇总流水时才可能（预存 = 余额 + 本月消费 − 待收款）。
+ */
+async function hasLegacySeedRecharge(
+  tx: Tx,
+  tenantId: string,
+  ledger: readonly SeedEntry[],
+): Promise<boolean> {
+  const recharge = ledger.find((e) => e.kind === 'recharge');
+  if (!recharge || !ledger.some((e) => e.kind === 'credit_recharge'))
+    return false;
+  const { rows } = await tx.execute<{ amount: string }>(sql`
+    select amount::text as amount from ledger_entries
+    where tenant_id = ${tenantId} and idempotency_key = ${`seed:${recharge.at}:${recharge.kind}`}`);
+  const existing = rows[0]?.amount;
+  return existing !== undefined && !decimal(existing).eq(recharge.amount);
 }
 
 /**

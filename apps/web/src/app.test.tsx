@@ -327,6 +327,9 @@ describe('home load errors', () => {
     });
     expect(await screen.findByText('含已停用')).toBeVisible();
     expect(screen.getByText('一切正常')).toBeVisible();
+    // 「已停机」只指余额停机；手动停用的租户同样不能呼叫，所以不能写「全部租户可呼叫」。
+    expect(screen.getByText('没有因余额停机')).toBeVisible();
+    expect(screen.queryByText('全部租户可呼叫')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'USD' }));
     expect(screen.getByRole('button', { name: 'USD' })).toHaveAttribute(
       'aria-pressed',

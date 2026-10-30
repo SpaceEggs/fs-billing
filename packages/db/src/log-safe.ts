@@ -87,8 +87,12 @@ const NUMBER_PARAMS = new Set([
 // 只有一个量词：不会在长而不匹配的取值上回溯（URL 是外部输入）；「至少 7 位数字」由调用处另查。
 const NUMBER_LIKE = /^\+?[\d\s\-.()]+$/;
 const MIN_NUMBER_DIGITS = 7;
-/** 日期与时间（`2026-10-01`、`2026-10-01T00:00:00Z`）有 8 位以上数字，但不是号码。 */
-const DATE_LIKE = /^\d{4}-\d{2}-\d{2}/;
+/**
+ * 开头的日期或日期时间（`2026-10-01`、`2026-10-01 00:00:00`、`2026-10-01T00:00:00+08:00`）。日期有 8 位以上数字，
+ * 但不是号码，所以**整个取值就是日期**时不掩码；日期后面还有数字（`2026-10-01 8613800138000`）就不是日期了，照常判断。
+ */
+const DATE_PREFIX =
+  /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?/;
 
 function decodeParam(text: string): string {
   try {
@@ -103,10 +107,15 @@ function maskParamValue(name: string, value: string): string {
   // `+` 在查询串里本来表示空格；号码前缀的 `+` 要靠 `%2B` 才到得了这里，所以按原文判断是否以 %2B 或 + 开头。
   const plus = /^(%2B|\+)/i.test(value) ? '+' : '';
   const digits = decoded.replace(/[^\d]/g, '');
-  const looksLikeNumber =
-    NUMBER_LIKE.test(decoded.trim()) &&
-    !DATE_LIKE.test(decoded.trim()) &&
-    digits.length >= MIN_NUMBER_DIGITS;
+  const trimmed = decoded.trim();
+  const rest = trimmed.replace(DATE_PREFIX, '');
+  const hasDatePrefix = rest !== trimmed;
+  // 整个取值就是日期：不是号码。日期之后还有数字：剩下的部分（以及整个取值的数字个数）照常判断，不能让日期前缀放过号码。
+  const looksLikeNumber = hasDatePrefix
+    ? /\d/.test(rest) &&
+      NUMBER_LIKE.test(rest.trim()) &&
+      digits.length >= MIN_NUMBER_DIGITS
+    : NUMBER_LIKE.test(trimmed) && digits.length >= MIN_NUMBER_DIGITS;
   if (!NUMBER_PARAMS.has(name.toLowerCase()) && !looksLikeNumber) return value;
   return digits.length === 0 ? '*' : maskNumber(`${plus}${digits}`);
 }

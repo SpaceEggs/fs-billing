@@ -1,21 +1,20 @@
 import { sql } from 'drizzle-orm';
 import { systemAlerts, type SystemAlertKind } from './schema.js';
 import type { Tx } from './client.js';
-import { AlertKeys } from './alerts.js';
-import { EmailAlertKeys } from './outbox.js';
 import { seededUuid } from './seed-calls.js';
 
 /**
  * 系统告警的开发种子（阶段 9 PR 8）：设计稿「管理后台 第三批 · 运营」概览与系统告警页的 5 条示例告警，
- * 写成现有代码真正会写出的形态（键、类型、描述措辞与各写入点一致）。
+ * 写成现有代码真正会写出的形态（类型与描述措辞与各写入点一致；键改用 `demo:` 前缀，见 {@link DEMO_ALERT_KEY_PREFIX}）。
  *
  * 设计稿的第二条「话单推送延迟，队列积压 1,204 条」没有对应的检测（阶段 9 决定 36），改成同样落在「话单处理失败」
  * 类型下的真实形态：话单保存失败（HTTP 503）。设计稿第三条「邮件被退信、地址不存在」是 SMTP 同步拒收的形态
  * （RCPT TO 阶段 5xx，记在 `recipient:<租户>`），退信解析不在本阶段（设计「设计稿与文档的出入」第 3 条）。
  *
  * **种子写的是历史，不是事件：** 全部 `notify = false`，并像迁移 0020 的回填那样标记开始已通知（已恢复的再标记恢复已通知）。
- * `notify-tick` 的开始、汇总、恢复通知三条查询都带 `notify = true`，所以这些行永远不会入发件箱；
- * 进行中的那条即便被静默窗口恢复，也不会发恢复邮件。
+ * `notify-tick` 的开始、汇总、恢复通知三条查询都带 `notify = true`，所以这些行永远不会入发件箱。
+ * 进行中的那条用 `demo:` 键，Worker 的任何恢复步骤都不会动它：开发库里它一直是「进行中」，导航红点常亮，
+ * 直到手工恢复或重置库（真实事件另开自己的行，见 {@link DEMO_ALERT_KEY_PREFIX}）。
  *
  * **时间相对播种时刻**，不写死日期：设计稿的日期是 2026-09-29，而告警列表默认只看最近 30 天，
  * 写死会让它们几天后就从页面上消失。偏移量对应设计稿「今天 14:03」时的各行位置，使概览「最近 24 小时」
@@ -42,6 +41,15 @@ export interface PlannedAlert {
   readonly durationMs: number | null;
 }
 
+/**
+ * 示例告警的键：**不用**任何真实写入点的键（`fs-authorize`、`cdr-save`、`smtp`、`recipient:*`）。
+ * 真实键上的进行中告警会吞掉真实事件：`raiseAlert` 把新事件合并进同键的进行中行，而示例行是 `notify = false`，
+ * 于是真实的开始邮件永远不发；每个新事件还会推迟静默窗口恢复，示例行就永远恢复不了。
+ * `demo:` 前缀不在 `QUIET_WINDOW_ALERTS` 里，也不匹配 `recipient:*` 等前缀恢复，Worker 的任何恢复步骤都不会动它们。
+ */
+export const DEMO_ALERT_KEY_PREFIX = 'demo:';
+const demoKey = (name: string) => `${DEMO_ALERT_KEY_PREFIX}${name}`;
+
 /** 最近一通未验证话单的 UUID：描述里的写法与 `ingest.ts` 一致。 */
 const OPEN_AUTH_TIMEOUT_CALL = 'b0000000-0000-4000-8000-0000000000a1';
 
@@ -49,7 +57,7 @@ export const SEED_ALERT_PLAN: readonly PlannedAlert[] = [
   {
     id: seededUuid('fs-billing:seed:alert:1'),
     kind: 'auth_timeout',
-    subjectKey: () => AlertKeys.authTimeout,
+    subjectKey: () => demoKey('auth-timeout'),
     tenantCode: null,
     description: `FreeSWITCH 授权未验证，按 1800 秒放行，最近一通 ${OPEN_AUTH_TIMEOUT_CALL}（按话单到达时间记录）`,
     affectedCalls: 9,
@@ -60,7 +68,7 @@ export const SEED_ALERT_PLAN: readonly PlannedAlert[] = [
   {
     id: seededUuid('fs-billing:seed:alert:2'),
     kind: 'cdr_failed',
-    subjectKey: () => AlertKeys.cdrSave,
+    subjectKey: () => demoKey('cdr-save'),
     tenantCode: null,
     description: '话单入库或任务入队失败',
     affectedCalls: 12,
@@ -71,7 +79,7 @@ export const SEED_ALERT_PLAN: readonly PlannedAlert[] = [
   {
     id: seededUuid('fs-billing:seed:alert:3'),
     kind: 'email_failed',
-    subjectKey: (tenantId) => EmailAlertKeys.recipient(tenantId!),
+    subjectKey: (tenantId) => demoKey(`recipient:${tenantId!}`),
     tenantCode: 'GZT007',
     description:
       '租户邮件（余额不足提醒）的收件人被邮件服务器拒绝，已放弃：EENVELOPE 550: 5.1.1 The email account that you tried to reach does not exist <地址>',
@@ -83,7 +91,7 @@ export const SEED_ALERT_PLAN: readonly PlannedAlert[] = [
   {
     id: seededUuid('fs-billing:seed:alert:4'),
     kind: 'auth_timeout',
-    subjectKey: () => AlertKeys.authTimeout,
+    subjectKey: () => demoKey('auth-timeout-previous'),
     tenantCode: null,
     description: `FreeSWITCH 授权未验证，按 1800 秒放行，最近一通 ${OPEN_AUTH_TIMEOUT_CALL}（按话单到达时间记录）`,
     affectedCalls: 23,
@@ -94,7 +102,7 @@ export const SEED_ALERT_PLAN: readonly PlannedAlert[] = [
   {
     id: seededUuid('fs-billing:seed:alert:5'),
     kind: 'email_failed',
-    subjectKey: () => EmailAlertKeys.smtp,
+    subjectKey: () => demoKey('smtp'),
     tenantCode: null,
     description: '余额不足提醒发送失败，已放弃：ETIMEDOUT: Connection timeout',
     affectedCalls: 0,

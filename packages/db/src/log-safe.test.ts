@@ -47,6 +47,26 @@ describe('redactUrlForLog（阶段 9 PR 8）', () => {
     ).toBe('/p?callee=8613*******00(13)&a=1&callee=8613*******78(13)#top');
   });
 
+  test.each([
+    '/x?from=2026-10-01',
+    '/x?from=2026-10-01%2000:00:00',
+    '/x?from=2026-10-01T00:00:00%2B08:00',
+    '/x?to=2026-10-31T23:59:59.999Z',
+  ])('a value that is only a date or a timestamp stays: %s', (url) => {
+    expect(redactUrlForLog(url)).toBe(url);
+  });
+
+  test.each([
+    '/x?search=2026-10-01%208613800138000',
+    '/x?search=2026-10-01T00:00:00Z%208613800138000',
+    '/x?search=2026-10-01%20%2B8613800138000',
+  ])('a date prefix does not let a number through: %s', (url) => {
+    const result = redactUrlForLog(url);
+    expect(result).not.toBe(url);
+    expect(result).not.toMatch(/8613800138|13800138000/);
+    expect(result).toMatch(/\*\*\*/);
+  });
+
   test('never leaves the middle digits of a number in the result', () => {
     const result = redactUrlForLog(
       '/p?callee=8613800138000&phone=%2B447700900123',

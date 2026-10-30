@@ -201,7 +201,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                   {home.metrics.suspendedTenants}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {home.metrics.suspendedTenants > 0 ? '个' : '全部租户可呼叫'}
+                  {home.metrics.suspendedTenants > 0 ? '个' : '没有因余额停机'}
                 </div>
               </section>
             </div>

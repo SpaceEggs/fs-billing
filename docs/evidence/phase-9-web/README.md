@@ -6,14 +6,14 @@
 
 | 命令             | 结果                                                                                                                                                                          |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`     | 退出 0：lint、格式检查、类型检查全过；根目录单元测试 55 个文件、1,067 通过 2 跳过（本机没有 `lua5.3`，Lua 测试跳过，CI 必跑）；Web 单元测试 51 个文件、662 通过；Web 构建成功 |
-| `pnpm test:db`   | 退出 0，两次：73 个文件、984 个测试全部通过（第一次 5 分 41 秒；与阶段 8 的依赖种子的测试一并通过，`ledger.db.test.ts` 里种子流水条数随新增的 4 笔赊账更新为 26/27）          |
+| `pnpm check`     | 退出 0：lint、格式检查、类型检查全过；根目录单元测试 55 个文件、1,074 通过 2 跳过（本机没有 `lua5.3`，Lua 测试跳过，CI 必跑）；Web 单元测试 51 个文件、662 通过；Web 构建成功 |
+| `pnpm test:db`   | 退出 0，两次：74 个文件、986 个测试全部通过（第一次 6 分 2 秒；与阶段 8 的依赖种子的测试一并通过，`ledger.db.test.ts` 里种子流水条数随新增的 4 笔赊账更新为 26/27）           |
 | `pnpm test:idor` | 退出 0：1 个文件、41 个测试全部通过                                                                                                                                           |
 | `pnpm test:e2e`  | 退出 0：147 个通过、7 个跳过（视觉对照脚本只在 `FSB_VISUAL=1` 时运行）；库是刚迁移、刚播种的                                                                                  |
 
 ## 本 PR 新增的测试
 
-- **种子与不排邮件：** `packages/db/src/seed-alerts.db.test.ts`（5 个用例，在单独的播过种子的库里跑）：5 条示例告警形态与键、「最近 24 小时 2 条、进行中 1 条」、全部 `notify = false` 并标记开始与恢复已通知、播种后与下一次 `notify-tick`（`queueAlertNotices`）与进行中告警被静默窗口恢复之后发件箱都是空的、待收款合计 ¥6,300 / $1,700 且重复播种不增行。种子证明：开发库播种后 `email_outbox` 0 行、`balance_alert_deliveries` 0 行、`system_alerts` 5 行（1 条进行中）。
+- **种子与不排邮件：** `packages/db/src/seed-alerts.db.test.ts`（6 个用例，在单独的播过种子的库里跑）：5 条示例告警的形态与 `demo:` 键、「最近 24 小时 2 条、进行中 1 条」、全部 `notify = false` 并标记开始与恢复已通知、播种后与下一次 `notify-tick`（`queueAlertNotices`）之后发件箱为空且静默窗口与 `recipient:*` 窗口都不动示例行、**真实的 `raiseAlert(AlertKeys.authTimeout)` 另开 `notify = true` 的新行且下一次 tick 排出 `alert_start`（评审修复）**、待收款合计 ¥6,300 / $1,700 且重复播种不增行。`seed-legacy.db.test.ts`：旧库（预存金额不同）重新播种不新增赊账、余额不漂移。种子证明：开发库播种后 `email_outbox` 0 行、`balance_alert_deliveries` 0 行、`system_alerts` 5 行（1 条进行中）。
 - **API 请求 URL 脱敏：** `apps/api/src/logging.test.ts`（真实 Fastify 加 `createApiLogger`，请求日志打开时断言 URL 里的 `callee`、`search` 号码被掩码、cookie 不出现）、`packages/db/src/log-safe.test.ts`（`redactUrlForLog` 的各种形态与 `maskNumber` 规则）。
 - **e2e（`apps/web/e2e`）：**
   - `admin-overview.spec.ts`：`shows the same receivable totals and alert count as their pages`（验收 5 在浏览器里：概览待收款卡片 = 待收款页合计，概览「最近 24 小时 · N 条」点进告警页落在 `?window=24h`、时间选择停在 24 小时、「共 N 条」一致）、`each alert row on the overview opens the 24 hour list`、`lists suspended and low balance tenants in the attention area`、`the daily spend chart is driven by the keyboard and switches currency`（只用键盘，不悬停、不断言具体日期）。

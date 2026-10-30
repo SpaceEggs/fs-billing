@@ -77,13 +77,9 @@ const overviewAllClear = async (page: Page) => {
 
 const alertsOpen = async (page: Page) => {
   await page.goto('/admin/system-alerts');
-  await expect(
-    page
-      .getByRole('row')
-      .filter({ hasText: '进行中' })
-      .first()
-      .or(page.getByRole('button', { name: /进行中/ }).first()),
-  ).toBeVisible();
+  // 列表加载完（「共 N 条」只在有数据时出现）；桌面是表格、其余宽度是卡片，状态徽章的文字相同；筛选分段里也有一个「进行中」，所以取最后一个。
+  await expect(page.getByText(/^共 \d+ 条$/)).toBeVisible();
+  await expect(page.getByText('进行中', { exact: true }).last()).toBeVisible();
 };
 
 /** 展开 9-27 那条已恢复的授权超时（稿 6b）：种子里 23 通、持续 18 分钟的一条。 */
