@@ -86,7 +86,7 @@ describe('portal statement detail', () => {
   it('uses a stacked equation and tables until the wide layout fits', async () => {
     renderDetail('2026-09', septemberDetail);
     const equation = await screen.findByRole('region', { name: '账单汇总' });
-    expect(equation.children[0]).toHaveClass('hidden', 'xl:flex');
+    expect(equation.children[0]).toHaveClass('hidden', 'xl:grid');
     expect(equation.children[0]).not.toHaveClass('overflow-x-auto');
     expect(equation.children[1]).toHaveClass('flex', 'xl:hidden');
     const countries = screen.getByRole('region', { name: '按国家汇总' });
@@ -109,21 +109,33 @@ describe('portal statement detail', () => {
     expect(desktop).toHaveTextContent(
       '期初余额¥1,176.60+充值¥1,300.00+赠送¥0.00±调账-¥25.50−通话扣费¥2,486.3012,804 通 · 49,726分钟=期末余额-¥35.20',
     );
-    const operators = desktop.querySelectorAll('[aria-hidden="true"]');
-    expect(operators).toHaveLength(5);
+    // 5 个运算符，外加一个 aria-hidden 的空底色块（期末余额）。
+    const hidden = [...desktop.querySelectorAll('[aria-hidden="true"]')];
+    const operators = hidden.filter((element) => element.textContent);
+    expect(operators.map((element) => element.textContent)).toEqual([
+      '+',
+      '+',
+      '±',
+      '−',
+      '=',
+    ]);
+    expect(hidden).toHaveLength(6);
     const amount = within(desktop).getByText('¥2,486.30').parentElement;
+    // 金额与运算符都在第 2 行，用基线对齐；运算符在两列之间的列里居中。
+    expect(desktop).toHaveClass('xl:grid', 'items-baseline');
+    expect(amount).toHaveClass('text-[22px]', 'leading-normal');
+    expect(amount).toHaveStyle({ gridRow: '2' });
     for (const operator of operators) {
-      expect(operator).toHaveClass('flex', 'flex-col', 'gap-1.5');
-      expect(operator.firstElementChild).toHaveClass(
-        'invisible',
-        'text-[13px]',
+      expect(operator).toHaveClass(
+        'justify-self-center',
+        'text-muted-foreground',
       );
-      expect(operator.lastElementChild).toHaveClass(
-        'text-[22px]',
-        'leading-normal',
-      );
-      expect(amount).toHaveClass('text-[22px]', 'leading-normal');
+      expect(operator).toHaveStyle({ gridRow: '2' });
     }
+    expect(within(desktop).getByText('-¥35.20').parentElement).toHaveStyle({
+      gridRow: '2',
+      gridColumn: '11',
+    });
     expect(within(desktop).getByText('12,804 通 · 49,726分钟')).toHaveClass(
       'whitespace-nowrap',
     );
