@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import { statementMonthSchema } from '@fs-billing/shared';
+import { useFavicon } from './lib/use-favicon';
 import { BlockedPage } from './pages/blocked';
 import { ErrorPage } from './pages/error';
 import { NotFoundPage } from './pages/not-found';
@@ -436,6 +437,7 @@ function PortalZone(): React.JSX.Element {
 }
 
 function AdminZone(): React.JSX.Element {
+  useFavicon();
   return (
     <ZoneGuard zone="admin" session={adminLayout.useRouteContext().session} />
   );
