@@ -324,7 +324,7 @@ function SettingsEditor({
         ) : null}
         {pending?.request.emails.length === 0 ? (
           <Alert variant="warning" role="note">
-            未配置收件人，余额提醒无法送达
+            未配置收件人，余额提醒无法送达；停用租户不发送
           </Alert>
         ) : null}
         <Alert variant="brand">

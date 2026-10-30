@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import {
+  BellRingIcon,
   Building2Icon,
   FileTextIcon,
   HandCoinsIcon,
@@ -28,7 +29,7 @@ import { MobileBarButton } from './mobile-bar-button';
 import { ThemeMenu } from './theme-controls';
 import { SheetPanel } from './sheet-panel';
 
-/** 后台导航按设计稿顺序；未归属话单带待处理条数角标，操作日志在账单之后。系统告警随该阶段加入。 */
+/** 后台导航按设计稿顺序；未归属话单带待处理条数角标，系统告警有进行中时显示红点。 */
 const navigation = {
   portal: [
     { label: '首页', to: zones.portal.home, icon: HouseIcon },
@@ -43,6 +44,7 @@ const navigation = {
     { label: '待收款', to: '/admin/receivables', icon: HandCoinsIcon },
     { label: '未归属话单', to: '/admin/unassigned', icon: PhoneMissedIcon },
     { label: '账单', to: '/admin/statements', icon: ReceiptIcon },
+    { label: '系统告警', to: '/admin/system-alerts', icon: BellRingIcon },
     { label: '操作日志', to: '/admin/audit-logs', icon: ScrollTextIcon },
     { label: '管理员', to: '/admin/admins', icon: ShieldUserIcon },
   ],
@@ -66,6 +68,11 @@ function NavItems({
   const pending = useQuery({
     ...apiQuery('adminUnassignedSummary'),
     enabled: zone === 'admin',
+  });
+  const alerts = useQuery({
+    ...apiQuery('adminSystemAlertsSummary'),
+    enabled: zone === 'admin',
+    refetchInterval: 60_000,
   });
   const pendingCount =
     zone === 'admin' && pending.data && pending.data.pending > 0
@@ -101,6 +108,13 @@ function NavItems({
               className={cn('shrink-0', mobile ? 'size-[18px]' : 'size-4')}
             />
             {item.label}
+            {item.to === '/admin/system-alerts' &&
+            (alerts.data?.open ?? 0) > 0 ? (
+              <span
+                aria-label="有进行中的告警"
+                className="ml-auto size-2 rounded-full bg-destructive"
+              />
+            ) : null}
             {item.to === '/admin/unassigned' && pendingCount !== null ? (
               <span className="ml-auto pl-2 text-[11px] tabular-nums text-muted-foreground">
                 {pendingCount.toLocaleString('en-US')}

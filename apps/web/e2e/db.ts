@@ -490,3 +490,21 @@ export function ledgerAndStatementSnapshot(tenantId: string) {
     };
   });
 }
+
+/** 为系统告警页面冒烟测试创建一条独立告警。 */
+export async function createSystemAlert() {
+  return withOwner(async (client) => {
+    const result = await client.query<{ id: string }>(
+      `INSERT INTO system_alerts (kind, subject_key, description)
+       VALUES ('auth_timeout', $1, '端到端授权超时') RETURNING id`,
+      [`e2e:${randomUUID()}`],
+    );
+    return result.rows[0]!.id;
+  });
+}
+
+export function removeSystemAlert(id: string) {
+  return withOwner((client) =>
+    client.query('DELETE FROM system_alerts WHERE id = $1', [id]),
+  );
+}

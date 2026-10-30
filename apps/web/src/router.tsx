@@ -55,6 +55,10 @@ const AdminStatementsPage = lazyRouteComponent(
   () => import('./pages/admin/statements'),
   'AdminStatementsPage',
 );
+const SystemAlertsPage = lazyRouteComponent(
+  () => import('./pages/admin/system-alerts'),
+  'SystemAlertsPage',
+);
 const AdminAuditLogsPage = lazyRouteComponent(
   () => import('./pages/admin/audit-logs'),
   'AdminAuditLogsPage',
@@ -367,6 +371,20 @@ const adminStatements = createRoute({
   ),
 });
 
+const adminSystemAlerts = createRoute({
+  getParentRoute: () => adminLayout,
+  path: 'system-alerts',
+  validateSearch: (
+    raw: Record<string, unknown>,
+  ): { window?: '24h' | undefined } => ({
+    window: raw['window'] === '24h' ? '24h' : undefined,
+  }),
+  component: lazyRoute(
+    () => <SystemAlertsPage identity={useZoneIdentity()} />,
+    SystemAlertsPage,
+  ),
+});
+
 const adminAuditLogs = createRoute({
   getParentRoute: () => adminLayout,
   path: 'audit-logs',
@@ -491,6 +509,7 @@ const routeTree = rootRoute.addChildren([
     adminReceivables,
     adminUnassigned,
     adminStatements,
+    adminSystemAlerts,
     adminAuditLogs,
     adminAccounts,
   ]),

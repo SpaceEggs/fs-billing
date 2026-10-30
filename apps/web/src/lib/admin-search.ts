@@ -156,6 +156,7 @@ export function validateAdminStatementsSearch(
  */
 export type UnassignedSearch = {
   tab?: 'ignored' | undefined;
+  reason?: string | undefined;
   tag?: string | undefined;
   page?: number | undefined;
 };
@@ -172,6 +173,8 @@ export function validateUnassignedSearch(
   return {
     tab: raw['tab'] === 'ignored' ? 'ignored' : undefined,
     tag: unassignedTagOf(raw['tag']),
+    reason: adminUnassignedListQuerySchema.shape.reason.safeParse(raw['reason'])
+      .data,
     page: pageOf(raw['page']),
   };
 }

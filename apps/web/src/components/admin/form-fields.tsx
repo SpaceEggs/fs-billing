@@ -192,6 +192,9 @@ export function RecipientsInput({
   flagged,
   stacked = false,
   className,
+  label = '通知邮箱',
+  helper = '可添加多个，余额不足和停机通知会发送到这些邮箱',
+  emptyNote = '未配置收件人，余额提醒无法送达；停用租户不发送',
 }: {
   emails: string[];
   error: string | undefined;
@@ -199,6 +202,9 @@ export function RecipientsInput({
   flagged?: ReadonlySet<string>;
   stacked?: boolean;
   className?: string;
+  label?: string;
+  helper?: string;
+  emptyNote?: string;
 }) {
   const id = useId();
   const [draft, setDraft] = useState('');
@@ -284,15 +290,15 @@ export function RecipientsInput({
         className,
       )}
     >
-      <Label htmlFor={id}>通知邮箱</Label>
+      <Label htmlFor={id}>{label}</Label>
       <span className="-mt-1 text-xs font-normal text-muted-foreground">
-        可添加多个，余额不足和停机通知会发送到这些邮箱
+        {helper}
       </span>
       {stacked ? (
         <>
           {emails.length ? (
             <ul
-              aria-label="已添加的通知邮箱"
+              aria-label={`已添加的${label}`}
               className="m-0 flex list-none flex-col gap-2 p-0 font-normal md:flex-row md:flex-wrap"
             >
               {chipItems}
@@ -337,7 +343,7 @@ export function RecipientsInput({
             error && 'border-err',
           )}
         >
-          <ul aria-label="已添加的通知邮箱" className="contents">
+          <ul aria-label={`已添加的${label}`} className="contents">
             {chipItems}
           </ul>
           {input('h-8 min-w-[180px] flex-1 px-1.5')}
@@ -354,7 +360,7 @@ export function RecipientsInput({
         ) : null}
         {emails.length === 0 ? (
           <span role="status" className="text-xs font-normal text-warn">
-            未配置收件人，余额提醒无法送达
+            {emptyNote}
           </span>
         ) : null}
         {flaggedEmails.map((email) => (
