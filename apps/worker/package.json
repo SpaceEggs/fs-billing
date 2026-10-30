@@ -12,7 +12,8 @@
     "mail:test": "tsx --env-file-if-exists=../../.env scripts/mail-test.ts",
     "mail:requeue": "tsx --env-file-if-exists=../../.env scripts/mail-requeue.ts",
     "raw:restore": "tsx --env-file-if-exists=../../.env scripts/restore-raw-cdr.ts",
-    "raw:restore-month": "tsx --env-file-if-exists=../../.env scripts/restore-raw-month.ts"
+    "raw:restore-month": "tsx --env-file-if-exists=../../.env scripts/restore-raw-month.ts",
+    "cdr:generate": "tsx --env-file-if-exists=../../.env scripts/generate-cdrs.ts"
   },
   "dependencies": {
     "@fs-billing/db": "workspace:*",
