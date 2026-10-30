@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FS-Billing 管理后台方案 A">
-  <style>.tile{fill:#2563eb}.letter{fill:#ffffff}.detail{fill:#bfdbfe}.edge{stroke:#2563eb;fill:#eff6ff}@media (prefers-color-scheme: dark){.tile{fill:#60a5fa}.letter{fill:#0b1e3d}.detail{fill:#dbeafe}.edge{stroke:#60a5fa;fill:#172b4d}}</style>
-  <rect class="tile" x="1" y="1" width="30" height="30" rx="7"/><path class="letter" d="M9 7h15v4H13v4h9v4h-9v7H9z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FS-Billing 管理后台">
+  <style>.tile{fill:#1d4ed8;stroke:none}@media (prefers-color-scheme: dark){.tile{stroke:rgba(255,255,255,.16)}}</style>
+  <rect class="tile" x="1" y="1" width="30" height="30" rx="5" stroke-width="1"/><path fill="#fff" fill-rule="evenodd" d="M16 5a11 11 0 1 0 0 22a11 11 0 1 0 0-22zM16 8a8 8 0 1 0 0 16a8 8 0 1 0 0-16zM16 16V10A6 6 0 0 1 21.2 19z"/>
 </svg>
