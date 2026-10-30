@@ -1,0 +1,3 @@
+## item2 wrong MAIL_FROM (no send expected)
+配置错误：MAIL_FROM：QQ 邮箱的 MAIL_FROM 必须与 SMTP_USER 相同
+exit=1

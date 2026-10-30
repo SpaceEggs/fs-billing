@@ -1,0 +1,5 @@
+## item7 nonexistent QQ address (random 16 chars)
+发送失败：永久失败（收件人或整封被拒）
+EMESSAGE 550: 550 The recipient may contain a non-existent account, please check the recipient address.
+用时 653 ms
+exit=1
