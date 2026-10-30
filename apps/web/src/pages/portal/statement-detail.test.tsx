@@ -90,6 +90,24 @@ describe('portal statement detail', () => {
     expect(desktop).toHaveTextContent(
       '期初余额¥1,176.60+充值¥1,300.00+赠送¥0.00±调账-¥25.50−通话扣费¥2,486.3012,804 通 · 49,726分钟=期末余额-¥35.20',
     );
+    const operators = desktop.querySelectorAll('[aria-hidden="true"]');
+    expect(operators).toHaveLength(5);
+    const amount = within(desktop).getByText('¥2,486.30').parentElement;
+    for (const operator of operators) {
+      expect(operator).toHaveClass('flex', 'flex-col', 'gap-1.5');
+      expect(operator.firstElementChild).toHaveClass(
+        'invisible',
+        'text-[13px]',
+      );
+      expect(operator.lastElementChild).toHaveClass(
+        'text-[22px]',
+        'leading-normal',
+      );
+      expect(amount).toHaveClass('text-[22px]', 'leading-normal');
+    }
+    expect(within(desktop).getByText('12,804 通 · 49,726分钟')).toHaveClass(
+      'whitespace-nowrap',
+    );
     expect(within(desktop).getByText('-¥25.50')).toHaveClass('text-neg');
     expect(within(desktop).getByText('-¥35.20')).toHaveClass('text-neg');
     expect(within(desktop).getByText('¥1,300.00')).not.toHaveClass('text-neg');

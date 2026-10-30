@@ -4,7 +4,18 @@ import { formatCount, formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
 import type { StatementFigures } from '../../lib/statement';
 
-const operatorClass = 'self-end pb-0.5 text-[22px] text-muted-foreground';
+const amountClass = 'text-[22px] leading-normal';
+
+function Operator({ children }: { children: React.ReactNode }) {
+  return (
+    <span aria-hidden className="flex flex-col gap-1.5 text-muted-foreground">
+      <span className="invisible text-[13px]">
+        <br />
+      </span>
+      <span className={amountClass}>{children}</span>
+    </span>
+  );
+}
 
 function Term({
   label,
@@ -18,13 +29,21 @@ function Term({
   note?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-1.5">
+    <div className="flex min-w-fit flex-1 flex-col gap-1.5">
       <span className="text-[13px] text-muted-foreground">{label}</span>
-      <span className={cn('text-[22px] font-semibold', className)}>
+      <span
+        className={cn(
+          amountClass,
+          'whitespace-nowrap font-semibold',
+          className,
+        )}
+      >
         {children}
       </span>
       {note ? (
-        <span className="text-xs text-muted-foreground">{note}</span>
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          {note}
+        </span>
       ) : null}
     </div>
   );
@@ -68,38 +87,28 @@ export function StatementEquation({
   const usageNote = `${formatCount(figures.calls)} 通 · ${formatMinutes(figures.callMinutes)}`;
   return (
     <section aria-label="账单汇总">
-      <div className="hidden items-stretch gap-2.5 rounded-xl border border-border p-6 tabular-nums md:flex print:break-inside-avoid">
+      <div className="hidden items-stretch gap-2.5 overflow-x-auto rounded-xl border border-border p-6 tabular-nums md:flex print:break-inside-avoid print:flex-wrap print:overflow-visible">
         <Term label="期初余额">
           <Money value={money(figures.openingBalance)} />
         </Term>
-        <span aria-hidden className={operatorClass}>
-          +
-        </span>
+        <Operator>+</Operator>
         <Term label="充值">
           <Money value={money(figures.recharge)} tone="plain" />
         </Term>
-        <span aria-hidden className={operatorClass}>
-          +
-        </span>
+        <Operator>+</Operator>
         <Term label="赠送">
           <Money value={money(figures.gift)} tone="plain" />
         </Term>
-        <span aria-hidden className={operatorClass}>
-          ±
-        </span>
+        <Operator>±</Operator>
         <Term label="调账">
           <Money value={money(figures.adjustment)} />
         </Term>
-        <span aria-hidden className={operatorClass}>
-          −
-        </span>
+        <Operator>−</Operator>
         <Term label="通话扣费" note={usageNote}>
           <Money value={money(figures.callCharges)} tone="plain" />
         </Term>
-        <span aria-hidden className={operatorClass}>
-          =
-        </span>
-        <div className="-my-3 mr-[-8px] flex flex-[1.2] flex-col justify-center gap-1.5 rounded-lg bg-muted px-4 py-3">
+        <Operator>=</Operator>
+        <div className="-my-3 mr-[-8px] flex min-w-fit flex-[1.2] flex-col justify-center gap-1.5 rounded-lg bg-muted px-4 py-3">
           <span className="text-[13px] text-muted-foreground">期末余额</span>
           <span className="text-[26px] font-bold">
             <Money value={money(figures.closingBalance)} />
