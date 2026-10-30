@@ -424,3 +424,66 @@ describe('404', () => {
     );
   });
 });
+
+it('links the overview alert group and each item to the 24-hour window', async () => {
+  const alert = {
+    id: '00000000-0000-4000-8000-000000000010',
+    kind: 'auth_timeout',
+    kindLabel: '授权超时',
+    description: '授权超时测试',
+    startedAt: '2026-09-29T01:00:00.000Z',
+    lastSeenAt: '2026-09-29T01:00:00.000Z',
+    recoveredAt: null,
+    status: 'open',
+    durationSeconds: 60,
+    affectedCalls: 1,
+    occurrences: 1,
+    tenant: null,
+  };
+  renderApp('/admin', (path) => {
+    if (path === '/api/auth/session')
+      return { status: 200, body: adminSession };
+    if (path === '/api/admin/overview')
+      return {
+        status: 200,
+        body: {
+          asOf: '2026-09-30T00:00:00.000Z',
+          metrics: {
+            tenantCount: 0,
+            todayCallMinutes: '0',
+            todaySpend: { CNY: '0', USD: '0' },
+            monthSpend: { CNY: '0', USD: '0' },
+            pendingReceivable: { CNY: '0', USD: '0' },
+            suspendedTenants: 0,
+          },
+          attention: {
+            suspended: { total: 0, items: [] },
+            lowBalance: { total: 0, items: [] },
+            unassigned: { pending: 0 },
+            alerts: { open: 1, last24h: 1, items: [alert] },
+          },
+          dailySpend: Array.from({ length: 30 }, (_, i) => ({
+            date: `2026-09-${String(i + 1).padStart(2, '0')}`,
+            CNY: '0',
+            USD: '0',
+          })),
+        },
+      };
+    if (path === '/api/admin/unassigned-cdrs/summary')
+      return { status: 200, body: { pending: 0, ignored: 0 } };
+    if (path === '/api/admin/system-alerts/summary')
+      return {
+        status: 200,
+        body: { open: 1, last24h: 1, lastOpenedAt: alert.startedAt },
+      };
+    throw new Error(`unexpected ${path}`);
+  });
+  const item = await screen.findByRole('link', { name: /授权超时测试/ });
+  const group = screen.getByRole('link', { name: /系统告警 最近 24 小时/ });
+  for (const link of [group, item])
+    expect(
+      new URL(link.getAttribute('href')!, 'http://localhost').searchParams.get(
+        'window',
+      ),
+    ).toBe('24h');
+});

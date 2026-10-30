@@ -41,27 +41,37 @@ it('shows empty list, mail configuration, validates input and handles a conflict
     },
   });
   renderApp('/admin/system-alerts', handler);
-  expect(await screen.findByText('没有系统告警')).toBeVisible();
+  expect(await screen.findByText('最近 30 天没有系统告警')).toBeVisible();
   await user.click(screen.getByRole('tab', { name: '设置' }));
   expect(
     await screen.findByText('邮件发送未配置，告警和提醒不会发出'),
   ).toBeVisible();
   expect(screen.getByText('未设置接收邮箱，当前发给全部管理员')).toBeVisible();
-  await user.type(screen.getByLabelText('告警接收邮箱'), 'bad');
+  await user.type(screen.getByLabelText('告警接收邮箱'), 'bad{Enter}');
   await user.click(screen.getByRole('button', { name: '保存' }));
   expect(screen.getByText(/请输入有效邮箱/)).toBeVisible();
   expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0);
-  await user.clear(screen.getByLabelText('告警接收邮箱'));
-  await user.type(screen.getByLabelText('告警接收邮箱'), 'ops@example.com');
-  await user.click(screen.getByRole('button', { name: '保存' }));
-  await waitFor(() =>
-    expect(screen.getByLabelText('告警接收邮箱')).toHaveValue(
-      'new@example.com',
-    ),
+  await user.click(screen.getByRole('button', { name: '移除 bad' }));
+  await user.type(
+    screen.getByLabelText('告警接收邮箱'),
+    'ops@example.com{Enter}',
   );
   expect(
-    screen.getByText('告警设置已被其他人修改，已重新加载当前设置'),
+    screen.getByRole('button', { name: '移除 ops@example.com' }),
   ).toBeVisible();
+  await user.click(screen.getByRole('button', { name: '保存' }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '移除 new@example.com' }),
+    ).toBeVisible(),
+  );
+  expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({
+    recipients: ['ops@example.com'],
+    digestMinutes: 15,
+    expectedVersion: 1,
+  });
+  expect(screen.getByRole('alert')).toHaveTextContent('您未保存的输入已被替换');
+  expect(screen.getByRole('alert')).toHaveTextContent('ops@example.com');
 });
 
 it('expands alert details and links to the matching unassigned reason', async () => {
@@ -110,8 +120,27 @@ it('expands alert details and links to the matching unassigned reason', async ()
   const table = await screen.findByRole('table', { name: '系统告警' });
   await user.click(within(table).getByRole('button'));
   expect(await screen.findByText('暂无通知记录')).toBeVisible();
-  expect(screen.getByRole('link', { name: '查看未归属话单' })).toHaveAttribute(
-    'href',
-    expect.stringContaining('reason='),
+  const href = screen.getByRole('link', { name: '0 通' }).getAttribute('href');
+  expect(new URL(href!, 'http://localhost').searchParams.get('reason')).toBe(
+    '缺少 billsec',
   );
+});
+
+it('clears a filtered empty state', async () => {
+  const user = userEvent.setup();
+  const { handler, calls } = adminApi({
+    'GET /api/admin/system-alerts': () => ({
+      status: 200,
+      body: {
+        items: [],
+        pagination: { page: 1, pageSize: 25, total: 0 },
+        openCount: 0,
+      },
+    }),
+  });
+  renderApp('/admin/system-alerts?window=24h', handler);
+  expect(await screen.findByText('没有符合筛选条件的系统告警')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: '清除筛选' }));
+  expect(await screen.findByText('最近 30 天没有系统告警')).toBeVisible();
+  expect(calls.some((c) => c.path.includes('window=30d'))).toBe(true);
 });

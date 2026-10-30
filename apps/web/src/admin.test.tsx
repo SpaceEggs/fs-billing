@@ -716,20 +716,22 @@ describe('tenant detail', () => {
     renderApp(`/admin/tenants/${tenantIds.abc}?tab=settings`, handler);
     const form = await screen.findByRole('form', { name: '租户设置' });
     expect(
-      within(form).queryByText('未配置收件人，余额提醒无法送达'),
+      within(form).queryByText(
+        '未配置收件人，余额提醒无法送达；停用租户不发送',
+      ),
     ).not.toBeInTheDocument();
     await user.click(
       within(form).getByRole('button', { name: '移除 ops@example.com' }),
     );
     expect(
-      within(form).getByText('未配置收件人，余额提醒无法送达'),
+      within(form).getByText('未配置收件人，余额提醒无法送达；停用租户不发送'),
     ).toBeVisible();
     await user.click(within(form).getByRole('button', { name: '保存修改' }));
     const dialog = await screen.findByRole('dialog', {
       name: '确认保存以下修改？',
     });
     expect(within(dialog).getByRole('note')).toHaveTextContent(
-      '未配置收件人，余额提醒无法送达',
+      '未配置收件人，余额提醒无法送达；停用租户不发送',
     );
     expect(dialog).toHaveTextContent('移除邮箱ops@example.com');
     await user.click(within(dialog).getByRole('button', { name: '确认保存' }));
@@ -1037,11 +1039,15 @@ describe('tenant create', () => {
   it('warns that alerts cannot be delivered when every recipient is removed', async () => {
     const { handler } = adminApi({});
     renderApp('/admin/tenants/new', handler);
-    expect(screen.queryByText('未配置收件人，余额提醒无法送达')).toBeNull();
+    expect(
+      screen.queryByText('未配置收件人，余额提醒无法送达；停用租户不发送'),
+    ).toBeNull();
     await userEvent.click(
       await screen.findByRole('button', { name: '移除 wangmin@example.com' }),
     );
-    expect(screen.getByText('未配置收件人，余额提醒无法送达')).toBeVisible();
+    expect(
+      screen.getByText('未配置收件人，余额提醒无法送达；停用租户不发送'),
+    ).toBeVisible();
   });
 
   it('lists every CSV row error and does not create the tenant', async () => {

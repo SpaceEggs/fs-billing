@@ -34,7 +34,7 @@ test('shows an open alert and its detail', async ({ page }) => {
     await expect(page.getByLabel('有进行中的告警')).toBeVisible();
     const row = page.getByRole('row').filter({ hasText: '端到端授权超时' });
     await row.getByRole('button').click();
-    await expect(page.getByText('影响的通话：0 通')).toBeVisible();
+    await expect(page.getByText('影响的通话', { exact: true })).toBeVisible();
     await expect(page.getByText('暂无通知记录')).toBeVisible();
   } finally {
     await removeSystemAlert(id);
@@ -48,7 +48,7 @@ test('opens alert details in a phone bottom sheet', async ({ page }) => {
     await page.goto('/admin/system-alerts');
     await page.getByRole('button', { name: /端到端授权超时/ }).click();
     const sheet = page.getByRole('dialog', { name: '告警详情' });
-    await expect(sheet.getByText('影响的通话：0 通')).toBeVisible();
+    await expect(sheet.getByText('影响的通话', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
   } finally {

@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import { createTenant, openTenants, test } from './admin';
 
-const emptyWarning = '未配置收件人，余额提醒无法送达';
+const emptyWarning = '未配置收件人，余额提醒无法送达；停用租户不发送';
 
 test('warns for empty recipients after load and save', async ({ page }) => {
   await openTenants(page);
