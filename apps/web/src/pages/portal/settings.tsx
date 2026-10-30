@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+import { Card as UiCard } from '@/components/ui/card';
 import type { Currency, Identity } from '@fs-billing/shared';
 import { Badge } from '../../components/ui/badge';
 import { AppShell, PageBody } from '../../components/app-shell';
@@ -21,20 +23,25 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      aria-label={title}
-      className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
+    <UiCard
+      asChild
+      className={cn(
+        'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+        'flex flex-col gap-4 rounded-xl border border-border bg-card p-5',
+      )}
     >
-      <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-[15px] font-semibold">{title}</h2>
-        {description ? (
-          <span className="text-[13px] text-muted-foreground">
-            {description}
-          </span>
-        ) : null}
-      </div>
-      {children}
-    </section>
+      <section aria-label={title}>
+        <div className="flex flex-col gap-1">
+          <h2 className="m-0 text-[15px] font-semibold">{title}</h2>
+          {description ? (
+            <span className="text-[13px] text-muted-foreground">
+              {description}
+            </span>
+          ) : null}
+        </div>
+        {children}
+      </section>
+    </UiCard>
   );
 }
 

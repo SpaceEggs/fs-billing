@@ -1,4 +1,13 @@
 import {
+  Table,
+  TableCaption,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import {
   formatCountryLabel,
   type Currency,
   type PortalHomeResponse,
@@ -29,39 +38,39 @@ export function RecentCalls({
   const money = (amount: string) => ({ currency, amount });
   return (
     <>
-      <table className="hidden w-full border-collapse text-[13px] tabular-nums md:table">
-        <caption className="sr-only">最近 10 通话单</caption>
-        <thead>
-          <tr className="bg-muted text-xs text-muted-foreground">
-            <th className="px-6 py-[9px] text-left font-medium">接通时间</th>
-            <th className="px-3 py-[9px] text-left font-medium">被叫号码</th>
-            <th className="px-3 py-[9px] text-left font-medium">国家</th>
-            <th className="px-3 py-[9px] text-right font-medium">通话时长</th>
-            <th className="px-3 py-[9px] text-right font-medium">计费时长</th>
-            <th className="px-6 py-[9px] text-right font-medium">费用</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="hidden tabular-nums md:table">
+        <TableCaption>最近 10 通话单</TableCaption>
+        <TableHeader>
+          <TableRow className="border-t-0">
+            <TableHead className="px-6 py-[9px]">接通时间</TableHead>
+            <TableHead className="py-[9px]">被叫号码</TableHead>
+            <TableHead className="py-[9px]">国家</TableHead>
+            <TableHead className="py-[9px] text-right">通话时长</TableHead>
+            <TableHead className="py-[9px] text-right">计费时长</TableHead>
+            <TableHead className="px-6 py-[9px] text-right">费用</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {calls.map((call) => (
-            <tr key={call.callUuid} className="border-t border-border">
-              <td className="px-6 py-2.5">
+            <TableRow key={call.callUuid}>
+              <TableCell className="px-6 py-2.5">
                 <DateTime value={call.answeredAt} />
-              </td>
-              <td className="px-3 py-2.5">{call.callee}</td>
-              <td className="px-3 py-2.5">{countryLabel(call)}</td>
-              <td className="px-3 py-2.5 text-right">
+              </TableCell>
+              <TableCell className="py-2.5">{call.callee}</TableCell>
+              <TableCell className="py-2.5">{countryLabel(call)}</TableCell>
+              <TableCell className="py-2.5 text-right">
                 {formatDuration(call.durationSeconds)}
-              </td>
-              <td className="px-3 py-2.5 text-right">
+              </TableCell>
+              <TableCell className="py-2.5 text-right">
                 {formatBilledMinutes(Number(call.billedMinutes))}
-              </td>
-              <td className="px-6 py-2.5 text-right font-medium">
+              </TableCell>
+              <TableCell className="px-6 py-2.5 text-right font-medium">
                 <Money value={money(call.charge)} />
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
         {calls.map((call) => (
           <li

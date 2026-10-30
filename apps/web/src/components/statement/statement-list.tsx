@@ -1,3 +1,12 @@
+import { Card } from '@/components/ui/card';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useRouter } from '@tanstack/react-router';
 import type { Currency } from '@fs-billing/shared';
 import {
@@ -86,42 +95,40 @@ export function StatementList<Row extends StatementListRow>({
   return (
     <>
       <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-        <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-          <thead>
-            <tr className="bg-muted text-xs text-muted-foreground">
-              <th className="px-4 py-2.5 text-left font-medium">月份</th>
-              <th className="px-3 py-2.5 text-right font-medium">期初余额</th>
-              <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell">
+        <Table className="whitespace-nowrap">
+          <TableHeader>
+            <TableRow className="border-t-0">
+              <TableHead className="px-4">月份</TableHead>
+              <TableHead className="text-right">期初余额</TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
                 充值
-              </th>
-              <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell">
+              </TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
                 赠送
-              </th>
-              <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell">
+              </TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
                 调账
-              </th>
-              <th className="px-3 py-2.5 text-right font-medium">通话扣费</th>
-              <th className="px-3 py-2.5 text-right font-medium">期末余额</th>
-              <th className="hidden px-3 py-2.5 text-right font-medium xl:table-cell">
+              </TableHead>
+              <TableHead className="text-right">通话扣费</TableHead>
+              <TableHead className="text-right">期末余额</TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
                 通话分钟数
-              </th>
+              </TableHead>
               {renderAction ? (
-                <th className="px-4 py-2.5 text-right font-medium">
-                  {actionLabel}
-                </th>
+                <TableHead className="px-4 text-right">{actionLabel}</TableHead>
               ) : null}
               {hrefFor ? (
-                <th className="w-10 px-4 py-2.5">
+                <TableHead className="font-bold text-center w-10 px-4">
                   <span className="sr-only">查看详情</span>
-                </th>
+                </TableHead>
               ) : null}
-            </tr>
-          </thead>
-          <tbody className="tabular-nums">
+            </TableRow>
+          </TableHeader>
+          <TableBody className="tabular-nums">
             {rows.map((row) => {
               const href = hrefFor?.(row);
               return (
-                <tr
+                <TableRow
                   key={row.month}
                   onClick={
                     href
@@ -136,12 +143,9 @@ export function StatementList<Row extends StatementListRow>({
                         }
                       : undefined
                   }
-                  className={cn(
-                    'border-t border-border',
-                    href && 'cursor-pointer hover:bg-row-hover',
-                  )}
+                  className={cn(href && 'cursor-pointer hover:bg-row-hover')}
                 >
-                  <td className="px-4 py-3.5">
+                  <TableCell className="px-4 py-3.5">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         {href ? (
@@ -161,50 +165,50 @@ export function StatementList<Row extends StatementListRow>({
                       </div>
                       {renderMonthNote?.(row, 'table')}
                     </div>
-                  </td>
-                  <td className="px-3 py-3.5 text-right">
+                  </TableCell>
+                  <TableCell className="py-3.5 text-right">
                     <Money value={money(row.figures.openingBalance)} />
-                  </td>
-                  <td className="hidden px-3 py-3.5 text-right xl:table-cell">
+                  </TableCell>
+                  <TableCell className="hidden py-3.5 text-right xl:table-cell">
                     <Money value={money(row.figures.recharge)} tone="plain" />
-                  </td>
-                  <td className="hidden px-3 py-3.5 text-right xl:table-cell">
+                  </TableCell>
+                  <TableCell className="hidden py-3.5 text-right xl:table-cell">
                     <Money value={money(row.figures.gift)} tone="plain" />
-                  </td>
-                  <td className="hidden px-3 py-3.5 text-right xl:table-cell">
+                  </TableCell>
+                  <TableCell className="hidden py-3.5 text-right xl:table-cell">
                     <Money value={money(row.figures.adjustment)} />
-                  </td>
-                  <td className="px-3 py-3.5 text-right">
+                  </TableCell>
+                  <TableCell className="py-3.5 text-right">
                     <Money
                       value={money(row.figures.callCharges)}
                       tone="plain"
                     />
-                  </td>
-                  <td className="px-3 py-3.5 text-right font-semibold">
+                  </TableCell>
+                  <TableCell className="py-3.5 text-right font-semibold">
                     <Money value={money(row.figures.closingBalance)} />
-                  </td>
-                  <td className="hidden px-3 py-3.5 text-right xl:table-cell">
+                  </TableCell>
+                  <TableCell className="hidden py-3.5 text-right xl:table-cell">
                     {minutesCount(row.figures.callMinutes)}
                     {minutesUnit ? '分钟' : ''}
-                  </td>
+                  </TableCell>
                   {renderAction ? (
-                    <td className="px-4 py-3.5 text-right">
+                    <TableCell className="px-4 py-3.5 text-right">
                       {renderAction(row, 'table')}
-                    </td>
+                    </TableCell>
                   ) : null}
                   {hrefFor ? (
-                    <td
+                    <TableCell
                       aria-hidden
                       className="px-4 py-3.5 text-right text-muted-foreground"
                     >
                       ›
-                    </td>
+                    </TableCell>
                   ) : null}
-                </tr>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <ul className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden">
         {rows.map((row) => {
@@ -259,14 +263,25 @@ export function StatementList<Row extends StatementListRow>({
           return (
             <li key={row.month}>
               {href ? (
-                <InternalLink
-                  href={href}
-                  className={cn(cardClass, 'no-underline')}
+                <Card
+                  asChild
+                  className={cn(
+                    'gap-0 bg-transparent py-0 text-inherit shadow-none',
+                    cardClass,
+                    'no-underline',
+                  )}
+                >
+                  <InternalLink href={href}>{body}</InternalLink>
+                </Card>
+              ) : (
+                <Card
+                  className={cn(
+                    'gap-0 bg-transparent py-0 text-inherit shadow-none',
+                    cardClass,
+                  )}
                 >
                   {body}
-                </InternalLink>
-              ) : (
-                <div className={cardClass}>{body}</div>
+                </Card>
               )}
             </li>
           );

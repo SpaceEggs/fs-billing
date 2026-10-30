@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -306,59 +308,67 @@ function AdminFacts({
   if (!reconcile && gap.isZero()) return null;
   const diff = reconcile?.diff ?? null;
   return (
-    <dl
-      aria-label="账单信息"
-      className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl border border-border px-4 py-3 text-[13px] tabular-nums md:grid-cols-[auto_1fr_auto_1fr] print:hidden"
-    >
-      {reconcile ? (
-        <>
-          <dt className="text-muted-foreground">版本</dt>
-          <dd className="m-0">
-            v{statement.version}
-            {statement.firstGeneratedAt &&
-            statement.firstGeneratedAt !== statement.generatedAt
-              ? `（首次生成 ${formatDateTime(statement.firstGeneratedAt)}）`
-              : ''}
-          </dd>
-          <dt className="text-muted-foreground">生成人</dt>
-          <dd className="m-0">
-            {statement.generatedBy?.name ?? '系统（定时任务）'}
-          </dd>
-          <dt className="text-muted-foreground">核对</dt>
-          <dd className="m-0 md:col-span-3">
-            <span
-              className={
-                reconcile.status === 'inconsistent'
-                  ? 'font-medium text-neg'
-                  : reconcile.status === 'stale'
-                    ? 'font-medium text-warn'
-                    : undefined
-              }
-            >
-              {reconcileText(reconcile)}
-            </span>
-            {diff ? (
-              <>
-                ，流水合计与期末相差{' '}
-                <Money value={{ currency, amount: diff }} exact />
-              </>
-            ) : null}
-            {reconcile.reconciledAt
-              ? ` · 核对于 ${formatDateTime(reconcile.reconciledAt)}`
-              : ''}
-          </dd>
-        </>
-      ) : null}
-      {gap.isZero() ? null : (
-        <>
-          <dt className="text-muted-foreground">话单差额</dt>
-          <dd className="m-0 md:col-span-3">
-            话单明细与通话扣费相差{' '}
-            <Money value={{ currency, amount: statement.breakdownGap }} exact />
-            （通话扣费减各国家费用合计）
-          </dd>
-        </>
+    <Card
+      asChild
+      className={cn(
+        'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+        'm-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl border border-border px-4 py-3 text-[13px] tabular-nums md:grid-cols-[auto_1fr_auto_1fr] print:hidden',
       )}
-    </dl>
+    >
+      <dl aria-label="账单信息">
+        {reconcile ? (
+          <>
+            <dt className="text-muted-foreground">版本</dt>
+            <dd className="m-0">
+              v{statement.version}
+              {statement.firstGeneratedAt &&
+              statement.firstGeneratedAt !== statement.generatedAt
+                ? `（首次生成 ${formatDateTime(statement.firstGeneratedAt)}）`
+                : ''}
+            </dd>
+            <dt className="text-muted-foreground">生成人</dt>
+            <dd className="m-0">
+              {statement.generatedBy?.name ?? '系统（定时任务）'}
+            </dd>
+            <dt className="text-muted-foreground">核对</dt>
+            <dd className="m-0 md:col-span-3">
+              <span
+                className={
+                  reconcile.status === 'inconsistent'
+                    ? 'font-medium text-neg'
+                    : reconcile.status === 'stale'
+                      ? 'font-medium text-warn'
+                      : undefined
+                }
+              >
+                {reconcileText(reconcile)}
+              </span>
+              {diff ? (
+                <>
+                  ，流水合计与期末相差{' '}
+                  <Money value={{ currency, amount: diff }} exact />
+                </>
+              ) : null}
+              {reconcile.reconciledAt
+                ? ` · 核对于 ${formatDateTime(reconcile.reconciledAt)}`
+                : ''}
+            </dd>
+          </>
+        ) : null}
+        {gap.isZero() ? null : (
+          <>
+            <dt className="text-muted-foreground">话单差额</dt>
+            <dd className="m-0 md:col-span-3">
+              话单明细与通话扣费相差{' '}
+              <Money
+                value={{ currency, amount: statement.breakdownGap }}
+                exact
+              />
+              （通话扣费减各国家费用合计）
+            </dd>
+          </>
+        )}
+      </dl>
+    </Card>
   );
 }

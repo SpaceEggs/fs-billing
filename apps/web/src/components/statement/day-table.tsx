@@ -1,3 +1,12 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableFooter,
+} from '@/components/ui/table';
 import type { Currency } from '@fs-billing/shared';
 import {
   hasUnmatchedCharge,
@@ -40,22 +49,19 @@ export function StatementDays({
         <h2 className="m-0 text-[15px] font-semibold md:text-base">按日汇总</h2>
         <span className="text-xs text-muted-foreground">{dayCount}</span>
       </div>
-      <table className="hidden w-full border-collapse whitespace-nowrap text-[13px] md:table">
-        <thead>
-          <tr className="bg-muted text-xs text-muted-foreground">
-            <th className="px-5 py-[9px] text-left font-medium">日期</th>
-            <th className="px-3 py-[9px] text-right font-medium">通话数</th>
-            <th className="px-3 py-[9px] text-right font-medium">计费分钟</th>
-            <th className="px-5 py-[9px] text-right font-medium">费用</th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
+      <Table className="hidden whitespace-nowrap md:table">
+        <TableHeader>
+          <TableRow className="border-t-0">
+            <TableHead className="px-5 py-[9px]">日期</TableHead>
+            <TableHead className="py-[9px] text-right">通话数</TableHead>
+            <TableHead className="py-[9px] text-right">计费分钟</TableHead>
+            <TableHead className="px-5 py-[9px] text-right">费用</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="tabular-nums">
           {days.map((row) => (
-            <tr
-              key={row.day}
-              className="border-t border-border print:break-inside-avoid"
-            >
-              <td className="px-5 py-2">
+            <TableRow key={row.day} className="print:break-inside-avoid">
+              <TableCell className="px-5 py-2">
                 <div className="flex flex-wrap items-center gap-2">
                   {row.day}
                   {row.day === today ? (
@@ -64,30 +70,32 @@ export function StatementDays({
                     </span>
                   ) : null}
                 </div>
-              </td>
-              <td className="px-3 py-2 text-right">{formatCount(row.calls)}</td>
-              <td className="px-3 py-2 text-right">
+              </TableCell>
+              <TableCell className="py-2 text-right">
+                {formatCount(row.calls)}
+              </TableCell>
+              <TableCell className="py-2 text-right">
                 {formatMinutes(row.minutes)}
-              </td>
-              <td className="px-5 py-2 text-right font-medium">
+              </TableCell>
+              <TableCell className="px-5 py-2 text-right font-medium">
                 <Money value={money(row.charge)} tone="plain" />
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-        <tfoot>
-          <tr className="border-t border-border bg-muted font-semibold tabular-nums">
-            <td className="px-5 py-2.5">合计</td>
-            <td className="px-3 py-2.5 text-right">
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell className="px-5 py-2.5">合计</TableCell>
+            <TableCell className="py-2.5 text-right">
               {formatCount(total.calls)}
-            </td>
-            <td className="px-3 py-2.5 text-right">{totalMinutes}</td>
-            <td className="px-5 py-2.5 text-right">
+            </TableCell>
+            <TableCell className="py-2.5 text-right">{totalMinutes}</TableCell>
+            <TableCell className="px-5 py-2.5 text-right">
               <Money value={money(total.charge)} tone="plain" />
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
       <div className="overflow-hidden rounded-xl border border-border tabular-nums md:hidden">
         <div className="grid grid-cols-[1fr_1fr_1.1fr] gap-2 bg-muted px-3.5 py-2 text-xs text-muted-foreground">
           <span>日期</span>

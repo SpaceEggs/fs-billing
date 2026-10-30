@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminRateVersion, Currency } from '@fs-billing/shared';
 import { Badge } from '../ui/badge';
@@ -37,44 +39,49 @@ export function ScheduledRateVersion({
   const changes = diffRateTables(previous.entries, version.entries);
   const counts = countChanges(changes);
   return (
-    <section
-      aria-label="排定的新版本"
-      className="flex flex-col gap-3 rounded-xl border border-brand-border bg-brand-soft px-3.5 py-3 md:px-[18px] md:py-3.5"
+    <Card
+      asChild
+      className={cn(
+        'block gap-0 bg-transparent py-0 text-inherit shadow-none',
+        'flex flex-col gap-3 rounded-xl border border-brand-border bg-brand-soft px-3.5 py-3 md:px-[18px] md:py-3.5',
+      )}
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Badge className="font-semibold">排定的新版本</Badge>
-        <span className="text-sm tabular-nums">
-          <time dateTime={version.effectiveFrom} className="font-semibold">
-            {formatDateTime(version.effectiveFrom)}
-          </time>{' '}
-          起生效 · 新增 {counts.added} · 修改 {counts.modified} · 删除{' '}
-          {counts.deleted}
-        </span>
-        <span className="flex-1" />
-        <Button
-          variant="outline"
-          size="sm"
-          className="hidden bg-background md:inline-flex"
-          disabled={exporting}
-          onClick={onExport}
-        >
-          导出 CSV
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="hidden bg-background md:inline-flex"
-          onClick={onCancel}
-        >
-          取消排定
-        </Button>
-      </div>
-      {changes.length ? (
-        <div className="max-h-[320px] overflow-auto rounded-lg border border-border bg-card">
-          <RateChangesTable changes={changes} currency={currency} />
+      <section aria-label="排定的新版本">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Badge className="font-semibold">排定的新版本</Badge>
+          <span className="text-sm tabular-nums">
+            <time dateTime={version.effectiveFrom} className="font-semibold">
+              {formatDateTime(version.effectiveFrom)}
+            </time>{' '}
+            起生效 · 新增 {counts.added} · 修改 {counts.modified} · 删除{' '}
+            {counts.deleted}
+          </span>
+          <span className="flex-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden bg-background md:inline-flex"
+            disabled={exporting}
+            onClick={onExport}
+          >
+            导出 CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden bg-background md:inline-flex"
+            onClick={onCancel}
+          >
+            取消排定
+          </Button>
         </div>
-      ) : null}
-    </section>
+        {changes.length ? (
+          <div className="max-h-[320px] overflow-auto rounded-lg border border-border bg-card">
+            <RateChangesTable changes={changes} currency={currency} />
+          </div>
+        ) : null}
+      </section>
+    </Card>
   );
 }
 

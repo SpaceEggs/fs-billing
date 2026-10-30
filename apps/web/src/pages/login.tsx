@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useEffect, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
@@ -184,121 +185,125 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             )}
           </div>
         </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!blocked) login.mutate({ email, password });
-          }}
-          className="flex flex-col gap-6 sm:w-[400px] sm:gap-5 sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]"
+        <Card
+          asChild
+          className="rounded-none border-0 bg-transparent py-0 text-inherit shadow-none flex flex-col gap-6 sm:w-[400px] sm:gap-5 sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]"
         >
-          <div className="hidden flex-col gap-1.5 sm:flex">
-            <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
-              {copy[zone].title}
-            </h1>
-            <span className="text-[13px] text-muted-foreground">
-              {copy[zone].subtitle}
-            </span>
-          </div>
-          {alert ? (
-            <Alert
-              variant={alert.tone === 'warn' ? 'warning' : 'destructive'}
-              role="alert"
-            >
-              {alert.tone === 'warn' ? (
-                <TriangleAlertIcon aria-hidden />
-              ) : (
-                <CircleAlertIcon aria-hidden />
-              )}
-              <AlertTitle>{alert.title}</AlertTitle>
-              <AlertDescription>{alert.body}</AlertDescription>
-            </Alert>
-          ) : null}
-          <div className="flex flex-col gap-3.5">
-            <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-              <Label htmlFor={ids.email}>登录邮箱</Label>
-              <Input
-                id={ids.email}
-                type="email"
-                name="email"
-                autoComplete="username"
-                required
-                disabled={blocked}
-                placeholder={copy[zone].emailPlaceholder}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className={cn('font-normal', fieldClass)}
-              />
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!blocked) login.mutate({ email, password });
+            }}
+          >
+            <div className="hidden flex-col gap-1.5 sm:flex">
+              <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
+                {copy[zone].title}
+              </h1>
+              <span className="text-[13px] text-muted-foreground">
+                {copy[zone].subtitle}
+              </span>
             </div>
-            <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-              <div className="flex items-center justify-between">
-                <Label htmlFor={ids.password}>密码</Label>
-                <ForgotLink
-                  zone={zone}
-                  onClick={() => setForgotOpen((open) => !open)}
-                  className="hidden text-xs font-normal sm:inline"
-                />
-              </div>
-              <div
-                className={cn(
-                  'flex h-11 items-center rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 sm:h-10 sm:pr-1',
-                  invalid &&
-                    'border-neg shadow-[0_0_0_3px_var(--alert-neg-bg)] focus-within:ring-0',
-                  fieldClass,
-                )}
+            {alert ? (
+              <Alert
+                variant={alert.tone === 'warn' ? 'warning' : 'destructive'}
+                role="alert"
               >
+                {alert.tone === 'warn' ? (
+                  <TriangleAlertIcon aria-hidden />
+                ) : (
+                  <CircleAlertIcon aria-hidden />
+                )}
+                <AlertTitle>{alert.title}</AlertTitle>
+                <AlertDescription>{alert.body}</AlertDescription>
+              </Alert>
+            ) : null}
+            <div className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
+                <Label htmlFor={ids.email}>登录邮箱</Label>
                 <Input
-                  id={ids.password}
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  autoComplete="current-password"
+                  id={ids.email}
+                  type="email"
+                  name="email"
+                  autoComplete="username"
                   required
                   disabled={blocked}
-                  placeholder="请输入密码"
-                  aria-invalid={invalid || undefined}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pr-0 pl-3 focus-visible:ring-0 sm:h-full"
+                  placeholder={copy[zone].emailPlaceholder}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className={cn('font-normal', fieldClass)}
                 />
-                <Button
-                  variant="ghost"
-                  size="inline"
-                  aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword((shown) => !shown)}
-                  className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
-                >
-                  {showPassword ? '隐藏' : '显示'}
-                </Button>
               </div>
+              <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={ids.password}>密码</Label>
+                  <ForgotLink
+                    zone={zone}
+                    onClick={() => setForgotOpen((open) => !open)}
+                    className="hidden text-xs font-normal sm:inline"
+                  />
+                </div>
+                <div
+                  className={cn(
+                    'flex h-11 items-center rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 sm:h-10 sm:pr-1',
+                    invalid &&
+                      'border-neg shadow-[0_0_0_3px_var(--alert-neg-bg)] focus-within:ring-0',
+                    fieldClass,
+                  )}
+                >
+                  <Input
+                    id={ids.password}
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
+                    required
+                    disabled={blocked}
+                    placeholder="请输入密码"
+                    aria-invalid={invalid || undefined}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pr-0 pl-3 focus-visible:ring-0 sm:h-full"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="inline"
+                    aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((shown) => !shown)}
+                    className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
+                  >
+                    {showPassword ? '隐藏' : '显示'}
+                  </Button>
+                </div>
+                {forgotOpen ? (
+                  <ForgotHint
+                    zone={zone}
+                    className="hidden text-xs font-normal text-foreground sm:block"
+                  />
+                ) : null}
+              </div>
+            </div>
+            <Button
+              type="submit"
+              size="field"
+              disabled={blocked || login.isPending}
+            >
+              {alert?.waitLabel ?? '登录'}
+            </Button>
+            <div className="flex flex-col items-center gap-2 sm:hidden">
+              <ForgotLink
+                zone={zone}
+                onClick={() => setForgotOpen((open) => !open)}
+                className="flex h-11 items-center text-sm"
+              />
               {forgotOpen ? (
                 <ForgotHint
                   zone={zone}
-                  className="hidden text-xs font-normal text-foreground sm:block"
+                  className="px-3 text-center text-[13px]"
                 />
               ) : null}
             </div>
-          </div>
-          <Button
-            type="submit"
-            size="field"
-            disabled={blocked || login.isPending}
-          >
-            {alert?.waitLabel ?? '登录'}
-          </Button>
-          <div className="flex flex-col items-center gap-2 sm:hidden">
-            <ForgotLink
-              zone={zone}
-              onClick={() => setForgotOpen((open) => !open)}
-              className="flex h-11 items-center text-sm"
-            />
-            {forgotOpen ? (
-              <ForgotHint
-                zone={zone}
-                className="px-3 text-center text-[13px]"
-              />
-            ) : null}
-          </div>
-        </form>
+          </form>
+        </Card>
         {zone === 'admin' ? (
           <span className="hidden text-xs text-muted-foreground sm:block">
             客户请使用客户门户登录

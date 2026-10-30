@@ -1,3 +1,12 @@
+import { Card } from '@/components/ui/card';
+import {
+  TableRow,
+  TableCell,
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+} from '@/components/ui/table';
 import { Fragment, useState, useSyncExternalStore } from 'react';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -261,31 +270,40 @@ function AlertRow({
 }) {
   return (
     <Fragment>
-      <tr
+      <TableRow
         className={cn(
-          'cursor-pointer border-t hover:bg-muted',
+          'cursor-pointer hover:bg-muted',
           alert.status === 'open' && 'bg-err-soft',
         )}
         onClick={onToggle}
       >
-        <td className="p-3 whitespace-nowrap">
-          <button aria-expanded={selected}>
+        <TableCell className="p-3 whitespace-nowrap">
+          <Button
+            variant="ghost"
+            size="inline"
+            className="rounded-none bg-transparent text-inherit hover:bg-transparent"
+            aria-expanded={selected}
+          >
             {formatDateTime(alert.startedAt)}
-          </button>
-        </td>
-        <td className="p-3 font-medium whitespace-nowrap">{alert.kindLabel}</td>
-        <td className="w-full p-3">{alert.description}</td>
-        <td className="p-3 whitespace-nowrap">
+          </Button>
+        </TableCell>
+        <TableCell className="p-3 font-medium whitespace-nowrap">
+          {alert.kindLabel}
+        </TableCell>
+        <TableCell className="w-full p-3">{alert.description}</TableCell>
+        <TableCell className="p-3 whitespace-nowrap">
           <AlertStatus status={alert.status} />
-        </td>
-        <td className="pr-4 text-muted-foreground">›</td>
-      </tr>
+        </TableCell>
+        <TableCell className="pl-0 py-0 pr-4 text-muted-foreground">
+          ›
+        </TableCell>
+      </TableRow>
       {selected ? (
-        <tr>
-          <td colSpan={5}>
+        <TableRow className="border-t-0">
+          <TableCell className="p-0" colSpan={5}>
             <Detail alert={alert} onClose={onToggle} />
-          </td>
-        </tr>
+          </TableCell>
+        </TableRow>
       ) : null}
     </Fragment>
   );
@@ -376,82 +394,84 @@ function SettingsForm({
     }
   }
   return (
-    <form
-      onSubmit={(e) => void submit(e)}
-      className="max-w-[620px] overflow-hidden rounded-xl border bg-card"
+    <Card
+      asChild
+      className="block gap-0 py-0 text-inherit shadow-none max-w-[620px] overflow-hidden rounded-xl border bg-card"
     >
-      <div className="space-y-5 p-5 md:p-6">
-        {!settings.mailEnabled ? (
-          <Alert variant="warning">
-            <AlertDescription>
-              邮件发送未配置，告警和提醒不会发出
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {message?.kind === 'conflict' ? (
-          <Alert variant="warning" role="alert">
-            <AlertDescription>
-              告警设置已被其他人修改，已重新加载当前设置，您未保存的输入已被替换。您提交的邮箱：
-              {message.recipients.join('、') || '（空）'}；汇总间隔：
-              {message.minutes} 分钟。
-            </AlertDescription>
-          </Alert>
-        ) : message ? (
-          <Alert>
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        ) : null}
-        <RecipientsInput
-          stacked
-          label="告警接收邮箱"
-          helper="可添加多个，告警邮件会发送到这些邮箱"
-          emptyNote="未设置接收邮箱，当前发给全部管理员"
-          emails={recipients}
-          error={error}
-          onChange={setRecipients}
-        />
-        <div className="space-y-2">
-          <label htmlFor="digest-minutes" className="text-sm font-medium">
-            汇总邮件间隔
-          </label>
-          <Segmented
-            className="w-fit"
-            label="常用汇总间隔"
-            options={['5', '15', '30', '60'].map((value) => ({
-              value,
-              label: `${value} 分钟`,
-            }))}
-            value={minutes}
-            onChange={setMinutes}
+      <form onSubmit={(e) => void submit(e)}>
+        <div className="space-y-5 p-5 md:p-6">
+          {!settings.mailEnabled ? (
+            <Alert variant="warning">
+              <AlertDescription>
+                邮件发送未配置，告警和提醒不会发出
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {message?.kind === 'conflict' ? (
+            <Alert variant="warning" role="alert">
+              <AlertDescription>
+                告警设置已被其他人修改，已重新加载当前设置，您未保存的输入已被替换。您提交的邮箱：
+                {message.recipients.join('、') || '（空）'}；汇总间隔：
+                {message.minutes} 分钟。
+              </AlertDescription>
+            </Alert>
+          ) : message ? (
+            <Alert>
+              <AlertDescription>{message.text}</AlertDescription>
+            </Alert>
+          ) : null}
+          <RecipientsInput
+            stacked
+            label="告警接收邮箱"
+            helper="可添加多个，告警邮件会发送到这些邮箱"
+            emptyNote="未设置接收邮箱，当前发给全部管理员"
+            emails={recipients}
+            error={error}
+            onChange={setRecipients}
           />
-          <div className="flex items-center gap-2 text-sm">
-            <label htmlFor="digest-minutes">自定义（分钟）</label>
-            <input
-              id="digest-minutes"
-              className="w-24 rounded-md border bg-background p-2"
-              type="number"
-              min="1"
-              max="1440"
-              step="1"
+          <div className="space-y-2">
+            <label htmlFor="digest-minutes" className="text-sm font-medium">
+              汇总邮件间隔
+            </label>
+            <Segmented
+              className="w-fit"
+              label="常用汇总间隔"
+              options={['5', '15', '30', '60'].map((value) => ({
+                value,
+                label: `${value} 分钟`,
+              }))}
               value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
+              onChange={setMinutes}
             />
+            <div className="flex items-center gap-2 text-sm">
+              <label htmlFor="digest-minutes">自定义（分钟）</label>
+              <input
+                id="digest-minutes"
+                className="w-24 rounded-md border bg-background p-2"
+                type="number"
+                min="1"
+                max="1440"
+                step="1"
+                value={minutes}
+                onChange={(e) => setMinutes(e.target.value)}
+              />
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              间隔内的告警合并为一封汇总邮件，避免短时间内收到大量邮件。默认 15
+              分钟。
+            </p>
           </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            间隔内的告警合并为一封汇总邮件，避免短时间内收到大量邮件。默认 15
-            分钟。
-          </p>
         </div>
-      </div>
-      <div className="flex items-center justify-between gap-4 border-t px-5 py-3">
-        <span className="text-xs whitespace-nowrap text-muted-foreground">
-          修改记入操作日志
-        </span>
-        <Button type="submit" disabled={save.isPending}>
-          保存
-        </Button>
-      </div>
-    </form>
+        <div className="flex items-center justify-between gap-4 border-t px-5 py-3">
+          <span className="text-xs whitespace-nowrap text-muted-foreground">
+            修改记入操作日志
+          </span>
+          <Button type="submit" disabled={save.isPending}>
+            保存
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 export function SystemAlertsPage({ identity }: { identity: Identity }) {
@@ -625,25 +645,22 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
                 </p>
                 {desktop ? (
                   <div className="overflow-hidden rounded-xl border">
-                    <table
-                      className="w-full text-left text-sm"
-                      aria-label="系统告警"
-                    >
-                      <thead className="bg-muted text-muted-foreground">
-                        <tr>
+                    <Table className="text-left text-sm" aria-label="系统告警">
+                      <TableHeader className="text-sm">
+                        <TableRow className="border-t-0">
                           {['时间', '类型', '说明', '状态', ''].map(
                             (label, i) => (
-                              <th
+                              <TableHead
                                 key={i}
-                                className="p-3 font-medium whitespace-nowrap"
+                                className="p-3 whitespace-nowrap"
                               >
                                 {label}
-                              </th>
+                              </TableHead>
                             ),
                           )}
-                        </tr>
-                      </thead>
-                      <tbody>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {query.data.items.map((a) => (
                           <AlertRow
                             key={a.id}
@@ -654,8 +671,8 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
                             }
                           />
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
                   <div className="space-y-2">

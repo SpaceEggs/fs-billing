@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -571,35 +579,32 @@ function RowErrors({
         </AlertDescription>
       </Alert>
       <div className="max-h-[320px] overflow-auto rounded-lg border border-border">
-        <table className="w-full border-collapse text-[13px]">
-          <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">
-            <tr>
-              <th className="py-2 pr-2 pl-3.5 text-left font-medium whitespace-nowrap">
+        <Table>
+          <TableHeader className="sticky top-0">
+            <TableRow className="border-t-0">
+              <TableHead className="py-2 pr-2 pl-3.5 whitespace-nowrap">
                 行号
-              </th>
-              <th className="px-2 py-2 text-left font-medium">错误原因</th>
-              <th className="py-2 pr-3.5 pl-2 text-left font-medium">
-                原始内容
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+              <TableHead className="px-2 py-2">错误原因</TableHead>
+              <TableHead className="py-2 pr-3.5 pl-2">原始内容</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {errors.map((error, index) => (
-              <tr
-                key={`${error.line}-${index}`}
-                className="border-t border-border"
-              >
-                <td className="py-2 pr-2 pl-3.5 font-semibold whitespace-nowrap tabular-nums">
+              <TableRow key={`${error.line}-${index}`}>
+                <TableCell className="py-2 pr-2 pl-3.5 font-semibold whitespace-nowrap tabular-nums">
                   第 {error.line} 行
-                </td>
-                <td className="px-2 py-2 text-err">{error.reason}</td>
-                <td className="py-2 pr-3.5 pl-2 font-mono break-all text-muted-foreground">
+                </TableCell>
+                <TableCell className="px-2 py-2 text-err">
+                  {error.reason}
+                </TableCell>
+                <TableCell className="py-2 pr-3.5 pl-2 font-mono break-all text-muted-foreground">
                   {csvRawLine(lines, error.line)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <span className="text-xs text-muted-foreground">
         校验规则：前缀只能是数字、不能重复；ISO

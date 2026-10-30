@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui/card';
 import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useRouter } from '@tanstack/react-router';
@@ -272,7 +273,7 @@ export function ChangePasswordPage({
     >
       <main className="flex flex-1 flex-col justify-center gap-6 px-6 py-10 sm:items-center sm:px-0">
         <BrandRow zone={zone} />
-        <div className="flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]">
+        <Card className="rounded-none border-0 bg-transparent py-0 text-inherit shadow-none flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]">
           <div className="flex flex-col gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
               {forced ? '请修改初始密码' : '修改密码'}
@@ -305,7 +306,7 @@ export function ChangePasswordPage({
               {logoutFailedMessage}
             </p>
           ) : null}
-        </div>
+        </Card>
       </main>
       <SessionExpiredDialog zone={zone} />
     </div>

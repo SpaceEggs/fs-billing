@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useId } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
@@ -92,57 +100,56 @@ function LedgerTable({
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-      <table className="w-full border-collapse text-[13px]">
-        <thead>
-          <tr className="bg-muted text-xs whitespace-nowrap text-muted-foreground">
-            <th className="px-4 py-2.5 text-left font-medium">时间</th>
-            <th className="px-3 py-2.5 text-left font-medium">类型</th>
-            <th className="px-3 py-2.5 text-right font-medium">金额</th>
-            <th className="px-3 py-2.5 text-right font-medium">变动后余额</th>
-            <th className="px-3 py-2.5 text-left font-medium">收款状态</th>
-            <th className="px-3 py-2.5 text-left font-medium">备注</th>
-            <th className="px-4 py-2.5 text-left font-medium">操作人</th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-t-0 whitespace-nowrap">
+            <TableHead className="px-4">时间</TableHead>
+            <TableHead>类型</TableHead>
+            <TableHead className="text-right">金额</TableHead>
+            <TableHead className="text-right">变动后余额</TableHead>
+            <TableHead>收款状态</TableHead>
+            <TableHead>备注</TableHead>
+            <TableHead className="px-4">操作人</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="tabular-nums">
           {items.map((entry) => (
-            <tr
+            <TableRow
               key={
                 entry.kind === 'call_charge'
                   ? `${entry.kind}:${entry.day}`
                   : entry.id
               }
-              className="border-t border-border"
             >
-              <td className="px-4 py-2.5 whitespace-nowrap">
+              <TableCell className="px-4 py-2.5 whitespace-nowrap">
                 <DateTime value={entry.occurredAt} />
-              </td>
-              <td className="px-3 py-2.5 whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2.5 whitespace-nowrap">
                 {ledgerKindLabels[entry.kind]}
-              </td>
-              <td className="px-3 py-2.5 text-right font-semibold whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2.5 text-right font-semibold whitespace-nowrap">
                 <Money
                   value={{ currency, amount: entry.amount }}
                   tone="signed"
                   exact={exactAmount(entry)}
                 />
-              </td>
-              <td className="px-3 py-2.5 text-right whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2.5 text-right whitespace-nowrap">
                 <Money value={{ currency, amount: entry.balanceAfter }} />
-              </td>
-              <td className="px-3 py-2 whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2 whitespace-nowrap">
                 <PaymentStatus entry={entry} />
-              </td>
-              <td className="px-3 py-2.5">
+              </TableCell>
+              <TableCell className="py-2.5">
                 <Note entry={entry} />
-              </td>
-              <td className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
+              </TableCell>
+              <TableCell className="px-4 py-2.5 whitespace-nowrap text-muted-foreground">
                 {entry.kind === 'call_charge' ? '—' : entry.actor.name}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useId } from 'react';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
@@ -114,53 +122,42 @@ function LedgerTable({
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-      <table className="w-full border-collapse text-[13px]">
-        <thead>
-          <tr className="bg-muted text-xs whitespace-nowrap text-muted-foreground">
-            <th className="w-[180px] px-4 py-2.5 text-left font-medium">
-              时间
-            </th>
-            <th className="w-[110px] px-3 py-2.5 text-left font-medium">
-              类型
-            </th>
-            <th className="w-[140px] px-3 py-2.5 text-right font-medium">
-              金额
-            </th>
-            <th className="w-[150px] px-3 py-2.5 text-right font-medium">
-              变动后余额
-            </th>
-            <th className="py-2.5 pr-4 pl-8 text-left font-medium">备注</th>
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-t-0 whitespace-nowrap">
+            <TableHead className="w-[180px] px-4">时间</TableHead>
+            <TableHead className="w-[110px]">类型</TableHead>
+            <TableHead className="w-[140px] text-right">金额</TableHead>
+            <TableHead className="w-[150px] text-right">变动后余额</TableHead>
+            <TableHead className="pr-4 pl-8">备注</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="tabular-nums">
           {items.map((row) => (
-            <tr
-              key={rowKey(row)}
-              className="border-t border-border hover:bg-muted/40"
-            >
-              <td className="px-4 py-2.5 whitespace-nowrap">
+            <TableRow key={rowKey(row)} className="hover:bg-muted/40">
+              <TableCell className="px-4 py-2.5 whitespace-nowrap">
                 <DateTime value={row.occurredAt} />
-              </td>
-              <td className="px-3 py-2.5 whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2.5 whitespace-nowrap">
                 {portalLedgerKindLabels[row.kind]}
-              </td>
-              <td className="px-3 py-2.5 text-right font-semibold whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2.5 text-right font-semibold whitespace-nowrap">
                 <Money
                   value={{ currency, amount: row.amount }}
                   tone="signed"
                   exact={exactAmount(row)}
                 />
-              </td>
-              <td className="px-3 py-2.5 text-right whitespace-nowrap">
+              </TableCell>
+              <TableCell className="py-2.5 text-right whitespace-nowrap">
                 <Money value={{ currency, amount: row.balanceAfter }} />
-              </td>
-              <td className="py-2.5 pr-4 pl-8">
+              </TableCell>
+              <TableCell className="py-2.5 pr-4 pl-8">
                 <Note row={row} />
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

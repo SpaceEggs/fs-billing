@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useDeferredValue, useEffect, useId, useRef, useState } from 'react';
 import {
   keepPreviousData,
@@ -380,50 +388,49 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         <>
           {/* 手机（第二批 1c/7c）同一张表排成每行带单位的列表，不显示表头。 */}
           <div className="overflow-x-auto rounded-xl border border-border md:rounded-[10px]">
-            <table className="w-full border-collapse text-[13px]">
-              <thead className="hidden md:table-header-group">
-                <tr className="bg-muted text-xs whitespace-nowrap text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left font-medium">ISO</th>
-                  <th className="px-3 py-2.5 text-left font-medium">国家</th>
-                  <th className="px-3 py-2.5 text-left font-medium">
-                    号码前缀
-                  </th>
-                  <th className="px-3 py-2.5 text-left font-medium">说明</th>
-                  <th className="px-4 py-2.5 text-right font-medium">
+            <Table>
+              <TableHeader className="hidden md:table-header-group">
+                <TableRow className="border-t-0 whitespace-nowrap">
+                  <TableHead className="px-4">ISO</TableHead>
+                  <TableHead>国家</TableHead>
+                  <TableHead>号码前缀</TableHead>
+                  <TableHead>说明</TableHead>
+                  <TableHead className="px-4 text-right">
                     费率（{unit}）
-                  </th>
-                  <th className="hidden w-20 px-4 py-2.5 md:table-cell">
+                  </TableHead>
+                  <TableHead className="font-bold text-center hidden w-20 px-4 md:table-cell">
                     <span className="sr-only">操作</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="tabular-nums">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="tabular-nums">
                 {visible.map((entry) => {
                   const hint = rowHints.get(entry.prefix);
                   return (
-                    <tr
+                    <TableRow
                       key={entry.prefix}
                       className={cn(
-                        'flex min-h-[52px] items-center gap-2.5 border-border px-3.5 py-2.5 not-first:border-t md:table-row md:border-t md:p-0',
+                        'border-t-0',
+                        'flex min-h-[52px] items-center gap-2.5 px-3.5 py-2.5 not-first:border-t md:table-row md:border-t md:p-0',
                         hint && 'bg-brand-soft',
                       )}
                     >
-                      <td className="hidden font-mono md:table-cell md:px-4 md:py-2.5">
+                      <TableCell className="p-0 hidden font-mono md:table-cell md:px-4 md:py-2.5">
                         {entry.iso}
-                      </td>
-                      <td className="hidden md:table-cell md:px-3 md:py-2.5">
+                      </TableCell>
+                      <TableCell className="p-0 hidden md:table-cell md:px-3 md:py-2.5">
                         {entry.country}
-                      </td>
-                      <td className="min-w-10 font-mono font-semibold md:px-3 md:py-2.5 md:font-normal">
+                      </TableCell>
+                      <TableCell className="p-0 min-w-10 font-mono font-semibold md:px-3 md:py-2.5 md:font-normal">
                         {entry.prefix}
-                      </td>
-                      <td className="hidden md:table-cell md:px-3 md:py-2.5">
+                      </TableCell>
+                      <TableCell className="p-0 hidden md:table-cell md:px-3 md:py-2.5">
                         {entry.description}
-                      </td>
-                      <td className="flex-1 text-sm md:hidden">
+                      </TableCell>
+                      <TableCell className="p-0 flex-1 text-sm md:hidden">
                         {formatCountryLabel(entry.country, entry.description)}
-                      </td>
-                      <td className="text-right md:px-4 md:py-2.5">
+                      </TableCell>
+                      <TableCell className="p-0 text-right md:px-4 md:py-2.5">
                         <span className="text-sm font-medium md:text-[13px] md:font-normal">
                           <Rate value={entry.rate} />
                           <span className="ml-[3px] text-[11px] font-normal text-muted-foreground md:hidden">
@@ -435,8 +442,8 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                             {hint}
                           </span>
                         ) : null}
-                      </td>
-                      <td className="hidden px-4 py-2.5 text-right md:table-cell">
+                      </TableCell>
+                      <TableCell className="hidden px-4 py-2.5 text-right md:table-cell">
                         {/* G4：已有排定版本时不能单条编辑，提示与导入按钮共用。 */}
                         <Button
                           variant="link"
@@ -454,12 +461,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                         >
                           编辑
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <Pagination
             page={page}

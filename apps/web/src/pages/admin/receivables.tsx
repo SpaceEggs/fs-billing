@@ -1,3 +1,12 @@
+import { Card } from '@/components/ui/card';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useEffect, useRef, useState } from 'react';
 import {
   keepPreviousData,
@@ -169,27 +178,29 @@ function Totals({
       className="m-0 grid list-none grid-cols-2 gap-2.5 p-0 tabular-nums md:grid-cols-3 md:gap-4"
     >
       {visibleTotals(totals ?? zeroTotals, currency).map((money) => (
-        <li
+        <Card
           key={money.currency}
-          aria-label={`${label}总额 ${money.currency}`}
-          className="flex flex-col gap-1 rounded-xl border border-border px-3.5 py-3 md:gap-1.5 md:px-5 md:py-[18px]"
+          asChild
+          className="bg-transparent text-inherit shadow-none flex flex-col gap-1 rounded-xl border border-border px-3.5 py-3 md:gap-1.5 md:px-5 md:py-[18px]"
         >
-          <span className="text-xs text-muted-foreground md:text-[13px]">
-            <span className="hidden md:inline">{label}总额 · </span>
-            {money.currency}
-          </span>
-          {totals ? (
-            <Money
-              value={money}
-              tone="plain"
-              className="text-xl font-semibold md:text-[28px] md:tracking-[-0.02em]"
-            />
-          ) : (
-            <span className="text-xl font-semibold text-muted-foreground md:text-[28px]">
-              加载中
+          <li aria-label={`${label}总额 ${money.currency}`}>
+            <span className="text-xs text-muted-foreground md:text-[13px]">
+              <span className="hidden md:inline">{label}总额 · </span>
+              {money.currency}
             </span>
-          )}
-        </li>
+            {totals ? (
+              <Money
+                value={money}
+                tone="plain"
+                className="text-xl font-semibold md:text-[28px] md:tracking-[-0.02em]"
+              />
+            ) : (
+              <span className="text-xl font-semibold text-muted-foreground md:text-[28px]">
+                加载中
+              </span>
+            )}
+          </li>
+        </Card>
       ))}
     </ul>
   );
@@ -325,85 +336,79 @@ function ReceivableTable({
 }) {
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-      <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-        <thead>
-          <tr className="bg-muted text-xs text-muted-foreground">
-            <th className="px-4 py-2.5 text-left font-medium">租户</th>
-            <th className="px-3 py-2.5 text-left font-medium">赊账时间</th>
-            <th className="px-3 py-2.5 text-right font-medium">金额</th>
-            <th className="py-2.5 pr-3 pl-7 text-left font-medium">操作人</th>
-            <th className="px-3 py-2.5 text-left font-medium">备注</th>
+      <Table className="whitespace-nowrap">
+        <TableHeader>
+          <TableRow className="border-t-0">
+            <TableHead className="px-4">租户</TableHead>
+            <TableHead>赊账时间</TableHead>
+            <TableHead className="text-right">金额</TableHead>
+            <TableHead className="pr-3 pl-7">操作人</TableHead>
+            <TableHead>备注</TableHead>
             {statusHeaders[status].map((header) => (
-              <th
+              <TableHead
                 key={header.label}
-                className={cn(
-                  'px-3 py-2.5 font-medium',
-                  header.right ? 'text-right' : 'text-left',
-                )}
+                className={cn(header.right ? 'text-right' : '')}
               >
                 {header.label}
-              </th>
+              </TableHead>
             ))}
             {status === 'voided' ? null : (
-              <th className="px-4 py-2.5">
+              <TableHead className="font-bold text-center px-4">
                 <span className="sr-only">操作</span>
-              </th>
+              </TableHead>
             )}
-          </tr>
-        </thead>
-        <tbody className="tabular-nums">
+          </TableRow>
+        </TableHeader>
+        <TableBody className="tabular-nums">
           {items.map((receivable) => (
-            <tr
+            <TableRow
               key={receivable.ledgerEntryId}
-              className={cn(
-                'border-t border-border',
-                receivable.overdue && overdueRow,
-              )}
+              className={cn(receivable.overdue && overdueRow)}
             >
-              <td className="px-4 py-[11px]">
+              <TableCell className="px-4">
                 <span className="flex flex-col gap-0.5">
                   <span className="text-sm">{receivable.tenant.name}</span>
                   <span className="font-mono text-xs text-muted-foreground">
                     {receivable.tenant.code} · {receivable.tenant.currency}
                   </span>
                 </span>
-              </td>
-              <td className="px-3 py-[11px]">
+              </TableCell>
+              <TableCell>
                 <DateTime value={receivable.createdAt} />
-              </td>
-              <td className="px-3 py-[11px] text-right text-sm font-semibold">
+              </TableCell>
+              <TableCell className="text-right text-sm font-semibold">
                 <Money value={receivableMoney(receivable)} tone="plain" />
-              </td>
-              <td className="py-[11px] pr-3 pl-7 text-muted-foreground">
+              </TableCell>
+              <TableCell className="pr-3 pl-7 text-muted-foreground">
                 {receivable.actor.name}
-              </td>
-              <td className="max-w-[280px] truncate px-3 py-[11px]">
+              </TableCell>
+              <TableCell className="max-w-[280px] truncate">
                 {receivable.internalNote}
-              </td>
+              </TableCell>
               {statusCells(receivable, names).map((cell, index) => (
-                <td
+                <TableCell
                   key={statusHeaders[status][index]?.label ?? index}
                   className={cn(
-                    'max-w-[240px] truncate px-3 py-[11px]',
+                    'max-w-[240px] truncate',
                     statusHeaders[status][index]?.right && 'text-right',
                   )}
                 >
                   {cell}
-                </td>
+                </TableCell>
               ))}
               {status === 'voided' ? null : (
-                <td className="px-4 py-2 text-right">
+                <TableCell className="px-4 py-2 text-right">
                   <Actions
                     receivable={receivable}
                     actions={actions}
                     mobile={false}
                   />
-                </td>
+                </TableCell>
               )}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

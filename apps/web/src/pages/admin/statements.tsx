@@ -1,3 +1,12 @@
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableFooter,
+} from '@/components/ui/table';
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -191,7 +200,7 @@ function Groups({
   );
 }
 
-const th = 'px-3 py-2.5 text-right font-medium';
+const th = 'text-right';
 
 function GroupSection({
   group,
@@ -226,25 +235,25 @@ function GroupSection({
         </span>
       </div>
       <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
-        <table className="w-full border-collapse text-[13px] whitespace-nowrap">
-          <thead>
-            <tr className="bg-muted text-xs text-muted-foreground">
-              <th className="px-4 py-2.5 text-left font-medium">租户</th>
-              <th className="px-3 py-2.5 text-left font-medium">币种</th>
-              <th className={th}>期初余额</th>
-              <th className={th}>充值</th>
-              <th className={th}>赠送</th>
-              <th className={th}>调账</th>
-              <th className={th}>通话扣费</th>
-              <th className={th}>期末余额</th>
-              <th className="px-3 py-2.5 text-left font-medium">生成时间</th>
-              <th className="px-4 py-2.5 text-right font-medium">操作</th>
-            </tr>
-          </thead>
-          <tbody className="tabular-nums">
+        <Table className="whitespace-nowrap">
+          <TableHeader>
+            <TableRow className="border-t-0">
+              <TableHead className="px-4">租户</TableHead>
+              <TableHead>币种</TableHead>
+              <TableHead className={th}>期初余额</TableHead>
+              <TableHead className={th}>充值</TableHead>
+              <TableHead className={th}>赠送</TableHead>
+              <TableHead className={th}>调账</TableHead>
+              <TableHead className={th}>通话扣费</TableHead>
+              <TableHead className={th}>期末余额</TableHead>
+              <TableHead>生成时间</TableHead>
+              <TableHead className="px-4 text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="tabular-nums">
             {group.items.map((row) => (
-              <tr key={row.tenant.id} className="border-t border-border">
-                <td className="px-4 py-[11px]">
+              <TableRow key={row.tenant.id}>
+                <TableCell className="px-4">
                   <span className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">
                       {row.tenant.name}
@@ -253,41 +262,41 @@ function GroupSection({
                       {row.tenant.code}
                     </span>
                   </span>
-                </td>
-                <td className="px-3 py-[11px]">{currency}</td>
+                </TableCell>
+                <TableCell>{currency}</TableCell>
                 {row.figures ? (
                   <>
-                    <td className="px-3 py-[11px] text-right">
+                    <TableCell className="text-right">
                       <Money value={money(row.figures.openingBalance)} />
-                    </td>
-                    <td className="px-3 py-[11px] text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Money value={money(row.figures.recharge)} tone="plain" />
-                    </td>
-                    <td className="px-3 py-[11px] text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Money value={money(row.figures.gift)} tone="plain" />
-                    </td>
-                    <td className="px-3 py-[11px] text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Money value={money(row.figures.adjustment)} />
-                    </td>
-                    <td className="px-3 py-[11px] text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <Money
                         value={money(row.figures.callCharges)}
                         tone="plain"
                       />
-                    </td>
-                    <td className="px-3 py-[11px] text-right font-semibold">
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
                       <Money value={money(row.figures.closingBalance)} />
-                    </td>
+                    </TableCell>
                   </>
                 ) : (
-                  <td
+                  <TableCell
                     colSpan={6}
-                    className="px-3 py-[11px] text-center text-muted-foreground"
+                    className="text-center text-muted-foreground"
                   >
                     未生成
-                  </td>
+                  </TableCell>
                 )}
-                <td className="px-3 py-[11px]">
+                <TableCell>
                   <span className="flex flex-col gap-0.5">
                     {row.generatedAt ? (
                       <DateTime value={row.generatedAt} />
@@ -296,8 +305,8 @@ function GroupSection({
                     )}
                     <GenerationNotes {...notesOf(row)} />
                   </span>
-                </td>
-                <td className="px-4 py-2">
+                </TableCell>
+                <TableCell className="px-4 py-2">
                   <span className="flex items-center justify-end gap-3">
                     <Link
                       to="/admin/tenants/$tenantId"
@@ -315,43 +324,43 @@ function GroupSection({
                       onClick={() => onRegenerate(targetOf(row, currency))}
                     />
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-border bg-muted font-semibold tabular-nums">
-              <td className="px-4 py-[11px]" colSpan={2}>
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell className="px-4" colSpan={2}>
                 {currency} 合计
-              </td>
-              <td className="px-3 py-[11px] text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <Money
                   value={money(group.totals.openingBalance)}
                   tone="plain"
                 />
-              </td>
-              <td className="px-3 py-[11px] text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <Money value={money(group.totals.recharge)} tone="plain" />
-              </td>
-              <td className="px-3 py-[11px] text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <Money value={money(group.totals.gift)} tone="plain" />
-              </td>
-              <td className="px-3 py-[11px] text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <Money value={money(group.totals.adjustment)} tone="plain" />
-              </td>
-              <td className="px-3 py-[11px] text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <Money value={money(group.totals.callCharges)} tone="plain" />
-              </td>
-              <td className="px-3 py-[11px] text-right">
+              </TableCell>
+              <TableCell className="text-right">
                 <Money
                   value={money(group.totals.closingBalance)}
                   tone="plain"
                 />
-              </td>
-              <td colSpan={2} />
-            </tr>
-          </tfoot>
-        </table>
+              </TableCell>
+              <TableCell className="p-0" colSpan={2} />
+            </TableRow>
+          </TableFooter>
+        </Table>
       </div>
       <div className="flex flex-col gap-2 md:hidden">
         {group.items.map((row) => (
