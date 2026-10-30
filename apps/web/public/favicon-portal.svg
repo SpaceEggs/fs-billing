@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="FS-Billing 客户门户方案 A">
+  <style>.tile{fill:#18181b}.letter{fill:#fafafa}.detail{fill:#a1a1aa}.edge{stroke:#18181b;fill:#fff}@media (prefers-color-scheme: dark){.tile{fill:#fafafa}.letter{fill:#18181b}.detail{fill:#71717a}.edge{stroke:#fafafa;fill:#18181b}}</style>
+  <rect class="tile" x="1" y="1" width="30" height="30" rx="7"/><path class="letter" d="M9 7h15v4H13v4h9v4h-9v7H9z"/>
+</svg>
