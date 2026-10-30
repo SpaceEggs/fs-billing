@@ -112,7 +112,8 @@ describe('流水只能新增', () => {
     const { rows } = await owner.pool.query(
       `SELECT count(*)::int AS seeded FROM ledger_entries WHERE idempotency_key LIKE 'seed:%'`,
     );
-    expect(rows).toEqual([{ seeded: currentMonth ? 23 : 22 }]);
+    // 22 条：ABC001 的人工流水与汇总流水；PR 8 起另有 4 条赊账（BJH003、SHC005、XYZ002、NYC021 的待收款）。
+    expect(rows).toEqual([{ seeded: currentMonth ? 27 : 26 }]);
   });
 });
 

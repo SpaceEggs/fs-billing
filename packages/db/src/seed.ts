@@ -22,6 +22,7 @@ import { databaseNow } from './clock.js';
 import { ensureCdrPartitions } from './partitions.js';
 import { callChargeKey } from './ledger.js';
 import { createRateVersion } from './rates.js';
+import { seedSystemAlerts } from './seed-alerts.js';
 import {
   planAbc01Unassigned,
   planEmptyTagUnassigned,
@@ -112,7 +113,7 @@ const TENANTS: readonly SeedTenant[] = [
     overdraft: '15.00',
     balance: '-4.82',
     monthSpend: '386.15',
-    pending: '0',
+    pending: '300.00',
   },
   {
     code: 'GZT007',
@@ -142,7 +143,7 @@ const TENANTS: readonly SeedTenant[] = [
     overdraft: '100.00',
     balance: '1286.40',
     monthSpend: '3105.20',
-    pending: '0',
+    pending: '2800.00',
   },
   {
     code: 'SHC005',
@@ -152,7 +153,7 @@ const TENANTS: readonly SeedTenant[] = [
     overdraft: '300.00',
     balance: '8950.00',
     monthSpend: '6720.85',
-    pending: '0',
+    pending: '2000.00',
   },
   {
     code: 'NYC021',
@@ -162,7 +163,7 @@ const TENANTS: readonly SeedTenant[] = [
     overdraft: '15.00',
     balance: '2140.00',
     monthSpend: '812.40',
-    pending: '0',
+    pending: '1400.00',
   },
   {
     code: 'CDT018',
@@ -563,6 +564,7 @@ export async function seedDatabase(
     await seedCdrs(tx, idOf, registered);
     await chargeSampleCdrs(tx, idOf);
     await seedUnassigned(tx, registered, adminIds);
+    await seedSystemAlerts(tx, now, tenantIds);
     // 种子写的是历史，不是事件：余额触发器在播种时为越线的种子租户排进发件箱的余额通知，只清掉这些
     // （开始播种流水前的发件箱快照之外、种子租户的 balance_* 行），免得 Worker 起来后把「余额不足」邮件真的发出去。
     // 状态行保留，标志已经跟上最终余额。不依赖事务开始时间或事务号。

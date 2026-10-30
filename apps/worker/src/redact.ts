@@ -1,5 +1,5 @@
 import { pino, stdSerializers, type DestinationStream } from 'pino';
-import { scrubErrorForLog } from '@fs-billing/db';
+import { maskNumber, scrubErrorForLog } from '@fs-billing/db';
 
 /**
  * Worker 日志脱敏（阶段 9 PR 5，决定 37）。
@@ -8,25 +8,7 @@ import { scrubErrorForLog } from '@fs-billing/db';
  * 结构性对比字段。完整号码仍在数据库（`unassigned_cdrs`、`raw_cdrs`，受 RLS 与后台权限保护）。
  */
 
-const KEEP_HEAD = 4;
-const KEEP_TAIL = 2;
-
-/**
- * 号码掩码：保留 `+` 前缀，其余保留前 4 位和后 2 位，中间以 `*` 代替，括号里附总长度（不含 `+`）。
- * 长度 ≤ 6 的整体替换为 `*` 加长度，不泄露任何一位。
- *
- * - `8613800138000` → `8613*******00(13)`
- * - `+447700900123` → `+4477******23(12)`
- * - `12345` → `*(5)`
- */
-export function maskNumber(value: string): string {
-  const plus = value.startsWith('+') ? '+' : '';
-  const body = plus ? value.slice(1) : value;
-  if (body.length <= KEEP_HEAD + KEEP_TAIL) return `${plus}*(${body.length})`;
-  return `${plus}${body.slice(0, KEEP_HEAD)}${'*'.repeat(
-    body.length - KEEP_HEAD - KEEP_TAIL,
-  )}${body.slice(-KEEP_TAIL)}(${body.length})`;
-}
+export { maskNumber };
 
 /** 号码的结构：长度（不含 `+`）、是否以 `+` 或 `00` 开头。排查归一化差异靠它，不需要号码本身。 */
 export function numberShape(value: string) {

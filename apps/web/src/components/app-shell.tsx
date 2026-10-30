@@ -166,6 +166,12 @@ export function AppShell({
 }) {
   const zone = zoneOfIdentity(identity);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // 手机顶栏的 ☰ 上也有红点（运营稿 2a、6e）；与侧边导航共用同一份汇总查询（同一个 queryKey，只请求一次）。
+  const alerts = useQuery({
+    ...apiQuery('adminSystemAlertsSummary'),
+    enabled: zone === 'admin',
+    refetchInterval: 60_000,
+  });
   return (
     <div className="flex min-h-dvh bg-background text-foreground">
       <aside className="hidden w-[232px] shrink-0 flex-col gap-5 border-r border-border bg-side px-3 py-4 md:flex print:hidden">
@@ -201,8 +207,14 @@ export function AppShell({
                 open={drawerOpen}
                 onOpenChange={setDrawerOpen}
                 trigger={
-                  <MobileBarButton aria-label="打开导航">
+                  <MobileBarButton aria-label="打开导航" className="relative">
                     <MenuIcon aria-hidden />
+                    {zone === 'admin' && (alerts.data?.open ?? 0) > 0 ? (
+                      <span
+                        aria-hidden
+                        className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive"
+                      />
+                    ) : null}
                   </MobileBarButton>
                 }
               >

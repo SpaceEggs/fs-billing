@@ -192,18 +192,27 @@ export function AdminHome({ identity }: { identity: Identity }) {
                 )}
               >
                 <div className="text-sm text-muted-foreground">已停机租户</div>
-                <div className="mt-2 text-xl font-semibold text-err">
+                <div
+                  className={cn(
+                    'mt-2 text-xl font-semibold',
+                    home.metrics.suspendedTenants > 0 && 'text-err',
+                  )}
+                >
                   {home.metrics.suspendedTenants}
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">个</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {home.metrics.suspendedTenants > 0 ? '个' : '全部租户可呼叫'}
+                </div>
               </section>
             </div>
             <section>
               <div className="mb-3 flex flex-wrap items-baseline gap-2">
                 <h2 className="text-base font-semibold">需要关注</h2>
-                <span className="text-sm text-muted-foreground">
-                  {attentionCount} 项 · 点击查看详情
-                </span>
+                {attentionCount ? (
+                  <span className="text-sm text-muted-foreground">
+                    {attentionCount} 项 · 点击查看详情
+                  </span>
+                ) : null}
               </div>
               {!attentionCount ? (
                 <div className="rounded-xl border border-ok-border bg-ok-soft p-5">
@@ -212,11 +221,12 @@ export function AdminHome({ identity }: { identity: Identity }) {
                     <span>一切正常</span>
                   </strong>
                   <p className="mt-1 text-sm">
-                    没有需要关注的租户、未归属话单或告警。
+                    没有已停机或余额不足的租户，没有未归属话单，最近 24
+                    小时没有系统告警。
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-3 min-[1200px]:grid-cols-[1.25fr_1fr]">
+                <div className="grid grid-cols-1 gap-3 min-[1200px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
                   {home.attention.suspended.total ||
                   home.attention.lowBalance.total ? (
                     <div className="min-w-0 overflow-hidden rounded-xl border bg-card">
@@ -231,7 +241,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                       />
                     </div>
                   ) : null}
-                  <div className="grid content-start gap-3">
+                  <div className="grid min-w-0 grid-cols-1 content-start gap-3">
                     {home.attention.unassigned.pending > 0 ? (
                       <Link
                         to="/admin/unassigned"

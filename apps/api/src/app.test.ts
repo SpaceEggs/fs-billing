@@ -95,13 +95,13 @@ test('startup pool errors and app logs share pino formatting and API redaction',
       pool: 'api.business',
       code: 'ECONNRESET',
     });
+    // 请求由 `req` 序列化器只留方法、URL、主机与来源地址（URL 里的号码另行掩码）：请求头与正文根本不会写出，
+    // 响应头仍按 redact 路径抹掉。
     expect(records[2]).toMatchObject({
-      req: {
-        headers: { cookie: '[Redacted]', authorization: '[Redacted]' },
-        body: '[Redacted]',
-      },
       res: { headers: { 'set-cookie': '[Redacted]' } },
     });
+    expect(records[2]).not.toHaveProperty('req.headers');
+    expect(records[2]).not.toHaveProperty('req.body');
     expect(lines.join('')).not.toContain('private-');
     expect(lines.join('')).not.toContain('postgres://');
   } finally {

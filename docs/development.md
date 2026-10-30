@@ -60,8 +60,9 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 
 Worker 与 API 的日志只写标准输出，部署后由 systemd journal 保存，不上传外部日志服务。客户的被叫号码是个人信息，日志里只留掩码和结构性字段，完整号码留在数据库。
 
-- **号码掩码**（`apps/worker/src/redact.ts` 的 `maskNumber`）：保留 `+` 前缀，其余保留前 4 位和后 2 位，中间以 `*` 代替，括号里附总长度（不含 `+`）；长度 ≤ 6 的整体替换为 `*` 加长度。`8613800138000` 记成 `8613*******00(13)`，`+447700900123` 记成 `+4477******23(12)`，`12345` 记成 `*(5)`。
+- **号码掩码**（`packages/db/src/log-safe.ts` 的 `maskNumber`，Worker 的 `redact.ts` 重新导出）：保留 `+` 前缀，其余保留前 4 位和后 2 位，中间以 `*` 代替，括号里附总长度（不含 `+`）；长度 ≤ 6 的整体替换为 `*` 加长度。`8613800138000` 记成 `8613*******00(13)`，`+447700900123` 记成 `+4477******23(12)`，`12345` 记成 `*(5)`。
 - **「授权计费号码不一致」日志**只含 `uuid`、`tenant`、四个号码的掩码（`dialedNumber`、`callee`、`luaBillingNumber`、`billingNumber`），以及对比字段：`calleeEqualsWorker`、`luaEqualsWorker`（Lua 送来的被叫、计费号码是否等于 Worker 按原拨号算出的计费号码，也就是 `resolveBillingNumber` 做的两个比较）、`shapes`（各号码的长度、是否以 `+` 或 `00` 开头）和 `reason`（`callee-differs`、`only-lua-differs`，两者都没有证据时 `unknown`）。排查 Lua 与 Worker 的归一化差异靠这些字段和 `freeswitch/tests/dialed-cases.tsv`；要完整号码，从后台查对应话单（`unassigned_cdrs`、`raw_cdrs`，受 RLS 与后台权限保护）。
+- **API 请求 URL**（`apps/api/src/logging.ts` 的 `req` 序列化器，阶段 9 PR 8）：话单搜索的 `callee` 等查询参数会带客户号码。参数名是号码类（`callee`、`caller`、`dialed`、`number`、`phone`，不分大小写），或取值像号码（可选 `+`，至少 7 位数字，日期除外）时，整个值按同一条 `maskNumber` 规则掩码，其余参数、路径与顺序不变（`redactUrlForLog`）。请求头与正文不写进日志。目前 `app.ts` 关闭了请求日志，这是防线。
 - **pino `redact`**（`createWorkerLogger`）：`req.headers["x-billing-key"]`、`req.headers.authorization`，以及数据库错误的 `err.detail`（含一层、两层 `cause`）。PostgreSQL 唯一冲突的 `detail` 形如 `Key (…)=(…)`，可能带号码或邮箱。
 - **数据库错误序列化**（`scrubErrorForLog`，Worker 与 API 的日志器都用）：drizzle 把失败的查询包成 `DrizzleQueryError`，`message`/`stack` 里带 `\nparams: …`（绑定的实参，话单入库绑的是原始 CDR 正文和被叫），对象上还有 `query`、`params`。序列化时去掉 `params`、`query`、`detail`、`where`（含各层 `cause`），并截掉 `message`/`stack` 里 `\nparams:` 之后的内容；PostgreSQL 错误码、约束、表由调用处用 `postgresErrorFields` 单独记。PostgreSQL 自己写进错误 `message` 的值（例如 `invalid input syntax for type integer: "…"`）无法通用地去掉，所以绑定到号码的查询不要用会回显值的写法。
 - **掩码的强度**：保留前 4 位和后 2 位意味着 7 至 9 位的号码只隐藏 1 至 3 位，这类短号码实际上几乎没有被掩码；决定 37 接受这一点（国际号码通常 10 位以上）。若要更严格，改为日志完全不含号码，只留 UUID、租户、长度和对比字段。
@@ -73,23 +74,25 @@ Worker 与 API 的日志只写标准输出，部署后由 systemd journal 保存
 
 ## 常用命令
 
-| 命令                                                                               | 作用                                                                                                                                |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`                                                                       | lint、格式检查、类型检查、单元测试和 Web 构建，与 CI 的 `check` job 一致                                                            |
-| `pnpm test`                                                                        | 单元测试，不连接数据库                                                                                                              |
-| `pnpm test:db`                                                                     | 在全新的 `fs_billing_test` 库上迁移、写种子并运行数据库验收测试。需要先 `pnpm db:up`（PostgreSQL 与 Mailpit）                       |
-| `pnpm test:idor`                                                                   | 只运行越权测试：用租户 A 的账号访问 OpenAPI 中每个客户端点的 B 租户数据，必须全部失败                                               |
-| `pnpm test:e2e`                                                                    | Playwright e2e，启动真实 API 和 Web，连接真实 PostgreSQL。需要已迁移、写种子的库和 `SEED_AUTH_PASSWORD`                             |
-| `pnpm coverage`                                                                    | 计费核心 `packages/rating` 的覆盖率，行覆盖率低于 95% 时失败                                                                        |
-| `pnpm build`                                                                       | 编译所有包和服务，构建网页                                                                                                          |
-| `pnpm format`                                                                      | 自动格式化。已确认的设计稿和原始规划文档不参与格式化                                                                                |
-| `pnpm db:migrate`                                                                  | 以 `DATABASE_URL`（owner）执行未应用的迁移，设置应用角色密码，建当月与下月话单分区。可重复执行                                      |
-| `pnpm db:seed`                                                                     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20）。可重复执行                                           |
-| `pnpm screenshots`                                                                 | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                                                  |
-| `pnpm --filter @fs-billing/worker raw:restore -- --id <uuid> --received-at <时间>` | 只读取回一条已归档的原始 JSON，核对哈希后把原文字节原样写到标准输出（阶段 8，见 [Worker 接口](worker-api.md#原始-json-归档阶段-8)） |
-| `pnpm --filter @fs-billing/worker mail:test -- --to <地址>`                        | 用当前 `SMTP_*` 直接发一封测试邮件（阶段 9，见上面的「邮件」）                                                                      |
-| `pnpm --filter @fs-billing/worker mail:requeue -- --id <uuid>`                     | 把 `failed` 的邮件放回待发；也可用 `--since <时间>`                                                                                 |
-| `pnpm --filter @fs-billing/worker raw:restore-month -- --month <YYYY-MM>`          | 整月恢复已归档的 `raw_cdrs` 分区（宽限期内挂回，已丢弃则从归档文件重建）                                                            |
+| 命令                                                                               | 作用                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm check`                                                                       | lint、格式检查、类型检查、单元测试和 Web 构建，与 CI 的 `check` job 一致                                                                                                 |
+| `pnpm test`                                                                        | 单元测试，不连接数据库                                                                                                                                                   |
+| `pnpm test:db`                                                                     | 在全新的 `fs_billing_test` 库上迁移、写种子并运行数据库验收测试。需要先 `pnpm db:up`（PostgreSQL 与 Mailpit）                                                            |
+| `pnpm test:idor`                                                                   | 只运行越权测试：用租户 A 的账号访问 OpenAPI 中每个客户端点的 B 租户数据，必须全部失败                                                                                    |
+| `pnpm test:e2e`                                                                    | Playwright e2e，启动真实 API 和 Web，连接真实 PostgreSQL。需要已迁移、写种子的库和 `SEED_AUTH_PASSWORD`                                                                  |
+| `pnpm coverage`                                                                    | 计费核心 `packages/rating` 的覆盖率，行覆盖率低于 95% 时失败                                                                                                             |
+| `pnpm build`                                                                       | 编译所有包和服务，构建网页                                                                                                                                               |
+| `pnpm format`                                                                      | 自动格式化。已确认的设计稿和原始规划文档不参与格式化                                                                                                                     |
+| `pnpm db:migrate`                                                                  | 以 `DATABASE_URL`（owner）执行未应用的迁移，设置应用角色密码，建当月与下月话单分区。可重复执行                                                                           |
+| `pnpm db:seed`                                                                     | 写入与设计稿一致的示例数据（ABC001、GZT007 等 10 个租户，ABC001 余额 −35.20；阶段 9 起另有 5 条示例系统告警与合计 ¥6,300.00 / $1,700.00 的待收款，不排邮件）。可重复执行 |
+| `pnpm screenshots`                                                                 | 截取登录页和 404 的实现与设计稿画框，写入 `docs/evidence/phase-4-web/screenshots/`                                                                                       |
+| `pnpm --filter @fs-billing/worker raw:restore -- --id <uuid> --received-at <时间>` | 只读取回一条已归档的原始 JSON，核对哈希后把原文字节原样写到标准输出（阶段 8，见 [Worker 接口](worker-api.md#原始-json-归档阶段-8)）                                      |
+| `pnpm --filter @fs-billing/worker mail:test -- --to <地址>`                        | 用当前 `SMTP_*` 直接发一封测试邮件（阶段 9，见上面的「邮件」）                                                                                                           |
+| `pnpm --filter @fs-billing/worker mail:requeue -- --id <uuid>`                     | 把 `failed` 的邮件放回待发；也可用 `--since <时间>`                                                                                                                      |
+| `pnpm --filter @fs-billing/worker raw:restore-month -- --month <YYYY-MM>`          | 整月恢复已归档的 `raw_cdrs` 分区（宽限期内挂回，已丢弃则从归档文件重建）                                                                                                 |
+
+阶段 9 的概览、系统告警与月账单视觉对照（宽度 1440、1024、768、390，浅色与深色）用 `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/admin-alerts-visual.spec.ts` 生成（环境同 `pnpm test:e2e`，库要是刚迁移、刚播种的），对照图写入 `docs/evidence/phase-9-web/visual/`，差异清单见 `docs/evidence/phase-9-web/visual-diff.md`。
 
 客户门户首页的视觉对照用 `FSB_VISUAL=1 pnpm --filter @fs-billing/web exec playwright test e2e/portal-visual.spec.ts` 生成（环境同上），对照图写入 `docs/evidence/phase-6-web/visual/`，差异清单见 `docs/evidence/phase-6-web/visual-diff.md`。
 
