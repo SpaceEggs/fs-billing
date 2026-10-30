@@ -83,6 +83,25 @@ describe('portal statement detail', () => {
     expect(screen.queryByText('本月（进行中）')).toBeNull();
   });
 
+  it('uses a stacked equation and tables until the wide layout fits', async () => {
+    renderDetail('2026-09', septemberDetail);
+    const equation = await screen.findByRole('region', { name: '账单汇总' });
+    expect(equation.children[0]).toHaveClass('hidden', 'xl:flex');
+    expect(equation.children[0]).not.toHaveClass('overflow-x-auto');
+    expect(equation.children[1]).toHaveClass('flex', 'xl:hidden');
+    const countries = screen.getByRole('region', { name: '按国家汇总' });
+    const days = screen.getByRole('region', { name: '按日汇总' });
+    expect(countries.parentElement).toBe(days.parentElement);
+    expect(countries.parentElement).toHaveClass('grid', 'xl:grid-cols-2');
+    expect(within(countries).getByRole('table')).toHaveClass(
+      'whitespace-nowrap',
+    );
+    expect(within(days).getByRole('table')).toHaveClass('whitespace-nowrap');
+    expect(screen.getByRole('heading', { name: '2026年9月' })).toHaveClass(
+      'whitespace-nowrap',
+    );
+  });
+
   it('shows the September equation with negative adjustment and closing in red', async () => {
     renderDetail('2026-09', septemberDetail);
     const equation = await screen.findByRole('region', { name: '账单汇总' });

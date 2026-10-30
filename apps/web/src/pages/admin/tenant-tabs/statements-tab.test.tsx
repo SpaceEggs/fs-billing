@@ -370,6 +370,26 @@ describe('admin statement detail', () => {
     expect(facts).toHaveTextContent('¥12.50');
   });
 
+  it('uses tablet-friendly statement and balance layouts', async () => {
+    tabApp(detailUrl);
+    const title = await screen.findByRole('heading', { name: '2026年8月' });
+    expect(title).toHaveClass('whitespace-nowrap');
+    const equation = screen.getByRole('region', { name: '账单汇总' });
+    expect(equation.children[0]).toHaveClass('hidden', 'xl:flex');
+    expect(equation.children[1]).toHaveClass('flex', 'xl:hidden');
+    const countries = screen.getByRole('region', { name: '按国家汇总' });
+    const days = screen.getByRole('region', { name: '按日汇总' });
+    expect(countries.parentElement).toBe(days.parentElement);
+    expect(countries.parentElement).toHaveClass('grid', 'xl:grid-cols-2');
+    expect(within(countries).getByRole('table')).toHaveClass(
+      'whitespace-nowrap',
+    );
+    expect(within(days).getByRole('table')).toHaveClass('whitespace-nowrap');
+    expect(
+      screen.getByRole('region', { name: '当前余额' }).parentElement,
+    ).toHaveClass('md:grid-cols-2', 'lg:grid-cols-[1.4fr_1fr_1fr_1fr]');
+  });
+
   it('names the scheduled job when no administrator generated the statement', async () => {
     tabApp(detailUrl);
     await screen.findByRole('heading', { name: '2026年8月' });

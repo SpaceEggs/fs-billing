@@ -87,7 +87,7 @@ export function StatementEquation({
   const usageNote = `${formatCount(figures.calls)} 通 · ${formatMinutes(figures.callMinutes)}`;
   return (
     <section aria-label="账单汇总">
-      <div className="hidden items-stretch gap-2.5 overflow-x-auto rounded-xl border border-border p-6 tabular-nums md:flex print:break-inside-avoid print:flex-wrap print:overflow-visible">
+      <div className="hidden items-stretch gap-2.5 rounded-xl border border-border p-6 tabular-nums xl:flex print:break-inside-avoid print:flex-wrap">
         <Term label="期初余额">
           <Money value={money(figures.openingBalance)} />
         </Term>
@@ -115,7 +115,7 @@ export function StatementEquation({
           </span>
         </div>
       </div>
-      <div className="flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums md:hidden">
+      <div className="flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums xl:hidden">
         <Row label="期初余额">
           <Money value={money(figures.openingBalance)} />
         </Row>

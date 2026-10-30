@@ -154,10 +154,10 @@ function StatementDetailContent({
   const title = statementMonthTitle(month);
   return (
     <div className="flex flex-col gap-4 p-4 md:gap-6 md:p-7">
-      <div className="flex flex-col gap-1.5 md:flex-row md:items-start md:justify-between md:gap-6">
+      <div className="flex flex-col gap-1.5 md:gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div className="flex flex-col gap-1.5 md:gap-2">
           <div className="flex items-center gap-2.5">
-            <h1 className="m-0 text-[26px] font-semibold tracking-[-0.01em] max-md:sr-only">
+            <h1 className="m-0 whitespace-nowrap text-[26px] font-semibold tracking-[-0.01em] max-md:sr-only">
               {title}
             </h1>
             <StatementStateTag
@@ -185,8 +185,8 @@ function StatementDetailContent({
             <StatementMeta statement={statement} />
           </span>
         </div>
-        <div className="hidden flex-col items-end gap-2 md:flex">
-          <div className="flex gap-2 print:hidden">
+        <div className="hidden flex-col gap-2 md:flex xl:items-end">
+          <div className="flex flex-wrap gap-2 print:hidden">
             <CdrExportButton
               label="导出 CSV（汇总）"
               exporting={summary.isPending}
@@ -226,7 +226,7 @@ function StatementDetailContent({
       ) : null}
       <StatementNotices statement={statement} />
       <StatementEquation currency={currency} figures={figures} />
-      <div className="grid items-start gap-4 md:grid-cols-2 md:gap-6">
+      <div className="grid items-start gap-4 md:gap-6 xl:grid-cols-2">
         <StatementCountries
           currency={currency}
           countries={statement.countries}

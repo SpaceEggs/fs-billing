@@ -192,10 +192,10 @@ function Detail({
   );
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
+      <div className="flex flex-col gap-3 md:gap-6 xl:flex-row xl:items-start xl:justify-between">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
-            <h2 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
+            <h2 className="m-0 whitespace-nowrap text-[22px] font-semibold tracking-[-0.01em]">
               {statementMonthTitle(month)}
             </h2>
             <StatementStateTag state={state} size="lg" />
@@ -207,8 +207,8 @@ function Detail({
             <span>{statementPeriodLabel(period, state)}</span>
           </div>
         </div>
-        <div className="flex flex-col gap-2 md:items-end">
-          <div className="flex flex-col gap-2 md:flex-row print:hidden">
+        <div className="flex flex-col gap-2 xl:items-end">
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap print:hidden">
             {exportButton('导出 CSV（汇总）', summaryExport)}
             {exportButton(
               '导出 CSV（该月话单明细）',
@@ -278,7 +278,7 @@ function Detail({
       ) : null}
       <AdminFacts statement={statement} />
       <StatementEquation currency={currency} figures={figures} />
-      <div className="grid items-start gap-5 md:grid-cols-2 md:gap-6">
+      <div className="grid items-start gap-5 md:gap-6 xl:grid-cols-2">
         <StatementCountries
           currency={currency}
           countries={statement.countries}

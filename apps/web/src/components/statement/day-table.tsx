@@ -40,7 +40,7 @@ export function StatementDays({
         <h2 className="m-0 text-[15px] font-semibold md:text-base">按日汇总</h2>
         <span className="text-xs text-muted-foreground">{dayCount}</span>
       </div>
-      <table className="hidden w-full border-collapse text-[13px] md:table">
+      <table className="hidden w-full border-collapse whitespace-nowrap text-[13px] md:table">
         <thead>
           <tr className="bg-muted text-xs text-muted-foreground">
             <th className="px-5 py-[9px] text-left font-medium">日期</th>
@@ -56,7 +56,7 @@ export function StatementDays({
               className="border-t border-border print:break-inside-avoid"
             >
               <td className="px-5 py-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {row.day}
                   {row.day === today ? (
                     <span className="rounded border border-border px-[5px] text-[11px] text-muted-foreground">
