@@ -1,5 +1,4 @@
 import { connect, LocalArchiveStore } from '@fs-billing/db';
-import { pino } from 'pino';
 import { startReconciliation } from './reconcile.js';
 import { createWorker } from './app.js';
 import { startRawArchive } from './archive.js';
@@ -7,11 +6,13 @@ import { mailSettingsOf, workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeCdr } from './charge.js';
 import { startNotifyJobs } from './notify.js';
+import { createWorkerLogger } from './redact.js';
 import { startPartitionMaintenance } from './maintenance.js';
 import { requestStatementCatchUp, startStatementJobs } from './statements.js';
 
 const config = workerEnvironmentSchema.parse(process.env);
-const logger = pino();
+// 日志脱敏见 redact.ts：共享密钥、授权头、数据库错误的 detail。
+const logger = createWorkerLogger();
 const connection = connect(config.APP_DATABASE_URL, {
   poolName: 'worker.business',
   logger,

@@ -376,7 +376,7 @@
 - [ ] 制定上线后大分区表（如 `cdrs`）新增索引的运维手册：当前 migrator 在事务内运行，不能执行 `CREATE INDEX CONCURRENTLY`。上线后必须在迁移事务外逐分区执行 `CREATE INDEX CONCURRENTLY`，再将分区索引附加到以 `ON ONLY` 创建的父索引；`0010` 的普通 `CREATE INDEX` 仅适用于上线前的开发、CI 或空库。
 - [ ] 在有历史数据的数据库上验证 `0004_billing_number_not_null.sql` guard：合法数据升级成功，非法数据拒绝升级且迁移原子失败（来自阶段 3 收尾评审）
 - [ ] CI 拉取 FreeSWITCH 镜像失败时不能静默跳过 e2e 后仍视为部署验收通过；上线前必须执行并保存未跳过的 Docker/SIPp 联调证据（来自阶段 3 收尾评审）
-- [ ] 上线前必须解决[阶段 9](#阶段-9通知与告警)的计费号码错误日志 PII 项，落实日志脱敏、访问与保留策略
+- [ ] 上线前必须解决[阶段 9](#阶段-9通知与告警)的计费号码错误日志 PII 项，落实日志脱敏、访问与保留策略。代码侧的号码掩码和日志脱敏已在阶段 9 PR 5 完成（规则见 [开发环境](development.md#worker-日志与脱敏阶段-9)）；**还差部署配置**：`journald.conf` 的 `MaxRetentionSec=14day`、journal 仅 root 与运维组（`systemd-journal`）可读、日志不转发到外部服务
 
 ---
 

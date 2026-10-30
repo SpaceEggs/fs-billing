@@ -56,6 +56,21 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 - **`pnpm test:db` 需要 Mailpit 在运行**（`pnpm db:up`）：邮件测试经 Mailpit 的 HTTP API 断言收到的邮件。测试只认 `MAILPIT_SMTP_HOST`、`MAILPIT_SMTP_PORT`、`MAILPIT_API_URL`（默认就是 compose 的端口，且必须是回环地址），**不读 `SMTP_*`**，所以 `.env` 里是真实邮箱也不会被测试用到。
 - 新增队列后（阶段 9 的 `notify-tick`）要重新执行 `pnpm --filter @fs-billing/worker queue:migrate`。
 
+### Worker 日志与脱敏（阶段 9）
+
+Worker 与 API 的日志只写标准输出，部署后由 systemd journal 保存，不上传外部日志服务。客户的被叫号码是个人信息，日志里只留掩码和结构性字段，完整号码留在数据库。
+
+- **号码掩码**（`apps/worker/src/redact.ts` 的 `maskNumber`）：保留 `+` 前缀，其余保留前 4 位和后 2 位，中间以 `*` 代替，括号里附总长度（不含 `+`）；长度 ≤ 6 的整体替换为 `*` 加长度。`8613800138000` 记成 `8613*******00(13)`，`+447700900123` 记成 `+4477******23(12)`，`12345` 记成 `*(5)`。
+- **「授权计费号码不一致」日志**只含 `uuid`、`tenant`、四个号码的掩码（`dialedNumber`、`callee`、`luaBillingNumber`、`billingNumber`），以及对比字段：`calleeEqualsWorker`、`luaEqualsWorker`（Lua 送来的被叫、计费号码是否等于 Worker 按原拨号算出的计费号码，也就是 `resolveBillingNumber` 做的两个比较）、`shapes`（各号码的长度、是否以 `+` 或 `00` 开头）和 `reason`（`callee-differs`、`only-lua-differs`，两者都没有证据时 `unknown`）。排查 Lua 与 Worker 的归一化差异靠这些字段和 `freeswitch/tests/dialed-cases.tsv`；要完整号码，从后台查对应话单（`unassigned_cdrs`、`raw_cdrs`，受 RLS 与后台权限保护）。
+- **pino `redact`**（`createWorkerLogger`）：`req.headers["x-billing-key"]`、`req.headers.authorization`，以及数据库错误的 `err.detail`（含一层、两层 `cause`）。PostgreSQL 唯一冲突的 `detail` 形如 `Key (…)=(…)`，可能带号码或邮箱。
+- **数据库错误序列化**（`scrubErrorForLog`，Worker 与 API 的日志器都用）：drizzle 把失败的查询包成 `DrizzleQueryError`，`message`/`stack` 里带 `\nparams: …`（绑定的实参，话单入库绑的是原始 CDR 正文和被叫），对象上还有 `query`、`params`。序列化时去掉 `params`、`query`、`detail`、`where`（含各层 `cause`），并截掉 `message`/`stack` 里 `\nparams:` 之后的内容；PostgreSQL 错误码、约束、表由调用处用 `postgresErrorFields` 单独记。PostgreSQL 自己写进错误 `message` 的值（例如 `invalid input syntax for type integer: "…"`）无法通用地去掉，所以绑定到号码的查询不要用会回显值的写法。
+- **掩码的强度**：保留前 4 位和后 2 位意味着 7 至 9 位的号码只隐藏 1 至 3 位，这类短号码实际上几乎没有被掩码；决定 37 接受这一点（国际号码通常 10 位以上）。若要更严格，改为日志完全不含号码，只留 UUID、租户、长度和对比字段。
+- **访问与保留（部署项，阶段 10 落实，本阶段不改服务器配置）**：日志保留 14 天（`journald.conf` 的 `MaxRetentionSec=14day`），只有 root 与运维组可读（journal 目录权限，运维账号放进 `systemd-journal` 组），不转发到外部服务。已记入[阶段 10 清单](plan.md#阶段-10部署与上线)。
+
+### 真实 cron 与多实例测试（阶段 9）
+
+`pnpm test:db` 里有两个文件要等真实时钟：`apps/worker/src/cron.db.test.ts`（不调用 `boss.send`，等 `notify-tick` 的 `* * * * *` 越过一个分钟边界自己触发；为控制 CI 时间只等一个边界）和 `apps/worker/src/multi-instance.db.test.ts`（两个 `PgBoss` 实例同库同队列：扣费任务、`supervise`、发件箱、`exclusive` 队列、真实分钟的调度）。两者合计约 2 至 3 分钟，其中等待时间取决于启动时刻距下一个分钟边界的远近（pg-boss 每 30 秒检查一次调度）。等待用带上限的轮询，上限 150 秒，不用固定 sleep；「恰好执行一次」靠任务 id（处理函数记下每个任务的 id，在没有排队/执行中/待重试的任务之后核对），不靠计时；这两个文件的测试自带超时（240 秒），不改 `vitest.db.config.ts` 的全局 `testTimeout`。只想跑别的文件时用 `pnpm test:db -- <文件>`。
+
 ## 常用命令
 
 | 命令                                                                               | 作用                                                                                                                                |
