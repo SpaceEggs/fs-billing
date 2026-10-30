@@ -395,6 +395,7 @@ function SettingsForm({
             汇总邮件间隔
           </label>
           <Segmented
+            className="w-fit"
             label="常用汇总间隔"
             options={['5', '15', '30', '60'].map((value) => ({
               value,

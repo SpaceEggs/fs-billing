@@ -144,4 +144,4 @@ docs/            设计、计划、各阶段设计与验收记录、证据
 - [Worker 接口](docs/worker-api.md)：授权、话单与扣费接口
 - [FreeSWITCH 准备清单](docs/freeswitch.md) 与 [FreeSWITCH 配置](freeswitch/README.md)
 - [费率表设计](docs/rate-list-design.md)
-- 阶段设计与验收：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)、[阶段 4 后端设计](docs/phase-4-api-design.md)、[阶段 4 API](docs/phase-4-api.md)、[阶段 4 Web](docs/phase-4-web.md)、[阶段 5](docs/phase-5-design.md)、[阶段 6](docs/phase-6-design.md)、[阶段 7](docs/phase-7-design.md)、[阶段 8](docs/phase-8-design.md)
+- 阶段设计与验收：[阶段 0](docs/phase-0-scaffold.md)、[阶段 1](docs/phase-1-rating.md)、[阶段 2](docs/phase-2-db.md)、[阶段 3](docs/phase-3-worker.md)、[阶段 4 后端设计](docs/phase-4-api-design.md)、[阶段 4 API](docs/phase-4-api.md)、[阶段 4 Web](docs/phase-4-web.md)、[阶段 5](docs/phase-5-design.md)、[阶段 6](docs/phase-6-design.md)、[阶段 7](docs/phase-7-design.md)、[阶段 8](docs/phase-8-design.md)、[阶段 9](docs/phase-9-design.md)（验收记录 [docs/evidence/phase-9-web](docs/evidence/phase-9-web/README.md)）

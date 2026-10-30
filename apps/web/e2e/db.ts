@@ -503,8 +503,53 @@ export async function createSystemAlert() {
   });
 }
 
+/**
+ * 合并后的无效输入告警：同一个校验失败原因的 `events` 次推送，Worker 只记成一条（键 `invalid-cdr:<原因>`，
+ * 事件次数与影响的通话数累加）。原因文本带本次运行的标记，页面上只会有这一行。
+ */
+export async function createInvalidInputAlert(events: number) {
+  const reason = `话单校验失败: e2e${randomUUID().slice(0, 8)}(invalid_type)`;
+  const id = await withOwner(async (client) => {
+    const result = await client.query<{ id: string }>(
+      `INSERT INTO system_alerts
+         (kind, subject_key, description, affected_calls, occurrences, notify, notified_start_at)
+       VALUES ('cdr_failed', $1, $2, $3, $3, false, now()) RETURNING id`,
+      [
+        `invalid-cdr:${reason}`,
+        `${reason}（最近一份原文 ${randomUUID()}）`,
+        events,
+      ],
+    );
+    return result.rows[0]!.id;
+  });
+  return { id, reason };
+}
+
 export function removeSystemAlert(id: string) {
   return withOwner((client) =>
     client.query('DELETE FROM system_alerts WHERE id = $1', [id]),
+  );
+}
+
+/**
+ * 把所有进行中的告警标为已恢复，返回它们的 id，用例结束时用 {@link reopenAlerts} 还原。
+ * 种子里有一条进行中的授权超时告警（导航红点常亮）；要验证「没有进行中的告警」时才需要这样暂时关掉。
+ */
+export function recoverOpenAlerts() {
+  return withOwner(async (client) => {
+    const result = await client.query<{ id: string }>(
+      `UPDATE system_alerts SET recovered_at = greatest(started_at, now())
+       WHERE recovered_at IS NULL RETURNING id`,
+    );
+    return result.rows.map((row) => row.id);
+  });
+}
+
+export function reopenAlerts(ids: readonly string[]) {
+  return withOwner((client) =>
+    client.query(
+      'UPDATE system_alerts SET recovered_at = NULL WHERE id = ANY($1::uuid[])',
+      [ids],
+    ),
   );
 }

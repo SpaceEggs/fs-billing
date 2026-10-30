@@ -1,5 +1,33 @@
 import { pino, stdSerializers, type DestinationStream } from 'pino';
-import { scrubErrorForLog } from '@fs-billing/db';
+import { redactUrlForLog, scrubErrorForLog } from '@fs-billing/db';
+
+/** Fastify 传给 `req` 序列化器的请求（`FastifyRequest`）里用到的字段。 */
+interface LoggedRequest {
+  readonly method?: string;
+  readonly url?: string;
+  readonly headers?: Record<string, unknown>;
+  readonly host?: string;
+  readonly ip?: string;
+  readonly socket?: { readonly remotePort?: number };
+}
+
+/**
+ * 与 Fastify 默认的 `req` 序列化器同样的字段，但 URL 里号码类的查询参数掩码（话单搜索的 `callee` 带客户号码，
+ * 阶段 9 PR 8，规则同 Worker 的 `maskNumber`，决定 37）。`loggerInstance` 自带的序列化器会盖过 Fastify 的默认值。
+ */
+export function serializeRequest(request: LoggedRequest) {
+  return {
+    method: request.method,
+    url:
+      typeof request.url === 'string'
+        ? redactUrlForLog(request.url)
+        : undefined,
+    version: request.headers?.['accept-version'],
+    host: request.host,
+    remoteAddress: request.ip,
+    remotePort: request.socket?.remotePort,
+  };
+}
 
 export function createApiLogger(destination?: DestinationStream) {
   return pino(
@@ -15,6 +43,7 @@ export function createApiLogger(destination?: DestinationStream) {
       serializers: {
         err: (error: unknown) =>
           scrubErrorForLog(stdSerializers.err(error as Error)),
+        req: serializeRequest,
       },
     },
     destination,

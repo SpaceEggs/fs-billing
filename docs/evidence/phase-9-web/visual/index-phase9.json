@@ -1,0 +1,836 @@
+{
+  "entries": [
+    {
+      "page": "overview-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1a 正常 · 有需要关注的事项（图表 CNY）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-1440-light.png"
+      }
+    },
+    {
+      "page": "alerts-list-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6a 列表 · 含进行中和已恢复（菜单红点）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-1440-light.png"
+      }
+    },
+    {
+      "page": "alerts-detail-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6b 告警详情 · 2026-09-27 03:08 授权超时"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-1440-light.png"
+      }
+    },
+    {
+      "page": "alerts-settings-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-1440-light.png"
+      }
+    },
+    {
+      "page": "statement-august-1440",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-1440-light.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-1440-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-1024",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1a 正常 · 有需要关注的事项（图表 CNY）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-1024-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-1024-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-1024-light.png"
+      }
+    },
+    {
+      "page": "alerts-list-1024",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6a 列表 · 含进行中和已恢复（菜单红点）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-1024-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-1024-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-1024-light.png"
+      }
+    },
+    {
+      "page": "alerts-detail-1024",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6f 手机 · 告警详情（底部面板）"
+      },
+      "note": "宽度不足 1100 时详情不在行内展开，改为底部面板（与手机同一个）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-1024-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-1024-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-1024-light.png"
+      }
+    },
+    {
+      "page": "alerts-settings-1024",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-1024-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-1024-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-1024-light.png"
+      }
+    },
+    {
+      "page": "statement-august-1024",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-1024-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-1024-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-1024-light.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-1024",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-1024-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-768",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1a 正常 · 有需要关注的事项（图表 CNY）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-768-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-768-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-768-light.png"
+      }
+    },
+    {
+      "page": "alerts-list-768",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6a 列表 · 含进行中和已恢复（菜单红点）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-768-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-768-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-768-light.png"
+      }
+    },
+    {
+      "page": "alerts-detail-768",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6f 手机 · 告警详情（底部面板）"
+      },
+      "note": "宽度不足 1100 时详情不在行内展开，改为底部面板（与手机同一个）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-768-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-768-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-768-light.png"
+      }
+    },
+    {
+      "page": "alerts-settings-768",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-768-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-768-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-768-light.png"
+      }
+    },
+    {
+      "page": "statement-august-768",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-768-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-768-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-768-light.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-768",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-768-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-390",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 手机",
+        "label": "2a 手机 · 正常（指标 2 列，需要关注为卡片）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-390-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-390-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-390-light.png"
+      }
+    },
+    {
+      "page": "alerts-list-390",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6e 手机 · 列表"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-390-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-390-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-390-light.png"
+      }
+    },
+    {
+      "page": "alerts-detail-390",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6f 手机 · 告警详情（底部面板）"
+      },
+      "note": "宽度不足 1100 时详情不在行内展开，改为底部面板（与手机同一个）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-390-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-390-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-390-light.png"
+      }
+    },
+    {
+      "page": "alerts-settings-390",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": "设计稿的设置页只有电脑画框。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-390-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-390-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-390-light.png"
+      }
+    },
+    {
+      "page": "statement-august-390",
+      "theme": "light",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2d 手机 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-390-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-390-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-390-light.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-390",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-390-light.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-allclear-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1b 一切正常 · 没有需要关注的事项（图表切换为 USD）"
+      },
+      "note": "接口拦截：需要关注清空，图表切到 USD。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-allclear-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-allclear-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-allclear-1440-light.png"
+      }
+    },
+    {
+      "page": "overview-allclear-390",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 手机",
+        "label": "2b 手机 · 一切正常（图表 USD）"
+      },
+      "note": "接口拦截：需要关注清空，图表切到 USD。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-allclear-390-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-allclear-390-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-allclear-390-light.png"
+      }
+    },
+    {
+      "page": "alerts-empty-1440",
+      "theme": "light",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6d 没有告警（无红点）"
+      },
+      "note": "接口拦截：列表与汇总清空。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-empty-1440-light.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-empty-1440-light.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-empty-1440-light.png"
+      }
+    },
+    {
+      "page": "overview-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1a 正常 · 有需要关注的事项（图表 CNY）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-1440-dark.png"
+      }
+    },
+    {
+      "page": "alerts-list-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6a 列表 · 含进行中和已恢复（菜单红点）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-1440-dark.png"
+      }
+    },
+    {
+      "page": "alerts-detail-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6b 告警详情 · 2026-09-27 03:08 授权超时"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-1440-dark.png"
+      }
+    },
+    {
+      "page": "alerts-settings-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-1440-dark.png"
+      }
+    },
+    {
+      "page": "statement-august-1440",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-1440-dark.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-1440-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-1024",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1a 正常 · 有需要关注的事项（图表 CNY）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-1024-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-1024-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-1024-dark.png"
+      }
+    },
+    {
+      "page": "alerts-list-1024",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6a 列表 · 含进行中和已恢复（菜单红点）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-1024-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-1024-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-1024-dark.png"
+      }
+    },
+    {
+      "page": "alerts-detail-1024",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6f 手机 · 告警详情（底部面板）"
+      },
+      "note": "宽度不足 1100 时详情不在行内展开，改为底部面板（与手机同一个）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-1024-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-1024-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-1024-dark.png"
+      }
+    },
+    {
+      "page": "alerts-settings-1024",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-1024-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-1024-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-1024-dark.png"
+      }
+    },
+    {
+      "page": "statement-august-1024",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-1024-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-1024-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-1024-dark.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-1024",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-1024-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-768",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1a 正常 · 有需要关注的事项（图表 CNY）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-768-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-768-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-768-dark.png"
+      }
+    },
+    {
+      "page": "alerts-list-768",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6a 列表 · 含进行中和已恢复（菜单红点）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-768-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-768-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-768-dark.png"
+      }
+    },
+    {
+      "page": "alerts-detail-768",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6f 手机 · 告警详情（底部面板）"
+      },
+      "note": "宽度不足 1100 时详情不在行内展开，改为底部面板（与手机同一个）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-768-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-768-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-768-dark.png"
+      }
+    },
+    {
+      "page": "alerts-settings-768",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-768-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-768-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-768-dark.png"
+      }
+    },
+    {
+      "page": "statement-august-768",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2c 电脑 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-768-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-768-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-768-dark.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-768",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-768-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-390",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 手机",
+        "label": "2a 手机 · 正常（指标 2 列，需要关注为卡片）"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-390-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-390-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-390-dark.png"
+      }
+    },
+    {
+      "page": "alerts-list-390",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6e 手机 · 列表"
+      },
+      "note": null,
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-list-390-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-list-390-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-list-390-dark.png"
+      }
+    },
+    {
+      "page": "alerts-detail-390",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6f 手机 · 告警详情（底部面板）"
+      },
+      "note": "宽度不足 1100 时详情不在行内展开，改为底部面板（与手机同一个）。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-detail-390-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-detail-390-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-detail-390-dark.png"
+      }
+    },
+    {
+      "page": "alerts-settings-390",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6c 设置 · 接收邮箱与汇总间隔"
+      },
+      "note": "设计稿的设置页只有电脑画框。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-settings-390-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-settings-390-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-settings-390-dark.png"
+      }
+    },
+    {
+      "page": "statement-august-390",
+      "theme": "dark",
+      "session": "abc001",
+      "designFrame": {
+        "file": "客户门户 第二批.dc.html",
+        "section": "月账单详情",
+        "label": "2d 手机 · 已结束（2026年8月）"
+      },
+      "note": "客户门户账单详情，#82 的算式对齐修复之后。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-statement-august-390-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-statement-august-390-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-statement-august-390-dark.png"
+      }
+    },
+    {
+      "page": "admin-statement-august-390",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": null,
+      "note": "后台租户账单详情没有设计稿（沿用门户版式），只存档，看 #82 对齐修复。",
+      "files": {
+        "design": null,
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-admin-statement-august-390-dark.png",
+        "compare": null
+      }
+    },
+    {
+      "page": "overview-allclear-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 电脑",
+        "label": "1b 一切正常 · 没有需要关注的事项（图表切换为 USD）"
+      },
+      "note": "接口拦截：需要关注清空，图表切到 USD。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-allclear-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-allclear-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-allclear-1440-dark.png"
+      }
+    },
+    {
+      "page": "overview-allclear-390",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "概览 手机",
+        "label": "2b 手机 · 一切正常（图表 USD）"
+      },
+      "note": "接口拦截：需要关注清空，图表切到 USD。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-overview-allclear-390-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-overview-allclear-390-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-overview-allclear-390-dark.png"
+      }
+    },
+    {
+      "page": "alerts-empty-1440",
+      "theme": "dark",
+      "session": "admin",
+      "designFrame": {
+        "file": "管理后台 第三批 · 运营.dc.html",
+        "section": "系统告警",
+        "label": "6d 没有告警（无红点）"
+      },
+      "note": "接口拦截：列表与汇总清空。",
+      "files": {
+        "design": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/design-alerts-empty-1440-dark.png",
+        "app": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/app-alerts-empty-1440-dark.png",
+        "compare": "/Volumes/Dev/FS-Billing/.claude/worktrees/agent-a631d3a9906fa61f9/docs/evidence/phase-9-web/visual/compare-alerts-empty-1440-dark.png"
+      }
+    }
+  ]
+}

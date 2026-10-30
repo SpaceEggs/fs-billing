@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { createTenant, openTenants, test } from './admin';
+import { createTenant, disableTenant, openTenants, test } from './admin';
 
 const emptyWarning = '未配置收件人，余额提醒无法送达；停用租户不发送';
 
@@ -40,4 +40,17 @@ test('warns for empty recipients after load and save', async ({ page }) => {
   await expect(
     page.getByRole('form', { name: '租户设置' }).getByText(emptyWarning),
   ).toBeVisible();
+});
+
+test('the empty recipients note says that disabled tenants are not mailed', async ({
+  page,
+}) => {
+  await openTenants(page);
+  const tenant = await createTenant(page, { emails: [] });
+  await disableTenant(page, tenant.id);
+  await page.goto(`/admin/tenants/${tenant.id}?tab=settings`);
+  const form = page.getByRole('form', { name: '租户设置' });
+  // 阶段 9 决定 27：停用租户不发提醒邮件，提示里直接说明，免得以为填了邮箱就会收到。
+  await expect(form.getByText('停用租户不发送')).toBeVisible();
+  await expect(form.getByText(emptyWarning)).toBeVisible();
 });
