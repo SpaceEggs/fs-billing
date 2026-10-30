@@ -9,6 +9,7 @@ import {
 import {
   AlertKeys,
   loadRatingTenant,
+  postgresErrorFields,
   withSystem,
   type Db,
 } from '@fs-billing/db';
@@ -19,6 +20,7 @@ import {
 } from '@fs-billing/rating';
 import { ingestCdr, postgresError, recordAlert } from './ingest.js';
 import type { ChargeQueue } from './queue.js';
+import { billingMismatchLog } from './redact.js';
 
 const sipCodes = {
   号码格式错误: 484,
@@ -82,14 +84,15 @@ export function createWorker(dependencies?: WorkerDependencies) {
       if ('error' in resolved) {
         if (resolved.error === 'mismatch') {
           request.log.error(
-            {
+            // 号码是个人信息，日志只留掩码和结构性对比字段（redact.ts）；完整号码在数据库。
+            billingMismatchLog({
               uuid: parsed.data.uuid,
               tenant,
               dialedNumber: parsed.data.dialedNumber,
               callee: parsed.data.callee,
               luaBillingNumber: parsed.data.billingNumber,
               billingNumber: resolved.billingNumber,
-            },
+            }),
             '授权计费号码不一致',
           );
           return reply.code(400).send({ error: '授权计费号码不一致' });
@@ -123,7 +126,10 @@ export function createWorker(dependencies?: WorkerDependencies) {
               },
         );
       } catch (error) {
-        request.log.error({ err: error }, '授权失败');
+        request.log.error(
+          { err: error, pg: postgresErrorFields(error) },
+          '授权失败',
+        );
         return reply.code(503).send({ error: '授权服务暂不可用' });
       }
     });
@@ -145,7 +151,10 @@ export function createWorker(dependencies?: WorkerDependencies) {
           const partitionFailed =
             pg?.code === '23514' &&
             /no partition of relation .* found for row/.test(pg.message);
-          request.log.error({ err: error }, '话单入库失败');
+          request.log.error(
+            { err: error, pg: postgresErrorFields(error) },
+            '话单入库失败',
+          );
           try {
             await recordAlert(db, {
               kind: partitionFailed ? 'partition_failed' : 'cdr_failed',

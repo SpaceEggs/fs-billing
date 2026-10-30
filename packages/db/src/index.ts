@@ -28,6 +28,7 @@ export * from './admin/rates.js';
 export { DatabaseUnavailableError } from './unavailable.js';
 export { readTenantUsageOverview } from './usage.js';
 export * from './errors.js';
+export { postgresErrorFields, scrubErrorForLog } from './log-safe.js';
 
 export * from './portal/ledger.js';
 export * from './portal/cdrs.js';
