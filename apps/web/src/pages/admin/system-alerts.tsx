@@ -652,7 +652,7 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
                             (label, i) => (
                               <TableHead
                                 key={i}
-                                className="text-center p-3 whitespace-nowrap"
+                                className="p-3 whitespace-nowrap"
                               >
                                 {label}
                               </TableHead>
