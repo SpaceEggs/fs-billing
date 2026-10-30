@@ -85,3 +85,13 @@ BEGIN
     suspended_active = EXCLUDED.suspended_active,
     updated_at = EXCLUDED.updated_at;
 END $$;
+--> statement-breakpoint
+-- 新建时可用额度为零的租户从开户时刻起停机；旧租户仍不猜测时间。
+CREATE OR REPLACE FUNCTION tenants_open_balance_notice() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  INSERT INTO balance_notice_state (tenant_id, suspended_active, suspended_at)
+  VALUES (NEW.id, NEW.overdraft_limit <= 0, CASE WHEN NEW.overdraft_limit <= 0 THEN now() END)
+  ON CONFLICT (tenant_id) DO NOTHING;
+  RETURN NULL;
+END $$;

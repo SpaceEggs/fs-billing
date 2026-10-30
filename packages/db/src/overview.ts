@@ -157,7 +157,8 @@ export async function readAdminOverview(
     ? ((
         await tx.execute<{ latest_at: string | null }>(sql`
     select ${cdrTimestamp(sql`coalesce(answered_at, started_at)`)} as latest_at from unassigned_cdrs
-    where status = 'pending' order by coalesce(answered_at, started_at) desc, id limit 1`)
+    where status = 'pending' and coalesce(answered_at, started_at) is not null
+    order by coalesce(answered_at, started_at) desc, id limit 1`)
       ).rows[0]?.latest_at ?? null)
     : null;
   const alerts = await alertsInWindow(tx, {

@@ -82,6 +82,19 @@ async function setup(options: Options = {}) {
   return { id: tenant.id, code };
 }
 
+it('records the creation time when a tenant starts suspended', async () => {
+  const tenant = await setup({ overdraft: '0' });
+  const { rows } = await owner.pool.query<{
+    suspended_active: boolean;
+    suspended_at: Date | null;
+  }>(
+    'select suspended_active, suspended_at from balance_notice_state where tenant_id = $1',
+    [tenant.id],
+  );
+  expect(rows[0]?.suspended_active).toBe(true);
+  expect(rows[0]?.suspended_at).toBeInstanceOf(Date);
+});
+
 it('records suspension transitions and clears the time on recovery', async () => {
   const tenant = await setup({ balance: '10' });
   const read = async () =>

@@ -73,7 +73,10 @@ function Detail({
       />
     );
   if (!d) return <p className="p-4">加载中…</p>;
-  const tenant = d.tenant ?? d.affectedTenants?.items[0];
+  const tenant =
+    d.affectedTenants?.items.length === 1
+      ? d.affectedTenants.items[0]
+      : undefined;
   const digestCount = d.notices.filter(
     (n) => n.template === 'alert_digest' && n.status === 'sent',
   ).length;
@@ -84,20 +87,6 @@ function Detail({
       search={{
         reason: d.unassignedFilter.reason,
         tag: d.unassignedFilter.tag ?? undefined,
-      }}
-    >
-      {d.affectedCalls} 通
-    </Link>
-  ) : tenant && d.cdrRange ? (
-    <Link
-      className="font-semibold text-primary"
-      to="/admin/tenants/$tenantId"
-      params={{ tenantId: tenant.id }}
-      search={{
-        tab: 'cdrs',
-        unverifiedOnly: d.kind === 'auth_timeout' ? true : undefined,
-        cdrFrom: d.cdrRange.fromDay,
-        cdrTo: d.cdrRange.toDay,
       }}
     >
       {d.affectedCalls} 通
@@ -252,7 +241,7 @@ function Detail({
                   cdrTo: d.cdrRange.toDay,
                 }}
               >
-                查看这 {d.affectedCalls} 通话单 ›
+                查看这 {tenant.count} 通话单 ›
               </Link>
             </Button>
           ) : null}

@@ -87,6 +87,7 @@ beforeAll(async () => {
     { answeredAt: '2027-03-15 10:00:00' },
     { answeredAt: '2027-03-15 11:00:00' },
     {},
+    { callUuid: null },
   ]);
   expect(app).toBeDefined();
 });
@@ -125,6 +126,16 @@ describe('聚合口径', () => {
     // 窗口外的 -9 不出现；30 天的和 = 7 + 4 + 3 + 2 + 1.5。
     expect(result.dailySpend.reduce((sum, day) => sum + num(day.CNY), 0)).toBe(
       17.5,
+    );
+  });
+
+  it('ignores pending validation failures without a call time when finding the latest call', async () => {
+    const { rows } = await database.owner.pool.query<{ n: number }>(
+      "select count(*)::int as n from unassigned_cdrs where status = 'pending' and coalesce(answered_at, started_at) is null",
+    );
+    expect(rows[0]?.n).toBe(1);
+    expect((await overview()).attention.unassigned.latestAt).toBe(
+      '2027-03-15T03:00:00.000000Z',
     );
   });
 
@@ -203,10 +214,8 @@ describe('与对应页面同源', () => {
         ).pagination.total;
       expect(await status('suspended')).toBe(1);
       expect(result.metrics.suspendedTenants).toBe(1);
-      expect(
-        result.metrics.suspendedTenantsByCurrency.CNY +
-          result.metrics.suspendedTenantsByCurrency.USD,
-      ).toBe(1);
+      expect(result.metrics.suspendedTenantsByCurrency.CNY).toBe(1);
+      expect(result.metrics.suspendedTenantsByCurrency.USD).toBe(0);
       expect(result.attention.suspended.total).toBe(1);
       expect(result.attention.suspended.items.map((item) => item.id)).toEqual([
         suspended.id,
@@ -222,7 +231,7 @@ describe('与对应页面同源', () => {
       expect(result.attention.unassigned.pending).toBe(
         (await readUnassignedSummary(tx)).pending,
       );
-      expect(result.attention.unassigned.pending).toBe(3);
+      expect(result.attention.unassigned.pending).toBe(4);
       expect(result.attention.unassigned.latestAt).toBe(
         '2027-03-15T03:00:00.000000Z',
       );
@@ -284,6 +293,45 @@ describe('与对应页面同源', () => {
     expect(later.attention.alerts.last24h).toBe(
       outcome.first.attention.alerts.last24h + 1,
     );
+  });
+
+  it('reflects suspension and recovery timestamps in the overview', async () => {
+    const tenant = await statementTenant(database.owner, { currency: 'CNY' });
+    const before = await overview();
+    expect(
+      before.attention.suspended.items.find((item) => item.id === tenant.id),
+    ).toBeUndefined();
+    await database.owner.pool.query(
+      'update tenant_balances set balance = -100 where tenant_id = $1',
+      [tenant.id],
+    );
+    const suspendedView = await overview();
+    const item = suspendedView.attention.suspended.items.find(
+      (entry) => entry.id === tenant.id,
+    );
+    const state = await database.owner.pool.query<{ suspended_at: Date }>(
+      'select suspended_at from balance_notice_state where tenant_id = $1',
+      [tenant.id],
+    );
+    expect(item?.suspendedAt).not.toBeNull();
+    expect(new Date(item!.suspendedAt!).getTime()).toBe(
+      state.rows[0]!.suspended_at.getTime(),
+    );
+    await database.owner.pool.query(
+      'update tenant_balances set balance = -99 where tenant_id = $1',
+      [tenant.id],
+    );
+    const recoveredView = await overview();
+    expect(
+      recoveredView.attention.suspended.items.find(
+        (entry) => entry.id === tenant.id,
+      ),
+    ).toBeUndefined();
+    expect(
+      recoveredView.attention.lowBalance.items.find(
+        (entry) => entry.id === tenant.id,
+      )?.suspendedAt,
+    ).toBeNull();
   });
 
   it('lists attention tenants in the same order as the tenant list', async () => {
