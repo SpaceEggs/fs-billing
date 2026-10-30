@@ -375,7 +375,7 @@ describe('admin statement detail', () => {
     const title = await screen.findByRole('heading', { name: '2026年8月' });
     expect(title).toHaveClass('whitespace-nowrap');
     const equation = screen.getByRole('region', { name: '账单汇总' });
-    expect(equation.children[0]).toHaveClass('hidden', 'xl:flex');
+    expect(equation.children[0]).toHaveClass('hidden', 'xl:grid');
     expect(equation.children[1]).toHaveClass('flex', 'xl:hidden');
     const countries = screen.getByRole('region', { name: '按国家汇总' });
     const days = screen.getByRole('region', { name: '按日汇总' });

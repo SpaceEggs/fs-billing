@@ -4,48 +4,71 @@ import { formatCount, formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
 import type { StatementFigures } from '../../lib/statement';
 
+/**
+ * 电脑一行算式用 CSS grid：每项占一列（max-content），运算符占其间的 1fr 列并居中，
+ * 所以每个运算符两侧的空隙相等；三行依次是标签、金额、备注，所有金额与运算符同在第 2 行，
+ * 用 items-baseline 共用一条基线。期末余额的底色块是跨三行的独立元素，不影响基线。
+ */
+const gutter = 'minmax(1.5rem, 1fr)';
+const columns = `auto ${Array.from({ length: 5 }, () => `${gutter} auto`).join(' ')}`;
+const closingColumn = 11;
+
 const amountClass = 'text-[22px] leading-normal';
 
-function Operator({ children }: { children: React.ReactNode }) {
+function Operator({ index, children }: { index: number; children: string }) {
   return (
-    <span aria-hidden className="flex flex-col gap-1.5 text-muted-foreground">
-      <span className="invisible text-[13px]">
-        <br />
-      </span>
-      <span className={amountClass}>{children}</span>
+    <span
+      aria-hidden
+      style={{ gridColumn: index * 2, gridRow: 2 }}
+      className="self-baseline justify-self-center text-xl leading-normal font-normal text-muted-foreground"
+    >
+      {children}
     </span>
   );
 }
 
+/** 一项占 1 列，子元素按行落在同一个 grid 里（display: contents），不额外包一层。 */
 function Term({
+  index,
   label,
   className,
   children,
   note,
 }: {
+  index: number;
   label: string;
   className?: string;
   children: React.ReactNode;
   note?: React.ReactNode;
 }) {
+  const column = index * 2 - 1;
   return (
-    <div className="flex min-w-fit flex-1 flex-col gap-1.5">
-      <span className="text-[13px] text-muted-foreground">{label}</span>
+    <>
       <span
+        style={{ gridColumn: column, gridRow: 1 }}
+        className="text-[13px] whitespace-nowrap text-muted-foreground"
+      >
+        {label}
+      </span>
+      <span
+        style={{ gridColumn: column, gridRow: 2 }}
         className={cn(
           amountClass,
-          'whitespace-nowrap font-semibold',
+          'font-semibold whitespace-nowrap',
           className,
         )}
       >
         {children}
       </span>
       {note ? (
-        <span className="whitespace-nowrap text-xs text-muted-foreground">
+        <span
+          style={{ gridColumn: column, gridRow: 3 }}
+          className="text-xs whitespace-nowrap text-muted-foreground"
+        >
           {note}
         </span>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -61,12 +84,12 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex justify-between border-t border-border py-2.5 first:border-t-0">
-      <span className="text-muted-foreground">
-        <span className="inline-block w-[18px]">{operator}</span>
-        {label}
+    <div className="grid grid-cols-[1.25rem_1fr_auto] items-baseline gap-x-2 border-t border-border py-2.5 first:border-t-0 print:break-inside-avoid">
+      <span aria-hidden className="text-center text-muted-foreground">
+        {operator}
       </span>
-      <span className={className}>{children}</span>
+      <span className="text-muted-foreground">{label}</span>
+      <span className={cn('text-right', className)}>{children}</span>
     </div>
   );
 }
@@ -87,35 +110,40 @@ export function StatementEquation({
   const usageNote = `${formatCount(figures.calls)} 通 · ${formatMinutes(figures.callMinutes)}`;
   return (
     <section aria-label="账单汇总">
-      <div className="hidden items-stretch gap-2.5 rounded-xl border border-border p-6 tabular-nums xl:flex print:break-inside-avoid print:flex-wrap">
-        <Term label="期初余额">
+      <div
+        style={{ gridTemplateColumns: columns }}
+        className="hidden items-baseline gap-y-1.5 rounded-xl border border-border px-7 py-6 tabular-nums xl:grid print:break-inside-avoid"
+      >
+        <Term index={1} label="期初余额">
           <Money value={money(figures.openingBalance)} />
         </Term>
-        <Operator>+</Operator>
-        <Term label="充值">
+        <Operator index={1}>+</Operator>
+        <Term index={2} label="充值">
           <Money value={money(figures.recharge)} tone="plain" />
         </Term>
-        <Operator>+</Operator>
-        <Term label="赠送">
+        <Operator index={2}>+</Operator>
+        <Term index={3} label="赠送">
           <Money value={money(figures.gift)} tone="plain" />
         </Term>
-        <Operator>±</Operator>
-        <Term label="调账">
+        <Operator index={3}>±</Operator>
+        <Term index={4} label="调账">
           <Money value={money(figures.adjustment)} />
         </Term>
-        <Operator>−</Operator>
-        <Term label="通话扣费" note={usageNote}>
+        <Operator index={4}>−</Operator>
+        <Term index={5} label="通话扣费" note={usageNote}>
           <Money value={money(figures.callCharges)} tone="plain" />
         </Term>
-        <Operator>=</Operator>
-        <div className="-my-3 mr-[-8px] flex min-w-fit flex-[1.2] flex-col justify-center gap-1.5 rounded-lg bg-muted px-4 py-3">
-          <span className="text-[13px] text-muted-foreground">期末余额</span>
-          <span className="text-[26px] font-bold">
-            <Money value={money(figures.closingBalance)} />
-          </span>
-        </div>
+        <Operator index={5}>=</Operator>
+        <span
+          aria-hidden
+          style={{ gridColumn: closingColumn, gridRow: '1 / span 3' }}
+          className="-mx-4 -my-3.5 self-stretch rounded-lg bg-muted"
+        />
+        <Term index={6} label="期末余额" className="text-[26px] font-bold">
+          <Money value={money(figures.closingBalance)} />
+        </Term>
       </div>
-      <div className="flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums xl:hidden">
+      <div className="flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums xl:hidden print:break-inside-avoid">
         <Row label="期初余额">
           <Money value={money(figures.openingBalance)} />
         </Row>
@@ -131,11 +159,12 @@ export function StatementEquation({
         <Row operator="−" label="通话扣费">
           <Money value={money(figures.callCharges)} tone="plain" />
         </Row>
-        <div className="flex items-baseline justify-between border-t-2 border-foreground pt-3 pb-2.5">
-          <span className="font-semibold">
-            <span className="inline-block w-[18px]">=</span>期末余额
+        <div className="grid grid-cols-[1.25rem_1fr_auto] items-baseline gap-x-2 border-t-2 border-foreground pt-3 pb-2.5">
+          <span aria-hidden className="text-center text-muted-foreground">
+            =
           </span>
-          <span className="text-[22px] font-bold">
+          <span className="font-semibold">期末余额</span>
+          <span className="text-right text-[22px] font-bold">
             <Money value={money(figures.closingBalance)} />
           </span>
         </div>
