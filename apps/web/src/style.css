@@ -117,11 +117,13 @@
   --alert-neg-bd: var(--err-bd);
 }
 
-/* 界面动效令牌：所有过渡只走这组时长与缓动，减少动态效果时时长归零。 */
+/* 界面动效令牌：所有过渡只走这组时长与缓动，减少动态效果时时长归零。
+   --motion-delay 是变淡出现前的等待，不是动效，归零媒体查询里保持原值。 */
 :root {
   --motion-fast: 120ms;
   --motion-base: 180ms;
   --motion-slow: 220ms;
+  --motion-delay: 200ms;
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
 }
@@ -200,6 +202,7 @@
 }
 .motion-refresh[data-refreshing='true'] {
   opacity: 0.72;
+  transition-delay: var(--motion-delay);
 }
 
 /* 弹层的进出场动画（tw-animate-css）在“减少动态效果”下关闭；Radix Presence 看到无动画会立即卸载。令牌归零后 transition 也是瞬时的。 */

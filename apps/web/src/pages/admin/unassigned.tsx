@@ -407,7 +407,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
       <RefreshError title="话单刷新失败，数据可能不是最新" query={list} />
       {unignoreError ? <RequestFailure error={unignoreError} /> : null}
       {listed && tab === 'pending' ? (
-        <Refreshing active={list.isFetching}>
+        <Refreshing active={list.isPlaceholderData}>
           <PendingRows
             rows={listed.items}
             total={listed.pagination.total}
@@ -421,7 +421,7 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
         </Refreshing>
       ) : null}
       {listed && tab === 'ignored' ? (
-        <Refreshing active={list.isFetching}>
+        <Refreshing active={list.isPlaceholderData}>
           <IgnoredRows
             rows={listed.items}
             total={listed.pagination.total}

@@ -1,4 +1,9 @@
-import { useLayoutEffect, useState, type ComponentProps } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type ComponentProps,
+} from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { cn } from '../lib/utils';
 
@@ -8,6 +13,31 @@ const pageEnter =
 /** 骨架屏换成内容：从半透明淡入，文字一开始就能读。 */
 export const motionContent =
   'animate-in fade-in-50 duration-base ease-motion-out';
+
+function motionDelayMs() {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue('--motion-delay')
+    .trim();
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) return 0;
+  return raw.endsWith('ms') ? value : value * 1000;
+}
+
+/**
+ * 内容就绪时返回淡入 class。挂载时已就绪，或就绪发生在 `--motion-delay` 内，都不播。
+ */
+export function useMotionContentClass(ready: boolean) {
+  const [held, setHeld] = useState(false);
+
+  useEffect(() => {
+    if (ready) return;
+    setHeld(false);
+    const id = window.setTimeout(() => setHeld(true), motionDelayMs());
+    return () => window.clearTimeout(id);
+  }, [ready]);
+
+  return ready && held ? motionContent : undefined;
+}
 
 /**
  * 上次真正提交的路径，和这次该进场的路径。

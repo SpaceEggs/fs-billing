@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
 import type { Identity, PortalHomeResponse } from '@fs-billing/shared';
-import { motionContent } from '../../components/motion';
+import { useMotionContentClass } from '../../components/motion';
 import { Skeleton } from '../../components/ui/skeleton';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { DailyChart } from '../../components/daily-spend-chart';
@@ -209,13 +209,15 @@ function NoCalls() {
 function HomeContent({
   home,
   code,
+  className,
 }: {
   home: PortalHomeResponse;
   code: string;
+  className?: string | undefined;
 }) {
   const hasCalls = home.recentCalls.length > 0;
   return (
-    <div className={cn(motionContent, 'flex flex-col gap-4 md:gap-6')}>
+    <div className={cn(className, 'flex flex-col gap-4 md:gap-6')}>
       {home.health === 'suspended' ? <SuspendedBanner /> : null}
       <div className="flex items-center justify-between md:hidden">
         <span className="text-[13px] text-muted-foreground">
@@ -264,6 +266,7 @@ export function PortalHome({ identity }: { identity: Identity }) {
   const home = useQuery(apiQuery('portalHome'));
   const tenant = identity.kind === 'customer' ? identity.tenant : null;
   const data = home.data;
+  const fade = useMotionContentClass(data !== undefined);
   return (
     <AppShell
       identity={identity}
@@ -283,7 +286,7 @@ export function PortalHome({ identity }: { identity: Identity }) {
         }
       >
         {data ? (
-          <HomeContent home={data} code={tenant?.code ?? ''} />
+          <HomeContent home={data} code={tenant?.code ?? ''} className={fade} />
         ) : home.isError ? (
           <LoadError
             error={home.error}
