@@ -176,9 +176,9 @@
   --color-alert-neg: var(--alert-neg-fg);
   --color-alert-neg-soft: var(--alert-neg-bg);
   --color-alert-neg-border: var(--alert-neg-bd);
-  --duration-fast: var(--motion-fast);
-  --duration-base: var(--motion-base);
-  --duration-slow: var(--motion-slow);
+  --transition-duration-fast: var(--motion-fast);
+  --transition-duration-base: var(--motion-base);
+  --transition-duration-slow: var(--motion-slow);
   --ease-motion-out: var(--motion-ease-out);
   --ease-motion-in: var(--motion-ease-in);
 }
@@ -202,13 +202,6 @@
   opacity: 0.72;
 }
 
-/* 表格行与手机卡片列表进入：从半透明淡入，时长 --motion-fast。 */
-[data-slot='table-body'] > tr,
-[data-motion='list'] > * {
-  animation: enter var(--motion-fast) var(--motion-ease-out);
-  --tw-enter-opacity: 0.5;
-}
-
 /* 弹层的进出场动画（tw-animate-css）在“减少动态效果”下关闭；Radix Presence 看到无动画会立即卸载。令牌归零后 transition 也是瞬时的。 */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -218,14 +211,11 @@
   }
 
   [class*='animate-in'],
-  [class*='animate-out'],
-  [data-slot='table-body'] > tr,
-  [data-motion='list'] > * {
+  [class*='animate-out'] {
     animation: none !important;
   }
 }
 
-/* 未写 duration-* 的 tw-animate 进出场也走 --motion-base。 */
 html,
 body {
   margin: 0;
@@ -233,7 +223,6 @@ body {
   color: var(--fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  --tw-duration: var(--motion-base);
 }
 
 body {

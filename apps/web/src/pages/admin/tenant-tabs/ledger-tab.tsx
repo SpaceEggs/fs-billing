@@ -163,10 +163,7 @@ function LedgerCards({
   items: AdminLedgerRow[];
 }) {
   return (
-    <ul
-      data-motion="list"
-      className="m-0 flex list-none flex-col gap-2 p-0 md:hidden"
-    >
+    <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
       {items.map((entry) => (
         <li
           key={

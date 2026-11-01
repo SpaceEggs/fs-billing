@@ -426,10 +426,7 @@ function ReceivableCards({
   actions: RowActions;
 }) {
   return (
-    <ul
-      data-motion="list"
-      className="m-0 flex list-none flex-col gap-2.5 p-0 tabular-nums md:hidden"
-    >
+    <ul className="m-0 flex list-none flex-col gap-2.5 p-0 tabular-nums md:hidden">
       {items.map((receivable) => (
         <li
           key={receivable.ledgerEntryId}

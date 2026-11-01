@@ -1,8 +1,6 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { cn } from '../lib/utils';
-
-let pageEnterArmed = false;
 
 const pageEnter =
   'animate-in fade-in-0 slide-in-from-bottom-1 duration-base ease-motion-out';
@@ -12,17 +10,23 @@ export const motionContent =
   'animate-in fade-in-50 duration-base ease-motion-out';
 
 /**
- * 会话里第一次进入带外壳的页面不播放切换动画，之后按 pathname 切换才播。
- * 依赖模块级开关，所以只应在 AppShell 里调用一次。
+ * AppShell 随页面重挂载，所以上次提交的路径记在模块里。
+ * 只在 effect 里写入挂载时的路径，被丢弃的 render 不会让首屏也播动画。
  */
+let committedPath: string | null = null;
+
 export function usePageEnterClass() {
   const pathname = useLocation({ select: (location) => location.pathname });
-  const className = useMemo(() => {
-    const enter = pageEnterArmed;
-    pageEnterArmed = true;
-    return enter ? pageEnter : undefined;
-  }, [pathname]);
-  return { pathname, className };
+  const [mountedPath] = useState(pathname);
+  const [enter] = useState(
+    () => committedPath !== null && committedPath !== mountedPath,
+  );
+
+  useEffect(() => {
+    committedPath = mountedPath;
+  }, [mountedPath]);
+
+  return { pathname, className: enter ? pageEnter : undefined };
 }
 
 /** 有旧数据时刷新：子树按 `aria-busy` 变淡，时长走 `--motion-fast`。 */

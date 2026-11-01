@@ -579,7 +579,7 @@ function Rows({
           </TableBody>
         </Table>
       </div>
-      <div data-motion="list" className="flex flex-col gap-2.5 md:hidden">
+      <div className="flex flex-col gap-2.5 md:hidden">
         {items.map((row) => (
           <LogCard
             key={row.id}

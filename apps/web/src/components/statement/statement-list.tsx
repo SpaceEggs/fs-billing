@@ -210,10 +210,7 @@ export function StatementList<Row extends StatementListRow>({
           </TableBody>
         </Table>
       </div>
-      <ul
-        data-motion="list"
-        className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden"
-      >
+      <ul className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden">
         {rows.map((row) => {
           if (renderCard) return <li key={row.month}>{renderCard(row)}</li>;
           const href = hrefFor?.(row);
