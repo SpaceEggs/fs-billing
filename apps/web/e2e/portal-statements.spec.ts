@@ -1,13 +1,18 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test as base, type Page } from '@playwright/test';
+import {
+  expect,
+  test as base,
+  type Page,
+  type Response,
+} from '@playwright/test';
 import { accounts } from './accounts';
 import { createTenant, test as adminTest } from './admin';
-import { monthsThrough, readBeijingClock, type BeijingClock } from './db';
+import { beijingDayOf, monthsThrough, seededCallsOn } from './db';
 import { expectPath, loginAs } from './helpers';
 import { openPortalCustomer } from './portal';
 
 // 种子（阶段 7 PR 1）：ABC001 的 8 月、9 月账单是月账单设计稿的数字。
-// 开户月是 8 月，列表从此一直排到数据库时钟的当前北京月；中间没有账单行的月份实时算。
+// 开户月是 8 月，列表从此一直排到响应 asOf 的北京月；中间没有账单行的月份实时算。
 // 当前月 1 日的 20 通话单（共 ¥3.51、81 分钟）和等额预存只在该月北京时间 03:00 之后才播种。
 const FIRST_MONTH = '2026-08';
 const zeroDay = String.raw`0\s*0分钟\s*¥0\.00`;
@@ -21,9 +26,46 @@ function dayRow(day: string, body: string, today: string) {
   return new RegExp(`${day}\\s*${mark}${body}`);
 }
 
-let clock: BeijingClock;
-
 const fingerprints = ['version', 'generatedBy', 'reconcile', 'breakdown'];
+
+function isStatementList(response: Response) {
+  return (
+    new URL(response.url()).pathname === '/api/portal/statements' &&
+    response.ok()
+  );
+}
+
+function isStatementDetail(month: string) {
+  return (response: Response) =>
+    new URL(response.url()).pathname === `/api/portal/statements/${month}` &&
+    response.ok();
+}
+
+/** 只取 asOf 的北京日。金额、通数、行数不从这份响应里读。 */
+async function dayFromResponse(pending: Promise<Response>) {
+  const body = JSON.parse(await (await pending).text()) as {
+    asOf?: string | null;
+  };
+  if (!body.asOf) throw new Error('实时账单响应没有 asOf');
+  return beijingDayOf(body.asOf);
+}
+
+/**
+ * 打开进行中的月份。`startMonth` 来自上一次响应的 asOf；
+ * 详情如果已经跨进下一个月，就按详情自己的 asOf 再打开一次。
+ */
+async function openLiveDetail(page: Page, startMonth: string) {
+  let month = startMonth;
+  for (let hop = 0; hop < 2; hop += 1) {
+    const pending = page.waitForResponse(isStatementDetail(month));
+    await page.goto(`/portal/statements/${month}`);
+    const when = await dayFromResponse(pending);
+    if (when.month === month)
+      return { when, seededCalls: await seededCallsOn(month) };
+    month = when.month;
+  }
+  throw new Error(`实时月份连续跨月，停在 ${month}`);
+}
 
 /** 汇总算式在电脑上是一行（稿 2a），手机是一列；只取当前可见的那一份。 */
 const equation = (page: Page) =>
@@ -35,7 +77,6 @@ const table = (page: Page, name: string) =>
 
 base.describe('ABC001 的月账单', () => {
   base.beforeEach(async ({ page }) => {
-    clock = await readBeijingClock();
     await loginAs(page, '/login', accounts.customer);
     await expectPath(page, '/');
   });
@@ -43,29 +84,28 @@ base.describe('ABC001 的月账单', () => {
   base(
     'shows the August and September statements of the mockup',
     async ({ page }) => {
-      const list = page.waitForResponse(
-        (response) =>
-          new URL(response.url()).pathname === '/api/portal/statements' &&
-          response.ok(),
-      );
+      const list = page.waitForResponse(isStatementList);
       await page
         .getByRole('navigation', { name: '主导航' })
         .getByRole('link', { name: '月账单' })
         .click();
       await expectPath(page, '/portal/statements');
-      // 原始响应里没有后台才有的字段，也没有租户 id。
+      // 原始响应里没有后台才有的字段，也没有租户 id。月份数跟这份响应的 asOf 走。
       const raw = await (await list).text();
       for (const field of [...fingerprints, 'tenantId'])
         expect(raw).not.toContain(field);
+      const asOf = (JSON.parse(raw) as { asOf?: string }).asOf;
+      if (!asOf) throw new Error('账单列表响应没有 asOf');
+      const when = beijingDayOf(asOf);
 
       await expect(
         page.getByRole('heading', { name: '月账单', level: 1 }),
       ).toBeVisible();
       const rows = page.getByRole('table').getByRole('row');
-      // 表头，再加上从开户月到当前北京月的每一个月。8 月之前 ABC001 还没有开户。
-      const months = monthsThrough(FIRST_MONTH, clock.month);
+      // 表头，再加上从开户月到 asOf 所在北京月的每一个月。8 月之前 ABC001 还没有开户。
+      const months = monthsThrough(FIRST_MONTH, when.month);
       await expect(rows).toHaveCount(months.length + 1);
-      await expect(rows.nth(1)).toContainText(monthTitle(clock.month));
+      await expect(rows.nth(1)).toContainText(monthTitle(when.month));
       await expect(rows.nth(1)).toContainText('本月（进行中）');
       const september = rows.filter({ hasText: '2026年9月' });
       await expect(september).not.toContainText('本月（进行中）');
@@ -180,29 +220,29 @@ base.describe('ABC001 的月账单', () => {
         /合计\s*9,642\s*37,468分钟\s*¥1,873\.40/,
       );
 
-      // 当前月从 1 日排到今天。1 日在 03:00 之后有那 20 通，之前也是 0。今天那一行标「今日 · 截至当前」。
-      await page.goto(`/portal/statements/${clock.month}`);
+      // 当前月从 1 日排到详情 asOf 的北京日。1 日在 03:00 之后有那 20 通，之前也是 0。
+      // 今天那一行标「今日 · 截至当前」。天数来自 asOf，不数响应里的 days。
+      const list = page.waitForResponse(isStatementList);
+      await page.goto('/portal/statements');
+      const listed = await dayFromResponse(list);
+      const { when, seededCalls } = await openLiveDetail(page, listed.month);
       await expect(
         page
           .getByRole('region', { name: '按日汇总' })
-          .getByText(`${clock.dayOfMonth} 天`, { exact: true }),
+          .getByText(`${when.dayOfMonth} 天`, { exact: true }),
       ).toBeVisible();
       const days = table(page, '按日汇总').getByRole('row');
-      await expect(days).toHaveCount(clock.dayOfMonth + 2);
-      const first = `${clock.month}-01`;
+      await expect(days).toHaveCount(when.dayOfMonth + 2);
+      const first = `${when.month}-01`;
       await expect(days.nth(1)).toHaveText(
-        dayRow(
-          first,
-          clock.seededCalls === 20 ? seededDay : zeroDay,
-          clock.today,
-        ),
+        dayRow(first, seededCalls === 20 ? seededDay : zeroDay, when.today),
       );
-      if (clock.dayOfMonth > 1) {
+      if (when.dayOfMonth > 1) {
         await expect(days.nth(2)).toHaveText(
-          dayRow(`${clock.month}-02`, zeroDay, clock.today),
+          dayRow(`${when.month}-02`, zeroDay, when.today),
         );
-        await expect(days.nth(clock.dayOfMonth)).toHaveText(
-          dayRow(clock.today, zeroDay, clock.today),
+        await expect(days.nth(when.dayOfMonth)).toHaveText(
+          dayRow(when.today, zeroDay, when.today),
         );
       }
     },
@@ -211,14 +251,17 @@ base.describe('ABC001 的月账单', () => {
   base(
     'shows the live month first, with the 20 seeded calls after 03:00 Beijing',
     async ({ page }) => {
+      const list = page.waitForResponse(isStatementList);
       await page.goto('/portal/statements');
+      const listed = await dayFromResponse(list);
+      const seeded = await seededCallsOn(listed.month);
       const live = page.getByRole('table').getByRole('row').nth(1);
-      await expect(live).toContainText(monthTitle(clock.month));
+      await expect(live).toContainText(monthTitle(listed.month));
       await expect(live).toContainText('本月（进行中）');
       // 20 通话单 ¥3.51 被等额预存抵平，所以有没有这 20 通，期初与期末都是 −¥35.20。
       await expect(live).toContainText('-¥35.20');
       await expect(live.getByText('-¥35.20').first()).toHaveClass(/text-neg/);
-      if (clock.seededCalls === 20) {
+      if (seeded === 20) {
         await expect(live).toContainText('¥3.51');
         await expect(live).toContainText('81');
       } else {
@@ -227,8 +270,15 @@ base.describe('ABC001 的月账单', () => {
       }
       await expect(page.getByText(/本月数据实时更新，截至/)).toBeVisible();
 
+      const detail = page.waitForResponse(isStatementDetail(listed.month));
       await live.click();
-      await expectPath(page, `/portal/statements/${clock.month}`);
+      await expectPath(page, `/portal/statements/${listed.month}`);
+      const detailDay = await dayFromResponse(detail);
+      // 列表和详情各算各的 asOf。跨月时详情页还停在旧月，再打开 asOf 所在的月。
+      const opened =
+        detailDay.month === listed.month
+          ? { seededCalls: seeded }
+          : await openLiveDetail(page, detailDay.month);
       await expect(
         page.getByText('本月（进行中）', { exact: true }).first(),
       ).toBeVisible();
@@ -241,7 +291,7 @@ base.describe('ABC001 的月账单', () => {
         /text-neg/,
       );
       await expect(equation(page)).toHaveText(
-        clock.seededCalls === 20
+        opened.seededCalls === 20
           ? /期初余额\s*-¥35\.20\s*\+\s*充值\s*¥3\.51\s*\+\s*赠送\s*¥0\.00\s*±\s*调账\s*¥0\.00\s*−\s*通话扣费\s*¥3\.51\s*20 通 · 81分钟\s*=\s*期末余额\s*-¥35\.20/
           : /期初余额\s*-¥35\.20\s*\+\s*充值\s*¥0\.00\s*\+\s*赠送\s*¥0\.00\s*±\s*调账\s*¥0\.00\s*−\s*通话扣费\s*¥0\.00\s*0 通 · 0分钟\s*=\s*期末余额\s*-¥35\.20/,
       );
@@ -418,9 +468,12 @@ base.describe('ABC001 的月账单', () => {
     'centres the title of the phone detail topbar on the screen',
     async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 812 });
+      const list = page.waitForResponse(isStatementList);
+      await page.goto('/portal/statements');
+      const listed = await dayFromResponse(list);
       for (const [path, title] of [
         ['/portal/statements/2026-08', '2026年8月'],
-        [`/portal/statements/${clock.month}`, monthTitle(clock.month)],
+        [`/portal/statements/${listed.month}`, monthTitle(listed.month)],
       ] as const) {
         await page.goto(path);
         const box = await page
@@ -457,10 +510,12 @@ base.describe('ABC001 的月账单', () => {
     'lays the list and the detail out as cards on a phone',
     async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
+      const list = page.waitForResponse(isStatementList);
       await page.goto('/portal/statements');
+      const listed = await dayFromResponse(list);
       await expect(page.getByRole('table')).toBeHidden();
       const cards = page.getByRole('listitem');
-      const months = monthsThrough(FIRST_MONTH, clock.month);
+      const months = monthsThrough(FIRST_MONTH, listed.month);
       await expect(cards).toHaveCount(months.length);
       const august = cards.last();
       await expect(august).toContainText('2026年8月');

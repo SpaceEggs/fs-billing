@@ -34,21 +34,22 @@ export function shanghaiDate(instant: Date | string) {
     .slice(0, 10);
 }
 
-export interface BeijingClock {
-  /** 数据库时钟的北京日期，YYYY-MM-DD。 */
+/** 响应里的 asOf（或 HTTP Date）对应的北京日历日。 */
+export type BeijingDay = {
+  /** YYYY-MM-DD。 */
   readonly today: string;
   /** YYYY-MM。 */
   readonly month: string;
   readonly dayOfMonth: number;
-  /**
-   * ABC001 在该月 1 日的已接通话单数。
-   * 种子只在该月北京时间 03:00 之后写入这 20 通，所以 1 日 03:00 之前是 0。
-   */
-  readonly seededCalls: 0 | 20;
-  /** 最近一通已接通的北京日期。本月还没播种时，这是上一次播种的 1 日，或 9 月 29 日。 */
-  readonly latestCallDay: string;
-  /** latestCallDay 是某月 1 日那 20 通种子话单，不是 9 月设计稿的尾部。 */
-  readonly latestIsSeedDay: boolean;
+};
+
+export function beijingDayOf(instant: string): BeijingDay {
+  const today = shanghaiDate(instant);
+  return {
+    today,
+    month: today.slice(0, 7),
+    dayOfMonth: Number(today.slice(8)),
+  };
 }
 
 /** 从 start 到 end（都是 YYYY-MM），含两端，按时间升序。 */
@@ -72,40 +73,51 @@ export function monthsThrough(start: string, end: string): string[] {
 }
 
 /**
- * 门户断言用的“现在”。与 API 一样读数据库时钟，不读测试进程的 Date。
- * seededCalls 来自已播种的话单，所以和这次 `db:seed` 看到的时钟一致。
+ * ABC001 在 `month`（YYYY-MM）1 日的已接通话单数。
+ * 种子只在该月北京时间 03:00 之后写入这 20 通，所以 1 日 03:00 之前是 0。
+ * 调用方传入响应 asOf 的月份；这里不读时钟，也不读被测响应里的金额或通数。
  */
-export function readBeijingClock(): Promise<BeijingClock> {
+export function seededCallsOn(month: string): Promise<0 | 20> {
+  return withOwner(async (client) => {
+    const { rows } = await client.query<{ seeded_calls: number }>(
+      `select count(*)::int as seeded_calls
+       from cdrs c
+       join tenants t on t.id = c.tenant_id
+       where t.code = 'ABC001'
+         and c.answered_at is not null
+         and (c.answered_at at time zone 'Asia/Shanghai')::date = $1::date`,
+      [`${month}-01`],
+    );
+    const seededCalls = Number(rows[0]?.seeded_calls ?? 0);
+    if (seededCalls === 20) return 20;
+    if (seededCalls === 0) return 0;
+    throw new Error(
+      `ABC001 在 ${month}-01 应有 0 或 20 通种子话单，实际 ${seededCalls}`,
+    );
+  });
+}
+
+export type LatestAnsweredDay = {
+  /** 最近一通已接通的北京日期。本月还没播种时，这是上一次播种的 1 日，或 9 月 29 日。 */
+  readonly latestCallDay: string;
+  /** latestCallDay 是某月 1 日那 20 通种子话单，不是 9 月设计稿的尾部。 */
+  readonly latestIsSeedDay: boolean;
+};
+
+/** ABC001 最近一通已接通落在哪一天。只看话单，不看时钟。 */
+export function latestAnsweredDay(): Promise<LatestAnsweredDay> {
   return withOwner(async (client) => {
     const { rows } = await client.query<{
-      today: string;
-      month: string;
-      seeded_calls: number;
-      latest_call_day: string;
+      latest_call_day: string | null;
       latest_calls: number;
     }>(`
-      with clock as (select statement_timestamp() as at),
-      latest as (
+      with latest as (
         select (max(c.answered_at) at time zone 'Asia/Shanghai')::date as day
         from cdrs c
         join tenants t on t.id = c.tenant_id
         where t.code = 'ABC001' and c.answered_at is not null
       )
       select
-        to_char(at at time zone 'Asia/Shanghai', 'YYYY-MM-DD') as today,
-        to_char(at at time zone 'Asia/Shanghai', 'YYYY-MM') as month,
-        (
-          select count(*)::int
-          from cdrs c
-          join tenants t on t.id = c.tenant_id
-          where t.code = 'ABC001'
-            and c.answered_at is not null
-            and (c.answered_at at time zone 'Asia/Shanghai')::date
-              = date_trunc(
-                  'month',
-                  (select at from clock) at time zone 'Asia/Shanghai'
-                )::date
-        ) as seeded_calls,
         to_char(latest.day, 'YYYY-MM-DD') as latest_call_day,
         (
           select count(*)::int
@@ -115,17 +127,10 @@ export function readBeijingClock(): Promise<BeijingClock> {
             and c.answered_at is not null
             and (c.answered_at at time zone 'Asia/Shanghai')::date = latest.day
         ) as latest_calls
-      from clock, latest`);
-    const row = rows[0];
-    if (!row) throw new Error('数据库未返回时间');
-    const seededCalls = Number(row.seeded_calls);
-    if (seededCalls !== 0 && seededCalls !== 20) {
-      throw new Error(
-        `ABC001 在 ${row.month}-01 应有 0 或 20 通种子话单，实际 ${seededCalls}`,
-      );
-    }
-    const latestCallDay = row.latest_call_day;
-    const latestCalls = Number(row.latest_calls);
+      from latest`);
+    const latestCallDay = rows[0]?.latest_call_day;
+    if (!latestCallDay) throw new Error('ABC001 没有已接通话单');
+    const latestCalls = Number(rows[0]?.latest_calls);
     const latestIsSeedDay = latestCallDay > '2026-09-30';
     if (latestIsSeedDay) {
       if (!latestCallDay.endsWith('-01') || latestCalls !== 20) {
@@ -138,14 +143,7 @@ export function readBeijingClock(): Promise<BeijingClock> {
         `ABC001 在没有更晚的种子月时，最近通话日应是 2026-09-29，实际 ${latestCallDay}`,
       );
     }
-    return {
-      today: row.today,
-      month: row.month,
-      dayOfMonth: Number(row.today.slice(8)),
-      seededCalls,
-      latestCallDay,
-      latestIsSeedDay,
-    };
+    return { latestCallDay, latestIsSeedDay };
   });
 }
 
