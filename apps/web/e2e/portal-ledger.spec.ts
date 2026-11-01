@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Response } from '@playwright/test';
 import { accounts } from './accounts';
-import { beijingDayOf, seededCallsOn, type BeijingDay } from './db';
+import { databaseBeijingDay, seededCallsOn, type BeijingDay } from './db';
 import { expectPath, loginAs } from './helpers';
 
 const septemberPath = '/portal/ledger?from=2026-09-01&to=2026-09-30';
@@ -16,13 +16,6 @@ function isLedgerDay(day: string) {
       url.searchParams.get('to') === day
     );
   };
-}
-
-/** 流水响应没有 asOf。Date 头是这次响应带的服务器时刻。 */
-function ledgerDay(response: Response): BeijingDay {
-  const headerDate = response.headers()['date'];
-  if (!headerDate) throw new Error('流水响应没有 Date');
-  return beijingDayOf(headerDate);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -67,30 +60,22 @@ test('shows the seeded first day of this month: 20 merged calls and the recharge
   // 种子在当前北京月 1 日凌晨写 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
   // 该月 03:00 之前这两笔还不存在。当天的合并行带「截至当前」。
   // 1 日的默认范围就是这一天，空列表写「还没有余额流水」；之后只筛 1 日不是默认范围。
-  // 首页 asOf 只用来选月份。截至当前和空状态跟这次流水响应的 Date 走，不读响应正文。
-  const home = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === '/api/portal/home' && response.ok(),
-  );
-  await page.goto('/');
-  const asOf = (
-    JSON.parse(await (await home).text()) as { usage?: { asOf?: string } }
-  ).usage?.asOf;
-  if (!asOf) throw new Error('首页响应没有 asOf');
-  let month = beijingDayOf(asOf).month;
+  // 「截至当前」比较的是查询语句的 statement_timestamp()。请求前后各读一次库时钟：
+  // 两次落在同一北京日，这一天才是这次查询的参照；跨日（含跨月）就再打开一次。
   let when: BeijingDay | undefined;
   for (let hop = 0; hop < 2; hop += 1) {
-    const day = `${month}-01`;
+    const before = await databaseBeijingDay();
+    const day = `${before.month}-01`;
     const pending = page.waitForResponse(isLedgerDay(day));
     await page.goto(`/portal/ledger?from=${day}&to=${day}`);
-    const stated = ledgerDay(await pending);
-    if (stated.month === month) {
-      when = stated;
+    await pending;
+    const after = await databaseBeijingDay();
+    if (before.today === after.today) {
+      when = before;
       break;
     }
-    month = stated.month;
   }
-  if (!when) throw new Error(`流水请求连续跨月，停在 ${month}`);
+  if (!when) throw new Error('流水请求连续跨过北京日');
   const day = `${when.month}-01`;
   const seededCalls = await seededCallsOn(when.month);
   await expect(page.getByText('-¥35.20').first()).toBeVisible();

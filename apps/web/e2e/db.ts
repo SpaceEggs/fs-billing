@@ -34,7 +34,7 @@ export function shanghaiDate(instant: Date | string) {
     .slice(0, 10);
 }
 
-/** 响应里的 asOf（或 HTTP Date）对应的北京日历日。 */
+/** 某一时刻对应的北京日历日。 */
 export type BeijingDay = {
   /** YYYY-MM-DD。 */
   readonly today: string;
@@ -45,6 +45,25 @@ export type BeijingDay = {
 
 export function beijingDayOf(instant: string): BeijingDay {
   const today = shanghaiDate(instant);
+  return beijingDayFromDate(today);
+}
+
+/**
+ * 数据库 `statement_timestamp()` 的北京日。
+ * 流水合并行的「截至当前」比较的就是这个日期，不是 API 发出响应时的 Date 头。
+ */
+export function databaseBeijingDay(): Promise<BeijingDay> {
+  return withOwner(async (client) => {
+    const { rows } = await client.query<{ today: string }>(
+      `select to_char((statement_timestamp() at time zone 'Asia/Shanghai')::date, 'YYYY-MM-DD') as today`,
+    );
+    const today = rows[0]?.today;
+    if (!today) throw new Error('数据库没有返回当前北京日');
+    return beijingDayFromDate(today);
+  });
+}
+
+function beijingDayFromDate(today: string): BeijingDay {
   return {
     today,
     month: today.slice(0, 7),
