@@ -27,6 +27,7 @@ import {
   FilterSheet,
   resultLabel,
 } from '../../../components/filter-sheet';
+import { Refreshing } from '../../../components/motion';
 import { Pagination } from '../../../components/pagination';
 import { QueryError, RefreshError } from '../../../components/query-error';
 import {
@@ -162,7 +163,10 @@ function LedgerCards({
   items: AdminLedgerRow[];
 }) {
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
+    <ul
+      data-motion="list"
+      className="m-0 flex list-none flex-col gap-2 p-0 md:hidden"
+    >
       {items.map((entry) => (
         <li
           key={
@@ -354,7 +358,10 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           </span>
         </div>
       ) : (
-        <>
+        <Refreshing
+          active={ledger.isPlaceholderData}
+          className="flex flex-col gap-5"
+        >
           <LedgerTable currency={data.currency} items={data.items} />
           <LedgerCards currency={data.currency} items={data.items} />
           <Pagination
@@ -363,7 +370,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
             rowCount={data.pagination.total}
             onPage={(next) => update({ page: next > 1 ? next : undefined })}
           />
-        </>
+        </Refreshing>
       )}
     </div>
   );

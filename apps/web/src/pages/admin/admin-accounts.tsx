@@ -37,6 +37,7 @@ import {
 import { Field, invalidClass } from '../../components/admin/form-fields';
 import { ProblemAlert } from '../../components/admin/problem-alert';
 import { AppShell, PageBody } from '../../components/app-shell';
+import { Refreshing } from '../../components/motion';
 import { DateTime } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -263,7 +264,10 @@ function AdminCards({
   onAction: (action: Action) => void;
 }) {
   return (
-    <ul className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden">
+    <ul
+      data-motion="list"
+      className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden"
+    >
       {items.map((account) => (
         <li
           key={account.id}
@@ -633,7 +637,10 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
             </Button>
           </div>
         ) : (
-          <>
+          <Refreshing
+            active={list.isPlaceholderData}
+            className="flex flex-col gap-5"
+          >
             <AdminTable items={data.items} selfId={selfId} onAction={open} />
             <AdminCards items={data.items} selfId={selfId} onAction={open} />
             <Pagination
@@ -649,7 +656,7 @@ export function AdminAccountsPage({ identity }: { identity: Identity }) {
                 })
               }
             />
-          </>
+          </Refreshing>
         )}
       </PageBody>
       {action?.kind === 'create' ? <CreateAdminDialog onClose={close} /> : null}

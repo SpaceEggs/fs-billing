@@ -23,6 +23,7 @@ import { apiQuery } from '../lib/admin-api';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity, zones, type Zone } from '../lib/zone';
 import { AccountMenu, MobileAccountMenu } from './account-menu';
+import { usePageEnterClass } from './motion';
 import { productLabel, SidebarBrand } from './brand';
 import { SessionExpiredDialog } from './session-expired-dialog';
 import { MobileBarButton } from './mobile-bar-button';
@@ -165,6 +166,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const zone = zoneOfIdentity(identity);
+  const pageEnter = usePageEnterClass();
   const [drawerOpen, setDrawerOpen] = useState(false);
   // 手机顶栏的 ☰ 上也有红点（运营稿 2a、6e）；与侧边导航共用同一份汇总查询（同一个 queryKey，只请求一次）。
   const alerts = useQuery({
@@ -264,7 +266,12 @@ export function AppShell({
             <MobileAccountMenu identity={identity} />
           </div>
         </header>
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main
+          key={pageEnter.pathname}
+          className={cn('flex flex-1 flex-col', pageEnter.className)}
+        >
+          {children}
+        </main>
       </div>
       <SessionExpiredDialog zone={zone} />
     </div>

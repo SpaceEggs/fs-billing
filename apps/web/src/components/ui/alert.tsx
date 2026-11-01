@@ -56,7 +56,11 @@ function Alert({
     <div
       data-slot="alert"
       role={role ?? defaultRole}
-      className={cn(alertVariants({ variant }), className)}
+      className={cn(
+        'animate-in fade-in-0 slide-in-from-top-1 duration-fast ease-motion-out',
+        alertVariants({ variant }),
+        className,
+      )}
       {...props}
     />
   );

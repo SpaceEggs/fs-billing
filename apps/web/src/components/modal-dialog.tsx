@@ -91,7 +91,7 @@ export function ModalDialog({
           dismissible ? undefined : (event) => event.preventDefault()
         }
         className={cn(
-          'inset-x-0 top-auto bottom-0 left-0 flex max-h-[90dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-4 overflow-y-auto rounded-t-2xl rounded-b-none border-0 bg-card px-4 pt-2 pb-7 text-foreground shadow-none sm:max-w-none md:inset-auto md:top-1/2 md:left-1/2 md:w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:border md:border-border md:p-6 md:shadow-[0_16px_48px_rgba(0,0,0,.25)]',
+          'inset-x-0 top-auto bottom-0 left-0 flex max-h-[90dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-4 overflow-y-auto rounded-t-2xl rounded-b-none border-0 bg-card px-4 pt-2 pb-7 text-foreground shadow-none sm:max-w-none max-md:data-[state=open]:slide-in-from-bottom max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:zoom-in-100 max-md:data-[state=closed]:zoom-out-100 md:inset-auto md:top-1/2 md:left-1/2 md:w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:border md:border-border md:p-6 md:shadow-[0_16px_48px_rgba(0,0,0,.25)]',
           className,
         )}
       >

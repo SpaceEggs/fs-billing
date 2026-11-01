@@ -30,6 +30,7 @@ import { ReversePaymentDialog } from '../../components/admin/reverse-payment-dia
 import { VoidReceivableDialog } from '../../components/admin/void-receivable-dialog';
 import { ModalDialog } from '../../components/modal-dialog';
 import { AppShell, PageBody } from '../../components/app-shell';
+import { Refreshing } from '../../components/motion';
 import {
   FilterGroup,
   FilterSheet,
@@ -425,7 +426,10 @@ function ReceivableCards({
   actions: RowActions;
 }) {
   return (
-    <ul className="m-0 flex list-none flex-col gap-2.5 p-0 tabular-nums md:hidden">
+    <ul
+      data-motion="list"
+      className="m-0 flex list-none flex-col gap-2.5 p-0 tabular-nums md:hidden"
+    >
       {items.map((receivable) => (
         <li
           key={receivable.ledgerEntryId}
@@ -826,7 +830,10 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
           ) : data.pagination.total === 0 ? (
             <EmptyState search={search} />
           ) : (
-            <>
+            <Refreshing
+              active={receivables.isPlaceholderData}
+              className="flex flex-col gap-5"
+            >
               <ReceivableTable
                 status={status}
                 items={data.items}
@@ -845,7 +852,7 @@ export function ReceivablesPage({ identity }: { identity: Identity }) {
                 rowCount={data.pagination.total}
                 onPage={goToPage}
               />
-            </>
+            </Refreshing>
           )}
         </section>
       </PageBody>

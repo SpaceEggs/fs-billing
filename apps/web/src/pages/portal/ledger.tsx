@@ -24,6 +24,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { Label } from '../../components/ui/label';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
+import { Refreshing } from '../../components/motion';
 import { DateTime, Money } from '../../components/data-format';
 import { DateRangeField } from '../../components/date-range-field';
 import {
@@ -170,7 +171,10 @@ function LedgerCards({
   items: PortalLedgerRow[];
 }) {
   return (
-    <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
+    <ul
+      data-motion="list"
+      className="m-0 flex list-none flex-col gap-2 p-0 md:hidden"
+    >
       {items.map((row) => (
         <li
           key={rowKey(row)}
@@ -452,7 +456,10 @@ export function PortalLedgerPage({
             </div>
           )
         ) : (
-          <>
+          <Refreshing
+            active={ledger.isPlaceholderData}
+            className="flex flex-col gap-5"
+          >
             <LedgerTable currency={data.currency} items={data.items} />
             <LedgerCards currency={data.currency} items={data.items} />
             <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-muted-foreground tabular-nums">
@@ -470,7 +477,7 @@ export function PortalLedgerPage({
                 }
               />
             </div>
-          </>
+          </Refreshing>
         )}
       </PageBody>
     </AppShell>

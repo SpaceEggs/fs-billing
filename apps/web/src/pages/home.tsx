@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
 import type { AdminOverviewResponse, Identity } from '@fs-billing/shared';
 import { AppShell, PageBody } from '../components/app-shell';
+import { motionContent } from '../components/motion';
 import { DailyChart } from '../components/daily-spend-chart';
 import { Money } from '../components/data-format';
 import { LoadError } from '../components/load-error';
@@ -189,7 +190,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
         ) : !home ? (
           <OverviewSkeleton />
         ) : (
-          <>
+          <div className={cn(motionContent, 'flex flex-col gap-5')}>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <Card
                 asChild
@@ -574,7 +575,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                 />
               </section>
             </Card>
-          </>
+          </div>
         )}
       </PageBody>
     </AppShell>

@@ -32,6 +32,7 @@ import { UnassignedAssignDialog } from '../../components/admin/unassigned-assign
 import { UnassignedIgnoreDialog } from '../../components/admin/unassigned-ignore-dialog';
 import { RequestFailure } from '../../components/admin/problem-alert';
 import { AppShell, PageBody } from '../../components/app-shell';
+import { Refreshing } from '../../components/motion';
 import { DateTime } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -803,7 +804,7 @@ function PendingRows({
   const selectedOnPage = rows.filter((row) => picked(row.id)).length;
   const allOnPage = rows.length > 0 && selectedOnPage === rows.length;
   return (
-    <div aria-busy={busy} className="flex flex-col gap-3">
+    <Refreshing active={busy} className="flex flex-col gap-3">
       {total === 0 ? (
         <p className="m-0 rounded-xl border border-border px-5 py-10 text-center text-sm text-muted-foreground">
           没有待处理的话单
@@ -917,7 +918,7 @@ function PendingRows({
           />
         </>
       )}
-    </div>
+    </Refreshing>
   );
 }
 
@@ -949,7 +950,7 @@ function IgnoredRows({
   onPage: (page: number) => void;
 }) {
   return (
-    <div aria-busy={busy} className="flex flex-col gap-3">
+    <Refreshing active={busy} className="flex flex-col gap-3">
       {total === 0 ? (
         <p className="m-0 rounded-xl border border-border px-5 py-12 text-center text-sm text-muted-foreground">
           没有已忽略的话单
@@ -1051,7 +1052,7 @@ function IgnoredRows({
           />
         </>
       )}
-    </div>
+    </Refreshing>
   );
 }
 

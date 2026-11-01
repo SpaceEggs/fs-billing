@@ -117,6 +117,15 @@
   --alert-neg-bd: var(--err-bd);
 }
 
+/* 界面动效令牌：所有过渡只走这组时长与缓动，减少动态效果时时长归零。 */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 220ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
 @theme inline {
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
@@ -167,6 +176,11 @@
   --color-alert-neg: var(--alert-neg-fg);
   --color-alert-neg-soft: var(--alert-neg-bg);
   --color-alert-neg-border: var(--alert-neg-bd);
+  --duration-fast: var(--motion-fast);
+  --duration-base: var(--motion-base);
+  --duration-slow: var(--motion-slow);
+  --ease-motion-out: var(--motion-ease-out);
+  --ease-motion-in: var(--motion-ease-in);
 }
 
 /* Tailwind v4 的 preflight 让裸 `border` 使用 currentcolor；与 shadcn/ui 一致，默认边框色取项目的 --border。 */
@@ -180,14 +194,38 @@
   }
 }
 
-/* 弹层的进出场动画（tw-animate-css）在“减少动态效果”下关闭；Radix Presence 看到无动画会立即卸载。 */
+/* 有旧数据时刷新：只变透明度，不改尺寸。 */
+.motion-refresh {
+  transition: opacity var(--motion-fast) var(--motion-ease-out);
+}
+.motion-refresh[aria-busy='true'] {
+  opacity: 0.72;
+}
+
+/* 表格行与手机卡片列表进入：从半透明淡入，时长 --motion-fast。 */
+[data-slot='table-body'] > tr,
+[data-motion='list'] > * {
+  animation: enter var(--motion-fast) var(--motion-ease-out);
+  --tw-enter-opacity: 0.5;
+}
+
+/* 弹层的进出场动画（tw-animate-css）在“减少动态效果”下关闭；Radix Presence 看到无动画会立即卸载。令牌归零后 transition 也是瞬时的。 */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+
   [class*='animate-in'],
-  [class*='animate-out'] {
+  [class*='animate-out'],
+  [data-slot='table-body'] > tr,
+  [data-motion='list'] > * {
     animation: none !important;
   }
 }
 
+/* 未写 duration-* 的 tw-animate 进出场也走 --motion-base。 */
 html,
 body {
   margin: 0;
@@ -195,6 +233,7 @@ body {
   color: var(--fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  --tw-duration: var(--motion-base);
 }
 
 body {

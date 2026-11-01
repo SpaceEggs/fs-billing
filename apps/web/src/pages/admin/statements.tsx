@@ -29,6 +29,7 @@ import {
   type RegenerateTarget,
 } from '../../components/admin/statement-regenerate';
 import { AppShell, PageBody } from '../../components/app-shell';
+import { Refreshing } from '../../components/motion';
 import { DateTime, Money } from '../../components/data-format';
 import { MonthField } from '../../components/month-field';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -38,7 +39,6 @@ import { apiQuery } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
 import { previousBeijingMonth } from '../../lib/admin-statements';
 import { statementMonthTitle } from '../../lib/statement';
-import { cn } from '../../lib/utils';
 
 type Group = AdminStatementsResponse['groups'][number];
 
@@ -174,7 +174,7 @@ function Groups({
     return (
       <div
         aria-busy={fetching}
-        className="flex flex-col items-center gap-2 rounded-xl border border-border px-4 py-12 text-center"
+        className="motion-refresh flex flex-col items-center gap-2 rounded-xl border border-border px-4 py-12 text-center"
       >
         <span className="text-[15px] font-semibold">
           {statementMonthTitle(data.month)}没有账单
@@ -185,10 +185,7 @@ function Groups({
       </div>
     );
   return (
-    <div
-      aria-busy={fetching}
-      className={cn('flex flex-col gap-5', fetching && 'opacity-60')}
-    >
+    <Refreshing active={fetching} className="flex flex-col gap-5">
       {data.groups.map((group) => (
         <GroupSection
           key={group.currency}
@@ -196,7 +193,7 @@ function Groups({
           onRegenerate={onRegenerate}
         />
       ))}
-    </div>
+    </Refreshing>
   );
 }
 

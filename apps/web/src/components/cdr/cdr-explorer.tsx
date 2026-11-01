@@ -4,8 +4,8 @@ import type { Currency, PortalCdr } from '@fs-billing/shared';
 import { Skeleton } from '../ui/skeleton';
 import type { CdrFilters } from '../../lib/cdr-search';
 import { rangeLabel, type DayRange } from '../../lib/day-range';
-import { cn } from '../../lib/utils';
 import { Pagination } from '../pagination';
+import { Refreshing } from '../motion';
 import { QueryError, RefreshError } from '../query-error';
 import { Button } from '../ui/button';
 import { formatCount } from './cdr-format';
@@ -230,11 +230,9 @@ export function CdrExplorer<Row extends PortalCdr>({
           onClear={clearFilters}
         />
       ) : (
-        <div
-          className={cn(
-            'flex flex-col gap-4',
-            list.isPlaceholderData && 'opacity-60',
-          )}
+        <Refreshing
+          active={list.isPlaceholderData}
+          className="flex flex-col gap-4"
         >
           <CdrTable
             currency={data.currency}
@@ -263,7 +261,7 @@ export function CdrExplorer<Row extends PortalCdr>({
               onPage={onPage}
             />
           </div>
-        </div>
+        </Refreshing>
       )}
       <CdrDetailDialog
         cdr={selected}

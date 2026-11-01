@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
 import type { Identity, PortalHomeResponse } from '@fs-billing/shared';
+import { motionContent } from '../../components/motion';
 import { Skeleton } from '../../components/ui/skeleton';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { DailyChart } from '../../components/daily-spend-chart';
@@ -214,7 +215,7 @@ function HomeContent({
 }) {
   const hasCalls = home.recentCalls.length > 0;
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
+    <div className={cn(motionContent, 'flex flex-col gap-4 md:gap-6')}>
       {home.health === 'suspended' ? <SuspendedBanner /> : null}
       <div className="flex items-center justify-between md:hidden">
         <span className="text-[13px] text-muted-foreground">
