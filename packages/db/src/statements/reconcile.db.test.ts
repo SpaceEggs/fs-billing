@@ -22,10 +22,16 @@ beforeAll(async () => {
 });
 
 const snapshot = { isolationLevel: 'repeatable read' } as const;
+// 2026-10-15 12:00 北京时间。上一个应有月份固定为 9 月，不随墙钟把没有账单的月份算进缺失。
+const asOf = new Date('2026-10-15T04:00:00.000Z');
 const generate = (tenant: string, month: string) =>
   withSystem(app.db, (tx) => generateStatement(tx, tenant, month), snapshot);
 const reconcile = (tenant: string) =>
-  withSystem(app.db, (tx) => reconcileTenantStatements(tx, tenant), snapshot);
+  withSystem(
+    app.db,
+    (tx) => reconcileTenantStatements(tx, tenant, { asOf }),
+    snapshot,
+  );
 const read = (tenant: string, month: string) =>
   withAdmin(app.db, (tx) => readStatement(tx, tenant, month));
 const alerts = async (tenant: string) =>
@@ -279,9 +285,9 @@ describe('账单核对（验收标准 2）', () => {
       createdAt: '2026-08-01 08:00:00',
     });
     await generate(tenant.id, '2026-08-01');
-    // 9 月应有而没有。
+    // 9 月应有而没有。asOf 停在 10 月，所以缺失的只有这一个月。
     const result = await reconcile(tenant.id);
-    expect(result.missing.slice(0, 1)).toEqual(['2026-09-01']);
+    expect(result.missing).toEqual(['2026-09-01']);
     expect(result.statements.map((s) => s.status)).toEqual(['ok']);
     const open = await alerts(tenant.id);
     expect(open.map((a) => a.description)).toEqual(

@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { accounts } from './accounts';
-import { clearLoginFailures } from './db';
+import { clearLoginFailures, readBeijingClock } from './db';
 import { loginAs } from './helpers';
 
-// 种子在播种当月的 1 日凌晨为 ABC001 写了 20 通已接通话单加一笔等额预存（本月消费 ¥3.51、81 分钟，余额不变）。
-// 播种月就是运行时的北京月（北京时间固定 UTC+8）。
-const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
+// 当前月 1 日凌晨的 20 通，03:00 之后才播种。还没播种时，最近 10 通是 9 月 29 日的尾部。
 
 test.beforeEach(async () => {
   await clearLoginFailures(accounts.suspendedCustomer);
@@ -33,14 +31,22 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
     '¥100.00',
   );
   // 播种月的 20 通话单：本月消费 ¥3.51、81 分钟；预存与扣费抵平，所以余额仍是 −¥35.20。
+  // 该月 03:00 之前还没有这 20 通，本月消费是 0。最近话单仍是上一次播种的 1 日，没有更晚的种子月时才是 9 月 29 日。
+  const clock = await readBeijingClock();
   const spend = page.getByRole('region', { name: '本月消费' });
-  await expect(spend).toContainText('¥3.51');
   await expect(spend).toContainText(
-    `${month.slice(0, 4)}年${Number(month.slice(5))}月`,
+    `${clock.month.slice(0, 4)}年${Number(clock.month.slice(5))}月`,
   );
   const minutes = page.getByRole('region', { name: '本月通话分钟数' });
-  await expect(minutes).toContainText('81');
-  await expect(minutes).toContainText('已接通 20 通');
+  if (clock.seededCalls === 20) {
+    await expect(spend).toContainText('¥3.51');
+    await expect(minutes).toContainText('81');
+    await expect(minutes).toContainText('已接通 20 通');
+  } else {
+    await expect(spend).toContainText('¥0.00');
+    await expect(spend).not.toContainText('¥3.51');
+    await expect(minutes).toContainText('已接通 0 通');
+  }
   await expect(page.getByText('透支中').first()).toBeVisible();
   await expect(
     page.getByText('余额已为负数，可用额度仍有 ¥64.80'),
@@ -85,22 +91,39 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
     calls.getByRole('columnheader', { name: '国家', exact: true }),
   ).toBeVisible();
   // 只有已接通的最近 10 通（表头加 10 行）：种子里 ABC001 另有一通未接通（13800138000），不会出现。
-  // 最近的 10 通是播种月 1 日凌晨 01:10 之后的话单，按接通时间倒序。
+  // 有种子月时，最近的是该月 1 日凌晨那 20 通里最晚的 10 通；否则是 9 月 29 日的尾部。
   const rows = calls.getByRole('row');
   await expect(rows).toHaveCount(11);
-  for (const [index, time, country] of [
-    [1, '01:59:30', '中国'],
-    [2, '01:56:04', '中国香港'],
-    [4, '01:46:36', '日本'],
-    [6, '01:33:54', '美国/加拿大'],
-    [8, '01:21:10', '英国'],
-    [10, '01:10:01', '新加坡'],
-  ] as const) {
-    await expect(rows.nth(index)).toContainText(`${month}-01 ${time}`);
-    await expect(rows.nth(index)).toContainText(country);
+  if (clock.latestIsSeedDay) {
+    for (const [index, time, country] of [
+      [1, '01:59:30', '中国'],
+      [2, '01:56:04', '中国香港'],
+      [4, '01:46:36', '日本'],
+      [6, '01:33:54', '美国/加拿大'],
+      [8, '01:21:10', '英国'],
+      [10, '01:10:01', '新加坡'],
+    ] as const) {
+      await expect(rows.nth(index)).toContainText(
+        `${clock.latestCallDay} ${time}`,
+      );
+      await expect(rows.nth(index)).toContainText(country);
+    }
+    for (const row of (await rows.all()).slice(1))
+      await expect(row).toContainText(clock.latestCallDay);
+  } else {
+    for (const [index, time, country] of [
+      [1, '13:26:25', '中国'],
+      [2, '13:24:05', '中国'],
+      [4, '13:16:50', '日本'],
+      [9, '12:59:26', '新加坡'],
+      [10, '12:54:09', '中国'],
+    ] as const) {
+      await expect(rows.nth(index)).toContainText(`2026-09-29 ${time}`);
+      await expect(rows.nth(index)).toContainText(country);
+    }
+    for (const row of (await rows.all()).slice(1))
+      await expect(row).toContainText('2026-09-29');
   }
-  for (const row of (await rows.all()).slice(1))
-    await expect(row).toContainText(`${month}-01`);
   await expect(calls.getByText('13800138000')).toHaveCount(0);
 
   const nav = page.getByRole('navigation', { name: '主导航' });
@@ -160,14 +183,23 @@ test.describe('on a phone', () => {
     page,
   }) => {
     await loginAs(page, '/login', accounts.customer);
+    const clock = await readBeijingClock();
     const recent = page.getByRole('region', { name: '最近话单' });
     await expect(recent.getByRole('table')).toBeHidden();
     const cards = recent.getByRole('listitem');
     await expect(cards).toHaveCount(10);
-    await expect(cards.first()).toContainText('中国 · 3分45秒');
-    await expect(cards.first()).toContainText(`${month.slice(5)}-01 01:59:30`);
-    await expect(cards.last()).toContainText('新加坡');
-    await expect(cards.last()).toContainText(`${month.slice(5)}-01 01:10:01`);
+    if (clock.latestIsSeedDay) {
+      const day = clock.latestCallDay.slice(5);
+      await expect(cards.first()).toContainText('中国 · 3分45秒');
+      await expect(cards.first()).toContainText(`${day} 01:59:30`);
+      await expect(cards.last()).toContainText('新加坡');
+      await expect(cards.last()).toContainText(`${day} 01:10:01`);
+    } else {
+      await expect(cards.first()).toContainText('中国 · 4分11秒');
+      await expect(cards.first()).toContainText('09-29 13:26:25');
+      await expect(cards.last()).toContainText('中国');
+      await expect(cards.last()).toContainText('09-29 12:54:09');
+    }
     await expect(page.getByText('ABC001 · CNY')).toBeVisible();
 
     await page.getByRole('button', { name: '打开导航' }).click();

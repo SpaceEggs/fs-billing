@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { accounts } from './accounts';
+import { readBeijingClock } from './db';
 import { expectPath, loginAs } from './helpers';
 
 const septemberPath = '/portal/ledger?from=2026-09-01&to=2026-09-30';
@@ -44,21 +45,33 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
 test('shows the seeded first day of this month: 20 merged calls and the recharge that offsets them', async ({
   page,
 }) => {
-  // 种子在播种月 1 日凌晨写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
-  const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
-  await page.goto(`/portal/ledger?from=${month}-01&to=${month}-01`);
-  const rows = page.getByRole('table').getByRole('row');
-  await expect(rows).toHaveCount(3);
-  await expect(
-    page.getByRole('link', { name: `${month}-01 通话扣费，共 20 通` }),
-  ).toBeVisible();
-  const recharge = rows.filter({ hasText: '银行转账预存' });
-  await expect(recharge).toHaveCount(1);
-  await expect(recharge).toContainText('+¥3.51');
-  await expect(rows.filter({ hasText: '通话扣费' })).toContainText('-¥3.51');
-  // 抵平之后余额仍是 −¥35.20。
-  await expect(page.getByText('当前余额').first()).toBeVisible();
+  // 种子在当前北京月 1 日凌晨写 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
+  // 该月 03:00 之前这两笔还不存在。当天的合并行带「截至当前」。
+  // 1 日的默认范围就是这一天，空列表写「还没有余额流水」；之后只筛 1 日不是默认范围。
+  const clock = await readBeijingClock();
+  const day = `${clock.month}-01`;
+  await page.goto(`/portal/ledger?from=${day}&to=${day}`);
   await expect(page.getByText('-¥35.20').first()).toBeVisible();
+  if (clock.seededCalls === 0) {
+    await expect(
+      page.getByText(
+        clock.dayOfMonth === 1 ? '还没有余额流水' : '没有符合条件的流水',
+      ),
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: /通话扣费/ })).toHaveCount(0);
+  } else {
+    const rows = page.getByRole('table').getByRole('row');
+    await expect(rows).toHaveCount(3);
+    const note =
+      clock.today === day
+        ? `${day} 通话扣费（截至当前），共 20 通`
+        : `${day} 通话扣费，共 20 通`;
+    await expect(page.getByRole('link', { name: note })).toBeVisible();
+    const recharge = rows.filter({ hasText: '银行转账预存' });
+    await expect(recharge).toHaveCount(1);
+    await expect(recharge).toContainText('+¥3.51');
+    await expect(rows.filter({ hasText: '通话扣费' })).toContainText('-¥3.51');
+  }
 });
 
 test('filters by type and keeps the range and page in the address', async ({

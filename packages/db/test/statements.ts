@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { beijingTime } from '@fs-billing/rating';
+import { sql } from 'drizzle-orm';
 import { lockTenants, withAdmin, type Connection } from '../src/client.js';
 import { ensureCdrPartitions } from '../src/partitions.js';
 import { cdrs, ledgerEntries, tenants } from '../src/schema.js';
@@ -41,8 +42,8 @@ export async function statementTenant(
 
 /**
  * 写一笔流水（owner 连接）。通话扣费的 occurred_at 是 `at`，created_at 默认比它晚 5 秒；
- * 人工流水两列都是 `at`。`createdAt` 单独指定“很久以后才写入”的补推；传 `'now'` 表示此刻写入
- * （晚于已生成账单的 generated_at，核对时算作迟到流水）。
+ * 人工流水两列都是 `at`。`createdAt` 单独指定“很久以后才写入”的补推；传 `'now'` 表示数据库此刻写入
+ * （晚于已生成账单的 generated_at，核对时算作迟到流水）。用数据库时钟，不跟测试进程的 Date 走。
  */
 export async function statementLedger(
   owner: Connection,
@@ -64,7 +65,7 @@ export async function statementLedger(
       occurredAt,
       createdAt: options.createdAt
         ? options.createdAt === 'now'
-          ? new Date()
+          ? sql`clock_timestamp()`
           : ts(options.createdAt)
         : kind === 'call_charge'
           ? new Date(occurredAt.getTime() + 5000)

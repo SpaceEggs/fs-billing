@@ -367,7 +367,11 @@ describe('验收标准 1 与 2：种子数据 ABC01 → ABC001', () => {
 
     const result = await withSystem(
       seeded.app.db,
-      (tx) => reconcileTenantStatements(tx, abc001),
+      (tx) =>
+        reconcileTenantStatements(tx, abc001, {
+          // 2026-10-15 12:00 北京时间。上一个应有月份是 9 月，缺失列表不随墙钟变长。
+          asOf: new Date('2026-10-15T04:00:00.000Z'),
+        }),
       { isolationLevel: 'repeatable read' },
     );
     expect(
