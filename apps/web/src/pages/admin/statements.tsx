@@ -174,6 +174,7 @@ function Groups({
     return (
       <div
         aria-busy={fetching}
+        data-refreshing={fetching ? 'true' : undefined}
         className="motion-refresh flex flex-col items-center gap-2 rounded-xl border border-border px-4 py-12 text-center"
       >
         <span className="text-[15px] font-semibold">
@@ -185,7 +186,11 @@ function Groups({
       </div>
     );
   return (
-    <Refreshing active={fetching} className="flex flex-col gap-5">
+    <Refreshing
+      active={fetching}
+      aria-busy={fetching}
+      className="flex flex-col gap-5"
+    >
       {data.groups.map((group) => (
         <GroupSection
           key={group.currency}

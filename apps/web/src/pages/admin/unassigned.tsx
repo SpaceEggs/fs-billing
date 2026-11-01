@@ -407,27 +407,31 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
       <RefreshError title="话单刷新失败，数据可能不是最新" query={list} />
       {unignoreError ? <RequestFailure error={unignoreError} /> : null}
       {listed && tab === 'pending' ? (
-        <PendingRows
-          rows={listed.items}
-          total={listed.pagination.total}
-          page={page}
-          selection={selection}
-          busy={list.isFetching}
-          onTogglePage={() => togglePage(listed.items)}
-          onToggleRow={toggleRow}
-          onPage={(next) => update(keptSearch(search, next))}
-        />
+        <Refreshing active={list.isFetching}>
+          <PendingRows
+            rows={listed.items}
+            total={listed.pagination.total}
+            page={page}
+            selection={selection}
+            busy={list.isFetching}
+            onTogglePage={() => togglePage(listed.items)}
+            onToggleRow={toggleRow}
+            onPage={(next) => update(keptSearch(search, next))}
+          />
+        </Refreshing>
       ) : null}
       {listed && tab === 'ignored' ? (
-        <IgnoredRows
-          rows={listed.items}
-          total={listed.pagination.total}
-          page={page}
-          busy={list.isFetching}
-          unignoring={unignoring}
-          onUnignore={(id) => void unignore(id)}
-          onPage={(next) => update(keptSearch(search, next))}
-        />
+        <Refreshing active={list.isFetching}>
+          <IgnoredRows
+            rows={listed.items}
+            total={listed.pagination.total}
+            page={page}
+            busy={list.isFetching}
+            unignoring={unignoring}
+            onUnignore={(id) => void unignore(id)}
+            onPage={(next) => update(keptSearch(search, next))}
+          />
+        </Refreshing>
       ) : null}
       {showList && !listed && !list.isError ? (
         <p aria-busy="true" className="m-0 text-sm text-muted-foreground">
@@ -804,7 +808,7 @@ function PendingRows({
   const selectedOnPage = rows.filter((row) => picked(row.id)).length;
   const allOnPage = rows.length > 0 && selectedOnPage === rows.length;
   return (
-    <Refreshing active={busy} className="flex flex-col gap-3">
+    <div aria-busy={busy} className="flex flex-col gap-3">
       {total === 0 ? (
         <p className="m-0 rounded-xl border border-border px-5 py-10 text-center text-sm text-muted-foreground">
           没有待处理的话单
@@ -918,7 +922,7 @@ function PendingRows({
           />
         </>
       )}
-    </Refreshing>
+    </div>
   );
 }
 
@@ -950,7 +954,7 @@ function IgnoredRows({
   onPage: (page: number) => void;
 }) {
   return (
-    <Refreshing active={busy} className="flex flex-col gap-3">
+    <div aria-busy={busy} className="flex flex-col gap-3">
       {total === 0 ? (
         <p className="m-0 rounded-xl border border-border px-5 py-12 text-center text-sm text-muted-foreground">
           没有已忽略的话单
@@ -1052,7 +1056,7 @@ function IgnoredRows({
           />
         </>
       )}
-    </Refreshing>
+    </div>
   );
 }
 

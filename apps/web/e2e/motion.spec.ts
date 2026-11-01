@@ -72,11 +72,18 @@ test('dialog motion uses tokens and reduced motion is instant', async ({
   await expect(page.getByRole('heading', { name: '管理员' })).toBeVisible();
   const refresh = page.locator('.motion-refresh').first();
   await expect(refresh).toBeVisible();
+  await expect(refresh).not.toHaveAttribute('aria-busy');
   expect(
     await refresh.evaluate(
       (element) => getComputedStyle(element).transitionDuration,
     ),
   ).toBe('0s');
+  expect(
+    await refresh.evaluate((element) => {
+      element.setAttribute('data-refreshing', 'true');
+      return getComputedStyle(element).opacity;
+    }),
+  ).toBe('0.72');
 
   await page.getByRole('button', { name: '＋ 新增管理员' }).click();
   const reducedDialog = page.getByRole('dialog', { name: '新增管理员' });

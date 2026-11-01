@@ -20,7 +20,6 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { AppShell, PageBody } from '../../components/app-shell';
-import { Refreshing } from '../../components/motion';
 import { DateRangeField } from '../../components/date-range-field';
 import { DateTime } from '../../components/data-format';
 import { FilterSheet, resultLabel } from '../../components/filter-sheet';
@@ -549,7 +548,11 @@ function Rows({
   onPage: (page: number) => void;
 }) {
   return (
-    <Refreshing active={busy} className="flex flex-col gap-3">
+    <div
+      aria-busy={busy}
+      data-refreshing={busy ? 'true' : undefined}
+      className="motion-refresh flex flex-col gap-3"
+    >
       <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
         <Table aria-label="操作记录">
           <TableHeader>
@@ -595,7 +598,7 @@ function Rows({
         rowCount={rowCount}
         onPage={onPage}
       />
-    </Refreshing>
+    </div>
   );
 }
 

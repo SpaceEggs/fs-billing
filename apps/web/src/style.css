@@ -198,7 +198,7 @@
 .motion-refresh {
   transition: opacity var(--motion-fast) var(--motion-ease-out);
 }
-.motion-refresh[aria-busy='true'] {
+.motion-refresh[data-refreshing='true'] {
   opacity: 0.72;
 }
 
