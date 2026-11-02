@@ -12,10 +12,11 @@ import {
   localTimeRestrictedSyntax,
 } from './tooling/eslint/guardrails.ts';
 
+const sourceExt = '{ts,tsx,mts,mjs,js,cjs}';
+
 const testFiles = [
-  '**/*.test.ts',
-  '**/*.test.tsx',
-  '**/*.spec.ts',
+  `**/*.test.${sourceExt}`,
+  `**/*.spec.${sourceExt}`,
   '**/test/**',
   'tests/**',
   'apps/web/e2e/**',
@@ -51,7 +52,15 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.mjs'],
+    // .mjs/.js/.cjs 不进 tsconfig。api/worker/db 的 .mts 与 web 以外的 .tsx 也不在内，
+    // 类型规则跑不起来；关掉之后语法护栏仍然生效。
+    files: [`**/*.{mjs,js,cjs,mts}`],
+    ignores: ['tooling/**/*.mts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['**/*.tsx'],
+    ignores: ['apps/web/**/*.tsx'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
@@ -107,14 +116,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.ts', '**/*.tsx', '**/*.mts'],
+    files: [`**/*.${sourceExt}`],
     ignores: testFiles,
     rules: {
       'no-restricted-syntax': ['error', ...localTimeRestrictedSyntax],
     },
   },
   {
-    files: ['**/*.ts', '**/*.tsx', '**/*.mts'],
+    files: [`**/*.${sourceExt}`],
     ignores: [...testFiles, ...ledgerWriteFiles],
     rules: {
       'no-restricted-syntax': [
@@ -127,9 +136,9 @@ export default tseslint.config(
   },
   {
     files: [
-      'apps/api/src/**/*.ts',
-      'apps/worker/src/**/*.ts',
-      'packages/db/src/**/*.ts',
+      `apps/api/src/**/*.${sourceExt}`,
+      `apps/worker/src/**/*.${sourceExt}`,
+      `packages/db/src/**/*.${sourceExt}`,
     ],
     // bin 是迁移/种子 CLI，stdout 就是产品（同 apps/*/scripts）。
     ignores: [...testFiles, 'packages/db/src/bin/**'],
@@ -158,7 +167,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/src/**/*.{ts,tsx}'],
+    files: [`apps/web/src/**/*.${sourceExt}`],
     ignores: [...testFiles, 'apps/web/src/lib/api.ts'],
     languageOptions: {
       globals: {
