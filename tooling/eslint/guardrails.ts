@@ -35,17 +35,31 @@ const insertCall = (
   selector: [
     `CallExpression[callee.property.name='insert'][arguments.0.name='${table}']`,
     `CallExpression[callee.property.name='insert'][arguments.0.property.name='${table}']`,
+    `CallExpression[callee.property.name='insert'][arguments.0.property.value='${table}']`,
     `CallExpression[callee.name='insert'][arguments.0.name='${table}']`,
     `CallExpression[callee.name='insert'][arguments.0.property.name='${table}']`,
+    `CallExpression[callee.name='insert'][arguments.0.property.value='${table}']`,
   ].join(', '),
+  message,
+});
+
+const renamedTableImport = (
+  table: 'ledgerEntries' | 'systemAlerts',
+  message: string,
+) => ({
+  selector: `ImportSpecifier[imported.name='${table}'][local.name!='${table}']`,
   message,
 });
 
 export const ledgerRestrictedSyntax = [
   insertCall('ledgerEntries', ledgerMessage),
+  renamedTableImport('ledgerEntries', ledgerMessage),
 ];
 
-export const alertRestrictedSyntax = [insertCall('systemAlerts', alertMessage)];
+export const alertRestrictedSyntax = [
+  insertCall('systemAlerts', alertMessage),
+  renamedTableImport('systemAlerts', alertMessage),
+];
 
 export const consoleRestrictedGlobals = {
   checkGlobalObject: true,
