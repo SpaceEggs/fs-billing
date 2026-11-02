@@ -17,7 +17,7 @@ const fetchMessage =
   '禁止直接 fetch / XMLHttpRequest，改用 apps/web/src/lib/api.ts 的 callApi / apiQuery（组件经 TanStack Query 取数）';
 
 const localDateMethod =
-  '/^(get|set)(FullYear|Month|Date|Day|Hours|Minutes|Seconds|Milliseconds)$/';
+  '/^(get|set)(FullYear|Year|Month|Date|Day|Hours|Minutes|Seconds|Milliseconds)$/';
 const localDateStringMethod =
   '/^(toLocaleDateString|toLocaleTimeString|toDateString|toTimeString)$/';
 
