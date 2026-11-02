@@ -5,6 +5,7 @@ import money from './tooling/eslint/money.ts';
 import {
   alertRestrictedSyntax,
   consoleRestrictedGlobals,
+  consoleRestrictedImports,
   eslintCommentsPlugin,
   fetchRestrictedGlobals,
   fetchRestrictedProperties,
@@ -133,9 +134,18 @@ export default tseslint.config(
     ],
     // bin 是迁移/种子 CLI，stdout 就是产品（同 apps/*/scripts）。
     ignores: [...testFiles, 'packages/db/src/bin/**'],
-    languageOptions: { globals: { console: 'readonly' } },
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        globalThis: 'readonly',
+        self: 'readonly',
+        window: 'readonly',
+        global: 'readonly',
+      },
+    },
     rules: {
-      'no-restricted-globals': ['error', ...consoleRestrictedGlobals],
+      'no-restricted-globals': ['error', consoleRestrictedGlobals],
+      'no-restricted-imports': ['error', consoleRestrictedImports],
     },
   },
   {

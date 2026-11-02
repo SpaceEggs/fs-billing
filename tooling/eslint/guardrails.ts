@@ -47,9 +47,18 @@ export const ledgerRestrictedSyntax = [
 
 export const alertRestrictedSyntax = [insertCall('systemAlerts', alertMessage)];
 
-export const consoleRestrictedGlobals = [
-  { name: 'console', message: consoleMessage },
-];
+export const consoleRestrictedGlobals = {
+  checkGlobalObject: true,
+  globalObjects: ['global'],
+  globals: [{ name: 'console', message: consoleMessage }],
+};
+
+export const consoleRestrictedImports = {
+  paths: [
+    { name: 'console', message: consoleMessage },
+    { name: 'node:console', message: consoleMessage },
+  ],
+};
 
 export const fetchRestrictedGlobals = [
   { name: 'fetch', message: fetchMessage },
