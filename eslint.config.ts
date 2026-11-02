@@ -2,6 +2,30 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import money from './tooling/eslint/money.ts';
+import {
+  alertRestrictedSyntax,
+  consoleRestrictedGlobals,
+  eslintCommentsPlugin,
+  fetchRestrictedGlobals,
+  fetchRestrictedProperties,
+  ledgerRestrictedSyntax,
+  localTimeRestrictedSyntax,
+} from './tooling/eslint/guardrails.ts';
+
+const testFiles = [
+  '**/*.test.ts',
+  '**/*.test.tsx',
+  '**/*.spec.ts',
+  '**/test/**',
+  'tests/**',
+  'apps/web/e2e/**',
+];
+
+const ledgerWriteFiles = [
+  'packages/db/src/ledger.ts',
+  'packages/db/src/alerts.ts',
+  'packages/db/src/seed-alerts.ts',
+];
 
 export default tseslint.config(
   {
@@ -80,6 +104,62 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.mts'],
+    ignores: testFiles,
+    rules: {
+      'no-restricted-syntax': ['error', ...localTimeRestrictedSyntax],
+    },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.mts'],
+    ignores: [...testFiles, ...ledgerWriteFiles],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...localTimeRestrictedSyntax,
+        ...ledgerRestrictedSyntax,
+        ...alertRestrictedSyntax,
+      ],
+    },
+  },
+  {
+    files: [
+      'apps/api/src/**/*.ts',
+      'apps/worker/src/**/*.ts',
+      'packages/db/src/**/*.ts',
+    ],
+    // bin 是迁移/种子 CLI，stdout 就是产品（同 apps/*/scripts）。
+    ignores: [...testFiles, 'packages/db/src/bin/**'],
+    languageOptions: { globals: { console: 'readonly' } },
+    rules: {
+      'no-restricted-globals': ['error', ...consoleRestrictedGlobals],
+    },
+  },
+  {
+    plugins: { '@eslint-community/eslint-comments': eslintCommentsPlugin },
+    linterOptions: { reportUnusedDisableDirectives: 'error' },
+    rules: {
+      '@eslint-community/eslint-comments/require-description': [
+        'error',
+        { ignore: ['eslint-enable'] },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: [...testFiles, 'apps/web/src/lib/api.ts'],
+    languageOptions: {
+      globals: {
+        fetch: 'readonly',
+        XMLHttpRequest: 'readonly',
+      },
+    },
+    rules: {
+      'no-restricted-globals': ['error', ...fetchRestrictedGlobals],
+      'no-restricted-properties': ['error', ...fetchRestrictedProperties],
     },
   },
   prettier,
