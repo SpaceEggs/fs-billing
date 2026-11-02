@@ -133,9 +133,6 @@ PR 描述列出验收证据，CI 通过后 squash 合并到 `main`。
 
 ## 运行验证
 
-两套验证技能提供进程归属检查、真实 HTTP 与浏览器验证，以及清理步骤：
-
-- [verify 技能](../apps/web/.agents/skills/verify/SKILL.md) 覆盖阶段 0–3。[功能图](../apps/web/.agents/skills/verify/features/README.md) 列出可验证的路径，包括 Worker 授权、话单入库、扣费任务和数据库账本。证据默认保存在 `artifacts/verify/`。
-- [verify-fs-billing 技能](../.cursor/skills/verify-fs-billing/SKILL.md) 覆盖阶段 4 的登录、越权、会话过期和 SIPp 呼叫。[功能图](../.cursor/skills/verify-fs-billing/features/README.md) 列出可验证的路径，完整运行证据在 `docs/evidence/verify-fs-billing/`。
+验证技能在 [verify-fs-billing](../.cursor/skills/verify-fs-billing/SKILL.md)：隔离栈上按真实用户路径驱动登录、越权、会话过期和 SIPp 呼叫。[功能图](../.cursor/skills/verify-fs-billing/features/README.md) 列出可验证路径，证据在 `docs/evidence/verify-fs-billing/`。
 
 FreeSWITCH 实机通话按 [FreeSWITCH 配置](../freeswitch/README.md) 另行保存证据。
