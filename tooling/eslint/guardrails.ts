@@ -16,10 +16,36 @@ const consoleMessage =
 const fetchMessage =
   '禁止直接 fetch / XMLHttpRequest，改用 apps/web/src/lib/api.ts 的 callApi / apiQuery（组件经 TanStack Query 取数）';
 
+const localDateMethod =
+  '/^(get|set)(FullYear|Month|Date|Day|Hours|Minutes|Seconds|Milliseconds)$/';
+const localDateStringMethod =
+  '/^(toLocaleDateString|toLocaleTimeString|toDateString|toTimeString)$/';
+
 export const localTimeRestrictedSyntax = [
   {
+    selector: `CallExpression[callee.property.name=${localDateMethod}]`,
+    message: localTimeMessage,
+  },
+  {
+    selector: `CallExpression[callee.computed=true][callee.property.value=${localDateMethod}]`,
+    message: localTimeMessage,
+  },
+  {
+    selector: `CallExpression[callee.property.name=${localDateStringMethod}]`,
+    message: localTimeMessage,
+  },
+  {
+    selector: `CallExpression[callee.computed=true][callee.property.value=${localDateStringMethod}]`,
+    message: localTimeMessage,
+  },
+  {
     selector:
-      'CallExpression[callee.property.name=/^(getHours|getDate|getMonth|getFullYear|getDay|setHours|setDate|toLocaleDateString|toDateString)$/]',
+      "CallExpression[callee.property.name='toLocaleString'][arguments.length=0]",
+    message: localTimeMessage,
+  },
+  {
+    selector:
+      "CallExpression[callee.computed=true][callee.property.value='toLocaleString'][arguments.length=0]",
     message: localTimeMessage,
   },
   {

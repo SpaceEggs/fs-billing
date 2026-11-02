@@ -33,6 +33,20 @@ test.each([
   'const d = new Date(); d.setDate(1);',
   'const d = new Date(); d.toLocaleDateString();',
   'const d = new Date(); d.toDateString();',
+  'const d = new Date(); d.getMinutes();',
+  'const d = new Date(); d.getSeconds();',
+  'const d = new Date(); d.getMilliseconds();',
+  'const d = new Date(); d.setMinutes(0);',
+  'const d = new Date(); d.setSeconds(0);',
+  'const d = new Date(); d.setMilliseconds(0);',
+  'const d = new Date(); d.setMonth(0);',
+  'const d = new Date(); d.setFullYear(2026);',
+  'const d = new Date(); d.toLocaleTimeString();',
+  'const d = new Date(); d.toTimeString();',
+  'const d = new Date(); d.toLocaleString();',
+  "const d = new Date(); d['getDate']();",
+  "const d = new Date(); d['toLocaleString']();",
+  "const d = new Date(); d['toLocaleTimeString']();",
   'const x = new Date(2026, 7);',
   'const x = new Date(2026, 7, 31, 12, 0, 0);',
 ])('rejects local-timezone Date usage: %s', reportsLocalTime);
@@ -44,8 +58,12 @@ test.each([
   'const x = Date.UTC(2026, 7, 31);',
   'const d = new Date(); d.getUTCDay();',
   'const d = new Date(); d.getUTCHours();',
+  "const d = new Date(); d['getUTCHours']();",
   'const d = new Date(); d.getTime();',
+  'const d = new Date(); d.setTime(0);',
+  'const d = new Date(); d.getTimezoneOffset();',
   "const n = 12345; n.toLocaleString('en-US');",
+  "const d = new Date(); d.toLocaleString('en-US');",
   'const d = new Date(); d.toISOString();',
 ])('allows UTC, ISO, and numeric toLocaleString: %s', (code) => {
   expect(lint(code)).toEqual([]);
@@ -72,6 +90,21 @@ test.each([
   },
   30_000,
 );
+
+test('repository config flags literal computed local Date access', async () => {
+  const results = await new ESLint().lintText(
+    "export const day = new Date()['getDate']();\nexport const label = new Date().toLocaleString();",
+    { filePath: 'packages/rating/src/time.ts' },
+  );
+  const messages = results.flatMap((result) => result.messages);
+  expect(
+    messages.filter(
+      (message) =>
+        message.ruleId === 'no-restricted-syntax' &&
+        message.message.includes('beijing-time.ts'),
+    ),
+  ).toHaveLength(2);
+}, 30_000);
 
 test('repository config leaves tests unrestricted', async () => {
   const results = await new ESLint().lintText(
