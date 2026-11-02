@@ -70,6 +70,66 @@ jobs:
           fi
           cat /tmp/money-lint.log
           grep -q 'money/no-number-money' /tmp/money-lint.log
+      - name: Reject local-timezone Date methods
+        run: |
+          probe=packages/rating/src/ci-time-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          echo 'export const month = new Date(2026, 7, 31).getMonth();' > "$probe"
+          if pnpm exec eslint "$probe" --format json > /tmp/time-lint.log 2>&1; then
+            echo 'ERROR: local-timezone Date method was accepted'
+            exit 1
+          fi
+          cat /tmp/time-lint.log
+          grep -q 'no-restricted-syntax' /tmp/time-lint.log
+          grep -q '改用' /tmp/time-lint.log
+      - name: Reject direct ledger and alert inserts
+        run: |
+          probe=apps/worker/src/ci-alert-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          printf '%s\n' 'export const write = (tx: { insert: (t: unknown) => unknown }, systemAlerts: unknown) => tx.insert(systemAlerts);' > "$probe"
+          if pnpm exec eslint "$probe" --format json > /tmp/alert-lint.log 2>&1; then
+            echo 'ERROR: direct systemAlerts insert was accepted'
+            exit 1
+          fi
+          cat /tmp/alert-lint.log
+          grep -q 'no-restricted-syntax' /tmp/alert-lint.log
+          grep -q '改用' /tmp/alert-lint.log
+      - name: Reject console in runtime
+        run: |
+          probe=apps/api/src/ci-console-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          echo 'export const fail = (error: unknown) => { console.error(error); };' > "$probe"
+          if pnpm exec eslint "$probe" --format json > /tmp/console-lint.log 2>&1; then
+            echo 'ERROR: console.error was accepted'
+            exit 1
+          fi
+          cat /tmp/console-lint.log
+          grep -q 'no-restricted-globals' /tmp/console-lint.log
+          grep -q '改用' /tmp/console-lint.log
+      - name: Reject undocumented eslint-disable
+        run: |
+          probe=apps/api/src/ci-disable-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          printf '%s\n' '/* eslint-disable no-console */' 'export const ok = 1;' > "$probe"
+          if pnpm exec eslint "$probe" --format json > /tmp/disable-lint.log 2>&1; then
+            echo 'ERROR: undocumented eslint-disable was accepted'
+            exit 1
+          fi
+          cat /tmp/disable-lint.log
+          grep -q '@eslint-community/eslint-comments/require-description' /tmp/disable-lint.log
+          grep -q '改用' /tmp/disable-lint.log
+      - name: Reject direct fetch in web
+        run: |
+          probe=apps/web/src/ci-fetch-probe.ts
+          trap 'rm -f "$probe"' EXIT
+          echo 'export const load = () => fetch("/api/health");' > "$probe"
+          if pnpm exec eslint "$probe" --format json > /tmp/fetch-lint.log 2>&1; then
+            echo 'ERROR: direct fetch was accepted'
+            exit 1
+          fi
+          cat /tmp/fetch-lint.log
+          grep -q 'no-restricted-globals' /tmp/fetch-lint.log
+          grep -q '改用' /tmp/fetch-lint.log
       - name: Start and verify PostgreSQL
         run: |
           docker compose up -d --wait
