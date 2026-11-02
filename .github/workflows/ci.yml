@@ -81,7 +81,7 @@ jobs:
           fi
           cat /tmp/time-lint.log
           grep -q 'no-restricted-syntax' /tmp/time-lint.log
-          grep -q '改用' /tmp/time-lint.log
+          grep -q 'beijing-time.ts' /tmp/time-lint.log
       - name: Reject direct ledger and alert inserts
         run: |
           probe=apps/worker/src/ci-alert-probe.ts
@@ -93,7 +93,7 @@ jobs:
           fi
           cat /tmp/alert-lint.log
           grep -q 'no-restricted-syntax' /tmp/alert-lint.log
-          grep -q '改用' /tmp/alert-lint.log
+          grep -q 'raiseAlert' /tmp/alert-lint.log
       - name: Reject console in runtime
         run: |
           probe=apps/api/src/ci-console-probe.ts
@@ -105,7 +105,7 @@ jobs:
           fi
           cat /tmp/console-lint.log
           grep -q 'no-restricted-globals' /tmp/console-lint.log
-          grep -q '改用' /tmp/console-lint.log
+          grep -q 'scrubErrorForLog' /tmp/console-lint.log
       - name: Reject undocumented eslint-disable
         run: |
           probe=apps/api/src/ci-disable-probe.ts
@@ -117,7 +117,7 @@ jobs:
           fi
           cat /tmp/disable-lint.log
           grep -q '@eslint-community/eslint-comments/require-description' /tmp/disable-lint.log
-          grep -q '改用' /tmp/disable-lint.log
+          grep -q '必须写明原因' /tmp/disable-lint.log
       - name: Reject direct fetch in web
         run: |
           probe=apps/web/src/ci-fetch-probe.ts
@@ -129,7 +129,7 @@ jobs:
           fi
           cat /tmp/fetch-lint.log
           grep -q 'no-restricted-globals' /tmp/fetch-lint.log
-          grep -q '改用' /tmp/fetch-lint.log
+          grep -q 'callApi' /tmp/fetch-lint.log
       - name: Start and verify PostgreSQL
         run: |
           docker compose up -d --wait
