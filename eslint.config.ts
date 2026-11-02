@@ -8,7 +8,6 @@ import {
   consoleRestrictedImports,
   eslintCommentsPlugin,
   fetchRestrictedGlobals,
-  fetchRestrictedProperties,
   ledgerRestrictedSyntax,
   localTimeRestrictedSyntax,
 } from './tooling/eslint/guardrails.ts';
@@ -165,11 +164,14 @@ export default tseslint.config(
       globals: {
         fetch: 'readonly',
         XMLHttpRequest: 'readonly',
+        globalThis: 'readonly',
+        self: 'readonly',
+        window: 'readonly',
+        global: 'readonly',
       },
     },
     rules: {
-      'no-restricted-globals': ['error', ...fetchRestrictedGlobals],
-      'no-restricted-properties': ['error', ...fetchRestrictedProperties],
+      'no-restricted-globals': ['error', fetchRestrictedGlobals],
     },
   },
   prettier,

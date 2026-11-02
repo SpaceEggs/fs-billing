@@ -1,25 +1,24 @@
 import { ESLint, Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { expect, test } from 'vitest';
-import {
-  fetchRestrictedGlobals,
-  fetchRestrictedProperties,
-} from '../tooling/eslint/guardrails.ts';
+import { fetchRestrictedGlobals } from '../tooling/eslint/guardrails.ts';
 
 function lint(code: string) {
   return new Linter().verify(code, {
     languageOptions: {
       parser: tseslint.parser,
+      sourceType: 'module',
       globals: {
         fetch: 'readonly',
         XMLHttpRequest: 'readonly',
-        window: 'readonly',
         globalThis: 'readonly',
+        self: 'readonly',
+        window: 'readonly',
+        global: 'readonly',
       },
     },
     rules: {
-      'no-restricted-globals': ['error', ...fetchRestrictedGlobals],
-      'no-restricted-properties': ['error', ...fetchRestrictedProperties],
+      'no-restricted-globals': ['error', fetchRestrictedGlobals],
     },
   });
 }
@@ -30,8 +29,7 @@ function reportsFetch(code: string) {
   expect(
     messages.some(
       (message) =>
-        (message.ruleId === 'no-restricted-globals' ||
-          message.ruleId === 'no-restricted-properties') &&
+        message.ruleId === 'no-restricted-globals' &&
         message.message.includes('改用') &&
         message.message.includes('callApi'),
     ),
@@ -42,7 +40,12 @@ test.each([
   'export const load = () => fetch("/api/health");',
   'export const load = () => window.fetch("/api/health");',
   'export const load = () => globalThis.fetch("/api/health");',
+  'export const load = () => self.fetch("/api/health");',
+  'export const load = () => global.fetch("/api/health");',
   'export const load = () => new XMLHttpRequest();',
+  'export const load = () => new window.XMLHttpRequest();',
+  'export const load = () => new globalThis.XMLHttpRequest();',
+  'export const load = () => new self.XMLHttpRequest();',
 ])('rejects direct HTTP: %s', reportsFetch);
 
 test.each([
@@ -52,6 +55,25 @@ test.each([
 ])('allows shadowed fetch and callApi: %s', (code) => {
   expect(lint(code)).toEqual([]);
 });
+
+test('repository config flags fetch and XMLHttpRequest on global objects', async () => {
+  const results = await new ESLint().lintText(
+    [
+      'export const load = () => self.fetch("/api/health");',
+      'export const open = () => new window.XMLHttpRequest();',
+      'export const openToo = () => new globalThis.XMLHttpRequest();',
+    ].join('\n'),
+    { filePath: 'apps/web/src/lib/session.ts' },
+  );
+  const messages = results.flatMap((result) => result.messages);
+  expect(
+    messages.filter(
+      (message) =>
+        message.ruleId === 'no-restricted-globals' &&
+        message.message.includes('callApi'),
+    ),
+  ).toHaveLength(3);
+}, 30_000);
 
 test('repository config flags fetch outside api.ts', async () => {
   const results = await new ESLint().lintText(

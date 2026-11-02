@@ -60,15 +60,14 @@ export const consoleRestrictedImports = {
   ],
 };
 
-export const fetchRestrictedGlobals = [
-  { name: 'fetch', message: fetchMessage },
-  { name: 'XMLHttpRequest', message: fetchMessage },
-];
-
-export const fetchRestrictedProperties = [
-  { object: 'window', property: 'fetch', message: fetchMessage },
-  { object: 'globalThis', property: 'fetch', message: fetchMessage },
-];
+export const fetchRestrictedGlobals = {
+  checkGlobalObject: true,
+  globalObjects: ['global'],
+  globals: [
+    { name: 'fetch', message: fetchMessage },
+    { name: 'XMLHttpRequest', message: fetchMessage },
+  ],
+};
 
 const requireDescription = eslintComments.rules['require-description']!;
 
