@@ -598,43 +598,41 @@ const LAST_MOCKUP_MONTH = '2026-09-01';
 
 /**
  * 当前月通话的种子月份（YYYY-MM-01），没有则 null。
- * 通话都在该月 1 日凌晨（北京时间 00:05 至 02:00 之间开始），所以必须等到该月 03:00 之后才播种，
- * 保证播种时它们全都已经发生；晚于设计稿的 9 月才有（8、9 月的数字不能变）。
+ * 只看北京月份：晚于设计稿的 9 月就有，与当天的钟点无关（8、9 月的数字不能变）。
+ * 通话落在该月 1 日 00:00:00 之后的第 1 秒内，所以除了这一秒，任何时刻播种它们都已经发生。
  */
 export function currentMonthSeedMonth(now: Date): string | null {
   const month = `${beijingMonth(now)}-01`;
   if (month <= LAST_MOCKUP_MONTH) return null;
-  if (now.getTime() < beijingTime(`${month} 03:00:00`).getTime()) return null;
   return month;
 }
 
-/** [开始时间（北京时间，当月 1 日）, 国家, 计费分钟]：固定 20 通，每个月都一样。 */
-const CURRENT_MONTH_CALLS: readonly (readonly [string, CountryKey, number])[] =
-  [
-    ['00:05:12', 'CN', 3],
-    ['00:11:40', 'CN', 5],
-    ['00:18:03', 'JM', 2],
-    ['00:24:55', 'CN', 4],
-    ['00:31:20', 'UK', 6],
-    ['00:38:47', 'CN', 2],
-    ['00:44:09', 'JP', 3],
-    ['00:52:31', 'CN', 7],
-    ['00:58:16', 'HK', 4],
-    ['01:03:42', 'CN', 3],
-    ['01:09:58', 'SG', 5],
-    ['01:15:21', 'CN', 6],
-    ['01:21:07', 'UK', 4],
-    ['01:27:33', 'CN', 2],
-    ['01:33:50', 'US', 8],
-    ['01:40:14', 'CN', 5],
-    ['01:46:29', 'JP', 3],
-    ['01:51:45', 'CN', 3],
-    ['01:56:02', 'HK', 2],
-    ['01:59:18', 'CN', 4],
-  ];
+/** [国家, 计费分钟]：固定 20 通，每个月都一样。开始时刻由序号决定。 */
+const CURRENT_MONTH_CALLS: readonly (readonly [CountryKey, number])[] = [
+  ['CN', 3],
+  ['CN', 5],
+  ['JM', 2],
+  ['CN', 4],
+  ['UK', 6],
+  ['CN', 2],
+  ['JP', 3],
+  ['CN', 7],
+  ['HK', 4],
+  ['CN', 3],
+  ['SG', 5],
+  ['CN', 6],
+  ['UK', 4],
+  ['CN', 2],
+  ['US', 8],
+  ['CN', 5],
+  ['JP', 3],
+  ['CN', 3],
+  ['HK', 2],
+  ['CN', 4],
+];
 
-/** 当前月预存的时刻：早于第一通话。 */
-const CURRENT_MONTH_RECHARGE_TIME = '00:03:00';
+/** 当前月预存的时刻：北京时间 00:00:00，早于第一通话。 */
+const CURRENT_MONTH_RECHARGE_TIME = '00:00:00';
 
 export interface CurrentMonthPlan {
   readonly month: string;
@@ -646,9 +644,10 @@ export interface CurrentMonthPlan {
 }
 
 /**
- * 某月 1 日凌晨的 20 通已接通话单加一笔等额预存。国家、计费分钟、通话秒数、费用逐月相同，
+ * 某月 1 日 00:00:00 后第 1 秒内的 20 通已接通话单加一笔等额预存。国家、计费分钟、通话秒数、费用逐月相同，
  * UUID 由租户与日期确定地算出，同一个月重复播种不增行；换一个月是另一组行，每组都自己抵平，
  * 余额因此永远不受播种次数影响。只用费率没有随版本变过的国家（不含 447），所以 8 月卡与 10 月卡结果一样。
+ * 振铃为 0、相邻两通相差 20ms，接通顺序与国家顺序一致，页面上的时刻都显示成 00:00:00。
  */
 export function planCurrentMonthCalls<C extends Currency>(input: {
   readonly month: string;
@@ -656,19 +655,19 @@ export function planCurrentMonthCalls<C extends Currency>(input: {
   readonly entries: readonly RateEntry<C>[];
   readonly caller: string;
 }): CurrentMonthPlan {
-  const used = [...new Set(CURRENT_MONTH_CALLS.map((c) => c[1]))];
+  const used = [...new Set(CURRENT_MONTH_CALLS.map((c) => c[0]))];
   assertRateCard(input.entries, used);
   const day = input.month;
-  const calls = CURRENT_MONTH_CALLS.map(([time, key, billed], k) => {
-    const ringSeconds = 2 + (mix(k, 13) % 11);
+  const midnight = beijingTime(`${day} 00:00:00`).getTime();
+  const calls = CURRENT_MONTH_CALLS.map(([key, billed], k) => {
     const talkSeconds = (billed - 1) * 60 + 1 + (mix(k, 17) % 60);
     return buildCall(
       input.entries,
       day,
       key,
       seededUuid(`fs-billing:seed:${input.tenantCode}:cdr:${day}:${k}`),
-      beijingTime(`${day} ${time}`),
-      ringSeconds,
+      new Date(midnight + (k + 1) * 20),
+      0,
       talkSeconds,
       specOf(key).callee(mix(k, 19)),
       'NORMAL_CLEARING',

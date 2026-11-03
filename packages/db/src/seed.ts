@@ -449,12 +449,12 @@ export async function seedDatabase(
     });
   }
   const idOf = (code: string) => tenantIds.get(code)!;
-  // 样例话单落在 2026 年 8、9、10 月。建分区不能放进下面持租户锁的事务。
+  // 样例话单落在 2026 年 8、9 月；当前月另有 20 通。建分区不能放进下面持租户锁的事务。
   await ensureCdrPartitions(db, {
     moment: beijingTime('2026-08-01 00:00:00'),
     monthsAhead: 2,
   });
-  // 当前月 1 日凌晨的 20 通话单（以数据库时钟决定是哪个月，播种时它们一定已经发生）。
+  // 当前月 1 日 00:00 后第 1 秒内的 20 通话单（月份由传入的 now 决定，缺省是数据库时钟）。
   const now = options.now ?? (await withAdmin(db, databaseNow));
   const currentMonth = currentMonthSeedMonth(now);
   const currentPlan = currentMonth

@@ -13,8 +13,12 @@ import { currentMonthSeedMonth } from './seed-calls.js';
 
 const { app, owner } = connections();
 
-// 播种月 1 日凌晨的 20 通话单（时钟太靠近 1 日凌晨时不播种）。
-const currentMonthCalls = currentMonthSeedMonth(new Date()) ? 20 : 0;
+async function currentMonthCalls(): Promise<number> {
+  const { rows } = await owner.pool.query<{ now: Date }>(
+    `select statement_timestamp() as now`,
+  );
+  return currentMonthSeedMonth(new Date(rows[0]!.now)) ? 20 : 0;
+}
 
 const tenantsOf = (rows: Record<string, unknown>[]) =>
   [...new Set(rows.map((r) => r.code))].sort();
@@ -28,7 +32,7 @@ describe('RLS 租户隔离', () => {
       ),
     );
     // 8、9 月逐通话单 22,446 条已接通，加上 1 条未接通示例话单（阶段 7 决定 20），以及播种月的 20 通。
-    expect(rows).toHaveLength(22447 + currentMonthCalls);
+    expect(rows).toHaveLength(22447 + (await currentMonthCalls()));
     expect(tenantsOf(rows)).toEqual(['ABC001']);
     expect(
       rows
@@ -79,7 +83,7 @@ describe('RLS 租户隔离', () => {
       ),
     );
     expect([rows.length, tenantsOf(rows)]).toEqual([
-      22449 + currentMonthCalls,
+      22449 + (await currentMonthCalls()),
       ['ABC001', 'GZT007'],
     ]);
   });

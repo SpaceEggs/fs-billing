@@ -23,8 +23,13 @@ import { currentMonthSeedMonth } from './seed-calls.js';
 
 const { app, owner } = connections();
 
-/** 播种月（数据库时钟所在的月）的 20 通话单加 1 笔等额预存；时钟太靠近 1 日凌晨时不播种。 */
-const currentMonth = currentMonthSeedMonth(new Date());
+/** 播种月（数据库时钟的北京月）。8、9 月是设计稿，没有当月通话。 */
+async function seededMonth(): Promise<string | null> {
+  const { rows } = await owner.pool.query<{ now: Date }>(
+    `select statement_timestamp() as now`,
+  );
+  return currentMonthSeedMonth(new Date(rows[0]!.now));
+}
 
 /** 等到 `pid` 进入锁等待。给出 `blockerPid` 时，必须是这个后端拿着锁。 */
 async function waitUntilBlocked(pid: number, blockerPid?: number) {
@@ -61,6 +66,7 @@ describe('ABC001 种子余额', () => {
       ).rows,
       display: formatMoney((await loadRatingTenant(tx, 'ABC001'))!.balance),
     }));
+    const currentMonth = await seededMonth();
     expect(result).toEqual({
       // 5 笔人工流水 + 8 月 9,642 笔与 9 月 12,804 笔逐通扣费（阶段 7 决定 20），
       // 加播种月 20 笔扣费与 1 笔等额预存（合计抵平，余额不变）。
@@ -113,6 +119,7 @@ describe('流水只能新增', () => {
       `SELECT count(*)::int AS seeded FROM ledger_entries WHERE idempotency_key LIKE 'seed:%'`,
     );
     // 22 条：ABC001 的人工流水与汇总流水；PR 8 起另有 4 条赊账（BJH003、SHC005、XYZ002、NYC021 的待收款）。
+    const currentMonth = await seededMonth();
     expect(rows).toEqual([{ seeded: currentMonth ? 27 : 26 }]);
   });
 });
@@ -250,6 +257,7 @@ describe('流水按发生时间归属月份', () => {
                trim_scale(sum(amount))::text as charges, count(*)::int as entries
         from ledger_entries where kind = 'call_charge' group by 1 order by 1`),
     );
+    const currentMonth = await seededMonth();
     expect(rows).toEqual([
       { month: '2026-08', charges: '-1873.4', entries: 9642 },
       { month: '2026-09', charges: '-2486.3', entries: 12804 },

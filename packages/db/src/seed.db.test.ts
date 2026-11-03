@@ -9,8 +9,13 @@ import { seedDatabase } from './seed.js';
 
 const { owner } = connections();
 
-/** 播种月（数据库时钟所在的月）；时钟太靠近 1 日凌晨时没有。 */
-const currentMonth = currentMonthSeedMonth(new Date());
+/** 播种月（数据库时钟的北京月）。8、9 月是设计稿，没有当月通话。 */
+async function seededMonth(): Promise<string | null> {
+  const { rows } = await owner.pool.query<{ now: Date }>(
+    `select statement_timestamp() as now`,
+  );
+  return currentMonthSeedMonth(new Date(rows[0]!.now));
+}
 
 const counts = async () =>
   (
@@ -32,6 +37,7 @@ describe('开发种子（阶段 7 决定 20）', () => {
     const before = await counts();
     // 其他测试文件先于本文件写过行，所以不比绝对值；种子租户自己的话单数是确定的：
     // ABC001 的 8 月 9,642 + 9 月 12,804 通已接通加 1 条未接通示例话单，加播种月的 20 通；GZT007 两条示例话单。
+    const currentMonth = await seededMonth();
     const { rows } = await owner.pool.query(
       `select t.code, count(*)::int as cdrs from cdrs c join tenants t on t.id = c.tenant_id
        where t.code in ('ABC001', 'GZT007') group by t.code order by t.code`,
@@ -96,6 +102,7 @@ describe('开发种子（阶段 7 决定 20）', () => {
         count(*)::int as n, trim_scale(sum(l.amount))::text as amount
       from ledger_entries l join tenants t on t.id = l.tenant_id
       where t.code = 'ABC001' and l.kind <> 'call_charge' group by 1, 2 order by 1, 2`);
+    const currentMonth = await seededMonth();
     expect(rows).toEqual([
       { month: '2026-08', kind: 'gift', n: 1, amount: '50' },
       { month: '2026-08', kind: 'recharge', n: 1, amount: '3000' },
@@ -115,14 +122,22 @@ describe('开发种子（阶段 7 决定 20）', () => {
     ]);
   });
 
-  it('the current-month calls are all in the past, in the early hours of the 1st, and offset exactly by one recharge', async () => {
-    if (!currentMonth) return;
+  it('the current-month calls are all in the past, in the first second of the 1st, and offset exactly by one recharge', async () => {
+    const currentMonth = await seededMonth();
+    if (!currentMonth) {
+      const { rows } = await owner.pool.query(
+        `select count(*)::int as calls from cdrs c join tenants t on t.id = c.tenant_id
+         where t.code = 'ABC001' and c.answered_at >= '2026-10-01 00:00:00+08'`,
+      );
+      expect(rows).toEqual([{ calls: 0 }]);
+      return;
+    }
     const { rows } = await owner.pool.query(
       `select count(*)::int as calls, sum(c.billed_minutes)::int as minutes,
               trim_scale(sum(c.charge))::text as charges,
-              to_char(min(c.answered_at) at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as first_call,
-              to_char(max(c.answered_at) at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as last_call,
-              max(c.answered_at) < now() as in_the_past,
+              to_char(min(c.answered_at) at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS.MS') as first_call,
+              to_char(max(c.answered_at) at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS.MS') as last_call,
+              max(c.answered_at) < statement_timestamp() as in_the_past,
               (select to_char(l.occurred_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS')
                  from ledger_entries l where l.tenant_id = c.tenant_id and l.kind = 'recharge'
                    and l.occurred_at >= $1::date::timestamp at time zone 'Asia/Shanghai') as recharge_at
@@ -136,10 +151,10 @@ describe('开发种子（阶段 7 决定 20）', () => {
         calls: 20,
         minutes: 81,
         charges: '3.51',
-        first_call: `${currentMonth} 00:05:20`,
-        last_call: `${currentMonth} 01:59:30`,
+        first_call: `${currentMonth} 00:00:00.020`,
+        last_call: `${currentMonth} 00:00:00.400`,
         in_the_past: true,
-        recharge_at: `${currentMonth} 00:03:00`,
+        recharge_at: `${currentMonth} 00:00:00`,
       },
     ]);
     const balance = await owner.pool.query(
@@ -197,12 +212,12 @@ describe('seeding again in a later month', () => {
         (select count(*)::int from cdrs c where c.tenant_id = t.id) as cdrs
       from tenants t join tenant_balances b on b.tenant_id = t.id where t.code = 'ABC001'`);
 
-  it('adds one set per month, keeps the balance at -35.20 and skips the early hours of the 1st', async () => {
+  it('adds one set per month from the first instant and keeps the balance at -35.20', async () => {
     await withScratchDatabase(async ({ db, pool }) => {
       const seedAt = async (moment: string) =>
         seedDatabase(db, { now: new Date(moment) });
 
-      await seedAt('2026-10-22T15:00:00+08:00');
+      await seedAt('2026-10-01T00:00:00+08:00');
       const october = (await abc001(pool)).rows[0]!;
       expect(october).toEqual({
         balance: '-35.2',
@@ -215,7 +230,7 @@ describe('seeding again in a later month', () => {
       expect((await abc001(pool)).rows[0]).toEqual(october);
 
       // 下个月再播种：另一组 20 通与另一笔预存，上个月的行还在，余额仍是 −35.20。
-      await seedAt('2026-11-15T12:00:00+08:00');
+      await seedAt('2026-11-01T00:00:00+08:00');
       expect((await abc001(pool)).rows[0]).toEqual({
         balance: '-35.2',
         calls: 40,
@@ -225,9 +240,17 @@ describe('seeding again in a later month', () => {
       await seedAt('2026-11-16T12:00:00+08:00');
       expect((await abc001(pool)).rows[0]!.cdrs).toBe(22487);
 
-      // 12 月 1 日 00:30：凌晨的通话还没发生，不播种（也不回头补 11 月之外的月份）。
+      // 12 月 1 日 00:30 同样播种当月这一组，不回头补更早的空月。
       await seedAt('2026-12-01T00:30:00+08:00');
-      expect((await abc001(pool)).rows[0]!.cdrs).toBe(22487);
+      const december = (await abc001(pool)).rows[0]!;
+      expect(december).toEqual({
+        balance: '-35.2',
+        calls: 60,
+        recharges: 3,
+        cdrs: 22507,
+      });
+      await seedAt('2026-12-01T00:30:00+08:00');
+      expect((await abc001(pool)).rows[0]).toEqual(december);
 
       // 每个月的账本都自己抵平：各月预存等于各月扣费。
       const perMonth = await pool.query(`
@@ -239,6 +262,7 @@ describe('seeding again in a later month', () => {
       expect(perMonth.rows).toEqual([
         { month: '2026-10', recharge: '3.51', charges: '-3.51' },
         { month: '2026-11', recharge: '3.51', charges: '-3.51' },
+        { month: '2026-12', recharge: '3.51', charges: '-3.51' },
       ]);
 
       // 8、9 月的账单数字不受影响。
