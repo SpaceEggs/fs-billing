@@ -598,12 +598,16 @@ const LAST_MOCKUP_MONTH = '2026-09-01';
 
 /**
  * 当前月通话的种子月份（YYYY-MM-01），没有则 null。
- * 只看北京月份：晚于设计稿的 9 月就有，与当天的钟点无关（8、9 月的数字不能变）。
- * 通话落在该月 1 日 00:00:00 之后的第 1 秒内，所以除了这一秒，任何时刻播种它们都已经发生。
+ * 晚于设计稿的 9 月才有（8、9 月的数字不能变）。
+ * 接通落在该月 1 日 00:00:00 之后的第 1 秒内（.020–.400），挂机可以再晚数分钟。
+ * now 若落在这一秒里，20 通还没全部接通；实时账单按接通时间 < asOf 计数，写进去通数会取决于毫秒。
+ * 所以这一秒整组推迟，等下一次播种再写。00:00:01 起 20 通都已接通。
  */
 export function currentMonthSeedMonth(now: Date): string | null {
   const month = `${beijingMonth(now)}-01`;
   if (month <= LAST_MOCKUP_MONTH) return null;
+  const opening = beijingTime(`${month} 00:00:00`).getTime();
+  if (now.getTime() < opening + 1000) return null;
   return month;
 }
 
@@ -644,10 +648,11 @@ export interface CurrentMonthPlan {
 }
 
 /**
- * 某月 1 日 00:00:00 后第 1 秒内的 20 通已接通话单加一笔等额预存。国家、计费分钟、通话秒数、费用逐月相同，
+ * 某月 1 日 00:00:00 后第 1 秒内接通的 20 通话单加一笔等额预存。国家、计费分钟、通话秒数、费用逐月相同，
  * UUID 由租户与日期确定地算出，同一个月重复播种不增行；换一个月是另一组行，每组都自己抵平，
  * 余额因此永远不受播种次数影响。只用费率没有随版本变过的国家（不含 447），所以 8 月卡与 10 月卡结果一样。
  * 振铃为 0、相邻两通相差 20ms，接通顺序与国家顺序一致，页面上的时刻都显示成 00:00:00。
+ * 挂机按计费分钟推算，可以晚于播种时刻；账务按接通时间归属，不看挂机。
  */
 export function planCurrentMonthCalls<C extends Currency>(input: {
   readonly month: string;

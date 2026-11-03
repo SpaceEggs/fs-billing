@@ -46,12 +46,42 @@ test('shows the seeded first day of this month: 20 merged calls and the recharge
   page,
 }) => {
   // 种子在数据库时钟所在北京月的 1 日第 1 秒写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
+  // 1 日当天合并行带「截至当前」。文案跟这一次流水响应的 partial 走，不把后缀写成可有可无。
   const month = (await databaseBeijingDay()).month;
+  const ledger = page.waitForResponse((response) => {
+    if (!response.ok()) return false;
+    const url = new URL(response.url());
+    return (
+      url.pathname === '/api/portal/ledger' &&
+      url.searchParams.get('from') === `${month}-01` &&
+      url.searchParams.get('to') === `${month}-01`
+    );
+  });
   await page.goto(`/portal/ledger?from=${month}-01&to=${month}-01`);
+  const body = (await (await ledger).json()) as {
+    items: {
+      kind: string;
+      day?: string;
+      calls?: number;
+      partial?: boolean;
+    }[];
+  };
+  const charge = body.items.find((item) => item.kind === 'call_charge');
+  if (
+    !charge ||
+    typeof charge.partial !== 'boolean' ||
+    charge.day === undefined ||
+    charge.calls === undefined
+  )
+    throw new Error('流水响应里没有当月合并扣费');
+  expect(charge).toMatchObject({ day: `${month}-01`, calls: 20 });
+  const label = charge.partial ? '通话扣费（截至当前）' : '通话扣费';
   const rows = page.getByRole('table').getByRole('row');
   await expect(rows).toHaveCount(3);
   await expect(
-    page.getByRole('link', { name: `${month}-01 通话扣费，共 20 通` }),
+    page.getByRole('link', {
+      name: `${charge.day} ${label}，共 ${charge.calls} 通`,
+    }),
   ).toBeVisible();
   const recharge = rows.filter({ hasText: '银行转账预存' });
   await expect(recharge).toHaveCount(1);

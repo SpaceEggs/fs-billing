@@ -202,10 +202,15 @@ const LAST_SEED_STATEMENT_MONTH = '2026-09-01';
 const ABC001_OCTOBER_AT = '2026-10-01 00:00:00';
 
 type SeedEntry = {
-  /** 写入时间（北京时间）。 */
+  /** 写入时间（北京时间）。非通话扣费的 occurred_at 与它相同。 */
   readonly at: string;
   readonly amount: string;
   readonly note: string;
+  /**
+   * 与发生时刻脱钩的幂等键。缺省是 `seed:${at}:${kind}`。
+   * 当月预存的发生时刻改到 00:00:00 之后，键仍用旧种子的 00:03:00，否则旧库再播种会多一笔。
+   */
+  readonly idempotencyKey?: string;
 } & (
   | { readonly kind: 'call_charge'; readonly occurredAt: string }
   | {
@@ -276,13 +281,17 @@ function abc001Ledger(currentMonthRecharge?: {
     },
   ];
   // 当前月的预存：恰为当月 20 通扣费的合计，播种前后余额不变（见 seed-calls.ts）。
+  // 发生时刻是 00:00:00。幂等键保持旧种子的 00:03:00：流水只能新增，键一旦换成新时刻，
+  // 已经用旧种子写过当月的库再播种会再插入一笔 +3.51。旧话单的接通时刻不改写。
   if (currentMonthRecharge) {
+    const day = currentMonthRecharge.at.slice(0, 10);
     entries.push({
       at: currentMonthRecharge.at,
       kind: 'recharge',
       amount: currentMonthRecharge.amount,
       note: '银行转账预存',
       admin: 'li',
+      idempotencyKey: `seed:${day} 00:03:00:recharge`,
     });
   }
   return entries;
@@ -454,7 +463,7 @@ export async function seedDatabase(
     moment: beijingTime('2026-08-01 00:00:00'),
     monthsAhead: 2,
   });
-  // 当前月 1 日 00:00 后第 1 秒内的 20 通话单（月份由传入的 now 决定，缺省是数据库时钟）。
+  // 晚于 9 月的北京月：1 日第 1 秒内接通的 20 通话单。now 落在这一秒内则整组推迟。
   const now = options.now ?? (await withAdmin(db, databaseNow));
   const currentMonth = currentMonthSeedMonth(now);
   const currentPlan = currentMonth
@@ -546,7 +555,7 @@ export async function seedDatabase(
             ${money(t.currency, e.amount).value.toFixed()},
             ${e.note},
             ${e.kind === 'call_charge' ? null : adminIds[e.admin]},
-            ${`seed:${e.at}:${e.kind}`},
+            ${e.idempotencyKey ?? `seed:${e.at}:${e.kind}`},
             ${occurredAt},
             ${createdAt}
           )

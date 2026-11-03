@@ -297,14 +297,19 @@ describe('当前月通话（播种月 1 日第 1 秒）', () => {
     expect(base.rechargeAmount).toBe('3.51');
   });
 
-  it('is planned for any instant after the mockup months, including midnight on the 1st', () => {
+  it('is planned after the first second of a month later than the mockup, and postponed during that second', () => {
     const at = (text: string) => beijingTime(text);
+    const opening = at('2026-10-01 00:00:00').getTime();
     expect(currentMonthSeedMonth(at('2026-10-22 15:00:00'))).toBe('2026-10-01');
     expect(currentMonthSeedMonth(at('2026-11-01 03:00:00'))).toBe('2026-11-01');
     expect(currentMonthSeedMonth(at('2026-12-31 23:59:59'))).toBe('2026-12-01');
-    expect(currentMonthSeedMonth(at('2026-10-01 00:00:00'))).toBe('2026-10-01');
+    expect(currentMonthSeedMonth(at('2026-10-01 00:00:01'))).toBe('2026-10-01');
     expect(currentMonthSeedMonth(at('2026-10-01 02:59:59'))).toBe('2026-10-01');
-    expect(currentMonthSeedMonth(at('2026-11-01 00:00:00'))).toBe('2026-11-01');
+    expect(currentMonthSeedMonth(at('2026-11-01 00:00:01'))).toBe('2026-11-01');
+    // 第 1 秒内 20 通还没全部接通，整组推迟。
+    expect(currentMonthSeedMonth(at('2026-10-01 00:00:00'))).toBeNull();
+    expect(currentMonthSeedMonth(new Date(opening + 999))).toBeNull();
+    expect(currentMonthSeedMonth(at('2026-11-01 00:00:00'))).toBeNull();
     // 8、9 月是设计稿的月账单，数字不能变。
     expect(currentMonthSeedMonth(at('2026-09-30 23:59:59'))).toBeNull();
     expect(currentMonthSeedMonth(at('2026-09-15 12:00:00'))).toBeNull();

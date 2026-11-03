@@ -7,6 +7,9 @@ import { seedDatabase } from '../src/seed.js';
 
 const TEST_DATABASE = 'fs_billing_test';
 
+/** 共享测试库的播种时刻：10 月月中，晚于设计稿，不在 1 日第 1 秒。 */
+export const SEEDED_AT = new Date('2026-10-15T12:00:00+08:00');
+
 declare module 'vitest' {
   export interface ProvidedContext {
     ownerUrl: string;
@@ -54,7 +57,7 @@ export default async function setup(project: TestProject) {
   };
   await migrateDatabase(testEnv);
   const { db, pool } = connect(testEnv.DATABASE_URL);
-  await seedDatabase(db);
+  await seedDatabase(db, { now: SEEDED_AT });
   await pool.end();
 
   project.provide('ownerUrl', testEnv.DATABASE_URL);

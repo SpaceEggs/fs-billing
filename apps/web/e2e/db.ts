@@ -56,6 +56,51 @@ export function databaseBeijingDay() {
 }
 
 /**
+ * 北京月 1 日 00:00:00 之后不足 1 秒时，当月种子通话可能还没全部接通。
+ * 等到这一秒过去再开测，最多等 1 秒。这是前置条件，不按时钟改断言。
+ */
+export async function waitPastMonthOpeningSecond() {
+  const day = await databaseBeijingDay();
+  if (day.dayOfMonth !== 1) return;
+  const elapsed =
+    day.instant.getTime() - Date.parse(`${day.today}T00:00:00+08:00`);
+  if (elapsed < 0 || elapsed >= 1000) return;
+  await new Promise((resolve) => setTimeout(resolve, 1000 - elapsed));
+}
+
+/**
+ * e2e 的前提是播种与运行在同一个北京月。API 的时间来自 Postgres，测不冻结。
+ * 对不上就停，免得几十个用例各自报一堆对不上的数字。
+ */
+export async function assertSeededMonth() {
+  const { seedMonth, dbMonth } = await withOwner(async (client) => {
+    const { rows } = await client.query<{
+      seed_month: string | null;
+      db_month: string;
+    }>(`
+      select (
+        select to_char(max(l.occurred_at) at time zone 'Asia/Shanghai', 'YYYY-MM')
+        from ledger_entries l
+        join tenants t on t.id = l.tenant_id
+        where t.code = 'ABC001'
+          and l.kind = 'recharge'
+          and l.idempotency_key ~ '^seed:[0-9]{4}-[0-9]{2}-01 00:0[03]:00:recharge$'
+      ) as seed_month,
+      to_char(statement_timestamp() at time zone 'Asia/Shanghai', 'YYYY-MM') as db_month
+    `);
+    return {
+      seedMonth: rows[0]?.seed_month ?? null,
+      dbMonth: rows[0]?.db_month ?? '',
+    };
+  });
+  if (seedMonth !== dbMonth) {
+    throw new Error(
+      `种子当月组在 ${seedMonth ?? '（没有）'}，数据库当前北京月是 ${dbMonth}。e2e 要求二者相同，请重新执行 pnpm db:seed。`,
+    );
+  }
+}
+
+/**
  * 以 Worker 入账的形状给租户记一通已接通（扣 `charge`、计 `minutes` 分钟）和一通未接通的电话。
  * 时刻只取一次数据库时间：两通电话从 3 秒前开始，若会跨过北京时间零点则改从当日零点开始，
  * 全部时刻落在同一北京日（因而同一月）内。返回该日期，供断言与概况的 asOf 对照。

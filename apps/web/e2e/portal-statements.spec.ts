@@ -207,28 +207,21 @@ base.describe('ABC001 的月账单', () => {
         /合计\s*9,642\s*37,468分钟\s*¥1,873\.40/,
       );
 
-      // 进行中的月份只有 1 日有通话，其余每一天也有一行，全为 0。天数取这次详情响应的 asOf。
-      // 数据库时钟和这次响应不在同一个月时，按响应重开一次。
-      let month = (await databaseBeijingDay()).month;
-      let day: ReturnType<typeof beijingDayOf> | undefined;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const detail = page.waitForResponse(
-          (response) =>
-            new URL(response.url()).pathname ===
-              `/api/portal/statements/${month}` && response.ok(),
+      // 进行中的月份只有 1 日有通话，其余每一天也有一行，全为 0。天数与「今日」都取这一次详情的 asOf。
+      const month = (await databaseBeijingDay()).month;
+      const detail = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname ===
+            `/api/portal/statements/${month}` && response.ok(),
+      );
+      await page.goto(`/portal/statements/${month}`);
+      const payload = (await (await detail).json()) as { asOf: string | null };
+      if (!payload.asOf) throw new Error('进行中的月份应带 asOf');
+      const day = beijingDayOf(payload.asOf);
+      if (day.month !== month)
+        throw new Error(
+          `账单详情 ${month} 的 asOf 落在 ${day.month}。这是详情接口跨月的既有竞态，请重跑这一条。`,
         );
-        await page.goto(`/portal/statements/${month}`);
-        const payload = (await (await detail).json()) as {
-          asOf: string | null;
-        };
-        if (!payload.asOf) throw new Error('进行中的月份应带 asOf');
-        day = beijingDayOf(payload.asOf);
-        if (day.month === month) break;
-        if (attempt === 1)
-          throw new Error('账单详情的月份与 asOf 跨了两次月界');
-        month = day.month;
-      }
-      if (!day) throw new Error('进行中的月份应带 asOf');
       await expect(
         page
           .getByRole('region', { name: '按日汇总' })
