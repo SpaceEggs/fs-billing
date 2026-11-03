@@ -47,7 +47,9 @@ test('shows the seeded first day of this month: 20 merged calls and the recharge
 }) => {
   // 种子在数据库时钟所在北京月的 1 日第 1 秒写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
   // 1 日当天合并行带「截至当前」。文案跟这一次流水响应的 partial 走，不把后缀写成可有可无。
-  const month = (await databaseBeijingDay()).month;
+  // 页面按浏览器日期把「未来」from/to 换成月至今，先钉在数据库此刻，避免跨日把 1 日换成上月。
+  const { instant, month } = await databaseBeijingDay();
+  await page.clock.setFixedTime(instant);
   const ledger = page.waitForResponse((response) => {
     if (!response.ok()) return false;
     const url = new URL(response.url());

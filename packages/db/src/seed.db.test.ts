@@ -296,7 +296,30 @@ describe('seeding again in a later month', () => {
         entries: rates.entries,
         caller: '075586001234',
       });
-      // 旧种子的接通时刻。UUID 与新种子相同，所以再播种会跳过这些话单，而不是改写时间。
+      // origin/main 旧种子 UUID：fs-billing:seed:ABC001:cdr:2026-11-01:0..19，不跟当前规划函数走。
+      const oldCallUuids = [
+        'a3c3231e-bd95-519e-a2fd-774652b7ed43',
+        '7657f3b4-6182-5762-acda-92fe1a4ef31c',
+        '9b100156-93ba-53a7-a006-0dd4eb6924e9',
+        '0cb3f419-7486-5b5f-a727-d96dbfcece46',
+        '63ca2277-f3c2-572f-87f6-d5cc9d577809',
+        '7227b704-8165-58db-8d2d-60e8c312ed28',
+        '3a9a2892-b135-5b5a-9c81-c47618b491ea',
+        'a2d0a806-18e3-5070-aa49-0619511fccea',
+        '612857fc-664b-5867-a3fb-45d1a1c41cc3',
+        '2254aad7-c438-522b-94c3-321162aef1db',
+        '8cc28f2c-6c90-59bb-85fc-2e8442d9c605',
+        '66655014-ca09-58b3-a871-63e2b1c9646d',
+        'bd2ad084-e26d-5f7f-a304-65d91095bbe6',
+        '93b91c6e-29a8-5e7f-8ecd-885dd13abe3e',
+        '18dd21ba-2a6f-57d0-b0be-060a5ba5cb0a',
+        'b924dbce-ae1f-5672-8e03-8fc7a6d8fc25',
+        'd64407d8-b97a-56f7-97b5-275876300fae',
+        '832edcb8-93a9-5215-b83c-5b3ea0099ce8',
+        'e4ea6a00-e6fd-56c7-8a9e-e08b379d0791',
+        '203e15ba-b4ba-509e-a694-6b5129c311f3',
+      ] as const;
+      // 旧种子的接通时刻。UUID 写成字面量，所以再播种会跳过这些话单，而不是改写时间。
       const opening = beijingTime('2026-11-01 00:05:20').getTime();
       const tenant = (
         await pool.query<{ id: string }>(
@@ -317,6 +340,9 @@ describe('seeding again in a later month', () => {
           tenant.id,
         ]);
         for (const [k, call] of plan.calls.entries()) {
+          const callUuid = oldCallUuids[k];
+          if (callUuid === undefined)
+            throw new Error(`旧版 UUID 夹具缺少第 ${k} 通`);
           const answered = new Date(opening + k * 1000);
           const ended = new Date(
             answered.getTime() + call.durationSeconds * 1000,
@@ -331,7 +357,7 @@ describe('seeding again in a later month', () => {
              )`,
             [
               tenant.id,
-              call.callUuid,
+              callUuid,
               answered,
               ended,
               call.caller,
@@ -355,8 +381,8 @@ describe('seeding again in a later month', () => {
             [
               tenant.id,
               decimal(call.charge).neg().toFixed(),
-              `通话扣费 ${call.callUuid} ${call.billingNumber}`,
-              callChargeKey(call.callUuid),
+              `通话扣费 ${callUuid} ${call.billingNumber}`,
+              callChargeKey(callUuid),
               answered,
               new Date(ended.getTime() + 3000),
             ],
@@ -367,7 +393,7 @@ describe('seeding again in a later month', () => {
           `insert into ledger_entries (
              tenant_id, kind, amount, note, created_by, idempotency_key, occurred_at, created_at
            ) values ($1, 'recharge', $2, '银行转账预存', $3, 'seed:2026-11-01 00:03:00:recharge', $4, $4)`,
-          [tenant.id, plan.rechargeAmount, admin.id, rechargeAt],
+          [tenant.id, '3.51', admin.id, rechargeAt],
         );
         await client.query('commit');
       } catch (error) {

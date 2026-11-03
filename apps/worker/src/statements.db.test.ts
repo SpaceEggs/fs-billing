@@ -582,38 +582,24 @@ describe('调度与 Worker 端到端', () => {
   it('processes the parent job, the children and the reconcile job through pg-boss', async () => {
     const tenant = await activeTenant();
     await boss.send(GENERATE_STATEMENTS_QUEUE, { tenantId: tenant.id });
-    // 父任务按数据库时钟，从租户首月生成到上一个北京月。只等 7、8、9 月的话，时钟越往后缺的月越多，核对会报 missing。
-    const dueMonths = async () =>
-      (
-        await owner.pool.query<{ month: string }>(
-          `select to_char(m.month, 'YYYY-MM-DD') as month
-           from tenants t
-           cross join lateral (
-             select date_trunc('month', least(
-               t.created_at,
-               coalesce(
-                 (select min(e.occurred_at) from ledger_entries e where e.tenant_id = t.id),
-                 t.created_at
-               )
-             ) at time zone 'Asia/Shanghai')::date as first_month
-           ) bounds
-           cross join lateral generate_series(
-             bounds.first_month,
-             (date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai')
-               - interval '1 month')::date,
-             interval '1 month'
-           ) as m(month)
-           where t.id = $1
-           order by m.month`,
-          [tenant.id],
-        )
-      ).rows.map((row) => row.month);
-    const first = await dueMonths();
-    if (first.length === 0)
+    // 夹具 7 月开户。父任务按数据库时钟生成到上一个北京月，全部写完再发核对。
+    const months = (
+      await owner.pool.query<{ month: string }>(
+        `select to_char(m.month, 'YYYY-MM-DD') as month
+         from generate_series(
+           '2026-07-01'::date,
+           (date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai')
+             - interval '1 month')::date,
+           interval '1 month'
+         ) as m(month)
+         order by m.month`,
+      )
+    ).rows.map((row) => row.month);
+    if (months.length === 0)
       throw new Error('数据库时钟的上一个北京月早于租户首月，没有要等的账单');
     await vi.waitFor(
       async () => {
-        for (const month of await dueMonths())
+        for (const month of months)
           expect(await read(tenant.id, month)).not.toBeNull();
       },
       { timeout: 45_000, interval: 200 },
