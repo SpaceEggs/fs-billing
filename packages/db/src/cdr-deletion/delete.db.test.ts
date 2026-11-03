@@ -244,6 +244,11 @@ describe('删除话单', () => {
   it('rejects the current month and a month without a statement', async () => {
     const f = await fixture();
     const current = await currentMonth();
+    const future = (
+      await one<{ month: string }>(
+        `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + interval '2 months', 'YYYY-MM') as month`,
+      )
+    ).month;
     const before = await ledgerAndStatements(f.tenant.id);
     const rejected = [
       // 当前月（没有账单行）。
@@ -269,8 +274,8 @@ describe('删除话单', () => {
         deleteCdrMonths(
           app.db,
           input(f, {
-            fromMonth: '2099-01',
-            toMonth: '2099-01',
+            fromMonth: future,
+            toMonth: future,
             expectedCount: 0,
           }),
         ),
@@ -279,7 +284,7 @@ describe('删除话单', () => {
     expect(rejected).toEqual([
       { code: 'CDR_MONTH_NOT_DELETABLE', month: current },
       { code: 'CDR_MONTH_NOT_DELETABLE', month: '2026-07' },
-      { code: 'CDR_MONTH_NOT_DELETABLE', month: '2099-01' },
+      { code: 'CDR_MONTH_NOT_DELETABLE', month: future },
     ]);
     expect(await augustCdrs(f.tenant.id)).toBe(3);
     expect(await septemberCdrs(f.tenant.id)).toBe(3);

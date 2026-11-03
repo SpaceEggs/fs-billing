@@ -43,6 +43,18 @@ const dbNow = async (tx: Tx) => {
 
 const later = (days: number) => new Date(Date.now() + days * 86_400_000);
 
+const futureFrom = async (tx: Tx, days: number) => {
+  const ms = (await dbNow(tx)).getTime() + days * 86_400_000;
+  return new Date(Math.floor(ms / 1000) * 1000);
+};
+
+const scheduledAt = async (tx: Tx, versionId: string) => {
+  const { rows } = await tx.execute<{ at: string }>(
+    sql`select effective_from::text as at from rate_versions where id = ${versionId}`,
+  );
+  return rows[0]!.at;
+};
+
 describe('费率版本', () => {
   it('同一费率表插入两个相同生效时间的版本，被唯一约束拒绝', async () => {
     const tenant = await createTenant(app, 'CNY');
@@ -64,17 +76,18 @@ describe('费率版本', () => {
   it('已排定未来版本时修改当前版本（新建立即生效版本）被拒绝，并提示先改未来版本', async () => {
     const tenant = await createTenant(app, 'CNY');
     await withAdmin(app.db, (tx) => createRateVersion(tx, tenant.id, CHINA));
-    await withAdmin(app.db, (tx) =>
-      createRateVersion(tx, tenant.id, CHINA_RAISED, {
-        effectiveFrom: new Date('2030-01-01T00:00:00+08:00'),
-      }),
-    );
+    const scheduled = await withAdmin(app.db, async (tx) => {
+      const version = await createRateVersion(tx, tenant.id, CHINA_RAISED, {
+        effectiveFrom: await futureFrom(tx, 30),
+      });
+      return scheduledAt(tx, version.id);
+    });
     const error = await pgError(
       withAdmin(app.db, (tx) => createRateVersion(tx, tenant.id, CHINA_RAISED)),
     );
     expect(error).toMatchObject({
       code: '23514',
-      message: '已排定 2029-12-31 16:00:00+00 生效的新版本，请先修改该未来版本',
+      message: `已排定 ${scheduled} 生效的新版本，请先修改该未来版本`,
     });
   });
 
@@ -272,12 +285,14 @@ describe('费率版本', () => {
 
   it('删未来条目后插入，同时删除该版本，两个事务都提交', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const version = await withAdmin(app.db, (tx) =>
+    const version = await withAdmin(app.db, async (tx) =>
       createRateVersion(
         tx,
         tenant.id,
         entries(',中国,86,,0.0500\n,英国,44,,0.0200'),
-        { effectiveFrom: new Date('2031-06-01T00:00:00Z') },
+        {
+          effectiveFrom: await futureFrom(tx, 30),
+        },
       ),
     );
     const editor = await app.pool.connect();
@@ -343,11 +358,13 @@ describe('同一租户的费率修改串行执行', () => {
     const release = deferred();
     const secondPid = deferred<number>();
     const first = adminTransaction(app.db, async (tx) => {
-      await createRateVersion(tx, tenant.id, CHINA, {
-        effectiveFrom: new Date('2031-01-01T00:00:00+08:00'),
+      const version = await createRateVersion(tx, tenant.id, CHINA, {
+        effectiveFrom: await futureFrom(tx, 60),
       });
+      const at = await scheduledAt(tx, version.id);
       written.resolve();
       await release.promise;
+      return at;
     });
     let second: Promise<unknown> = Promise.resolve();
     try {
@@ -355,16 +372,15 @@ describe('同一租户的费率修改串行执行', () => {
       second = adminTransaction(app.db, async (tx) => {
         secondPid.resolve(await backendPid(tx));
         await createRateVersion(tx, tenant.id, CHINA_RAISED, {
-          effectiveFrom: new Date('2030-06-01T00:00:00+08:00'),
+          effectiveFrom: await futureFrom(tx, 30),
         });
       });
       await waitForTenantLock(owner, await secondPid.promise, tenant.id);
       release.resolve();
-      await first;
+      const at = await first;
       expect(await pgError(second)).toMatchObject({
         code: '23514',
-        message:
-          '已排定 2030-12-31 16:00:00+00 生效的新版本，请先修改该未来版本',
+        message: `已排定 ${at} 生效的新版本，请先修改该未来版本`,
       });
     } finally {
       release.resolve();
@@ -374,9 +390,9 @@ describe('同一租户的费率修改串行执行', () => {
 
   it('两个事务各插一条未来条目后都删版本：后到的事务排队，版本删掉后它的插入报外键错误', async () => {
     const tenant = await createTenant(app, 'CNY');
-    const version = await withAdmin(app.db, (tx) =>
+    const version = await withAdmin(app.db, async (tx) =>
       createRateVersion(tx, tenant.id, CHINA, {
-        effectiveFrom: new Date('2031-06-01T00:00:00Z'),
+        effectiveFrom: await futureFrom(tx, 30),
       }),
     );
     const insertEntry = (tx: Tx, prefix: string) =>

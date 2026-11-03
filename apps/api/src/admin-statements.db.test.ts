@@ -16,7 +16,6 @@ import {
   type Fixture,
 } from '../test/support.js';
 import {
-  currentBeijingMonth,
   ensureStatementPartitions,
   generateMonth,
   statementCall,
@@ -31,7 +30,15 @@ let fixture: Fixture;
 let adminCookie: string;
 let customerCookie: string;
 
-const current = currentBeijingMonth();
+const beijingMonthOf = (asOf: string) =>
+  new Date(Date.parse(asOf) + 8 * 60 * 60 * 1000).toISOString().slice(0, 7);
+const dbBeijingMonth = async (monthsAhead: number) =>
+  (
+    await connections.owner.pool.query<{ month: string }>(
+      `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + ($1::int * interval '1 month'), 'YYYY-MM') as month`,
+      [monthsAhead],
+    )
+  ).rows[0]!.month;
 const adminId = () => fixture.admin.profileId;
 const get = (url: string) =>
   api.inject({ url, headers: requestHeaders(adminCookie) });
@@ -239,17 +246,24 @@ describe('GET /api/admin/statements', () => {
   });
 
   it('defaults to the previous Beijing month, is empty for the current month and rejects a future month', async () => {
-    const previous = new Date(Date.now() + 8 * 60 * 60 * 1000);
-    previous.setUTCMonth(previous.getUTCMonth() - 1, 1);
     const defaulted = adminStatementsResponseSchema.parse(
       (await get('/api/admin/statements')).json(),
     );
+    const currentMonth = beijingMonthOf(defaulted.asOf);
+    const previous = new Date(`${currentMonth}-01T00:00:00Z`);
+    previous.setUTCMonth(previous.getUTCMonth() - 1);
     expect(defaulted.month).toBe(previous.toISOString().slice(0, 7));
     const now = adminStatementsResponseSchema.parse(
-      (await get(`/api/admin/statements?month=${current}`)).json(),
+      (await get(`/api/admin/statements?month=${currentMonth}`)).json(),
     );
+    expect(now.month).toBe(beijingMonthOf(now.asOf));
     expect(now.groups).toEqual([]);
-    for (const query of ['month=2999-01', 'month=2026-13', 'month=2026-07&x=1'])
+    const future = await dbBeijingMonth(2);
+    for (const query of [
+      `month=${future}`,
+      'month=2026-13',
+      'month=2026-07&x=1',
+    ])
       expect(
         (await get(`/api/admin/statements?${query}`)).statusCode,
         query,
@@ -287,10 +301,11 @@ describe('admin tenant statements', () => {
     const body = adminTenantStatementsResponseSchema.parse(response.json());
     expect(body.tenant).toMatchObject({ id: tenant.id, code: tenant.code });
     const months = body.items.map((item) => item.month);
-    expect(months[0]).toBe(current);
+    const currentMonth = beijingMonthOf(body.asOf);
+    expect(months[0]).toBe(currentMonth);
     expect(months.at(-1)).toBe('2026-08');
     const byMonth = new Map(body.items.map((item) => [item.month, item]));
-    expect(byMonth.get(current)).toMatchObject({
+    expect(byMonth.get(currentMonth)).toMatchObject({
       state: 'in_progress',
       version: 0,
       regenerable: { allowed: false, reason: 'in_progress' },
@@ -300,7 +315,7 @@ describe('admin tenant statements', () => {
       detailsDeleted: true,
       regenerable: { allowed: false, reason: 'details_deleted' },
     });
-    if (current > '2026-09')
+    if (currentMonth > '2026-09')
       expect(byMonth.get('2026-09')).toMatchObject({
         state: 'pending',
         figures: { openingBalance: '99', closingBalance: '99' },
@@ -325,7 +340,9 @@ describe('admin tenant statements', () => {
     expect(scheduled.firstGeneratedAt).toBe(scheduled.generatedAt);
     const live = adminTenantStatementResponseSchema.parse(
       (
-        await get(`/api/admin/tenants/${tenant.id}/statements/${current}`)
+        await get(
+          `/api/admin/tenants/${tenant.id}/statements/${await dbBeijingMonth(0)}`,
+        )
       ).json(),
     );
     expect(live).toMatchObject({
@@ -348,7 +365,7 @@ describe('admin tenant statements', () => {
     ])
       expect((await get(url)).statusCode, url).toBe(404);
     for (const url of [
-      `/api/admin/tenants/${tenant.id}/statements/2999-01`,
+      `/api/admin/tenants/${tenant.id}/statements/${await dbBeijingMonth(2)}`,
       `/api/admin/tenants/${tenant.id}/statements/2026-9`,
     ])
       expect((await get(url)).statusCode, url).toBe(400);
@@ -567,7 +584,7 @@ describe('POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate', () 
 
   it('rejects the in-progress month with STATEMENT_NOT_FINAL', async () => {
     const tenant = await generatedTenant();
-    const response = await regenerate(tenant.id, current, 0);
+    const response = await regenerate(tenant.id, await dbBeijingMonth(0), 0);
     expect(response.statusCode, response.body).toBe(409);
     expect(errorCode(response.body)).toBe('STATEMENT_NOT_FINAL');
     expect(await auditRows(tenant.id)).toHaveLength(0);
@@ -624,7 +641,9 @@ describe('POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate', () 
         .statusCode,
     ).toBe(404);
     expect((await regenerate(tenant.id, '2026-07', 0)).statusCode).toBe(404);
-    expect((await regenerate(tenant.id, '2999-01', 0)).statusCode).toBe(400);
+    expect(
+      (await regenerate(tenant.id, await dbBeijingMonth(2), 0)).statusCode,
+    ).toBe(400);
     for (const payload of [
       {},
       { expectedVersion: -1 },

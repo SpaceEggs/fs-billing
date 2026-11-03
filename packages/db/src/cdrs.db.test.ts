@@ -31,6 +31,20 @@ const partitionOf = (tx: Tx, callUuid: string) =>
     sql`select tableoid::regclass::text as partition from cdrs where call_uuid = ${callUuid}`,
   );
 
+async function monthWithoutCdrPartition() {
+  const { rows } = await owner.pool.query<{ at: string; name: string }>(
+    `select to_char(m + interval '14 days 12 hours', 'YYYY-MM-DD"T"HH24:MI:SS"+08:00"') as at,
+            'cdrs_' || to_char(m, 'YYYY_MM') as name
+     from generate_series(
+       date_trunc('month', clock_timestamp() at time zone 'Asia/Shanghai') + interval '2 years',
+       date_trunc('month', clock_timestamp() at time zone 'Asia/Shanghai') + interval '30 years',
+       interval '1 month') as m
+     where to_regclass('cdrs_' || to_char(m, 'YYYY_MM')) is null
+     limit 1`,
+  );
+  return rows[0]!;
+}
+
 describe('话单按通话 UUID 唯一', () => {
   beforeAll(() =>
     ensureCdrPartitions(app.db, {
@@ -250,13 +264,10 @@ describe('按月分区', () => {
 
   it('没有分区的月份插入失败，不会悄悄落入兜底分区', async () => {
     const tenant = await createTenant(app, 'CNY');
+    const missing = await monthWithoutCdrPartition();
     const error = await pgError(
       withAdmin(app.db, (tx) =>
-        tx
-          .insert(cdrs)
-          .values(
-            unanswered(tenant.id, randomUUID(), '2030-06-01T12:00:00+08:00'),
-          ),
+        tx.insert(cdrs).values(unanswered(tenant.id, randomUUID(), missing.at)),
       ),
     );
     expect([error.code, error.message]).toEqual([
@@ -266,6 +277,7 @@ describe('按月分区', () => {
   });
 
   it('分区已存在时不等待建分区锁；缺分区时才加锁', async () => {
+    const missing = await monthWithoutCdrPartition();
     const holder = await owner.pool.connect();
     const ensureWithin300ms = (moment: string) =>
       withAdmin(app.db, async (tx) => {
@@ -280,12 +292,11 @@ describe('按月分区', () => {
       await holder.query('BEGIN');
       await holder.query(
         `SELECT pg_advisory_xact_lock(hashtextextended('partition:cdrs_2026_10', 0)),
-                pg_advisory_xact_lock(hashtextextended('partition:cdrs_2031_03', 0))`,
+                pg_advisory_xact_lock(hashtextextended($1, 0))`,
+        [`partition:${missing.name}`],
       );
       expect(await ensureWithin300ms('2026-10-12T00:00:00+08:00')).toBe(4);
-      const blocked = await pgError(
-        ensureWithin300ms('2031-03-15T00:00:00+08:00'),
-      );
+      const blocked = await pgError(ensureWithin300ms(missing.at));
       expect([blocked.code, blocked.message]).toEqual([
         '55P03',
         'canceling statement due to lock timeout',
