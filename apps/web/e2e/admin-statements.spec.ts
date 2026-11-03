@@ -4,30 +4,22 @@ import { accounts } from './accounts';
 import { createTenant, test } from './admin';
 import {
   backdateTenant,
+  databaseBeijingDay,
   operationLogs,
   recordLedgerEntry,
   recordStatementCall,
   setStatementFlags,
-  shanghaiDate,
 } from './db';
 
 const abc001 = '/admin/statements';
 const tenantTab = (id: string, extra = '') =>
   `/admin/tenants/${id}?tab=statements${extra}`;
 
-/** 北京时间的当前月与上一个月，格式 YYYY-MM。 */
-function currentMonth() {
-  return shanghaiDate(new Date()).slice(0, 7);
-}
-
-function previousMonth() {
-  const [year, month] = currentMonth().split('-').map(Number) as [
-    number,
-    number,
-  ];
-  return month === 1
+function previousMonth(month: string) {
+  const [year, monthNumber] = month.split('-').map(Number) as [number, number];
+  return monthNumber === 1
     ? `${year - 1}-12`
-    : `${year}-${String(month - 1).padStart(2, '0')}`;
+    : `${year}-${String(monthNumber - 1).padStart(2, '0')}`;
 }
 
 const monthLabel = (month: string) =>
@@ -53,7 +45,7 @@ const listRow = (page: Page, code: string) =>
 
 /**
  * 本次运行专用的租户：8 月初开户，8 月、9 月各有一笔充值与一通已接通电话，
- * 10 月（当前月）没有活动。重新生成会改动账单，所以不用 ABC001。
+ * 之后的月份没有活动。重新生成会改动账单，所以不用 ABC001。
  */
 async function fixtureTenant(
   page: Page,
@@ -124,6 +116,9 @@ async function confirmRegenerate(page: Page, trigger: Locator) {
 test('adds 账单 to the admin navigation after 待收款 and defaults to the previous month', async ({
   page,
 }) => {
+  // 默认月份是浏览器算的上一个北京月。把页面时钟钉在数据库的此刻，避免和 Postgres 跨日。
+  const { instant, month } = await databaseBeijingDay();
+  await page.clock.setFixedTime(instant);
   await page.goto('/admin');
   const nav = page.getByRole('navigation', { name: '主导航' });
   await expect(nav.getByRole('link')).toHaveText([
@@ -143,7 +138,9 @@ test('adds 账单 to the admin navigation after 待收款 and defaults to the pr
   ).toBeVisible();
   await expect(
     page
-      .getByRole('button', { name: `月份：${monthLabel(previousMonth())}` })
+      .getByRole('button', {
+        name: `月份：${monthLabel(previousMonth(month))}`,
+      })
       .first(),
   ).toBeVisible();
   // 默认的上月已是最晚可选月份。
@@ -409,15 +406,12 @@ test('greys the current month and a month with deleted CDRs, each with its reaso
   await generate(page, tenant.id, '2026-09');
   await setStatementFlags(tenant.id, '2026-08', { detailsDeleted: true });
   await page.goto(tenantTab(tenant.id));
-  const current = page
-    .locator('tbody tr')
-    .filter({ hasText: monthLabel(currentMonth()) });
+  const label = monthLabel((await databaseBeijingDay()).month);
+  const current = page.locator('tbody tr').filter({ hasText: label });
   await expect(current).toContainText('本月（进行中）');
   await expect(current).toContainText('进行中，月结后可重新生成');
   await expect(
-    current.getByRole('button', {
-      name: `重新生成 ${monthLabel(currentMonth())}`,
-    }),
+    current.getByRole('button', { name: `重新生成 ${label}` }),
   ).toBeDisabled();
   const august = page.locator('tbody tr').filter({ hasText: '2026年8月' });
   await expect(august).toContainText('话单已删除');

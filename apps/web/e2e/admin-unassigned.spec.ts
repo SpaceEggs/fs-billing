@@ -3,6 +3,7 @@ import { test } from './admin';
 import {
   callChargeEntries,
   cdrTotals,
+  databaseBeijingDay,
   operationLogs,
   recordUnassigned,
   tenantBalance,
@@ -13,7 +14,6 @@ import {
   assignableTenant,
   assignRowsAssignable,
   assignRowsCharge,
-  currentMonth,
   monthLabel,
 } from './ops';
 
@@ -169,7 +169,9 @@ test('assigns a group to the nearest tenant, charges it once and writes the ledg
   );
   // 补扣费落在运行当月：对话框列出受影响的月份。
   await expect(dialog).toContainText('受影响的月份');
-  await expect(dialog).toContainText(monthLabel(currentMonth()));
+  await expect(dialog).toContainText(
+    monthLabel((await databaseBeijingDay()).month),
+  );
 
   const assigned = page.waitForRequest(
     (request) =>

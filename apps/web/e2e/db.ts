@@ -34,6 +34,27 @@ export function shanghaiDate(instant: Date | string) {
     .slice(0, 10);
 }
 
+/** 某一时刻的北京日期、月份（YYYY-MM）与日。 */
+export function beijingDayOf(instant: Date | string) {
+  const today = shanghaiDate(instant);
+  return {
+    today,
+    month: today.slice(0, 7),
+    dayOfMonth: Number(today.slice(8, 10)),
+  };
+}
+
+/** 数据库时钟的北京日。e2e 打的是真实 Postgres，不用测试进程的 Date.now() 猜月份。 */
+export function databaseBeijingDay() {
+  return withOwner(async (client) => {
+    const { rows } = await client.query<{ now: Date }>(
+      'select statement_timestamp() as now',
+    );
+    const instant = new Date(rows[0]!.now);
+    return { instant, ...beijingDayOf(instant) };
+  });
+}
+
 /**
  * 以 Worker 入账的形状给租户记一通已接通（扣 `charge`、计 `minutes` 分钟）和一通未接通的电话。
  * 时刻只取一次数据库时间：两通电话从 3 秒前开始，若会跨过北京时间零点则改从当日零点开始，

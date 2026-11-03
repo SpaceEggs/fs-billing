@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { accounts } from './accounts';
+import { databaseBeijingDay } from './db';
 import { expectPath, loginAs } from './helpers';
 
 const septemberPath = '/portal/ledger?from=2026-09-01&to=2026-09-30';
@@ -44,8 +45,8 @@ test('merges daily charges and jumps to that day of CDRs', async ({ page }) => {
 test('shows the seeded first day of this month: 20 merged calls and the recharge that offsets them', async ({
   page,
 }) => {
-  // 种子在播种月 1 日凌晨写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
-  const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
+  // 种子在数据库时钟所在北京月的 1 日第 1 秒写了 20 通话单（共 ¥3.51）和一笔等额预存，余额不变。
+  const month = (await databaseBeijingDay()).month;
   await page.goto(`/portal/ledger?from=${month}-01&to=${month}-01`);
   const rows = page.getByRole('table').getByRole('row');
   await expect(rows).toHaveCount(3);
