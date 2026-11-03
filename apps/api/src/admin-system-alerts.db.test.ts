@@ -326,8 +326,13 @@ describe('告警设置', () => {
       ],
     });
     // 操作日志页能列出这条（标签「修改设置」）。
+    const through = (
+      await connections.owner.pool.query<{ day: string }>(
+        `select ((clock_timestamp() at time zone 'Asia/Shanghai')::date + 1)::text as day`,
+      )
+    ).rows[0]!.day;
     const listed = await get(
-      '/api/admin/audit-logs?label=settings&from=2000-01-01&to=2999-12-31',
+      `/api/admin/audit-logs?label=settings&from=2000-01-01&to=${through}`,
     );
     expect(listed.statusCode, listed.body).toBe(200);
     expect(

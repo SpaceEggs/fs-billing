@@ -32,6 +32,12 @@ let adminCookie: string;
 let customerCookie: string;
 
 const current = currentBeijingMonth();
+const nextBeijingMonth = async () =>
+  (
+    await connections.owner.pool.query<{ month: string }>(
+      `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + interval '1 month', 'YYYY-MM') as month`,
+    )
+  ).rows[0]!.month;
 const adminId = () => fixture.admin.profileId;
 const get = (url: string) =>
   api.inject({ url, headers: requestHeaders(adminCookie) });
@@ -249,7 +255,12 @@ describe('GET /api/admin/statements', () => {
       (await get(`/api/admin/statements?month=${current}`)).json(),
     );
     expect(now.groups).toEqual([]);
-    for (const query of ['month=2999-01', 'month=2026-13', 'month=2026-07&x=1'])
+    const future = await nextBeijingMonth();
+    for (const query of [
+      `month=${future}`,
+      'month=2026-13',
+      'month=2026-07&x=1',
+    ])
       expect(
         (await get(`/api/admin/statements?${query}`)).statusCode,
         query,
@@ -348,7 +359,7 @@ describe('admin tenant statements', () => {
     ])
       expect((await get(url)).statusCode, url).toBe(404);
     for (const url of [
-      `/api/admin/tenants/${tenant.id}/statements/2999-01`,
+      `/api/admin/tenants/${tenant.id}/statements/${await nextBeijingMonth()}`,
       `/api/admin/tenants/${tenant.id}/statements/2026-9`,
     ])
       expect((await get(url)).statusCode, url).toBe(400);
@@ -624,7 +635,9 @@ describe('POST /api/admin/tenants/{tenantId}/statements/{month}/regenerate', () 
         .statusCode,
     ).toBe(404);
     expect((await regenerate(tenant.id, '2026-07', 0)).statusCode).toBe(404);
-    expect((await regenerate(tenant.id, '2999-01', 0)).statusCode).toBe(400);
+    expect(
+      (await regenerate(tenant.id, await nextBeijingMonth(), 0)).statusCode,
+    ).toBe(400);
     for (const payload of [
       {},
       { expectedVersion: -1 },

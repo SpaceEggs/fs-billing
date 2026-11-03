@@ -423,6 +423,16 @@ describe('锁：决定 48 与分离对入库的影响', () => {
   };
 
   it('ensure_month_partition gives up after two seconds instead of queueing behind a long transaction', async () => {
+    const missing = await one<{ at: string; name: string }>(
+      `select to_char(m + interval '14 days 12 hours', 'YYYY-MM-DD"T"HH24:MI:SS"+08:00"') as at,
+              'raw_cdrs_' || to_char(m, 'YYYY_MM') as name
+       from generate_series(
+         date_trunc('month', clock_timestamp() at time zone 'Asia/Shanghai') + interval '2 years',
+         date_trunc('month', clock_timestamp() at time zone 'Asia/Shanghai') + interval '30 years',
+         interval '1 month') as m
+       where to_regclass('raw_cdrs_' || to_char(m, 'YYYY_MM')) is null
+       limit 1`,
+    );
     const reader = await db.owner.pool.connect();
     try {
       await reader.query('begin');
@@ -437,7 +447,8 @@ describe('锁：决定 48 与分离对入库的影响', () => {
           );
           return await pgError(
             maintenance.query(
-              `select ensure_month_partition('raw_cdrs', '2031-05-15T00:00:00Z'::timestamptz)`,
+              `select ensure_month_partition('raw_cdrs', $1::timestamptz)`,
+              [missing.at],
             ),
           );
         } finally {
@@ -465,7 +476,8 @@ describe('锁：决定 48 与分离对入库的影响', () => {
       expect(
         (
           await one<{ found: boolean }>(
-            `select to_regclass('raw_cdrs_2031_05') is not null as found`,
+            `select to_regclass($1) is not null as found`,
+            [missing.name],
           )
         ).found,
       ).toBe(false);

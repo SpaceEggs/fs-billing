@@ -173,7 +173,11 @@ describe('实时（进行中）月份', () => {
       ),
     ).rejects.toBeInstanceOf(NotFoundError);
     await expect(
-      withAdmin(app.db, (tx) => readLiveStatement(tx, tenant.id, '2099-01-01')),
+      withAdmin(app.db, (tx) =>
+        readLiveStatement(tx, tenant.id, '2026-10-01', {
+          asOf: new Date('2026-09-15T12:00:00+08:00'),
+        }),
+      ),
     ).rejects.toThrow('晚于当前北京月');
     const { rows } = await owner.pool.query(
       'select count(*)::int as n from monthly_statements where tenant_id = $1',

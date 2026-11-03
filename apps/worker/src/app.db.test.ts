@@ -536,7 +536,19 @@ describe('Worker HTTP 与真实数据库', () => {
   it('缺分区返回 503 留给重推，保留原文并写 partition_failed，不在写入路径建分区', async () => {
     const tenant = await fixture();
     const uuid = randomUUID();
-    const start = Math.floor(new Date('2034-06-01T00:00:00Z').getTime() / 1000);
+    const missing = (
+      await owner.pool.query<{ at: string; name: string }>(
+        `select to_char(m + interval '14 days 12 hours', 'YYYY-MM-DD"T"HH24:MI:SS"+08:00"') as at,
+                'cdrs_' || to_char(m, 'YYYY_MM') as name
+         from generate_series(
+           date_trunc('month', clock_timestamp() at time zone 'Asia/Shanghai') + interval '2 years',
+           date_trunc('month', clock_timestamp() at time zone 'Asia/Shanghai') + interval '30 years',
+           interval '1 month') as m
+         where to_regclass('cdrs_' || to_char(m, 'YYYY_MM')) is null
+         limit 1`,
+      )
+    ).rows[0]!;
+    const start = Math.floor(new Date(missing.at).getTime() / 1000);
     const payload = body(tenant.code, uuid, {
       start_epoch: start,
       answer_epoch: start + 9,
@@ -551,9 +563,9 @@ describe('Worker HTTP 与真实数据库', () => {
     });
     expect(
       (
-        await owner.pool.query(
-          "select to_regclass('cdrs_2034_06') as partition",
-        )
+        await owner.pool.query('select to_regclass($1) as partition', [
+          missing.name,
+        ])
       ).rows,
     ).toEqual([{ partition: null }]);
     expect(
@@ -571,7 +583,7 @@ describe('Worker HTTP 与真实数据库', () => {
       ).rows,
     ).toEqual([{ body: payload }]);
     await ensureCdrPartitions(connection.db, {
-      moment: new Date('2034-06-01T00:00:00Z'),
+      moment: new Date(missing.at),
     });
     expect((await post(payload)).json()).toMatchObject({ status: 'queued' });
     await chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid });

@@ -562,9 +562,14 @@ describe('POST /api/portal/statements/{month}/export', () => {
     expect(other.statusCode).toBe(404);
     expect(other.headers['content-type']).toContain('application/json');
     expect(other.body).not.toContain(',10');
+    const futureMonth = (
+      await connections.owner.pool.query<{ month: string }>(
+        `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + interval '1 month', 'YYYY-MM') as month`,
+      )
+    ).rows[0]!.month;
     const future = await api.inject({
       method: 'POST',
-      url: '/api/portal/statements/2999-01/export',
+      url: `/api/portal/statements/${futureMonth}/export`,
       headers: requestHeaders(aCookie),
     });
     expect(future.statusCode).toBe(400);
