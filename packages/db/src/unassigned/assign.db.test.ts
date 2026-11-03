@@ -367,7 +367,10 @@ describe('验收标准 1 与 2：种子数据 ABC01 → ABC001', () => {
 
     const result = await withSystem(
       seeded.app.db,
-      (tx) => reconcileTenantStatements(tx, abc001),
+      (tx) =>
+        reconcileTenantStatements(tx, abc001, {
+          asOf: new Date('2026-10-15T12:00:00+08:00'),
+        }),
       { isolationLevel: 'repeatable read' },
     );
     expect(

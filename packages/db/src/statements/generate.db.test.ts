@@ -545,13 +545,13 @@ describe('租户第一个应有月份与缺失账单', () => {
       status: 'disabled',
     });
     const missing = await withAdmin(app.db, (tx) =>
-      listMissingStatements(tx, { tenantId: tenant.id }),
+      listMissingStatements(tx, {
+        tenantId: tenant.id,
+        asOf: new Date('2026-10-15T12:00:00+08:00'),
+      }),
     );
-    // 默认到上一个北京月，已停用的租户也有账单。
-    expect(missing.map((m) => m.month).slice(0, 2)).toEqual([
-      '2026-08-01',
-      '2026-09-01',
-    ]);
+    // 固定“现在”为 2026-10-15，上一个北京月是 9 月；已停用的租户也有账单。
+    expect(missing.map((m) => m.month)).toEqual(['2026-08-01', '2026-09-01']);
     const statement = await created(tenant.id, '2026-08-01');
     expect(statement).toMatchObject({
       openingBalance: '0',

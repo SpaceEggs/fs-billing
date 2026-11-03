@@ -12,7 +12,6 @@ import { NotFoundError } from '../errors.js';
 import { readTenantUsageOverview } from '../usage.js';
 import {
   computeStatement,
-  currentStatementMonth,
   generateStatement,
   readLiveStatement,
 } from './index.js';
@@ -28,7 +27,8 @@ const snapshot = { isolationLevel: 'repeatable read' } as const;
 
 describe('实时（进行中）月份', () => {
   it('matches the home month spend for the current month', async () => {
-    const month = await withAdmin(app.db, (tx) => currentStatementMonth(tx));
+    const month = '2026-10-01';
+    const asOf = new Date('2026-10-15T12:00:00+08:00');
     const tenant = await statementTenant(owner, {
       createdAt: '2026-07-01 08:00:00',
     });
@@ -42,7 +42,6 @@ describe('实时（进行中）月份', () => {
         adminId: administrator,
       },
     );
-    // 本月月初后一秒的两笔扣费和一笔赠送，一定早于“现在”。
     await statementLedger(owner, tenant.id, 'gift', '10', `${month} 00:00:01`, {
       adminId: administrator,
     });
@@ -61,10 +60,10 @@ describe('实时（进行中）月份', () => {
       app.db,
       tenant.id,
       async (tx) => ({
-        live: await readLiveStatement(tx, tenant.id, month),
-        home: await readTenantUsageOverview(tx, tenant.id),
+        live: await readLiveStatement(tx, tenant.id, month, { asOf }),
+        home: await readTenantUsageOverview(tx, tenant.id, asOf),
         viaTenant: await computeStatement(tx, tenant.id, month, {
-          asOf: new Date(),
+          asOf,
           opening: 'ledger',
         }),
       }),
@@ -86,7 +85,7 @@ describe('实时（进行中）月份', () => {
     expect(decimal(live!.statement.callCharges).eq(home.monthSpend)).toBe(true);
     // 余额锚点与月初前流水合计得到同一个期初。
     expect(viaTenant.openingBalance).toBe(live!.statement.openingBalance);
-    expect(live!.asOf.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+    expect(live!.asOf.getTime()).toBe(asOf.getTime());
   });
 
   it('honors a fixed asOf: later entries are not counted', async () => {
@@ -133,8 +132,9 @@ describe('实时（进行中）月份', () => {
       minutes: '2',
       charge: '0.4',
     });
+    const asOf = new Date('2026-10-15T12:00:00+08:00');
     const pending = await withAdmin(app.db, (tx) =>
-      readLiveStatement(tx, tenant.id, '2026-09-01'),
+      readLiveStatement(tx, tenant.id, '2026-09-01', { asOf }),
     );
     expect(pending).toMatchObject({
       month: '2026-09-01',
@@ -156,7 +156,7 @@ describe('实时（进行中）月份', () => {
     expect(generated.statement).toMatchObject(pending!.statement);
     expect(
       await withAdmin(app.db, (tx) =>
-        readLiveStatement(tx, tenant.id, '2026-09-01'),
+        readLiveStatement(tx, tenant.id, '2026-09-01', { asOf }),
       ),
     ).toBeNull();
   });
