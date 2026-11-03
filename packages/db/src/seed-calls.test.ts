@@ -234,7 +234,7 @@ describe('ABC001 逐通话单种子', () => {
   });
 });
 
-describe('当前月通话（播种月 1 日凌晨）', () => {
+describe('当前月通话（播种月 1 日第 1 秒）', () => {
   const october = parseRateCsv(OCTOBER_RATES_CSV, 'CNY');
   if (!october.ok) throw new Error('测试 10 月费率表无效');
   const planFor = (month: string, entries = october.entries) =>
@@ -245,7 +245,7 @@ describe('当前月通话（播种月 1 日凌晨）', () => {
       caller: '075586001234',
     });
 
-  it('is 20 calls, 81 minutes, 3.51 in the early hours of the 1st, with an equal recharge just before the first call', () => {
+  it('is 20 calls, 81 minutes, 3.51 in the first second of the 1st, with an equal recharge just before the first call', () => {
     const result = planFor('2026-10-01');
     expect(result.calls).toHaveLength(20);
     expect(result.calls.reduce((sum, c) => sum + c.billedMinutes, 0)).toBe(81);
@@ -255,18 +255,18 @@ describe('当前月通话（播种月 1 日凌晨）', () => {
     );
     expect(charges.toFixed()).toBe('3.51');
     expect(result.rechargeAmount).toBe('3.51');
-    expect(result.rechargeAt).toBe('2026-10-01 00:03:00');
+    expect(result.rechargeAt).toBe('2026-10-01 00:00:00');
+    const midnight = beijingTime('2026-10-01 00:00:00').getTime();
     expect(beijingTime(result.rechargeAt).getTime()).toBeLessThan(
       Math.min(...result.calls.map((c) => c.startedAt.getTime())),
     );
     for (const call of result.calls) {
       expect(call.day).toBe('2026-10-01');
-      expect(call.startedAt.getTime()).toBeGreaterThanOrEqual(
-        beijingTime('2026-10-01 00:05:00').getTime(),
-      );
-      // 最晚的一通 01:59:18 开始，挂机不晚于 02:10。
+      expect(call.startedAt.getTime()).toBeGreaterThan(midnight);
+      expect(call.answeredAt.getTime()).toBeLessThan(midnight + 1000);
+      // 通话最长约 8 分钟，挂机不晚于 00:10。
       expect(call.endedAt.getTime()).toBeLessThan(
-        beijingTime('2026-10-01 02:10:00').getTime(),
+        beijingTime('2026-10-01 00:10:00').getTime(),
       );
     }
   });
@@ -297,15 +297,21 @@ describe('当前月通话（播种月 1 日凌晨）', () => {
     expect(base.rechargeAmount).toBe('3.51');
   });
 
-  it('is only planned once the early-hours window has passed and after the mockup months', () => {
+  it('is planned after the first second of a month later than the mockup, and postponed during that second', () => {
     const at = (text: string) => beijingTime(text);
+    const opening = at('2026-10-01 00:00:00').getTime();
     expect(currentMonthSeedMonth(at('2026-10-22 15:00:00'))).toBe('2026-10-01');
     expect(currentMonthSeedMonth(at('2026-11-01 03:00:00'))).toBe('2026-11-01');
     expect(currentMonthSeedMonth(at('2026-12-31 23:59:59'))).toBe('2026-12-01');
-    // 当月 1 日 03:00 之前通话还没发生，不播种。
-    expect(currentMonthSeedMonth(at('2026-10-01 02:59:59'))).toBeNull();
+    expect(currentMonthSeedMonth(at('2026-10-01 00:00:01'))).toBe('2026-10-01');
+    expect(currentMonthSeedMonth(at('2026-10-01 02:59:59'))).toBe('2026-10-01');
+    expect(currentMonthSeedMonth(at('2026-11-01 00:00:01'))).toBe('2026-11-01');
+    // 第 1 秒内 20 通还没全部接通，整组推迟。
+    expect(currentMonthSeedMonth(at('2026-10-01 00:00:00'))).toBeNull();
+    expect(currentMonthSeedMonth(new Date(opening + 999))).toBeNull();
     expect(currentMonthSeedMonth(at('2026-11-01 00:00:00'))).toBeNull();
     // 8、9 月是设计稿的月账单，数字不能变。
+    expect(currentMonthSeedMonth(at('2026-09-30 23:59:59'))).toBeNull();
     expect(currentMonthSeedMonth(at('2026-09-15 12:00:00'))).toBeNull();
     expect(currentMonthSeedMonth(at('2026-08-01 12:00:00'))).toBeNull();
   });

@@ -50,11 +50,6 @@ export async function assignableTenant(
   return { ...tenant, tag };
 }
 
-/** 北京时间的当前月与上一个月，格式 YYYY-MM；用来在界面里找「当月」。 */
-export function currentMonth(now = new Date()) {
-  return new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 7);
-}
-
 export const monthLabel = (month: string) =>
   `${month.slice(0, 4)}年${Number(month.slice(5))}月`;
 

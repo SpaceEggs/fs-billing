@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import { beijingTime } from '@fs-billing/rating';
 import { lockTenants, withAdmin, type Connection } from '../src/client.js';
 import { ensureCdrPartitions } from '../src/partitions.js';
@@ -41,8 +42,8 @@ export async function statementTenant(
 
 /**
  * 写一笔流水（owner 连接）。通话扣费的 occurred_at 是 `at`，created_at 默认比它晚 5 秒；
- * 人工流水两列都是 `at`。`createdAt` 单独指定“很久以后才写入”的补推；传 `'now'` 表示此刻写入
- * （晚于已生成账单的 generated_at，核对时算作迟到流水）。
+ * 人工流水两列都是 `at`。`createdAt` 单独指定“很久以后才写入”的补推；传 `'now'` 用数据库时钟
+ * （晚于已提交账单的 generated_at，核对时算作迟到流水）。不用进程时钟，免得它落在 generated_at 前面。
  */
 export async function statementLedger(
   owner: Connection,
@@ -62,13 +63,14 @@ export async function statementLedger(
       idempotencyKey: `test:${randomUUID()}`,
       note: options.note ?? (kind === 'call_charge' ? '' : '测试'),
       occurredAt,
-      createdAt: options.createdAt
-        ? options.createdAt === 'now'
-          ? new Date()
-          : ts(options.createdAt)
-        : kind === 'call_charge'
-          ? new Date(occurredAt.getTime() + 5000)
-          : occurredAt,
+      createdAt:
+        options.createdAt === 'now'
+          ? sql`clock_timestamp()`
+          : options.createdAt
+            ? ts(options.createdAt)
+            : kind === 'call_charge'
+              ? new Date(occurredAt.getTime() + 5000)
+              : occurredAt,
       ...(kind !== 'call_charge' && {
         createdBy: options.adminId ?? null,
       }),

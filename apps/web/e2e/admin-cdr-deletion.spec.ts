@@ -2,17 +2,12 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './admin';
 import {
   cdrTotals,
+  databaseBeijingDay,
   ledgerAndStatementSnapshot,
   operationLogs,
   tenantBalance,
 } from './db';
-import {
-  adminName,
-  cdrTabUrl,
-  currentMonth,
-  deletableTenant,
-  monthLabel,
-} from './ops';
+import { adminName, cdrTabUrl, deletableTenant, monthLabel } from './ops';
 
 async function openDialog(page: Page) {
   await page.getByRole('button', { name: '删除话单' }).first().click();
@@ -52,6 +47,10 @@ test('disables the current month, deletes August after the typed code, and shows
   const before = await ledgerAndStatementSnapshot(tenant.id);
   expect((await cdrTotals(tenant.id)).count).toBe(2);
 
+  // 对话框用浏览器月份决定「本月账单尚未生成」。钉在数据库此刻，避免跨日对不上。
+  const { instant, month: current } = await databaseBeijingDay();
+  await page.clock.setFixedTime(instant);
+
   await page.goto(cdrTabUrl(tenant.id));
   const dialog = await openDialog(page);
   // 一打开就预选最近一个可删除的月份（9 月：8、9 月可删，当月和之后不可删），预览立即显示。
@@ -63,7 +62,6 @@ test('disables the current month, deletes August after the typed code, and shows
   );
   // 当月不可选：格子下方写明原因；先看当月所在年，再翻到 2026 年。
   await dialog.getByRole('button', { name: /^结束月份：/ }).click();
-  const current = currentMonth();
   await showYear(dialog, Number(current.slice(0, 4)));
   await expect(monthCell(dialog, monthLabel(current))).toBeDisabled();
   await expect(dialog.getByTestId('month-reasons')).toContainText(
@@ -228,7 +226,7 @@ test('the server refuses the current month and a wrong code even when the page i
 }) => {
   const tenant = await deletableTenant(page);
   const url = `/api/admin/tenants/${tenant.id}/cdr-deletions`;
-  const current = currentMonth();
+  const current = (await databaseBeijingDay()).month;
 
   const currentMonthRequest = await page.request.post(url, {
     data: {

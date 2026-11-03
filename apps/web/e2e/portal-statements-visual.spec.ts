@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from './admin';
+import { databaseBeijingDay } from './db';
 import { openPortalCustomer } from './portal';
 import { createTenant } from './admin';
 import {
@@ -33,9 +34,6 @@ const frame = (section: string, label: string): DesignFrame => ({
 });
 
 type Session = 'abc001' | 'deleted' | 'empty';
-
-/** 播种月就是运行时的北京月（同 portal-statements.spec.ts）。 */
-const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
 
 const visibleText = (page: import('@playwright/test').Page, text: string) =>
   page.getByText(text).filter({ visible: true }).first();
@@ -92,6 +90,7 @@ const shots: Shot<Session>[] = [
     frame: frame('月账单详情', '2a 电脑 · 本月（进行中）'),
     note: '播种月的进行中账单（20 通、81 分钟、¥3.51）。',
     open: async (page) => {
+      const { month } = await databaseBeijingDay();
       await page.goto(`/portal/statements/${month}`);
       await expect(
         page.getByRole('heading', { name: /^\d{4}年\d{1,2}月$/ }),
@@ -109,6 +108,7 @@ const shots: Shot<Session>[] = [
     frame: frame('月账单详情', '2b 手机 · 本月（进行中）'),
     note: null,
     open: async (page) => {
+      const { month } = await databaseBeijingDay();
       await page.goto(`/portal/statements/${month}`);
       await expect(visibleText(page, '本月尚未结束')).toBeVisible();
       await expect(

@@ -1,11 +1,23 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { accounts } from './accounts';
-import { clearLoginFailures } from './db';
+import { beijingDayOf, clearLoginFailures } from './db';
 import { loginAs } from './helpers';
 
-// 种子在播种当月的 1 日凌晨为 ABC001 写了 20 通已接通话单加一笔等额预存（本月消费 ¥3.51、81 分钟，余额不变）。
-// 播种月就是运行时的北京月（北京时间固定 UTC+8）。
-const month = new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 7);
+// 种子在晚于 2026-09 的北京月 1 日第 1 秒内为 ABC001 写了 20 通已接通话单加一笔等额预存
+// （本月消费 ¥3.51、81 分钟，余额不变）。月份取首页响应的 usage.asOf，不用测试进程的时钟。
+
+function homeResponse(page: Page) {
+  return page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/portal/home' && response.ok(),
+  );
+}
+
+async function homeMonth(response: Promise<{ text(): Promise<string> }>) {
+  const body = await (await response).text();
+  const payload = JSON.parse(body) as { usage: { asOf: string } };
+  return { body, month: beijingDayOf(payload.usage.asOf).month };
+}
 
 test.beforeEach(async () => {
   await clearLoginFailures(accounts.suspendedCustomer);
@@ -14,12 +26,9 @@ test.beforeEach(async () => {
 test('an overdrawn customer sees the figures, the 30-day chart and the recent answered calls', async ({
   page,
 }) => {
-  const home = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === '/api/portal/home' && response.ok(),
-  );
+  const home = homeResponse(page);
   await loginAs(page, '/login', accounts.customer);
-  const body = await (await home).text();
+  const { body, month } = await homeMonth(home);
   // 门户响应没有未接通通数，也没有后台才有的未经验证标记。
   expect(body).not.toMatch(/unanswered|unverified/i);
 
@@ -85,18 +94,18 @@ test('an overdrawn customer sees the figures, the 30-day chart and the recent an
     calls.getByRole('columnheader', { name: '国家', exact: true }),
   ).toBeVisible();
   // 只有已接通的最近 10 通（表头加 10 行）：种子里 ABC001 另有一通未接通（13800138000），不会出现。
-  // 最近的 10 通是播种月 1 日凌晨 01:10 之后的话单，按接通时间倒序。
+  // 20 通都在当月 1 日 00:00:00 后的第 1 秒内，页面时刻都显示 00:00:00，按接通时间倒序。
   const rows = calls.getByRole('row');
   await expect(rows).toHaveCount(11);
-  for (const [index, time, country] of [
-    [1, '01:59:30', '中国'],
-    [2, '01:56:04', '中国香港'],
-    [4, '01:46:36', '日本'],
-    [6, '01:33:54', '美国/加拿大'],
-    [8, '01:21:10', '英国'],
-    [10, '01:10:01', '新加坡'],
+  for (const [index, country] of [
+    [1, '中国'],
+    [2, '中国香港'],
+    [4, '日本'],
+    [6, '美国/加拿大'],
+    [8, '英国'],
+    [10, '新加坡'],
   ] as const) {
-    await expect(rows.nth(index)).toContainText(`${month}-01 ${time}`);
+    await expect(rows.nth(index)).toContainText(`${month}-01 00:00:00`);
     await expect(rows.nth(index)).toContainText(country);
   }
   for (const row of (await rows.all()).slice(1))
@@ -159,15 +168,17 @@ test.describe('on a phone', () => {
   test('recent calls are cards and the drawer lists the monthly statement', async ({
     page,
   }) => {
+    const home = homeResponse(page);
     await loginAs(page, '/login', accounts.customer);
+    const { month } = await homeMonth(home);
     const recent = page.getByRole('region', { name: '最近话单' });
     await expect(recent.getByRole('table')).toBeHidden();
     const cards = recent.getByRole('listitem');
     await expect(cards).toHaveCount(10);
     await expect(cards.first()).toContainText('中国 · 3分45秒');
-    await expect(cards.first()).toContainText(`${month.slice(5)}-01 01:59:30`);
+    await expect(cards.first()).toContainText(`${month.slice(5)}-01 00:00:00`);
     await expect(cards.last()).toContainText('新加坡');
-    await expect(cards.last()).toContainText(`${month.slice(5)}-01 01:10:01`);
+    await expect(cards.last()).toContainText(`${month.slice(5)}-01 00:00:00`);
     await expect(page.getByText('ABC001 · CNY')).toBeVisible();
 
     await page.getByRole('button', { name: '打开导航' }).click();

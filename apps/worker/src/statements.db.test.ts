@@ -582,10 +582,24 @@ describe('调度与 Worker 端到端', () => {
   it('processes the parent job, the children and the reconcile job through pg-boss', async () => {
     const tenant = await activeTenant();
     await boss.send(GENERATE_STATEMENTS_QUEUE, { tenantId: tenant.id });
-    // 真实时钟下 7 月至上月都缺；至少 7、8、9 月被生成。
+    // 夹具 7 月开户。父任务按数据库时钟生成到上一个北京月，全部写完再发核对。
+    const months = (
+      await owner.pool.query<{ month: string }>(
+        `select to_char(m.month, 'YYYY-MM-DD') as month
+         from generate_series(
+           '2026-07-01'::date,
+           (date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai')
+             - interval '1 month')::date,
+           interval '1 month'
+         ) as m(month)
+         order by m.month`,
+      )
+    ).rows.map((row) => row.month);
+    if (months.length === 0)
+      throw new Error('数据库时钟的上一个北京月早于租户首月，没有要等的账单');
     await vi.waitFor(
       async () => {
-        for (const month of ['2026-07-01', '2026-08-01', '2026-09-01'])
+        for (const month of months)
           expect(await read(tenant.id, month)).not.toBeNull();
       },
       { timeout: 45_000, interval: 200 },

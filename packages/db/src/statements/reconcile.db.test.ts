@@ -22,10 +22,16 @@ beforeAll(async () => {
 });
 
 const snapshot = { isolationLevel: 'repeatable read' } as const;
+/** 固定在 2026-10-15：上一个北京月是 9 月，缺账单名单不随挂钟增长。 */
+const AS_OF = new Date('2026-10-15T12:00:00+08:00');
 const generate = (tenant: string, month: string) =>
   withSystem(app.db, (tx) => generateStatement(tx, tenant, month), snapshot);
 const reconcile = (tenant: string) =>
-  withSystem(app.db, (tx) => reconcileTenantStatements(tx, tenant), snapshot);
+  withSystem(
+    app.db,
+    (tx) => reconcileTenantStatements(tx, tenant, { asOf: AS_OF }),
+    snapshot,
+  );
 const read = (tenant: string, month: string) =>
   withAdmin(app.db, (tx) => readStatement(tx, tenant, month));
 const alerts = async (tenant: string) =>
@@ -279,19 +285,17 @@ describe('账单核对（验收标准 2）', () => {
       createdAt: '2026-08-01 08:00:00',
     });
     await generate(tenant.id, '2026-08-01');
-    // 9 月应有而没有。
+    // 9 月应有而没有。asOf 停在 10 月，名单里只有这一个月。
     const result = await reconcile(tenant.id);
-    expect(result.missing.slice(0, 1)).toEqual(['2026-09-01']);
+    expect(result.missing).toEqual(['2026-09-01']);
     expect(result.statements.map((s) => s.status)).toEqual(['ok']);
     const open = await alerts(tenant.id);
-    expect(open.map((a) => a.description)).toEqual(
-      expect.arrayContaining([
-        expect.stringMatching(/ 2026-09 账单与流水不一致（missing）$/),
-      ]),
-    );
+    expect(open.map((a) => a.description)).toEqual([
+      expect.stringMatching(/ 2026-09 账单与流水不一致（missing）$/),
+    ]);
     await generate(tenant.id, '2026-09-01');
     const later = await reconcile(tenant.id);
-    expect(later.alertsRecovered).toBeGreaterThanOrEqual(1);
+    expect(later.alertsRecovered).toBe(1);
     expect(
       (await alerts(tenant.id)).find((a) =>
         a.description.includes(' 2026-09 '),

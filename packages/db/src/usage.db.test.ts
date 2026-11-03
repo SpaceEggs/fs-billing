@@ -309,16 +309,19 @@ describe('tenant usage overview snapshot', () => {
         .insert(balanceAlertSettings)
         .values({ tenantId: a.id, threshold: '0', emails: [] }),
     );
-    const now = new Date();
-    const chargedAt = new Date(now.getTime() - 1000).toISOString();
-    await charge(a.id, chargedAt, '-0.5');
-    await charge(b.id, chargedAt, '-999');
+    const asOf = (
+      await owner.pool.query<{ now: Date }>(
+        'select statement_timestamp() as now',
+      )
+    ).rows[0]!.now;
+    await charge(a.id, asOf.toISOString(), '-0.5');
+    await charge(b.id, asOf.toISOString(), '-999');
     const value = await app.db.transaction(async (tx) => {
       await tx.execute(sql`set transaction read only`);
       await tx.execute(
         sql`select set_config('app.scope', 'tenant', true), set_config('app.tenant_id', ${a.id}, true)`,
       );
-      const result = await readTenantUsageOverview(tx, a.id, now);
+      const result = await readTenantUsageOverview(tx, a.id, asOf);
       const locks = await owner.pool.query<{ locked: number }>(
         `select count(*)::int as locked from pg_locks
          where pid = $1 and locktype = 'advisory'`,
@@ -329,7 +332,7 @@ describe('tenant usage overview snapshot', () => {
     });
     expect(
       await withTenant(app.db, a.id, (tx) =>
-        readTenantUsageOverview(tx, a.id, now),
+        readTenantUsageOverview(tx, a.id, asOf),
       ),
     ).toEqual(value);
     expect(value).toMatchObject({
@@ -354,7 +357,7 @@ describe('tenant usage overview snapshot', () => {
     await expect(
       withTenant(app.db, b.id, (tx) => readTenantUsageOverview(tx, a.id)),
     ).rejects.toMatchObject({ name: 'NotFoundError', code: 'NOT_FOUND' });
-    await expect(read(randomUUID(), now.toISOString())).rejects.toMatchObject({
+    await expect(read(randomUUID(), asOf.toISOString())).rejects.toMatchObject({
       name: 'NotFoundError',
       code: 'NOT_FOUND',
     });
