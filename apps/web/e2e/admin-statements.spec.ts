@@ -9,6 +9,7 @@ import {
   recordLedgerEntry,
   recordStatementCall,
   setStatementFlags,
+  statementGeneratedAt,
 } from './db';
 
 const abc001 = '/admin/statements';
@@ -174,7 +175,9 @@ test('shows the ABC001 August and September statements of the mockup', async ({
   await expect(september).toContainText('-¥25.50');
   await expect(september).toContainText('¥2,486.30');
   await expect(september).toContainText('-¥35.20');
-  await expect(september).toContainText('2026-');
+  await expect(september).toContainText(
+    await statementGeneratedAt('ABC001', '2026-09'),
+  );
 });
 
 test('groups by currency and the footer total equals the sum of the generated rows', async ({

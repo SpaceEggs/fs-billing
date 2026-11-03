@@ -56,6 +56,28 @@ export function databaseBeijingDay() {
 }
 
 /**
+ * 某租户某月账单的生成时间，格式与页面 DateTime 相同（北京 YYYY-MM-DD HH:mm:ss）。
+ * generated_at 是种子或生成时的数据库 now()，不是账单月份，也不是测试进程此刻。
+ */
+export function statementGeneratedAt(tenantCode: string, month: string) {
+  return withOwner(async (client) => {
+    const { rows } = await client.query<{ at: string }>(
+      `SELECT to_char(
+         s.generated_at at time zone 'Asia/Shanghai',
+         'YYYY-MM-DD HH24:MI:SS'
+       ) AS at
+       FROM monthly_statements s
+       JOIN tenants t ON t.id = s.tenant_id
+       WHERE t.code = $1 AND s.month = $2::date`,
+      [tenantCode, `${month}-01`],
+    );
+    const at = rows[0]?.at;
+    if (!at) throw new Error(`no statement ${tenantCode} ${month}`);
+    return at;
+  });
+}
+
+/**
  * 北京月 1 日 00:00:00 之后不足 1 秒时，当月种子通话可能还没全部接通。
  * 等到这一秒过去再开测，最多等 1 秒。这是前置条件，不按时钟改断言。
  */
