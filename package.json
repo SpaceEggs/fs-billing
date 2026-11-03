@@ -28,6 +28,7 @@
     "screenshots": "pnpm --filter @fs-billing/web screenshots"
   },
   "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
     "@eslint/js": "10.0.1",
     "@types/node": "^24",
     "@vitest/coverage-v8": "5.0.4",

@@ -108,8 +108,7 @@ export function planDay(
   const weekend = [0, 6].includes(
     new Date(dateMs(day) + 8 * 3600000).getUTCDay(),
   );
-  // These calculations generate call counts and durations, not money.
-  /* eslint-disable money/no-number-money */
+  /* eslint-disable money/no-number-money -- call counts and durations, not money */
   const count = Math.round(
     (min + Math.floor(rnd() * (max - min + 1))) * (weekend ? 0.3 : 1),
   );
