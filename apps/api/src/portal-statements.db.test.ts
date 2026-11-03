@@ -17,7 +17,6 @@ import {
 } from '../test/support.js';
 import {
   backdateTenant,
-  currentBeijingMonth,
   ensureStatementPartitions,
   generateMonth,
   statementCall,
@@ -35,12 +34,20 @@ let bCookie: string;
 let adminCookie: string;
 
 const adminId = () => fixture.admin.profileId;
-const current = currentBeijingMonth();
-const monthsFrom = (first: string) => {
+const beijingMonthOf = (asOf: string) =>
+  new Date(Date.parse(asOf) + 8 * 60 * 60 * 1000).toISOString().slice(0, 7);
+const dbBeijingMonth = async (monthsAhead: number) =>
+  (
+    await connections.owner.pool.query<{ month: string }>(
+      `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + ($1::int * interval '1 month'), 'YYYY-MM') as month`,
+      [monthsAhead],
+    )
+  ).rows[0]!.month;
+const monthsFrom = (first: string, through: string) => {
   const months: string[] = [];
   for (
     let [year, month] = [Number(first.slice(0, 4)), Number(first.slice(5))];
-    `${year}-${String(month).padStart(2, '0')}` <= current;
+    `${year}-${String(month).padStart(2, '0')}` <= through;
     month === 12 ? ([year, month] = [year + 1, 1]) : (month += 1)
   )
     months.unshift(`${year}-${String(month).padStart(2, '0')}`);
@@ -173,7 +180,10 @@ describe('GET /api/portal/statements', () => {
     expect(response.headers['cache-control']).toBe('no-store');
     const body = portalStatementsResponseSchema.parse(response.json());
     expect(body.currency).toBe('CNY');
-    expect(body.items.map((item) => item.month)).toEqual(monthsFrom('2026-08'));
+    const currentMonth = beijingMonthOf(body.asOf);
+    expect(body.items.map((item) => item.month)).toEqual(
+      monthsFrom('2026-08', currentMonth),
+    );
     const byMonth = new Map(body.items.map((item) => [item.month, item]));
     expect(byMonth.get('2026-09')).toMatchObject({
       state: 'final',
@@ -201,7 +211,7 @@ describe('GET /api/portal/statements', () => {
       },
     });
     expect(byMonth.get('2026-09')?.generatedAt).not.toBeNull();
-    expect(byMonth.get(current)).toMatchObject({
+    expect(byMonth.get(currentMonth)).toMatchObject({
       state: 'in_progress',
       generatedAt: null,
       detailsDeleted: false,
@@ -210,7 +220,7 @@ describe('GET /api/portal/statements', () => {
     const months = body.items.map((item) => item.month);
     const previous = byMonth.get(months[1]!);
     if (previous?.state === 'final')
-      expect(byMonth.get(current)?.figures.openingBalance).toBe(
+      expect(byMonth.get(currentMonth)?.figures.openingBalance).toBe(
         previous.figures.closingBalance,
       );
     expect(new Date(body.asOf).getTime()).toBeLessThanOrEqual(Date.now());
@@ -233,7 +243,9 @@ describe('GET /api/portal/statements', () => {
     });
     const body = portalStatementsResponseSchema.parse(response.json());
     expect(body.currency).toBe('USD');
-    expect(body.items.map((item) => item.month)).toEqual(monthsFrom('2026-06'));
+    expect(body.items.map((item) => item.month)).toEqual(
+      monthsFrom('2026-06', beijingMonthOf(body.asOf)),
+    );
     expect(response.body).not.toContain('3519.7');
     expect(
       body.items.find((item) => item.month === '2026-06')?.figures,
@@ -249,7 +261,9 @@ describe('GET /api/portal/statements', () => {
       headers: requestHeaders(a2Cookie),
     });
     const body = portalStatementsResponseSchema.parse(response.json());
-    expect(body.items.map((item) => item.month)).toEqual(monthsFrom('2026-09'));
+    expect(body.items.map((item) => item.month)).toEqual(
+      monthsFrom('2026-09', beijingMonthOf(body.asOf)),
+    );
     expect(body.items.find((item) => item.month === '2026-09')).toMatchObject({
       state: 'pending',
       generatedAt: null,
@@ -274,7 +288,7 @@ describe('GET /api/portal/statements', () => {
     });
     expect(body.items).toHaveLength(1);
     expect(body.items[0]).toMatchObject({
-      month: current,
+      month: beijingMonthOf(body.asOf),
       state: 'in_progress',
       generatedAt: null,
       figures: {
@@ -357,16 +371,19 @@ describe('GET /api/portal/statements/{month}', () => {
 
   it('computes the in-progress month live up to now', async () => {
     const response = await api.inject({
-      url: `/api/portal/statements/${current}`,
+      url: `/api/portal/statements/${await dbBeijingMonth(0)}`,
       headers: requestHeaders(aCookie),
     });
     expect(response.statusCode, response.body).toBe(200);
     const body = portalStatementResponseSchema.parse(response.json());
     expect(body.state).toBe('in_progress');
     expect(body.generatedAt).toBeNull();
-    expect(body.asOf).not.toBeNull();
+    const asOf = body.asOf;
+    expect(asOf).not.toBeNull();
     expect(body.period.to).toBe(
-      new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      new Date(Date.parse(asOf!) + 8 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
     );
     expect(response.body).not.toMatch(internalFields);
   });
@@ -409,13 +426,12 @@ describe('GET /api/portal/statements/{month}', () => {
   });
 
   it('rejects a malformed month, a future month and extra query keys with 400', async () => {
-    const next = new Date(Date.now() + 8 * 60 * 60 * 1000);
-    next.setUTCMonth(next.getUTCMonth() + 1, 1);
+    const future = await dbBeijingMonth(2);
     for (const url of [
       '/api/portal/statements/2026-13',
       '/api/portal/statements/2026-9',
       '/api/portal/statements/2026-09-01',
-      `/api/portal/statements/${next.toISOString().slice(0, 7)}`,
+      `/api/portal/statements/${future}`,
       '/api/portal/statements/2026-09?tenantId=' + fixture.b.tenantId,
     ]) {
       const response = await api.inject({
@@ -527,7 +543,7 @@ describe('POST /api/portal/statements/{month}/export', () => {
 
   it('exports the live current month and a pending month', async () => {
     for (const [cookie, month] of [
-      [aCookie, current],
+      [aCookie, await dbBeijingMonth(0)],
       [a2Cookie, '2026-09'],
     ] as const) {
       const response = await api.inject({
@@ -562,11 +578,7 @@ describe('POST /api/portal/statements/{month}/export', () => {
     expect(other.statusCode).toBe(404);
     expect(other.headers['content-type']).toContain('application/json');
     expect(other.body).not.toContain(',10');
-    const futureMonth = (
-      await connections.owner.pool.query<{ month: string }>(
-        `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + interval '1 month', 'YYYY-MM') as month`,
-      )
-    ).rows[0]!.month;
+    const futureMonth = await dbBeijingMonth(2);
     const future = await api.inject({
       method: 'POST',
       url: `/api/portal/statements/${futureMonth}/export`,

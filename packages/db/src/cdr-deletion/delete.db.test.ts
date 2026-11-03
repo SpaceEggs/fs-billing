@@ -246,7 +246,7 @@ describe('删除话单', () => {
     const current = await currentMonth();
     const future = (
       await one<{ month: string }>(
-        `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + interval '1 month', 'YYYY-MM') as month`,
+        `select to_char(date_trunc('month', statement_timestamp() at time zone 'Asia/Shanghai') + interval '2 months', 'YYYY-MM') as month`,
       )
     ).month;
     const before = await ledgerAndStatements(f.tenant.id);

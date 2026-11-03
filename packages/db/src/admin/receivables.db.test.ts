@@ -323,9 +323,9 @@ describe('admin receivable event services against Postgres', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
-    const tomorrow = (
+    const future = (
       await owner.pool.query<{ day: string }>(
-        `select ((clock_timestamp() at time zone 'Asia/Shanghai')::date + 1)::text as day`,
+        `select ((clock_timestamp() at time zone 'Asia/Shanghai')::date + 2)::text as day`,
       )
     ).rows[0]!.day;
     await expect(
@@ -333,7 +333,7 @@ describe('admin receivable event services against Postgres', () => {
         ...f.input,
         request: {
           expectedLatestSettlementId: null,
-          receivedOn: tomorrow,
+          receivedOn: future,
           note: '',
         },
       }),
