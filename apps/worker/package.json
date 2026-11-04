@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "queue:migrate": "tsx --env-file-if-exists=../../.env scripts/install-queue.ts",
     "perf:authorize": "tsx --env-file-if-exists=../../.env scripts/perf-authorize.ts",
+    "perf:charge-queue": "tsx --env-file-if-exists=../../.env scripts/charge-queue-perf.ts",
     "mail:test": "tsx --env-file-if-exists=../../.env scripts/mail-test.ts",
     "mail:requeue": "tsx --env-file-if-exists=../../.env scripts/mail-requeue.ts",
     "raw:restore": "tsx --env-file-if-exists=../../.env scripts/restore-raw-cdr.ts",

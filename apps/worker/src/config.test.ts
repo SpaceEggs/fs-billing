@@ -15,6 +15,7 @@ describe('Worker 启动配置边界', () => {
       WORKER_PORT: 3001,
       WORKER_ALLOWED_IPS: ['127.0.0.1', '10.0.0.10'],
       WORKER_RECONCILE_LOOKBACK_DAYS: 30,
+      WORKER_CHARGE_BATCH_SIZE: 10,
     });
     expect(
       workerEnvironmentSchema.parse({
@@ -37,6 +38,9 @@ describe('Worker 启动配置边界', () => {
   it.each([
     { WORKER_DB_POOL_MAX: '0' },
     { WORKER_QUEUE_POOL_MAX: '1.5' },
+    { WORKER_CHARGE_BATCH_SIZE: '0' },
+    { WORKER_CHARGE_BATCH_SIZE: '101' },
+    { WORKER_CHARGE_BATCH_SIZE: '1.5' },
     { WORKER_DB_CONNECTION_TIMEOUT_MS: '0' },
     { WORKER_DB_CONNECTION_TIMEOUT_MS: 'Infinity' },
     { WORKER_RECONCILE_MIN_AGE_MINUTES: '-1' },
