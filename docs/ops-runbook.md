@@ -4,8 +4,8 @@
 `<B_IP>`、`<A_IP>`、`<B_PRIVATE_IP>`、`<DOMAIN>` 都是占位符，执行时替换为实际值；
 仓库、文档和截图里不写真实地址与密钥。
 
-当前版本含「部署」「回滚」「迁移演练」「大表加索引」「日志与隐私」「证书」六章。
-备份与恢复、监测与告警、密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
+当前版本含「部署」「回滚」「迁移演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「证书」九章。
+监测与告警、密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
 （`docs/go-live-checklist.md` 在后续 PR 建立）。
 
 ## 部署
@@ -446,6 +446,216 @@ SELECT pg_reload_conf();
 
 `0010` 的迁移头注释已经指向本手册；不要把它改成 CONCURRENTLY，也不要手工在生产
 上执行 `CREATE INDEX`（非并发）去替代本流程。
+
+## 备份
+
+### 现状与已知差距
+
+备份暂时只写本机 `/root/backups`（阶段 10 决定 9）：能防误删数据、坏迁移、应用层事故，
+**防不了整机丢失**（磁盘损坏、被入侵、误删整个系统）。因此阶段 10 带条件上线：只接入
+试用客户，**首个付费客户之前必须有异地备份**。过渡期每周手工拉一份到运维自己的机器，
+步骤见下面「每周手工拉取（过渡）」。
+
+备份范围（[阶段 10 设计：备份与恢复](phase-10-design.md#3-备份与恢复验收-3)）：
+
+| 产物                     | 内容                                                          | 说明                                                         |
+| ------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| `fs_billing-<时间>.dump` | `pg_dump -Fc` 整库（含 `auth`、`pgboss` 与所有分区）          | 先写 `.partial`，`pg_restore --list` 通过才改名              |
+| `globals-<时间>.sql`     | `pg_dumpall --globals-only`，含角色与密码哈希                 | 没有它，恢复到新机器会因 RLS、`SECURITY DEFINER` 属主失败    |
+| `archive-<时间>.tar.gz`  | `/var/lib/fs-billing/archive`（原始话单归档）                 | 原始 JSON 丢弃后的**唯一副本**；在库之后拍，保证清单不缺文件 |
+| `config-<时间>.tar.gz`   | `/etc/fs-billing`、`/etc/nginx/conf.d`、`/etc/ssl/fs-billing` | 含 nginx 站点与**证书私钥**，异地时必须加密                  |
+| `SHA256SUMS-<时间>`      | 以上四个产物的 sha256                                         | `verify-restore.sh` 先校验它                                 |
+| `LATEST.json`            | 时间、大小、校验和、`pg_restore --list` 条目数、归档文件统计  | 体检脚本用它判断备份是否新鲜                                 |
+
+目录 700、文件 600。备份里有完整号码与客户资料；不要把它们拷到共享目录、聊天工具或
+未加密的磁盘。
+
+### 安装与配置
+
+```sh
+install -m 0600 /opt/fs-billing/current/ops/backup/backup.conf.example /etc/fs-billing/backup.conf
+$EDITOR /etc/fs-billing/backup.conf
+```
+
+配置只写路径（`BACKUP_DIR`、`ARCHIVE_DIR`、`CONFIG_PATHS`、保留天数等）；数据库连接串
+从 `/etc/fs-billing/owner.env` 的 `DATABASE_URL` 读取，密码不写进 `backup.conf`。
+`BACKUP_DIR` 默认 `/root/backups`，改它时同步改
+`ops/backup/systemd/fs-billing-backup.service` 的 `ReadWritePaths`。
+
+安装并启用定时器：
+
+```sh
+install -m 0644 /opt/fs-billing/current/ops/backup/systemd/fs-billing-backup.service \
+  /opt/fs-billing/current/ops/backup/systemd/fs-billing-backup.timer \
+  /opt/fs-billing/current/ops/backup/systemd/fs-billing-backup-verify.service \
+  /opt/fs-billing/current/ops/backup/systemd/fs-billing-backup-verify.timer \
+  /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now fs-billing-backup.timer fs-billing-backup-verify.timer
+systemctl list-timers 'fs-billing-*'
+```
+
+`fs-billing-backup.timer` 每天北京时间 05:00 运行（避开 00:00 分区维护、02:00 账单、
+03:00 核对、04:00 归档）；`fs-billing-backup-verify.timer` 每周日 06:00 做一次恢复演练。
+两个 timer 都是 `Persistent=true`，关机错过后开机补跑。失败通知由 PR 4 的 `notify.sh`
+接入（单元里的 `OnFailure=` 已注释，等它到位后取消注释）。
+
+### 手动跑一次并核对
+
+```sh
+systemctl start fs-billing-backup.service
+journalctl -u fs-billing-backup.service -n 50 --no-pager
+stat -c '%a %U:%G %n' /root/backups /root/backups/*
+jq . /root/backups/LATEST.json
+df -h /root/backups /var/lib/fs-billing
+```
+
+期望 `LATEST.json` 的 `createdAt` 是刚才，`dump.tocEntries` 大于 0，四个产物的
+`bytes` / `sha256` 都有值；目录 700、文件 600。磁盘不足时脚本在开始前就失败，不会写出
+半套备份。保留策略按文件名里的 UTC 时间戳删除 30 天前的整套备份，且至少保留最近 3 套。
+
+失败时按顺序查：`owner.env` 是否有 `DATABASE_URL`、PostgreSQL 是否在跑、归档目录是否存在
+（不存在脚本会直接失败，不会悄悄跳过）、磁盘余量、异地驱动命令（见
+[offsite/README.md](../ops/backup/offsite/README.md)）。
+
+### 异地备份（未启用）
+
+`backup.conf` 的 `OFFSITE_COMMAND` 为空时只存本机。异地目标以后按
+[offsite/README.md](../ops/backup/offsite/README.md) 的驱动约定接入：脚本对每个产物调用
+一次「命令 + 产物路径」，失败使整次备份退出非零；异地副本必须加密。现在不要为了「先跑通」
+随便填一个目标，也不要把真实地址写进仓库。
+
+### 每周手工拉取（过渡）
+
+异地目标到位前，每周由运维从自己的机器拉最近一套备份。下面的 `<B_IP>`、`<本地目录>` 都是
+占位符；本地目录放在加密磁盘上，只有运维本人可读。
+
+```sh
+# 1. 在工作站看最新一套的时间戳（文件名里的 UTC 时间）
+ssh root@<B_IP> 'ls -1t /root/backups/fs_billing-*.dump | head -n 1'
+
+# 2. 拉取整套（库、globals、归档、配置、校验和、LATEST.json）
+#    先确认最近的备份已完成：LATEST.json 已更新，且没有 *.partial
+ssh root@<B_IP> 'ls -1t /root/backups/fs_billing-*.dump | head -n 1; ls /root/backups/*.partial 2>/dev/null || true'
+rsync -a --partial --protect-args \
+  root@<B_IP>:/root/backups/ <本地目录>/fs-billing-backups/
+
+# 3. 校验拉下来的产物
+cd <本地目录>/fs-billing-backups
+sha256sum --check SHA256SUMS-<时间戳>
+
+# 4. 至少保留最近 4 周（4 套），旧的按需删除；不要反过来删服务器上的
+ls -1t fs_billing-*.dump | tail -n +5
+```
+
+手工拉取同样只解决「机器没了」，不解决「本地磁盘坏了」：本地也至少保留两份不同介质。
+每周拉完在运维记录里写日期、时间戳、`sha256sum --check` 的结果与文件大小；拉取失败的
+那一周要在下周补齐，并检查服务器上的 `LATEST.json` 是否仍在更新。
+
+## 恢复
+
+恢复会覆盖目标库，先看清楚再执行。默认目标**不是**生产库；生产库必须写出库名并带
+`--i-know-this-drops-the-database`。先做一次只读校验：
+
+```sh
+ls -1t /root/backups/fs_billing-*.dump | head -n 1
+/opt/fs-billing/current/ops/backup/restore.sh --verify
+```
+
+`--verify` 把最新备份恢复到临时库 `fs_billing_verify`，用 `snapshot-counts.sh` 核对余额、
+流水合计与各表/各分区的行数，检查账本不变量，然后删除临时库。它不碰生产库，可以在服务
+运行时做；磁盘上需要能放下第二份库。
+
+完整恢复（示例把生产库 `fs_billing` 恢复到某个时间点）：
+
+```sh
+/opt/fs-billing/current/ops/backup/restore.sh --restore \
+  --target-db fs_billing \
+  --i-know-this-drops-the-database \
+  --dump /root/backups/fs_billing-<时间戳>.dump
+```
+
+脚本按顺序做：
+
+1. 交互确认（标准输入是终端时要求再输入一次库名）。
+2. 停 `fs-billing-api` 与 `fs-billing-worker`；停不下来就中止，不会在服务还连着库时改名。
+3. 把现库改名为 `fs_billing_pre_restore_<UTC 时间>`：**改名，不删除**。恢复失败或发现
+   备份不对时可以改回来。
+4. 导入 `globals-<时间>.sql`（已存在的角色跳过）。
+5. `createdb -O fs_billing` 后 `pg_restore --exit-on-error --single-transaction`。
+6. 在 `/opt/fs-billing/current` 里以 owner 身份跑 `pnpm db:migrate` 与
+   `pnpm --filter @fs-billing/worker queue:migrate`：重设两个登录角色的密码、补建当月
+   与下月分区、安装 pg-boss 队列（幂等）。
+7. 把 `archive-<时间>.tar.gz` 解回 `/var/lib/fs-billing/archive`。
+8. 启动两个服务并做 `/api/health` 与 Worker `/health` 检查。
+
+恢复成功后：
+
+```sh
+systemctl status fs-billing-api fs-billing-worker
+/opt/fs-billing/current/ops/backup/snapshot-counts.sh | head -n 20
+ls -l /var/lib/fs-billing/archive
+```
+
+临时查库用 `snapshot-counts.sh` 或应用自己的只读脚本；不要把 owner 连接串写在
+`psql` 的命令行上（会出现在进程列表里）。
+
+确认数据无误后再手工删除 `fs_billing_pre_restore_<时间>`（删除前先做一次新的
+`backup.sh`）。恢复失败时旧库仍在，脚本不会启动服务；按输出的提示修好后重跑，或把旧库
+改名回来。
+
+证书与配置不从 `restore.sh` 自动解包；需要时手工恢复（含秘密，仅 root）：
+
+```sh
+tar -xzf /root/backups/config-<时间戳>.tar.gz -C /
+systemctl restart nginx fs-billing-api fs-billing-worker
+```
+
+### 恢复后补推
+
+备份时刻到事故时刻之间的话单不在库里。服务器 A 的 `/var/lib/freeswitch/cdr/archive/`
+保留了推送过的话单副本：把备份时刻之后的文件拷进 A 的 `retry/`，`replay-cdr.sh` 每分钟
+补推；Worker 按通话 UUID 去重，已存在的话单不会重复扣费。RPO 因此是「24 小时，且在 A 的
+副本还在时可补回」（决定 10）。A 上副本的保留期见 FreeSWITCH 侧配置，不要把它当永久备份。
+
+## 恢复演练
+
+### 每周自动演练
+
+`fs-billing-backup-verify.timer` 每周日 06:00 调用 `verify-restore.sh`：先按
+`SHA256SUMS-<时间>` 校验最近一套的四个产物，再走 `restore.sh --verify` 的完整恢复与
+快照核对，最后删除临时库。查看结果：
+
+```sh
+systemctl list-timers fs-billing-backup-verify.timer
+systemctl status fs-billing-backup-verify.service
+journalctl -u fs-billing-backup-verify.service --since '8 days ago' --no-pager
+ls -l /root/backups/LATEST.json
+```
+
+失败会在 `systemctl status` 里显示非零退出码（PR 4 接入邮件后同时发信）。每周自动演练
+只证明「备份能恢复、数量与余额对得上、归档包能完整读出」；它**不**把归档目录解回，
+也不覆盖服务器 A 的补推，不替代下面的人工演练。
+
+### 每季度完整演练
+
+阶段 10 的设计要求每季度做一次完整的删库恢复；正式证据在服务器 B 上取得（测试服务器上的
+演练要先得到用户同意）。演练会产生停机，放在维护窗口：
+
+1. 停 Worker 与 API，让数据静止：`systemctl stop fs-billing-worker fs-billing-api`。
+2. `/opt/fs-billing/current/ops/backup/backup.sh`，记下时间戳。
+3. `/opt/fs-billing/current/ops/backup/snapshot-counts.sh > before.txt`。
+4. `/opt/fs-billing/current/ops/backup/restore.sh --restore --target-db fs_billing \
+--i-know-this-drops-the-database --dump /root/backups/fs_billing-<时间戳>.dump`；
+   脚本把原库改名为 `fs_billing_pre_restore_<时间>`，效果等同「删库后恢复」，但可回退。
+5. `snapshot-counts.sh > after.txt`。
+6. `diff before.txt after.txt` 必须为空；再用一次「恢复后补推」把演练窗口内的话单补回。
+7. 启动两个服务，`curl` 两个 `/health`；确认 Worker 起来后没有新增异常告警。
+8. 观察一两天后删除 `fs_billing_pre_restore_<时间>`。
+
+证据存 `docs/evidence/phase-10/backup-restore/`：`backup-run.txt`、`before.txt`、
+`after.txt`、`diff.txt`、`restore-run.txt`、`weekly-verify.txt`。**不放备份文件本身，
+不放密码**；快照里有租户编码与余额，按内部资料对待。
 
 ## 日志与隐私
 
