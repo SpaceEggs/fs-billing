@@ -331,7 +331,7 @@ test.each([
   },
 );
 
-test('credential routes share one IP limit before validation and ignore forwarded IP headers', async () => {
+test('credential routes share one IP limit before validation and ignore forwarded IP headers from untrusted peers', async () => {
   const limited = createApi({
     businessDb: business.db,
     auth,
@@ -385,6 +385,64 @@ test('credential routes share one IP limit before validation and ignore forwarde
     expect(apiErrorSchema.parse(logout.json()).error.code).toBe(
       'UNAUTHENTICATED',
     );
+  } finally {
+    await limited.close();
+  }
+});
+
+test('a loopback nginx proxy gives each forwarded client its own credential bucket', async () => {
+  const limited = createApi({
+    businessDb: business.db,
+    auth,
+    rateLimit: { max: 2, timeWindow: 60_000 },
+  });
+  const login = (forwardedFor: string) =>
+    limited.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { 'x-forwarded-for': forwardedFor },
+      payload: {},
+      // nginx 从回环地址连接 API，并用 $remote_addr 覆盖 X-Forwarded-For。
+      remoteAddress: '127.0.0.1',
+    });
+  try {
+    for (const url of ['/api/auth/login', '/api/auth/login']) {
+      const response = await limited.inject({
+        method: 'POST',
+        url,
+        headers: { 'x-forwarded-for': '203.0.113.10' },
+        payload: {},
+        remoteAddress: '127.0.0.1',
+      });
+      expect(response.statusCode).toBe(400);
+    }
+    expect((await login('203.0.113.10')).statusCode).toBe(429);
+    expect((await login('203.0.113.11')).statusCode).toBe(400);
+  } finally {
+    await limited.close();
+  }
+});
+
+test('a forged X-Forwarded-For from an untrusted peer does not change the credential bucket', async () => {
+  const limited = createApi({
+    businessDb: business.db,
+    auth,
+    rateLimit: { max: 2, timeWindow: 60_000 },
+  });
+  const login = (remoteAddress: string, forwardedFor: string) =>
+    limited.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      headers: { 'x-forwarded-for': forwardedFor },
+      payload: {},
+      remoteAddress,
+    });
+  try {
+    for (const forwardedFor of ['203.0.113.20', '203.0.113.21']) {
+      expect((await login('198.51.100.7', forwardedFor)).statusCode).toBe(400);
+    }
+    expect((await login('198.51.100.7', '192.0.2.99')).statusCode).toBe(429);
+    expect((await login('198.51.100.8', '192.0.2.99')).statusCode).toBe(400);
   } finally {
     await limited.close();
   }

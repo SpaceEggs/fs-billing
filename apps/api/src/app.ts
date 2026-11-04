@@ -98,7 +98,9 @@ export function createApi(deps: ApiDependencies) {
     poolName: 'api.export',
   });
   const app = Fastify({
-    trustProxy: false,
+    // API 只监听回环并放在 nginx 后面：只信任来自 127.0.0.1 的 X-Forwarded-For（nginx 用 $remote_addr
+    // 覆盖该头）。其余来源的转发头一律忽略，伪造头不能换限流桶。
+    trustProxy: '127.0.0.1',
     exposeHeadRoutes: false,
     logController: new LogController({ disableRequestLogging: true }),
     ...(deps.loggerInstance || deps.logger
