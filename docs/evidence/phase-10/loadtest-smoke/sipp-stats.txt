@@ -1,0 +1,4 @@
+# 摘自开发机冒烟运行 .smoke/out2/smoke.log 的 Statistics Screen（UTC 2026-11-04）
+Successful call        |        0                  |      360
+Failed call            |        0                  |        0
+Elapsed Time           | 00:03:38:316000           | 00:03:38:316000

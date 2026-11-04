@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模拟上游运营商（UAS）。压测的 FreeSWITCH 上游网关指向本场景监听的地址与端口，
+  不配置任何真实线路，因此不会产生运营商流量与费用。
+  保持 RTP 到客户挂断；超时上限 10 分钟，覆盖「50 路各保持 3 分钟」的补充模式。
+-->
+<scenario name="模拟上游运营商：接通后等客户挂断">
+  <recv request="INVITE" />
+  <send retrans="500">
+    <![CDATA[
+SIP/2.0 200 OK
+[last_Via:]
+[last_From:]
+[last_To:];tag=load-carrier-[call_number]
+[last_Call-ID:]
+[last_CSeq:]
+Contact: <sip:carrier@[local_ip]:[local_port]>
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=carrier 1 1 IN IP4 [local_ip]
+s=carrier
+c=IN IP4 [local_ip]
+t=0 0
+m=audio [media_port] RTP/AVP 0
+a=rtpmap:0 PCMU/8000
+a=ptime:20
+a=sendrecv
+    ]]>
+  </send>
+  <recv request="ACK" timeout="10000">
+    <action>
+      <exec rtp_stream="/media/silence.wav,-1,0" />
+    </action>
+  </recv>
+  <recv request="BYE" timeout="600000" />
+  <send>
+    <![CDATA[
+SIP/2.0 200 OK
+[last_Via:]
+[last_From:]
+[last_To:]
+[last_Call-ID:]
+[last_CSeq:]
+Content-Length: 0
+    ]]>
+  </send>
+</scenario>

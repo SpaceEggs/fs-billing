@@ -4,7 +4,7 @@
 `<B_IP>`、`<A_IP>`、`<B_PRIVATE_IP>`、`<DOMAIN>` 都是占位符，执行时替换为实际值；
 仓库、文档和截图里不写真实地址与密钥。
 
-当前版本含「部署」「回滚」「迁移演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「监测与告警」「证书」十章。
+当前版本含「部署」「回滚」「迁移演练」「压测与演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「监测与告警」「证书」十一章。
 密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
 （`docs/go-live-checklist.md` 在后续 PR 建立）。
 
@@ -362,6 +362,190 @@ SELECT pg_reload_conf();
 
 失败时脚本保留临时库并打印最后 40 行 `psql` 输出；检查完用
 `dropdb --force fs_billing_rehearse` 清理。不要把这个库接到应用上。
+
+## 压测与演练
+
+验收 4–6 的脚本在 [ops/loadtest](../ops/loadtest)：SIPp 同时扮演客户（UAC）与**模拟上游**
+（UAS），FreeSWITCH 的上游网关指向 UAS，所以压测不产生任何真实运营商流量与费用。
+号码清单 `destinations.csv` 全是合成号码，覆盖国内 `86`、国际 `44` 与 `1` 三类前缀；
+不要把它换成真实客户号码。
+
+**压测数据清不掉。** 账本只增不改，30 分钟正式压测会在生产库留下约 18,000 条话单和
+对应流水，事后不能删除。因此压测必须**在上线前、服务器 B 上**完成，完成后**重置生产库**
+（停服务 → 删库 → 重建 → 迁移 → 建第一个管理员）。重置步骤要**先在另一套库上演练一次**，
+再用于生产库；重置后的库才是上线检查清单里「生产库已重置」的状态。若压测只能安排在上线
+之后，就换一套独立的库做，不能污染生产账本。
+
+### 拓扑与前置
+
+- SIPp 单独一台主机（不装在服务器 A 上），能访问 A 的 SIP 端口；A 的上游网关指向 SIPp
+  主机上 `uas-carrier.xml` 监听的地址与端口。
+- 测试租户一个专用编码（建议 `LOADTEST`，不含下划线），余额足够、`limit` 并发上限 ≥ 60；
+  费率表至少含 `86`、`44`、`1` 三个前缀且国内前缀带 `86`。
+- SIPp 主机有仓库 checkout（`verify-load.ts` 从这里运行）和 `psql`；`DATABASE_URL` 只放
+  环境或 `--env-file`，不写进命令行。
+- `sample-resources.sh` 在服务器 B 上运行；`drill.sh` 在 B 与 A 上运行，均以 root。
+
+脚本默认只指向回环地址。真实环境显式传地址（下文的 `<A_SIP_IP>`、`<SIPP_IP>` 是占位符）：
+
+```sh
+export DATABASE_URL='postgresql://<只读或 owner 用户>@<B_DB_HOST>:5432/fs_billing'
+export API_HEALTH_URL='https://<B_IP>/api/health'
+export WORKER_HEALTH_URL='http://<B_PRIVATE_IP>:3001/health'
+```
+
+### 跑正式压测
+
+在 SIPp 主机、仓库根执行。`--fs` 是服务器 A 的 SIP 地址，`--uas` 是本机给 A 回呼的地址：
+
+```sh
+ops/loadtest/run-load.sh \
+  --out /tmp/loadtest-$(date -u +%Y%m%dT%H%M%SZ) \
+  --tenant LOADTEST \
+  --fs <A_SIP_IP>:5060 \
+  --uas <SIPP_IP>:5090 \
+  --uac-ip <SIPP_IP>
+```
+
+`retry/` 在服务器 A 上，SIPp 主机通常看不到；压测结束、补推完成后，在 A（或挂载了该目录的机器）上补跑一次
+`verify-load.ts --retry-dir /var/lib/freeswitch/cdr/retry`，见下面「核对输出」。
+
+脚本顺序执行：预检（两个健康检查、租户余额、磁盘余量）→ 1 分钟冒烟 2 cps → 10 分钟
+中压 5 cps → 30 分钟正式 10 cps（`-l 50 -m 18000`）→ 静置（最多 10 分钟，等补推与扣费
+队列清空）→ `verify-load.ts`。每个阶段都写 `-trace_stat`，最后汇总进核对。
+
+扣费队列现在每个 Worker 每秒只消费约 0.5 个任务（charge Worker 的 pg-boss 用默认值：
+一次只取一个任务、每 2 秒轮询一次）。因此 18,000 通呼叫的积压在这条链路修好之前
+不可能被 `run-load.sh` 的 10 分钟静置清空；静置到点只会打印 warn，随后 `verify-load.ts`
+按未扣费判定失败。
+
+速率、时长、并发都能覆盖；例如只跑冒烟验证环境：
+
+```sh
+ops/loadtest/run-load.sh --out /tmp/load-smoke --tenant LOADTEST \
+  --fs <A_SIP_IP>:5060 --uas <SIPP_IP>:5090 --uac-ip <SIPP_IP> \
+  --skip-medium --skip-full --smoke-rate 2 --smoke-seconds 60
+```
+
+**补充模式（决定 8）：50 路各保持 3 分钟。** 在 `run-load.sh` 的另一次运行里：
+
+```sh
+ops/loadtest/run-load.sh --mode long --out /tmp/loadtest-long \
+  --tenant LOADTEST --fs <A_SIP_IP>:5060 --uas <SIPP_IP>:5090 --uac-ip <SIPP_IP>
+```
+
+它从 `uac-load.xml` 生成一个只把 pause 换成 180000ms 的临时场景，`-l 50 -m 50` 同时起呼。
+
+### 资源采样
+
+在服务器 B 上另开一个会话，从压测开始前跑到静置结束：
+
+```sh
+ops/loadtest/sample-resources.sh --out /tmp/load-resources.csv --interval 5
+```
+
+CSV 每 5 秒一行：CPU、1 分钟负载、内存、`pg_stat_activity` 连接数、pg-boss 积压、
+journal 错误行数。峰值写进证据的 `summary.md`；设计不设通过线，它用于后续容量判断。
+
+### 核对输出
+
+`run-load.sh` 把核对写到 `<out>/verify-load.txt`，同时以退出码表示结果。手工重跑：
+
+```sh
+pnpm --filter @fs-billing/db exec tsx --env-file-if-exists=../../.env \
+  scripts/verify-load.ts --tenant LOADTEST \
+  --since 2026-11-04T02:00:00Z --until 2026-11-04T02:30:00Z \
+  --sipp-log /tmp/loadtest/full.log
+```
+
+补推完成后在服务器 A 上补查 `retry/`（SIPp 统计已经在上一轮核对过，这里用 `--skip-sipp`）：
+
+```sh
+pnpm --filter @fs-billing/db exec tsx --env-file-if-exists=../../.env \
+  scripts/verify-load.ts --tenant LOADTEST \
+  --since 2026-11-04T02:00:00Z --until 2026-11-04T02:30:00Z \
+  --skip-sipp --retry-dir /var/lib/freeswitch/cdr/retry
+```
+
+`--skip-sipp` 只跳过 SIPp 成功数这一项，其余检查照常执行；不要把它用在正式证据的主核对上。
+
+它逐条用 `packages/rating` 的 `priceCall` 重算（每条话单的快照费率与 `billsec`，
+60/60、decimal.js、不舍入），要求「重算合计 = `call_charge` 流水合计 = 余额变化」
+逐位相等；未接通与 0 元话单不得有流水。任何不相等、SIPp 成功数与话单数不一致、
+`raw_cdrs` 缺原文、`call_uuids` 重复、`retry/` 非空、窗口内出现 `auth_timeout` 都会
+退出非零。「未经验证话单」小节单独列出 `unverified` 的条数与金额，验收 6 也用它。
+
+`--max-unverified` 只在演练里放宽（例如停 Worker 的 60 秒），正式压测保持默认 0；
+`--expect-auth-timeout` 用于验收 6，要求窗口内确有 `auth_timeout` 告警。
+
+### 压测中重启 API 与 Web（验收 5）
+
+正式压测第 8 分钟，在服务器 B：
+
+```sh
+ops/loadtest/drill.sh restart-front --out /tmp/drill-restart-front \
+  --sipp-stats /tmp/loadtest/full-stats.csv
+```
+
+它 `systemctl restart fs-billing-api`，10 秒后 `systemctl restart nginx`，同时每秒
+`curl` 一次 `https://127.0.0.1/api/health`（自签证书默认加 `-k`）。输出
+`timeline.tsv`（每步起止）、`curl.tsv`、`unavailable-window.txt`、`journal.txt`、
+`sipp-window.csv`。后台页面短暂不可用不算失败；判据仍是呼叫路径不受影响：SIPp 失败数
+为 0、窗口内无 `unverified`、话单数不少、Worker 无重启，全部由 `verify-load.ts` 核对。
+
+### 压测中停 Worker 1 分钟（验收 6）
+
+正式压测第 15 分钟，在服务器 A：
+
+```sh
+ops/loadtest/drill.sh stop-worker --out /tmp/drill-stop-worker \
+  --sipp-stats /tmp/loadtest/full-stats.csv
+```
+
+脚本先确认 `fs_cli` 可连、Worker 是 active，然后停 `fs-billing-worker`；第 5 秒用
+`loopback/<合成号码>/billing` 起一通 120 秒探针（走计费拨号计划，不绕过授权），
+接通后读 `uuid_getvar <uuid> execute_on_answer`，期望
+`sched_hangup +1800 ALLOTTED_TIMEOUT`；停机满 60 秒后启动 Worker，探针到 120 秒再挂断。
+在 B 上运行时，用 `FS_CLI_SSH=<user@A>` 让 `fs_cli` 经 ssh 在 A 上执行（脚本跑
+`ssh -- "$FS_CLI_SSH" fs_cli -x "<命令>"`，认证用密钥，命令里没有任何密码）；A 的
+防火墙（`ops/firewall/nftables-a.conf`）不对外开放 event socket，所以不能从 B 直连。
+不设置 `FS_CLI_SSH` 时脚本直接跑本机 `fs_cli`（操作员就在 A 上时）。时间线、探针变量、
+journal 与 SIPp 时段统计都写到 `--out`。退出时无论成败都会把 Worker 拉起来。
+
+停机的 60 秒内约 600 通呼叫的授权连不上 Worker，Lua 按 1800 秒放行并标记未验证；
+话单落入 A 的 `retry/`，Worker 恢复后由 `replay-cdr.sh` 补推。补推完成后用
+`verify-load.ts --since <压测开始> --until <压测结束> --max-unverified <上限>` 核对：
+话单不重不漏、未验证话单照常扣费、`auth_timeout` 告警有开始与恢复通知。
+上限按停机时长与到达率估算，写进证据说明，不能为了「通过」随意放大。
+
+### 证据
+
+按 [阶段 10 设计](phase-10-design.md#4-sipp-压测验收-4) 放：
+
+- `docs/evidence/phase-10/loadtest/`：`sipp-stats.csv`、`verify-load.txt`、
+  `resources.csv`、`summary.md`。
+- `docs/evidence/phase-10/drill-restart-front/`：`timeline.tsv`、`curl.tsv`、
+  `unavailable-window.txt`、`journal.txt`、`sipp-window.csv`。
+- `docs/evidence/phase-10/drill-stop-worker/`：`timeline.tsv`、
+  `probe-execute_on_answer.txt`、`journal.txt`、告警与发件箱查询输出。
+
+证据里不含共享密钥、连接串与真实号码；合成号码可以保留。开发机上的 Docker 低速冒烟
+只证明脚本可用，**不是验收证据**，文件名与 `summary.md` 里要写明。
+
+### 压测后重置生产库
+
+顺序（在 B 上，先演练再用于生产）：
+
+1. 停 `fs-billing-api` 与 `fs-billing-worker`，确认没有连接。
+2. 做一次 `backup.sh`（万一还要查压测数据）。
+3. `dropdb --force fs_billing`（或 `DROP DATABASE ... WITH (FORCE)`），`createdb -O fs_billing fs_billing`。
+4. 以 owner 身份 `pnpm db:migrate` 与 `pnpm --filter @fs-billing/worker queue:migrate`。
+5. 按上线检查清单建第一个管理员；**不要**跑 `db:seed`。
+6. `verify-load.ts` 不应再用于重置后的库；用 `snapshot-counts.sh` 确认话单与流水为 0，
+   再启动两个服务。
+
+重置步骤先在测试库演练一次，记录耗时与偏离；正式重置的证据（命令、时间、重置后的行数）
+与压测证据放在一起。
 
 ## 大表加索引
 

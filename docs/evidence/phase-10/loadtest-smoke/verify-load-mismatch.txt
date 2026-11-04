@@ -1,0 +1,41 @@
+压测核对 tenant=FSIOK currency=CNY window=2026-11-04T09:17:01.000Z..2026-11-04T09:20:39.000Z
+INFO	租户余额 92.10，透支额度 0，状态 active
+
+## 逐条重算（packages/rating priceCall，60/60，decimal.js）
+PASS	逐条重算	360 条话单全部可重算
+FAIL	话单金额快照	1 条 cdrs.charge 与重算值不相等
+PASS	计费分钟快照	cdrs.billed_minutes 与重算值逐条相等
+
+## 扣费总额
+PASS	三方相等	重算=7.9，流水=-7.9，余额变化=-7.9
+PASS	窗口内无非通话流水	窗口内流水 360 笔
+PASS	账本不变量	余额 92.10 = 全部流水合计 92.10
+PASS	扣费流水唯一	360 笔 call_charge
+PASS	未接通不扣费	未接通与 0 元话单没有 call_charge 流水
+PASS	应扣费都已扣费	所有金额大于 0 的话单都有 call_charge 流水
+
+## 所有话单入库
+INFO	窗口内话单 360 条，其中未验证 0 条
+PASS	授权超时	未验证话单 0 条（允许 0 条）
+PASS	auth_timeout 告警	窗口内没有 auth_timeout
+PASS	call_uuid 无重复	360 个 UUID
+PASS	raw_cdrs 覆盖	360 个 UUID 有原文（原文 360 行，重推可能多于话单）
+PASS	无未归属话单	窗口内该租户没有 unassigned_cdrs
+PASS	call_uuids	360 个登记，与话单一一对应
+SKIP	retry 目录为空	未提供 --retry-dir（在服务器 A 上可传该目录复查）
+
+## SIPp 统计
+PASS	SIPp 成功数 = 话单数	360 = 360
+PASS	SIPp 失败呼叫为 0	failed=0，5xx=0，timeout=0
+
+## 未经验证话单
+PASS	未验证话单	窗口内没有 unverified 话单
+
+## 授权延迟
+SKIP	授权延迟	未提供 --worker-log
+INFO	资源峰值见 sample-resources.sh 的 CSV；本脚本不设通过线。
+
+结果：FAIL（失败项 1）
+undefined
+/Volumes/Dev/FS-Billing/.claude/worktrees/p10-load/packages/db:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: tsx --env-file-if-exists=/Volumes/Dev/FS-Billing/.claude/worktrees/p10-load/.env scripts/verify-load.ts --tenant FSIOK --since 2026-11-04T09:17:01Z --until 2026-11-04T09:20:39Z --sipp-log /Volumes/Dev/FS-Billing/.claude/worktrees/p10-load/.smoke/out2/smoke.log
