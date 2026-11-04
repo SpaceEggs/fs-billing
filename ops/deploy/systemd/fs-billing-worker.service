@@ -1,0 +1,29 @@
+[Unit]
+Description=FS-Billing Worker
+After=network-online.target postgresql.service
+Wants=network-online.target
+# Worker 退出码非零即重启；放宽上限，避免连续失败后长时间停摆。
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+User=fs-billing
+Group=fs-billing
+WorkingDirectory=/opt/fs-billing/current/apps/worker
+EnvironmentFile=/etc/fs-billing/app.env
+ExecStart=/usr/local/bin/node --import tsx src/main.ts
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# 原始 JSON 归档目录；不写这里时 Worker 启动会因只读文件系统失败。
+ReadWritePaths=/var/lib/fs-billing
+
+[Install]
+WantedBy=multi-user.target

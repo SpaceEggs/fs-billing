@@ -1,0 +1,28 @@
+[Unit]
+Description=FS-Billing API
+After=network-online.target postgresql.service
+Wants=network-online.target
+# Worker 故障时 FreeSWITCH 会降级放行；API 自身短时重启不应触发 systemd 的启动频率上限。
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=simple
+User=fs-billing
+Group=fs-billing
+WorkingDirectory=/opt/fs-billing/current/apps/api
+EnvironmentFile=/etc/fs-billing/app.env
+ExecStart=/usr/local/bin/node --import tsx src/main.ts
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/fs-billing
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+# 服务器 B 的 WireGuard 模板，仅在 B 没有内网 IPv4、A 与 B 之间需要隧道时使用。
+# 复制到 /etc/wireguard/wg0.conf，权限 0600 root:root；占位符全部替换。
+#
+# 密钥（两台机器各自执行，私钥不出本机）：
+#   wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+#   chmod 0600 /etc/wireguard/privatekey
+#
+# 启用：
+#   systemctl enable --now wg-quick@wg0
+#   nftables-b.conf 取消 UDP 51820（只允许 A 公网地址）的注释后重启 nftables
+#   app.env 改为 WORKER_HOST=10.66.0.1、WORKER_ALLOWED_IPS=10.66.0.2
+#
+# 隧道地址 10.66.0.0/24 只是示例，可换成其他不冲突的 RFC1918 网段。
+
+[Interface]
+Address = 10.66.0.1/24
+ListenPort = 51820
+PrivateKey = replace-with-b-private-key
+
+[Peer]
+# 服务器 A 的公钥
+PublicKey = replace-with-a-public-key
+AllowedIPs = 10.66.0.2/32
