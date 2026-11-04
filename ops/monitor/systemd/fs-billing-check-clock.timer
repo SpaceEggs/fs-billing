@@ -1,0 +1,10 @@
+[Unit]
+Description=FS-Billing 服务器 B 自身时钟偏差检查（每分钟，与体检错开 30 秒）
+
+[Timer]
+OnCalendar=*-*-* *:*:30
+AccuracySec=10s
+Unit=fs-billing-check-clock.service
+
+[Install]
+WantedBy=timers.target

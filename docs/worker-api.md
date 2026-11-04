@@ -24,7 +24,7 @@ pnpm --filter @fs-billing/worker start
 
 可选：`WORKER_STATEMENT_CONCURRENCY`（账单子任务并发，默认 2，1–10）。每日账单生成从每个租户的第一个应有月份起补全所有缺失的已结束月份，没有回看上限（原 `STATEMENT_BACKFILL_MONTHS` 已取消，环境里残留的该变量被忽略）。
 
-`POST /authorize` 与 `POST /cdr` 必须带 `X-Billing-Key`，缺失或错误返回 401（固定长度 SHA-256 摘要经 `timingSafeEqual` 比较），来源 IP 不在白名单返回 403。使用连接的实际 IP，不信任代理头。`GET /health` 返回 `{"status":"ok","service":"worker"}`，不检查数据库。
+`POST /authorize`、`POST /cdr` 与 `POST /clock` 必须带 `X-Billing-Key`，缺失或错误返回 401（固定长度 SHA-256 摘要经 `timingSafeEqual` 比较），来源 IP 不在白名单返回 403。使用连接的实际 IP，不信任代理头。`GET /health` 返回 `{"status":"ok","service":"worker"}`，不检查数据库。
 
 ## POST /authorize
 
@@ -114,6 +114,35 @@ CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化�
 
 `status` 为 `queued`、`duplicate`、`unassigned` 或 `invalid`。只有数据库/队列保存失败时返回 503 `{"error":"话单保存失败，请重推"}`，不暴露数据库错误详情。失败告警尽力写入，数据库故障导致告警也无法保存时只记日志，仍返回同一 503 正文；坏话单不返回 400。HTTP 层仍限制正文大小（Fastify 默认 1 MiB）；文本列不能保存非法 UTF-8 字节或实际 NUL 字符。
 
+## POST /clock
+
+服务器 A 的 `fs-clock-heartbeat.sh` 每 30 秒调用一次（阶段 10 验收 8），沿用 `/authorize` 的 `X-Billing-Key` 与 IP 白名单。`Content-Type: application/json`：
+
+```json
+{
+  "sentAt": "2026-11-04T08:21:09.123Z",
+  "rttMs": 2.4,
+  "chronyOffsetSeconds": 0.000123,
+  "chronySynchronized": true
+}
+```
+
+`sentAt` 是 A 发出请求的本机时间（带毫秒与 UTC 偏移），`rttMs` 是发送方估计的往返时间，`chronyOffsetSeconds` 与 `chronySynchronized` 取自 A 的 `chronyc tracking`。请求体由 `packages/shared/src/clock.ts` 的 `clockRequestSchema` 校验，不符合返回 HTTP 400 `{"error":"时钟请求格式错误"}`。
+
+Worker 用数据库时钟 `clock_timestamp()`（取消费率版本余量用的同一个时钟）算 `skew = 收到时间 − sentAt − RTT/2`，正数表示 A 比数据库慢。阈值（决定 3）：
+
+| 条件              | 结果                                                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 偏差绝对值 < 1 秒 | 正常；若已有 `clock_skew` 或 `clock_skew_critical`，各自回到阈值内满静默窗口后恢复                                         |
+| 偏差绝对值 ≥ 1 秒 | `raiseAlert('clock_skew', 'fs-vs-db', …)`（警告）；同时让已开的严重告警按 5 秒阈值走静默窗口                               |
+| 偏差绝对值 ≥ 5 秒 | 同时 `raiseAlert('clock_skew', 'fs-vs-db', …)` 与 `raiseAlert('clock_skew_critical', 'fs-vs-db', …)`（严重），各发开始通知 |
+
+严重级别是独立的告警种类，不再写进描述；同一 `(kind, subject_key)` 仍只有一条未恢复的告警。恢复不靠 `notify-tick` 的静默扫描，而是由后续心跳判断：`last_seen_at` 只在越过各自阈值时推进，它早于「现在减 `ALERT_QUIET_MINUTES`」即表示已回到该阈值内满一个窗口。因此 `clock_skew_critical` 在偏差回到 5 秒内满窗口后恢复，`clock_skew` 在回到 1 秒内满窗口后恢复；例如 3 秒的心跳会让警告保持未恢复，而严重告警在窗口后单独恢复。没有心跳时不会仅凭时间流逝恢复任何一种偏差告警。
+
+心跳超过 5 分钟没到（服务器 A 失联或 Worker 不可达的一侧信号）时由 Worker 每分钟检查一次，`raiseAlert('fs_heartbeat', 'fs-clock', …)`；下一次 `/clock` 到达时恢复。心跳时间只留在 Worker 内存，**不建新表**；Worker 重启以启动时刻为起点，不会误报，已开告警的恢复也不依赖重启前的内存。心跳检查失败或数据库不可用时返回 HTTP 503 `{"error":"时钟服务暂不可用"}`，不回显数据库错误。
+
+响应固定为 `{"ok":true}`，不返回数据库时间、偏差或任何租户数据。
+
 ## 系统告警（阶段 9）
 
 所有写入点经 `packages/db/src/alerts.ts` 的 `raiseAlert` / `recoverAlert`，不再有「按描述前缀找告警」的写法。设计见 [phase-9-design.md](phase-9-design.md#告警模型)。
@@ -123,19 +152,22 @@ CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化�
 - **租户。** 只有按租户分的键（`charge-reconcile:*`、`statement:*`）带 `tenant_id`；其余全局键的租户为空，对象信息在描述里。
 - **通知。** 新开时按 `kind` 定下 `notify`（`email_failed` 为假，其余为真）；邮件由后续 PR 的定时任务发出，历史告警 `notify = false`。
 
-| 写入点              | kind                 | `subject_key`                                 | 恢复                                            |
-| ------------------- | -------------------- | --------------------------------------------- | ----------------------------------------------- |
-| 未验证话单入库      | `auth_timeout`       | `fs-authorize`                                | 静默窗口                                        |
-| 停放到未归属        | `cdr_failed`         | `unassigned:<原因>`；租户不存在再加 `:<标签>` | 同键的 `pending` 行清零（忽略、分配）           |
-| 话单校验失败        | `cdr_failed`         | `invalid-cdr:<结构化原因>`                    | 同原因的 `pending` 行清零（`superseded`、忽略） |
-| JSON 语法损坏       | `cdr_failed`         | `invalid-json`                                | 静默窗口                                        |
-| HTTP 503 保存失败   | `cdr_failed`         | `cdr-save`                                    | 静默窗口                                        |
-| 入库缺分区（23514） | `partition_failed`   | `partition-missing`                           | 静默窗口（不随分区维护成功恢复）                |
-| 分区维护失败        | `partition_failed`   | `partition-maintenance`                       | 下一次分区维护成功                              |
-| 扣费对账持续失败    | `cdr_failed`         | `charge-reconcile:<UUID>`                     | `chargeCall` 写流水的同一事务；扫描兜底         |
-| 月账单核对          | `statement_mismatch` | `statement:<租户 id>:<YYYY-MM>`               | 核对通过                                        |
-| 原始话单归档        | `raw_archive_failed` | `archive:<YYYY-MM>`                           | 该月成功或已丢弃                                |
-| 重置密码审计失败    | `audit_failed`       | `audit:reset-password`                        | 静默窗口                                        |
+| 写入点              | kind                  | `subject_key`                                 | 恢复                                              |
+| ------------------- | --------------------- | --------------------------------------------- | ------------------------------------------------- |
+| 未验证话单入库      | `auth_timeout`        | `fs-authorize`                                | 静默窗口                                          |
+| 停放到未归属        | `cdr_failed`          | `unassigned:<原因>`；租户不存在再加 `:<标签>` | 同键的 `pending` 行清零（忽略、分配）             |
+| 话单校验失败        | `cdr_failed`          | `invalid-cdr:<结构化原因>`                    | 同原因的 `pending` 行清零（`superseded`、忽略）   |
+| JSON 语法损坏       | `cdr_failed`          | `invalid-json`                                | 静默窗口                                          |
+| HTTP 503 保存失败   | `cdr_failed`          | `cdr-save`                                    | 静默窗口                                          |
+| 入库缺分区（23514） | `partition_failed`    | `partition-missing`                           | 静默窗口（不随分区维护成功恢复）                  |
+| 分区维护失败        | `partition_failed`    | `partition-maintenance`                       | 下一次分区维护成功                                |
+| 扣费对账持续失败    | `cdr_failed`          | `charge-reconcile:<UUID>`                     | `chargeCall` 写流水的同一事务；扫描兜底           |
+| 月账单核对          | `statement_mismatch`  | `statement:<租户 id>:<YYYY-MM>`               | 核对通过                                          |
+| 原始话单归档        | `raw_archive_failed`  | `archive:<YYYY-MM>`                           | 该月成功或已丢弃                                  |
+| 重置密码审计失败    | `audit_failed`        | `audit:reset-password`                        | 静默窗口                                          |
+| 时钟偏差（警告）    | `clock_skew`          | `fs-vs-db`                                    | 偏差回到 1 秒内并持续静默窗口（由下一次心跳判断） |
+| 时钟偏差（严重）    | `clock_skew_critical` | `fs-vs-db`                                    | 偏差回到 5 秒内并持续静默窗口（由下一次心跳判断） |
+| 时钟心跳中断        | `fs_heartbeat`        | `fs-clock`                                    | 下一次心跳到达                                    |
 
 静默窗口（`recoverQuietAlerts`，默认 10 分钟，配置键 `ALERT_QUIET_MINUTES` 随阶段 9 邮件 PR 加入）：事件型告警在窗口内没有新事件即恢复。未归属 / 校验失败这一族告警的恢复在改动待处理行的同一事务里完成（入库修正稿、忽略、分配），并有 `recoverClearedUnassignedAlerts` 全量扫描兜底；这一族的停放、修正稿、忽略、分配和恢复先拿同一把事务级互斥锁（`lock_alert_family()`），正常入库不拿。
 

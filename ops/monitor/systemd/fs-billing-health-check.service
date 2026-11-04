@@ -1,0 +1,17 @@
+[Unit]
+Description=FS-Billing 本机体检（Worker、API、PostgreSQL、备份、磁盘、证书、journal）
+Documentation=file:/opt/fs-billing/current/docs/ops-runbook.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/fs-billing/current/ops/monitor/health-check.sh
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+# 只写去重状态；/root/backups 与 /etc/ssl/fs-billing 只读。
+ReadWritePaths=/var/lib/fs-billing/monitor
+TimeoutStartSec=120

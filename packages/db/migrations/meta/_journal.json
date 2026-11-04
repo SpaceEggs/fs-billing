@@ -176,6 +176,13 @@
       "when": 1793923200000,
       "tag": "0024_suspended_at",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794009600000,
+      "tag": "0025_clock_heartbeat_alerts",
+      "breakpoints": true
     }
   ]
 }

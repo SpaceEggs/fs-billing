@@ -128,6 +128,7 @@ fi
 install -d -m 0755 -o root -g root /opt/fs-billing /opt/fs-billing/releases
 install -d -m 0700 -o fs-billing -g fs-billing /var/lib/fs-billing
 install -d -m 0700 -o fs-billing -g fs-billing /var/lib/fs-billing/archive
+install -d -m 0700 -o root -g root /var/lib/fs-billing/monitor
 install -d -m 0700 -o root -g root /root/backups
 
 note '安装 Node'
@@ -311,7 +312,11 @@ note '启用服务单元（首次部署前 API/Worker 还没有 current，先只
 systemctl enable fs-billing-api fs-billing-worker
 
 note '启用 chrony'
+install -d -m 0755 /etc/chrony/conf.d
+install -m 0644 "$repo_root/ops/monitor/chrony/fs-billing.conf" \
+  /etc/chrony/conf.d/fs-billing.conf
 systemctl enable --now chrony
+systemctl restart chrony
 
 cat <<EOF
 

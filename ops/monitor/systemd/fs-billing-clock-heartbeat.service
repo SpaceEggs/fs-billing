@@ -1,0 +1,18 @@
+[Unit]
+Description=FS-Billing 服务器 A 时钟心跳（POST 到 B 的 Worker /clock，每 30 秒）
+Documentation=file:/opt/fs-billing/current/docs/ops-runbook.md
+After=network-online.target chrony.service
+Wants=network-online.target chrony.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/lib/fs-billing/fs-clock-heartbeat.sh --config /etc/fs-billing/heartbeat.env
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+# 上一轮 RTT 估计写在运行时目录，重启即清空，第一次按 0 处理。
+RuntimeDirectory=fs-billing-clock
+RuntimeDirectoryMode=0755
+TimeoutStartSec=30

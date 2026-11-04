@@ -18,6 +18,9 @@ export const alertKindSchema = z.enum([
   'statement_mismatch',
   'audit_failed',
   'raw_archive_failed',
+  'clock_skew',
+  'clock_skew_critical',
+  'fs_heartbeat',
 ]);
 export type AlertKind = z.infer<typeof alertKindSchema>;
 /** 与邮件的 `ALERT_KIND_LABELS` 同一份：每个类型都有中文名（测试断言），缺失时退回类型名。 */

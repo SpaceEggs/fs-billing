@@ -130,6 +130,9 @@ export const ALERT_KIND_LABELS: Readonly<Record<string, string>> = {
   statement_mismatch: '账单核对异常',
   audit_failed: '审计写入失败',
   raw_archive_failed: '原始话单归档失败',
+  clock_skew: '时钟偏差（警告）',
+  clock_skew_critical: '时钟偏差（严重）',
+  fs_heartbeat: '时钟心跳中断',
 };
 const kindLabel = (kind: string) => ALERT_KIND_LABELS[kind] ?? kind;
 

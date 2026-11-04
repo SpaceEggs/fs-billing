@@ -4,10 +4,13 @@ import {
   authorizeRequestSchema,
   authorizeResponseSchema,
   cdrResponseSchema,
+  clockRequestSchema,
+  clockResponseSchema,
   healthResponseSchema,
 } from '@fs-billing/shared';
 import {
   AlertKeys,
+  DEFAULT_ALERT_QUIET_MINUTES,
   loadRatingTenant,
   postgresErrorFields,
   withSystem,
@@ -18,6 +21,7 @@ import {
   resolveBillingNumber,
   type RejectReason,
 } from '@fs-billing/rating';
+import { applyClockHeartbeat, type ClockHeartbeatMonitor } from './clock.js';
 import { ingestCdr, postgresError, recordAlert } from './ingest.js';
 import type { ChargeQueue } from './queue.js';
 import { billingMismatchLog } from './redact.js';
@@ -36,6 +40,10 @@ export interface WorkerDependencies {
   db: Db;
   queue: ChargeQueue;
   security: { secret: string; allowedIps: readonly string[] };
+  /** 时钟心跳的内存状态；不传时 /clock 仍处理告警，只是不做 5 分钟心跳超时检查。 */
+  clock?: ClockHeartbeatMonitor | undefined;
+  /** 事件型告警的静默恢复窗口，默认 10 分钟。 */
+  alertQuietMinutes?: number | undefined;
 }
 
 export function createWorker(dependencies?: WorkerDependencies) {
@@ -48,7 +56,9 @@ export function createWorker(dependencies?: WorkerDependencies) {
     healthResponseSchema.parse({ status: 'ok', service: 'worker' }),
   );
   if (!dependencies) return app;
-  const { db, queue, security } = dependencies;
+  const { db, queue, security, clock } = dependencies;
+  const alertQuietMinutes =
+    dependencies.alertQuietMinutes ?? DEFAULT_ALERT_QUIET_MINUTES;
   const secretHash = createHash('sha256').update(security.secret).digest();
   app.register(async (routes) => {
     routes.addHook('onRequest', async (request, reply) => {
@@ -131,6 +141,24 @@ export function createWorker(dependencies?: WorkerDependencies) {
           '授权失败',
         );
         return reply.code(503).send({ error: '授权服务暂不可用' });
+      }
+    });
+    routes.post('/clock', async (request, reply) => {
+      const parsed = clockRequestSchema.safeParse(request.body);
+      if (!parsed.success)
+        return reply.code(400).send({ error: '时钟请求格式错误' });
+      try {
+        await applyClockHeartbeat(db, parsed.data, {
+          quietMinutes: alertQuietMinutes,
+          monitor: clock,
+        });
+        return clockResponseSchema.parse({ ok: true });
+      } catch (error) {
+        request.log.error(
+          { err: error, pg: postgresErrorFields(error) },
+          '时钟心跳处理失败',
+        );
+        return reply.code(503).send({ error: '时钟服务暂不可用' });
       }
     });
     await routes.register((cdrRoutes, _options, done) => {

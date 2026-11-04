@@ -1,6 +1,7 @@
 import { connect, LocalArchiveStore } from '@fs-billing/db';
 import { startReconciliation } from './reconcile.js';
 import { createWorker } from './app.js';
+import { createClockMonitor, startClockMonitor } from './clock.js';
 import { startRawArchive } from './archive.js';
 import { mailSettingsOf, workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
@@ -27,6 +28,7 @@ const queueConnection = connect(config.APP_DATABASE_URL, {
   connectionTimeoutMillis: config.WORKER_DB_CONNECTION_TIMEOUT_MS,
 });
 const boss = createBoss(queueConnection.db);
+const clock = createClockMonitor({ db: connection.db, logger });
 const app = createWorker({
   loggerInstance: logger,
   db: connection.db,
@@ -35,6 +37,8 @@ const app = createWorker({
     secret: config.WORKER_SHARED_KEY,
     allowedIps: config.WORKER_ALLOWED_IPS,
   },
+  clock,
+  alertQuietMinutes: config.ALERT_QUIET_MINUTES,
 });
 boss.on('error', (error) => app.log.error({ err: error }, '队列错误'));
 app.addHook('onClose', async () => {
@@ -110,6 +114,10 @@ try {
     quietMinutes: config.ALERT_QUIET_MINUTES,
     logger: app.log,
     signal: shutdown.signal,
+  });
+  const stopClockMonitor = startClockMonitor(clock, app.log);
+  app.addHook('onClose', () => {
+    stopClockMonitor();
   });
   app.log.info(
     `Worker listening at ${await app.listen({ host: config.WORKER_HOST, port: config.WORKER_PORT })}`,

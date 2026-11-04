@@ -1,0 +1,16 @@
+[Unit]
+Description=FS-Billing 服务器 B 自身时钟偏差检查（chronyc tracking，每分钟）
+Documentation=file:/opt/fs-billing/current/docs/ops-runbook.md
+After=chrony.service
+Wants=chrony.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/fs-billing/current/ops/monitor/check-clock.sh
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/fs-billing/monitor
+TimeoutStartSec=60
