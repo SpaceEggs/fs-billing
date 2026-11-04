@@ -1,0 +1,20 @@
+[Unit]
+Description=FS-Billing 每周恢复演练（把最新备份恢复到临时库校验后删除）
+Documentation=file:/opt/fs-billing/current/docs/ops-runbook.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+# 失败通知：PR 4 提供 ops/monitor/notify.sh 与 fs-billing-notify@.service 后再取消注释。
+# OnFailure=fs-billing-notify@%n.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/fs-billing/current/ops/backup/verify-restore.sh --config /etc/fs-billing/backup.conf
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=6h

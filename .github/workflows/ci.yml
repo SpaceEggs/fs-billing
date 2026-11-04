@@ -228,9 +228,16 @@ jobs:
             install -m 0755 /bin/true /usr/local/bin/node
             install -d /etc/fs-billing
             : > /etc/fs-billing/app.env
+            install -d /opt/fs-billing/current/ops/backup
+            install -m 0755 /w/ops/backup/backup.sh /opt/fs-billing/current/ops/backup/backup.sh
+            install -m 0755 /w/ops/backup/verify-restore.sh /opt/fs-billing/current/ops/backup/verify-restore.sh
             systemd-analyze verify \
               ops/deploy/systemd/fs-billing-api.service \
-              ops/deploy/systemd/fs-billing-worker.service
+              ops/deploy/systemd/fs-billing-worker.service \
+              ops/backup/systemd/fs-billing-backup.service \
+              ops/backup/systemd/fs-billing-backup.timer \
+              ops/backup/systemd/fs-billing-backup-verify.service \
+              ops/backup/systemd/fs-billing-backup-verify.timer
 
             # 4. nginx：临时主配置包含站点片段，证书与 web 根目录用临时占位
             install -d /etc/ssl/fs-billing /var/log/nginx /opt/fs-billing/current/apps/web/dist
@@ -251,3 +258,35 @@ jobs:
               "}" > "$tmp/nginx.conf"
             nginx -t -c "$tmp/nginx.conf" -p "$tmp"
           '
+
+  # 备份/恢复往返（阶段 10 验收 3）：用 compose 里的一次性 PostgreSQL 造数、备份、
+  # 恢复到另一个库、比对快照，并证明无开关拒绝覆盖与损坏的 dump 被拒绝。
+  # 脚本在 debian:13 容器里运行，与生产环境（Debian 13 + postgresql-client-17）一致。
+  backup-roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Start PostgreSQL
+        run: docker compose up -d --wait postgres
+      - name: Backup and restore round trip
+        run: |
+          network=$(docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$(docker compose ps -q postgres)")
+          docker run --rm --network "$network" \
+            -v "$PWD":/w:ro -w /w \
+            -e PGHOST=postgres -e PGUSER=fs_billing -e PGPASSWORD=local-development-only \
+            -e MIGRATIONS_DIR=/w/packages/db/migrations \
+            -e ROUNDTRIP_ALLOW_DESTRUCTIVE=1 \
+            debian:13 bash -c '
+            set -euo pipefail
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends postgresql-client-17 >/dev/null
+            /w/ops/backup/roundtrip-test.sh
+          '
+      - name: PostgreSQL logs
+        if: failure()
+        run: docker compose logs postgres
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker compose down

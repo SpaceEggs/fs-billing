@@ -1,0 +1,39 @@
+# 备份配置（阶段 10 验收 3）。复制到 /etc/fs-billing/backup.conf，root:root，模式 0600。
+# backup.sh / restore.sh / verify-restore.sh / snapshot-counts.sh 都直接 source 本文件，
+# 所以这是 shell 语法：数组用括号，值不要加引号以外的装饰。
+#
+# 这里只写路径与参数。数据库连接串从 OWNER_ENV_FILE 的 DATABASE_URL 读取：
+# 备份里有完整号码与客户资料，密码不写进本文件、不上命令行、不进日志。
+
+# 整套备份的根目录；脚本会把它设为 700，产物写 600。
+BACKUP_DIR=/root/backups
+
+# Worker 的 RAW_CDR_ARCHIVE_DIR。归档文件是原始 JSON 丢弃后的唯一副本，必须进备份。
+ARCHIVE_DIR=/var/lib/fs-billing/archive
+# 恢复归档目录时新建目录的属主（生产为 Worker 用户）。
+ARCHIVE_OWNER=fs-billing
+
+# 配置包要包含的路径；不存在的自动跳过。tar 保留绝对路径，恢复时解到 /。
+# nginx 站点片段装在 /etc/nginx/conf.d/fs-billing.conf（见 bootstrap-server.sh）。
+CONFIG_PATHS=(/etc/fs-billing /etc/nginx/conf.d /etc/ssl/fs-billing)
+
+# 数据库属主角色：createdb -O 与 pg_restore 用。
+DB_OWNER=fs_billing
+
+# 保留策略：按文件名里的 UTC 时间戳删除 RETENTION_DAYS 天前的整套备份；
+# 无论多旧都至少保留最近 MIN_KEEP 套（防时钟错误一次删光）。
+RETENTION_DAYS=30
+MIN_KEEP=3
+
+# 异地驱动（可选，见 offsite/README.md）：留空只存本机。非空时对每个产物调用一次
+# 「命令 + 产物绝对路径」，任一失败使整次备份退出非零。例如：
+#   OFFSITE_COMMAND="rclone copyto --immutable"
+#   OFFSITE_COMMAND="rsync -a --partial"
+# 命令本身不带目标路径以外的占位符；目标主机、存储桶写在命令参数或驱动自己的配置里。
+OFFSITE_COMMAND=
+
+# owner 环境文件：提供 DATABASE_URL（owner 角色 fs_billing）。
+OWNER_ENV_FILE=/etc/fs-billing/owner.env
+
+# 生产恢复时用当前发布目录里的代码重设角色密码并安装 pg-boss 队列。
+RELEASE_DIR=/opt/fs-billing/current

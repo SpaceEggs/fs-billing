@@ -1,0 +1,11 @@
+[Unit]
+Description=FS-Billing 每周恢复演练（周日 06:00，每日备份之后）
+
+[Timer]
+OnCalendar=Sun *-*-* 06:00:00 Asia/Shanghai
+Persistent=true
+AccuracySec=1h
+Unit=fs-billing-backup-verify.service
+
+[Install]
+WantedBy=timers.target
