@@ -231,13 +231,30 @@ jobs:
             install -d /opt/fs-billing/current/ops/backup
             install -m 0755 /w/ops/backup/backup.sh /opt/fs-billing/current/ops/backup/backup.sh
             install -m 0755 /w/ops/backup/verify-restore.sh /opt/fs-billing/current/ops/backup/verify-restore.sh
+            install -d /opt/fs-billing/current/ops/monitor
+            install -m 0755 /w/ops/monitor/check-clock.sh /opt/fs-billing/current/ops/monitor/check-clock.sh
+            install -m 0755 /w/ops/monitor/health-check.sh /opt/fs-billing/current/ops/monitor/health-check.sh
+            install -m 0755 /w/ops/monitor/notify.sh /opt/fs-billing/current/ops/monitor/notify.sh
+            # 心跳单元在 A 上，脚本装在 /usr/local/lib/fs-billing（A 没有 /opt/fs-billing/current）。
+            install -d /usr/local/lib/fs-billing
+            install -m 0755 /w/ops/monitor/fs-clock-heartbeat.sh /usr/local/lib/fs-billing/fs-clock-heartbeat.sh
+            : > /etc/fs-billing/monitor.env
+            : > /etc/fs-billing/heartbeat.env
+            install -d -m 0700 /var/lib/fs-billing/monitor
             systemd-analyze verify \
               ops/deploy/systemd/fs-billing-api.service \
               ops/deploy/systemd/fs-billing-worker.service \
               ops/backup/systemd/fs-billing-backup.service \
               ops/backup/systemd/fs-billing-backup.timer \
               ops/backup/systemd/fs-billing-backup-verify.service \
-              ops/backup/systemd/fs-billing-backup-verify.timer
+              ops/backup/systemd/fs-billing-backup-verify.timer \
+              ops/monitor/systemd/fs-billing-notify@.service \
+              ops/monitor/systemd/fs-billing-health-check.service \
+              ops/monitor/systemd/fs-billing-health-check.timer \
+              ops/monitor/systemd/fs-billing-check-clock.service \
+              ops/monitor/systemd/fs-billing-check-clock.timer \
+              ops/monitor/systemd/fs-billing-clock-heartbeat.service \
+              ops/monitor/systemd/fs-billing-clock-heartbeat.timer
 
             # 4. nginx：临时主配置包含站点片段，证书与 web 根目录用临时占位
             install -d /etc/ssl/fs-billing /var/log/nginx /opt/fs-billing/current/apps/web/dist

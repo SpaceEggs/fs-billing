@@ -1,0 +1,10 @@
+[Unit]
+Description=FS-Billing 服务器 A 时钟心跳（每 30 秒）
+
+[Timer]
+OnCalendar=*-*-* *:*:00,30
+AccuracySec=1s
+Unit=fs-billing-clock-heartbeat.service
+
+[Install]
+WantedBy=timers.target

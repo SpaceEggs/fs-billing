@@ -4,8 +4,8 @@
 `<B_IP>`、`<A_IP>`、`<B_PRIVATE_IP>`、`<DOMAIN>` 都是占位符，执行时替换为实际值；
 仓库、文档和截图里不写真实地址与密钥。
 
-当前版本含「部署」「回滚」「迁移演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「证书」九章。
-监测与告警、密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
+当前版本含「部署」「回滚」「迁移演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「监测与告警」「证书」十章。
+密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
 （`docs/go-live-checklist.md` 在后续 PR 建立）。
 
 ## 部署
@@ -497,8 +497,8 @@ systemctl list-timers 'fs-billing-*'
 
 `fs-billing-backup.timer` 每天北京时间 05:00 运行（避开 00:00 分区维护、02:00 账单、
 03:00 核对、04:00 归档）；`fs-billing-backup-verify.timer` 每周日 06:00 做一次恢复演练。
-两个 timer 都是 `Persistent=true`，关机错过后开机补跑。失败通知由 PR 4 的 `notify.sh`
-接入（单元里的 `OnFailure=` 已注释，等它到位后取消注释）。
+两个 timer 都是 `Persistent=true`，关机错过后开机补跑。失败由
+`OnFailure=fs-billing-notify@%n.service` 调用 `notify.sh` 发邮件，配置见「监测与告警」。
 
 ### 手动跑一次并核对
 
@@ -633,7 +633,8 @@ journalctl -u fs-billing-backup-verify.service --since '8 days ago' --no-pager
 ls -l /root/backups/LATEST.json
 ```
 
-失败会在 `systemctl status` 里显示非零退出码（PR 4 接入邮件后同时发信）。每周自动演练
+失败会在 `systemctl status` 里显示非零退出码，同时由 `fs-billing-notify@.service` 发邮件。
+每周自动演练
 只证明「备份能恢复、数量与余额对得上、归档包能完整读出」；它**不**把归档目录解回，
 也不覆盖服务器 A 的补推，不替代下面的人工演练。
 
@@ -724,6 +725,187 @@ systemd 单元的标准输出与标准错误都进 journal；不要另外配置�
   记录绑定参数的慢查询日志**；开启与否记入上线检查清单的「带条件上线」栏。
 
 这两项是用户接受的已知风险，改动前先评审。
+
+## 监测与告警
+
+### 组成
+
+| 位置 | 单元 / 文件                          | 做什么                                                                                                            |
+| ---- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| B    | `fs-billing-health-check.timer`      | 每分钟检查 Worker `/health`、API `/api/health`、PostgreSQL、`LATEST.json` 新鲜度、磁盘、证书、journal；失败发邮件 |
+| B    | `fs-billing-check-clock.timer`       | 每分钟读 `chronyc tracking` 的 System time；偏差 ≥1 秒警告、≥5 秒严重（决定 3），未同步也告警                     |
+| B    | `fs-billing-notify@.service`         | 模板单元；备份等单元失败时由 `OnFailure=` 调用 `notify.sh`，附带 `systemctl status` 与最近 40 行 journal          |
+| A    | `fs-billing-clock-heartbeat.timer`   | 每 30 秒 POST 到 B 的 Worker `/clock`，带 `sentAt`、上一轮 RTT、A 的 chrony 偏移与同步状态                        |
+| 两台 | `/etc/chrony/conf.d/fs-billing.conf` | 至少 3 个时间源；公网 NTP 被屏蔽时换成机房提供的源（用户提供）                                                    |
+
+Worker 的 `/clock` 用数据库时钟 `clock_timestamp()` 算 `skew = 收到时间 − sentAt − RTT/2`，
+正数表示 A 比数据库慢。偏差 ≥1 秒开 `clock_skew` 告警（警告），≥5 秒另开一条
+`clock_skew_critical`（严重），各发一封开始通知；回到阈值内并持续 `ALERT_QUIET_MINUTES`
+（默认 10 分钟）后，由后续心跳分别恢复：严重在偏差回到 5 秒内满窗口后恢复，警告在回到
+1 秒内满窗口后恢复。
+心跳超过 5 分钟没到时开 `fs_heartbeat`，下一次心跳到达时恢复。心跳不落新表；Worker
+重启不会误报，也不会丢掉已开告警的恢复。三种告警都进后台「系统告警」页、概览计数与
+邮件通道，收件邮箱沿用后台「告警设置」。
+
+服务器 A 到位前，Worker 每次启动约 5 分钟后会开 `fs_heartbeat` 并保持未恢复（只发一封
+开始通知，后续合并）；这是 A 尚未安装时的预期现象，A 的第一次心跳到达后自动恢复。
+`clock_skew` 与 `clock_skew_critical` 是两条独立告警：从警告升级到严重会新开严重告警并发
+一封开始通知，警告仍按 1 秒阈值判断；偏差回落到 3 秒时，严重告警在静默窗口后单独恢复，
+警告保持未恢复直到回到 1 秒内满一个窗口。
+
+### 安装
+
+B 上（代码已经发布到 `/opt/fs-billing/current` 之后）：
+
+```sh
+install -m 0644 /opt/fs-billing/current/ops/monitor/systemd/fs-billing-notify@.service \
+  /opt/fs-billing/current/ops/monitor/systemd/fs-billing-health-check.service \
+  /opt/fs-billing/current/ops/monitor/systemd/fs-billing-health-check.timer \
+  /opt/fs-billing/current/ops/monitor/systemd/fs-billing-check-clock.service \
+  /opt/fs-billing/current/ops/monitor/systemd/fs-billing-check-clock.timer \
+  /etc/systemd/system/
+install -m 0600 /opt/fs-billing/current/ops/monitor/monitor.env.example /etc/fs-billing/monitor.env
+$EDITOR /etc/fs-billing/monitor.env       # 至少填 NOTIFY_TO
+systemctl daemon-reload
+systemctl enable --now fs-billing-health-check.timer fs-billing-check-clock.timer
+systemctl list-timers 'fs-billing-*'
+```
+
+`monitor.env` 里 `NOTIFY_TO` 是脚本侧的运维收件人。它不能从后台「告警设置」读：数据库或
+Worker 整体宕机时正是最需要发信的时候，脚本只能读本机文件。可以填同一个邮箱，多个用逗号
+分隔。`SMTP_*` 与 `MAIL_FROM` 仍从 `/etc/fs-billing/app.env` 读取，`SMTP_PASS` 只放在那里。
+`notify.sh` 用 `curl` 的 SMTPS 支持发信（Debian 包 `curl`，已在
+`bootstrap-server.sh` 的安装列表里），不需要 `sendmail` 或额外邮件包。
+
+先手动发一封确认通道：
+
+```sh
+/opt/fs-billing/current/ops/monitor/notify.sh \
+  --subject '【FS-Billing】通知测试' \
+  --body '这是一封运维通知测试。'
+```
+
+A 是 FreeSWITCH 机器，没有 `/opt/fs-billing/current`；脚本、单元与示例从工作站仓库拷过去。
+在工作站仓库根执行：
+
+```sh
+scp ops/monitor/fs-clock-heartbeat.sh \
+  ops/monitor/heartbeat.env.example \
+  ops/monitor/systemd/fs-billing-clock-heartbeat.service \
+  ops/monitor/systemd/fs-billing-clock-heartbeat.timer \
+  root@<A_IP>:/tmp/
+```
+
+再在 A 上安装：
+
+```sh
+install -d -m 0755 /usr/local/lib/fs-billing
+install -m 0755 /tmp/fs-clock-heartbeat.sh /usr/local/lib/fs-billing/fs-clock-heartbeat.sh
+install -d -m 0700 /etc/fs-billing
+install -m 0600 /tmp/heartbeat.env.example /etc/fs-billing/heartbeat.env
+$EDITOR /etc/fs-billing/heartbeat.env     # WORKER_SHARED_KEY 与 B 的 app.env 一致
+install -m 0644 /tmp/fs-billing-clock-heartbeat.service \
+  /tmp/fs-billing-clock-heartbeat.timer \
+  /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now fs-billing-clock-heartbeat.timer
+```
+
+A 的 `curl` 已由 `freeswitch/install/install.sh` 安装；还需要 `jq` 与 `chrony`：
+
+```sh
+apt-get install -y jq chrony
+```
+
+两台都安装 chrony 片段后重启 chrony。B 上：
+
+```sh
+install -d -m 0755 /etc/chrony/conf.d
+install -m 0644 /opt/fs-billing/current/ops/monitor/chrony/fs-billing.conf \
+  /etc/chrony/conf.d/fs-billing.conf
+systemctl restart chrony
+chronyc tracking
+```
+
+A 上同样没有 `/opt/fs-billing/current`，先从工作站把文件拷过去：
+
+```sh
+# 工作站仓库根
+scp ops/monitor/chrony/fs-billing.conf root@<A_IP>:/tmp/
+```
+
+再在 A 上安装并重启：
+
+```sh
+# A
+install -d -m 0755 /etc/chrony/conf.d
+install -m 0644 /tmp/fs-billing.conf /etc/chrony/conf.d/fs-billing.conf
+systemctl restart chrony
+chronyc tracking
+```
+
+默认源是 Debian 的公网 NTP 池；机房屏蔽公网 NTP 时，把文件里的 `pool` 行换成机房提供的
+至少 3 个源（地址由用户提供，不写进仓库）。`chronyc tracking` 的 `Leap status` 应为
+`Normal`。
+
+### 每次体检看什么
+
+`health-check.sh` 的检查项与阈值都能在 `monitor.env` 覆盖：
+
+| 检查         | 失败条件                                                                       |
+| ------------ | ------------------------------------------------------------------------------ |
+| Worker / API | `curl` 失败或响应不是 `{"status":"ok",...}`                                    |
+| PostgreSQL   | `pg_isready -q` 非零                                                           |
+| 备份新鲜度   | `/root/backups/LATEST.json` 不存在或超过 26 小时未更新                         |
+| 磁盘         | `/`、`/var/lib/fs-billing`、`/root/backups` 使用率 ≥90%（`DISK_WARN_PERCENT`） |
+| 证书         | `/etc/ssl/fs-billing/fullchain.pem` 剩余少于 30 天（`CERT_WARN_DAYS`）         |
+| journal      | `/var/log/journal` 占用 ≥2G 的 90%（`JOURNAL_WARN_BYTES`）                     |
+
+同一问题 30 分钟内只发一封邮件（`MONITOR_DEDUPE_SECONDS`），状态文件在
+`/var/lib/fs-billing/monitor`。检查失败时脚本以非零退出，`systemctl status` 与
+`journalctl` 都能看到；恢复后状态文件自动清除。
+
+### 查看与演示
+
+```sh
+systemctl list-timers 'fs-billing-*'
+journalctl -u fs-billing-health-check -u fs-billing-check-clock --since today --no-pager
+journalctl -u fs-billing-clock-heartbeat --since today --no-pager   # 在 A 上
+```
+
+后台「系统告警」页按类型筛选 `时钟偏差（警告）`（`clock_skew`）、`时钟偏差（严重）`
+（`clock_skew_critical`）与 `时钟心跳中断`（`fs_heartbeat`）；概览的「系统告警」计数与导航
+红点复用同一套查询。邮件开始、汇总、恢复通知由 Worker 的 `notify-tick` 发出，发件箱状态见
+告警详情。
+
+验收 8 的偏差演示要在服务器 A 上做（需要 A 到位）：
+
+```sh
+# A：停 chrony，把本机拨快 10 秒，等一个心跳周期（30 秒）
+systemctl stop chrony
+date -s '+10 seconds'
+journalctl -u fs-billing-clock-heartbeat -n 20 --no-pager
+
+# B：告警页出现 clock_skew（警告）与 clock_skew_critical（严重），两封开始通知应发出
+# A：恢复并强制校时
+systemctl start chrony
+chronyc makestep
+```
+
+恢复后，回到阈值内满一个静默窗口，下一次心跳分别把 `clock_skew` 与 `clock_skew_critical`
+置为已恢复，并发出恢复邮件。
+截图与两台的 `chronyc tracking` 输出存 `docs/evidence/phase-10/ntp/`；**不要在演示中把
+真实地址或密钥写进证据**。
+
+### 常见故障
+
+| 症状                                              | 检查                                                                                         | 处理                                                                                           |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 收不到任何运维邮件                                | `notify.sh --subject 测试`；`app.env` 的 `SMTP_*`、`MAIL_FROM`、`monitor.env` 的 `NOTIFY_TO` | 补全配置；QQ 邮箱的 `MAIL_FROM` 必须等于 `SMTP_USER`；查 `journalctl -u fs-billing-notify@...` |
+| A 的心跳在 B 上不到                               | A 的 `heartbeat.env`、B 的 `WORKER_ALLOWED_IPS`、防火墙 3001、`WORKER_SHARED_KEY`            | 修通后等下一次 `/clock`，`fs_heartbeat` 自动恢复                                               |
+| 告警页一直有 `clock_skew` / `clock_skew_critical` | 两台 `chronyc tracking` 的 System time；A 是否刚做过 `date -s`                               | `chronyc makestep`；偏差回到阈值内满静默窗口后自动恢复                                         |
+| `check-clock.sh` 报 chrony 未同步                 | `chronyc sources -v`、NTP 源是否可达                                                         | 修 NTP 源后 `systemctl restart chrony`；未同步期间告警保持                                     |
+| 体检每分钟都失败但只收到一封邮件                  | 这是 30 分钟去重；`MONITOR_DEDUPE_SECONDS` 可调                                              | 先修问题；恢复后状态文件自动清除                                                               |
 
 ## 证书
 

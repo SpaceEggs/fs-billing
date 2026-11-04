@@ -1,0 +1,15 @@
+[Unit]
+Description=FS-Billing 失败通知：%i
+Documentation=file:/opt/fs-billing/current/docs/ops-runbook.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/fs-billing/current/ops/monitor/notify.sh --unit %i
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+TimeoutStartSec=120

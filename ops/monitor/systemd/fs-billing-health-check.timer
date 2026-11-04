@@ -1,0 +1,10 @@
+[Unit]
+Description=FS-Billing 本机体检（每分钟，失败邮件 30 分钟内不重复）
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=10s
+Unit=fs-billing-health-check.service
+
+[Install]
+WantedBy=timers.target

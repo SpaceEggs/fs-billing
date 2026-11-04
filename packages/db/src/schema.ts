@@ -449,6 +449,9 @@ export const systemAlertKinds = [
   'statement_mismatch',
   'audit_failed',
   'raw_archive_failed',
+  'clock_skew',
+  'clock_skew_critical',
+  'fs_heartbeat',
 ] as const;
 export type SystemAlertKind = (typeof systemAlertKinds)[number];
 

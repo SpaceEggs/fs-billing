@@ -35,6 +35,10 @@ export const AlertKeys = {
   partitionMaintenance: 'partition-maintenance',
   /** 重置密码的审计写入失败。 */
   auditResetPassword: 'audit:reset-password',
+  /** 服务器 A 与数据库时钟的偏差（阶段 10 验收 8），全局一条。 */
+  clockSkew: 'fs-vs-db',
+  /** 服务器 A 的时钟心跳中断，全局一条。 */
+  fsHeartbeat: 'fs-clock',
   chargeReconcile: (callUuid: string) => `charge-reconcile:${callUuid}`,
   statement: (tenantId: string, month: string) =>
     `statement:${tenantId}:${month}`,
@@ -62,7 +66,7 @@ export interface RaiseAlertInput {
   /**
    * 新开时记录；合并到已有告警时保持原值。只有按租户分的键（`charge-reconcile:*`、`statement:*`，
    * 以后的 `recipient:*`）带租户；全局键（`fs-authorize`、`invalid-json`、`cdr-save`、`partition-*`、
-   * `audit:reset-password`、`unassigned:*`、`invalid-cdr:*`、`archive:*`）不传，租户为空——
+   * `audit:reset-password`、`fs-vs-db`、`fs-clock`、`unassigned:*`、`invalid-cdr:*`、`archive:*`）不传，租户为空——
    * 合并了多个租户的事件之后，保留第一次事件的租户没有意义。
    */
   readonly tenantId?: string | null | undefined;
@@ -214,6 +218,37 @@ export async function recoverQuietAlerts(
     )!,
     options.at,
     { skipLocked: options.skipLocked === true },
+  );
+}
+
+/**
+ * 时钟偏差告警的恢复：`last_seen_at` 只在偏差超过各自阈值时被 `raiseAlert` 推进，所以它早于
+ * 「现在减静默窗口」就表示已经回到该阈值内并持续了一个完整窗口。由 `/clock` 在每次心跳内调用；
+ * 不放进 `recoverQuietAlerts`——没有心跳时不能仅凭时间流逝就认为偏差已经消失。
+ *
+ * 警告与严重是两种独立告警（用户 2026-11-04 决定）：严重 `clock_skew_critical` 在偏差回到
+ * 5 秒内满窗口后恢复，警告 `clock_skew` 在回到 1 秒内满窗口后恢复，两者各自判断。
+ */
+export type ClockSkewKind = 'clock_skew' | 'clock_skew_critical';
+
+export async function recoverClockSkewAfterQuiet(
+  tx: Tx,
+  options: {
+    readonly kind: ClockSkewKind;
+    readonly subjectKey: string;
+    readonly quietMinutes: number;
+    readonly at?: Date | undefined;
+  },
+): Promise<number> {
+  const now = options.at ?? sql`now()`;
+  return recoverAlertsWhere(
+    tx,
+    and(
+      eq(systemAlerts.kind, options.kind),
+      eq(systemAlerts.subjectKey, options.subjectKey),
+      sql`${systemAlerts.lastSeenAt} <= ${now}::timestamptz - ${options.quietMinutes} * interval '1 minute'`,
+    )!,
+    options.at,
   );
 }
 
