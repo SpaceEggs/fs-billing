@@ -1,0 +1,9 @@
+{
+  "status": "failed",
+  "sha": "21e359a6b6be71d0827ebbc8ba90f777250f6832",
+  "event": "workflow_dispatch",
+  "image_hash": "5f06500dfd4c4d9e767d423872401b435fd482b6aa67d7efe27a5db78949b02c",
+  "passed": 0,
+  "total": 0,
+  "reason": "镜像不可用，且此事件不允许跳过。"
+}

@@ -1,0 +1,1059 @@
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: using the "epoll" event method
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: nginx/1.28.0
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: built by gcc 12.2.0 (Debian 12.2.0-14) 
+freeswitch-1  | ERROR: Failed to set SCHED_FIFO scheduler (Operation not permitted)
+freeswitch-1  | ERROR: Could not set nice level
+freeswitch-1  | 2026-11-04 07:59:13.173338 0.00% [INFO] switch_event.c:715 Activate Eventing Engine.
+freeswitch-1  | 2026-11-04 07:59:13.183581 0.00% [WARNING] switch_event.c:686 Create additional event dispatch thread 0
+freeswitch-1  | 2026-11-04 07:59:13.353383 0.00% [NOTICE] switch_scheduler.c:186 Starting task thread
+freeswitch-1  | 2026-11-04 07:59:13.355351 0.00% [NOTICE] switch_core.c:1482 Created ip list rfc6598.auto default (deny)
+freeswitch-1  | 2026-11-04 07:59:13.355363 0.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (allow) [] to list rfc6598.auto
+freeswitch-1  | 2026-11-04 07:59:13.355366 0.00% [NOTICE] switch_core.c:1488 Created ip list rfc1918.auto default (deny)
+freeswitch-1  | 2026-11-04 07:59:13.355368 0.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (allow) [] to list rfc1918.auto
+freeswitch-1  | 2026-11-04 07:59:13.355370 0.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (allow) [] to list rfc1918.auto
+freeswitch-1  | 2026-11-04 07:59:13.355372 0.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (allow) [] to list rfc1918.auto
+freeswitch-1  | 2026-11-04 07:59:13.355373 0.00% [NOTICE] switch_utils.c:665 Adding fe80::/10 (allow) [] to list rfc1918.auto
+freeswitch-1  | 2026-11-04 07:59:13.355375 0.00% [NOTICE] switch_core.c:1497 Created ip list wan.auto default (allow)
+freeswitch-1  | 2026-11-04 07:59:13.355377 0.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/8 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355379 0.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355380 0.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355382 0.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355383 0.00% [NOTICE] switch_utils.c:665 Adding 169.254.0.0/16 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355385 0.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355386 0.00% [NOTICE] switch_utils.c:665 Adding fe80::/10 (deny) [] to list wan.auto
+freeswitch-1  | 2026-11-04 07:59:13.355388 0.00% [NOTICE] switch_core.c:1509 Created ip list wan_v6.auto default (allow)
+freeswitch-1  | 2026-11-04 07:59:13.355389 0.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/0 (deny) [] to list wan_v6.auto
+freeswitch-1  | 2026-11-04 07:59:13.355391 0.00% [NOTICE] switch_utils.c:665 Adding fe80::/10 (deny) [] to list wan_v6.auto
+freeswitch-1  | 2026-11-04 07:59:13.355393 0.00% [NOTICE] switch_core.c:1517 Created ip list wan_v4.auto default (allow)
+freeswitch-1  | 2026-11-04 07:59:13.355394 0.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/8 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355396 0.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355397 0.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355399 0.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355401 0.00% [NOTICE] switch_utils.c:665 Adding 169.254.0.0/16 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355402 0.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355405 0.00% [NOTICE] switch_utils.c:665 Adding ::/0 (deny) [] to list wan_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355407 0.00% [NOTICE] switch_core.c:1530 Created ip list any_v6.auto default (allow)
+freeswitch-1  | 2026-11-04 07:59:13.355409 0.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/0 (deny) [] to list any_v6.auto
+freeswitch-1  | 2026-11-04 07:59:13.355412 0.00% [NOTICE] switch_core.c:1537 Created ip list any_v4.auto default (allow)
+freeswitch-1  | 2026-11-04 07:59:13.355414 0.00% [NOTICE] switch_utils.c:665 Adding ::/0 (deny) [] to list any_v4.auto
+freeswitch-1  | 2026-11-04 07:59:13.355416 0.00% [NOTICE] switch_core.c:1544 Created ip list nat.auto default (deny)
+freeswitch-1  | 2026-11-04 07:59:13.355420 0.00% [NOTICE] switch_core.c:1546 Adding 10.1.0.127/255.255.240.0 (deny) to list nat.auto
+freeswitch-1  | 2026-11-04 07:59:13.355422 0.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (allow) [] to list nat.auto
+freeswitch-1  | 2026-11-04 07:59:13.355423 0.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (allow) [] to list nat.auto
+freeswitch-1  | 2026-11-04 07:59:13.355425 0.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (allow) [] to list nat.auto
+freeswitch-1  | 2026-11-04 07:59:13.355426 0.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (allow) [] to list nat.auto
+freeswitch-1  | 2026-11-04 07:59:13.355433 0.00% [NOTICE] switch_core.c:1556 Created ip list loopback.auto default (deny)
+freeswitch-1  | 2026-11-04 07:59:13.355435 0.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.0/8 (allow) [] to list loopback.auto
+freeswitch-1  | 2026-11-04 07:59:13.355437 0.00% [NOTICE] switch_utils.c:665 Adding ::1/128 (allow) [] to list loopback.auto
+freeswitch-1  | 2026-11-04 07:59:13.355438 0.00% [NOTICE] switch_core.c:1563 Created ip list localnet.auto default (deny)
+freeswitch-1  | 2026-11-04 07:59:13.355440 0.00% [NOTICE] switch_core.c:1566 Adding 10.1.0.127/255.255.240.0 (allow) to list localnet.auto
+freeswitch-1  | 2026-11-04 07:59:13.355445 0.00% [CONSOLE] switch_core.c:1593 Created ip list billing-tenants default (deny)
+freeswitch-1  | 2026-11-04 07:59:13.355463 0.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.2/32 (allow) [FSIOK@127.0.0.1] to list billing-tenants
+freeswitch-1  | 2026-11-04 07:59:13.355465 0.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.3/32 (allow) [FSIOFF@127.0.0.1] to list billing-tenants
+freeswitch-1  | 2026-11-04 07:59:13.355467 0.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.4/32 (allow) [FSILOW@127.0.0.1] to list billing-tenants
+freeswitch-1  | 2026-11-04 07:59:13.355470 0.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.5/32 (allow) [FSI60@127.0.0.1] to list billing-tenants
+freeswitch-1  | 2026-11-04 07:59:13.456247 0.00% [CONSOLE] switch_core.c:2471 Bringing up environment.
+freeswitch-1  | 2026-11-04 07:59:13.456265 0.00% [CONSOLE] switch_core.c:2472 Loading Modules.
+freeswitch-1  | 2026-11-04 07:59:13.456405 0.00% [INFO] switch_time.c:1437 Timezone loaded 597 definitions
+freeswitch-1  | 2026-11-04 07:59:13.456412 0.00% [CONSOLE] switch_time.c:1580 Clock calibration disabled.
+freeswitch-1  | 2026-11-04 07:59:13.456416 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [CORE_SOFTTIMER_MODULE]
+freeswitch-1  | 2026-11-04 07:59:13.456423 0.00% [NOTICE] switch_loadable_module.c:354 Adding Timer 'soft'
+freeswitch-1  | 2026-11-04 07:59:13.456459 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [CORE_PCM_MODULE]
+freeswitch-1  | 2026-11-04 07:59:13.456466 0.00% [NOTICE] switch_loadable_module.c:282 Adding Codec PROXY-VID 31 PROXY VIDEO PASS-THROUGH 90000hz 0ms 1ch (VBR)
+freeswitch-1  | 2026-11-04 07:59:13.456472 0.00% [NOTICE] switch_loadable_module.c:282 Adding Codec PROXY 0 PROXY PASS-THROUGH 8000hz 20ms 2ch (VBR)
+freeswitch-1  | 2026-11-04 07:59:13.456474 0.00% [NOTICE] switch_loadable_module.c:282 Adding Codec PROXY 0 PROXY PASS-THROUGH 8000hz 20ms 1ch (VBR)
+freeswitch-1  | 2026-11-04 07:59:13.456478 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 11025hz 32ms 2ch 352800bps
+freeswitch-1  | 2026-11-04 07:59:13.456480 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 11025hz 32ms 1ch 176400bps
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: OS: Linux 7.0.0-1019-azure
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 65536:65536
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: start worker processes
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: start worker process 9
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: start worker process 10
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: start worker process 11
+nginx-1       | 2026/11/04 07:59:13 [notice] 1#1: start worker process 12
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:15 +0000] "GET / HTTP/1.1" 404 153 "-" "curl/8.18.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:18 +0000] "POST /cdr?uuid=f0523e44-2017-473a-8ddc-14ecb6659a81 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:22 +0000] "POST /cdr?uuid=72f18d89-1f1f-48ec-8dd8-87e1c47e8fe2 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:26 +0000] "POST /cdr?uuid=95cda5a0-ee46-48f6-97a3-6a14e301bb89 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:30 +0000] "POST /cdr?uuid=29d34e00-9b0d-4c84-88c7-6b951f9b3db4 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:34 +0000] "POST /cdr?uuid=0b7d054a-4df5-482e-90f8-aba48c6288ca HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:38 +0000] "POST /cdr?uuid=8f432a08-d106-4e87-a105-9644edabcbb1 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:40 +0000] "POST /cdr?uuid=d1b16b48-3ae7-4750-b544-214461814454 HTTP/1.1" 200 70 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:41 +0000] "POST /cdr?uuid=92f8805c-cdd6-4b47-abaa-8a2bcb1f7de0 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:41 +0000] "POST /cdr?uuid=f1f47f9e-b348-4eca-b915-d23f9f946568 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:07:59:44 +0000] "POST /cdr?uuid=b4c0ff45-86aa-48fa-a05f-ca095af9156e HTTP/1.1" 200 70 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:00:45 +0000] "POST /cdr?uuid=dd91a120-81dd-4cfe-b547-26bfb91f2604 HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 2026/11/04 08:00:48 [error] 9#9: *24 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: localhost, request: "POST /cdr?uuid=6b4cc968-8cc4-4355-80a5-aabf95269a8d HTTP/1.1", upstream: "http://127.0.0.1:3001/cdr?uuid=6b4cc968-8cc4-4355-80a5-aabf95269a8d", host: "127.0.0.1:3002"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:00:48 +0000] "POST /cdr?uuid=6b4cc968-8cc4-4355-80a5-aabf95269a8d HTTP/1.1" 502 157 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:00:49 +0000] "POST /cdr?uuid=6b4cc968-8cc4-4355-80a5-aabf95269a8d HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:00:58 +0000] "POST /cdr?uuid=9c97d231-9d08-4e4a-b7e0-481cfedb747a HTTP/1.1" 200 66 "-" "freeswitch-json/1.0" "-"
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: signal 3 (SIGQUIT) received, shutting down
+nginx-1       | 2026/11/04 08:01:00 [notice] 9#9: gracefully shutting down
+nginx-1       | 2026/11/04 08:01:00 [notice] 10#10: gracefully shutting down
+nginx-1       | 2026/11/04 08:01:00 [notice] 10#10: exiting
+nginx-1       | 2026/11/04 08:01:00 [notice] 9#9: exiting
+nginx-1       | 2026/11/04 08:01:00 [notice] 9#9: exit
+nginx-1       | 2026/11/04 08:01:00 [notice] 10#10: exit
+nginx-1       | 2026/11/04 08:01:00 [notice] 11#11: gracefully shutting down
+nginx-1       | 2026/11/04 08:01:00 [notice] 11#11: exiting
+nginx-1       | 2026/11/04 08:01:00 [notice] 11#11: exit
+nginx-1       | 2026/11/04 08:01:00 [notice] 12#12: gracefully shutting down
+nginx-1       | 2026/11/04 08:01:00 [notice] 12#12: exiting
+nginx-1       | 2026/11/04 08:01:00 [notice] 12#12: exit
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: signal 17 (SIGCHLD) received from 9
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: worker process 9 exited with code 0
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: signal 29 (SIGIO) received
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: signal 17 (SIGCHLD) received from 11
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: worker process 11 exited with code 0
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: signal 17 (SIGCHLD) received from 10
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: worker process 10 exited with code 0
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: worker process 12 exited with code 0
+nginx-1       | 2026/11/04 08:01:00 [notice] 1#1: exit
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: using the "epoll" event method
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: nginx/1.28.0
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: built by gcc 12.2.0 (Debian 12.2.0-14) 
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: OS: Linux 7.0.0-1019-azure
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 65536:65536
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: start worker processes
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: start worker process 9
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: start worker process 10
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: start worker process 11
+nginx-1       | 2026/11/04 08:01:04 [notice] 1#1: start worker process 12
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:01:04 +0000] "GET / HTTP/1.1" 404 153 "-" "curl/8.18.0" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:01:04 +0000] "POST /cdr HTTP/1.1" 200 66 "-" "curl/8.14.1" "-"
+nginx-1       | 127.0.0.1 - - [04/Nov/2026:08:01:06 +0000] "POST /cdr HTTP/1.1" 200 69 "-" "curl/8.18.0" "-"
+freeswitch-1  | 2026-11-04 07:59:13.456482 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 11025hz 40ms 2ch 352800bps
+freeswitch-1  | 2026-11-04 07:59:13.456483 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 11025hz 40ms 1ch 176400bps
+freeswitch-1  | 2026-11-04 07:59:13.456485 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 22050hz 20ms 2ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456486 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 22050hz 20ms 1ch 352800bps
+freeswitch-1  | 2026-11-04 07:59:13.456488 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 44100hz 30ms 2ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456489 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 44100hz 30ms 1ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456491 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 44100hz 20ms 2ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456492 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 44100hz 20ms 1ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456494 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 44100hz 10ms 2ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456497 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 44100hz 10ms 1ch 705600bps
+freeswitch-1  | 2026-11-04 07:59:13.456503 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 40ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456505 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 40ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456506 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 30ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456508 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 30ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456509 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 20ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456511 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 20ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456512 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 8ms 2ch 1024000bps
+freeswitch-1  | 2026-11-04 07:59:13.456514 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 8ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456516 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 6ms 2ch 1024000bps
+freeswitch-1  | 2026-11-04 07:59:13.456517 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 6ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456519 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 4ms 2ch 1024000bps
+freeswitch-1  | 2026-11-04 07:59:13.456520 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 4ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456522 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 2ms 2ch 1024000bps
+freeswitch-1  | 2026-11-04 07:59:13.456524 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 2ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456526 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 8ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456528 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 8ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456530 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 6ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456532 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 6ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456534 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 4ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456536 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 4ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456538 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 2ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456541 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 2ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456543 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 8ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456545 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 8ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456546 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 6ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456548 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 6ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456550 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 4ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456552 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 4ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456554 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 2ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456578 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 2ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456580 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 10ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456582 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 10ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456584 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 8ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456586 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 8ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456588 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 6ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456590 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 6ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456592 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 4ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456594 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 4ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456596 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 2ms 2ch 1536000bps
+freeswitch-1  | 2026-11-04 07:59:13.456598 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 48000hz 2ms 1ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456600 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 24000hz 60ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456602 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 24000hz 60ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456604 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 24000hz 40ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456606 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 24000hz 40ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456609 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 24000hz 20ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456611 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 24000hz 20ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456613 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 100ms 2ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456615 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 100ms 1ch 192000bps
+freeswitch-1  | 2026-11-04 07:59:13.456617 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 80ms 2ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456619 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 80ms 1ch 192000bps
+freeswitch-1  | 2026-11-04 07:59:13.456622 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 60ms 2ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456624 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 60ms 1ch 192000bps
+freeswitch-1  | 2026-11-04 07:59:13.456626 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 40ms 2ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456628 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 40ms 1ch 192000bps
+freeswitch-1  | 2026-11-04 07:59:13.456630 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 20ms 2ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456632 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 12000hz 20ms 1ch 192000bps
+freeswitch-1  | 2026-11-04 07:59:13.456635 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 10ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456640 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 10ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456642 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 20ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456644 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 20ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456647 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 30ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456649 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 30ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456651 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 40ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456653 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 40ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456655 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 50ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456658 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 50ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456660 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 60ms 2ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456662 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 32000hz 60ms 1ch 512000bps
+freeswitch-1  | 2026-11-04 07:59:13.456664 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 10ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456666 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 10ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456668 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 20ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456670 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 20ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456672 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 30ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456675 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 30ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456677 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 40ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456679 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 40ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456681 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 50ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456683 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 50ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456685 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 60ms 2ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456687 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 16000hz 60ms 1ch 256000bps
+freeswitch-1  | 2026-11-04 07:59:13.456690 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 10ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456692 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 10ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456694 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 20ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456696 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 20ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456698 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 30ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456703 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 30ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456705 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 40ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456707 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 40ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456710 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 50ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456712 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 50ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456714 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 60ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456716 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 60ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456718 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 70ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456720 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 70ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456723 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 80ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456725 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 80ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456727 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 90ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456729 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 90ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456731 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 100ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456733 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 100ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456735 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 110ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456737 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 110ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456739 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 120ms 2ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456741 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec L16 100 RAW Signed Linear (16 bit) 8000hz 120ms 1ch 128000bps
+freeswitch-1  | 2026-11-04 07:59:13.456749 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 10ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456752 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 10ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456753 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 10ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456755 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 20ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456757 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 20ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456758 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 20ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456760 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 30ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456761 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 30ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456763 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 30ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456764 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 40ms 2ch 768000bps
+freeswitch-1  | 2026-11-04 07:59:13.456783 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 48000hz 40ms 1ch 384000bps
+freeswitch-1  | 2026-11-04 07:59:13.456785 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 40ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456787 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 50ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456789 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 60ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456792 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 70ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456793 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 80ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456795 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 90ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456796 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 100ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456798 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 110ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456800 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMU 0 G.711 ulaw 8000hz 120ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456804 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 10ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456806 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 20ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456808 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 30ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456809 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 40ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456811 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 50ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456812 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 60ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456814 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 70ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456815 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 80ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456817 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 90ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456819 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 100ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456820 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 110ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456823 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec PCMA 8 G.711 alaw 8000hz 120ms 1ch 64000bps
+freeswitch-1  | 2026-11-04 07:59:13.456838 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [CORE_SPEEX_MODULE]
+freeswitch-1  | 2026-11-04 07:59:13.456846 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec SPEEX 99 Speex 32000hz 20ms 1ch 44000bps
+freeswitch-1  | 2026-11-04 07:59:13.456849 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec SPEEX 99 Speex 16000hz 20ms 1ch 42200bps
+freeswitch-1  | 2026-11-04 07:59:13.456851 0.00% [NOTICE] switch_loadable_module.c:276 Adding Codec SPEEX 99 Speex 8000hz 20ms 1ch 24600bps
+freeswitch-1  | 2026-11-04 07:59:13.456905 0.00% [CRIT] switch_loadable_module.c:1815 Error Loading module /usr/lib/freeswitch/mod/mod_pgsql.so
+freeswitch-1  | **/usr/lib/freeswitch/mod/mod_pgsql.so: cannot open shared object file: No such file or directory**
+freeswitch-1  | 2026-11-04 07:59:13.457370 0.00% [INFO] switch_core_sqldb.c:3595 Opening DB
+freeswitch-1  | 2026-11-04 07:59:13.457400 0.00% [ERR] switch_core_sqldb.c:728 [db="core",type="core_db"] NATIVE SQL ERR [no such table: channels]
+freeswitch-1  | drop table channels
+freeswitch-1  | 2026-11-04 07:59:13.457414 0.00% [ERR] switch_core_sqldb.c:728 [db="core",type="core_db"] NATIVE SQL ERR [no such table: calls]
+freeswitch-1  | drop table calls
+freeswitch-1  | 2026-11-04 07:59:13.457426 0.00% [ERR] switch_core_sqldb.c:728 [db="core",type="core_db"] NATIVE SQL ERR [no such view: detailed_calls]
+freeswitch-1  | drop view detailed_calls
+freeswitch-1  | 2026-11-04 07:59:13.457438 0.00% [ERR] switch_core_sqldb.c:728 [db="core",type="core_db"] NATIVE SQL ERR [no such view: basic_calls]
+freeswitch-1  | drop view basic_calls
+freeswitch-1  | 2026-11-04 07:59:13.457478 0.00% [ERR] switch_core_sqldb.c:728 [db="core",type="core_db"] NATIVE SQL ERR [no such table: interfaces]
+freeswitch-1  | drop table interfaces
+freeswitch-1  | 2026-11-04 07:59:13.457492 0.00% [ERR] switch_core_sqldb.c:728 [db="core",type="core_db"] NATIVE SQL ERR [no such table: tasks]
+freeswitch-1  | drop table tasks
+freeswitch-1  | 2026-11-04 07:59:13.460432 0.00% [INFO] switch_core_sqldb.c:1840 CORE Starting SQL thread.
+freeswitch-1  | 2026-11-04 07:59:13.461616 0.00% [ERR] switch_vpx.c:1832 no codecs in vp8
+freeswitch-1  | 2026-11-04 07:59:13.461630 0.00% [ERR] switch_vpx.c:1832 no codecs in vp9
+freeswitch-1  | 2026-11-04 07:59:13.461645 0.00% [WARNING] switch_vpx.c:1787 VPX config param "profile" -> "lossless" value "0" is not applicable, leave default 0
+freeswitch-1  | 2026-11-04 07:59:13.461649 0.00% [WARNING] switch_vpx.c:1803 VPX config param "profile" -> "noise-sensitivity" value "1" is not applicable, leave default 1
+freeswitch-1  | 2026-11-04 07:59:13.461651 0.00% [ERR] switch_vpx.c:1832 no codecs in conference-vp8
+freeswitch-1  | 2026-11-04 07:59:13.461664 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [CORE_VPX_MODULE]
+freeswitch-1  | 2026-11-04 07:59:13.461672 0.00% [NOTICE] switch_loadable_module.c:282 Adding Codec VP8 99 VP8 Video 90000hz 0ms 1ch (VBR)
+freeswitch-1  | 2026-11-04 07:59:13.461683 0.00% [NOTICE] switch_loadable_module.c:282 Adding Codec VP9 99 VP9 Video 90000hz 0ms 1ch (VBR)
+freeswitch-1  | 2026-11-04 07:59:13.461688 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'vpx'
+freeswitch-1  | [m2026-11-04 07:59:13.461922 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_console]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.461931 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'console'
+freeswitch-1  | [m[m2026-11-04 07:59:13.462119 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_logfile]
+freeswitch-1  | [m[m2026-11-04 07:59:13.462324 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_event_socket]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462332 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'socket'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462342 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'event_sink'
+freeswitch-1  | [m[m2026-11-04 07:59:13.462736 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_commands]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462743 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'msrp_recv_file'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462749 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'msrp_send_file'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462754 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'bg_system'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462760 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'system'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462770 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'bg_spawn'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462774 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'spawn'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462778 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'spawn_stream'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462783 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'interface_allowlist_dump'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462788 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'acl'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462792 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'alias'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462799 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'coalesce'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462805 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'banner'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462825 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'bgapi'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462833 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'break'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462836 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'complete'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462842 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'cond'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462845 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'console_complete'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462852 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'console_complete_xml'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462858 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'create_uuid'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462861 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'db_cache'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462866 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'domain_data'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462872 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'domain_exists'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462876 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'echo'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462879 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'event_channel_broadcast'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462884 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'escape'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462889 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'eval'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462894 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'expand'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462897 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'find_user_xml'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462901 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'fsctl'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462907 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function '...'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462910 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'shutdown'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462914 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'version'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462919 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'global_getvar'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462924 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'global_setvar'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462927 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'group_call'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462932 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'help'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462940 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'host_lookup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462944 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'hostname'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462948 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'interface_ip'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462953 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'switchname'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462958 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'gethost'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462963 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'getenv'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462966 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'hupall'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462971 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'in_group'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462976 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'is_lan_addr'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462985 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'limit_usage'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462989 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'limit_hash_usage'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462994 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'limit_status'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.462999 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'limit_reset'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463004 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'limit_interval_reset'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463007 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'list_users'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463012 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'load'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463017 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'log'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463026 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'md5'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463029 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'module_exists'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463036 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'msleep'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463041 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'nat_map'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463044 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'originate'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463050 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'pause'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463059 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'pool_stats'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463062 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'quote_shell_arg'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463068 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'regex'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463072 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'reloadacl'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463075 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'reload'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463081 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'reloadxml'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463087 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'reloadcert'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463090 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'replace'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463095 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'say_string'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463100 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sched_api'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463103 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sched_broadcast'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463109 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sched_del'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463114 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sched_hangup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463118 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sched_transfer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463124 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'show'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463130 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sql_escape'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463133 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'status'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463139 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'strftime_tz'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463143 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'stun'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463148 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'time_test'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463155 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'timer_test'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463159 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'tone_detect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463166 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'unload'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463171 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'unsched_api'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463175 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uptime'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463181 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'reg_url'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463186 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'url_decode'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463190 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'url_encode'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463195 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'toupper'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463198 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'tolower'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463202 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'user_data'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463208 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_early_ok'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463211 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'user_exists'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463389 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_answer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463409 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_audio'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463428 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_break'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463457 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_bridge'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463475 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_broadcast'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463493 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_buglist'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463512 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_chat'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463531 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_send_text'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463549 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_capture_text'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463569 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_codec_debug'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463589 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_codec_param'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463609 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_debug_media'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463629 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_deflect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463649 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_displace'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463668 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_display'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463674 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_media_params'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463676 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_drop_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463680 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_dump'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463682 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_exists'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463685 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_fileman'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463689 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_flush_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463692 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_getvar'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463695 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_hold'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463698 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_kill'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463701 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_send_message'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463704 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_send_info'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463707 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_set_media_stats'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463710 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_video_bitrate'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463713 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_video_bandwidth'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463716 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_video_refresh'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463719 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_outgoing_answer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463722 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_limit'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463725 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_limit_release'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463728 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_loglevel'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463763 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_media'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463767 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_media_3p'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463771 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_media_reneg'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463776 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_park'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463781 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_pause'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463785 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_phone_event'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463789 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_ring_ready'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463793 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_pre_answer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463796 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_preprocess'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463800 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_record'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463804 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_recovery_refresh'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463808 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_recv_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463812 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_redirect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463815 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_send_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463819 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_session_heartbeat'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463823 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_setvar_multi'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463826 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_setvar'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463830 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_transfer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463834 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_dual_transfer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463838 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_simplify'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463842 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_jitterbuffer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463845 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_zombie_exec'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463848 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_xfer_zombie'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463851 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'xml_flush_cache'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463854 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'xml_locate'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463858 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'xml_wrap'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463861 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'file_exists'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463864 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'getcputime'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463867 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'json'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463872 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'memory'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463875 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'msrp'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463878 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'uuid_msrp_send'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463881 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'mediaStats'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463885 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'status'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463889 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'fsapi'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463892 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'execute'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.463895 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'channelData'
+freeswitch-1  | [m[m2026-11-04 07:59:13.464171 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_dptools]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464179 0.00% [NOTICE] switch_loadable_module.c:225 Adding Endpoint 'error'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464184 0.00% [NOTICE] switch_loadable_module.c:225 Adding Endpoint 'group'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464188 0.00% [NOTICE] switch_loadable_module.c:225 Adding Endpoint 'user'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464192 0.00% [NOTICE] switch_loadable_module.c:225 Adding Endpoint 'pickup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464195 0.00% [NOTICE] switch_loadable_module.c:326 Adding Dialplan 'inline'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464199 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'blind_transfer_ack'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464203 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'bind_digit_action'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464207 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'capture'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464212 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'clear_digit_action'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464215 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'digit_action_set_realm'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464218 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'privacy'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464221 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_audio_level'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464225 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_mute'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464245 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'flush_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464248 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'hold'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464251 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'unhold'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464255 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'mutex'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464259 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'page'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464262 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'transfer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464266 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'check_acl'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464269 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'verbose_events'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464273 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'novideo'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464276 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'cng_plc'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464279 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'early_hangup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464282 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sleep'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464286 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'delay_echo'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464289 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'strftime'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464293 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'phrase'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464296 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'eval'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464301 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_media_stats'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464304 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464308 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_zombie_exec'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464311 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'pre_answer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464315 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'answer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464322 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'wait_for_answer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464326 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'wait_for_video_ready'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464335 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'hangup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464341 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_name'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464348 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'presence'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464351 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'log'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464356 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'info'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464366 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'event'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464369 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sound_test'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464374 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'export'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464380 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'bridge_export'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464384 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464387 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'multiset'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464392 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'push'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464397 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'unshift'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464401 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_global'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464404 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_profile_var'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464409 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'unset'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464414 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'multiunset'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464417 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'capture_text'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464422 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'acknowledge_call'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464428 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'ring_ready'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464437 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'remove_bugs'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464440 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'break'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464445 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'detect_speech'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464450 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'play_and_detect_speech'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464455 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'ivr'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464459 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'redirect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464464 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'video_refresh'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464468 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'video_decode'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464479 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'send_info'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464483 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'jitterbuffer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464489 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'send_display'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464495 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'respond'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464501 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'deflect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464507 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'recovery_refresh'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464512 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'reuse_caller_profile'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464521 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'queue_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464527 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'send_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464530 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sched_cancel'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464539 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sched_hangup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464543 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sched_broadcast'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464549 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sched_transfer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464557 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'execute_extension'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464562 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sched_heartbeat'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464566 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'enable_heartbeat'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464574 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'filter_codecs'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464579 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'enable_keepalive'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464583 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'media_reset'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464589 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'mkdir'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464599 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'rename'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464604 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'transfer_vars'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464608 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'soft_hold'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464615 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'bind_meta_app'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464621 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'unbind_meta_app'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464625 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'block_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464635 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'unblock_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464638 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'intercept'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464647 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'eavesdrop'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464650 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'native_eavesdrop'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464655 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'three_way'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464663 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'set_user'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464666 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464677 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'start_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464680 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop_dtmf_generate'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464685 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'start_dtmf_generate'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464689 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop_tone_detect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464696 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'fax_detect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464701 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'tone_detect'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464709 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'echo'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464714 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'park'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464722 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'park_state'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464727 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'gentones'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464730 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'playback'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464736 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'broadcast'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464743 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'endless_playback'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464746 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'loop_playback'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464750 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'att_xfer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464762 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'read'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464765 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'play_and_get_digits'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464772 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop_video_write_overlay'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464775 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'video_write_overlay'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464785 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop_record_session'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464788 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'record_session'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464794 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'record_session_mask'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464798 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'record_session_unmask'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464809 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'record_session_pause'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464813 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'record_session_resume'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464817 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'record'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464822 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'preprocess'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464825 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'stop_displace_session'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464830 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'displace_session'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464835 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'speak'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464838 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'clear_speech_cache'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464843 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'bridge'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464855 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'system'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464859 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'bgsystem'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464867 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'say'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464870 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'detect_audio'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464875 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'detect_silence'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464883 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'wait_for_silence'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464887 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'session_loglevel'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464897 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'limit'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464902 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'limit_hash'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464907 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'limit_execute'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464913 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'limit_hash_execute'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464919 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'pickup'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464922 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'deduplicate_dtmf'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464930 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'vad_test'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464936 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'debug_media'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464940 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'strepoch'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464950 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'page'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464953 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'strmicroepoch'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464961 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'chat'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464965 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'strftime'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464973 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'presence'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464978 0.00% [NOTICE] switch_loadable_module.c:516 Adding File Format 'file_string'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464982 0.00% [NOTICE] switch_loadable_module.c:516 Adding File Format 'file'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464987 0.00% [NOTICE] switch_loadable_module.c:516 Adding File Format 'tts'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464991 0.00% [NOTICE] switch_loadable_module.c:682 Adding Chat interface 'event'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.464995 0.00% [NOTICE] switch_loadable_module.c:682 Adding Chat interface 'api'
+freeswitch-1  | [m[m2026-11-04 07:59:13.465256 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_hash]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.465261 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'hash'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.465266 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'hash'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.465270 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'hash_dump'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.465276 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'hash_remote'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.465279 0.00% [NOTICE] switch_loadable_module.c:778 Adding Limit interface 'hash'
+freeswitch-1  | [m[m2026-11-04 07:59:13.465462 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_dialplan_xml]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.465467 0.00% [NOTICE] switch_loadable_module.c:326 Adding Dialplan 'XML'
+freeswitch-1  | [m[32m2026-11-04 07:59:13.466454 0.00% [INFO] mod_lua.cpp:336 lua: appending script directory: '/usr/share/freeswitch/scripts/?.lua;;'
+freeswitch-1  | [m[32m2026-11-04 07:59:13.466463 0.00% [INFO] mod_lua.cpp:405 lua: LUA_PATH set to: '/usr/share/freeswitch/scripts/?.lua;;'
+freeswitch-1  | [m[m2026-11-04 07:59:13.466464 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_lua]
+freeswitch-1  | [m[36m2026-11-04 07:59:13.466469 0.00% [NOTICE] switch_loadable_module.c:326 Adding Dialplan 'LUA'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.466478 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'lua'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.466482 0.00% [NOTICE] switch_loadable_module.c:416 Adding Chat Application 'lua'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.466488 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'luarun'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.466493 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'lua'
+freeswitch-1  | [m[32m2026-11-04 07:59:13.467212 0.00% [INFO] mod_sofia.c:6737 Starting initial message thread.
+freeswitch-1  | [m[35m2026-11-04 07:59:13.467403 0.00% [WARNING] sofia.c:5325 rtp-timeout-sec deprecated use media_timeout variable.
+freeswitch-1  | [m[35m2026-11-04 07:59:13.467434 0.00% [WARNING] sofia.c:5332 rtp-hold-timeout-sec deprecated use media_hold_timeout variable.
+freeswitch-1  | [m[32m2026-11-04 07:59:13.467439 0.00% [INFO] sofia.c:6179 Setting nonce TTL to 60 seconds
+freeswitch-1  | [m[32m2026-11-04 07:59:13.467440 0.00% [INFO] sofia.c:6184 Setting MAX Auth Validity to 0 Attempts
+freeswitch-1  | [m[36m2026-11-04 07:59:13.467494 0.00% [NOTICE] sofia.c:6347 Started Profile customer [sofia_reg_customer]
+freeswitch-1  | [m[35m2026-11-04 07:59:13.467706 0.00% [WARNING] sofia.c:2279 MSG Thread 0 Started
+freeswitch-1  | [m[32m2026-11-04 07:59:13.482156 0.00% [INFO] switch_core_sqldb.c:1840 sofia:customer Starting SQL thread.
+freeswitch-1  | [m[36m2026-11-04 07:59:13.483383 0.00% [NOTICE] sofia_reg.c:3722 Added gateway 'upstream' to profile 'customer'
+freeswitch-1  | [m[36m2026-11-04 07:59:13.483399 0.00% [NOTICE] sofia.c:4226 Adding Alias [127.0.0.1] for profile [customer]
+freeswitch-1  | [m[m2026-11-04 07:59:14.969125 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_sofia]
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969148 0.00% [NOTICE] switch_loadable_module.c:225 Adding Endpoint 'sofia'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969175 0.00% [NOTICE] switch_loadable_module.c:225 Adding Endpoint 'rtp'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969183 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sofia_sla'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969195 0.00% [NOTICE] switch_loadable_module.c:384 Adding Application 'sofia_stir_shaken_vs'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969203 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969208 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia_gateway_data'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969212 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia_username_of'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969217 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia_contact'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969222 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia_count_reg'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969238 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia_dig'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969244 0.00% [NOTICE] switch_loadable_module.c:448 Adding API Function 'sofia_presence_data'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969251 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'sofia.status'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969264 0.00% [NOTICE] switch_loadable_module.c:480 Adding JSON API Function 'sofia.status.info'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969267 0.00% [NOTICE] switch_loadable_module.c:682 Adding Chat interface 'sip'
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969273 0.00% [NOTICE] switch_loadable_module.c:744 Adding Management interface 'mod_sofia' OID[.1.3.6.1.4.1.27880.1001]
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969605 0.00% [NOTICE] mod_json_cdr.c:114 Rotating log file paths
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969610 0.00% [NOTICE] mod_json_cdr.c:141 Setting log file path to /var/lib/freeswitch/cdr/archive
+freeswitch-1  | [m[36m2026-11-04 07:59:14.969620 0.00% [NOTICE] mod_json_cdr.c:180 Setting err log file path to /var/lib/freeswitch/cdr/retry
+freeswitch-1  | [m[m2026-11-04 07:59:14.969625 0.00% [CONSOLE] switch_loadable_module.c:1833 Successfully Loaded [mod_json_cdr]
+freeswitch-1  | [m[m2026-11-04 07:59:14.969643 0.00% [CONSOLE] switch_loadable_module.c:151 Starting runtime thread for mod_event_socket
+freeswitch-1  | [m[m2026-11-04 07:59:14.969701 0.00% [CONSOLE] switch_loadable_module.c:151 Starting runtime thread for CORE_SOFTTIMER_MODULE
+freeswitch-1  | [m[32m2026-11-04 07:59:14.969845 100.00% [INFO] switch_time.c:628 Clock synchronized to system time.
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970064 100.00% [NOTICE] switch_core.c:1482 Created ip list rfc6598.auto default (deny)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970070 100.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (allow) [] to list rfc6598.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970072 100.00% [NOTICE] switch_core.c:1488 Created ip list rfc1918.auto default (deny)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970073 100.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (allow) [] to list rfc1918.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970074 100.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (allow) [] to list rfc1918.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970074 100.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (allow) [] to list rfc1918.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970075 100.00% [NOTICE] switch_utils.c:665 Adding fe80::/10 (allow) [] to list rfc1918.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970076 100.00% [NOTICE] switch_core.c:1497 Created ip list wan.auto default (allow)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970076 100.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/8 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970077 100.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970078 100.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970079 100.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970080 100.00% [NOTICE] switch_utils.c:665 Adding 169.254.0.0/16 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970081 100.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970082 100.00% [NOTICE] switch_utils.c:665 Adding fe80::/10 (deny) [] to list wan.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970082 100.00% [NOTICE] switch_core.c:1509 Created ip list wan_v6.auto default (allow)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970083 100.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/0 (deny) [] to list wan_v6.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970084 100.00% [NOTICE] switch_utils.c:665 Adding fe80::/10 (deny) [] to list wan_v6.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970085 100.00% [NOTICE] switch_core.c:1517 Created ip list wan_v4.auto default (allow)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970086 100.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/8 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970086 100.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970087 100.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970088 100.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970089 100.00% [NOTICE] switch_utils.c:665 Adding 169.254.0.0/16 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970090 100.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970090 100.00% [NOTICE] switch_utils.c:665 Adding ::/0 (deny) [] to list wan_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970091 100.00% [NOTICE] switch_core.c:1530 Created ip list any_v6.auto default (allow)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970093 100.00% [NOTICE] switch_utils.c:665 Adding 0.0.0.0/0 (deny) [] to list any_v6.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970094 100.00% [NOTICE] switch_core.c:1537 Created ip list any_v4.auto default (allow)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970095 100.00% [NOTICE] switch_utils.c:665 Adding ::/0 (deny) [] to list any_v4.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970095 100.00% [NOTICE] switch_core.c:1544 Created ip list nat.auto default (deny)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970096 100.00% [NOTICE] switch_core.c:1546 Adding 10.1.0.127/255.255.240.0 (deny) to list nat.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970097 100.00% [NOTICE] switch_utils.c:665 Adding 10.0.0.0/8 (allow) [] to list nat.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970098 100.00% [NOTICE] switch_utils.c:665 Adding 172.16.0.0/12 (allow) [] to list nat.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970099 100.00% [NOTICE] switch_utils.c:665 Adding 192.168.0.0/16 (allow) [] to list nat.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970099 100.00% [NOTICE] switch_utils.c:665 Adding 100.64.0.0/10 (allow) [] to list nat.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970100 100.00% [NOTICE] switch_core.c:1556 Created ip list loopback.auto default (deny)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970101 100.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.0/8 (allow) [] to list loopback.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970101 100.00% [NOTICE] switch_utils.c:665 Adding ::1/128 (allow) [] to list loopback.auto
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970102 100.00% [NOTICE] switch_core.c:1563 Created ip list localnet.auto default (deny)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970103 100.00% [NOTICE] switch_core.c:1566 Adding 10.1.0.127/255.255.240.0 (allow) to list localnet.auto
+freeswitch-1  | [m[m2026-11-04 07:59:14.970105 100.00% [CONSOLE] switch_core.c:1593 Created ip list billing-tenants default (deny)
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970112 100.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.2/32 (allow) [FSIOK@127.0.0.1] to list billing-tenants
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970114 100.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.3/32 (allow) [FSIOFF@127.0.0.1] to list billing-tenants
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970115 100.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.4/32 (allow) [FSILOW@127.0.0.1] to list billing-tenants
+freeswitch-1  | [m[36m2026-11-04 07:59:14.970117 100.00% [NOTICE] switch_utils.c:665 Adding 127.0.0.5/32 (allow) [FSI60@127.0.0.1] to list billing-tenants
+freeswitch-1  | [m[m2026-11-04 07:59:14.970140 100.00% [CONSOLE] switch_core.c:2497 [m[33m[44m
+freeswitch-1  | .=============================================================.
+freeswitch-1  | |   _____              ______        _____ _____ ____ _   _   |
+freeswitch-1  | |  |  ___| __ ___  ___/ ___\ \      / /_ _|_   _/ ___| | | |  |
+freeswitch-1  | |  | |_ | '__/ _ \/ _ \___ \\ \ /\ / / | |  | || |   | |_| |  |
+freeswitch-1  | |  |  _|| | |  __/  __/___) |\ V  V /  | |  | || |___|  _  |  |
+freeswitch-1  | |  |_|  |_|  \___|\___|____/  \_/\_/  |___| |_| \____|_| |_|  |
+freeswitch-1  | |                                                             |
+freeswitch-1  | .=============================================================.
+freeswitch-1  | |   Anthony Minessale II, Michael Jerris, Brian West, Others  |
+freeswitch-1  | |   FreeSWITCH (http://www.freeswitch.org)                    |
+freeswitch-1  | |   Paypal Donations Appreciated: paypal@freeswitch.org       |
+freeswitch-1  | |   Brought to you by ClueCon http://www.cluecon.com/         |
+freeswitch-1  | .=============================================================.
+freeswitch-1  | 
+freeswitch-1  | .=======================================================================================================.
+freeswitch-1  | |       _                            _    ____ _             ____                                       |
+freeswitch-1  | |      / \   _ __  _ __  _   _  __ _| |  / ___| |_   _  ___ / ___|___  _ __                             |
+freeswitch-1  | |     / _ \ | '_ \| '_ \| | | |/ _` | | | |   | | | | |/ _ \ |   / _ \| '_ \                            |
+freeswitch-1  | |    / ___ \| | | | | | | |_| | (_| | | | |___| | |_| |  __/ |__| (_) | | | |                           |
+freeswitch-1  | |   /_/   \_\_| |_|_| |_|\__,_|\__,_|_|  \____|_|\__,_|\___|\____\___/|_| |_|                           |
+freeswitch-1  | |                                                                                                       |
+freeswitch-1  | |    ____ _____ ____    ____             __                                                             |
+freeswitch-1  | |   |  _ \_   _/ ___|  / ___|___  _ __  / _| ___ _ __ ___ _ __   ___ ___                                |
+freeswitch-1  | |   | |_) || || |     | |   / _ \| '_ \| |_ / _ \ '__/ _ \ '_ \ / __/ _ \                               |
+freeswitch-1  | |   |  _ < | || |___  | |__| (_) | | | |  _|  __/ | |  __/ | | | (_|  __/                               |
+freeswitch-1  | |   |_| \_\|_| \____|  \____\___/|_| |_|_|  \___|_|  \___|_| |_|\___\___|                               |
+freeswitch-1  | |                                                                                                       |
+freeswitch-1  | |     ____ _             ____                                                                           |
+freeswitch-1  | |    / ___| |_   _  ___ / ___|___  _ __         ___ ___  _ __ ___                                       |
+freeswitch-1  | |   | |   | | | | |/ _ \ |   / _ \| '_ \       / __/ _ \| '_ ` _ \                                      |
+freeswitch-1  | |   | |___| | |_| |  __/ |__| (_) | | | |  _  | (_| (_) | | | | | |                                     |
+freeswitch-1  | |    \____|_|\__,_|\___|\____\___/|_| |_| (_)  \___\___/|_| |_| |_|                                     |
+freeswitch-1  | |                                                                                                       |
+freeswitch-1  | .=======================================================================================================.
+freeswitch-1  | [m
+freeswitch-1  | 
+freeswitch-1  | [m[32m2026-11-04 07:59:14.970153 100.00% [INFO] switch_core.c:2506 
+freeswitch-1  | FreeSWITCH Version 1.11.3-release-33213556856-ef32e20529~64bit (-release-33213556856-ef32e20529 64bit)
+freeswitch-1  | 
+freeswitch-1  | FreeSWITCH Started
+freeswitch-1  | Max Sessions [100]
+freeswitch-1  | Session Rate [20]
+freeswitch-1  | SQL [Enabled]
+freeswitch-1  | [m[36m2026-11-04 07:59:15.569872 100.00% [NOTICE] switch_cpp.cpp:1466 PASS lua_version
+freeswitch-1  | [m[36m2026-11-04 07:59:15.569872 100.00% [NOTICE] switch_cpp.cpp:1466 PASS cURL.safe
+freeswitch-1  | [m[36m2026-11-04 07:59:15.569872 100.00% [NOTICE] switch_cpp.cpp:1466 PASS cjson.safe
+freeswitch-1  | [m[36m2026-11-04 07:59:15.569872 100.00% [NOTICE] switch_cpp.cpp:1466 PASS json_integer_conversion
+freeswitch-1  | [m[36m2026-11-04 07:59:15.569872 100.00% [NOTICE] switch_cpp.cpp:1466 PASS FS_CHECK
+freeswitch-1  | [m[36m2026-11-04 07:59:16.069869 98.90% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [f0523e44-2017-473a-8ddc-14ecb6659a81]
+freeswitch-1  | [m[32m2026-11-04 07:59:16.069869 98.90% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: plus-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:16.069869 98.90% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=+447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:16.109870 98.90% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:16.109870 98.90% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:16.109870 98.90% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/+447700900123)
+freeswitch-1  | [m[36m2026-11-04 07:59:16.109870 98.90% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/+447700900123 [56ae06d4-43df-4e9a-9f12-c97ceeb39871]
+freeswitch-1  | [m[35m2026-11-04 07:59:16.109870 98.90% [WARNING] switch_core_port_allocator.c:83 Rounding odd end port 16483 to 16482
+freeswitch-1  | [m[32m2026-11-04 07:59:16.109870 98.90% [INFO] sofia_glue.c:1656 sofia/customer/+447700900123 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:16.109870 98.90% [NOTICE] sofia.c:8699 Channel [sofia/customer/+447700900123] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:16.129868 98.90% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 07:59:16.129868 98.90% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+14400 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 07:59:18.149868 98.77% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:18.169867 98.77% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/+447700900123 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:18.169867 98.77% [NOTICE] switch_core_session.c:1766 Session 2 (sofia/customer/+447700900123) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:18.169867 98.77% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/+447700900123 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 07:59:18.169867 98.77% [INFO] mod_json_cdr.c:272 Process [a_f0523e44-2017-473a-8ddc-14ecb6659a81.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:18.169867 98.77% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_f0523e44-2017-473a-8ddc-14ecb6659a81.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:18.189872 98.77% [NOTICE] switch_core_session.c:1766 Session 1 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:18.189872 98.77% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:20.469867 97.73% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [72f18d89-1f1f-48ec-8dd8-87e1c47e8fe2]
+freeswitch-1  | [m[32m2026-11-04 07:59:20.469867 97.73% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: doublezero-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:20.469867 97.73% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->00447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=00447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:20.489870 97.73% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:20.489870 97.73% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:20.489870 97.73% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/00447700900123)
+freeswitch-1  | [m[36m2026-11-04 07:59:20.489870 97.73% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/00447700900123 [edf070b9-d647-4e7a-afeb-f6340b99b144]
+freeswitch-1  | [m[32m2026-11-04 07:59:20.489870 97.73% [INFO] sofia_glue.c:1656 sofia/customer/00447700900123 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:20.489870 97.73% [NOTICE] sofia.c:8699 Channel [sofia/customer/00447700900123] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:20.529868 97.73% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 07:59:20.529868 97.73% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+14400 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 07:59:22.529868 97.20% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:22.549869 97.20% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/00447700900123 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:22.549869 97.20% [NOTICE] switch_core_session.c:1766 Session 4 (sofia/customer/00447700900123) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:22.549869 97.20% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/00447700900123 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 07:59:22.549869 97.20% [INFO] mod_json_cdr.c:272 Process [a_72f18d89-1f1f-48ec-8dd8-87e1c47e8fe2.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:22.549869 97.20% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_72f18d89-1f1f-48ec-8dd8-87e1c47e8fe2.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:22.549869 97.20% [NOTICE] switch_core_session.c:1766 Session 3 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:22.549869 97.20% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:24.289868 96.20% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [95cda5a0-ee46-48f6-97a3-6a14e301bb89]
+freeswitch-1  | [m[32m2026-11-04 07:59:24.289868 96.20% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: domestic-mobile-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:24.289868 96.20% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->13800138000 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=13800138000)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:24.309871 96.20% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:24.309871 96.20% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:24.309871 96.20% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/13800138000)
+freeswitch-1  | [m[36m2026-11-04 07:59:24.309871 96.20% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/13800138000 [033d9195-d2e5-40f2-8f97-60a98f7df404]
+freeswitch-1  | [m[32m2026-11-04 07:59:24.309871 96.20% [INFO] sofia_glue.c:1656 sofia/customer/13800138000 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:24.329871 96.20% [NOTICE] sofia.c:8699 Channel [sofia/customer/13800138000] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:24.349868 96.20% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 07:59:24.349868 96.20% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+14400 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 07:59:26.349868 95.83% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:26.369869 95.83% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/13800138000 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:26.369869 95.83% [NOTICE] switch_core_session.c:1766 Session 6 (sofia/customer/13800138000) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:26.369869 95.83% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/13800138000 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 07:59:26.369869 95.83% [INFO] mod_json_cdr.c:272 Process [a_95cda5a0-ee46-48f6-97a3-6a14e301bb89.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:26.369869 95.83% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_95cda5a0-ee46-48f6-97a3-6a14e301bb89.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:26.369869 95.83% [NOTICE] switch_core_session.c:1766 Session 5 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:26.369869 95.83% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:28.389867 94.83% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [29d34e00-9b0d-4c84-88c7-6b951f9b3db4]
+freeswitch-1  | [m[32m2026-11-04 07:59:28.389867 94.83% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: domestic-landline-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:28.389867 94.83% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->07551234567 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=07551234567)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:28.409871 94.83% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:28.409871 94.83% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:28.409871 94.83% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/07551234567)
+freeswitch-1  | [m[36m2026-11-04 07:59:28.409871 94.83% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/07551234567 [d2535262-edc0-417b-9e1c-50d8af27b263]
+freeswitch-1  | [m[32m2026-11-04 07:59:28.409871 94.83% [INFO] sofia_glue.c:1656 sofia/customer/07551234567 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:28.409871 94.83% [NOTICE] sofia.c:8699 Channel [sofia/customer/07551234567] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:28.429868 94.83% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 07:59:28.429868 94.83% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+14400 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 07:59:30.449868 94.43% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:30.469867 94.43% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/07551234567 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:30.469867 94.43% [NOTICE] switch_core_session.c:1766 Session 8 (sofia/customer/07551234567) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:30.469867 94.43% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/07551234567 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 07:59:30.469867 94.43% [INFO] mod_json_cdr.c:272 Process [a_29d34e00-9b0d-4c84-88c7-6b951f9b3db4.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:30.469867 94.43% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_29d34e00-9b0d-4c84-88c7-6b951f9b3db4.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:30.469867 94.43% [NOTICE] switch_core_session.c:1766 Session 7 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:30.469867 94.43% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:32.509870 93.43% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [0b7d054a-4df5-482e-90f8-aba48c6288ca]
+freeswitch-1  | [m[32m2026-11-04 07:59:32.509870 93.43% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: nanp-international-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:32.509870 93.43% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+13055551234 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=+13055551234)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:32.529869 93.43% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:32.529869 93.43% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:32.529869 93.43% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/+13055551234)
+freeswitch-1  | [m[36m2026-11-04 07:59:32.529869 93.43% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/+13055551234 [4e239653-5584-49dc-809a-c5840d4569e8]
+freeswitch-1  | [m[32m2026-11-04 07:59:32.529869 93.43% [INFO] sofia_glue.c:1656 sofia/customer/+13055551234 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:32.529869 93.43% [NOTICE] sofia.c:8699 Channel [sofia/customer/+13055551234] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:32.549869 93.43% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 07:59:32.549869 93.43% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+14400 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 07:59:34.569869 92.93% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:34.589867 92.93% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/+13055551234 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:34.589867 92.93% [NOTICE] switch_core_session.c:1766 Session 10 (sofia/customer/+13055551234) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:34.589867 92.93% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/+13055551234 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 07:59:34.589867 92.93% [INFO] mod_json_cdr.c:272 Process [a_0b7d054a-4df5-482e-90f8-aba48c6288ca.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:34.589867 92.93% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_0b7d054a-4df5-482e-90f8-aba48c6288ca.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:34.589867 92.93% [NOTICE] switch_core_session.c:1766 Session 9 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:34.589867 92.93% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:36.329867 91.87% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [8f432a08-d106-4e87-a105-9644edabcbb1]
+freeswitch-1  | [m[32m2026-11-04 07:59:36.329867 91.87% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: nanp-domestic-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:36.329867 91.87% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->13055551234 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=13055551234)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:36.349871 91.87% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:36.349871 91.87% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:36.349871 91.87% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/13055551234)
+freeswitch-1  | [m[36m2026-11-04 07:59:36.349871 91.87% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/13055551234 [7613faaf-5a41-4096-9347-3d254533a583]
+freeswitch-1  | [m[32m2026-11-04 07:59:36.349871 91.87% [INFO] sofia_glue.c:1656 sofia/customer/13055551234 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:36.349871 91.87% [NOTICE] sofia.c:8699 Channel [sofia/customer/13055551234] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:36.369870 91.87% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 07:59:36.369870 91.87% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+14400 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 07:59:38.369867 91.53% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:38.389868 91.53% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/13055551234 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 07:59:38.389868 91.53% [NOTICE] switch_core_session.c:1766 Session 12 (sofia/customer/13055551234) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:38.389868 91.53% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/13055551234 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 07:59:38.389868 91.53% [INFO] mod_json_cdr.c:272 Process [a_8f432a08-d106-4e87-a105-9644edabcbb1.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:38.389868 91.53% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_8f432a08-d106-4e87-a105-9644edabcbb1.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:38.389868 91.53% [NOTICE] switch_core_session.c:1766 Session 11 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:38.389868 91.53% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:40.429869 90.57% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [d1b16b48-3ae7-4750-b544-214461814454]
+freeswitch-1  | [m[32m2026-11-04 07:59:40.429869 90.57% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: bad-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:40.429869 90.57% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->bad in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=bad)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 respond(484)
+freeswitch-1  | [m[36m2026-11-04 07:59:40.429869 90.57% [NOTICE] mod_sofia.c:2451 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [INVALID_NUMBER_FORMAT]
+freeswitch-1  | [m[32m2026-11-04 07:59:40.429869 90.57% [INFO] mod_json_cdr.c:272 Process [a_d1b16b48-3ae7-4750-b544-214461814454.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:40.429869 90.57% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_d1b16b48-3ae7-4750-b544-214461814454.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:40.429869 90.57% [NOTICE] switch_core_session.c:1766 Session 13 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:40.429869 90.57% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:40.969869 90.57% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.3 [92f8805c-cdd6-4b47-abaa-8a2bcb1f7de0]
+freeswitch-1  | [m[32m2026-11-04 07:59:40.969869 90.57% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.3 receiving invite from 127.0.0.3:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: disabled-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:40.969869 90.57% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.3 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.3 set(billing_dialed_number=+447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.3 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.3 respond(403)
+freeswitch-1  | [m[36m2026-11-04 07:59:40.989869 90.57% [NOTICE] mod_sofia.c:2451 Hangup sofia/customer/fsi@127.0.0.3 [CS_EXECUTE] [CALL_REJECTED]
+freeswitch-1  | [m[32m2026-11-04 07:59:40.989869 90.57% [INFO] mod_json_cdr.c:272 Process [a_92f8805c-cdd6-4b47-abaa-8a2bcb1f7de0.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:40.989869 90.57% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_92f8805c-cdd6-4b47-abaa-8a2bcb1f7de0.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:41.009868 90.57% [NOTICE] switch_core_session.c:1766 Session 14 (sofia/customer/fsi@127.0.0.3) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:41.009868 90.57% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.3 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:41.950034 89.57% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.4 [f1f47f9e-b348-4eca-b915-d23f9f946568]
+freeswitch-1  | [m[32m2026-11-04 07:59:41.950034 89.57% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.4 receiving invite from 127.0.0.4:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: low-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:41.950034 89.57% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.4 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.4 set(billing_dialed_number=+447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.4 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.4 respond(402)
+freeswitch-1  | [m[36m2026-11-04 07:59:41.950034 89.57% [NOTICE] mod_sofia.c:2451 Hangup sofia/customer/fsi@127.0.0.4 [CS_EXECUTE] [CALL_REJECTED]
+freeswitch-1  | [m[32m2026-11-04 07:59:41.950034 89.57% [INFO] mod_json_cdr.c:272 Process [a_f1f47f9e-b348-4eca-b915-d23f9f946568.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:41.950034 89.57% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_f1f47f9e-b348-4eca-b915-d23f9f946568.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:41.950034 89.57% [NOTICE] switch_core_session.c:1766 Session 15 (sofia/customer/fsi@127.0.0.4) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:41.950034 89.57% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.4 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:44.089882 87.60% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [b4c0ff45-86aa-48fa-a05f-ca095af9156e]
+freeswitch-1  | [m[32m2026-11-04 07:59:44.089882 87.60% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: mismatch-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:44.089882 87.60% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->07551234567 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=07551234567)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[31m2026-11-04 07:59:44.109870 87.60% [ERR] switch_cpp.cpp:1466 计费授权请求被拒绝 HTTP 400
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 respond(503)
+freeswitch-1  | [m[36m2026-11-04 07:59:44.109870 87.60% [NOTICE] mod_sofia.c:2451 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_TEMPORARY_FAILURE]
+freeswitch-1  | [m[32m2026-11-04 07:59:44.109870 87.60% [INFO] mod_json_cdr.c:272 Process [a_b4c0ff45-86aa-48fa-a05f-ca095af9156e.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 07:59:44.109870 87.60% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_b4c0ff45-86aa-48fa-a05f-ca095af9156e.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 07:59:44.109870 87.60% [NOTICE] switch_core_session.c:1766 Session 16 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 07:59:44.109870 87.60% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 07:59:45.289868 86.57% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.5 [dd91a120-81dd-4cfe-b547-26bfb91f2604]
+freeswitch-1  | [m[32m2026-11-04 07:59:45.289868 86.57% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.5 receiving invite from 127.0.0.5:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: allotted-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 07:59:45.289868 86.57% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.5 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.5 set(billing_dialed_number=+447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.5 lua(billing_authorize.lua)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.5 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 07:59:45.309869 86.57% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 07:59:45.309869 86.57% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.5 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 07:59:45.309869 86.57% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.5 bridge(sofia/gateway/upstream/+447700900123)
+freeswitch-1  | [m[36m2026-11-04 07:59:45.309869 86.57% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/+447700900123 [739c99a9-1cff-487b-b9cf-4c23a368bb2b]
+freeswitch-1  | [m[32m2026-11-04 07:59:45.309869 86.57% [INFO] sofia_glue.c:1656 sofia/customer/+447700900123 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 07:59:45.309869 86.57% [NOTICE] sofia.c:8699 Channel [sofia/customer/+447700900123] has been answered
+freeswitch-1  | [m[36m2026-11-04 07:59:45.329870 86.57% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.5!
+freeswitch-1  | [m[36m2026-11-04 07:59:45.329870 86.57% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.5] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.5 sched_hangup(+60 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 08:00:45.329867 98.40% [NOTICE] switch_ivr_async.c:5527 Hangup sofia/customer/fsi@127.0.0.5 [CS_EXECUTE] [ALLOTTED_TIMEOUT]
+freeswitch-1  | [m[36m2026-11-04 08:00:45.349867 98.40% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/+447700900123 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 08:00:45.349867 98.40% [NOTICE] switch_core_session.c:1766 Session 18 (sofia/customer/+447700900123) Ended
+freeswitch-1  | [m[36m2026-11-04 08:00:45.349867 98.40% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/+447700900123 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 08:00:45.349867 98.40% [INFO] mod_json_cdr.c:272 Process [a_dd91a120-81dd-4cfe-b547-26bfb91f2604.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 08:00:45.349867 98.40% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_dd91a120-81dd-4cfe-b547-26bfb91f2604.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 08:00:45.369881 98.40% [NOTICE] switch_core_session.c:1766 Session 17 (sofia/customer/fsi@127.0.0.5) Ended
+freeswitch-1  | [m[36m2026-11-04 08:00:45.369881 98.40% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.5 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 08:00:46.789868 97.93% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [6b4cc968-8cc4-4355-80a5-aabf95269a8d]
+freeswitch-1  | [m[32m2026-11-04 08:00:46.789868 97.93% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: refused-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 08:00:46.789868 97.93% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=+447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[35m2026-11-04 08:00:46.789868 97.93% [WARNING] switch_cpp.cpp:1466 计费授权无有效响应 uuid=6b4cc968-8cc4-4355-80a5-aabf95269a8d
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 08:00:46.789868 97.93% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 08:00:46.789868 97.93% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 08:00:46.789868 97.93% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/+447700900123)
+freeswitch-1  | [m[36m2026-11-04 08:00:46.789868 97.93% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/+447700900123 [212a928b-1931-4e77-84fb-f526ad863c02]
+freeswitch-1  | [m[32m2026-11-04 08:00:46.789868 97.93% [INFO] sofia_glue.c:1656 sofia/customer/+447700900123 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 08:00:46.789868 97.93% [NOTICE] sofia.c:8699 Channel [sofia/customer/+447700900123] has been answered
+freeswitch-1  | [m[36m2026-11-04 08:00:46.809869 97.93% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 08:00:46.809869 97.93% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+1800 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 08:00:48.829867 97.27% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 08:00:48.849867 97.27% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/+447700900123 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 08:00:48.849867 97.27% [NOTICE] switch_core_session.c:1766 Session 20 (sofia/customer/+447700900123) Ended
+freeswitch-1  | [m[36m2026-11-04 08:00:48.849867 97.27% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/+447700900123 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 08:00:48.849867 97.27% [INFO] mod_json_cdr.c:272 Process [a_6b4cc968-8cc4-4355-80a5-aabf95269a8d.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 08:00:48.849867 97.27% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_6b4cc968-8cc4-4355-80a5-aabf95269a8d.cdr.json]
+freeswitch-1  | [m[31m2026-11-04 08:00:48.849867 97.27% [ERR] mod_json_cdr.c:399 Got error [502] posting to web server [http://127.0.0.1:3002/cdr]
+freeswitch-1  | [m[36m2026-11-04 08:00:49.869881 97.07% [NOTICE] switch_core_session.c:1766 Session 19 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 08:00:49.869881 97.07% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 08:00:54.669868 95.67% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [9c97d231-9d08-4e4a-b7e0-481cfedb747a]
+freeswitch-1  | [m[32m2026-11-04 08:00:54.669868 95.67% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: stalled-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 08:00:54.669868 95.67% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=+447700900123)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 lua(billing_authorize.lua)
+freeswitch-1  | [m[35m2026-11-04 08:00:56.169867 95.03% [WARNING] switch_cpp.cpp:1466 计费授权无有效响应 uuid=9c97d231-9d08-4e4a-b7e0-481cfedb747a
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 execute_extension(billing-bridge XML billing-authorized)
+freeswitch-1  | [m[32m2026-11-04 08:00:56.169867 95.03% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->billing-bridge in context billing-authorized
+freeswitch-1  | [m[36m2026-11-04 08:00:56.169867 95.03% [NOTICE] switch_core_session.c:3094 Execute [depth=1] set(hangup_after_bridge=true)
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 set(hangup_after_bridge=true)
+freeswitch-1  | [m[36m2026-11-04 08:00:56.169867 95.03% [NOTICE] switch_core_session.c:3094 Execute [depth=1] bridge(sofia/gateway/upstream/${billing_destination})
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 bridge(sofia/gateway/upstream/+447700900123)
+freeswitch-1  | [m[36m2026-11-04 08:00:56.169867 95.03% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/+447700900123 [d8988872-9c4e-4810-b04e-d31f9d89ba0f]
+freeswitch-1  | [m[32m2026-11-04 08:00:56.169867 95.03% [INFO] sofia_glue.c:1656 sofia/customer/+447700900123 sending invite call-id: (null)
+freeswitch-1  | [m[36m2026-11-04 08:00:56.169867 95.03% [NOTICE] sofia.c:8699 Channel [sofia/customer/+447700900123] has been answered
+freeswitch-1  | [m[36m2026-11-04 08:00:56.189867 95.03% [NOTICE] sofia_media.c:90 Pre-Answer sofia/customer/fsi@127.0.0.2!
+freeswitch-1  | [m[36m2026-11-04 08:00:56.189867 95.03% [NOTICE] switch_ivr_originate.c:3855 Channel [sofia/customer/fsi@127.0.0.2] has been answered
+freeswitch-1  | [m[32mEXECUTE [depth=1] sofia/customer/fsi@127.0.0.2 sched_hangup(+1800 ALLOTTED_TIMEOUT)
+freeswitch-1  | [m[36m2026-11-04 08:00:58.189867 95.00% [NOTICE] sofia.c:1065 Hangup sofia/customer/fsi@127.0.0.2 [CS_EXECUTE] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 08:00:58.209867 95.00% [NOTICE] switch_ivr_bridge.c:1027 Hangup sofia/customer/+447700900123 [CS_EXCHANGE_MEDIA] [NORMAL_CLEARING]
+freeswitch-1  | [m[36m2026-11-04 08:00:58.209867 95.00% [NOTICE] switch_core_session.c:1766 Session 22 (sofia/customer/+447700900123) Ended
+freeswitch-1  | [m[36m2026-11-04 08:00:58.209867 95.00% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/+447700900123 [CS_DESTROY]
+freeswitch-1  | [m[32m2026-11-04 08:00:58.209867 95.00% [INFO] mod_json_cdr.c:272 Process [a_9c97d231-9d08-4e4a-b7e0-481cfedb747a.cdr.json]
+freeswitch-1  | [m[32m2026-11-04 08:00:58.209867 95.00% [INFO] mod_json_cdr.c:276 Log to disk [/var/lib/freeswitch/cdr/archive/a_9c97d231-9d08-4e4a-b7e0-481cfedb747a.cdr.json]
+freeswitch-1  | [m[36m2026-11-04 08:00:58.229873 95.00% [NOTICE] switch_core_session.c:1766 Session 21 (sofia/customer/fsi@127.0.0.2) Ended
+freeswitch-1  | [m[36m2026-11-04 08:00:58.229873 95.00% [NOTICE] switch_core_session.c:1770 Close Channel sofia/customer/fsi@127.0.0.2 [CS_DESTROY]
+freeswitch-1  | [m[36m2026-11-04 08:01:00.509873 94.10% [NOTICE] switch_channel.c:1143 New Channel sofia/customer/fsi@127.0.0.2 [5ab9bbcf-d0f4-4d7a-b310-4b8f37a68c60]
+freeswitch-1  | [m[32m2026-11-04 08:01:00.509873 94.10% [INFO] sofia.c:10478 sofia/customer/fsi@127.0.0.2 receiving invite from 127.0.0.2:5062 version: 1.11.3 -release-33213556856-ef32e20529 64bit call-id: replay-df7ad3b65a654098925010c6b5ff4e34@fsi
+freeswitch-1  | [m[32m2026-11-04 08:01:00.509873 94.10% [INFO] mod_dialplan_xml.c:648 Processing fsi <fsi>->+447700900123 in context billing
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_authorized=false)
+freeswitch-1  | [m[32mEXECUTE [depth=0] sofia/customer/fsi@127.0.0.2 set(billing_dialed_number=+447700900123)
