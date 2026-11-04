@@ -1,0 +1,24 @@
+# 服务器 A 的 WireGuard 模板，仅在 B 没有内网 IPv4、A 与 B 之间需要隧道时使用。
+# 复制到 /etc/wireguard/wg0.conf，权限 0600 root:root；占位符全部替换。
+#
+# 密钥（两台机器各自执行，私钥不出本机）：
+#   wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+#   chmod 0600 /etc/wireguard/privatekey
+#
+# 启用：
+#   systemctl enable --now wg-quick@wg0
+#   nftables-a.conf 取消到 B 的 UDP 51820 注释后重启 nftables
+#   FreeSWITCH 的 billing_worker_url 与 relay 的 proxy_pass 改为 10.66.0.1:3001
+#
+# Endpoint 填 B 的公网 IPv4 与 wg0 的 ListenPort；隧道地址只是示例。
+
+[Interface]
+Address = 10.66.0.2/24
+PrivateKey = replace-with-a-private-key
+
+[Peer]
+# 服务器 B 的公钥
+PublicKey = replace-with-b-public-key
+Endpoint = 203.0.113.20:51820
+AllowedIPs = 10.66.0.1/32
+PersistentKeepalive = 25

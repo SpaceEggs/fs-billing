@@ -193,3 +193,61 @@ jobs:
       - name: Stop PostgreSQL
         if: always()
         run: docker compose down
+
+  # 运维骨架的静态检查。与本地复现使用同一条 docker run 命令：
+  #   docker run --rm --cap-add=NET_ADMIN -v "$PWD":/w:ro -w /w debian:13 bash -c '...'
+  # nft -c 只解析不应用，但初始化 netlink 缓存需要 NET_ADMIN；挂载始终只读。
+  ops-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: shellcheck、nft -c、systemd-analyze verify、nginx -t
+        run: |
+          docker run --rm --cap-add=NET_ADMIN \
+            -v "$PWD":/w:ro -w /w debian:13 bash -c '
+            set -euo pipefail
+            shopt -s globstar
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends \
+              shellcheck nftables nginx systemd openssl netbase >/dev/null
+
+            # 1. 所有运维 shell 脚本
+            shellcheck ops/**/*.sh
+
+            # 2. nftables：只校验语法，不加载规则
+            nft -c -f ops/firewall/nftables-b.conf
+            nft -c -f ops/firewall/nftables-a.conf
+
+            # 3. systemd 单元：准备单元里出现的用户、目录、node 占位与环境文件
+            id fs-billing >/dev/null 2>&1 ||
+              useradd --system --no-create-home --shell /usr/sbin/nologin fs-billing
+            install -d /opt/fs-billing/current/apps/api /opt/fs-billing/current/apps/worker
+            install -d -o fs-billing -g fs-billing /var/lib/fs-billing
+            install -m 0755 /bin/true /usr/local/bin/node
+            install -d /etc/fs-billing
+            : > /etc/fs-billing/app.env
+            systemd-analyze verify \
+              ops/deploy/systemd/fs-billing-api.service \
+              ops/deploy/systemd/fs-billing-worker.service
+
+            # 4. nginx：临时主配置包含站点片段，证书与 web 根目录用临时占位
+            install -d /etc/ssl/fs-billing /var/log/nginx /opt/fs-billing/current/apps/web/dist
+            openssl req -x509 -newkey rsa:2048 -sha256 -days 1 -nodes \
+              -subj /CN=test -addext subjectAltName=IP:127.0.0.1 \
+              -keyout /etc/ssl/fs-billing/privkey.pem \
+              -out /etc/ssl/fs-billing/fullchain.pem >/dev/null 2>&1
+            tmp=$(mktemp -d)
+            printf "%s\n" \
+              "worker_processes 1;" \
+              "error_log $tmp/error.log;" \
+              "pid $tmp/nginx.pid;" \
+              "events { worker_connections 64; }" \
+              "http {" \
+              "  include /etc/nginx/mime.types;" \
+              "  access_log $tmp/access.log;" \
+              "  include /w/ops/deploy/nginx/fs-billing.conf;" \
+              "}" > "$tmp/nginx.conf"
+            nginx -t -c "$tmp/nginx.conf" -p "$tmp"
+          '
