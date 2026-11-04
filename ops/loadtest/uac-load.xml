@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  压测客户（UAC）。号码来自 destinations.csv 的 field0，由固定的 RANDOM 清单覆盖国内 86、
+  国际 44 与 1 三类前缀；号码全部是合成号码，不指向任何真实用户。
+  接通后保持 2–8 秒（均值 5 秒），对应 50 路并发 × 10 通/秒。全程发送 RTP，避免
+  FreeSWITCH 因媒体停顿而提前拆线。
+-->
+<scenario name="压测客户：接通后保持 2–8 秒">
+  <send retrans="500">
+    <![CDATA[
+INVITE sip:[field0]@[remote_ip]:[remote_port] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-load-[call_number]
+From: <sip:load@[local_ip]>;tag=load-[call_number]
+To: <sip:[field0]@[remote_ip]>
+Call-ID: [call_id]
+CSeq: 1 INVITE
+Contact: <sip:load@[local_ip]:[local_port]>
+Max-Forwards: 70
+Content-Type: application/sdp
+Content-Length: [len]
+
+v=0
+o=load 1 1 IN IP4 [local_ip]
+s=load
+c=IN IP4 [local_ip]
+t=0 0
+m=audio [media_port] RTP/AVP 0
+a=rtpmap:0 PCMU/8000
+a=ptime:20
+a=sendrecv
+    ]]>
+  </send>
+  <recv response="100" optional="true" />
+  <recv response="180" optional="true" />
+  <recv response="183" optional="true" />
+  <recv response="200" rrs="true" timeout="10000" />
+  <send>
+    <![CDATA[
+ACK [next_url] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-load-ack-[call_number]
+From: <sip:load@[local_ip]>;tag=load-[call_number]
+To: <sip:[field0]@[remote_ip]>[peer_tag_param]
+Call-ID: [call_id]
+CSeq: 1 ACK
+[routes]
+Max-Forwards: 70
+Content-Length: 0
+    ]]>
+  </send>
+  <nop>
+    <action>
+      <exec rtp_stream="/media/silence.wav,-1,0" />
+    </action>
+  </nop>
+  <pause distribution="uniform" min="2000" max="8000" />
+  <send retrans="500">
+    <![CDATA[
+BYE [next_url] SIP/2.0
+Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-load-bye-[call_number]
+From: <sip:load@[local_ip]>;tag=load-[call_number]
+To: <sip:[field0]@[remote_ip]>[peer_tag_param]
+Call-ID: [call_id]
+CSeq: 2 BYE
+[routes]
+Max-Forwards: 70
+Content-Length: 0
+    ]]>
+  </send>
+  <recv response="200" timeout="10000" />
+</scenario>
