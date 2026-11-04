@@ -89,6 +89,8 @@ jobs:
       DATABASE_URL: postgresql://fs_billing:local-development-only@127.0.0.1:5432/fs_billing
       APP_DATABASE_URL: postgresql://fs_billing_app:local-app-only@127.0.0.1:5432/fs_billing
       FS_INTEGRATION_LOG_DIR: /tmp/fs-integration-ci
+      # 定时、手动与 main 推送是上线门禁的输入：镜像不可用必须红。拉取请求允许跳过。
+      FS_E2E_REQUIRE_IMAGE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && '1' || '' }}
     steps:
       - uses: actions/checkout@v7.0.1
       - name: 拉取私有镜像
@@ -104,8 +106,12 @@ jobs:
             echo 'available=true' >> "$GITHUB_OUTPUT"
             echo "FS_IMAGE=$image" >> "$GITHUB_ENV"
           else
-            echo "::notice::此 hash 的镜像尚未构建（$IMAGE_HASH），跳过 FreeSWITCH 联调；合并后在 main 上运行 workflow_dispatch。"
             echo 'available=false' >> "$GITHUB_OUTPUT"
+            if [[ -n "$FS_E2E_REQUIRE_IMAGE" ]]; then
+              echo "::error::此 hash 的镜像不可用（$IMAGE_HASH）；定时、手动与 main 推送不允许跳过 FreeSWITCH 联调。"
+              exit 1
+            fi
+            echo "::notice::此 hash 的镜像尚未构建（$IMAGE_HASH），跳过 FreeSWITCH 联调；合并后在 main 上运行 workflow_dispatch。"
           fi
       - uses: pnpm/action-setup@v6.1.0
         if: steps.pull.outputs.available == 'true'
@@ -120,6 +126,7 @@ jobs:
         if: steps.pull.outputs.available == 'true'
         run: docker compose up -d --wait postgres
       - name: SIP 与账本联调
+        id: integration
         if: steps.pull.outputs.available == 'true'
         run: bash freeswitch/test/run-integration.sh "$FS_INTEGRATION_LOG_DIR"
       - name: 保存联调日志
@@ -132,3 +139,87 @@ jobs:
       - name: 停止 PostgreSQL
         if: always() && steps.pull.outputs.available == 'true'
         run: docker compose down
+      # 无论前面是否执行或失败，都落一份状态：绿不等于联调通过（验收 13）。
+      - name: 写入联调状态
+        if: always()
+        env:
+          IMAGE_HASH: ${{ hashFiles('freeswitch/install/**', 'freeswitch/docker/**') }}
+          PULL_AVAILABLE: ${{ steps.pull.outputs.available }}
+          INTEGRATION_OUTCOME: ${{ steps.integration.outcome }}
+        run: |
+          passed=0
+          total=0
+          if [[ -f "$FS_INTEGRATION_LOG_DIR/results.tsv" ]]; then
+            total=$(awk -F '\t' 'NR > 1 && NF > 0 { count++ } END { print count + 0 }' "$FS_INTEGRATION_LOG_DIR/results.tsv")
+            passed=$(awk -F '\t' 'NR > 1 && $2 == "PASS" { count++ } END { print count + 0 }' "$FS_INTEGRATION_LOG_DIR/results.tsv")
+          fi
+
+          status=failed
+          reason='拉取步骤未执行，无法确认镜像与联调结果。'
+          label=失败
+          if [[ "${PULL_AVAILABLE:-}" == 'true' ]]; then
+            if [[ "${INTEGRATION_OUTCOME:-}" == 'success' && "$total" -gt 0 && "$passed" -eq "$total" ]]; then
+              status=passed
+              label=通过
+              reason="联调全部通过（$passed/$total）。"
+            else
+              status=failed
+              label=失败
+              reason="联调未通过（$passed/$total，步骤结果 ${INTEGRATION_OUTCOME:-未执行}）。"
+            fi
+          elif [[ "${PULL_AVAILABLE:-}" == 'false' ]]; then
+            if [[ -n "${FS_E2E_REQUIRE_IMAGE:-}" ]]; then
+              status=failed
+              label=失败
+              reason='镜像不可用，且此事件不允许跳过。'
+            else
+              status=skipped
+              label=跳过
+              reason='镜像不可用，pull request 允许跳过。'
+            fi
+          fi
+
+          jq -n \
+            --arg status "$status" \
+            --arg sha "${GITHUB_SHA:-}" \
+            --arg event "${GITHUB_EVENT_NAME:-}" \
+            --arg image_hash "${IMAGE_HASH:-}" \
+            --arg reason "$reason" \
+            --argjson passed "$passed" \
+            --argjson total "$total" \
+            '{
+              status: $status,
+              sha: $sha,
+              event: $event,
+              image_hash: $image_hash,
+              passed: $passed,
+              total: $total,
+              reason: $reason
+            }' > fs-e2e-status.json
+          cat fs-e2e-status.json
+
+          {
+            printf '## FreeSWITCH 联调状态：%s\n\n' "$label"
+            if [[ "$status" == 'skipped' ]]; then
+              printf '**SKIPPED** — 本次没有执行 FreeSWITCH 联调。\n\n'
+            fi
+            printf '| 项 | 值 |\n| --- | --- |\n'
+            printf '| 状态 | %s |\n' "$status"
+            printf '| 提交 | %s |\n' "${GITHUB_SHA:-}"
+            printf '| 事件 | %s |\n' "${GITHUB_EVENT_NAME:-}"
+            printf '| 镜像 hash | %s |\n' "${IMAGE_HASH:-}"
+            printf '| 通过/总数 | %s/%s |\n\n' "$passed" "$total"
+            printf '%s\n' "$reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "$status" == 'failed' ]]; then
+            echo "::error::FreeSWITCH 联调状态为 failed：$reason"
+            exit 1
+          fi
+      - name: 上传联调状态
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: freeswitch-integration-status
+          path: fs-e2e-status.json
+          if-no-files-found: error
