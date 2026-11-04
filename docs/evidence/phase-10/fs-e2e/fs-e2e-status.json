@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "sha": "a83d190ef251de946f7f1de1c7206afc033203f3",
+  "event": "workflow_dispatch",
+  "image_hash": "5f06500dfd4c4d9e767d423872401b435fd482b6aa67d7efe27a5db78949b02c",
+  "passed": 15,
+  "total": 15,
+  "reason": "联调全部通过（15/15）。"
+}

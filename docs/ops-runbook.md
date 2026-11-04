@@ -4,9 +4,8 @@
 `<B_IP>`、`<A_IP>`、`<B_PRIVATE_IP>`、`<DOMAIN>` 都是占位符，执行时替换为实际值；
 仓库、文档和截图里不写真实地址与密钥。
 
-当前版本含「部署」「回滚」「迁移演练」「压测与演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「监测与告警」「证书」十一章。
-密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
-（`docs/go-live-checklist.md` 在后续 PR 建立）。
+当前版本含「部署」「回滚」「上线核对」「迁移演练」「压测与演练」「大表加索引」「备份」「恢复」「恢复演练」「日志与隐私」「监测与告警」「证书」「密钥轮换」十三章。
+上线前按 [上线检查清单](go-live-checklist.md) 逐项核对。
 
 ## 部署
 
@@ -251,6 +250,62 @@ ops/deploy/deploy.sh root@<B_IP>
 
 日常发布失败时先看 `deploy.sh` 的输出：在切换 `current` 之前失败，旧版本继续服务，
 修好后重跑即可；切换之后健康检查失败，按本节回滚。
+
+## 上线核对
+
+### billing_tenant 与租户编码
+
+验收 9 的核对分两步：在服务器 A 上提取 FreeSWITCH 实际配置的 `billing_tenant`，在服务器 B
+上读数据库的租户编码比对。脚本是 `ops/checks/billing-tenant.sh`；A 上没有
+`/opt/fs-billing/current`，先把脚本拷过去。
+
+```sh
+# 工作站仓库根
+scp ops/checks/billing-tenant.sh root@<A_IP>:/root/
+
+# A：扫 /etc/freeswitch/directory、ACL 与拨号计划
+bash /root/billing-tenant.sh --extract --root /etc/freeswitch --output /root/fs-tags.txt
+cat /root/fs-tags.txt
+
+# 工作站：把清单拿回来
+scp root@<A_IP>:/root/fs-tags.txt ./fs-tags.txt
+
+# B：在发布目录里比对，默认写 compare.txt 与 prefix-check.txt
+cd /opt/fs-billing/current
+bash ops/checks/billing-tenant.sh --compare ./fs-tags.txt
+```
+
+`--extract` 输出三列：大写去重后的编码、来源文件、原始写法。同一编码在多个文件出现会合并
+来源；转大写后出现多种写法（例如 `FSI60` 与 `fsi60`）会在清单头部列出，应当统一。
+`--compare` 用 `/etc/fs-billing/owner.env` 的 `DATABASE_URL` 读 `tenants.code`，连接串只进
+`PG*` 环境变量，密码不出现在命令行；需要 `psql`（Debian 包 `postgresql-client-17`）。
+它输出四类：
+
+| 分类            | 含义                                         | 处理                                                                  |
+| --------------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| 两边一致        | 编码在两边都有（转大写后相同）               | 无                                                                    |
+| 只在 FreeSWITCH | 这些呼叫会进未归属话单                       | **必须处理**：在后台建同编码租户，或改正 A 上的配置；否则脚本退出非零 |
+| 只在数据库      | 该租户尚未接入 FreeSWITCH                    | 信息项，接入时再配                                                    |
+| 仅大小写不同    | 授权与入库都转大写，能对上，但两边写法不一致 | 建议统一；租户编码创建后不可修改，通常改 A 的写法为数据库中的写法     |
+
+任一「只在 FreeSWITCH」都会让脚本以 1 退出；四类都为 0 时退出 0。清单里同一编码（转大写
+后）出现多次时脚本会提示，并按一次计算。改完配置后重跑 `--extract` 与 `--compare`，直到
+「只在 FreeSWITCH」为空。
+
+`--compare` 还会用 [freeswitch.md §3.3](freeswitch.md#33-号码格式) 的 SQL 检查国内前缀，
+结果写 `prefix-check.txt`；结果为空才表示没有以 `0` 开头或未带 `86` 的国内前缀候选。发现
+不符合要求的前缀时发布正确的费率版本，不要自动改写现有版本。
+
+证据放 `docs/evidence/phase-10/billing-tenant/`：
+
+```sh
+install -d -m 0755 docs/evidence/phase-10/billing-tenant
+cp fs-tags.txt compare.txt prefix-check.txt docs/evidence/phase-10/billing-tenant/
+```
+
+租户编码是客户标识，按决定 7 可以留在证据里；`compare.txt` 不含连接串与密码，不要把
+`owner.env` 或 `psql` 命令的历史记录贴进去。路径都可以用 `--root`、`--output`、
+`--owner-env`、`--prefix-output`、`--path` 覆盖，便于先在联调配置上自测。
 
 ## 迁移演练
 
@@ -1139,3 +1194,148 @@ systemctl restart fs-billing-api fs-billing-worker
 
 续期 `--dry-run` 输出与 `certbot certificates` 存
 `docs/evidence/phase-10/certbot/`（需域名，暂不在验收范围）。
+
+## 密钥轮换
+
+这里只列仓库 env 文件里真实存在的秘密，以及必须与它们一起换的 FreeSWITCH 侧配置。
+轮换前先看完整节：每个密钥的生效点不同，有的会让会话失效，有的必须两台机器同时改。
+命令都在服务器 B 的 `/opt/fs-billing/current` 执行（A 的步骤单独标出）。新值用
+`openssl rand` 生成，只写进对应 env 文件；不要写进仓库、工单、聊天工具或命令行参数
+（命令行会进进程列表与 shell 历史）。轮换后把日期、原因与验证结果记进运维记录。
+本手册按仓库代码的读取点写；如果服务器上的 unit、nginx 配置或 env 路径与仓库示例不同，
+先用 `systemctl cat fs-billing-api fs-billing-worker` 与 `nginx -T` 核对实际读取位置再操作。
+
+### BETTER_AUTH_SECRET
+
+用途：API 用 better-auth 的 `secret` 签名会话 cookie（`apps/api/src/main.ts`）；
+`admin:create`、`auth:bootstrap` 从 `owner.env` 读同一个键。两份文件里的值必须一致。
+
+影响：**轮换会让所有已登录会话失效**，管理员与客户都要重新登录；数据库里的会话记录
+不会删除，旧 cookie 因签名不匹配而不可用。不涉及数据迁移，也不影响 Worker 与通话。
+
+步骤：
+
+1. 用编辑器（不要用把明文写在命令行的 `sed`）同时改 `/etc/fs-billing/app.env` 与
+   `/etc/fs-billing/owner.env` 的 `BETTER_AUTH_SECRET`，保持 32 字符以上的随机值。
+2. 确认两份文件权限未变：`stat -c '%a %U:%G' /etc/fs-billing/app.env /etc/fs-billing/owner.env`
+   应为 `640 root:fs-billing` 与 `600 root:root`。
+3. `systemctl restart fs-billing-api`；Worker 不读这个键，不需要重启。
+4. 用管理员账号重新登录一次，确认新会话可用、旧标签页被要求重新登录。`owner.env`
+   里的副本供下一次 `admin:create`/`auth:bootstrap` 使用，同样要改。
+
+注意：如果只改了 `app.env`，API 会用新密钥签名，但 `admin:create`/`auth:bootstrap`
+仍从 `owner.env` 读旧值；两份必须一起改。
+
+### WORKER_SHARED_KEY
+
+用途：Worker 校验 `X-Billing-Key`；同一个值出现在四处，必须同时改：
+
+| 位置             | 文件 / 配置                                            | 说明                                                        |
+| ---------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| B 的 Worker      | `/etc/fs-billing/app.env` 的 `WORKER_SHARED_KEY`       | 重启 Worker 生效                                            |
+| A 的 FreeSWITCH  | `vars.xml` 的全局变量 `billing_shared_key`             | Lua 授权读它，`fs_cli -x reloadxml` 生效                    |
+| A 的 nginx relay | `billing-cdr.conf` 的 `proxy_set_header X-Billing-Key` | 话单转发加这个头，`nginx -t && systemctl reload nginx` 生效 |
+| A 的心跳         | `/etc/fs-billing/heartbeat.env` 的 `WORKER_SHARED_KEY` | 每个心跳周期重新读文件，下一次运行生效                      |
+
+不一致时的实际行为（看代码，不是猜测）：授权请求返回 401 时，Lua 不再按超时放行，而是
+返回 SIP 503 并挂断，**新呼叫直接失败**；话单推送 401 会失败落进 A 的 `retry/`，恢复后由
+`replay-cdr.sh` 补推；心跳 401 会让 `fs_heartbeat` 在 5 分钟后开告警。没有双密钥并存的
+过渡机制，所以必须安排在一个短窗口内完成。
+
+推荐顺序（与验收 6 的停机演练相同，把不一致窗口变成 1800 秒放行而不是 503 拒呼）：
+
+1. 低峰期在 B 上 `systemctl stop fs-billing-worker`。
+2. 改 B 的 `app.env`，再改 A 的 `vars.xml`、nginx relay 与 `heartbeat.env` 三处。
+3. A 上 `fs_cli -x reloadxml`、`nginx -t && systemctl reload nginx`。
+4. B 上 `systemctl start fs-billing-worker`。
+5. 从 A 重跑 `WORKER_SHARED_KEY='<新值>' ops/firewall/verify-ports.sh from-a <B_WORKER_IP>`，
+   确认 `/health` 与 `/authorize` 都是 200；等一个心跳周期，确认 `fs_heartbeat` 恢复；
+   观察 `retry/` 在补推后清空。
+6. 停机窗口内到达的呼叫会按 1800 秒放行并标记未验证（10 cps 时每分钟约 600 通），
+   恢复后补推；这与验收 6 的预期一致，不是丢单。
+
+直接对换（不停 Worker）也能做，但窗口内的新呼叫会收到 503；只在能接受短时拒呼时使用。
+改完后四处逐一核对，漏掉 relay 会出现「授权正常、话单一直 401」的半通状态。
+
+### 数据库角色密码（`fs_billing_app`、`fs_billing_auth`）
+
+用途：API/Worker 的运行时连接。密码写在 `app.env` 与 `owner.env` 的 `APP_DATABASE_URL`、
+`AUTH_DATABASE_URL` 里；`pnpm db:migrate` 以 owner 执行时按这两个 URL 对角色做
+`ALTER ROLE ... PASSWORD`（`packages/db/src/migrate.ts`）。
+
+步骤：
+
+1. 生成新密码；URL 里的特殊字符要百分号编码（`@` → `%40`，`:` → `%3A` 等），
+   否则解析出的用户名/主机不对。
+2. 停 `fs-billing-api` 与 `fs-billing-worker`，避免旧连接池在密码切换后重连失败。
+3. 用编辑器同时改 `app.env` 与 `owner.env` 的同名 URL，两份必须一致。
+4. 以 owner 身份跑迁移（它会重设两个角色密码，并补分区，幂等）：
+
+   ```sh
+   cd /opt/fs-billing/current
+   set -a
+   . /etc/fs-billing/owner.env
+   set +a
+   pnpm db:migrate
+   ```
+
+5. `systemctl start fs-billing-api fs-billing-worker`；确认两个 `/health`，再登录后台
+   做一次只读查询，确认 API 与 Worker 都用新密码连上。
+6. 如果 `queue:migrate` 在这之后单独跑过，不需要再改密码；它不重设角色。
+
+出现「password authentication failed」时先查两份 URL 是否一致、特殊字符是否编码，
+再确认 `db:migrate` 真的执行成功；不要为了绕过而把 `pg_hba.conf` 改成 trust。
+
+### owner 角色 `fs_billing` 的密码
+
+用途：只出现在 `owner.env` 的 `DATABASE_URL`，供迁移、`queue:migrate`、
+`auth:bootstrap`、`admin:create`、`auth:unlock`、备份与恢复脚本使用；API/Worker 不读它。
+轮换不影响在线服务。
+
+1. 在 B 上以 `postgres` 系统用户进入 psql，用 `\password` 交互改密（不回显、不进
+   shell 历史）：
+
+   ```sh
+   runuser -u postgres -- psql -X
+   # psql 里执行：
+   \password fs_billing
+   \q
+   ```
+
+   不要用 `ALTER ROLE ... PASSWORD '...'` 把明文写在命令行。
+
+2. 用编辑器改 `/etc/fs-billing/owner.env` 的 `DATABASE_URL`，特殊字符百分号编码。
+3. 验证：`/opt/fs-billing/current/ops/backup/snapshot-counts.sh | head` 能连上；
+   再手动跑一次 `backup.sh`，确认 `pg_dump` 成功。
+4. `bootstrap-server.sh` 在 env 文件已存在时会保留它们，不会改密码；不要靠重跑引导
+   脚本来轮换。
+
+### SMTP 授权码（`SMTP_PASS`，QQ 邮箱）
+
+用途：Worker 发告警与账单邮件；`ops/monitor/notify.sh` 也从 `app.env` 读同一组
+`SMTP_*`，数据库或 Worker 整体宕机时仍能发信。API 只读 `SMTP_HOST` 与 `MAIL_FROM`
+来显示「邮件发送未配置」，不读密码。
+
+步骤：
+
+1. 在邮箱侧生成新的授权码（不是登录密码）。
+2. 用编辑器改 `app.env` 的 `SMTP_PASS`；如果换了邮箱，同时改 `SMTP_USER` 与
+   `MAIL_FROM`（QQ 邮箱要求 `MAIL_FROM` 等于 `SMTP_USER`）。
+3. `systemctl restart fs-billing-worker`；`notify.sh` 每次运行重新读文件，不需要重启。
+   如果改了 `SMTP_HOST`/`MAIL_FROM`，API 也要 `systemctl restart fs-billing-api`。
+4. 验证：
+
+   ```sh
+   pnpm --filter @fs-billing/worker mail:test -- --to <运维邮箱>
+   pnpm --filter @fs-billing/worker mail:requeue -- --since <出问题的时间>
+   ```
+
+   第二条把失败的邮件放回待发队列（也可用 `--id <uuid>` 单封重投）；确认发件箱状态与
+   告警详情里的投递结果恢复正常。
+
+### 不在 env 文件里的密钥
+
+FreeSWITCH 的 `billing_shared_key` 与 A 的 nginx relay 已包含在 `WORKER_SHARED_KEY`
+一节。TLS 私钥在 `/etc/ssl/fs-billing/privkey.pem`，续期与重签见「证书」；自签证书重签后
+指纹会变，必须重新发给客户。服务器 root 的 SSH 私钥与备份异地的凭据不在本手册的轮换
+范围，按各自的介质管理流程处理。
