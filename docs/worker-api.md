@@ -175,7 +175,7 @@ Worker 用数据库时钟 `clock_timestamp()`（取消费率版本余量用的�
 
 `ChargeQueue.enqueue(tx, {tenantId, callUuid})` 只做数据库操作，使用 pg-boss `fromDrizzle(tx, sql)` 与话单共用事务。`chargeCdr(db, unknown)` 在任务边界校验形状，再读取已保存的计价快照，调用 `appendLedgerEntry`，幂等键为 `call:<UUID>`、`occurred_at=answered_at`。零费率或未接通不产生零元流水（数据库只接受负值通话扣费）。扣费备注为 `通话扣费 <UUID> <billing_number>`。余额缓存由流水触发器更新。
 
-启动后消费真实 pg-boss 扣费任务；开启 `supervise` 与 `schedule`，使用固定版本补丁禁用额外 advisory 锁。DB 测试通过真实队列领取、重复执行处理器、模拟提交前崩溃与提交后未确认任务的重投，断言账本与余额。
+启动后消费真实 pg-boss 扣费任务；开启 `supervise` 与 `schedule`，使用固定版本补丁禁用额外 advisory 锁。每次最多领取 `WORKER_CHARGE_BATCH_SIZE`（默认 10）个任务，取满即连续领取，空队列仍按 pg-boss 默认 2 秒轮询。批内逐单结算（`perJobResults`）：每个任务在自己的事务里扣费并独立重试/进入死信，一个坏任务不会让同批其他任务重跑或重复扣费。DB 测试通过真实队列领取、重复执行处理器、模拟提交前崩溃与提交后未确认任务的重投，断言账本与余额；批处理与两实例并发见 `charge-batch.db.test.ts`，吞吐实测见 [perf/charge-queue.md](perf/charge-queue.md)。
 
 Worker 启动时在独立维护事务调用一次 `ensureCdrPartitions`。CDR 写入路径不建分区；遇到 SQLSTATE 23514 `no partition of relation … found for row` 时记日志、独立累加 `partition_failed`（`partition-missing`）、返回 503。缺分区的写入回滚，不登记 UUID，原文（若收到月份分区存在）保留，等待维护后重推。原文分区也缺失时同样告警并返回 503。维护启动失败记录 `partition_failed` 并退出。
 
@@ -195,7 +195,7 @@ pnpm coverage
 
 入库使用 `answered_at` 选择整表费率版本与最长前缀，保存该时刻的费率快照。任务只带租户编号与通话 UUID，以快照费率和接通时长调用 `packages/rating` 计价；接通时无匹配费率就在入库事务里保存 pending 未归属话单、并入 `unassigned:接通时无费率` 告警，不入扣费队列。未接通或合法零费率不产生扣费流水。
 
-扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；失败立即记日志，错误继续向队列抛出；持续失败由对账任务写为每话单一条 `charge-reconcile:<UUID>` 告警，流水终于写出时恢复。
+扣费在一个 `withSystem` 事务里先拿租户锁，再写 `call:<UUID>` 幂等流水；`occurred_at = answered_at`。流水与缓存余额一起提交。提交前崩溃回滚全部变动，提交后未确认任务的重投读回同一流水，余额不再减少。pg-boss 开启过期任务监督，扣费任务最多重投 3 次；批量领取时每个任务单独结算，失败立即记日志并只让该任务重试/进入死信，同批其他任务照常完成；持续失败由对账任务写为每话单一条 `charge-reconcile:<UUID>` 告警，流水终于写出时恢复。
 
 Worker 启动时执行一次分区维护，然后注册每日北京时间零点任务（`0 0 * * *`，`tz: Asia/Shanghai`）。`ensureCdrPartitions` 接收数据库连接池对应的 PoolDb，自成系统身份维护事务，准备当前与下个月的正式及原始话单分区。维护失败记日志与 `partition_failed`（`partition-maintenance`）告警并抛错，下一次维护成功时恢复它；启动失败不监听 HTTP。入库路径缺分区返回 503、累加 `partition-missing`，等待维护恢复后由 FreeSWITCH 重推；写入事务不建分区。`partition-missing` 不随维护成功恢复（维护只建当月和下个月，缺的可能是已分离的旧月），按静默窗口恢复。
 
@@ -215,13 +215,14 @@ Worker 启动时执行一次分区维护，然后注册每日北京时间零点�
 
 `reconcile-cdr-charges` 每分钟调度（`* * * * *`，Asia/Shanghai），查找 `charge > 0` 且没有同租户 `call:<UUID>` 通话扣费流水的话单。未接通、合法零费率无需流水，不进入对账。以接收时间为宽限期，重试耗尽、任务丢失或被清理都能重新发现。
 
-| 配置                               | 默认值 | 有效范围                                         |
-| ---------------------------------- | ------ | ------------------------------------------------ |
-| `WORKER_RECONCILE_MIN_AGE_MINUTES` | 5      | 整数 1–10080 分钟；接收/上次补投后至少等待此时长 |
-| `WORKER_RECONCILE_ALERT_ATTEMPTS`  | 3      | 整数 1–1000；已补投这么多轮仍无流水时告警        |
-| `WORKER_DB_POOL_MAX`               | 10     | 整数 1–100；HTTP、扣费、对账业务连接             |
-| `WORKER_QUEUE_POOL_MAX`            | 2      | 整数 1–20；pg-boss 元数据与调度连接              |
-| `WORKER_DB_CONNECTION_TIMEOUT_MS`  | 5000   | 整数 1–60000；两个池的连接获取超时               |
+| 配置                               | 默认值 | 有效范围                                             |
+| ---------------------------------- | ------ | ---------------------------------------------------- |
+| `WORKER_RECONCILE_MIN_AGE_MINUTES` | 5      | 整数 1–10080 分钟；接收/上次补投后至少等待此时长     |
+| `WORKER_RECONCILE_ALERT_ATTEMPTS`  | 3      | 整数 1–1000；已补投这么多轮仍无流水时告警            |
+| `WORKER_DB_POOL_MAX`               | 10     | 整数 1–100；HTTP、扣费、对账业务连接                 |
+| `WORKER_QUEUE_POOL_MAX`            | 2      | 整数 1–20；pg-boss 元数据与调度连接                  |
+| `WORKER_DB_CONNECTION_TIMEOUT_MS`  | 5000   | 整数 1–60000；两个池的连接获取超时                   |
+| `WORKER_CHARGE_BATCH_SIZE`         | 10     | 整数 1–100；每次最多领取的扣费任务数，取满即连续领取 |
 
 每个候选沿用已有租户锁，拿锁后重新检查流水、宽限期和未终结任务（包括升级前没有 singletonKey 的任务）。补投使用稳定 `singletonKey=callUuid` 和由 UUID/轮次生成的确定性任务 ID；真正的去重由任务主键、同一事务内更新的 `reconcile_attempts/reconciled_at` 及原有租户锁保证，标准队列的 singletonKey 本身不保证唯一。重复/并发对账不增加任务或次数。计费仍使用账本唯一键，不重复扣费。
 

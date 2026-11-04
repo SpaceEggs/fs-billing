@@ -198,12 +198,21 @@ export function mailSettingsOf(
   };
 }
 
+/** 扣费每次最多领取的任务数；10 条约等于设计要求的 10 单/秒下的 1 秒到达量。 */
+export const DEFAULT_WORKER_CHARGE_BATCH_SIZE = 10;
+
 export const workerEnvironmentSchema = z
   .object({
     ...mailEnvironmentShape,
     APP_DATABASE_URL: databaseEnvironmentSchema.shape.APP_DATABASE_URL,
     WORKER_DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
     WORKER_QUEUE_POOL_MAX: z.coerce.number().int().min(1).max(20).default(2),
+    WORKER_CHARGE_BATCH_SIZE: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(DEFAULT_WORKER_CHARGE_BATCH_SIZE),
     WORKER_DB_CONNECTION_TIMEOUT_MS: z.coerce
       .number()
       .int()

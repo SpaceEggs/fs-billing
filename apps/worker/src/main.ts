@@ -5,7 +5,7 @@ import { createClockMonitor, startClockMonitor } from './clock.js';
 import { startRawArchive } from './archive.js';
 import { mailSettingsOf, workerEnvironmentSchema } from './config.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
-import { chargeCdr } from './charge.js';
+import { chargeJobs, chargeWorkOptions } from './charge.js';
 import { startNotifyJobs } from './notify.js';
 import { createWorkerLogger } from './redact.js';
 import { startPartitionMaintenance } from './maintenance.js';
@@ -60,16 +60,11 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 try {
   await boss.start();
   await startPartitionMaintenance(boss, connection.db, app.log);
-  await boss.work(CHARGE_QUEUE, async (jobs) => {
-    for (const job of jobs) {
-      try {
-        await chargeCdr(connection.db, job.data);
-      } catch (error) {
-        app.log.error({ err: error, jobId: job.id }, '话单扣费失败');
-        throw error;
-      }
-    }
-  });
+  await boss.work(
+    CHARGE_QUEUE,
+    chargeWorkOptions(config.WORKER_CHARGE_BATCH_SIZE),
+    (jobs) => chargeJobs(connection.db, jobs, app.log),
+  );
   await startReconciliation(
     boss,
     connection.db,

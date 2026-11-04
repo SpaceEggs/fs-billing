@@ -1,0 +1,22 @@
+{
+  "measuredAt": "2026-11-04T10:29:39.285Z",
+  "variant": "before",
+  "instances": 1,
+  "jobs": 180,
+  "batchSize": 1,
+  "burstWhenBatchFull": false,
+  "perJobResults": false,
+  "tenants": 6,
+  "wallMs": 358265,
+  "perSecond": 0.5,
+  "ledgerEntries": 180,
+  "ledgerTotal": "-36.0",
+  "balanceEqualsLedger": true,
+  "host": {
+    "platform": "darwin",
+    "release": "27.0.0",
+    "cpus": 10,
+    "memoryBytes": 17179869184
+  },
+  "database": "PostgreSQL 17.9 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit"
+}
