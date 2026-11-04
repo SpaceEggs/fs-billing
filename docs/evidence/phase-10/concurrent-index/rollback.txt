@@ -1,0 +1,43 @@
+# 机器：开发机（macOS 笔记本，非服务器 B）
+
+## 1. 评估
+表：cdrs；索引：cdrs_tenant_started_at；列：tenant_id, started_at
+
+### 分区与大小
+  cdrs_2025_10  116 MB  (121339904 bytes)
+  cdrs_2025_11  114 MB  (119865344 bytes)
+  cdrs_2025_12  117 MB  (122830848 bytes)
+  cdrs_2026_01  116 MB  (121167872 bytes)
+  cdrs_2026_02  106 MB  (111427584 bytes)
+  cdrs_2026_03  124 MB  (130490368 bytes)
+  cdrs_2026_04  115 MB  (120307712 bytes)
+  cdrs_2026_05  117 MB  (122732544 bytes)
+  cdrs_2026_06  115 MB  (120111104 bytes)
+  cdrs_2026_07  117 MB  (122765312 bytes)
+  cdrs_2026_08  116 MB  (121159680 bytes)
+  cdrs_2026_09  114 MB  (120045568 bytes)
+  cdrs_2026_10  117 MB  (122331136 bytes)
+  cdrs_2026_11  114 MB  (119873536 bytes)
+  cdrs_2026_12  1400 kB  (1433600 bytes)
+磁盘：/var/lib/postgresql/data  /dev/vdb1            285933568  42970580 242962988  15% /etc/hostname
+maintenance_work_mem：64MB
+表总大小：1697882112 bytes；索引估算约为表的 20%–70%
+
+## 回退：先删父索引，再清理未挂接的分区索引
+  DROP INDEX cdrs_tenant_started_at
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2025_10
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2025_11
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2025_12
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_01
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_02
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_03
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_04
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_05
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_06
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_07
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_08
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_09
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_10
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_11
+  跳过已随父索引删除的 cdrs_tenant_started_at_cdrs_2026_12
+回退完成

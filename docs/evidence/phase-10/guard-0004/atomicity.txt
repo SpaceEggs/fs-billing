@@ -1,0 +1,22 @@
+# 0004 guard 验证
+
+机器：开发机（macOS 笔记本，非服务器 B）
+数据来源：0003 结构的历史库；非法场景各用一个临时库。
+本文件不含电话号码、密钥或连接串。
+
+## 三个非法场景的原子性核对
+  fs_billing_guard_invalid_null_af0effd467 cdrs.billing_number 仍可空：true
+  fs_billing_guard_invalid_null_af0effd467 旧 cdrs 约束仍在：true
+  fs_billing_guard_invalid_null_af0effd467 旧 unassigned 约束仍在：true
+  fs_billing_guard_invalid_null_af0effd467 新 reason 约束不存在：true
+  fs_billing_guard_invalid_null_af0effd467 迁移记录没有 0004：true
+  fs_billing_guard_invalid_format_c686138f07 cdrs.billing_number 仍可空：true
+  fs_billing_guard_invalid_format_c686138f07 旧 cdrs 约束仍在：true
+  fs_billing_guard_invalid_format_c686138f07 旧 unassigned 约束仍在：true
+  fs_billing_guard_invalid_format_c686138f07 新 reason 约束不存在：true
+  fs_billing_guard_invalid_format_c686138f07 迁移记录没有 0004：true
+  fs_billing_guard_invalid_unassigned_0553076c02 cdrs.billing_number 仍可空：true
+  fs_billing_guard_invalid_unassigned_0553076c02 旧 cdrs 约束仍在：true
+  fs_billing_guard_invalid_unassigned_0553076c02 旧 unassigned 约束仍在：true
+  fs_billing_guard_invalid_unassigned_0553076c02 新 reason 约束不存在：true
+  fs_billing_guard_invalid_unassigned_0553076c02 迁移记录没有 0004：true

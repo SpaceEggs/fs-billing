@@ -1,0 +1,168 @@
+# 机器：开发机（macOS 笔记本，非服务器 B）
+
+## 1. 评估
+表：cdrs；索引：cdrs_tenant_started_at；列：tenant_id, started_at
+
+### 分区与大小
+  cdrs_2025_10  107 MB  (112615424 bytes)
+  cdrs_2025_11  106 MB  (111239168 bytes)
+  cdrs_2025_12  109 MB  (114008064 bytes)
+  cdrs_2026_01  107 MB  (112443392 bytes)
+  cdrs_2026_02  99 MB  (103374848 bytes)
+  cdrs_2026_03  115 MB  (121085952 bytes)
+  cdrs_2026_04  107 MB  (111681536 bytes)
+  cdrs_2026_05  109 MB  (113909760 bytes)
+  cdrs_2026_06  106 MB  (111484928 bytes)
+  cdrs_2026_07  109 MB  (113942528 bytes)
+  cdrs_2026_08  107 MB  (112435200 bytes)
+  cdrs_2026_09  106 MB  (111419392 bytes)
+  cdrs_2026_10  108 MB  (113508352 bytes)
+  cdrs_2026_11  106 MB  (111247360 bytes)
+  cdrs_2026_12  1288 kB  (1318912 bytes)
+磁盘：/var/lib/postgresql/data  /dev/vdb1            285933568  42970580 242962988  15% /etc/hostname
+maintenance_work_mem：64MB
+表总大小：1575714816 bytes；索引估算约为表的 20%–70%
+
+## 2–5. 父索引、逐分区 CONCURRENTLY、挂接、验证
+长事务检查（cdrs_2025_10）：无超过 5 分钟的事务
+测试钩子：在 cdrs_2025_10 上故意制造失败（同名唯一索引 ((1)) 必然重复）
+ERROR:  could not create unique index "cdrs_tenant_started_at_cdrs_2025_10"
+DETAIL:  Key ((1))=(1) is duplicated.
+  故意失败退出码：1（预期非 0，留下 invalid 索引）
+  清理 invalid 索引 cdrs_tenant_started_at_cdrs_2025_10
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2025_10 ON cdrs_2025_10
+长事务检查（cdrs_2025_11）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2025_11 ON cdrs_2025_11
+长事务检查（cdrs_2025_12）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2025_12 ON cdrs_2025_12
+长事务检查（cdrs_2026_01）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_01 ON cdrs_2026_01
+长事务检查（cdrs_2026_02）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_02 ON cdrs_2026_02
+长事务检查（cdrs_2026_03）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_03 ON cdrs_2026_03
+长事务检查（cdrs_2026_04）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_04 ON cdrs_2026_04
+长事务检查（cdrs_2026_05）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_05 ON cdrs_2026_05
+长事务检查（cdrs_2026_06）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_06 ON cdrs_2026_06
+长事务检查（cdrs_2026_07）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_07 ON cdrs_2026_07
+长事务检查（cdrs_2026_08）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_08 ON cdrs_2026_08
+长事务检查（cdrs_2026_09）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_09 ON cdrs_2026_09
+长事务检查（cdrs_2026_10）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_10 ON cdrs_2026_10
+长事务检查（cdrs_2026_11）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_11 ON cdrs_2026_11
+长事务检查（cdrs_2026_12）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_12 ON cdrs_2026_12
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2025_10
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2025_11
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2025_12
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_01
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_02
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_03
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_04
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_05
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_06
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_07
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_08
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_09
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_10
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_11
+  ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_12
+
+## 6. 验证
+父索引 indisvalid：t
+invalid 分区索引数：0
+各分区索引状态：
+  cdrs_tenant_started_at_cdrs_2025_10 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2025_11 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2025_12 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_01 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_02 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_03 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_04 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_05 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_06 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_07 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_08 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_09 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_10 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_11 indisvalid=t
+  cdrs_tenant_started_at_cdrs_2026_12 indisvalid=t
+
+EXPLAIN（关闭 seqscan 以强制规划器考虑索引）：
+  select tenant_id, started_at from cdrs where tenant_id = (select tenant_id from cdrs limit 1) order by tenant_id, started_at limit 10
+Limit
+  InitPlan 1
+    ->  Limit
+          ->  Append
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2025_10 on cdrs_2025_10 cdrs_17
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2025_11 on cdrs_2025_11 cdrs_18
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2025_12 on cdrs_2025_12 cdrs_19
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_01 on cdrs_2026_01 cdrs_20
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_02 on cdrs_2026_02 cdrs_21
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_03 on cdrs_2026_03 cdrs_22
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_04 on cdrs_2026_04 cdrs_23
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_05 on cdrs_2026_05 cdrs_24
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_06 on cdrs_2026_06 cdrs_25
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_07 on cdrs_2026_07 cdrs_26
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_08 on cdrs_2026_08 cdrs_27
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_09 on cdrs_2026_09 cdrs_28
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_10 on cdrs_2026_10 cdrs_29
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_11 on cdrs_2026_11 cdrs_30
+                ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_12 on cdrs_2026_12 cdrs_31
+  ->  Append
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2025_10 on cdrs_2025_10 cdrs_1
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2025_11 on cdrs_2025_11 cdrs_2
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2025_12 on cdrs_2025_12 cdrs_3
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_01 on cdrs_2026_01 cdrs_4
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_02 on cdrs_2026_02 cdrs_5
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_03 on cdrs_2026_03 cdrs_6
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_04 on cdrs_2026_04 cdrs_7
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_05 on cdrs_2026_05 cdrs_8
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_06 on cdrs_2026_06 cdrs_9
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_07 on cdrs_2026_07 cdrs_10
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_08 on cdrs_2026_08 cdrs_11
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_09 on cdrs_2026_09 cdrs_12
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_10 on cdrs_2026_10 cdrs_13
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_11 on cdrs_2026_11 cdrs_14
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+        ->  Index Only Scan using cdrs_tenant_started_at_cdrs_2026_12 on cdrs_2026_12 cdrs_15
+              Index Cond: (tenant_id = (InitPlan 1).col1)
+
+实际执行一次查询并刷新统计，然后读 pg_stat_user_indexes：
+  cdrs_tenant_started_at_cdrs_2025_10 idx_scan=2 idx_tup_read=11
+  cdrs_tenant_started_at_cdrs_2025_11 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2025_12 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_01 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_02 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_03 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_04 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_05 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_06 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_07 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_08 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_09 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_10 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_11 idx_scan=0 idx_tup_read=0
+  cdrs_tenant_started_at_cdrs_2026_12 idx_scan=0 idx_tup_read=0
+
+完成。回退：同一脚本加 --rollback。
