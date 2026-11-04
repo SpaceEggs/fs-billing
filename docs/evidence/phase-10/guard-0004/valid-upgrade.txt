@@ -1,0 +1,33 @@
+# 0004 guard 验证
+
+机器：开发机（macOS 笔记本，非服务器 B）
+数据来源：0003 结构的历史库；非法场景各用一个临时库。
+本文件不含电话号码、密钥或连接串。
+
+
+## 源库核对
+
+源库：fsb_rehearse_0003
+cdrs 行数：3000000
+drizzle 迁移记录：4 条（0000–0003）
+billing_number 列：存在；不合法的存量行：0
+
+## 合法数据升级成功
+
+数据库：fs_billing_guard_valid_882efcccfd
+数据：从 fsb_rehearse_0003 模板复制，3000000 条 cdrs
+演练前 cdrs 行数：3000000
+0004 墙钟耗时：4076.9 ms
+锁采样：最强 AccessExclusiveLock，跨度 2117 ms，样本 369 个
+
+检查：
+  cdrs.billing_number NOT NULL：true
+  cdrs_billing_number_check 已 VALIDATE：true
+  unassigned_cdrs_billing_number_check 已 VALIDATE：true
+  unassigned_cdrs_billing_number_reason_check 已 VALIDATE：true
+  drizzle 记录 0004：1 行
+  仍不合法 / 为空的 billing_number：0 行
+
+## 结论
+
+通过：合法数据可以升级到 0004。

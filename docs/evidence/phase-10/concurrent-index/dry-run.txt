@@ -1,0 +1,77 @@
+# 机器：开发机（macOS 笔记本，非服务器 B）
+
+## 1. 评估
+表：cdrs；索引：cdrs_tenant_started_at；列：tenant_id, started_at
+
+### 分区与大小
+  cdrs_2025_10  107 MB  (112615424 bytes)
+  cdrs_2025_11  106 MB  (111239168 bytes)
+  cdrs_2025_12  109 MB  (114008064 bytes)
+  cdrs_2026_01  107 MB  (112443392 bytes)
+  cdrs_2026_02  99 MB  (103374848 bytes)
+  cdrs_2026_03  115 MB  (121085952 bytes)
+  cdrs_2026_04  107 MB  (111681536 bytes)
+  cdrs_2026_05  109 MB  (113909760 bytes)
+  cdrs_2026_06  106 MB  (111484928 bytes)
+  cdrs_2026_07  109 MB  (113942528 bytes)
+  cdrs_2026_08  107 MB  (112435200 bytes)
+  cdrs_2026_09  106 MB  (111419392 bytes)
+  cdrs_2026_10  108 MB  (113508352 bytes)
+  cdrs_2026_11  106 MB  (111247360 bytes)
+  cdrs_2026_12  1288 kB  (1318912 bytes)
+磁盘：/var/lib/postgresql/data  /dev/vdb1            285933568  42970420 242963148  15% /etc/hostname
+maintenance_work_mem：64MB
+表总大小：1575714816 bytes；索引估算约为表的 20%–70%
+
+## 2–5. 父索引、逐分区 CONCURRENTLY、挂接、验证
+将执行：
+  CREATE INDEX "cdrs_tenant_started_at" ON ONLY "cdrs" (tenant_id, started_at);
+长事务检查（cdrs_2025_10）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2025_10" ON "cdrs_2025_10" (tenant_id, started_at);
+长事务检查（cdrs_2025_11）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2025_11" ON "cdrs_2025_11" (tenant_id, started_at);
+长事务检查（cdrs_2025_12）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2025_12" ON "cdrs_2025_12" (tenant_id, started_at);
+长事务检查（cdrs_2026_01）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_01" ON "cdrs_2026_01" (tenant_id, started_at);
+长事务检查（cdrs_2026_02）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_02" ON "cdrs_2026_02" (tenant_id, started_at);
+长事务检查（cdrs_2026_03）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_03" ON "cdrs_2026_03" (tenant_id, started_at);
+长事务检查（cdrs_2026_04）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_04" ON "cdrs_2026_04" (tenant_id, started_at);
+长事务检查（cdrs_2026_05）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_05" ON "cdrs_2026_05" (tenant_id, started_at);
+长事务检查（cdrs_2026_06）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_06" ON "cdrs_2026_06" (tenant_id, started_at);
+长事务检查（cdrs_2026_07）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_07" ON "cdrs_2026_07" (tenant_id, started_at);
+长事务检查（cdrs_2026_08）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_08" ON "cdrs_2026_08" (tenant_id, started_at);
+长事务检查（cdrs_2026_09）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_09" ON "cdrs_2026_09" (tenant_id, started_at);
+长事务检查（cdrs_2026_10）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_10" ON "cdrs_2026_10" (tenant_id, started_at);
+长事务检查（cdrs_2026_11）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_11" ON "cdrs_2026_11" (tenant_id, started_at);
+长事务检查（cdrs_2026_12）：无超过 5 分钟的事务
+  CREATE INDEX CONCURRENTLY "cdrs_tenant_started_at_cdrs_2026_12" ON "cdrs_2026_12" (tenant_id, started_at);
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2025_10";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2025_11";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2025_12";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_01";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_02";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_03";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_04";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_05";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_06";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_07";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_08";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_09";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_10";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_11";
+  ALTER INDEX "cdrs_tenant_started_at" ATTACH PARTITION "cdrs_tenant_started_at_cdrs_2026_12";
+
+## 6. 验证
+  （dry-run 不执行验证查询）
+  将检查 pg_index.indisvalid、EXPLAIN 与 pg_stat_user_indexes

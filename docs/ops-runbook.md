@@ -4,8 +4,8 @@
 `<B_IP>`、`<A_IP>`、`<B_PRIVATE_IP>`、`<DOMAIN>` 都是占位符，执行时替换为实际值；
 仓库、文档和截图里不写真实地址与密钥。
 
-当前版本只含「部署」「回滚」「日志与隐私」「证书」四章。备份与恢复、监测与告警、
-迁移演练、大表加索引、密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
+当前版本含「部署」「回滚」「迁移演练」「大表加索引」「日志与隐私」「证书」六章。
+备份与恢复、监测与告警、密钥轮换等章节由后续 PR 增补；上线前以上线检查清单收口
 （`docs/go-live-checklist.md` 在后续 PR 建立）。
 
 ## 部署
@@ -251,6 +251,201 @@ ops/deploy/deploy.sh root@<B_IP>
 
 日常发布失败时先看 `deploy.sh` 的输出：在切换 `current` 之前失败，旧版本继续服务，
 修好后重跑即可；切换之后健康检查失败，按本节回滚。
+
+## 迁移演练
+
+### 什么时候做
+
+- 上线前，用原型库或测试服务器备份把 `0002/0003/0004/0010/0016` 这些触及 `cdrs`
+  的迁移量一遍。
+- 上线后，**每个触及大表的新迁移**在部署前都要附一次演练结果（迁移门禁，见上线
+  检查清单）。迁移在事务里执行，锁一直持有到整批提交；只有该文件是唯一待执行
+  迁移时，一个文件的墙钟耗时才是它的持锁时长。`lock_timeout` 只能限制等锁，
+  限制不了持锁与扫描。
+
+### 准备数据
+
+三条路，按可用性选一条：
+
+1. **真实规模备份**：`pg_dump -Fc` 的测试服务器或生产备份。不要在生产库上演练。
+2. **原型库**：`prototype:<基线迁移号>`，脚本先在临时库里静默迁到该号，再灌
+   合成话单（默认 300 万条、14 个月分区）。号码是合成的，不含真实用户数据。
+3. **同实例克隆**：`db:<库名>`，用 `CREATE DATABASE ... TEMPLATE` 复制一份已有
+   的演练库；源库必须没有活动连接。
+
+演练只碰临时库（默认 `fs_billing_rehearse`），脚本拒绝把 `fs_billing` 当源库或
+目标库。连接参数全部取标准 `PG*` 环境变量：
+
+```sh
+export PGHOST='<演练实例地址>'
+export PGPORT='<演练实例端口>'
+export PGUSER='<owner 角色>'
+# PGPASSWORD 从环境或受限文件读取，不写进命令行与仓库
+ops/migrate/rehearse.sh --out /tmp/rehearse \
+  --machine-label '服务器 B（演练实例）' db:fsb_rehearse_source 0024
+```
+
+第一次只灌原型数据：
+
+```sh
+ops/migrate/rehearse.sh --cdrs 3000000 --keep --out /tmp/rehearse-0003 \
+  --machine-label '开发机' prototype:0001 0003
+```
+
+这次会把 `0002`（加列）与 `0003`（加 `billing_number`、`VALIDATE`）量出来。到
+`0003` 后把 `billing_number` 回填成合法值，再以这个库为源继续跑 `0004` 及之后：
+
+```sh
+psql -d fs_billing_rehearse -c \
+  "update cdrs set billing_number = callee where billing_number is null;"
+psql -d fs_billing_rehearse -c 'vacuum (analyze) cdrs;'
+# 先用 --keep 保留上一轮的库，再复制一份作为 0003 基线
+createdb -T fs_billing_rehearse fsb_rehearse_0003
+ops/migrate/rehearse.sh --out /tmp/rehearse-0024 \
+  --machine-label '服务器 B（演练实例）' db:fsb_rehearse_0003 0024
+```
+
+`prototype:0001 0003` 之后临时库默认会被删；需要继续用就加 `--keep`。
+
+### 演练期间实例上的设置
+
+只在**一次性演练实例**上开日志，不在这台机器以外的生产库上改：
+
+```sql
+ALTER SYSTEM SET log_lock_waits = on;
+ALTER SYSTEM SET log_min_duration_statement = 0;
+SELECT pg_reload_conf();
+-- 演练结束后恢复：
+ALTER SYSTEM RESET log_lock_waits;
+ALTER SYSTEM RESET log_min_duration_statement;
+SELECT pg_reload_conf();
+```
+
+`log_min_duration_statement = 0` 会记录所有语句；如果实例里有真实号码，这会写进
+日志。生产库不要这样设置（见「日志与隐私」）。
+
+### 脚本做了什么
+
+1. 把数据来源恢复/克隆到临时库 `fs_billing_rehearse`。
+2. 建一个会话，每 50ms 对 `cdrs` 做一次写入探测（插入后主动回滚）；迁移持锁时
+   探测延迟上升，这就是业务写入被阻塞的时长。
+3. 默认逐文件在独立事务里应用待执行迁移，记录每个文件的墙钟耗时；加 `--batch`
+   时与真实 migrator 一致，把本轮所有待执行迁移放在一个事务里。两种模式都每
+   100ms 采样迁移事务在 `pg_locks` 里持有的关系锁。
+4. 默认模式汇总为 `summary.md`（每文件墙钟、最强锁与持锁跨度）、
+   `lock-timeline.txt`、`probe-latency.txt`；`--batch` 只汇总整批的总墙钟、
+   最强锁及其跨度、探针最大与受阻时间，另两个文件照常写。
+
+`summary.md` 里的「部署窗口」= 迁移总耗时 + 服务重启与健康检查估算。锁一直持有
+到提交，所以「持锁跨度」约等于该文件的墙钟耗时；采样间隔是 100ms，短锁可能只被
+采到一次或不出现。
+
+**注意：** drizzle migrator 把本轮所有待执行迁移放在同一个事务里。一次部署如果
+有多条待执行迁移，锁会一直持到最后一个文件提交，实际时长是整批的墙钟；只有该文件
+是唯一待执行迁移时，一个迁移的持锁时长才等于该文件的耗时。默认模式按文件分别计时，
+`summary.md` 的「迁移总耗时」和部署窗口已按总和计算，但每文件数字仍会低估阻塞；
+部署前用 `--batch` 再量一次。
+
+一次部署有多条待执行迁移时，用 `--batch` 做演练。部署期间如果与线上流量死锁，
+整批迁移会回滚，旧代码继续运行，重试是安全的；触及 `cdrs` 或 `tenants` 的迁移应
+安排在业务低峰发布。
+
+### 怎么看结果
+
+- 探针最大延迟持续接近某个迁移的墙钟耗时：说明该迁移阻塞了写入。
+- `AccessExclusiveLock` 出现在 `SET NOT NULL`、`ADD COLUMN`、`ADD CONSTRAINT`
+  这类语句上；`CREATE INDEX`（非 CONCURRENTLY）持 `ShareLock`，会挡写但不挡读。
+- 墙钟耗时接近 `lock_timeout`（5 秒）时，先确认是等锁还是确实在扫表；等锁说明
+  部署窗口有并发事务，扫表说明需要改成 `CONCURRENTLY` 或分批回填。
+- 把结果附在发布说明或 `docs/evidence/phase-10/migration-rehearsal/`，作为迁移
+  门禁的证据。上线后在服务器 B 上用生产备份重做一次，作为真实基线。
+
+失败时脚本保留临时库并打印最后 40 行 `psql` 输出；检查完用
+`dropdb --force fs_billing_rehearse` 清理。不要把这个库接到应用上。
+
+## 大表加索引
+
+### 限制
+
+- drizzle migrator 在事务内执行迁移，`CREATE INDEX CONCURRENTLY` 不能在事务里跑。
+- 分区表的父表不支持直接 `CREATE INDEX CONCURRENTLY`。
+- 所以：父索引用 `CREATE INDEX ... ON ONLY`（只改元数据，可以放在迁移事务里），
+  每个分区在事务外并发建索引，最后 `ATTACH PARTITION` 挂到父索引。
+
+### 步骤
+
+以 `0010` 的 `cdrs (tenant_id, started_at)` 为例。
+
+1. **评估**。看分区列表、各分区大小、磁盘余量（索引约占表的 20%–70%）、
+   `maintenance_work_mem`，并确认没有长时间运行的事务（`CONCURRENTLY` 会等它们）。
+
+   ```sh
+   ops/migrate/concurrent-index.sh --database fs_billing --production \
+     --table cdrs --index cdrs_tenant_started_at \
+     --columns 'tenant_id, started_at' --dry-run
+   ```
+
+   先在演练库上不加 `--production` 试跑；生产库 `fs_billing` 必须显式加
+   `--production`，否则脚本拒绝。
+
+2. **父索引**。放进正常迁移（事务内可以，因为不扫数据）：
+
+   ```sql
+   CREATE INDEX cdrs_tenant_started_at ON ONLY cdrs (tenant_id, started_at);
+   ```
+
+3. **逐分区**。在迁移事务之外，每个分区一条：
+
+   ```sql
+   CREATE INDEX CONCURRENTLY cdrs_tenant_started_at_cdrs_2026_10
+     ON cdrs_2026_10 (tenant_id, started_at);
+   ```
+
+   失败会留下 `indisvalid = false` 的索引；先 `DROP INDEX CONCURRENTLY` 清理再
+   重试。脚本在每次失败后自动做这一步。每个分区之间检查
+   `pg_stat_activity` 里的长事务。
+
+4. **挂接**：
+
+   ```sql
+   ALTER INDEX cdrs_tenant_started_at
+     ATTACH PARTITION cdrs_tenant_started_at_cdrs_2026_10;
+   ```
+
+   全部分区挂接后父索引自动变为 valid。
+
+5. **验证**：`pg_index.indisvalid` 全为真；`EXPLAIN` 走新索引；
+   `pg_stat_user_indexes` 有扫描。
+
+6. **回退**：
+
+   ```sh
+   ops/migrate/concurrent-index.sh --database fs_billing --production \
+     --table cdrs --index cdrs_tenant_started_at \
+     --columns 'tenant_id, started_at' --rollback
+   ```
+
+   PostgreSQL 没有 `ALTER INDEX ... DETACH PARTITION`，已挂接的分区索引依赖父索引。
+   所以先 `DROP INDEX` 父索引（会一并删除已挂接的分区索引），再对未挂接的残留
+   分区索引逐个 `DROP INDEX CONCURRENTLY`。
+
+   **父索引的 `DROP INDEX` 不能 `CONCURRENTLY`**，会拿表与各分区的
+   `ACCESS EXCLUSIVE`，短暂阻塞读写，还可能排在长事务后面。脚本给它加
+   `lock_timeout = '5s'`，拿不到锁就失败而不是一直等；回退安排在业务低峰执行。
+
+7. **迁移文件怎么写**：drizzle 迁移文件里只放第 2 步（`ON ONLY`），第 3–4 步
+   写成运维步骤，并在迁移文件头注释里指向本章。新库（开发、CI、空库）仍能直接
+   得到完整索引；新建分区会自动继承父索引，不需要额外处理。
+
+### 演练失败
+
+`concurrent-index.sh --inject-failure <分区名>` 是演练钩子：先故意建一个同名
+唯一索引 `((1))`（必然重复），留下 invalid 索引，然后走「检测 invalid →
+`DROP INDEX CONCURRENTLY` → 重试」的正常路径。只在演练库使用，不要写进部署流程。
+在 `fs_billing` 上一律拒绝，即使加了 `--production`。
+
+`0010` 的迁移头注释已经指向本手册；不要把它改成 CONCURRENTLY，也不要手工在生产
+上执行 `CREATE INDEX`（非并发）去替代本流程。
 
 ## 日志与隐私
 

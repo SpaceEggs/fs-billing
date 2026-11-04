@@ -1,0 +1,26 @@
+# 0004 guard 验证
+
+机器：开发机（macOS 笔记本，非服务器 B）
+数据来源：0003 结构的历史库；非法场景各用一个临时库。
+本文件不含电话号码、密钥或连接串。
+
+
+## 构造的非法数据
+
+cdrs.billing_number = NULL
+
+## 0004 结果
+
+错误：reset the dev database before 0004: legacy billing_number rows present
+
+## 原子性核对（失败后）
+
+  cdrs.billing_number 仍可空：true
+  旧 cdrs 约束仍在：true
+  旧 unassigned 约束仍在：true
+  新 reason 约束不存在：true
+  迁移记录没有 0004：true
+
+## 结论
+
+通过：guard 拒绝非法数据，迁移整体回滚，临时库保持 0003 结构。
