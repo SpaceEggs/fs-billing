@@ -202,8 +202,11 @@ systemctl reload ssh
 
 note '安装 journald 配置'
 install -d -m 0755 /etc/systemd/journald.conf.d
+# Debian 的 systemd 自带 /usr/lib/systemd/journald.conf.d/syslog.conf（ForwardToSyslog=yes），
+# journald 按文件名字典序合并、后读到的生效，所以本片段用 zz- 前缀排在它后面。
+rm -f /etc/systemd/journald.conf.d/fs-billing.conf
 install -m 0644 "$repo_root/ops/journald/fs-billing.conf" \
-  /etc/systemd/journald.conf.d/fs-billing.conf
+  /etc/systemd/journald.conf.d/zz-fs-billing.conf
 install -d -m 2750 -o root -g systemd-journal /var/log/journal
 systemctl restart systemd-journald
 

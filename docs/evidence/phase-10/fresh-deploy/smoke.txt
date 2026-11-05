@@ -1,0 +1,11 @@
+ok  管理员登录（经 nginx） 200
+ok  首次改密 200
+ok  建租户与费率 200
+ok  充值 100 200
+等 70 秒，让接通时刻落在费率生效之后
+ok  读余额 200
+authorize 200 {"allowed":true,"maxSeconds":14400}
+cdr 200 queued
+cdr 重推 200 duplicate
+余额 100 -> 99.7 期望减 0.3
+RESULT PASS

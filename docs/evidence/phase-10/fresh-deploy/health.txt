@@ -1,0 +1,49 @@
+$ 发布版本
+b0263f7f5900
+$ curl api /health
+{"status":"ok","service":"api"}
+$ curl worker /health
+{"status":"ok","service":"worker"}
+$ curl -k https://<B_IP>/api/health
+{"status":"ok","service":"api"}
+$ curl -k -I https://<B_IP>/
+200
+$ systemctl is-active / is-enabled
+active
+active
+active
+active
+active
+active
+enabled
+enabled
+$ 环境文件权限
+640 root:fs-billing /etc/fs-billing/app.env
+600 root:root /etc/fs-billing/owner.env
+600 root:root /etc/fs-billing/monitor.env
+600 root:root /etc/fs-billing/backup.conf
+700 fs-billing:fs-billing /var/lib/fs-billing
+2750 root:systemd-journal /var/log/journal
+$ 含空格的键值行（期望无）
+/etc/fs-billing/app.env:0
+/etc/fs-billing/owner.env:0
+$ 测试键（期望无）
+/etc/fs-billing/app.env:0
+/etc/fs-billing/owner.env:0
+$ app.env 里的 owner DATABASE_URL（期望 0）
+0
+$ sshd
+permitrootlogin without-password
+passwordauthentication no
+kbdinteractiveauthentication no
+$ chrony
+System time     : 0.000033181 seconds slow of NTP time
+Leap status     : Normal
+6
+$ 定时器
+fs-billing-backup.service
+fs-billing-backup-verify.service
+fs-billing-check-clock.service
+fs-billing-health-check.service
+$ 失败单元
+（列表结束）

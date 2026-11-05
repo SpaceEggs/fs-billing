@@ -86,6 +86,7 @@ main() {
   remote_tarball=$2
   stopwatch_enabled=${3:-0}
   release_root=/opt/fs-billing/releases
+  current_link=/opt/fs-billing/current
   release=$release_root/$sha
 
   [[ $EUID -eq 0 ]] || {
@@ -109,7 +110,7 @@ main() {
   chmod 0755 "$staging"
 
   if [[ -e $release ]]; then
-    if [[ $release == "$(readlink -f "$release_root/current" 2>/dev/null || true)" ]]; then
+    if [[ $release == "$(readlink -f "$current_link" 2>/dev/null || true)" ]]; then
       echo "release $sha 是当前版本，复用目录并重新安装依赖"
       rm -rf -- "$staging"
     else
@@ -159,8 +160,8 @@ main() {
   run_timed 'queue:migrate' pnpm --filter @fs-billing/worker queue:migrate
 
   # 原子替换 current 符号链接。
-  ln -sfn "$release" "$release_root/current.tmp"
-  mv -Tf "$release_root/current.tmp" "$release_root/current"
+  ln -sfn "$release" "$current_link.tmp"
+  mv -Tf "$current_link.tmp" "$current_link"
 
   systemctl restart fs-billing-api fs-billing-worker
 
@@ -201,7 +202,7 @@ main() {
   chown fs-billing:fs-billing "$release/DEPLOYED_COMMIT"
 
   # 保留最近 3 个 release；当前链接与正在使用的目录不删。
-  current=$(readlink -f "$release_root/current" 2>/dev/null || true)
+  current=$(readlink -f "$current_link" 2>/dev/null || true)
   mapfile -t releases < <(
     find "$release_root" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' |
       sort -rn | awk '{ print $2 }'

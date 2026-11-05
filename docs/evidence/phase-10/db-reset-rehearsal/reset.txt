@@ -1,0 +1,23 @@
+开始 2026-11-05T01:48:50Z
+连接数：0
+backup_exit=0
+dropdb_exit=0
+createdb_exit=0
+迁移完成
+migrate_exit=0
+扣费队列安装完成
+queue_exit=0
+输出 sha256：7538b9df116c537b0b1d3442f4296720dfba31a0298df991c008f1c1ac1e3fd1
+balance_mismatch=0
+table	cdrs	0
+table	ledger_entries	0
+table	raw_cdrs	0
+table	unassigned_cdrs	0
+table	call_uuids	0
+table	system_alerts	0
+table	email_outbox	0
+active
+active
+{"status":"ok","service":"api"}
+{"status":"ok","service":"worker"}
+耗时 26 秒
