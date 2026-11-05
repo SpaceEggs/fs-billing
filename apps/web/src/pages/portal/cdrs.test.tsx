@@ -171,8 +171,8 @@ describe('portal CDR list', () => {
       '牙买加',
     );
     await user.click(
-      within(screen.getByRole('radiogroup', { name: '接通状态' })).getByRole(
-        'radio',
+      within(screen.getByRole('tablist', { name: '接通状态' })).getByRole(
+        'tab',
         { name: '全部' },
       ),
     );
@@ -222,26 +222,26 @@ describe('portal CDR list', () => {
       '447',
     );
     expect(
-      within(screen.getByRole('radiogroup', { name: '接通状态' })).getByRole(
-        'radio',
+      within(screen.getByRole('tablist', { name: '接通状态' })).getByRole(
+        'tab',
         { name: '全部' },
       ),
-    ).toHaveAttribute('aria-checked', 'true');
+    ).toHaveAttribute('aria-selected', 'true');
   });
 
   it('writes the direction filter to the address and the request', async () => {
     const user = userEvent.setup();
     const { lists, location } = cdrApp('/portal/cdrs');
     await screen.findByRole('table');
-    const direction = screen.getByRole('radiogroup', { name: '方向' });
-    await user.click(within(direction).getByRole('radio', { name: '呼入' }));
+    const direction = screen.getByRole('tablist', { name: '方向' });
+    await user.click(within(direction).getByRole('tab', { name: '呼入' }));
     await waitFor(() => expect(location()).toContain('direction=inbound'));
     await waitFor(() =>
       expect(Object.fromEntries(lists.at(-1)!)).toMatchObject({
         direction: 'inbound',
       }),
     );
-    await user.click(within(direction).getByRole('radio', { name: '全部' }));
+    await user.click(within(direction).getByRole('tab', { name: '全部' }));
     await waitFor(() => expect(location()).not.toContain('direction='));
   });
 
@@ -335,8 +335,8 @@ describe('portal CDR list', () => {
     expect(summary).toHaveTextContent('49,726分钟');
     expect(summary).toHaveTextContent('¥2,486.30');
     await user.click(
-      within(screen.getByRole('radiogroup', { name: '接通状态' })).getByRole(
-        'radio',
+      within(screen.getByRole('tablist', { name: '接通状态' })).getByRole(
+        'tab',
         { name: '全部' },
       ),
     );
@@ -509,8 +509,8 @@ describe('portal CDR list on a phone', () => {
     );
     await user.click(
       within(
-        within(sheet).getByRole('radiogroup', { name: '接通状态' }),
-      ).getByRole('radio', { name: '全部' }),
+        within(sheet).getByRole('tablist', { name: '接通状态' }),
+      ).getByRole('tab', { name: '全部' }),
     );
     await waitFor(() =>
       expect(Object.fromEntries(lists.at(-1)!)).toMatchObject({

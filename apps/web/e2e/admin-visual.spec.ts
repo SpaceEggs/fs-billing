@@ -564,7 +564,7 @@ const shots: Shot[] = [
       await openTab(page, seed.cny, '');
       await page.getByRole('button', { name: '余额操作' }).click();
       const dialog = page.getByRole('dialog', { name: '余额操作' });
-      await dialog.getByRole('radio', { name: '充值', exact: true }).check();
+      await dialog.getByRole('tab', { name: '充值', exact: true }).click();
       await dialog.getByLabel('金额').fill('1000');
       await dialog.getByLabel(/备注/).fill('9 月对公转账');
     },
@@ -578,7 +578,7 @@ const shots: Shot[] = [
       await openTab(page, seed.cny, '');
       await page.getByRole('button', { name: '余额操作' }).click();
       const dialog = page.getByRole('dialog', { name: '余额操作' });
-      await dialog.getByRole('radio', { name: '充值', exact: true }).check();
+      await dialog.getByRole('tab', { name: '充值', exact: true }).click();
       await dialog.getByLabel('金额').fill('1000');
       await dialog.getByRole('button', { name: '下一步' }).click();
       await expect(

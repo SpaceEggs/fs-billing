@@ -290,7 +290,7 @@ it('greys out and locks the settings while sending is off', async () => {
   await user.click(screen.getByRole('switch', { name: '启用邮件发送' }));
   expect(host).toBeDisabled();
   expect(change).toBeDisabled();
-  expect(screen.getByRole('radio', { name: 'STARTTLS' })).toBeDisabled();
+  expect(screen.getByRole('tab', { name: 'STARTTLS' })).toBeDisabled();
   expect(test).toBeDisabled();
   expect(host).toHaveValue(pageConfigured.host);
   expect(screen.getByText(/下面的配置会保留/)).toBeVisible();

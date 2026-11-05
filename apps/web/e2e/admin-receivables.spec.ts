@@ -60,7 +60,7 @@ test('renders CNY and USD totals separately', async ({ page }) => {
   await expect(totals).not.toContainText('1,413.46');
   await expect(table.getByRole('row')).toHaveCount(4);
 
-  await page.getByRole('radiogroup', { name: '币种' }).getByText('USD').click();
+  await page.getByRole('tablist', { name: '币种' }).getByText('USD').click();
   await expect(totals.getByRole('listitem')).toHaveText([
     '待收款总额 · USD$78.90',
   ]);
@@ -206,8 +206,8 @@ test('reverses then reconfirms with fresh token', async ({ page }) => {
     ).json()) as { items: { payment: { settlementId: string } }[] }
   ).items[0]!.payment.settlementId;
 
-  const status = page.getByRole('radiogroup', { name: '状态' });
-  await status.getByRole('radio', { name: '已收款' }).click();
+  const status = page.getByRole('tablist', { name: '状态' });
+  await status.getByRole('tab', { name: '已收款' }).click();
   await expect(page).toHaveURL(/status=received/);
   const row = table.getByRole('row').filter({ hasText: tenant.code });
   await expect(row).toContainText('工行对公转账');
@@ -224,7 +224,7 @@ test('reverses then reconfirms with fresh token', async ({ page }) => {
   );
   await expect(page.getByText('没有符合条件的已收款')).toBeVisible();
 
-  await status.getByRole('radio', { name: '待收款' }).click();
+  await status.getByRole('tab', { name: '待收款' }).click();
   await table
     .getByRole('button', { name: `确认收款 ${tenant.code} ¥800.00` })
     .click();
@@ -258,7 +258,10 @@ test('voids with linked adjustment', async ({ page }) => {
   // 经真实的余额操作对话框做一笔相反金额的调账（预填 -500.00）。
   await dialog.getByRole('button', { name: '去调账 -¥500.00' }).click();
   const adjust = page.getByRole('dialog', { name: '余额操作' });
-  await expect(adjust.getByRole('radio', { name: '调账' })).toBeChecked();
+  await expect(adjust.getByRole('tab', { name: '调账' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(adjust.getByLabel(/金额/)).toHaveValue(/^-500(\.0+)?$/);
   await adjust.getByRole('button', { name: '下一步' }).click();
   await adjust.getByRole('button', { name: '确认调账' }).click();
@@ -279,8 +282,8 @@ test('voids with linked adjustment', async ({ page }) => {
   expect(await balance(page, tenant)).toBe(afterAdjustment);
 
   await page
-    .getByRole('radiogroup', { name: '状态' })
-    .getByRole('radio', { name: '已作废' })
+    .getByRole('tablist', { name: '状态' })
+    .getByRole('tab', { name: '已作废' })
     .click();
   const row = table.getByRole('row').filter({ hasText: tenant.code });
   await expect(row).toContainText('客户合同终止');

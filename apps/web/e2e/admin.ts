@@ -104,7 +104,7 @@ export async function fillBalance(
 ) {
   await page.getByRole('button', { name: '余额操作' }).click();
   const dialog = page.getByRole('dialog', { name: '余额操作' });
-  await dialog.getByRole('radio', { name: kind, exact: true }).check();
+  await dialog.getByRole('tab', { name: kind, exact: true }).click();
   await dialog.getByLabel('金额').fill(amount);
   if (note) await dialog.getByLabel(/备注/).fill(note);
   await dialog.getByRole('button', { name: '下一步' }).click();

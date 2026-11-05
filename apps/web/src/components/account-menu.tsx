@@ -160,7 +160,7 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
       </div>
       <div className="flex flex-col gap-2 border-b border-border py-3">
         <span className="text-sm text-muted-foreground">主题</span>
-        <ThemeSegmented className="w-full [&>button]:flex-1" />
+        <ThemeSegmented className="w-full" />
       </div>
       {logout.isError ? (
         <p role="alert" className="m-0 pt-3 text-sm text-neg">

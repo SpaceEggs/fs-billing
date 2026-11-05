@@ -138,7 +138,7 @@ describe('receivables list', () => {
         : { status: 200, body: listing([gzt, nyc]) },
     );
     await screen.findByRole('table');
-    await user.click(screen.getByRole('radio', { name: 'USD' }));
+    await user.click(screen.getByRole('tab', { name: 'USD' }));
     await waitFor(() =>
       expect(location()).toBe('/admin/receivables?currency=USD'),
     );
@@ -148,8 +148,8 @@ describe('receivables list', () => {
     );
     expect(totals).toHaveTextContent('待收款总额 · USD$1,700.00');
     expect(totals).not.toHaveTextContent('CNY');
-    expect(screen.getByRole('radio', { name: 'USD' })).toHaveAttribute(
-      'aria-checked',
+    expect(screen.getByRole('tab', { name: 'USD' })).toHaveAttribute(
+      'aria-selected',
       'true',
     );
     const last = listCalls(calls).at(-1)?.path ?? '';
@@ -173,7 +173,7 @@ describe('receivables list', () => {
       '/admin/receivables?currency=CNY',
     );
     await screen.findByRole('table');
-    await user.click(screen.getByRole('radio', { name: '全部币种' }));
+    await user.click(screen.getByRole('tab', { name: '全部币种' }));
     const totals = screen.getByRole('list', { name: '待收款合计' });
     await waitFor(() =>
       expect(within(totals).getAllByRole('listitem')).toHaveLength(2),
@@ -994,11 +994,12 @@ describe('status views', () => {
       '/admin/receivables?page=2&currency=CNY',
     );
     await screen.findByRole('table');
-    const group = screen.getByRole('radiogroup', { name: '状态' });
-    expect(
-      within(group).getByRole('radio', { name: '待收款' }),
-    ).toHaveAttribute('aria-checked', 'true');
-    await user.click(within(group).getByRole('radio', { name: '已收款' }));
+    const group = screen.getByRole('tablist', { name: '状态' });
+    expect(within(group).getByRole('tab', { name: '待收款' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await user.click(within(group).getByRole('tab', { name: '已收款' }));
     await waitFor(() =>
       expect(location()).toBe(
         '/admin/receivables?currency=CNY&status=received',
@@ -1019,7 +1020,7 @@ describe('status views', () => {
         .map((item) => item.textContent),
     ).toEqual(['已收款总额 · CNY¥2,000.00']);
 
-    await user.click(within(group).getByRole('radio', { name: '待收款' }));
+    await user.click(within(group).getByRole('tab', { name: '待收款' }));
     await waitFor(() =>
       expect(location()).toBe('/admin/receivables?currency=CNY'),
     );
@@ -1035,7 +1036,7 @@ describe('status views', () => {
       { 'GET /api/admin/admins': accounts },
     );
     await screen.findByRole('table');
-    await user.click(screen.getByRole('radio', { name: '已作废' }));
+    await user.click(screen.getByRole('tab', { name: '已作废' }));
     expect(await screen.findByLabelText('已作废加载中')).toBeVisible();
     expect(screen.queryByRole('list', { name: /合计/ })).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
@@ -1405,7 +1406,10 @@ describe('void receivable', () => {
       within(dialog).getByRole('button', { name: '去调账 -¥2,000.00' }),
     );
     const balance = await screen.findByRole('dialog', { name: '余额操作' });
-    expect(within(balance).getByRole('radio', { name: '调账' })).toBeChecked();
+    expect(within(balance).getByRole('tab', { name: '调账' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(within(balance).getByLabelText(/金额/)).toHaveValue('-2000');
     expect(within(balance).getByLabelText(/备注/)).toHaveValue(
       '冲正 2026-08-18 充值 ¥2,000.00',

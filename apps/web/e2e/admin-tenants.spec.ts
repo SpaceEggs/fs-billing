@@ -14,7 +14,7 @@ test('tenant list shows seeded tenants with status and per-currency balances', a
   await expect(glb).toContainText('已停机');
   await expect(glb).toContainText('-$15.02');
 
-  await page.getByRole('radio', { name: 'USD' }).click();
+  await page.getByRole('tab', { name: 'USD' }).click();
   await expectPath(page, '/admin/tenants?currency=USD');
   await expect(page.getByRole('row').filter({ hasText: 'ABC001' })).toHaveCount(
     0,

@@ -36,7 +36,7 @@ import { SearchBox } from '../../components/search-box';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
-import { OptionToggle } from '../../components/option-toggle';
+import { OptionTabs } from '../../components/option-tabs';
 import {
   NativeSelect,
   NativeSelectOption,
@@ -117,12 +117,12 @@ function Filters({ total }: { total: number | undefined }) {
         </FilterGroup>
         <FilterGroup label="币种">
           {() => (
-            <OptionToggle
+            <OptionTabs
               label="币种"
               options={currencyChoices}
               value={search.currency}
               onChange={(currency) => setFilter({ currency })}
-              className="w-full [&>button]:flex-1"
+              className="w-full"
             />
           )}
         </FilterGroup>
@@ -151,7 +151,7 @@ function Filters({ total }: { total: number | undefined }) {
             </NativeSelectOption>
           ))}
         </NativeSelect>
-        <OptionToggle
+        <OptionTabs
           label="币种"
           options={currencyChoices}
           value={search.currency}

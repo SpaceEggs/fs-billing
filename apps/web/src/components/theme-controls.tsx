@@ -5,7 +5,7 @@ import {
   useThemePreference,
 } from '../lib/theme';
 import { cn } from '../lib/utils';
-import { OptionToggle } from './option-toggle';
+import { OptionTabs } from './option-tabs';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -67,7 +67,7 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
 export function ThemeSegmented({ className }: { className?: string }) {
   const preference = useThemePreference();
   return (
-    <OptionToggle
+    <OptionTabs
       label="主题"
       options={themeOptions}
       value={preference}

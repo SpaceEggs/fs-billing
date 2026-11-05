@@ -24,7 +24,7 @@ import {
 import { AppShell, PageBody } from '../../components/app-shell';
 import { RecipientsInput } from '../../components/admin/form-fields';
 import { SheetPanel } from '../../components/sheet-panel';
-import { OptionToggle } from '../../components/option-toggle';
+import { OptionTabs } from '../../components/option-tabs';
 import { LoadError } from '../../components/load-error';
 import { MailSettingsTab } from './mail-settings-tab';
 import { Alert, AlertDescription } from '../../components/ui/alert';
@@ -439,7 +439,7 @@ function SettingsForm({
             <label htmlFor="digest-minutes" className="text-sm font-medium">
               汇总邮件间隔
             </label>
-            <OptionToggle
+            <OptionTabs
               label="常用汇总间隔"
               options={['5', '15', '30', '60'].map((value) => ({
                 value,
@@ -574,7 +574,7 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
           </TabsContent>
           <TabsContent value="list" className="flex flex-col gap-5">
             <div className="flex flex-wrap items-center gap-3">
-              <OptionToggle
+              <OptionTabs
                 label="状态"
                 options={[
                   { value: 'all', label: '全部' },
