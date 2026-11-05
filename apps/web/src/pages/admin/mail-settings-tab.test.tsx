@@ -145,7 +145,7 @@ it('uses the env values read-only until the page takes over', async () => {
   expect(screen.getByRole('button', { name: '保存' })).toBeVisible();
 });
 
-it('fills the QQ preset and follows the account for the sender', async () => {
+it('has no provider choice and keeps the sender independent of the account', async () => {
   const user = userEvent.setup();
   const { handler } = adminApi({
     'GET /api/admin/mail-settings': () => ({
@@ -155,6 +155,8 @@ it('fills the QQ preset and follows the account for the sender', async () => {
   });
   renderApp('/admin/system-alerts?tab=mail', handler);
   expect(await screen.findByText('已设置')).toBeVisible();
+  expect(screen.queryByText('服务商')).not.toBeInTheDocument();
+  expect(screen.queryByRole('radio', { name: 'QQ 邮箱' })).toBeNull();
   expect(screen.queryByLabelText(/密码或授权码/)).not.toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: '更改' }));
@@ -162,17 +164,12 @@ it('fills the QQ preset and follows the account for the sender', async () => {
   expect(password).toBeVisible();
   expect(password).not.toBeRequired();
 
-  await user.click(screen.getByRole('radio', { name: 'QQ 邮箱' }));
-  expect(screen.getByLabelText('SMTP 服务器')).toHaveValue('smtp.qq.com');
-  expect(screen.getByLabelText('端口')).toHaveValue('465');
-  expect(screen.getByRole('radio', { name: '隐式 TLS' })).toBeChecked();
-
+  const sender = screen.getByLabelText(/发件人邮箱/);
+  const before = (sender as HTMLInputElement).value;
   const username = screen.getByLabelText('账号');
   await user.clear(username);
   await user.type(username, 'me@qq.com');
-  expect(screen.getByLabelText('发件人邮箱')).toHaveValue('me@qq.com');
-  expect(screen.getByText('QQ 邮箱要求和账号相同')).toBeVisible();
-  expect(screen.getByLabelText('授权码')).toBeVisible();
+  expect(sender).toHaveValue(before);
 });
 
 it('asks for a new password after the host changes', async () => {
