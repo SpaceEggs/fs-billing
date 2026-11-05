@@ -1,3 +1,4 @@
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useDeferredValue, useEffect, useId, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -584,32 +585,29 @@ function TenantPicker({
           {deferred ? '没有匹配的同币种租户' : '没有其他同币种租户'}
         </span>
       ) : (
-        <div
-          role="radiogroup"
+        <RadioGroup
           aria-label={label}
           aria-describedby={`${id}-group`}
-          className="flex max-h-[220px] flex-col overflow-auto rounded-lg border border-border"
+          value={selectedId ?? ''}
+          disabled={disabled}
+          onValueChange={(next) => {
+            const tenant = items.find((item) => item.id === next);
+            if (tenant)
+              onPick({
+                id: tenant.id,
+                code: tenant.code,
+                name: tenant.name,
+                currency: tenant.currency,
+              });
+          }}
+          className="flex max-h-[220px] flex-col gap-0 overflow-auto rounded-lg border border-border"
         >
           {items.map((tenant) => (
             <label
               key={tenant.id}
-              className="flex cursor-pointer items-center gap-2.5 border-t border-border px-3 py-2 text-[13px] first:border-t-0 has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+              className="flex cursor-pointer items-center gap-2.5 border-t border-border px-3 py-2 text-[13px] first:border-t-0 has-[[data-state=checked]]:bg-brand-soft"
             >
-              <input
-                type="radio"
-                name={`${id}-tenant`}
-                checked={tenant.id === selectedId}
-                disabled={disabled}
-                onChange={() =>
-                  onPick({
-                    id: tenant.id,
-                    code: tenant.code,
-                    name: tenant.name,
-                    currency: tenant.currency,
-                  })
-                }
-                className="accent-primary"
-              />
+              <RadioGroupItem value={tenant.id} />
               <span className="font-mono">{tenant.code}</span>
               <span className="flex-1 truncate">{tenant.name}</span>
               {tenant.status === 'disabled' ? (
@@ -617,7 +615,7 @@ function TenantPicker({
               ) : null}
             </label>
           ))}
-        </div>
+        </RadioGroup>
       )}
       {more ? (
         <span className="text-xs text-muted-foreground">

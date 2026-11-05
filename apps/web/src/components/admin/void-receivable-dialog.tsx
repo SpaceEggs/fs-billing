@@ -1,3 +1,4 @@
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useId, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AdminReceivable } from '@fs-billing/shared';
@@ -96,27 +97,21 @@ function Candidates({
       <span id={`${id}-label`}>
         冲正调账 <span className="text-neg">*</span>
       </span>
-      <div
-        role="radiogroup"
+      <RadioGroup
         aria-labelledby={`${id}-label`}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
+        value={selected ?? ''}
+        disabled={disabled}
+        onValueChange={onSelect}
         className="flex flex-col gap-1.5"
       >
         {candidates.map((entry) => (
           <label
             key={entry.id}
-            className="flex cursor-pointer items-start gap-2 rounded-lg border border-input px-3 py-2 text-[13px] font-normal has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+            className="flex cursor-pointer items-start gap-2 rounded-lg border border-input px-3 py-2 text-[13px] font-normal has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-brand-soft"
           >
-            <input
-              type="radio"
-              name={id}
-              value={entry.id}
-              checked={selected === entry.id}
-              disabled={disabled}
-              onChange={() => onSelect(entry.id)}
-              className="mt-0.5"
-            />
+            <RadioGroupItem value={entry.id} className="mt-0.5" />
             <span className="flex flex-col gap-0.5 tabular-nums">
               <span className="font-semibold">
                 调账 {formatExactMoney({ currency, amount: entry.amount })}
@@ -129,7 +124,7 @@ function Candidates({
             </span>
           </label>
         ))}
-      </div>
+      </RadioGroup>
       {error ? (
         <span id={`${id}-error`} className="text-xs font-normal text-neg">
           {error}

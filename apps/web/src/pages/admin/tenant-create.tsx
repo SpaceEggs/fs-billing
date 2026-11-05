@@ -1,3 +1,5 @@
+import { OptionToggle } from '../../components/option-toggle';
+import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { useEffect, useId, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -77,38 +79,25 @@ function CurrencyChoice({
   value: Currency;
   onChange: (currency: Currency) => void;
 }) {
-  const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <span id={`${id}-label`}>
+      <span aria-hidden>
         币种
         <span aria-hidden className="text-err">
           {' '}
           *
         </span>
       </span>
-      <div
-        role="radiogroup"
-        aria-labelledby={`${id}-label`}
-        className="grid h-11 grid-cols-2 gap-0.5 rounded-lg bg-muted p-[3px] md:h-10"
-      >
-        {currencySchema.options.map((currency) => (
-          <label
-            key={currency}
-            className="relative flex cursor-pointer items-center justify-center rounded-md text-sm font-normal text-muted-foreground has-checked:bg-background has-checked:font-semibold has-checked:text-primary has-checked:shadow-[0_1px_2px_rgba(0,0,0,.12)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
-          >
-            <input
-              type="radio"
-              name={id}
-              value={currency}
-              checked={value === currency}
-              onChange={() => onChange(currency)}
-              className="absolute inset-0 cursor-pointer appearance-none outline-none"
-            />
-            {currencyLabel[currency]}
-          </label>
-        ))}
-      </div>
+      <OptionToggle
+        label="币种"
+        options={currencySchema.options.map((currency) => ({
+          value: currency,
+          label: currencyLabel[currency],
+        }))}
+        value={value}
+        onChange={onChange}
+        className="w-full [&>button]:flex-1"
+      />
       <span className="text-xs font-normal text-muted-foreground">
         创建后不可修改
       </span>
@@ -143,12 +132,11 @@ function CsvPicker({
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
       <Label htmlFor={id}>CSV 文件</Label>
-      <input
+      <Input
         id={id}
         type="file"
         accept=".csv,text/csv"
         onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
-        className="text-[13px] font-normal file:mr-3 file:h-9 file:rounded-lg file:border file:border-input file:bg-transparent file:px-3 file:text-sm file:text-foreground"
       />
       <RateCsvTemplateLink className="self-start" />
       <span
@@ -624,7 +612,6 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     await openPortal(response.tenant.id, built.value.portal);
   }
 
-  const rateGroup = useId();
   const codeHint = normalizedCode(form.code);
   const pending = createTenant.isPending || readingCsv !== null;
 
@@ -869,36 +856,26 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
             title="费率表"
             description="没有费率的前缀，呼叫会被拒绝"
           >
-            <div
-              role="radiogroup"
+            <RadioGroup
               aria-label="初始费率表"
-              className="grid gap-2.5 md:col-span-2 md:grid-cols-3"
+              value={form.rates.kind}
+              onValueChange={(kind) =>
+                setRates(
+                  kind === 'blank'
+                    ? { kind: 'blank' }
+                    : kind === 'csv'
+                      ? { kind: 'csv', file: null }
+                      : { kind: 'copy', source: null },
+                )
+              }
+              className="gap-2.5 md:col-span-2 md:grid-cols-3"
             >
               {rateOptions.map((option) => (
                 <label
                   key={option.kind}
-                  className="relative flex cursor-pointer items-start gap-2.5 rounded-lg border border-input p-3 has-checked:border-[1.5px] has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
+                  className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-input p-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-brand-soft"
                 >
-                  <input
-                    type="radio"
-                    name={rateGroup}
-                    value={option.kind}
-                    checked={form.rates.kind === option.kind}
-                    onChange={() =>
-                      setRates(
-                        option.kind === 'blank'
-                          ? { kind: 'blank' }
-                          : option.kind === 'csv'
-                            ? { kind: 'csv', file: null }
-                            : { kind: 'copy', source: null },
-                      )
-                    }
-                    className="peer absolute inset-0 cursor-pointer appearance-none outline-none"
-                  />
-                  <span
-                    aria-hidden
-                    className="mt-0.5 size-4 shrink-0 rounded-full border-[1.5px] border-input peer-checked:border-[5px] peer-checked:border-primary"
-                  />
+                  <RadioGroupItem value={option.kind} className="mt-0.5" />
                   <span className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium">{option.label}</span>
                     <span className="hidden text-xs text-muted-foreground md:block">
@@ -907,7 +884,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                   </span>
                 </label>
               ))}
-            </div>
+            </RadioGroup>
             {form.rates.kind === 'csv' ? (
               <CsvPicker
                 file={form.rates.file}
