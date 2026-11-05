@@ -289,6 +289,58 @@ for rejection in 'bad 127.0.0.2 bad 484' 'disabled 127.0.0.3 +447700900123 403 4
   wait_sql "SELECT NOT EXISTS (SELECT 1 FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid'));"
   pass
 done
+
+current='并发上限 未配置 SIP 503'
+sed 's/response="484"/response="503"/' freeswitch/test/sipp/caller-reject.xml > "$FS_LOG_DIR/nolimit.xml"
+call nolimit 127.0.0.6 +447700900123 /logs/nolimit.xml
+sip_assert none >> "$FS_LOG_DIR/assertions.log"
+identify
+wait_sql "SELECT count(*)=1 AND bool_and(hangup_cause='NORMAL_TEMPORARY_FAILURE' AND charge=0 AND duration_seconds=0) FROM cdrs WHERE call_uuid::text IN ($uuids);"
+wait_sql "SELECT NOT EXISTS (SELECT 1 FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid'));"
+pass
+
+current='并发上限 超限 SIP 503'
+holder_name=limit-hold
+holder_cid=$holder_name-$run_id@fsi
+sed 's/milliseconds="2000"/milliseconds="12000"/' freeswitch/test/sipp/caller.xml > "$FS_LOG_DIR/$holder_name.xml"
+if cmp -s freeswitch/test/sipp/caller.xml "$FS_LOG_DIR/$holder_name.xml"; then
+  fail '并发保持呼叫未延长 pause'
+fi
+holder_invites_before=$(carrier_invites)
+(
+  call "$holder_name" 127.0.0.7 +447700900123 "/logs/$holder_name.xml"
+) &
+holder_pid=$!
+sleep 3
+for _ in $(seq 1 50); do
+  [[ $(cli 'limit_usage hash tenant FSIOK' | tr -d '[:space:]') == 1 ]] && break
+  sleep 0.2
+done
+[[ $(cli 'limit_usage hash tenant FSIOK' | tr -d '[:space:]') == 1 ]] || fail '并发保持呼叫未占用计数'
+# 等保持中的呼叫先完成授权和桥接，避免它的 INVITE/authorize 落在超限呼叫的时间窗内。
+for _ in $(seq 1 50); do
+  (( $(carrier_invites) > holder_invites_before )) && break
+  sleep 0.2
+done
+(( $(carrier_invites) > holder_invites_before )) || fail '并发保持呼叫未桥接'
+sed 's/response="484"/response="503"/' freeswitch/test/sipp/caller-reject.xml > "$FS_LOG_DIR/limit-over.xml"
+call limit-over 127.0.0.8 +447700900123 /logs/limit-over.xml
+sip_assert none >> "$FS_LOG_DIR/assertions.log"
+identify
+wait_sql "SELECT count(*)=1 AND bool_and(hangup_cause='NORMAL_CIRCUIT_CONGESTION' AND charge=0 AND duration_seconds=0) FROM cdrs WHERE call_uuid::text IN ($uuids);"
+wait_sql "SELECT NOT EXISTS (SELECT 1 FROM ledger_entries WHERE kind='call_charge' AND idempotency_key IN (SELECT 'call:' || (payload->'variables'->>'uuid') FROM raw_cdrs WHERE payload->'variables'->>'sip_call_id'='$cid'));"
+wait "$holder_pid" || fail '并发保持呼叫失败'
+cid=$holder_cid
+case_name=$holder_name
+charged
+wait_sql "SELECT count(*)=1 AND bool_and(charge=0.01 AND duration_seconds BETWEEN 10 AND 30) FROM cdrs WHERE call_uuid::text IN ($uuids);"
+for _ in $(seq 1 50); do
+  [[ $(cli 'limit_usage hash tenant FSIOK' | tr -d '[:space:]') == 0 ]] && break
+  sleep 0.2
+done
+[[ $(cli 'limit_usage hash tenant FSIOK' | tr -d '[:space:]') == 0 ]] || fail '并发计数未回到 0'
+pass
+
 current='计费号码不一致 HTTP 400 / SIP 503'
 authorize_backup=$FS_LOG_DIR/billing_authorize.original.lua
 cp "$authorize_script" "$authorize_backup"

@@ -121,7 +121,7 @@ ORDER BY t.code, e.prefix;
 | 配置项 | 示例 | 说明 |
 |---|---|---|
 | `billing_tenant` | `ABC001` | 写在 SIP 用户或 IP 对接上；必须与管理后台中的租户编码完全一致，否则话单进入未归属话单 |
-| 并发上限 | `limit hash tenant ABC001 30` | 计费系统故障时控制透支的主要手段 |
+| 并发上限 | `billing_concurrency=30` | 在 directory 的 user 或 IP 路由上设置正整数；拨号计划执行 `limit`，超限返回 SIP 503、话单 `NORMAL_CIRCUIT_CONGESTION`；未配置时拒绝呼叫，返回 SIP 503、话单 `NORMAL_TEMPORARY_FAILURE`。计费系统故障时控制透支的主要手段。 |
 | 接入方式 | SIP 账号密码，或 IP 白名单 | |
 | TLS / SRTP | 是否强制 | 按客户终端能力决定 |
 
