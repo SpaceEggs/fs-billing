@@ -42,13 +42,14 @@ const base: MailSettingsInput = {
 function save(
   expectedVersion = 1,
   overrides: Partial<MailSettingsInput> = {},
-  password: string | undefined = 'super-secret-password',
+  // 传 null 表示不提供密码；传 undefined 会触发这里的默认值。
+  password: string | null = 'super-secret-password',
 ) {
   return updateMailSettings(app.db, {
     actor,
     key,
     expectedVersion,
-    input: { ...base, ...overrides, password },
+    input: { ...base, ...overrides, password: password ?? undefined },
   });
 }
 
@@ -111,7 +112,7 @@ describe('admin mail settings', () => {
   it('does not bump the version or write a log when nothing changed', async () => {
     const first = await save(1);
     const before = await logCount();
-    const same = await save(first.settings.version, {}, undefined);
+    const same = await save(first.settings.version, {}, null);
     expect(same.auditId).toBeNull();
     expect(same.settings.version).toBe(2);
     expect(await logCount()).toBe(before);
@@ -121,7 +122,7 @@ describe('admin mail settings', () => {
     await save(1);
     const before = await logCount();
     await expect(
-      save(2, { host: 'smtp.attacker.test' }, undefined),
+      save(2, { host: 'smtp.attacker.test' }, null),
     ).rejects.toBeInstanceOf(MailSettingsPasswordRequiredError);
     expect(await logCount()).toBe(before);
     expect((await getMailSettings(app.db)).version).toBe(2);
@@ -131,7 +132,7 @@ describe('admin mail settings', () => {
     await save(1);
     const before = await logCount();
     await expect(
-      save(2, { username: 'other@example.com' }, undefined),
+      save(2, { username: 'other@example.com' }, null),
     ).rejects.toBeInstanceOf(MailSettingsPasswordRequiredError);
     expect(await logCount()).toBe(before);
     expect((await getMailSettings(app.db)).version).toBe(2);
@@ -143,14 +144,14 @@ describe('admin mail settings', () => {
     const updated = await save(
       2,
       { siteUrl: 'https://new.example.com' },
-      undefined,
+      null,
     );
     expect(updated.settings.version).toBe(3);
     expect(await ciphertext()).toBe(before);
   });
 
   it('rejects the first save without a password outside loopback', async () => {
-    await expect(save(1, {}, undefined)).rejects.toBeInstanceOf(
+    await expect(save(1, {}, null)).rejects.toBeInstanceOf(
       MailSettingsPasswordRequiredError,
     );
   });
@@ -165,7 +166,7 @@ describe('admin mail settings', () => {
         username: null,
         mailFrom: 'dev@example.com',
       },
-      undefined,
+      null,
     );
     expect(saved.settings.passwordSet).toBe(false);
   });
