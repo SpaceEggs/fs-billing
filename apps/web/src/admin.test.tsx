@@ -488,9 +488,9 @@ describe('tenant detail', () => {
     expect(
       await screen.findByRole('region', { name: '本月消费' }),
     ).toHaveTextContent('¥2,486.30');
-    expect(screen.getByRole('link', { name: '概况' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    expect(screen.getByRole('tab', { name: '概况' })).toHaveAttribute(
+      'aria-selected',
+      'true',
     );
   });
 

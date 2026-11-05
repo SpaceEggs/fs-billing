@@ -105,7 +105,7 @@ describe('mobile tenant detail header', () => {
     const { user } = openDetail();
     await screen.findByRole('region', { name: '余额概要' });
     expect(screen.getAllByRole('button', { name: '余额操作' })).toHaveLength(2);
-    await user.click(screen.getByRole('link', { name: '设置' }));
+    await user.click(screen.getByRole('tab', { name: '设置' }));
     await screen.findByRole('button', { name: '保存修改' });
     expect(screen.getAllByRole('button', { name: '余额操作' })).toHaveLength(1);
   });

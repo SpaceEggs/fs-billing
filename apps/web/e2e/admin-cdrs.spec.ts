@@ -40,8 +40,8 @@ test('tags the unverified call, counts it in the summary, and offers delete', as
   ).toBeVisible();
   await expect(page.getByText('查看告警')).toHaveCount(0);
   await expect(
-    page.getByRole('link', { name: '话单', exact: true }),
-  ).toHaveAttribute('aria-current', 'page');
+    page.getByRole('tab', { name: '话单', exact: true }),
+  ).toHaveAttribute('aria-selected', 'true');
 });
 
 test('shows 英国 · 手机 and 英国 for the merged country column', async ({
@@ -149,11 +149,11 @@ test('keeps separate date ranges for the ledger and the calls', async ({
   await page.goto(tabUrl(tenant.id, '&from=2026-10-01&to=2026-10-02'));
   // 话单用自己的 9 月范围，不受地址里流水的 10 月范围影响。
   await expect(rows(page)).toHaveCount(51);
-  await page.getByRole('link', { name: '余额流水', exact: true }).click();
+  await page.getByRole('tab', { name: '余额流水', exact: true }).click();
   await expect(
     page.getByRole('button', { name: /日期范围.*2026-10-01 至 2026-10-02/ }),
   ).toBeVisible();
-  await page.getByRole('link', { name: '话单', exact: true }).click();
+  await page.getByRole('tab', { name: '话单', exact: true }).click();
   await expect(rows(page)).toHaveCount(51);
   await expect(
     page.getByRole('button', { name: /日期范围.*2026-09-01 至 2026-09-30/ }),

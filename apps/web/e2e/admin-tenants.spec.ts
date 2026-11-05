@@ -138,9 +138,9 @@ test('overview tab shows this month, call counts and the 30-day chart from the A
   const sameDay = fixture.day === today;
   const sameMonth = fixture.day.slice(0, 7) === today.slice(0, 7);
 
-  await expect(page.getByRole('link', { name: '概况' })).toHaveAttribute(
-    'aria-current',
-    'page',
+  await expect(page.getByRole('tab', { name: '概况' })).toHaveAttribute(
+    'aria-selected',
+    'true',
   );
   await expect(page.getByRole('region', { name: '本月消费' })).toContainText(
     sameMonth ? '¥12.34' : '¥0.00',
