@@ -1,3 +1,9 @@
+/**
+ * `mail:test` 与 `mail:requeue` 命令行。
+ *
+ * **`mail:test` 只读环境变量（`SMTP_*`），不读数据库里的邮箱设置**：它是上线前对真实账号做的手工核实，
+ * 也用于页面管理的配置出问题时确认环境变量这条退路。页面保存的配置不参与这里的判断。
+ */
 import type { Writable } from 'node:stream';
 import { parseArgs } from 'node:util';
 import { z } from 'zod';

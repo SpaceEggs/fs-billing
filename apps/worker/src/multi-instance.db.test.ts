@@ -94,7 +94,7 @@ const MINUTE = 60_000;
 // 不带 mail 设置：处理函数仍是真实的（告警恢复、入发件箱），只是不分发——发件箱的分发由下面的专门用例控制，
 // 不会有第三个分发器在同一时刻抢邮件。
 const tickOptions = (): NotifyTickOptions => ({
-  mail: undefined,
+  resolveMail: () => Promise.resolve(undefined),
   quietMinutes: 10,
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 });

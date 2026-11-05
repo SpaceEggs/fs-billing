@@ -6,11 +6,14 @@ import {
   raiseAlert,
   recoverAlert,
   saveAlertSettings,
+  updateMailSettings,
   withAdmin,
   withSystem,
+  type MailSettingsInput,
 } from '@fs-billing/db';
 import { connections } from '../../../packages/db/test/support.js';
 import type { MailSettings } from '@fs-billing/mailer';
+import { resolveMailSettings } from './mail-settings.js';
 import { runNotifyTick } from './notify.js';
 import {
   clearMailpit,
@@ -34,7 +37,8 @@ const tickAt = (
   options: { quietMinutes?: number; mail?: MailSettings | undefined } = {},
 ) =>
   runNotifyTick(app.db, {
-    mail: 'mail' in options ? options.mail : settings(),
+    resolveMail: () =>
+      Promise.resolve('mail' in options ? options.mail : settings()),
     quietMinutes: options.quietMinutes ?? 10,
     now: () => minute(m),
   });
@@ -61,6 +65,14 @@ async function cleanUp() {
   );
   await owner.pool.query(
     `update alert_settings set recipients = '{}', digest_minutes = 15, version = 1, updated_by = null`,
+  );
+  // 页面管理的邮箱设置也属于本文件：恢复成默认的“用环境变量”，不留给后面的文件。
+  await owner.pool.query(
+    `update smtp_settings
+        set managed = false, enabled = false, host = null, port = null, secure = null,
+            username = null, password_ciphertext = null, mail_from = null, site_url = null,
+            last_test_at = null, last_test_ok = null, last_test_result = null,
+            version = 1, updated_at = now(), updated_by = null`,
   );
 }
 
@@ -461,7 +473,7 @@ describe('notify-tick 的事务与失败隔离', () => {
     const log = { info: () => undefined, warn: vi.fn(), error: vi.fn() };
     await breaking([['cdrs', 'unverified', 'unverified_off']], () =>
       runNotifyTick(app.db, {
-        mail: settings(),
+        resolveMail: () => Promise.resolve(settings()),
         quietMinutes: 10,
         now: () => minute(10),
         logger: log,
@@ -501,7 +513,7 @@ describe('notify-tick 的事务与失败隔离', () => {
       async () => {
         for (const m of [1, 2]) {
           await runNotifyTick(app.db, {
-            mail: settings(),
+            resolveMail: () => Promise.resolve(settings()),
             quietMinutes: 10,
             now: () => minute(m),
             logger: log,
@@ -518,5 +530,109 @@ describe('notify-tick 的事务与失败隔离', () => {
     expect((await outbox()).map((row) => row.template)).toEqual([
       'alert_start',
     ]);
+  });
+});
+
+describe('页面管理的邮箱设置（每轮读取）', () => {
+  const KEY = Buffer.alloc(32, 11);
+  const tuning = { timeoutMs: 5000, ratePerTick: 20, maxAttempts: 6 };
+
+  const dbMail = (
+    overrides: Partial<MailSettingsInput> = {},
+  ): MailSettingsInput => ({
+    enabled: true,
+    host: mailpitSettings().host,
+    port: mailpitSettings().port,
+    secure: false,
+    username: null,
+    mailFrom: 'first@example.test',
+    siteUrl: SITE,
+    ...overrides,
+  });
+  const save = (input: MailSettingsInput, expectedVersion = 1) =>
+    updateMailSettings(app.db, {
+      actor: { id: adminId, name: '管理员' },
+      key: KEY,
+      expectedVersion,
+      input,
+    });
+  const resolve = (envSettings?: MailSettings) =>
+    resolveMailSettings(app.db, { envSettings, key: KEY, tuning });
+  const queueTest = (m: number) =>
+    withSystem(app.db, (tx) =>
+      enqueueEmail(tx, {
+        dedupeKey: `test:${randomUUID()}`,
+        template: 'test',
+        params: { sentAt: minute(m).toISOString() },
+        recipients: [OPS],
+        at: minute(m),
+      }),
+    );
+  const status = async (id: string) =>
+    (
+      await owner.pool.query<{ status: string }>(
+        'select status from email_outbox where id = $1',
+        [id],
+      )
+    ).rows[0]!.status;
+  const tick = (m: number, envSettings?: MailSettings) =>
+    runNotifyTick(app.db, {
+      resolveMail: () => resolve(envSettings),
+      quietMinutes: 10,
+      now: () => minute(m),
+    });
+
+  it('uses a sender changed between ticks without a restart', async () => {
+    const saved = await save(dbMail());
+    const first = await queueTest(0);
+    // 环境变量来源用另一个发件人：页面管理时不看它。
+    await tick(0, settings({ from: 'env@example.test' }));
+    expect(await status(first.id)).toBe('sent');
+    const afterFirst = await received();
+    expect(afterFirst[0]!.From.Address).toBe('first@example.test');
+
+    await save(
+      dbMail({ mailFrom: 'second@example.test' }),
+      saved.settings.version,
+    );
+    const second = await queueTest(1);
+    await tick(1, settings({ from: 'env@example.test' }));
+    expect(await status(second.id)).toBe('sent');
+    const messages = await received();
+    expect(messages).toHaveLength(2);
+    expect(messages[1]!.From.Address).toBe('second@example.test');
+  });
+
+  it('holds mail while disabled and sends it after enabling', async () => {
+    const saved = await save(dbMail({ enabled: false }));
+    const queued = await queueTest(0);
+    // 即使配了环境变量，页面停用就不发。
+    await tick(0, settings());
+    expect(await status(queued.id)).toBe('pending');
+    expect(await mailpitMessages()).toHaveLength(0);
+
+    await save(dbMail({ enabled: true }), saved.settings.version);
+    await tick(1, settings());
+    expect(await status(queued.id)).toBe('sent');
+    expect(await mailpitMessages()).toHaveLength(1);
+  });
+
+  it('keeps queued notices when resolving the settings throws', async () => {
+    await configure();
+    await raiseAuthTimeout(0);
+    await expect(
+      runNotifyTick(app.db, {
+        resolveMail: () => {
+          throw new Error('settings db down');
+        },
+        quietMinutes: 10,
+        now: () => minute(0),
+      }),
+    ).rejects.toThrow('settings db down');
+    // 入队先提交：告警已经开始通知，邮件留待下一轮。
+    expect(await outbox()).toMatchObject([
+      { template: 'alert_start', status: 'pending' },
+    ]);
+    expect(await mailpitMessages()).toHaveLength(0);
   });
 });

@@ -89,7 +89,7 @@ describe('real cron', () => {
   let firstBoundary = 0;
   // 不带 mail 设置：处理函数仍是真实的（告警恢复、入发件箱），只是不分发，所以不会碰 Mailpit 和发件箱里别的邮件。
   const options: NotifyTickOptions = {
-    mail: undefined,
+    resolveMail: () => Promise.resolve(undefined),
     quietMinutes: 10,
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   };

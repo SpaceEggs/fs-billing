@@ -5,6 +5,7 @@ import { createClockMonitor, startClockMonitor } from './clock.js';
 import { startRawArchive } from './archive.js';
 import { mailSettingsOf } from '@fs-billing/mailer';
 import { workerEnvironmentSchema } from './config.js';
+import { resolveMailSettings } from './mail-settings.js';
 import { CHARGE_QUEUE, chargeQueue, createBoss } from './queue.js';
 import { chargeJobs, chargeWorkOptions } from './charge.js';
 import { startNotifyJobs } from './notify.js';
@@ -100,13 +101,20 @@ try {
     app.log.warn(
       '未设置 RAW_CDR_ARCHIVE_DIR：原始话单归档未启用，raw_cdrs 的老分区不会被归档或丢弃',
     );
-  const mail = mailSettingsOf(config);
-  if (!mail)
-    app.log.warn(
-      '未设置 SMTP_HOST：邮件发送未启用，发件箱照常入队但不会发出（余额提醒、故障告警邮件）',
-    );
+  // 启动时不再判断有没有邮件配置：来源（环境变量或页面管理）每轮发信前才读一次，数据库暂时不可用
+  // 不应让 Worker 启动失败。配置有问题时由 resolver 每轮记固定错误日志。
   await startNotifyJobs(boss, connection.db, {
-    mail,
+    resolveMail: () =>
+      resolveMailSettings(connection.db, {
+        envSettings: mailSettingsOf(config),
+        key: config.SETTINGS_ENCRYPTION_KEY,
+        tuning: {
+          timeoutMs: config.SMTP_TIMEOUT_MS,
+          ratePerTick: config.MAIL_RATE_PER_MINUTE,
+          maxAttempts: config.MAIL_MAX_ATTEMPTS,
+        },
+        logger: app.log,
+      }),
     quietMinutes: config.ALERT_QUIET_MINUTES,
     logger: app.log,
     signal: shutdown.signal,
