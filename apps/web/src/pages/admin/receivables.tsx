@@ -35,7 +35,7 @@ import {
   FilterSheet,
   resultLabel,
 } from '../../components/filter-sheet';
-import { Segmented } from '../../components/segmented';
+import { OptionToggle } from '../../components/option-toggle';
 import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -107,14 +107,14 @@ function Filters({ total }: { total: number | undefined }) {
   const { search, setFilter } = useReceivablesSearch();
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-      <Segmented
+      <OptionToggle
         label="状态"
         options={statusOptions}
         value={statusOf(search)}
         onChange={(status) =>
           setFilter({ status: status === 'pending' ? undefined : status })
         }
-        className="w-full md:w-auto"
+        className="w-full md:w-fit max-md:[&>button]:flex-1"
       />
       <div className="flex gap-2 md:contents">
         <SearchBox
@@ -132,18 +132,18 @@ function Filters({ total }: { total: number | undefined }) {
         >
           <FilterGroup label="币种">
             {() => (
-              <Segmented
+              <OptionToggle
                 label="币种"
                 options={currencyOptions}
                 value={search.currency}
                 onChange={(currency) => setFilter({ currency })}
-                className="w-full self-stretch text-[15px]"
+                className="w-full [&>button]:flex-1"
               />
             )}
           </FilterGroup>
         </FilterSheet>
       </div>
-      <Segmented
+      <OptionToggle
         label="币种"
         options={currencyOptions}
         value={search.currency}

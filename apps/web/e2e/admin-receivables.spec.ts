@@ -60,7 +60,7 @@ test('renders CNY and USD totals separately', async ({ page }) => {
   await expect(totals).not.toContainText('1,413.46');
   await expect(table.getByRole('row')).toHaveCount(4);
 
-  await page.getByRole('group', { name: '币种' }).getByText('USD').click();
+  await page.getByRole('radiogroup', { name: '币种' }).getByText('USD').click();
   await expect(totals.getByRole('listitem')).toHaveText([
     '待收款总额 · USD$78.90',
   ]);
@@ -206,8 +206,8 @@ test('reverses then reconfirms with fresh token', async ({ page }) => {
     ).json()) as { items: { payment: { settlementId: string } }[] }
   ).items[0]!.payment.settlementId;
 
-  const status = page.getByRole('group', { name: '状态' });
-  await status.getByRole('button', { name: '已收款' }).click();
+  const status = page.getByRole('radiogroup', { name: '状态' });
+  await status.getByRole('radio', { name: '已收款' }).click();
   await expect(page).toHaveURL(/status=received/);
   const row = table.getByRole('row').filter({ hasText: tenant.code });
   await expect(row).toContainText('工行对公转账');
@@ -224,7 +224,7 @@ test('reverses then reconfirms with fresh token', async ({ page }) => {
   );
   await expect(page.getByText('没有符合条件的已收款')).toBeVisible();
 
-  await status.getByRole('button', { name: '待收款' }).click();
+  await status.getByRole('radio', { name: '待收款' }).click();
   await table
     .getByRole('button', { name: `确认收款 ${tenant.code} ¥800.00` })
     .click();
@@ -279,8 +279,8 @@ test('voids with linked adjustment', async ({ page }) => {
   expect(await balance(page, tenant)).toBe(afterAdjustment);
 
   await page
-    .getByRole('group', { name: '状态' })
-    .getByRole('button', { name: '已作废' })
+    .getByRole('radiogroup', { name: '状态' })
+    .getByRole('radio', { name: '已作废' })
     .click();
   const row = table.getByRole('row').filter({ hasText: tenant.code });
   await expect(row).toContainText('客户合同终止');

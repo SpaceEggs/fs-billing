@@ -6,9 +6,9 @@ import type { DayRange } from '../../lib/day-range';
 import { latestRangeEnd } from '@fs-billing/shared';
 import { DateRangeField } from '../date-range-field';
 import { FilterGroup, FilterSheet } from '../filter-sheet';
+import { OptionToggle } from '../option-toggle';
 import { SearchBox } from '../search-box';
 import { NativeSelect, NativeSelectOption } from '../ui/native-select';
-import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { cn } from '../../lib/utils';
 
 const statusOptions = [
@@ -21,42 +21,6 @@ const directionOptions = [
   { value: 'inbound', label: '呼入' },
   { value: 'outbound', label: '呼出' },
 ] as const;
-
-/** 话单筛选里的单选项（接通状态、方向）统一用 shadcn ToggleGroup。 */
-function FilterToggle<Value extends string>({
-  label,
-  options,
-  value,
-  onChange,
-  className,
-}: {
-  label: string;
-  options: readonly { value: Value; label: string }[];
-  value: Value;
-  onChange: (value: Value) => void;
-  className?: string;
-}) {
-  return (
-    <ToggleGroup
-      type="single"
-      aria-label={label}
-      variant="outline"
-      value={value}
-      onValueChange={(next) => {
-        // 已选中的一段再次点击不取消选择。
-        const option = options.find((item) => item.value === next);
-        if (option) onChange(option.value);
-      }}
-      className={className}
-    >
-      {options.map((option) => (
-        <ToggleGroupItem key={option.value} value={option.value}>
-          {option.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
-  );
-}
 
 /** 后台在筛选里多出的「仅看未经验证」：电脑端排在状态之后，手机端放在面板里。 */
 export type CdrFilterExtra = {
@@ -200,26 +164,26 @@ export function CdrFilterBar({
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">接通状态</span>
-          <FilterToggle
+          <OptionToggle
             label="接通状态"
             options={statusOptions}
             value={status}
             onChange={(next) =>
               onFilters({ status: next === 'all' ? 'all' : undefined })
             }
-            className="w-full self-stretch [&>button]:h-11 [&>button]:flex-1"
+            className="w-full [&>button]:flex-1"
           />
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">方向</span>
-          <FilterToggle
+          <OptionToggle
             label="方向"
             options={directionOptions}
             value={filters.direction ?? 'all'}
             onChange={(next) =>
               onFilters({ direction: next === 'all' ? undefined : next })
             }
-            className="w-full self-stretch [&>button]:h-11 [&>button]:flex-1"
+            className="w-full [&>button]:flex-1"
           />
         </div>
         {extra?.sheet}
@@ -242,7 +206,7 @@ export function CdrFilterBar({
           </NativeSelect>
         </Field>
         <Field label="接通状态">
-          <FilterToggle
+          <OptionToggle
             label="接通状态"
             options={statusOptions}
             value={status}
@@ -252,7 +216,7 @@ export function CdrFilterBar({
           />
         </Field>
         <Field label="方向">
-          <FilterToggle
+          <OptionToggle
             label="方向"
             options={directionOptions}
             value={filters.direction ?? 'all'}

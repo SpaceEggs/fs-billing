@@ -33,10 +33,10 @@ test('overview and system alerts settings', async ({ page }) => {
   await chart.focus();
   await chart.press('Home');
   await expect(page.getByTestId('chart-bubble')).toBeVisible();
-  await page.getByRole('button', { name: 'USD', exact: true }).click();
+  await page.getByRole('radio', { name: 'USD', exact: true }).click();
   await expect(
-    page.getByRole('button', { name: 'USD', exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.getByRole('radio', { name: 'USD', exact: true }),
+  ).toHaveAttribute('aria-checked', 'true');
   await page
     .getByRole('navigation', { name: '主导航' })
     .getByRole('link', { name: /系统告警/ })
@@ -120,10 +120,10 @@ test('lists the seeded alerts, filters them and expands a recovered one', async 
   await expect(page.getByText(/^进行中 \d+$/)).toBeVisible();
 
   // 状态：只看进行中，每一行都是进行中。
-  const status = page.getByRole('group', { name: '状态' });
-  await status.getByRole('button', { name: '进行中' }).click();
-  await expect(status.getByRole('button', { name: '进行中' })).toHaveAttribute(
-    'aria-pressed',
+  const status = page.getByRole('radiogroup', { name: '状态' });
+  await status.getByRole('radio', { name: '进行中' }).click();
+  await expect(status.getByRole('radio', { name: '进行中' })).toHaveAttribute(
+    'aria-checked',
     'true',
   );
   await expect(rows.filter({ hasText: '已恢复' })).toHaveCount(0);
@@ -136,7 +136,7 @@ test('lists the seeded alerts, filters them and expands a recovered one', async 
   await expect(page.getByText('没有符合筛选条件的系统告警')).toBeVisible();
 
   // 改为只看已恢复的邮件发送失败：种子里的两条（收件人被拒、SMTP 超时）。
-  await status.getByRole('button', { name: '已恢复' }).click();
+  await status.getByRole('radio', { name: '已恢复' }).click();
   await expect(rows.first()).toContainText('邮件发送失败');
   await expect(rows.filter({ hasNotText: '邮件发送失败' })).toHaveCount(0);
   expect(await rows.count()).toBeGreaterThanOrEqual(2);
@@ -153,7 +153,7 @@ test('lists the seeded alerts, filters them and expands a recovered one', async 
 
   // 清除筛选：回到全部。
   await page.getByRole('combobox', { name: '类型' }).selectOption('');
-  await status.getByRole('button', { name: '全部' }).click();
+  await status.getByRole('radio', { name: '全部' }).click();
   await expect(rows.first()).toContainText('进行中');
 
   // 时间窗口：24 小时是 30 天的子集。
@@ -255,7 +255,7 @@ test('edits the receiving mailboxes with the chips input and saves them', async 
     await page.getByRole('button', { name: '移除 not-an-email' }).click();
 
     // 汇总间隔：常用值与自定义共用一个值。
-    await page.getByRole('button', { name: '30 分钟' }).click();
+    await page.getByRole('radio', { name: '30 分钟' }).click();
     await expect(page.getByLabel('自定义（分钟）')).toHaveValue('30');
     await page.getByRole('button', { name: '保存', exact: true }).click();
     await expect(page.getByText('设置已保存')).toBeVisible();
@@ -337,7 +337,7 @@ test('a stale settings form is rejected with a conflict and reloaded', async ({
     // 本页仍是旧版本；保存被拒，提示里列出自己提交的内容，表单换成最新设置。
     await input.fill('mine@example.com');
     await input.press('Enter');
-    await page.getByRole('button', { name: '30 分钟' }).click();
+    await page.getByRole('radio', { name: '30 分钟' }).click();
     await page.getByRole('button', { name: '保存', exact: true }).click();
     const conflict = page.getByRole('alert').filter({
       hasText: '告警设置已被其他人修改',

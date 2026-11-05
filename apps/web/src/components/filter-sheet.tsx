@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { Toggle } from './ui/toggle';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { SheetPanel } from './sheet-panel';
@@ -88,7 +88,7 @@ export function FilterGroup({
   );
 }
 
-/** 面板里的多选一（如租户状态），三列按钮，aria-pressed 标出当前项。 */
+/** 面板里的多选一（如租户状态），三列按钮。 */
 export function ChoiceGrid<Value extends string | undefined>({
   labelledBy,
   options,
@@ -101,30 +101,29 @@ export function ChoiceGrid<Value extends string | undefined>({
   onChange: (value: Value) => void;
 }) {
   return (
-    <div
-      role="group"
+    <ToggleGroup
+      type="single"
       aria-labelledby={labelledBy}
-      className="grid grid-cols-3 gap-2"
+      variant="outline"
+      spacing={2}
+      value={value ?? 'all'}
+      onValueChange={(next) => {
+        // 已选中的一项再次点击不取消选择。
+        const option = options.find((item) => (item.value ?? 'all') === next);
+        if (option) onChange(option.value);
+      }}
+      className="grid w-full grid-cols-3"
     >
-      {options.map((option) => {
-        const selected = value === option.value;
-        return (
-          <Toggle
-            key={option.value ?? 'all'}
-            variant="outline"
-            pressed={selected}
-            onPressedChange={() => onChange(option.value)}
-            className={cn(
-              'h-11 rounded-lg border-input px-0 text-[15px] font-normal shadow-none hover:bg-transparent hover:text-foreground',
-              selected &&
-                'border-[1.5px] border-primary bg-brand-soft font-medium text-primary data-[state=on]:bg-brand-soft data-[state=on]:text-primary hover:bg-brand-soft hover:text-primary',
-            )}
-          >
-            {option.label}
-          </Toggle>
-        );
-      })}
-    </div>
+      {options.map((option) => (
+        <ToggleGroupItem
+          key={option.value ?? 'all'}
+          value={option.value ?? 'all'}
+          className="h-11"
+        >
+          {option.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }
 

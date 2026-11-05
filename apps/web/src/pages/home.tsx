@@ -8,7 +8,7 @@ import { AppShell, PageBody } from '../components/app-shell';
 import { DailyChart } from '../components/daily-spend-chart';
 import { Money } from '../components/data-format';
 import { LoadError } from '../components/load-error';
-import { Segmented } from '../components/segmented';
+import { OptionToggle } from '../components/option-toggle';
 import { StatusTag } from '../components/status-tag';
 import { healthStatus } from '../components/tenant-health';
 import { Badge } from '../components/ui/badge';
@@ -554,7 +554,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                         {formatMoney({ currency, amount: total })}
                       </strong>
                     </div>
-                    <Segmented
+                    <OptionToggle
                       label="消费币种"
                       options={[
                         { value: 'CNY', label: 'CNY' },

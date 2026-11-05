@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import { SunMoonIcon } from 'lucide-react';
 import {
   setThemePreference,
@@ -6,6 +5,7 @@ import {
   useThemePreference,
 } from '../lib/theme';
 import { cn } from '../lib/utils';
+import { OptionToggle } from './option-toggle';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -63,38 +63,16 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
   );
 }
 
-/**
- * 分段选择器，取自客户门户账号设置的“主题”卡片；手机账号菜单内使用。
- * 用原生单选框：整组只占一个 Tab 停靠点，方向键切换选项。
- */
+/** 主题单选，用于客户门户账号设置和手机账号菜单。 */
 export function ThemeSegmented({ className }: { className?: string }) {
   const preference = useThemePreference();
-  const name = useId();
   return (
-    <div
-      role="radiogroup"
-      aria-label="主题"
-      className={cn(
-        'inline-flex gap-0.5 rounded-[9px] bg-muted p-[3px] text-[13px]',
-        className,
-      )}
-    >
-      {themeOptions.map((option) => (
-        <label
-          key={option.value}
-          className="relative flex h-[30px] flex-1 cursor-pointer items-center justify-center rounded-[7px] px-3.5 text-muted-foreground has-checked:bg-background has-checked:font-medium has-checked:text-foreground has-checked:shadow-[0_1px_2px_rgba(0,0,0,.08)] has-focus-visible:ring-[3px] has-focus-visible:ring-ring"
-        >
-          <input
-            type="radio"
-            name={name}
-            value={option.value}
-            checked={option.value === preference}
-            onChange={() => setThemePreference(option.value)}
-            className="absolute inset-0 cursor-pointer appearance-none outline-none"
-          />
-          {option.label}
-        </label>
-      ))}
-    </div>
+    <OptionToggle
+      label="主题"
+      options={themeOptions}
+      value={preference}
+      onChange={setThemePreference}
+      {...(className ? { className } : {})}
+    />
   );
 }
