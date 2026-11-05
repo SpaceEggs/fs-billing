@@ -1,3 +1,4 @@
+import { Item } from '../../components/ui/item';
 import {
   Table,
   TableHeader,
@@ -679,34 +680,38 @@ function LogCard({
   onToggle: () => void;
 }) {
   return (
-    <button
-      type="button"
-      aria-expanded={open}
-      onClick={onToggle}
+    <Item
+      asChild
+      variant="outline"
+      size="sm"
       className={cn(
-        'flex flex-col gap-1.5 rounded-[10px] border p-3 text-left tabular-nums',
-        open ? 'border-primary' : 'border-border',
+        'flex-col items-stretch gap-1.5 text-left tabular-nums',
+        open && 'border-primary',
       )}
     >
-      <span className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2">
-          <OpBadge row={row} />
-          <span className="truncate font-mono text-sm">{objectText(row)}</span>
+      <button type="button" aria-expanded={open} onClick={onToggle}>
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-2">
+            <OpBadge row={row} />
+            <span className="truncate font-mono text-sm">
+              {objectText(row)}
+            </span>
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {open ? (
+              <ChevronDownIcon aria-hidden className="size-3.5" />
+            ) : (
+              <ChevronRightIcon aria-hidden className="size-3.5" />
+            )}
+          </span>
         </span>
+        <span className="text-sm leading-normal">{row.summary}</span>
         <span className="text-xs text-muted-foreground">
-          {open ? (
-            <ChevronDownIcon aria-hidden className="size-3.5" />
-          ) : (
-            <ChevronRightIcon aria-hidden className="size-3.5" />
-          )}
+          {actorText(row.actor)} · <DateTime value={row.occurredAt} />
         </span>
-      </span>
-      <span className="text-sm leading-normal">{row.summary}</span>
-      <span className="text-xs text-muted-foreground">
-        {actorText(row.actor)} · <DateTime value={row.occurredAt} />
-      </span>
-      {open ? <Detail row={row} layout="stack" /> : null}
-    </button>
+        {open ? <Detail row={row} layout="stack" /> : null}
+      </button>
+    </Item>
   );
 }
 

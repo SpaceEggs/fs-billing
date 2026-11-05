@@ -1,3 +1,4 @@
+import { Item } from '../ui/item';
 import {
   Table,
   TableHeader,
@@ -139,34 +140,43 @@ export function CdrCards<Row extends PortalCdr>({
     <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
       {items.map((cdr) => (
         <li key={cdr.callUuid}>
-          <button
-            type="button"
-            onClick={() => onSelect(cdr)}
-            aria-label={`查看话单详情 ${cdr.callee}`}
+          <Item
+            asChild
+            variant="outline"
+            size="sm"
             className={cn(
-              'flex w-full flex-col gap-1.5 rounded-[10px] border border-border px-3.5 py-3 text-left tabular-nums outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
+              'w-full flex-col items-stretch gap-1.5 text-left tabular-nums',
               muted(cdr),
             )}
           >
-            <span className="flex items-center justify-between gap-2 text-[15px] font-medium">
-              <span className="flex items-center gap-2">
-                {cdr.callee}
-                <DirectionBadge cdr={cdr} />
-                {badge?.(cdr)}
+            <button
+              type="button"
+              onClick={() => onSelect(cdr)}
+              aria-label={`查看话单详情 ${cdr.callee}`}
+            >
+              <span className="flex items-center justify-between gap-2 text-[15px] font-medium">
+                <span className="flex items-center gap-2">
+                  {cdr.callee}
+                  <DirectionBadge cdr={cdr} />
+                  {badge?.(cdr)}
+                </span>
+                {cdrIsInbound(cdr) ? (
+                  '—'
+                ) : (
+                  <Money
+                    value={{ currency, amount: cdr.charge }}
+                    tone="plain"
+                  />
+                )}
               </span>
-              {cdrIsInbound(cdr) ? (
-                '—'
-              ) : (
-                <Money value={{ currency, amount: cdr.charge }} tone="plain" />
-              )}
-            </span>
-            <span className="flex justify-between gap-2 text-xs text-muted-foreground">
-              <span className="truncate">
-                {cdrCountryLabel(cdr)} · {formatDuration(cdr.durationSeconds)}
+              <span className="flex justify-between gap-2 text-xs text-muted-foreground">
+                <span className="truncate">
+                  {cdrCountryLabel(cdr)} · {formatDuration(cdr.durationSeconds)}
+                </span>
+                <span className="whitespace-nowrap">{cdrShortMoment(cdr)}</span>
               </span>
-              <span className="whitespace-nowrap">{cdrShortMoment(cdr)}</span>
-            </span>
-          </button>
+            </button>
+          </Item>
         </li>
       ))}
     </ul>
