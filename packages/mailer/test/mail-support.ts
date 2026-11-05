@@ -1,5 +1,5 @@
 import { createServer, type Server, type Socket } from 'node:net';
-import type { MailSettings } from '../src/config.js';
+import type { MailSettings } from '../src/index.js';
 
 /**
  * 邮件测试的公用部分（只被 *.test.ts 引用）。

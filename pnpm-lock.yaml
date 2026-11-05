@@ -207,6 +207,9 @@ importers:
       '@fs-billing/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@fs-billing/mailer':
+        specifier: workspace:*
+        version: link:../../packages/mailer
       '@fs-billing/rating':
         specifier: workspace:*
         version: link:../../packages/rating
@@ -219,9 +222,6 @@ importers:
       fastify:
         specifier: ^5.0.0
         version: 5.12.5
-      nodemailer:
-        specifier: 10.1.1
-        version: 10.1.1
       pg-boss:
         specifier: 12.37.1
         version: 12.37.1(patch_hash=b2e03f9bebbbbd0180c4d76abe64e4ac6f68cee0623e235a56cf30b5b3f7f052)(@opentelemetry/api@1.9.1)
@@ -260,6 +260,15 @@ importers:
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
+
+  packages/mailer:
+    dependencies:
+      nodemailer:
+        specifier: 10.1.1
+        version: 10.1.1
+      zod:
+        specifier: ^4.6.6
+        version: 4.6.6
 
   packages/rating:
     dependencies:

@@ -9,18 +9,16 @@ import {
 } from '@fs-billing/db';
 import { renderMail } from '@fs-billing/shared';
 import {
-  isLoopbackHost,
-  mailEnvironmentSchema,
-  mailSettingsOf,
-  type MailSettings,
-} from './config.js';
-import {
   MAIL_FROM_NAME,
   classifySmtpError,
   createMailTransport,
+  isLoopbackHost,
+  mailEnvironmentSchema,
+  mailSettingsOf,
   testMessageId,
+  type MailSettings,
   type MailTransport,
-} from './mail.js';
+} from '@fs-billing/mailer';
 
 export interface MailCliIo {
   stdout: Writable;

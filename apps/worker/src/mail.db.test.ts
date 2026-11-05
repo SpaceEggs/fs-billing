@@ -27,12 +27,12 @@ import {
   connections,
   createTenant,
 } from '../../../packages/db/test/support.js';
-import type { MailSettings } from './config.js';
 import {
   createMailTransport,
-  dispatchOutbox,
+  type MailSettings,
   type MailTransport,
-} from './mail.js';
+} from '@fs-billing/mailer';
+import { dispatchOutbox } from './mail.js';
 import {
   NOTIFY_CRON,
   NOTIFY_TIMEZONE,
@@ -49,7 +49,7 @@ import {
   startFakeSmtp,
   type FakeSmtp,
   type FakeSmtpScript,
-} from '../test/mail-support.js';
+} from '@fs-billing/mailer/test-support';
 
 const { app, owner } = connections();
 
