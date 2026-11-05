@@ -64,6 +64,8 @@ export interface UnassignedFixture {
   readonly callUuid?: string | null;
   readonly hangupCause?: string;
   readonly unverified?: boolean;
+  /** 缺省为呼出。 */
+  readonly direction?: 'outbound' | 'inbound';
 }
 
 /** 往 unassigned_cdrs 写若干 pending 行（owner 连接），返回行编号和通话 UUID。 */
@@ -110,6 +112,7 @@ export async function insertUnassigned(
       reason,
       caller: '075586001234',
       callee,
+      direction: row.direction ?? 'outbound',
       billingNumber,
       durationSeconds: identified && answeredAt ? seconds : 0,
       hangupCause: row.hangupCause ?? 'NORMAL_CLEARING',

@@ -431,6 +431,7 @@ describe('扣费对账告警的恢复', () => {
           endedAt: new Date(answeredAt.getTime() + 61_000),
           caller: '075586001234',
           callee: '+8613800138000',
+          direction: 'outbound',
           billsec: 61,
           hangupCause: 'NORMAL_CLEARING',
           unverified: false,

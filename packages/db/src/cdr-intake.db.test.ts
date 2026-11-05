@@ -44,6 +44,7 @@ function call(overrides: Partial<IntakeCdr> = {}): IntakeCdr {
     ),
     caller: '075586001234',
     callee: '+8613800138000',
+    direction: 'outbound',
     billsec: answeredAt ? 61 : 0,
     hangupCause: 'NORMAL_CLEARING',
     unverified: false,

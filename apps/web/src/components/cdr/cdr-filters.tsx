@@ -9,12 +9,51 @@ import { FilterGroup, FilterSheet } from '../filter-sheet';
 import { SearchBox } from '../search-box';
 import { Segmented } from '../segmented';
 import { NativeSelect, NativeSelectOption } from '../ui/native-select';
+import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { cn } from '../../lib/utils';
 
 const statusOptions = [
   { value: 'answered', label: '已接通' },
   { value: 'all', label: '全部' },
 ] as const;
+
+const directionOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'inbound', label: '呼入' },
+  { value: 'outbound', label: '呼出' },
+] as const;
+
+/** 方向筛选用 shadcn ToggleGroup：全部 / 呼入 / 呼出，缺省为全部。 */
+function DirectionToggle({
+  value,
+  onChange,
+  className,
+}: {
+  value: CdrFilters['direction'];
+  onChange: (value: CdrFilters['direction']) => void;
+  className?: string;
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      aria-label="方向"
+      variant="outline"
+      value={value ?? 'all'}
+      onValueChange={(next) => {
+        // 已选中的一段再次点击不取消选择。
+        if (next === 'all') onChange(undefined);
+        else if (next === 'inbound' || next === 'outbound') onChange(next);
+      }}
+      className={className}
+    >
+      {directionOptions.map((option) => (
+        <ToggleGroupItem key={option.value} value={option.value}>
+          {option.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
 
 /** 后台在筛选里多出的「仅看未经验证」：电脑端排在状态之后，手机端放在面板里。 */
 export type CdrFilterExtra = {
@@ -80,11 +119,13 @@ export function CdrFilterBar({
   const sheetActive =
     (filters.country ? 1 : 0) +
     (status === 'all' ? 1 : 0) +
+    (filters.direction ? 1 : 0) +
     (extra?.active ? 1 : 0);
   const anyActive = sheetActive > 0 || Boolean(filters.callee);
   const clearSheet = (): CdrFilters => ({
     country: undefined,
     status: undefined,
+    direction: undefined,
     unverifiedOnly: undefined,
   });
   const countryOptions = (
@@ -166,6 +207,14 @@ export function CdrFilterBar({
             className="w-full self-stretch [&>button]:flex-1"
           />
         </div>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">方向</span>
+          <DirectionToggle
+            value={filters.direction}
+            onChange={(direction) => onFilters({ direction })}
+            className="w-full self-stretch [&>button]:flex-1"
+          />
+        </div>
         {extra?.sheet}
       </FilterSheet>
       <div className="hidden md:contents">
@@ -193,6 +242,12 @@ export function CdrFilterBar({
             onChange={(next) =>
               onFilters({ status: next === 'all' ? 'all' : undefined })
             }
+          />
+        </Field>
+        <Field label="方向">
+          <DirectionToggle
+            value={filters.direction}
+            onChange={(direction) => onFilters({ direction })}
           />
         </Field>
         {extra?.desktop}

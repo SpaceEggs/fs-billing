@@ -238,7 +238,11 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
             resolved.billingNumber,
           );
         const verifiedBillingNumber = resolved.billingNumber;
-        const ratingTenant = await loadRatingTenant(tx, tenant.code);
+        // 呼入不查费率，连费率表也不读。
+        const ratingTenant =
+          cdr.direction === 'inbound'
+            ? undefined
+            : await loadRatingTenant(tx, tenant.code);
         // 定价与写 cdrs 在 packages/db 的 priceAndInsertCdr，未归属话单的分配与这里共用。
         const inserted = await priceAndInsertCdr(
           tx,
@@ -252,10 +256,12 @@ export async function ingestCdr(db: Db, queue: ChargeQueue, body: string) {
         // 上面的 lockTenants 之后读到的标志就是最新已提交的。
         if (inserted.status === 'month_deleted')
           return park(tx, cdr, CDR_MONTH_DELETED_REASON, verifiedBillingNumber);
-        await queue.enqueue(tx, {
-          tenantId: tenant.id,
-          callUuid: cdr.callUuid,
-        });
+        // 呼入不收费：不查费率、不入扣费队列、不写流水（由 priceAndInsertCdr 按 0 元入库）。
+        if (cdr.direction !== 'inbound')
+          await queue.enqueue(tx, {
+            tenantId: tenant.id,
+            callUuid: cdr.callUuid,
+          });
         return 'queued' as const;
       })();
       // FreeSWITCH 超时放行的信号随首次有效话单到达；去重后告警，重推不重复记。

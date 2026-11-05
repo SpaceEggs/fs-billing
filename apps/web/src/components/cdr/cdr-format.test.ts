@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { answeredCdr, unansweredCdr } from '../../test/cdr';
+import { answeredCdr, inboundCdr, unansweredCdr } from '../../test/cdr';
 import type { PortalCdr } from '@fs-billing/shared';
 import {
   cdrCountryLabel,
+  cdrDirectionLabel,
   cdrHangupCause,
+  cdrIsInbound,
   cdrMoment,
   cdrShortMoment,
   formatMinutes,
@@ -26,6 +28,19 @@ describe('cdrCountryLabel', () => {
 
   it('writes 未接通 for a call without a country, like the CSV', () => {
     expect(cdrCountryLabel(unanswered)).toBe('未接通');
+  });
+
+  it('writes — for an inbound call, which has no country', () => {
+    expect(cdrCountryLabel(inboundCdr() as PortalCdr)).toBe('—');
+  });
+});
+
+describe('direction labels', () => {
+  it('labels outbound and inbound calls', () => {
+    expect(cdrIsInbound(answered)).toBe(false);
+    expect(cdrDirectionLabel(answered)).toBe('呼出');
+    expect(cdrIsInbound(inboundCdr() as PortalCdr)).toBe(true);
+    expect(cdrDirectionLabel(inboundCdr() as PortalCdr)).toBe('呼入');
   });
 });
 

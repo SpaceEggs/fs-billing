@@ -2,7 +2,12 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { adminApi, customerSession, renderApp } from '../../test/app';
-import { answeredCdr, cdrList, unansweredCdr } from '../../test/cdr';
+import {
+  answeredCdr,
+  cdrList,
+  inboundCdr,
+  unansweredCdr,
+} from '../../test/cdr';
 
 const downloadBlob = vi.hoisted(() =>
   vi.fn<(filename: string, blob: Blob) => void>(),
@@ -97,6 +102,7 @@ describe('portal CDR list', () => {
       '接通时间 ↓',
       '主叫号码',
       '被叫号码',
+      '方向',
       '国家',
       '通话时长',
       '计费时长',
@@ -164,7 +170,12 @@ describe('portal CDR list', () => {
       await screen.findByRole('combobox', { name: '国家' }),
       '牙买加',
     );
-    await user.click(screen.getByRole('button', { name: '全部' }));
+    await user.click(
+      within(screen.getByRole('group', { name: '接通状态' })).getByRole(
+        'button',
+        { name: '全部' },
+      ),
+    );
     await waitFor(() =>
       expect(Object.fromEntries(lists.at(-1)!)).toEqual({
         from: '2026-10-01',
@@ -210,10 +221,44 @@ describe('portal CDR list', () => {
     expect(screen.getByRole('searchbox', { name: '被叫号码' })).toHaveValue(
       '447',
     );
-    expect(screen.getByRole('button', { name: '全部' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    expect(
+      within(screen.getByRole('group', { name: '接通状态' })).getByRole(
+        'button',
+        { name: '全部' },
+      ),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('writes the direction filter to the address and the request', async () => {
+    const user = userEvent.setup();
+    const { lists, location } = cdrApp('/portal/cdrs');
+    await screen.findByRole('table');
+    const direction = screen.getByRole('radiogroup', { name: '方向' });
+    await user.click(within(direction).getByRole('radio', { name: '呼入' }));
+    await waitFor(() => expect(location()).toContain('direction=inbound'));
+    await waitFor(() =>
+      expect(Object.fromEntries(lists.at(-1)!)).toMatchObject({
+        direction: 'inbound',
+      }),
     );
+    await user.click(within(direction).getByRole('radio', { name: '全部' }));
+    await waitFor(() => expect(location()).not.toContain('direction='));
+  });
+
+  it('shows an inbound call with a badge and dashes for rate and charge', async () => {
+    const user = userEvent.setup();
+    cdrApp('/portal/cdrs', {
+      list: () => ({ status: 200, body: cdrList([inboundCdr()]) }),
+    });
+    await screen.findByRole('table');
+    const row = within(table()).getAllByRole('row')[1]!;
+    expect(row).toHaveTextContent('呼入');
+    expect(row).toHaveTextContent('—');
+    expect(row).not.toHaveTextContent('¥0.00');
+    await user.click(within(row).getByRole('button', { name: /查看话单详情/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('方向');
+    expect(dialog).toHaveTextContent('呼入暂不收费');
   });
 
   it('reads a numeric callee from the address as text', async () => {
@@ -289,7 +334,12 @@ describe('portal CDR list', () => {
     expect(summary).toHaveTextContent('另有未接通 713 通');
     expect(summary).toHaveTextContent('49,726分钟');
     expect(summary).toHaveTextContent('¥2,486.30');
-    await user.click(screen.getByRole('button', { name: '全部' }));
+    await user.click(
+      within(screen.getByRole('group', { name: '接通状态' })).getByRole(
+        'button',
+        { name: '全部' },
+      ),
+    );
     await waitFor(() => expect(lists.at(-1)!.get('status')).toBe('all'));
     await waitFor(() =>
       expect(
@@ -361,6 +411,8 @@ describe('portal CDR list', () => {
     const text = dialog.textContent;
     for (const expected of [
       '话单详情',
+      '方向',
+      '呼出',
       '075586001234',
       '+447700900123',
       '英国 · 手机',

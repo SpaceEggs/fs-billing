@@ -307,6 +307,38 @@ it('重试耗尽后对账重新入队，并发/重复对账与重复扣费只产
   ).toEqual([{ n: 2 }]);
 });
 
+it('对账不碰呼入话单：不重投扣费任务', async () => {
+  const tenant = await fixture();
+  const uuid = randomUUID();
+  const at = new Date();
+  await owner.pool.query(
+    `insert into cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at,
+       caller, callee, direction, billing_number, duration_seconds, billed_minutes,
+       charge, hangup_cause)
+     values ($1, $2, $3, $4, $5, '+447700900999', '8613800138000', 'inbound',
+       '8613800138000', 61, 0, 0, 'NORMAL_CLEARING')`,
+    [
+      tenant.id,
+      uuid,
+      new Date(at.getTime() - 5000),
+      at,
+      new Date(at.getTime() + 61000),
+    ],
+  );
+  await age(tenant.id, uuid);
+  await reconcileCharges(connection.db, boss, options, worker.log);
+  expect(
+    (
+      await owner.pool.query(
+        `select reconcile_attempts,
+          (select count(*)::int from pgboss.job where name = $2 and data->>'callUuid' = $1::text) as jobs
+         from cdrs where call_uuid = $1::uuid`,
+        [uuid, CHARGE_QUEUE],
+      )
+    ).rows,
+  ).toEqual([{ reconcile_attempts: 0, jobs: 0 }]);
+});
+
 it('只对账窗口内开始的通话，较早话单保留给人工处理', async () => {
   const tenant = await fixture();
   const oldUuid = randomUUID();

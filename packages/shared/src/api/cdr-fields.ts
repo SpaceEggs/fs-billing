@@ -41,6 +41,9 @@ export const calleeSearchSchema = z
 
 export const cdrStatusSchema = z.enum(['answered', 'all']);
 
+/** 话单方向；不传筛选表示全部。缺字段的老话单在数据库里默认 outbound。 */
+export const cdrDirectionSchema = z.enum(['outbound', 'inbound']);
+
 export const pageNumberSchema = z.coerce
   .number()
   .int()
@@ -48,12 +51,13 @@ export const pageNumberSchema = z.coerce
   .max(CDR_MAX_PAGE)
   .default(1);
 
-/** 话单筛选的公共字段：北京日范围、被叫、国家、接通状态。范围上限由 checkDayRange 检查。 */
+/** 话单筛选的公共字段：北京日范围、被叫、国家、接通状态、方向。范围上限由 checkDayRange 检查。 */
 export const cdrFilterFields = {
   ...dayRangeFields,
   callee: calleeSearchSchema.optional(),
   country: z.string().trim().min(1).max(200).optional(),
   status: cdrStatusSchema.default('answered'),
+  direction: cdrDirectionSchema.optional(),
 };
 
 export const cdrPaginationSchema = z.strictObject({
@@ -73,6 +77,7 @@ export const cdrFields = {
   endedAt: timestamp,
   caller: z.string(),
   callee: z.string(),
+  direction: cdrDirectionSchema,
   country: z.string().nullable(),
   iso: z
     .string()
@@ -91,6 +96,7 @@ type CdrShape = {
   startedAt: string;
   answeredAt: string | null;
   endedAt: string;
+  direction: 'outbound' | 'inbound';
   country: string | null;
   matchedPrefix: string | null;
   durationSeconds: number;
@@ -99,7 +105,7 @@ type CdrShape = {
   charge: string;
 };
 
-/** 与 cdrs 的检查约束一致：未接通没有时长和费用，已接通必须有国家、前缀和费率。 */
+/** 与 cdrs 的检查约束一致：未接通没有时长和费用，已接通的呼出必须有国家、前缀和费率。 */
 export function checkCdrShape(cdr: CdrShape, context: z.RefinementCtx) {
   const started = Date.parse(cdr.startedAt);
   const ended = Date.parse(cdr.endedAt);
@@ -129,11 +135,26 @@ export function checkCdrShape(cdr: CdrShape, context: z.RefinementCtx) {
       path: ['answeredAt'],
       message: '接通时间必须在振铃开始与挂断之间',
     });
-  if (cdr.country === null || cdr.matchedPrefix === null || cdr.rate === null)
+  if (
+    cdr.direction === 'outbound' &&
+    (cdr.country === null || cdr.matchedPrefix === null || cdr.rate === null)
+  )
     context.addIssue({
       code: 'custom',
       path: ['country'],
       message: '已接通话单必须有国家、匹配前缀和费率',
+    });
+  if (cdr.direction === 'inbound' && !isZero(cdr.billedMinutes))
+    context.addIssue({
+      code: 'custom',
+      path: ['billedMinutes'],
+      message: '呼入话单的计费分钟必须为 0',
+    });
+  if (cdr.direction === 'inbound' && !isZero(cdr.charge))
+    context.addIssue({
+      code: 'custom',
+      path: ['charge'],
+      message: '呼入话单的费用必须为 0',
     });
 }
 

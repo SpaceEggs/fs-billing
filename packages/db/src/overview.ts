@@ -83,7 +83,8 @@ export async function readAdminOverview(
         coalesce(sum(c.billed_minutes) filter (where t.currency = 'CNY'), 0)::text as cny,
         coalesce(sum(c.billed_minutes) filter (where t.currency = 'USD'), 0)::text as usd
       from cdrs c join tenants t on t.id = c.tenant_id
-      where c.answered_at >= (select today::timestamp at time zone 'Asia/Shanghai' from bounds)
+      where c.direction = 'outbound'
+        and c.answered_at >= (select today::timestamp at time zone 'Asia/Shanghai' from bounds)
         and c.answered_at < (select (today + 1)::timestamp at time zone 'Asia/Shanghai' from bounds)
         and c.started_at >= (select today::timestamp at time zone 'Asia/Shanghai' - interval '1 day' from bounds)
         and c.started_at < (select (today + 1)::timestamp at time zone 'Asia/Shanghai' from bounds)

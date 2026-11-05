@@ -31,8 +31,8 @@ import { formatDate } from '../../lib/format';
 export function PortalCdrsPage({ identity }: { identity: Identity }) {
   const search = useSearch({ from: '/portal/portal/cdrs' });
   const navigate = useNavigate({ from: '/portal/cdrs' });
-  const { callee, country, status, page = 1 } = search;
-  const filters: CdrFilters = { callee, country, status };
+  const { callee, country, status, direction, page = 1 } = search;
+  const filters: CdrFilters = { callee, country, status, direction };
   const now = new Date();
   const range = rangeOrMonthToDate(search, now);
   const defaultRange =

@@ -1,0 +1,31 @@
+<include>
+  <!--
+    示例：运营商来电路由（docs/inbound-cdr-design.md）。复制为 dialplan/trunk_inbound.xml，
+    替换号码、租户编码和目标账号。这个 context 只给线路 profile 使用，不能外呼。
+  -->
+  <context name="trunk-inbound">
+    <!-- 占位号码。实际部署要兼容运营商送来的格式：02...、2...、86...、+86...。 -->
+    <extension name="did-02100000000">
+      <condition field="destination_number" expression="^(\+?86|0086)?0?2100000000$">
+        <action application="set" data="billing_direction=inbound" />
+        <action application="set" data="billing_tenant=ABC001" />
+        <action application="set" data="billing_dialed_number=02100000000" />
+        <!-- 按线路号码限制并发，不占租户的外呼并发。 -->
+        <action application="limit" data="hash inbound 02100000000 20 !USER_BUSY" />
+        <action application="set" data="hangup_after_bridge=true" />
+        <action application="set" data="call_timeout=60" />
+        <!-- 3CX 按 To 匹配入站规则，所以 To 要带真实号码。 -->
+        <action application="bridge" data="{sip_invite_to_uri=&lt;sip:02100000000@$${domain}&gt;}user/1001@$${domain}" />
+      </condition>
+    </extension>
+
+    <!-- 未列出的号码：拒绝且不产生话单。 -->
+    <extension name="reject">
+      <condition field="destination_number" expression="^">
+        <action application="set" data="process_cdr=false" inline="true" />
+        <action application="log" data="WARNING 线路来电的被叫没有路由：${destination_number}" />
+        <action application="respond" data="404" />
+      </condition>
+    </extension>
+  </context>
+</include>

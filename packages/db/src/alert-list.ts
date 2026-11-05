@@ -332,7 +332,7 @@ async function readUnverifiedStats(
     scoped as materialized (
       select c.tenant_id, c.started_at
       from cdrs c, bounds b
-      where c.unverified
+      where c.unverified and c.direction = 'outbound'
         and c.received_at >= b.lo and c.received_at <= b.hi
         and c.started_at >= b.lo - ${TOP_TENANTS_LOOKBACK_DAYS} * interval '1 day'
         and c.started_at <= b.hi + interval '1 day'

@@ -503,7 +503,7 @@ export async function topUnverifiedTenants(
   const { rows } = await tx.execute<{ code: string }>(sql`
     SELECT t.code
     FROM cdrs c JOIN tenants t ON t.id = c.tenant_id
-    WHERE c.unverified
+    WHERE c.unverified AND c.direction = 'outbound'
       AND c.received_at >= ${range.since}::timestamptz
       AND c.received_at <= ${range.until}::timestamptz
       AND c.started_at >= ${range.since}::timestamptz - ${TOP_TENANTS_LOOKBACK_DAYS} * interval '1 day'

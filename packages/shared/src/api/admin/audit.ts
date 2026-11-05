@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cdrStatusSchema } from '../cdr-fields.js';
+import { cdrDirectionSchema, cdrStatusSchema } from '../cdr-fields.js';
 import { currencySchema } from '../identity.js';
 import { adminRateEntrySchema } from './rates.js';
 import { adminStatementVersionFiguresSchema } from './statements.js';
@@ -219,6 +219,7 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
         .regex(/^[1-9][0-9]{0,14}$/)
         .optional(),
       country: z.string().min(1).max(200).optional(),
+      direction: cdrDirectionSchema.optional(),
       unverifiedOnly: z.boolean(),
     }),
   }),

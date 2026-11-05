@@ -41,6 +41,7 @@ export function cdrFilters({
   if (query.callee)
     filters.push(sql`c.billing_number like ${`%${query.callee}%`}`);
   if (query.country) filters.push(sql`c.country = ${query.country}`);
+  if (query.direction) filters.push(sql`c.direction = ${query.direction}`);
   return sql.join(filters, sql` and `);
 }
 

@@ -179,6 +179,32 @@ const september = {
 };
 
 describe('computeStatement 与存下的账单、手算的数字一致', () => {
+  it('excludes inbound calls from call counts, minutes and the country/day breakdown', async () => {
+    const tenant = await statementTenant(owner, {
+      createdAt: '2026-08-01 08:00:00',
+    });
+    await statementCall(owner, tenant.id, {
+      answeredAt: '2026-09-10 10:00:00',
+      minutes: '2',
+      charge: '0.5',
+    });
+    await statementCdr(owner, tenant.id, {
+      startedAt: '2026-09-10 11:00:00',
+      direction: 'inbound',
+    });
+    const result = await withAdmin(app.db, (tx) =>
+      computeStatement(tx, tenant.id, '2026-09-01'),
+    );
+    expect(result.calls).toBe(1);
+    expect(result.callMinutes).toBe('2');
+    expect(result.countries).toEqual([
+      { country: '中国', calls: 1, minutes: '2', charge: '0.5' },
+    ]);
+    expect(result.days).toEqual([
+      { day: '2026-09-10', calls: 1, minutes: '2', charge: '0.5' },
+    ]);
+  });
+
   it('closed months equal the hand-computed figures and the statement the generator stores', async () => {
     const augustLive = await compute('2026-08-01');
     const septemberLive = await compute('2026-09-01');

@@ -95,6 +95,8 @@ export interface IntakeCdr {
   readonly endedAt: Date;
   readonly caller: string;
   readonly callee: string;
+  /** 呼入不查费率、不收费；缺失时按呼出处理。 */
+  readonly direction?: 'outbound' | 'inbound' | undefined;
   /** 接通后通话秒数，写入 duration_seconds。 */
   readonly billsec: number;
   readonly hangupCause: string;
@@ -177,7 +179,12 @@ export async function priceAndInsertCdr(
     : await isMonthDeleted(tx, tenant.id, month);
   if (deleted) return { status: 'month_deleted', month };
 
-  const priced = priceCdr(tenant, cdr, billingNumber);
+  const direction = cdr.direction ?? 'outbound';
+  // 呼入暂时不收费：不查费率、不保存费率快照，计费分钟与费用为 0。
+  const priced: PricedCdr | 'no_rate' =
+    direction === 'inbound'
+      ? { entry: undefined, billedMinutes: decimal('0'), charge: decimal('0') }
+      : priceCdr(tenant, cdr, billingNumber);
   if (priced === 'no_rate') return { status: 'no_rate' };
   const { entry } = priced;
   await tx.insert(cdrs).values({
@@ -188,6 +195,7 @@ export async function priceAndInsertCdr(
     endedAt: cdr.endedAt,
     caller: cdr.caller,
     callee: cdr.callee,
+    direction,
     billingNumber,
     durationSeconds: cdr.billsec,
     billedMinutes: priced.billedMinutes.toFixed(),
@@ -229,6 +237,7 @@ export async function chargeCall(
 ): Promise<ChargeCallResult> {
   const [row] = await tx
     .select({
+      direction: cdrs.direction,
       rate: cdrs.rate,
       billingNumber: cdrs.billingNumber,
       durationSeconds: cdrs.durationSeconds,
@@ -243,7 +252,9 @@ export async function chargeCall(
       and(eq(cdrs.callUuid, job.callUuid), eq(cdrs.tenantId, job.tenantId)),
     );
   if (!row) throw new Error(`话单 ${job.callUuid} 不存在`);
-  if (row.answeredAt === null) return { charge: '0', occurredAt: null };
+  // 呼入不收费：即使有历史或误投的扣费任务，也不因缺少费率快照失败。
+  if (row.direction === 'inbound' || row.answeredAt === null)
+    return { charge: '0', occurredAt: null };
   if (row.rate === null) throw new Error(`话单 ${job.callUuid} 缺少费率快照`);
   const priced = priceCall(row.durationSeconds, rate(row.currency, row.rate));
   if (priced.charge.value.isZero()) return { charge: '0', occurredAt: null };

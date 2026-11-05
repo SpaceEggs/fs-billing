@@ -51,11 +51,14 @@ describe('admin CDR export endpoint', () => {
         from: `${day.slice(0, 7)}-01`,
         to: day,
         callee: '+86 138-0013 8001',
+        direction: 'outbound',
         unverifiedOnly: true,
       },
     });
     expect(response.statusCode, response.body).toBe(200);
     expect(response.body).toContain('验证状态');
+    expect(response.body).toContain('方向');
+    expect(response.body).toContain('呼出');
     expect(response.body).toContain('未经验证');
     expect(response.body).toContain("'+86 138-0013 8001");
     expect(response.body).toContain('123456789012345678901234567890.1234');
@@ -77,6 +80,7 @@ describe('admin CDR export endpoint', () => {
         to: day,
         status: 'answered',
         callee: '8613800138001',
+        direction: 'outbound',
         unverifiedOnly: true,
       },
     });

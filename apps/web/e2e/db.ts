@@ -233,8 +233,10 @@ export type CdrFixture = {
   answeredAt: string | null;
   endedAt: string;
   caller: string;
-  /** 客户拨出的原始号码。 */
+  /** 客户拨出的原始号码；呼入时是线路号码。 */
   callee: string;
+  /** 缺省为呼出。呼入没有国家、前缀和费率，费用为 0。 */
+  direction?: 'outbound' | 'inbound';
   /** 归一化后的计费号码（首位 1-9，不含 + 和 00）。 */
   billingNumber: string;
   country: string | null;
@@ -281,9 +283,9 @@ export function recordCdrs(tenantId: string, cdrRows: readonly CdrFixture[]) {
         uuids.push(callUuid);
         await client.query(
           `INSERT INTO cdrs (tenant_id, call_uuid, started_at, answered_at, ended_at, caller, callee,
-             billing_number, duration_seconds, billed_minutes, matched_prefix, country, iso, description,
+             direction, billing_number, duration_seconds, billed_minutes, matched_prefix, country, iso, description,
              rate, charge, hangup_cause, unverified)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
           [
             tenantId,
             callUuid,
@@ -292,6 +294,7 @@ export function recordCdrs(tenantId: string, cdrRows: readonly CdrFixture[]) {
             cdr.endedAt,
             cdr.caller,
             cdr.callee,
+            cdr.direction ?? 'outbound',
             cdr.billingNumber,
             cdr.durationSeconds,
             cdr.minutes,

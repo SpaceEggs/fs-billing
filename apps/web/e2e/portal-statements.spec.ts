@@ -348,8 +348,8 @@ base.describe('ABC001 的月账单', () => {
       );
       const text = await readFile((await file.path()) ?? '', 'utf8');
       const lines = text.slice(1).trimEnd().split('\r\n');
-      // 15 列，不含后台才有的验证状态；只含已接通话单，行数等于账单的通话数 9,642。
-      expect(lines[0]?.split(',')).toHaveLength(15);
+      // 16 列，不含后台才有的验证状态；只含已接通话单，行数等于账单的通话数 9,642。
+      expect(lines[0]?.split(',')).toHaveLength(16);
       expect(lines[0]).not.toContain('验证');
       expect(lines.length - 1).toBe(9642);
       expect(text).not.toContain('未接通');

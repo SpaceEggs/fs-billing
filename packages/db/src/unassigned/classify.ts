@@ -107,6 +107,7 @@ export function classifyRows(
       endedAt: row.endedAt,
       caller: row.caller,
       callee: row.callee,
+      direction: row.direction === 'inbound' ? 'inbound' : 'outbound',
       billsec: row.durationSeconds,
       hangupCause: row.hangupCause,
       unverified: row.unverified,
@@ -117,7 +118,15 @@ export function classifyRows(
       blocked.push({ row, month });
       continue;
     }
-    const priced = priceCdr(tenant, cdr, billingNumber);
+    // 呼入分配后仍不收费：不查费率，直接按 0 元入库。
+    const priced =
+      cdr.direction === 'inbound'
+        ? {
+            entry: undefined,
+            billedMinutes: decimal('0'),
+            charge: decimal('0'),
+          }
+        : priceCdr(tenant, cdr, billingNumber);
     if (priced === 'no_rate') {
       // 接通时刻有生效的版本而前缀不在其中，或接通早于租户的第一个费率版本。
       const version = tenant.rating

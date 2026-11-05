@@ -82,12 +82,15 @@ pnpm --filter @fs-billing/worker start
 | `billing_unverified`                      | 布尔值或字符串 `true` / `false`，缺失为 false                                                                             |
 | `caller_id_number` / `destination_number` | 主叫与路由被叫字符串；路由被叫不用于计费                                                                                  |
 | `billing_dialed_number`                   | 必填原始拨号；作为展示被叫与归一化输入                                                                                    |
+| `billing_direction`                       | 可选；只有 `inbound` 表示呼入，缺失或其他值都按呼出处理                                                                   |
 | `billing_number`                          | 可选计费投影；存在时必须与原始拨号重新计算的结果一致                                                                      |
 | `hangup_cause`                            | 挂断原因，缺失为空字符串                                                                                                  |
 
 `start_uepoch`、`answer_uepoch`、`end_uepoch` 接受非负整数或数字字符串；无效值不能回退到秒数。时间先按微秒校验先后顺序，再截断到毫秒。
 
 `caller_id_number` 优先取 `variables`，缺失时取首个 `callflow` 的 `caller_profile`，仍缺失则为空字符串。`destination_number` 不参与计费；话单校验失败且缺少 `billing_dialed_number` 时，用它作为展示被叫的回退。`billing_dialed_number` 用于展示被叫，避免 `execute_extension` 改变 `destination_number` 后丢失客户原始拨号。缺主叫不拒绝话单；原始拨号为空按号码格式错误保存为未归属话单，缺少 `billing_dialed_number` 按话单校验失败保存。
+
+呼入话单（`billing_direction=inbound`）照常保存原文、按 `call_uuids` 去重，并写入 `cdrs.direction='inbound'`；但**不查费率、不保存费率快照、不入扣费队列、不写流水**，`charge` 与 `billed_minutes` 为 0，`matched_prefix`、`country`、`rate` 为空。呼入的 `caller` 是对方号码，`callee` 与 `billing_number` 是线路号码。停用或余额不足的租户的来电照常入库，因为来电不经过授权。呼入也不进扣费对账。缺少 `billing_direction` 或其他值都按呼出处理，旧 FreeSWITCH 配置不受影响。
 
 CDR 与授权调用同一个 `resolveBillingNumber`，从原始拨号归一化并核验可选 `billing_number`。缺少 `billing_dialed_number` 的话单以 `话单校验失败: ...` 原因进入未归属待办，原因包含缺失字段名，保存原文引用并并入 `invalid-cdr:<原因>` 告警（见[系统告警](#系统告警阶段-9)），不登记通话 UUID、不入队、不收费。投影不一致的 A-leg 话单以 `计费号码不一致` 原因停放在 `unassigned_cdrs`，保存 Worker 计算的号码和通话 UUID，不写 `cdrs`、不入扣费队列、不记账。授权因不一致被拒绝时，话单入库后并入 `unassigned:计费号码不一致` 告警（每个 UUID 只累加一次，重推不重复）；不写 `auth_timeout`。
 

@@ -21,7 +21,7 @@ export interface ReconcileOptions {
   lookbackDays: number;
 }
 
-/** 只补应收费而无流水的话单；零费率、未接通不应产生负值流水。 */
+/** 只补应收费而无流水的话单；呼入、零费率、未接通不应产生负值流水。 */
 export async function reconcileCharges(
   db: Db,
   boss: PgBoss,
@@ -29,7 +29,7 @@ export async function reconcileCharges(
   logger: Pick<FastifyBaseLogger, 'error'>,
 ) {
   const missing = sql`c.started_at >= now() - ${options.lookbackDays} * interval '1 day'
-    AND c.charge > 0 AND NOT EXISTS (
+    AND c.direction = 'outbound' AND c.charge > 0 AND NOT EXISTS (
     SELECT FROM ledger_entries l WHERE l.tenant_id = c.tenant_id
       AND l.kind = 'call_charge' AND l.idempotency_key = 'call:' || c.call_uuid::text
   ) AND c.received_at < now() - ${options.minAgeMinutes} * interval '1 minute'

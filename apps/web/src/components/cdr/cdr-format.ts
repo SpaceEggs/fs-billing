@@ -19,8 +19,18 @@ export function cdrMoment(cdr: PortalCdr) {
   return cdr.answeredAt ?? cdr.startedAt;
 }
 
-/** 「国家 · 说明」，说明为空只显示国家。未接通话单没有国家，与 CSV 一致写「未接通」。 */
+/** 呼入话单没有国家；列表与详情显示「—」。 */
+export function cdrIsInbound(cdr: Pick<PortalCdr, 'direction'>) {
+  return cdr.direction === 'inbound';
+}
+
+export function cdrDirectionLabel(cdr: Pick<PortalCdr, 'direction'>) {
+  return cdrIsInbound(cdr) ? '呼入' : '呼出';
+}
+
+/** 「国家 · 说明」，说明为空只显示国家。未接通的呼出没有国家，与 CSV 一致写「未接通」。 */
 export function cdrCountryLabel(cdr: PortalCdr) {
+  if (cdrIsInbound(cdr)) return '—';
   return cdr.country === null
     ? '未接通'
     : formatCountryLabel(cdr.country, cdr.description);

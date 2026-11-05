@@ -77,6 +77,8 @@ export const modJsonCdrSchema = z
         destination_number: z.string().optional(),
         billing_dialed_number: z.string(),
         billing_number: z.string().optional(),
+        /** 呼入通道由 FreeSWITCH 设为 inbound；缺失或其他值都按呼出处理。 */
+        billing_direction: z.string().default(''),
         hangup_cause: z.string().default(''),
       })
       .transform((v) => ({
@@ -139,6 +141,10 @@ export const modJsonCdrSchema = z
       callflow?.[0]?.caller_profile?.caller_id_number ??
       '',
     callee: v.billing_dialed_number,
+    direction:
+      v.billing_direction === 'inbound'
+        ? ('inbound' as const)
+        : ('outbound' as const),
     billingNumber: v.billing_number,
     hangupCause: v.hangup_cause,
   }));

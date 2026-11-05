@@ -10,6 +10,7 @@ const cdr = {
   endedAt: '2026-10-01T00:01:01Z',
   caller: '123',
   callee: '44712345678',
+  direction: 'outbound',
   iso: 'GB',
   country: '英国',
   description: '手机',

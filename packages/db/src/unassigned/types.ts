@@ -90,6 +90,7 @@ const rowColumns = {
   endedAt: unassignedCdrs.endedAt,
   caller: unassignedCdrs.caller,
   callee: unassignedCdrs.callee,
+  direction: unassignedCdrs.direction,
   billingNumber: unassignedCdrs.billingNumber,
   durationSeconds: unassignedCdrs.durationSeconds,
   hangupCause: unassignedCdrs.hangupCause,

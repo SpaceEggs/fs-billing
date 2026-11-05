@@ -10,6 +10,7 @@ export function answeredCdr(n = 1, over: Record<string, unknown> = {}) {
     endedAt: '2026-10-16T10:03:50.000Z',
     caller: '075586001234',
     callee: '+447700900123',
+    direction: 'outbound',
     country: '英国',
     iso: 'GB',
     description: '手机',
@@ -39,6 +40,23 @@ export function unansweredCdr(n = 2, over: Record<string, unknown> = {}) {
     rate: null,
     charge: '0',
     hangupCause: 'CALL_REJECTED',
+    ...over,
+  });
+}
+
+/** 一通已接通的呼入话单：没有国家、前缀、费率，费用与计费分钟为 0。 */
+export function inboundCdr(n = 5, over: Record<string, unknown> = {}) {
+  return answeredCdr(n, {
+    direction: 'inbound',
+    caller: '+447700900999',
+    callee: '1001',
+    country: null,
+    iso: null,
+    description: null,
+    matchedPrefix: null,
+    billedMinutes: '0',
+    rate: null,
+    charge: '0',
     ...over,
   });
 }

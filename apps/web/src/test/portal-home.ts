@@ -18,6 +18,7 @@ export const recentCall = {
   endedAt: '2026-09-29T06:07:12.000Z',
   caller: '075586001234',
   callee: '447700900123',
+  direction: 'outbound',
   country: '英国',
   iso: 'GB',
   description: '手机',
