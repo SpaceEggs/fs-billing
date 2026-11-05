@@ -27,7 +27,7 @@ vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_pass
 1. 加载 `mod_lua` 与 `mod_json_cdr`。在 **mod_lua 使用的 Lua 版本**中安装 `Lua-cURL`（Lua-cURLv3）与 `lua-cjson`，确认 `require('cURL.safe')` 和 `require('cjson.safe')` 成功。脚本用 libcurl 的 `timeout_ms=1500` 限制整个 HTTP 请求，含连接与响应读取，不用只支持整数秒的 `mod_curl timeout`。
 2. 将 [billing_authorize.lua](scripts/billing_authorize.lua) 放进 FreeSWITCH 的 scripts 目录。在受限的 `vars.xml` 设置全局变量 `billing_worker_url=http://10.0.0.20:3001`、`billing_shared_key=<WORKER_SHARED_KEY>`，执行 `reloadxml`。密钥不放通道变量，避免进入原始话单。
 3. 从可信的 directory 用户或 IP 路由设置 `billing_tenant=ABC001`。拒绝客户端用 SIP header 覆盖租户标签。将 [billing.xml](dialplan/billing.xml) 放进 dialplan 目录，客户使用 `billing` context，将 `upstream` 换成实际 gateway。`billing-authorized` 只供脚本之后的内部寻路，不给客户配置为入口。
-4. 设置租户并发上限。Worker 故障时合法号码每通放行 1800 秒，并发上限用于控制透支。
+4. 设置租户并发上限。在可信 directory 的 user 或 IP 路由上设置变量 `billing_concurrency`，值为正整数；拨号计划据此执行 `limit`，超限返回 SIP 503、话单 `NORMAL_CIRCUIT_CONGESTION`。没有配置时拒绝呼叫，返回 SIP 503、话单 `NORMAL_TEMPORARY_FAILURE`。Worker 故障时合法号码每通放行 1800 秒，并发上限用于控制透支。
 
 脚本始终保留原始 `destination_number`，将原始号码写入 `billing_destination` 供桥接，在脚本开始时就写入 `billing_dialed_number`，使提前退出或校验失败的话单也保留原始拨号。`billing_number` 单独保存计费投影。带 `+` 或 `00` 的号码按国际号码去掉冠字；其他号码按国内号码先去掉一个开头的 `0`，再加 `86`。例如 `07551234567` 的计费号码是 `867551234567`，上游仍收到 `07551234567`。`+13055551234` 按国际号码计费，裸拨 `13055551234` 按 `8613055551234` 计费。
 

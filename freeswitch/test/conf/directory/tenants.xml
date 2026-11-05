@@ -7,24 +7,48 @@
             <variables>
               <variable name="user_context" value="billing" />
               <variable name="billing_tenant" value="FSIOK" />
+              <variable name="billing_concurrency" value="10" />
             </variables>
           </user>
           <user id="FSIOFF" cidr="127.0.0.3/32">
             <variables>
               <variable name="user_context" value="billing" />
               <variable name="billing_tenant" value="FSIOFF" />
+              <variable name="billing_concurrency" value="10" />
             </variables>
           </user>
           <user id="FSILOW" cidr="127.0.0.4/32">
             <variables>
               <variable name="user_context" value="billing" />
               <variable name="billing_tenant" value="FSILOW" />
+              <variable name="billing_concurrency" value="10" />
             </variables>
           </user>
           <user id="FSI60" cidr="127.0.0.5/32">
             <variables>
               <variable name="user_context" value="billing" />
               <variable name="billing_tenant" value="FSI60" />
+              <variable name="billing_concurrency" value="10" />
+            </variables>
+          </user>
+          <user id="FSNOLIM" cidr="127.0.0.6/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSIOK" />
+            </variables>
+          </user>
+          <user id="FSLIM1" cidr="127.0.0.7/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSIOK" />
+              <variable name="billing_concurrency" value="1" />
+            </variables>
+          </user>
+          <user id="FSLIM2" cidr="127.0.0.8/32">
+            <variables>
+              <variable name="user_context" value="billing" />
+              <variable name="billing_tenant" value="FSIOK" />
+              <variable name="billing_concurrency" value="1" />
             </variables>
           </user>
         </users>

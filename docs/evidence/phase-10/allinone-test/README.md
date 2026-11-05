@@ -24,6 +24,6 @@ FreeSWITCH 与计费系统装在同一台阿里云服务器上，用于接 SIP t
 ## 发现的问题
 
 1. **挂断延迟多计时长（已在服务器修复，已写入 README）。** 缺少 `rtp-timer-name=soft` 时，BYE 延迟约 5 秒才响应，每条腿都多等，话单结束时间推迟。
-2. **仓库的拨号计划没有并发上限。** 设计把 `limit` 当作 Worker 故障时控制透支的主要手段，但 `billing.xml` 里没有这一步。测试服务器上已手工加入，尚未进仓库。这一步本身还没有专门测试过。
-3. **无人接听的话单挂断原因不准。** 客户端收到 480，但 A 腿话单是 `NORMAL_CLEARING`，因为拨号计划最后的 `hangup NORMAL_CLEARING` 盖掉了原因；486 能保留为 `USER_BUSY`。这会影响后台排查。
+2. **并发上限已写入拨号计划（已修复）。** `billing.xml` 在授权前执行 `limit hash tenant ${billing_tenant} ${billing_concurrency}`，超限返回 SIP 503、话单 `NORMAL_CIRCUIT_CONGESTION`；没有配置 `billing_concurrency` 时直接拒绝，返回 SIP 503、话单 `NORMAL_TEMPORARY_FAILURE`。集成用例已覆盖「未配置」和「超限」两种情况。
+3. **无人接听的话单挂断原因已修复。** 拨号计划最后的挂断改用 `${originate_disposition}`，不再写死 `NORMAL_CLEARING`，因此 480 等未接通原因会保留到话单；486 仍保留为 `USER_BUSY`。无人接听只在同机测试环境实测过，没有进集成用例。
 4. **同一 FreeSWITCH 的入站腿会产生话单。** 模拟上游的入站腿没有计费变量，进了未归属待办并触发 `cdr_failed` 告警。接真实 trunk 后，如果允许来电进入同一实例，要确认不会重现。
