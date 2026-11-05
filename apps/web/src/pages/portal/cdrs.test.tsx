@@ -171,8 +171,8 @@ describe('portal CDR list', () => {
       '牙买加',
     );
     await user.click(
-      within(screen.getByRole('group', { name: '接通状态' })).getByRole(
-        'button',
+      within(screen.getByRole('radiogroup', { name: '接通状态' })).getByRole(
+        'radio',
         { name: '全部' },
       ),
     );
@@ -222,11 +222,11 @@ describe('portal CDR list', () => {
       '447',
     );
     expect(
-      within(screen.getByRole('group', { name: '接通状态' })).getByRole(
-        'button',
+      within(screen.getByRole('radiogroup', { name: '接通状态' })).getByRole(
+        'radio',
         { name: '全部' },
       ),
-    ).toHaveAttribute('aria-pressed', 'true');
+    ).toHaveAttribute('aria-checked', 'true');
   });
 
   it('writes the direction filter to the address and the request', async () => {
@@ -335,8 +335,8 @@ describe('portal CDR list', () => {
     expect(summary).toHaveTextContent('49,726分钟');
     expect(summary).toHaveTextContent('¥2,486.30');
     await user.click(
-      within(screen.getByRole('group', { name: '接通状态' })).getByRole(
-        'button',
+      within(screen.getByRole('radiogroup', { name: '接通状态' })).getByRole(
+        'radio',
         { name: '全部' },
       ),
     );
@@ -507,7 +507,11 @@ describe('portal CDR list on a phone', () => {
       within(sheet).getByRole('combobox', { name: '国家' }),
       '英国',
     );
-    await user.click(within(sheet).getByRole('button', { name: '全部' }));
+    await user.click(
+      within(
+        within(sheet).getByRole('radiogroup', { name: '接通状态' }),
+      ).getByRole('radio', { name: '全部' }),
+    );
     await waitFor(() =>
       expect(Object.fromEntries(lists.at(-1)!)).toMatchObject({
         country: '英国',

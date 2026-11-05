@@ -112,8 +112,8 @@ test('hides the unanswered calls by default and notes them, then lists them in t
   await expect(rows(portal)).toHaveCount(51);
 
   await portal
-    .getByRole('group', { name: '接通状态' })
-    .getByRole('button', { name: '全部', exact: true })
+    .getByRole('radiogroup', { name: '接通状态' })
+    .getByRole('radio', { name: '全部', exact: true })
     .click();
   await expect(summary(portal)).toContainText('含未接通 1');
   const unanswered = rows(portal).filter({ hasText: '8613900139000' });
@@ -309,8 +309,8 @@ test('changing a filter after the session ended goes to the login page and retur
   await expect(rows(portal)).toHaveCount(3);
   await revokeSessions(email);
   await portal
-    .getByRole('group', { name: '接通状态' })
-    .getByRole('button', { name: '全部', exact: true })
+    .getByRole('radiogroup', { name: '接通状态' })
+    .getByRole('radio', { name: '全部', exact: true })
     .click();
   await expectFiltersAfterLogin(portal, email, password, {
     status: 'all',
