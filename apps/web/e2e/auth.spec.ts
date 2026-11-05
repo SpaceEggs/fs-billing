@@ -315,6 +315,7 @@ test.describe('mobile 375px', () => {
     await sheet.getByRole('radio', { name: '深色' }).focus();
     await page.keyboard.press('ArrowRight');
     await expect(sheet.getByRole('radio', { name: '跟随系统' })).toBeFocused();
+    await page.keyboard.press('Space');
     await expect(sheet.getByRole('radio', { name: '跟随系统' })).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await page.emulateMedia({ colorScheme: 'dark' });
