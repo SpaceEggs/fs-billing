@@ -6,6 +6,7 @@ import {
   recoverOpenAlerts,
   reopenAlerts,
   removeSystemAlert,
+  resetMailSettings,
 } from './db';
 
 /** 告警设置是全局单行：用例改动之后经接口还原为「接收邮箱为空、间隔 15 分钟」，不影响后面的用例。 */
@@ -41,7 +42,7 @@ test('overview and system alerts settings', async ({ page }) => {
     .getByRole('link', { name: /系统告警/ })
     .click();
   await expect(page.getByRole('tab', { name: '告警列表' })).toBeVisible();
-  await page.getByRole('tab', { name: '设置' }).click();
+  await page.getByRole('tab', { name: '告警设置' }).click();
   await expect(
     page.getByText('未设置接收邮箱，当前发给全部管理员'),
   ).toBeVisible();
@@ -68,10 +69,11 @@ test('opens alert details in a phone bottom sheet', async ({ page }) => {
   try {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/admin/system-alerts');
-    await expect(page.getByRole('tab', { name: '设置' })).toBeHidden();
+    await expect(page.getByRole('tab', { name: '告警设置' })).toBeVisible();
     await page.getByRole('button', { name: '告警设置' }).click();
     await expect(page).toHaveURL(/tab=settings/);
     await page.getByRole('button', { name: '返回告警列表' }).click();
+    await expect(page.getByRole('tab', { name: '邮箱设置' })).toBeVisible();
     await page.getByRole('button', { name: /端到端授权超时/ }).click();
     const sheet = page.getByRole('dialog', { name: '告警详情' });
     await expect(sheet.getByText('影响的通话', { exact: true })).toBeVisible();
@@ -205,7 +207,7 @@ test('edits the receiving mailboxes with the chips input and saves them', async 
 }) => {
   try {
     await page.goto('/admin/system-alerts');
-    await page.getByRole('tab', { name: '设置' }).click();
+    await page.getByRole('tab', { name: '告警设置' }).click();
     const input = page.getByRole('textbox', { name: '告警接收邮箱' });
     const chips = page
       .getByRole('list', { name: '已添加的告警接收邮箱' })
@@ -260,7 +262,7 @@ test('edits the receiving mailboxes with the chips input and saves them', async 
 
     // 刷新后仍在；操作日志记了一条「修改设置」。
     await page.reload();
-    await page.getByRole('tab', { name: '设置' }).click();
+    await page.getByRole('tab', { name: '告警设置' }).click();
     await expect(chips).toHaveText(['ops-alert@example.com', 'c@example.com']);
     await expect(page.getByLabel('自定义（分钟）')).toHaveValue('30');
     const logs = await page.request.get('/api/admin/audit-logs?label=settings');
@@ -272,12 +274,52 @@ test('edits the receiving mailboxes with the chips input and saves them', async 
   }
 });
 
+test('configures mail from the page and sends a test message', async ({
+  page,
+}) => {
+  try {
+    await page.goto('/admin/system-alerts');
+    await page.getByRole('tab', { name: '邮箱设置' }).click();
+    await expect(page.getByText('邮件发送未配置')).toBeVisible();
+    await page.getByRole('switch', { name: '启用邮件发送' }).click();
+    await page.getByLabel('SMTP 服务器').fill('127.0.0.1');
+    await page.getByLabel('端口').fill('1025');
+    await page.getByLabel('账号', { exact: true }).fill('e2e@example.test');
+    await page.getByLabel('密码或授权码').fill('e2e-test-password');
+    await page.getByLabel('发件人邮箱').fill('e2e@example.test');
+    await page.getByRole('radio', { name: 'STARTTLS' }).click();
+
+    // 测试邮件用表单里当前的配置发到当前管理员邮箱，不保存设置。
+    await page.getByRole('button', { name: '发送测试邮件' }).click();
+    const dialog = page.getByRole('dialog', { name: '发送测试邮件' });
+    await expect(dialog.getByLabel('收件人')).toHaveValue(
+      'wangmin@example.com',
+    );
+    await dialog.getByRole('button', { name: '发送' }).click();
+    await expect(page.getByText('测试邮件已发送')).toBeVisible();
+    await expect(
+      page.getByText(/服务器已接受，请到 wangmin@example\.com 查收/),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByText('设置已保存')).toBeVisible();
+
+    // 刷新后配置仍在，密码只显示「已设置」。
+    await page.reload();
+    await expect(page.getByText('已设置')).toBeVisible();
+    await expect(page.getByLabel('SMTP 服务器')).toHaveValue('127.0.0.1');
+    await expect(page.getByLabel('发件人邮箱')).toHaveValue('e2e@example.test');
+  } finally {
+    await resetMailSettings();
+  }
+});
+
 test('a stale settings form is rejected with a conflict and reloaded', async ({
   page,
 }) => {
   try {
     await page.goto('/admin/system-alerts');
-    await page.getByRole('tab', { name: '设置' }).click();
+    await page.getByRole('tab', { name: '告警设置' }).click();
     const input = page.getByRole('textbox', { name: '告警接收邮箱' });
     await expect(input).toBeVisible();
 

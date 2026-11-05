@@ -620,6 +620,23 @@ export function removeSystemAlert(id: string) {
 }
 
 /**
+ * 邮箱设置是全局单行。用例保存后还原成「未接管、未启用、没有配置」，
+ * 避免影响后续「告警设置」的“邮件发送未配置”提示。
+ */
+export function resetMailSettings() {
+  return withOwner((client) =>
+    client.query(
+      `UPDATE smtp_settings SET
+         managed = false, enabled = false, host = NULL, port = NULL, secure = NULL,
+         username = NULL, password_ciphertext = NULL, mail_from = NULL, site_url = NULL,
+         last_test_at = NULL, last_test_ok = NULL, last_test_result = NULL,
+         version = version + 1, updated_by = NULL
+       WHERE id`,
+    ),
+  );
+}
+
+/**
  * 把所有进行中的告警标为已恢复，返回它们的 id，用例结束时用 {@link reopenAlerts} 还原。
  * 种子里有一条进行中的授权超时告警（导航红点常亮）；要验证「没有进行中的告警」时才需要这样暂时关掉。
  */

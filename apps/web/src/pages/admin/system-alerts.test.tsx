@@ -42,7 +42,7 @@ it('shows empty list, mail configuration, validates input and handles a conflict
   });
   renderApp('/admin/system-alerts', handler);
   expect(await screen.findByText('最近 30 天没有系统告警')).toBeVisible();
-  await user.click(screen.getByRole('tab', { name: '设置' }));
+  await user.click(screen.getByRole('tab', { name: '告警设置' }));
   expect(
     await screen.findByText('邮件发送未配置，告警和提醒不会发出'),
   ).toBeVisible();

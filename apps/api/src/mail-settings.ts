@@ -123,6 +123,20 @@ const mailerField = {
   APP_PUBLIC_URL: 'siteUrl',
 } as const satisfies Record<string, keyof ConfigInput | 'password'>;
 
+/** 校验规则与环境变量共用，文案写的是变量名；页面上要显示表单字段名。 */
+const fieldLabelMessage = (message: string): string =>
+  message
+    .replaceAll('SMTP_SECURE 应为 false', '加密方式应选 STARTTLS')
+    .replaceAll('SMTP_SECURE 不能为 false', '加密方式应选隐式 TLS')
+    .replaceAll('SMTP_SECURE', '加密方式')
+    .replaceAll('SMTP_HOST', 'SMTP 服务器')
+    .replaceAll('SMTP_PORT', '端口')
+    .replaceAll('SMTP_USER', '账号')
+    .replaceAll('SMTP_PASS', '密码')
+    .replaceAll('MAIL_FROM', '发件人邮箱')
+    .replaceAll('APP_PUBLIC_URL', '站点地址')
+    .replace(/(\p{Script=Han}) (?=\p{Script=Han})/gu, '$1');
+
 /**
  * PUT 与测试共用的校验：
  * - 字段规则直接复用 `@fs-billing/mailer` 的 `refineMailEnvironment`（不复制规则）；
@@ -177,7 +191,10 @@ function validateConfig(
     for (const issue of parsed.error.issues) {
       const field =
         mailerField[String(issue.path[0]) as keyof typeof mailerField];
-      issues.push({ path: field ? [field] : [], message: issue.message });
+      issues.push({
+        path: field ? [field] : [],
+        message: fieldLabelMessage(issue.message),
+      });
     }
 
   if (
