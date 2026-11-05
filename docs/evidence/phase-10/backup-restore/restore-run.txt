@@ -1,0 +1,31 @@
+标准输入不是终端：跳过交互确认（--i-know-this-drops-the-database 已给出）
+已停止 fs-billing-api 与 fs-billing-worker
+把现库 fs_billing 改名为 fs_billing_pre_restore_20261105T014205Z（不删除）
+ALTER DATABASE
+导入角色 /root/backups/globals-20261105T014202Z.sql（已存在的跳过）
+恢复 /root/backups/fs_billing-20261105T014202Z.dump -> fs_billing
+重设应用角色密码并安装 pg-boss 队列
+
+> fs-billing@ db:migrate /opt/fs-billing/releases/a675813b79e8
+> pnpm --filter @fs-billing/db migrate
+
+
+> @fs-billing/db@ migrate /opt/fs-billing/releases/a675813b79e8/packages/db
+> tsx --env-file-if-exists=../../.env src/bin/migrate.ts
+
+../../.env not found. Continuing without it.
+../../.env not found. Continuing without it.
+迁移完成
+
+> @fs-billing/worker@ queue:migrate /opt/fs-billing/releases/a675813b79e8/apps/worker
+> tsx --env-file-if-exists=../../.env scripts/install-queue.ts
+
+../../.env not found. Continuing without it.
+../../.env not found. Continuing without it.
+扣费队列安装完成
+解回归档目录 /var/lib/fs-billing/archive
+已启动 fs-billing-api 与 fs-billing-worker
+健康检查通过：API（http://127.0.0.1:3000/api/health）
+健康检查通过：Worker（http://<B_IP>:3001/health）
+恢复完成：fs_billing（备份时刻之前的旧库留在 fs_billing_pre_restore_20261105T014205Z）
+备份时刻之后的话单不在库里：按手册「恢复后补推」从服务器 A 的副本补推。

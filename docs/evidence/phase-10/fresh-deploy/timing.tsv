@@ -1,0 +1,14 @@
+kind	step	started_at	ended_at	seconds
+manual	起点：root 可 SSH 登录	2026-11-05T01:28:13Z	2026-11-05T01:28:13Z	0
+manual	1. 引导完成	2026-11-05T01:28:13Z	2026-11-05T01:31:18Z	185
+script	pnpm install --frozen-lockfile	2026-11-05T01:31:49Z	2026-11-05T01:32:14Z	25
+script	Web 构建	2026-11-05T01:32:14Z	2026-11-05T01:32:18Z	4
+script	db:migrate	2026-11-05T01:32:18Z	2026-11-05T01:32:29Z	11
+script	queue:migrate	2026-11-05T01:32:29Z	2026-11-05T01:32:36Z	7
+script	pnpm install --frozen-lockfile	2026-11-05T01:33:42Z	2026-11-05T01:33:50Z	8
+script	Web 构建	2026-11-05T01:33:50Z	2026-11-05T01:33:54Z	4
+script	db:migrate	2026-11-05T01:33:54Z	2026-11-05T01:33:59Z	5
+script	queue:migrate	2026-11-05T01:33:59Z	2026-11-05T01:34:06Z	7
+manual	4. 冒烟通过	2026-11-05T01:34:06Z	2026-11-05T01:34:26Z	20
+manual	冒烟通过：管理员登录、授权、话单、扣费	2026-11-05T01:34:26Z	2026-11-05T01:37:50Z	204
+manual	冒烟真正通过（第 4 次运行）：管理员登录、授权、话单、扣费	2026-11-05T01:37:50Z	2026-11-05T01:41:32Z	222

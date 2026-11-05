@@ -17,7 +17,9 @@ PostgreSQL 用 Debian 官方 `postgresql-17`。
 
 #### 0. 前置
 
-- 服务器 B 的公网 IPv4，以及可选的 B 内网 IPv4。
+- 服务器 B 的公网 IPv4，以及可选的 B 内网 IPv4。B 只有内网地址时，`--public-ip` 也填内网地址
+  （证书 SAN 与 `BETTER_AUTH_URL` 都用它），门户只能从这个网络访问；有 NAT 或域名后要重签证书并改
+  `BETTER_AUTH_URL` 与 `BETTER_AUTH_TRUSTED_ORIGINS`。
 - 服务器 A 的地址。A 未到位时可以先填一个占位地址，或临时用一台内网替身机器的
   地址做过渡验证；A 到位后按下面「防火墙」改 `FS_A_IP` 与 `WORKER_ALLOWED_IPS`
   并复验，复验前验收 2 不勾选，替身证据要注明「用替身，A 到位后复验」。
@@ -125,8 +127,19 @@ curl -k -I https://<B_IP>/
 两个 `/health` 均返回 `{"status":"ok",...}`；Web 首页返回 200。自签证书会让
 `curl`/浏览器告警，`-k` 只用于验收命令；浏览器里的证书指纹核对见「证书」。
 
-首个管理员的创建命令由后续的代码加固步骤提供；上线前按上线检查清单执行，
-创建后再验证后台登录。
+创建管理员（**参数前不加 `--`**）。命令把临时密码打到标准输出，重定向到只有 root 能读的文件，
+不要让它进日志或对话；临时密码 72 小时后失效：
+
+```sh
+ssh root@<B_IP> 'cd /opt/fs-billing/current && umask 077 && set -a && . /etc/fs-billing/owner.env && set +a &&
+  pnpm --silent --filter @fs-billing/api admin:create --email <邮箱> --name "<姓名>" | tail -1 > /root/first-admin-temp-password.txt'
+```
+
+本人首次登录并改密后删除该文件。
+
+完整冒烟还要一通授权加话单推送入账。服务器 A 未到位时，可以临时把 B 自己的地址加进
+`WORKER_ALLOWED_IPS`，在 B 上用 `curl` 模拟，结束后改回并重启 Worker。话单的接通时刻要晚于费率
+生效时刻，否则进未归属待办（新建租户后至少等过一通话的时长）。
 
 #### 5. 防火墙
 
@@ -599,7 +612,8 @@ journal 与 SIPp 时段统计都写到 `--out`。退出时无论成败都会把 
 6. `verify-load.ts` 不应再用于重置后的库；用 `snapshot-counts.sh` 确认话单与流水为 0，
    再启动两个服务。
 
-重置步骤先在测试库演练一次，记录耗时与偏离；正式重置的证据（命令、时间、重置后的行数）
+恢复演练留下的 `fs_billing_pre_restore_<时间>` 要一起删（`dropdb --force`）。步骤 2 的备份
+含压测数据，按保留策略过期即可。重置步骤先在测试库演练一次，记录耗时与偏离；正式重置的证据（命令、时间、重置后的行数）
 与压测证据放在一起。
 
 ## 大表加索引
@@ -1005,7 +1019,7 @@ install -m 0644 /opt/fs-billing/current/ops/monitor/systemd/fs-billing-notify@.s
   /opt/fs-billing/current/ops/monitor/systemd/fs-billing-check-clock.timer \
   /etc/systemd/system/
 install -m 0600 /opt/fs-billing/current/ops/monitor/monitor.env.example /etc/fs-billing/monitor.env
-$EDITOR /etc/fs-billing/monitor.env       # 至少填 NOTIFY_TO
+$EDITOR /etc/fs-billing/monitor.env       # 至少填 NOTIFY_TO；先手动跑一次备份，否则体检因没有 LATEST.json 而失败
 systemctl daemon-reload
 systemctl enable --now fs-billing-health-check.timer fs-billing-check-clock.timer
 systemctl list-timers 'fs-billing-*'
@@ -1085,7 +1099,7 @@ chronyc tracking
 ```
 
 默认源是 Debian 的公网 NTP 池；机房屏蔽公网 NTP 时，把文件里的 `pool` 行换成机房提供的
-至少 3 个源（地址由用户提供，不写进仓库）。`chronyc tracking` 的 `Leap status` 应为
+公网 NTP 可用但想指定来源时，同样改这个片段。至少 3 个源（地址由用户提供，不写进仓库）。`chronyc tracking` 的 `Leap status` 应为
 `Normal`。
 
 ### 每次体检看什么

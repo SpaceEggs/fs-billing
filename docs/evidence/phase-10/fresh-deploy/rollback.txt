@@ -1,0 +1,19 @@
+/opt/fs-billing/releases/b0263f7f5900 (current)
+  DEPLOYED_COMMIT=b0263f7f5900
+/opt/fs-billing/releases/a675813b79e8
+  DEPLOYED_COMMIT=a675813b79e8
+/opt/fs-billing/releases/748c99ac0338
+$ rollback.sh
+回滚：/opt/fs-billing/releases/b0263f7f5900 -> /opt/fs-billing/releases/a675813b79e8
+健康检查通过：API（http://127.0.0.1:3000/api/health）
+健康检查通过：Worker（http://<B_IP>:3001/health）
+回滚完成。注意：数据库迁移没有回滚；若旧代码与新 schema 不兼容，请立即停止
+服务并联系开发处理，不要继续写入。
+exit=0
+/opt/fs-billing/releases/a675813b79e8
+a675813b79e8
+active
+active
+$ 再次失败路径：指定不存在的 release
+exit=1
+错误：release 不存在：/opt/fs-billing/releases/deadbeef

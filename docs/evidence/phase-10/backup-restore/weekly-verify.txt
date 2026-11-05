@@ -1,0 +1,8 @@
+校验备份 20261105T014202Z 的 sha256
+校验和一致
+tar: Removing leading `/' from member names
+归档包可读
+恢复 /root/backups/fs_billing-20261105T014202Z.dump -> fs_billing_verify
+输出 sha256：abd8aebf4a97add8b6f313b5ee6f101e070804c2ab02e3eeae44bb879b68edf7
+恢复校验通过：/root/backups/fs_billing-20261105T014202Z.dump -> fs_billing_verify（行数与账本不变量一致，临时库已删除）
+每周恢复演练通过：/root/backups/fs_billing-20261105T014202Z.dump

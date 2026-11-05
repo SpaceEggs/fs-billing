@@ -1,0 +1,11 @@
+备份数据库 fs_billing
+  库备份 fs_billing-20261105T014202Z.dump（625 个条目）
+备份角色（含密码哈希）
+  角色备份 globals-20261105T014202Z.sql
+备份原始话单归档目录 /var/lib/fs-billing/archive
+  归档 archive-20261105T014202Z.tar.gz（0 个文件，0 字节）
+备份配置与证书私钥（含秘密，异地时必须加密）
+  配置 config-20261105T014202Z.tar.gz（/etc/fs-billing /etc/nginx/conf.d /etc/ssl/fs-billing）
+写校验和
+写 LATEST.json（共 315192 字节）
+备份完成：20261105T014202Z，异地状态：skipped

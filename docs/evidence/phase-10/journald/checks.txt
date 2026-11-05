@@ -1,0 +1,29 @@
+$ systemd-analyze cat-config（按读取顺序，后者生效）
+# /etc/systemd/journald.conf
+# /usr/lib/systemd/journald.conf.d/syslog.conf
+ForwardToSyslog=yes
+# /etc/systemd/journald.conf.d/zz-fs-billing.conf
+Storage=persistent
+MaxRetentionSec=14day
+MaxFileSec=1day
+SystemMaxUse=2G
+ForwardToSyslog=no
+ForwardToKMsg=no
+ForwardToConsole=no
+ForwardToWall=no
+$ journalctl --disk-usage
+Archived and active journals take up 20.9M in the file system.
+$ stat /var/log/journal
+2750 root:systemd-journal
+$ getent group systemd-journal
+systemd-journal:x:999:
+$ fs-billing 读 journal（期望看不到系统日志）
+Hint: You are currently not seeing messages from other users and the system.
+      Users in groups 'adm', 'systemd-journal' can see all messages.
+      Pass -q to turn off this notice.
+$ 外发代理单元
+（无）
+$ Worker 日志里 8 位以上数字（排除时间戳、耗时）
+2
+$ 冒烟号码明文
+0

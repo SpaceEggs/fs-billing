@@ -1,0 +1,23 @@
+# fs-billing 备份快照（owner 读取，绕过 RLS）
+# tenant_balance	租户编码	余额	流水合计	是否一致
+tenant_balance	<冒烟租户>	100	100	ok
+tenant_balance	<冒烟租户>	99.7	99.7	ok
+balance_mismatch=0
+# 行数：父表与按北京月的分区
+table	cdrs	1
+table	ledger_entries	3
+table	raw_cdrs	4
+table	unassigned_cdrs	1
+table	call_uuids	2
+table	system_alerts	1
+table	email_outbox	1
+partition	cdrs_2026_11	1
+partition	cdrs_2026_12	0
+partition	raw_cdrs_2026_11	4
+partition	raw_cdrs_2026_12	0
+# 原始话单归档清单
+# 归档目录
+archive_dir	/var/lib/fs-billing/archive
+archive_files	0
+archive_bytes	0
+输出 sha256：abd8aebf4a97add8b6f313b5ee6f101e070804c2ab02e3eeae44bb879b68edf7
