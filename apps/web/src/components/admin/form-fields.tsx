@@ -5,6 +5,13 @@ import { Label } from '../ui/label';
 import { addRecipients } from '../../lib/tenant-create';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '../ui/input-group';
 
 export const currencySymbol = { CNY: '¥', USD: '$' } as const satisfies Record<
   Currency,
@@ -151,31 +158,22 @@ export function MoneyInput({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        'flex h-11 items-center overflow-hidden rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 md:h-10',
-        error && 'border-err',
-      )}
+    <InputGroup
+      className={cn('font-normal max-md:h-11', error && 'border-err')}
     >
-      <span
-        aria-hidden
-        className="flex h-full items-center border-r border-input px-3 text-muted-foreground"
-      >
-        {currencySymbol[currency]}
-      </span>
-      <input
+      <InputGroupAddon>
+        <InputGroupText>{currencySymbol[currency]}</InputGroupText>
+      </InputGroupAddon>
+      <InputGroupInput
         {...aria}
         inputMode="decimal"
         autoComplete="off"
-        placeholder={placeholder}
+        placeholder={placeholder ?? ''}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          'h-full min-w-0 flex-1 bg-transparent px-3 text-right text-base tabular-nums outline-none placeholder:text-muted-foreground md:text-sm',
-          className,
-        )}
+        className={cn('text-right tabular-nums', className)}
       />
-    </div>
+    </InputGroup>
   );
 }
 
@@ -259,7 +257,7 @@ export function RecipientsInput({
     </li>
   ));
   const input = (layout: string) => (
-    <input
+    <Input
       ref={inputRef}
       id={id}
       type="email"
@@ -277,10 +275,7 @@ export function RecipientsInput({
         } else if (event.key === 'Backspace' && !draft && emails.length)
           onChange(emails.slice(0, -1));
       }}
-      className={cn(
-        'bg-transparent text-base outline-none placeholder:text-[13px] placeholder:text-muted-foreground md:text-sm',
-        layout,
-      )}
+      className={layout}
     />
   );
   return (
@@ -320,12 +315,7 @@ export function RecipientsInput({
               inputShown ? 'flex' : 'hidden',
             )}
           >
-            {input(
-              cn(
-                'h-11 flex-1 rounded-lg border px-3 focus-visible:ring-[3px] focus-visible:ring-ring/50 md:h-9',
-                error ? 'border-err' : 'border-input',
-              ),
-            )}
+            {input(cn('flex-1', error && 'border-err'))}
             <Button
               type="button"
               variant="outline"
@@ -346,7 +336,9 @@ export function RecipientsInput({
           <ul aria-label={`已添加的${label}`} className="contents">
             {chipItems}
           </ul>
-          {input('h-8 min-w-[180px] flex-1 px-1.5')}
+          {input(
+            'h-8 max-md:h-8 w-auto min-w-[180px] flex-1 border-0 bg-transparent px-1.5 shadow-none focus-visible:ring-0 dark:bg-transparent',
+          )}
         </div>
       )}
       <div id={`${id}-messages`} className="flex flex-col gap-1">

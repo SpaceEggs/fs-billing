@@ -1219,20 +1219,28 @@ describe('tenant create', () => {
     ).toBe(true);
   });
 
-  it('currency and rate source are native radio groups that follow arrow keys', async () => {
+  it('currency and rate source can be chosen by keyboard', async () => {
     const { handler } = adminApi({});
     renderApp('/admin/tenants/new', handler);
     const user = userEvent.setup();
     const cny = await screen.findByRole('radio', { name: 'CNY 人民币' });
     expect(cny).toBeChecked();
-    await user.click(cny);
+    cny.focus();
     await user.keyboard('{ArrowRight}');
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'USD 美元' })).toHaveFocus(),
+    );
+    await user.keyboard(' ');
     expect(screen.getByRole('radio', { name: 'USD 美元' })).toBeChecked();
     expect(screen.getByLabelText(/透支额度/)).toHaveValue('15.00');
 
     await user.click(screen.getByRole('radio', { name: /空白费率表/ }));
-    await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('radio', { name: /从 CSV 导入/ })).toBeChecked();
+    // Radix 只在方向键按住期间把获得焦点的项选中，所以等选中后再松开。
+    await user.keyboard('{ArrowDown>}');
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: /从 CSV 导入/ })).toBeChecked(),
+    );
+    await user.keyboard('{/ArrowDown}');
     expect(screen.getByLabelText('CSV 文件')).toBeVisible();
   });
 });

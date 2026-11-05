@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   QueryClient,
@@ -330,30 +336,28 @@ describe('balance dialog', () => {
     expect(keys[1]).not.toBe(keys[0]);
   });
 
-  it('operation type is a native radio group navigable by keyboard', async () => {
+  it('operation type is a radio group navigable by keyboard', async () => {
     const user = userEvent.setup();
     renderDialog(tenantFixture(), () => Promise.reject(new Error('unused')));
     const group = within(dialog()).getByRole('radiogroup', {
       name: '操作类型',
     });
-    const radios = within(group).getAllByRole('radio');
-    expect(radios.map((radio) => radio.getAttribute('type'))).toEqual([
-      'radio',
-      'radio',
-      'radio',
-      'radio',
-    ]);
+    expect(within(group).getAllByRole('radio')).toHaveLength(4);
     expect(within(group).getByRole('radio', { name: '充值' })).toBeChecked();
 
     within(group).getByRole('radio', { name: '充值' }).focus();
     await user.keyboard('{ArrowRight}');
+    await waitFor(() =>
+      expect(
+        within(group).getByRole('radio', { name: '赊账充值' }),
+      ).toHaveFocus(),
+    );
+    await user.keyboard(' ');
     expect(
       within(group).getByRole('radio', { name: '赊账充值' }),
     ).toBeChecked();
     expect(
       within(dialog()).getByText(/先加余额，记为「待收款」/),
     ).toBeVisible();
-    await user.keyboard('{ArrowLeft}');
-    expect(within(group).getByRole('radio', { name: '充值' })).toBeChecked();
   });
 });

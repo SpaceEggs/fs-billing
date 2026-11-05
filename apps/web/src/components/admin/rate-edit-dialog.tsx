@@ -1,3 +1,10 @@
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '../ui/input-group';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useId, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -207,13 +214,10 @@ export function RateEditDialog({
             hint={`当前 ${formatRate(entry.rate)} ${unit} · 最多 4 位小数，不能为负`}
           >
             {(props) => (
-              <div
-                className={cn(
-                  'flex h-11 items-center overflow-hidden rounded-lg border border-input font-normal focus-within:ring-[3px] focus-within:ring-ring/50 md:h-10',
-                  errors.rate && 'border-err',
-                )}
+              <InputGroup
+                className={cn('max-md:h-11', errors.rate && 'border-err')}
               >
-                <input
+                <InputGroupInput
                   {...props}
                   inputMode="decimal"
                   autoComplete="off"
@@ -221,15 +225,12 @@ export function RateEditDialog({
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') toConfirm();
                   }}
-                  className="h-full min-w-0 flex-1 bg-transparent px-3 text-right text-base tabular-nums outline-none md:text-sm"
+                  className="text-right tabular-nums"
                 />
-                <span
-                  aria-hidden
-                  className="flex h-full items-center border-l border-input px-3 text-[13px] text-muted-foreground"
-                >
-                  {unit}
-                </span>
-              </div>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>{unit}</InputGroupText>
+                </InputGroupAddon>
+              </InputGroup>
             )}
           </Field>
           <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
@@ -392,40 +393,38 @@ export function ScheduleField({
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0 text-sm font-medium">
       <legend className="mb-2 p-0">生效时间</legend>
-      <div className="grid grid-cols-2 gap-2 font-normal">
+      <RadioGroup
+        aria-label="生效时间"
+        value={choice.kind}
+        disabled={disabled}
+        onValueChange={(kind) =>
+          onChange(
+            kind === 'immediate'
+              ? { kind: 'immediate' }
+              : { kind: 'scheduled', minute },
+          )
+        }
+        className="grid-cols-2 gap-2 font-normal"
+      >
         {options.map((option) => (
           <label
             key={option.kind}
             className={cn(
-              'relative flex cursor-pointer gap-2.5 rounded-lg border border-input px-3 has-checked:border-primary has-checked:bg-brand-soft has-focus-visible:ring-[3px] has-focus-visible:ring-ring',
+              'flex cursor-pointer gap-2.5 rounded-lg border border-input px-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-brand-soft',
               descriptions
                 ? 'items-start py-2.5'
-                : 'h-11 items-center has-checked:font-medium has-checked:text-primary md:h-10',
+                : 'h-11 items-center has-[[data-state=checked]]:font-medium has-[[data-state=checked]]:text-primary md:h-10',
             )}
           >
-            <input
-              type="radio"
-              name={id}
+            <RadioGroupItem
               value={option.kind}
-              disabled={disabled}
-              checked={choice.kind === option.kind}
-              onChange={() =>
-                onChange(
-                  option.kind === 'immediate'
-                    ? { kind: 'immediate' }
-                    : { kind: 'scheduled', minute },
-                )
-              }
               {...(descriptions
                 ? {
                     'aria-label': option.label,
                     'aria-describedby': `${id}-${option.kind}`,
                   }
                 : {})}
-              className={cn(
-                'size-4 shrink-0 accent-primary',
-                descriptions && 'mt-0.5',
-              )}
+              className={cn(descriptions && 'mt-0.5')}
             />
             {descriptions ? (
               <span className="flex flex-col gap-0.5">
@@ -442,7 +441,7 @@ export function ScheduleField({
             )}
           </label>
         ))}
-      </div>
+      </RadioGroup>
       {choice.kind === 'scheduled' ? (
         <Field label="指定生效时间（北京时间）" error={error}>
           {(props) => (

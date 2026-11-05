@@ -1,3 +1,4 @@
+import { Input } from '../../components/ui/input';
 import { Card } from '@/components/ui/card';
 import {
   TableRow,
@@ -448,9 +449,9 @@ function SettingsForm({
             />
             <div className="flex items-center gap-2 text-sm">
               <label htmlFor="digest-minutes">自定义（分钟）</label>
-              <input
+              <Input
                 id="digest-minutes"
-                className="w-24 rounded-md border bg-background p-2"
+                className="w-24"
                 type="number"
                 min="1"
                 max="1440"

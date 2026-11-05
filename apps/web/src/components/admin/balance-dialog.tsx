@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { OptionToggle } from '../option-toggle';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
 import type {
@@ -74,32 +75,19 @@ function KindChoice({
   value: BalanceKind;
   onChange: (kind: BalanceKind) => void;
 }) {
-  const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <span id={`${id}-label`}>操作类型</span>
-      <div
-        role="radiogroup"
-        aria-labelledby={`${id}-label`}
-        className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-0.5 md:rounded-lg md:bg-muted md:p-[3px]"
-      >
-        {balanceKindOrder.map((kind) => (
-          <label
-            key={kind}
-            className="relative flex h-11 cursor-pointer items-center justify-center rounded-lg border border-input text-[15px] font-normal text-muted-foreground has-checked:border-primary has-checked:bg-brand-soft has-checked:font-semibold has-checked:text-primary has-focus-visible:ring-[3px] has-focus-visible:ring-ring md:h-8 md:rounded-md md:border-0 md:text-[13px] md:has-checked:bg-background md:has-checked:shadow-[0_1px_2px_rgba(0,0,0,.12)]"
-          >
-            <input
-              type="radio"
-              name={id}
-              value={kind}
-              checked={value === kind}
-              onChange={() => onChange(kind)}
-              className="absolute inset-0 cursor-pointer appearance-none outline-none"
-            />
-            {balanceKinds[kind].label}
-          </label>
-        ))}
-      </div>
+      <span aria-hidden>操作类型</span>
+      <OptionToggle
+        label="操作类型"
+        options={balanceKindOrder.map((kind) => ({
+          value: kind,
+          label: balanceKinds[kind].label,
+        }))}
+        value={value}
+        onChange={onChange}
+        className="w-full [&>button]:flex-1"
+      />
       {value === 'credit_topup' ? (
         <span className="text-xs leading-normal font-normal text-muted-foreground">
           先加余额，记为「待收款」，确认收款后变为「已收款」。客户看到的是「账户充值」。
