@@ -97,7 +97,11 @@ describe('phase 9 contract', () => {
 
   it('records the settings change as an audit event under its own label', () => {
     expect(auditLabelOf('alert_settings_update')).toBe('settings');
-    expect(auditLabelActions.settings).toEqual(['alert_settings_update']);
+    expect(auditLabelActions.settings).toEqual([
+      'alert_settings_update',
+      'mail_settings_update',
+      'mail_settings_test',
+    ]);
     const id = '11111111-1111-4111-8111-111111111111';
     const event = {
       id,

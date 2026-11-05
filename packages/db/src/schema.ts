@@ -487,6 +487,29 @@ export const alertSettings = pgTable('alert_settings', {
   updatedBy: uuid('updated_by'),
 });
 
+/** 邮箱设置（阶段 9 PR 2）：单行表（id 恒为 true）。`managed` 为 false 时 Worker 继续用环境变量。 */
+export const smtpSettings = pgTable('smtp_settings', {
+  id: boolean('id').primaryKey().default(true),
+  managed: boolean('managed').notNull().default(false),
+  enabled: boolean('enabled').notNull().default(false),
+  host: text('host'),
+  port: integer('port'),
+  secure: boolean('secure'),
+  username: text('username'),
+  /** 只存密文；明文与密钥都不进数据库。 */
+  passwordCiphertext: text('password_ciphertext'),
+  mailFrom: text('mail_from'),
+  siteUrl: text('site_url'),
+  lastTestAt: at('last_test_at'),
+  lastTestOk: boolean('last_test_ok'),
+  lastTestResult: text('last_test_result', {
+    enum: ['ok', 'auth', 'retry', 'permanent'],
+  }),
+  version: integer('version').notNull().default(1),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by'),
+});
+
 export const balanceAlertSettings = pgTable('balance_alert_settings', {
   tenantId: uuid('tenant_id').primaryKey(),
   threshold: numeric('threshold').notNull(),

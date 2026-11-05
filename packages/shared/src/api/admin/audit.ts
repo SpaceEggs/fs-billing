@@ -44,6 +44,8 @@ export const auditActionSchema = z.enum([
   'cdr_delete',
   'credential_bootstrap',
   'alert_settings_update',
+  'mail_settings_update',
+  'mail_settings_test',
 ]);
 export type AuditAction = z.infer<typeof auditActionSchema>;
 export const auditChangeSchema = z.strictObject({
@@ -68,6 +70,15 @@ export const auditChangeSchema = z.strictObject({
     'callCount',
     'alertRecipients',
     'digestMinutes',
+    'smtpManaged',
+    'smtpEnabled',
+    'smtpHost',
+    'smtpPort',
+    'smtpSecure',
+    'smtpUsername',
+    'smtpPassword',
+    'smtpMailFrom',
+    'smtpSiteUrl',
   ]),
   before: z.union([z.string(), z.array(z.string()), z.null()]),
   after: z.union([z.string(), z.array(z.string()), z.null()]),
@@ -97,6 +108,7 @@ export const auditTargetKindSchema = z.enum([
   'statement',
   'unassigned_batch',
   'alert_settings',
+  'smtp_settings',
 ]);
 const envelopeFields = {
   id: z.uuid(),
@@ -258,6 +270,16 @@ export const auditPayloadSchema = z.discriminatedUnion('action', [
    * changes 含接收邮箱与汇总间隔的前后值（管理员自己的运营邮箱，写入日志可接受）；version 是保存后的版本。
    */
   auditVariant('alert_settings_update', { version: z.int().positive() }),
+  /**
+   * 邮箱设置（阶段 9 PR 2）：全局单行，target 取本条审计自身的 id，tenantId 为空。
+   * changes 只含字段前后值与密码的固定文字（已设置 / 未设置 / 已更改），绝不含明文或密文。
+   */
+  auditVariant('mail_settings_update', { version: z.int().positive() }),
+  /** 测试邮件只记收件人与结果分类，不存服务器原始响应。 */
+  auditVariant('mail_settings_test', {
+    recipient: z.email(),
+    result: z.enum(['ok', 'auth', 'retry', 'permanent']),
+  }),
 ]);
 export const auditContentSchema = z.discriminatedUnion('action', [
   auditPayloadSchema.options[0].pick({ action: true, content: true }),

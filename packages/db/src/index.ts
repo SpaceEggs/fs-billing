@@ -6,6 +6,8 @@ export * from './alert-notify.js';
 export * from './alert-list.js';
 export * from './overview.js';
 export * from './admin/alert-settings.js';
+export * from './admin/mail-settings.js';
+export * from './settings-crypto.js';
 export * from './outbox.js';
 export * from './balance-notices.js';
 export * from './clock.js';

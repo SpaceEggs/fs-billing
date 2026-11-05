@@ -72,7 +72,11 @@ export const auditLabelActions = {
   unassigned_assign: ['unassigned_assign'],
   unassigned_ignore: ['unassigned_ignore', 'unassigned_unignore'],
   cdr_delete: ['cdr_delete'],
-  settings: ['alert_settings_update'],
+  settings: [
+    'alert_settings_update',
+    'mail_settings_update',
+    'mail_settings_test',
+  ],
 } as const satisfies Record<AuditLabel, readonly AuditAction[]>;
 
 /** 页面上的中文标签（设计稿「第三批 · 运营」）。 */
