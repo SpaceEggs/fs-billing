@@ -29,7 +29,8 @@ import {
 } from '../../../packages/db/test/support.js';
 import { createWorker } from './app.js';
 import { chargeCdr } from './charge.js';
-import { createMailTransport, dispatchOutbox } from './mail.js';
+import { createMailTransport } from '@fs-billing/mailer';
+import { dispatchOutbox } from './mail.js';
 import { startNotifyJobs, type NotifyTickOptions } from './notify.js';
 import {
   ARCHIVE_QUEUE,
@@ -44,7 +45,7 @@ import {
   clearMailpit,
   mailpitMessages,
   mailpitSettings,
-} from '../test/mail-support.js';
+} from '@fs-billing/mailer/test-support';
 import { countStatements, recordingBoss } from '../test/pgboss-support.js';
 
 /**

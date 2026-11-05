@@ -10,14 +10,14 @@ import {
   withSystem,
 } from '@fs-billing/db';
 import { connections } from '../../../packages/db/test/support.js';
-import type { MailSettings } from './config.js';
+import type { MailSettings } from '@fs-billing/mailer';
 import { runNotifyTick } from './notify.js';
 import {
   clearMailpit,
   mailpitMessage,
   mailpitMessages,
   mailpitSettings,
-} from '../test/mail-support.js';
+} from '@fs-billing/mailer/test-support';
 
 const { app, owner } = connections();
 

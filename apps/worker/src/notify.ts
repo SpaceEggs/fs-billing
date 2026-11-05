@@ -14,13 +14,12 @@ import {
   type QueueAlertNoticesResult,
   type Tx,
 } from '@fs-billing/db';
-import type { MailSettings } from './config.js';
 import {
   createMailTransport,
-  dispatchOutbox,
-  type DispatchSummary,
+  type MailSettings,
   type MailTransport,
-} from './mail.js';
+} from '@fs-billing/mailer';
+import { dispatchOutbox, type DispatchSummary } from './mail.js';
 import { NOTIFY_QUEUE } from './queue.js';
 
 type Logger = Pick<FastifyBaseLogger, 'info' | 'warn' | 'error'>;

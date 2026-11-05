@@ -4,13 +4,14 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { appendLedgerEntry, createTenant, withAdmin } from '@fs-billing/db';
 import { money } from '@fs-billing/rating';
 import { adminId, connections } from '../../../packages/db/test/support.js';
-import { createMailTransport, dispatchOutbox } from './mail.js';
+import { createMailTransport } from '@fs-billing/mailer';
+import { dispatchOutbox } from './mail.js';
 import {
   clearMailpit,
   mailpitMessage,
   mailpitMessages,
   mailpitSettings,
-} from '../test/mail-support.js';
+} from '@fs-billing/mailer/test-support';
 
 const { app, owner } = connections();
 
