@@ -20,6 +20,15 @@ vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_pass
 
 服务器有公网 NAT 时，`sip-ip`、`rtp-ip` 填内网地址，`ext-sip-ip`、`ext-rtp-ip` 填公网地址。
 
+## 线路和来电
+
+线路不要和客户共用一个 SIP profile。客户 profile 开着 `auth-calls`，运营商的来电会被要求认证，而运营商给不了账号密码，呼叫约 10 秒后断开。
+
+- **线路 profile：** 单独的端口（同机环境用 5080），网关放在这里，`auth-calls=false`，`context` 指向只做来电路由的 context。外呼的 `sofia/gateway/upstream/` 不受影响。
+- **安全：** 这个入口不认证，防火墙必须只放行运营商 IP。来电 context 只能转给列出的号码，不能外呼，其他被叫一律拒绝。
+- **号码：** 网关的 `extension` 参数是运营商来电不带号码（`gw+网关名`）时用的被叫。实际路由要兼容 `02...`、`2...`、`86...`、`+86...` 这些格式。
+- **3CX：** 用账号注册的 3CX 收到的请求地址是注册账号，它按 `To` 匹配入站规则，所以要用 `sip_invite_to_uri` 带上真实号码，否则 3CX 回 180 后接着回 `480 Not available`。
+
 ## 安装授权脚本与拨号计划
 
 自定义 `lua.conf.xml` 的 `script-directory` 时，在路径末尾保留 `;;`，以保留 Lua 默认模块搜索路径。
