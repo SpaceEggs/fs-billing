@@ -1,3 +1,4 @@
+import { Badge } from '../../components/ui/badge';
 import {
   Table,
   TableHeader,
@@ -469,18 +470,10 @@ export function AdminUnassignedPage({ identity }: { identity: Identity }) {
             className="gap-0"
           >
             <TabsList aria-label="未归属话单">
-              <TabButton
-                value="pending"
-                selected={tab === 'pending'}
-                count={summary.data.pending}
-              >
+              <TabButton value="pending" count={summary.data.pending}>
                 待处理
               </TabButton>
-              <TabButton
-                value="ignored"
-                selected={tab === 'ignored'}
-                count={summary.data.ignored}
-              >
+              <TabButton value="ignored" count={summary.data.ignored}>
                 已忽略
               </TabButton>
             </TabsList>
@@ -593,28 +586,19 @@ function BillingTenantHint() {
 
 function TabButton({
   value,
-  selected,
   count,
   children,
 }: {
   value: 'pending' | 'ignored';
-  selected: boolean;
   count: number;
   children: string;
 }) {
   return (
     <TabsTrigger value={value}>
       {children}
-      <span
-        className={cn(
-          'rounded-full px-1.5 text-xs font-medium tabular-nums',
-          selected
-            ? 'max-md:bg-primary-foreground/15 md:bg-muted md:text-muted-foreground'
-            : 'bg-muted',
-        )}
-      >
+      <Badge variant="secondary" className="tabular-nums">
         {countText(count)}
-      </span>
+      </Badge>
     </TabsTrigger>
   );
 }

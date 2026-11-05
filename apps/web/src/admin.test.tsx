@@ -315,7 +315,7 @@ describe('tenant list', () => {
     const { location } = renderApp('/admin/tenants', handler);
     await screen.findByRole('table');
     await userEvent.selectOptions(screen.getByLabelText('状态'), 'suspended');
-    await userEvent.click(screen.getByRole('button', { name: 'USD' }));
+    await userEvent.click(screen.getByRole('radio', { name: 'USD' }));
     await userEvent.type(screen.getByLabelText('搜索编码或名称'), 'ABC01');
     expect(
       await screen.findByText('没有符合条件的租户', undefined, {

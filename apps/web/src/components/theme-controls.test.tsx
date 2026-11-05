@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setThemePreference } from '../lib/theme';
@@ -10,7 +10,7 @@ beforeEach(() => {
 });
 
 describe('ThemeSegmented', () => {
-  it('is one Tab stop and arrow keys change the theme', async () => {
+  it('is one Tab stop; arrow keys move focus and Space picks the theme', async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -23,11 +23,18 @@ describe('ThemeSegmented', () => {
     expect(screen.getByRole('radio', { name: '跟随系统' })).toHaveFocus();
 
     await user.keyboard('{ArrowLeft}');
-    expect(screen.getByRole('radio', { name: '深色' })).toHaveFocus();
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: '深色' })).toHaveFocus(),
+    );
+    await user.keyboard(' ');
     expect(screen.getByRole('radio', { name: '深色' })).toBeChecked();
     expect(document.documentElement.dataset['theme']).toBe('dark');
 
     await user.keyboard('{ArrowLeft}');
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: '浅色' })).toHaveFocus(),
+    );
+    await user.keyboard(' ');
     expect(screen.getByRole('radio', { name: '浅色' })).toBeChecked();
     expect(document.documentElement.dataset['theme']).toBe('light');
     expect(localStorage.getItem('fs-billing.theme')).toBe('light');
