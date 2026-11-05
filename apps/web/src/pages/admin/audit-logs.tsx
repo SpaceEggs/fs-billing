@@ -90,6 +90,15 @@ const changeFieldText = {
   callCount: '条数',
   alertRecipients: '告警接收邮箱',
   digestMinutes: '汇总间隔（分钟）',
+  smtpManaged: '改由页面管理',
+  smtpEnabled: '启用邮箱发送',
+  smtpHost: 'SMTP 服务器',
+  smtpPort: 'SMTP 端口',
+  smtpSecure: '加密方式',
+  smtpUsername: 'SMTP 账号',
+  smtpPassword: 'SMTP 密码',
+  smtpMailFrom: '发件人邮箱',
+  smtpSiteUrl: '站点地址',
 } as const satisfies Record<AdminAuditLog['changes'][number]['field'], string>;
 
 const targetKindText = {
@@ -102,6 +111,7 @@ const targetKindText = {
   statement: '账单',
   unassigned_batch: '未归属批次',
   alert_settings: '告警设置',
+  smtp_settings: '邮箱设置',
 } as const satisfies Record<
   NonNullable<AdminAuditLog['target']>['kind'],
   string

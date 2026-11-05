@@ -183,6 +183,13 @@
       "when": 1794009600000,
       "tag": "0025_clock_heartbeat_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794096000000,
+      "tag": "0026_smtp_settings",
+      "breakpoints": true
     }
   ]
 }
