@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { z } from 'zod';
 
 /**
  * 设置里的秘密（目前只有 SMTP 密码）的加密。
@@ -47,6 +48,29 @@ export function parseSettingsKey(value: string): Buffer {
   if (key.length !== SETTINGS_KEY_BYTES) throw new SettingsKeyError();
   return key;
 }
+
+/**
+ * API 与 Worker 共用的 `SETTINGS_ENCRYPTION_KEY` 环境变量 schema：空字符串等同未设置；写了但格式错误
+ * 时启动失败（否则要等保存或发信时才发现）。错误信息固定，不回显取值。
+ */
+export const settingsEncryptionKeySchema = z.preprocess(
+  (value) => (value === '' ? undefined : value),
+  z
+    .string()
+    .optional()
+    .transform((value, context) => {
+      if (value === undefined) return undefined;
+      try {
+        return parseSettingsKey(value);
+      } catch {
+        context.addIssue({
+          code: 'custom',
+          message: 'SETTINGS_ENCRYPTION_KEY 必须是 32 字节的 base64',
+        });
+        return z.NEVER;
+      }
+    }),
+);
 
 function assertKey(key: Buffer): void {
   if (!Buffer.isBuffer(key) || key.length !== SETTINGS_KEY_BYTES)

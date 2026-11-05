@@ -3,6 +3,8 @@ import {
   AlertSettingsInvalidError,
   AlertSettingsVersionConflictError,
   CdrDeletionError,
+  MailSettingsPasswordRequiredError,
+  MailSettingsVersionConflictError,
   UnassignedError,
 } from '@fs-billing/db';
 
@@ -22,6 +24,11 @@ export async function mapBusinessErrors<T>(run: () => Promise<T>): Promise<T> {
       throw new AdminServiceError(error.code, error.message);
     if (error instanceof AlertSettingsInvalidError)
       throw new AdminServiceError('VALIDATION_ERROR', error.message);
+    // 阶段 9 PR 4：邮箱设置的版本冲突（→ 409）与改主机/账号却没填新密码（→ 400）。
+    if (error instanceof MailSettingsVersionConflictError)
+      throw new AdminServiceError(error.code, error.message);
+    if (error instanceof MailSettingsPasswordRequiredError)
+      throw new AdminServiceError(error.code, error.message);
     throw error;
   }
 }

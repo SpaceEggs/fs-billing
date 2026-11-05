@@ -1,5 +1,6 @@
 import type {
   AdminCsvRowError,
+  AdminMailSettingsErrorCode,
   ValidationIssue,
   adminConflictCodeSchema,
 } from '@fs-billing/shared';
@@ -22,6 +23,11 @@ export type ApiProblem =
   | { kind: 'csv-rejected'; message: string }
   | { kind: 'not-found' }
   | { kind: 'conflict'; code: ConflictCode; message: string }
+  | {
+      kind: 'mail-settings';
+      code: AdminMailSettingsErrorCode;
+      message: string;
+    }
   | { kind: 'rate-limited'; retryAfterSeconds: number }
   | { kind: 'unavailable' };
 
@@ -49,7 +55,17 @@ export const conflictMessages = {
   CDR_MONTH_NOT_DELETABLE: '所选月份不能删除话单，请刷新后重新选择',
   CDR_DELETE_COUNT_CHANGED: '话单条数与预览不符，请刷新后重新预览',
   ALERT_SETTINGS_VERSION_CONFLICT: '告警设置已被其他人修改，请刷新后重试',
+  MAIL_SETTINGS_VERSION_CONFLICT: '邮箱设置已被其他人修改，请刷新后重试',
 } as const satisfies Record<ConflictCode, string>;
+
+export const mailSettingsMessages = {
+  SETTINGS_KEY_MISSING:
+    '服务器未配置设置加密密钥（SETTINGS_ENCRYPTION_KEY），无法保存或使用密码',
+  MAIL_SETTINGS_PASSWORD_REQUIRED: '修改服务器或账号后必须重新填写密码',
+  MAIL_SETTINGS_PASSWORD_UNUSABLE: '已保存的密码无法解密，请重新填写密码',
+  MAIL_SETTINGS_HOST_NOT_ALLOWED:
+    '该邮件服务器地址不被允许：不能是回环地址、内网地址或 localhost',
+} as const satisfies Record<AdminMailSettingsErrorCode, string>;
 
 /** 冲突说明页面数据已过时，刷新后可重新操作。 */
 const staleConflicts: ReadonlySet<ConflictCode> = new Set([
@@ -67,6 +83,7 @@ const staleConflicts: ReadonlySet<ConflictCode> = new Set([
   'CDR_MONTH_NOT_DELETABLE',
   'CDR_DELETE_COUNT_CHANGED',
   'ALERT_SETTINGS_VERSION_CONFLICT',
+  'MAIL_SETTINGS_VERSION_CONFLICT',
 ]);
 
 export function apiProblem(error: unknown): ApiProblem {
@@ -126,10 +143,20 @@ export function apiProblem(error: unknown): ApiProblem {
     case 'CDR_MONTH_NOT_DELETABLE':
     case 'CDR_DELETE_COUNT_CHANGED':
     case 'ALERT_SETTINGS_VERSION_CONFLICT':
+    case 'MAIL_SETTINGS_VERSION_CONFLICT':
       return {
         kind: 'conflict',
         code: detail.code,
         message: conflictMessages[detail.code],
+      };
+    case 'SETTINGS_KEY_MISSING':
+    case 'MAIL_SETTINGS_PASSWORD_REQUIRED':
+    case 'MAIL_SETTINGS_PASSWORD_UNUSABLE':
+    case 'MAIL_SETTINGS_HOST_NOT_ALLOWED':
+      return {
+        kind: 'mail-settings',
+        code: detail.code,
+        message: mailSettingsMessages[detail.code],
       };
     case 'UNAUTHENTICATED':
     case 'SESSION_EXPIRED':
@@ -170,6 +197,8 @@ export function problemNotice(problem: ApiProblem): ProblemNotice {
         title: problem.message,
         refresh: staleConflicts.has(problem.code),
       };
+    case 'mail-settings':
+      return { title: problem.message, refresh: false };
     case 'not-found':
       return {
         title: '内容不存在或已被删除',

@@ -163,7 +163,7 @@ export const adminAlertSettingsResponseSchema = z.strictObject({
   recipients: z.array(z.email()).max(ADMIN_ALERT_RECIPIENTS_MAX),
   digestMinutes: adminAlertDigestMinutesSchema,
   version: z.int().positive(),
-  /** 与 Worker 同一个信号：API 环境里 `SMTP_HOST` 与 `MAIL_FROM` 都已设置（不含凭据）；为假时页面写「邮件发送未配置，告警和提醒不会发出」。 */
+  /** 与 Worker 同一个有效配置：页面接管时看页面 `enabled`，否则看环境变量是否配了 `SMTP_HOST` 与 `MAIL_FROM`；为假时页面写「邮件发送未配置，告警和提醒不会发出」。 */
   mailEnabled: z.boolean(),
 });
 export type AdminAlertSettingsResponse = z.infer<

@@ -57,6 +57,14 @@ import { cdrDeletionHandlers } from './routes/cdr-deletions.js';
 import { auditLogHandlers } from './routes/audit-logs.js';
 import { overviewHandlers } from './routes/overview.js';
 import { systemAlertHandlers } from './routes/system-alerts.js';
+import { mailSettingsHandlers } from './routes/mail-settings.js';
+import {
+  resolveMailEnabled,
+  type MailHostLookup,
+  type MailSettingsRuntime,
+} from './mail-settings.js';
+import type { MailSettings, MailTransport } from '@fs-billing/mailer';
+import type { AdminMailSettingsEnvironment } from '@fs-billing/shared';
 
 export type ApiDependencies = {
   businessDb: PoolDb;
@@ -72,8 +80,17 @@ export type ApiDependencies = {
   };
   adminAmountMaxIntegerDigits?: number;
   accountService?: AdminAccountService;
-  /** 邮件发送是否启用（`SMTP_HOST` 与 `MAIL_FROM` 都已设置，见 config.ts 的 `mailEnabled`）；只用于告警设置页的提示。默认 false。 */
+  /** 旧测试用的固定值；生产走 `mailSettings` 从数据库算。默认 false。 */
   mailEnabled?: boolean;
+  /** 邮箱设置接口与测试发信：密钥、环境变量非秘密值、测试注入的传输与解析。 */
+  mailSettings?: {
+    key?: Buffer | undefined;
+    allowPlaintext?: boolean;
+    timeoutMs?: number;
+    env?: Partial<AdminMailSettingsEnvironment>;
+    transportFactory?: (settings: MailSettings) => MailTransport;
+    lookupHost?: MailHostLookup;
+  };
   exportPoolApplicationName?: string;
 };
 export function createApi(deps: ApiDependencies) {
@@ -97,6 +114,21 @@ export function createApi(deps: ApiDependencies) {
     application_name: deps.exportPoolApplicationName ?? 'fsbilling-api-export',
     poolName: 'api.export',
   });
+  const mailRuntime: MailSettingsRuntime = {
+    key: deps.mailSettings?.key,
+    allowPlaintext: deps.mailSettings?.allowPlaintext ?? true,
+    timeoutMs: deps.mailSettings?.timeoutMs ?? 15_000,
+    env: {
+      host: deps.mailSettings?.env?.host ?? null,
+      port: deps.mailSettings?.env?.port ?? null,
+      secure: deps.mailSettings?.env?.secure ?? null,
+      username: deps.mailSettings?.env?.username ?? null,
+      mailFrom: deps.mailSettings?.env?.mailFrom ?? null,
+      siteUrl: deps.mailSettings?.env?.siteUrl ?? null,
+    },
+    transportFactory: deps.mailSettings?.transportFactory,
+    lookupHost: deps.mailSettings?.lookupHost,
+  };
   const app = Fastify({
     // API 只监听回环并放在 nginx 后面：只信任来自 127.0.0.1 的 X-Forwarded-For（nginx 用 $remote_addr
     // 覆盖该头）。其余来源的转发头一律忽略，伪造头不能换限流桶。
@@ -180,8 +212,12 @@ export function createApi(deps: ApiDependencies) {
     ...auditLogHandlers(deps.businessDb),
     ...overviewHandlers(deps.businessDb),
     ...systemAlertHandlers(deps.businessDb, {
-      mailEnabled: deps.mailEnabled ?? false,
+      resolveMailEnabled: () =>
+        deps.mailSettings
+          ? resolveMailEnabled(deps.businessDb, mailRuntime)
+          : Promise.resolve(deps.mailEnabled ?? false),
     }),
+    ...mailSettingsHandlers(deps.businessDb, mailRuntime),
     ...exportHandlers({
       db: deps.businessDb,
       auditDb: exportConnection.db,

@@ -25,7 +25,18 @@ export const adminConflictCodeSchema = z.enum([
   'CDR_MONTH_NOT_DELETABLE',
   'CDR_DELETE_COUNT_CHANGED',
   'ALERT_SETTINGS_VERSION_CONFLICT',
+  'MAIL_SETTINGS_VERSION_CONFLICT',
 ]);
+/** 邮箱设置的非版本错误：缺密钥、密码必须重填/解不开、生产环境拒绝可疑主机。 */
+export const adminMailSettingsErrorCodeSchema = z.enum([
+  'SETTINGS_KEY_MISSING',
+  'MAIL_SETTINGS_PASSWORD_REQUIRED',
+  'MAIL_SETTINGS_PASSWORD_UNUSABLE',
+  'MAIL_SETTINGS_HOST_NOT_ALLOWED',
+]);
+export type AdminMailSettingsErrorCode = z.infer<
+  typeof adminMailSettingsErrorCodeSchema
+>;
 const errorFields = {
   message: z.string().min(1),
   requestId: z.string().min(1),
@@ -52,10 +63,17 @@ export const adminCsvLimitErrorSchema = z.strictObject({
     code: z.literal('CSV_LIMIT_EXCEEDED'),
   }),
 });
+export const adminMailSettingsErrorSchema = z.strictObject({
+  error: z.strictObject({
+    ...errorFields,
+    code: adminMailSettingsErrorCodeSchema,
+  }),
+});
 export const adminDomainErrorSchema = z.union([
   adminConflictErrorSchema,
   adminCsvInputErrorSchema,
   adminCsvLimitErrorSchema,
+  adminMailSettingsErrorSchema,
 ]);
 export const adminApiErrorSchema = z.union([
   apiErrorSchema,
@@ -87,6 +105,11 @@ export const adminApiErrorStatus = {
   CDR_MONTH_NOT_DELETABLE: 409,
   CDR_DELETE_COUNT_CHANGED: 409,
   ALERT_SETTINGS_VERSION_CONFLICT: 409,
+  MAIL_SETTINGS_VERSION_CONFLICT: 409,
+  SETTINGS_KEY_MISSING: 400,
+  MAIL_SETTINGS_PASSWORD_REQUIRED: 400,
+  MAIL_SETTINGS_PASSWORD_UNUSABLE: 400,
+  MAIL_SETTINGS_HOST_NOT_ALLOWED: 400,
   CSV_INVALID: 400,
   CSV_ENCODING_UNSUPPORTED: 400,
   CSV_LIMIT_EXCEEDED: 413,
