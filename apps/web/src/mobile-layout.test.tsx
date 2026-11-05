@@ -213,7 +213,9 @@ describe('mobile list top bar and filter sheet', () => {
     });
     const { location } = renderApp('/admin/receivables', handler);
     const user = userEvent.setup();
-    expect(await screen.findByRole('radiogroup', { name: '状态' })).toBeVisible();
+    expect(
+      await screen.findByRole('radiogroup', { name: '状态' }),
+    ).toBeVisible();
     await user.click(screen.getByRole('button', { name: '筛选' }));
     const sheet = await screen.findByRole('dialog', { name: '筛选' });
     await user.click(within(sheet).getByRole('radio', { name: 'USD' }));
