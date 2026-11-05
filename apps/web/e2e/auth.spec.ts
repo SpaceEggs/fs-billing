@@ -309,14 +309,19 @@ test.describe('mobile 375px', () => {
     const sheet = page.getByRole('dialog', { name: '账号菜单' });
     await page.emulateMedia({ colorScheme: 'light' });
     await sheet.getByText('深色', { exact: true }).click();
-    await expect(sheet.getByRole('radio', { name: '深色' })).toBeChecked();
+    await expect(sheet.getByRole('tab', { name: '深色' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
-    await sheet.getByRole('radio', { name: '深色' }).focus();
+    await sheet.getByRole('tab', { name: '深色' }).focus();
     await page.keyboard.press('ArrowRight');
-    await expect(sheet.getByRole('radio', { name: '跟随系统' })).toBeFocused();
-    await page.keyboard.press('Space');
-    await expect(sheet.getByRole('radio', { name: '跟随系统' })).toBeChecked();
+    await expect(sheet.getByRole('tab', { name: '跟随系统' })).toBeFocused();
+    await expect(sheet.getByRole('tab', { name: '跟随系统' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

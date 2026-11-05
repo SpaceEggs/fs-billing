@@ -10,7 +10,7 @@ beforeEach(() => {
 });
 
 describe('ThemeSegmented', () => {
-  it('is one Tab stop; arrow keys move focus and Space picks the theme', async () => {
+  it('is one Tab stop and arrow keys change the theme', async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -20,29 +20,33 @@ describe('ThemeSegmented', () => {
     );
 
     await user.tab();
-    expect(screen.getByRole('radio', { name: '跟随系统' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: '跟随系统' })).toHaveFocus();
 
     await user.keyboard('{ArrowLeft}');
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: '深色' })).toHaveFocus(),
+      expect(screen.getByRole('tab', { name: '深色' })).toHaveFocus(),
     );
-    await user.keyboard(' ');
-    expect(screen.getByRole('radio', { name: '深色' })).toBeChecked();
+    expect(screen.getByRole('tab', { name: '深色' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(document.documentElement.dataset['theme']).toBe('dark');
 
     await user.keyboard('{ArrowLeft}');
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: '浅色' })).toHaveFocus(),
+      expect(screen.getByRole('tab', { name: '浅色' })).toHaveFocus(),
     );
-    await user.keyboard(' ');
-    expect(screen.getByRole('radio', { name: '浅色' })).toBeChecked();
+    expect(screen.getByRole('tab', { name: '浅色' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(document.documentElement.dataset['theme']).toBe('light');
     expect(localStorage.getItem('fs-billing.theme')).toBe('light');
 
     await user.tab();
     expect(screen.getByRole('button', { name: '之后' })).toHaveFocus();
     await user.tab({ shift: true });
-    expect(screen.getByRole('radio', { name: '浅色' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: '浅色' })).toHaveFocus();
   });
 });
 

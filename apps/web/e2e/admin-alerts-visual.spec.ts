@@ -72,7 +72,7 @@ const overviewAllClear = async (page: Page) => {
   });
   await page.goto('/admin');
   await expect(page.getByText('一切正常')).toBeVisible();
-  await page.getByRole('radio', { name: 'USD', exact: true }).click();
+  await page.getByRole('tab', { name: 'USD', exact: true }).click();
 };
 
 const alertsOpen = async (page: Page) => {

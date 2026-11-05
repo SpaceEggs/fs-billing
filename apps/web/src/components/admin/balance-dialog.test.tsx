@@ -146,7 +146,7 @@ const dialog = () => screen.getByRole('dialog', { name: '余额操作' });
 
 async function fillAdjustment(amount: string, note = '冲正') {
   const user = userEvent.setup();
-  await user.click(within(dialog()).getByRole('radio', { name: '调账' }));
+  await user.click(within(dialog()).getByRole('tab', { name: '调账' }));
   await user.type(within(dialog()).getByLabelText(/^金额/), amount);
   await user.type(within(dialog()).getByLabelText(/备注/), note);
   await user.click(within(dialog()).getByRole('button', { name: '下一步' }));
@@ -336,26 +336,28 @@ describe('balance dialog', () => {
     expect(keys[1]).not.toBe(keys[0]);
   });
 
-  it('operation type is a radio group navigable by keyboard', async () => {
+  it('operation type is navigable by keyboard', async () => {
     const user = userEvent.setup();
     renderDialog(tenantFixture(), () => Promise.reject(new Error('unused')));
-    const group = within(dialog()).getByRole('radiogroup', {
+    const group = within(dialog()).getByRole('tablist', {
       name: '操作类型',
     });
-    expect(within(group).getAllByRole('radio')).toHaveLength(4);
-    expect(within(group).getByRole('radio', { name: '充值' })).toBeChecked();
+    expect(within(group).getAllByRole('tab')).toHaveLength(4);
+    expect(within(group).getByRole('tab', { name: '充值' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
-    within(group).getByRole('radio', { name: '充值' }).focus();
+    within(group).getByRole('tab', { name: '充值' }).focus();
     await user.keyboard('{ArrowRight}');
     await waitFor(() =>
       expect(
-        within(group).getByRole('radio', { name: '赊账充值' }),
+        within(group).getByRole('tab', { name: '赊账充值' }),
       ).toHaveFocus(),
     );
-    await user.keyboard(' ');
     expect(
-      within(group).getByRole('radio', { name: '赊账充值' }),
-    ).toBeChecked();
+      within(group).getByRole('tab', { name: '赊账充值' }),
+    ).toHaveAttribute('aria-selected', 'true');
     expect(
       within(dialog()).getByText(/先加余额，记为「待收款」/),
     ).toBeVisible();

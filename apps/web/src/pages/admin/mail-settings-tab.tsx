@@ -36,7 +36,7 @@ import {
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
-import { ToggleGroup, ToggleGroupItem } from '../../components/ui/toggle-group';
+import { OptionTabs } from '../../components/option-tabs';
 
 type MailConfig = Omit<
   ApiBody<'adminMailSettingsUpdate'>,
@@ -621,24 +621,16 @@ function MailSettingsForm({
 
               <div className="space-y-2">
                 <Label>加密方式</Label>
-                <ToggleGroup
-                  type="single"
-                  variant="outline"
-                  aria-label="加密方式"
-                  aria-invalid={fieldError('secure') ? true : undefined}
-                  aria-describedby={
-                    fieldError('secure') ? `${id}-secure-error` : undefined
-                  }
+                <OptionTabs
+                  label="加密方式"
+                  options={[
+                    { value: 'tls', label: '隐式 TLS' },
+                    { value: 'starttls', label: 'STARTTLS' },
+                  ]}
                   value={secure ? 'tls' : 'starttls'}
                   disabled={!editing}
-                  onValueChange={(value) => {
-                    if (value === 'tls') setSecure(true);
-                    if (value === 'starttls') setSecure(false);
-                  }}
-                >
-                  <ToggleGroupItem value="tls">隐式 TLS</ToggleGroupItem>
-                  <ToggleGroupItem value="starttls">STARTTLS</ToggleGroupItem>
-                </ToggleGroup>
+                  onChange={(next) => setSecure(next === 'tls')}
+                />
                 {fieldError('secure') ? (
                   <p
                     id={`${id}-secure-error`}

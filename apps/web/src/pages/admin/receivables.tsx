@@ -35,7 +35,7 @@ import {
   FilterSheet,
   resultLabel,
 } from '../../components/filter-sheet';
-import { OptionToggle } from '../../components/option-toggle';
+import { OptionTabs } from '../../components/option-tabs';
 import { DateTime, Money } from '../../components/data-format';
 import { Pagination } from '../../components/pagination';
 import { QueryError, RefreshError } from '../../components/query-error';
@@ -107,14 +107,14 @@ function Filters({ total }: { total: number | undefined }) {
   const { search, setFilter } = useReceivablesSearch();
   return (
     <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-      <OptionToggle
+      <OptionTabs
         label="状态"
         options={statusOptions}
         value={statusOf(search)}
         onChange={(status) =>
           setFilter({ status: status === 'pending' ? undefined : status })
         }
-        className="w-full md:w-fit max-md:[&>button]:flex-1"
+        className="w-full md:w-fit"
       />
       <div className="flex gap-2 md:contents">
         <SearchBox
@@ -132,18 +132,18 @@ function Filters({ total }: { total: number | undefined }) {
         >
           <FilterGroup label="币种">
             {() => (
-              <OptionToggle
+              <OptionTabs
                 label="币种"
                 options={currencyOptions}
                 value={search.currency}
                 onChange={(currency) => setFilter({ currency })}
-                className="w-full [&>button]:flex-1"
+                className="w-full"
               />
             )}
           </FilterGroup>
         </FilterSheet>
       </div>
-      <OptionToggle
+      <OptionTabs
         label="币种"
         options={currencyOptions}
         value={search.currency}

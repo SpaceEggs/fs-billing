@@ -6,7 +6,7 @@ import type { DayRange } from '../../lib/day-range';
 import { latestRangeEnd } from '@fs-billing/shared';
 import { DateRangeField } from '../date-range-field';
 import { FilterGroup, FilterSheet } from '../filter-sheet';
-import { OptionToggle } from '../option-toggle';
+import { OptionTabs } from '../option-tabs';
 import { SearchBox } from '../search-box';
 import { NativeSelect, NativeSelectOption } from '../ui/native-select';
 import { cn } from '../../lib/utils';
@@ -164,26 +164,26 @@ export function CdrFilterBar({
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">接通状态</span>
-          <OptionToggle
+          <OptionTabs
             label="接通状态"
             options={statusOptions}
             value={status}
             onChange={(next) =>
               onFilters({ status: next === 'all' ? 'all' : undefined })
             }
-            className="w-full [&>button]:flex-1"
+            className="w-full"
           />
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium">方向</span>
-          <OptionToggle
+          <OptionTabs
             label="方向"
             options={directionOptions}
             value={filters.direction ?? 'all'}
             onChange={(next) =>
               onFilters({ direction: next === 'all' ? undefined : next })
             }
-            className="w-full [&>button]:flex-1"
+            className="w-full"
           />
         </div>
         {extra?.sheet}
@@ -206,7 +206,7 @@ export function CdrFilterBar({
           </NativeSelect>
         </Field>
         <Field label="接通状态">
-          <OptionToggle
+          <OptionTabs
             label="接通状态"
             options={statusOptions}
             value={status}
@@ -216,7 +216,7 @@ export function CdrFilterBar({
           />
         </Field>
         <Field label="方向">
-          <OptionToggle
+          <OptionTabs
             label="方向"
             options={directionOptions}
             value={filters.direction ?? 'all'}

@@ -103,7 +103,7 @@ test('the daily spend chart is driven by the keyboard and switches currency', as
   await chart.press('Escape');
   await expect(bubble).toHaveCount(0);
 
-  await page.getByRole('radio', { name: 'USD', exact: true }).click();
+  await page.getByRole('tab', { name: 'USD', exact: true }).click();
   await expect(page.getByText('所有 USD 租户合计')).toBeVisible();
   await chart.focus();
   await chart.press('Home');

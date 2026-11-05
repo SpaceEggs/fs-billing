@@ -1,4 +1,4 @@
-import { OptionToggle } from '../../components/option-toggle';
+import { OptionTabs } from '../../components/option-tabs';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { useEffect, useId, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -88,7 +88,7 @@ function CurrencyChoice({
           *
         </span>
       </span>
-      <OptionToggle
+      <OptionTabs
         label="币种"
         options={currencySchema.options.map((currency) => ({
           value: currency,
@@ -96,7 +96,7 @@ function CurrencyChoice({
         }))}
         value={value}
         onChange={onChange}
-        className="w-full [&>button]:flex-1"
+        className="w-full"
       />
       <span className="text-xs font-normal text-muted-foreground">
         创建后不可修改

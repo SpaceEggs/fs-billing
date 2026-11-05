@@ -1,4 +1,4 @@
-import { OptionToggle } from '../option-toggle';
+import { OptionTabs } from '../option-tabs';
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
@@ -78,7 +78,7 @@ function KindChoice({
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
       <span aria-hidden>操作类型</span>
-      <OptionToggle
+      <OptionTabs
         label="操作类型"
         options={balanceKindOrder.map((kind) => ({
           value: kind,
@@ -86,7 +86,7 @@ function KindChoice({
         }))}
         value={value}
         onChange={onChange}
-        className="w-full [&>button]:flex-1"
+        className="w-full"
       />
       {value === 'credit_topup' ? (
         <span className="text-xs leading-normal font-normal text-muted-foreground">

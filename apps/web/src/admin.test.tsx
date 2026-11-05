@@ -315,7 +315,7 @@ describe('tenant list', () => {
     const { location } = renderApp('/admin/tenants', handler);
     await screen.findByRole('table');
     await userEvent.selectOptions(screen.getByLabelText('状态'), 'suspended');
-    await userEvent.click(screen.getByRole('radio', { name: 'USD' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'USD' }));
     await userEvent.type(screen.getByLabelText('搜索编码或名称'), 'ABC01');
     expect(
       await screen.findByText('没有符合条件的租户', undefined, {
@@ -512,7 +512,7 @@ describe('tenant detail', () => {
     const user = userEvent.setup();
     renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
     const dialog = await openBalance(user);
-    await user.click(within(dialog).getByRole('radio', { name: '调账' }));
+    await user.click(within(dialog).getByRole('tab', { name: '调账' }));
     await user.type(within(dialog).getByLabelText('金额'), '-12.3456');
     await user.type(within(dialog).getByLabelText(/备注/), '   ');
     await user.click(within(dialog).getByRole('button', { name: '下一步' }));
@@ -559,7 +559,7 @@ describe('tenant detail', () => {
     const user = userEvent.setup();
     renderApp(`/admin/tenants/${tenantIds.abc}`, handler);
     const dialog = await openBalance(user);
-    await user.click(within(dialog).getByRole('radio', { name: '赠送' }));
+    await user.click(within(dialog).getByRole('tab', { name: '赠送' }));
     await user.type(within(dialog).getByLabelText('金额'), '10000');
     await user.click(within(dialog).getByRole('button', { name: '下一步' }));
     expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
@@ -788,7 +788,7 @@ describe('tenant create', () => {
       screen.getByLabelText(/租户名称/),
       'Pacific Link Communications Ltd',
     );
-    await user.click(screen.getByRole('radio', { name: 'USD 美元' }));
+    await user.click(screen.getByRole('tab', { name: 'USD 美元' }));
     await user.type(screen.getByLabelText(/余额提醒阈值/), '30');
     await user.type(
       screen.getByLabelText(/登录邮箱/),
@@ -1223,15 +1223,17 @@ describe('tenant create', () => {
     const { handler } = adminApi({});
     renderApp('/admin/tenants/new', handler);
     const user = userEvent.setup();
-    const cny = await screen.findByRole('radio', { name: 'CNY 人民币' });
-    expect(cny).toBeChecked();
+    const cny = await screen.findByRole('tab', { name: 'CNY 人民币' });
+    expect(cny).toHaveAttribute('aria-selected', 'true');
     cny.focus();
     await user.keyboard('{ArrowRight}');
     await waitFor(() =>
-      expect(screen.getByRole('radio', { name: 'USD 美元' })).toHaveFocus(),
+      expect(screen.getByRole('tab', { name: 'USD 美元' })).toHaveFocus(),
     );
-    await user.keyboard(' ');
-    expect(screen.getByRole('radio', { name: 'USD 美元' })).toBeChecked();
+    expect(screen.getByRole('tab', { name: 'USD 美元' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     expect(screen.getByLabelText(/透支额度/)).toHaveValue('15.00');
 
     await user.click(screen.getByRole('radio', { name: /空白费率表/ }));
