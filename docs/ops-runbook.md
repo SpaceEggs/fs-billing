@@ -902,7 +902,8 @@ ls -l /root/backups/LATEST.json
 ### 配置与生效
 
 journald 配置在 [ops/journald/fs-billing.conf](../ops/journald/fs-billing.conf)，安装到
-`/etc/systemd/journald.conf.d/fs-billing.conf`。`bootstrap-server.sh` 会装好并重启
+`/etc/systemd/journald.conf.d/zz-fs-billing.conf`（`zz-` 前缀让它排在 Debian 自带的
+`syslog.conf` 之后，否则 `ForwardToSyslog=yes` 会生效）。`bootstrap-server.sh` 会装好并重启
 `systemd-journald`。关键项：
 
 | 项                | 值         | 作用                                                 |
