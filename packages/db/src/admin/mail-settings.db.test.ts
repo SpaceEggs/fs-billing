@@ -141,11 +141,7 @@ describe('admin mail settings', () => {
   it('reuses the stored ciphertext when the host and username stay the same', async () => {
     await save(1);
     const before = await ciphertext();
-    const updated = await save(
-      2,
-      { siteUrl: 'https://new.example.com' },
-      null,
-    );
+    const updated = await save(2, { siteUrl: 'https://new.example.com' }, null);
     expect(updated.settings.version).toBe(3);
     expect(await ciphertext()).toBe(before);
   });
