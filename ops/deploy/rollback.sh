@@ -8,6 +8,7 @@
 set -euo pipefail
 
 release_root=/opt/fs-billing/releases
+current_link=/opt/fs-billing/current
 
 usage() {
   cat <<'EOF'
@@ -33,7 +34,7 @@ esac
 [[ $EUID -eq 0 ]] || fail '必须以 root 执行'
 [[ -d $release_root ]] || fail "找不到 $release_root"
 
-current=$(readlink -f "$release_root/current" 2>/dev/null || true)
+current=$(readlink -f "$current_link" 2>/dev/null || true)
 
 list_releases() {
   while read -r _ path; do
@@ -86,8 +87,8 @@ target=$(readlink -f "$target")
   fail "目标没有 DEPLOYED_COMMIT，可能从未成功发布：$target"
 
 printf '回滚：%s -> %s\n' "${current:-（无）}" "$target"
-ln -sfn "$target" "$release_root/current.tmp"
-mv -Tf "$release_root/current.tmp" "$release_root/current"
+ln -sfn "$target" "$current_link.tmp"
+mv -Tf "$current_link.tmp" "$current_link"
 systemctl restart fs-billing-api fs-billing-worker
 
 api_host=$(sed -n 's/^API_HOST=//p' /etc/fs-billing/app.env | tail -n 1)
