@@ -338,7 +338,9 @@ describe('告警设置', () => {
     expect(
       adminAuditLogsResponseSchema
         .parse(listed.json())
-        .items.map((item) => [item.id, item.label]),
+        // 同一分类也有邮箱设置的日志，其他测试文件留在库里的不算。
+        .items.filter((item) => item.id === saved.auditId)
+        .map((item) => [item.id, item.label]),
     ).toEqual([[saved.auditId, 'settings']]);
   });
 

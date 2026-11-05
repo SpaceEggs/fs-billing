@@ -628,7 +628,7 @@ describe('收件人被拒', () => {
     // 7 天后由 tick 恢复。
     now = after(T0, 7 * 86400);
     await runNotifyTick(app.db, {
-      mail: undefined,
+      resolveMail: () => Promise.resolve(undefined),
       quietMinutes: 10,
       now: clock,
     });
@@ -831,7 +831,11 @@ describe('notify-tick', () => {
     const queued = await enqueue();
     const tick = (minutes: number, quietMinutes: number, mail = settings()) => {
       now = after(T0, minutes * 60);
-      return runNotifyTick(app.db, { mail, quietMinutes, now: clock });
+      return runNotifyTick(app.db, {
+        resolveMail: () => Promise.resolve(mail),
+        quietMinutes,
+        now: clock,
+      });
     };
     // 差一分钟不到窗口：不恢复，但邮件照发。
     expect(await tick(9, 10)).toMatchObject({ claimed: 1, sent: 1 });
@@ -858,14 +862,14 @@ describe('notify-tick', () => {
     const day = 86400;
     now = after(T0, 7 * day - 60);
     await runNotifyTick(app.db, {
-      mail: undefined,
+      resolveMail: () => Promise.resolve(undefined),
       quietMinutes: 10,
       now: clock,
     });
     expect((await alerts())[0]!.recovered_at).toBeNull();
     now = after(T0, 7 * day);
     await runNotifyTick(app.db, {
-      mail: undefined,
+      resolveMail: () => Promise.resolve(undefined),
       quietMinutes: 10,
       now: clock,
     });
@@ -877,7 +881,7 @@ describe('notify-tick', () => {
     now = after(T0, 3600);
     expect(
       await runNotifyTick(app.db, {
-        mail: undefined,
+        resolveMail: () => Promise.resolve(undefined),
         quietMinutes: 10,
         now: clock,
       }),
@@ -976,7 +980,7 @@ describe('定时任务', () => {
       NOTIFY_QUEUE,
     ]);
     await startNotifyJobs(boss, app.db, {
-      mail: settings(),
+      resolveMail: () => Promise.resolve(settings()),
       quietMinutes: 10,
       logger: log,
     });

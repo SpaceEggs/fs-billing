@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import { isAbsolute } from 'node:path';
 import { z } from 'zod';
-import { databaseEnvironmentSchema } from '@fs-billing/db';
+import { databaseEnvironmentSchema, parseSettingsKey } from '@fs-billing/db';
 import {
   mailEnvironmentShape,
   refineMailEnvironment,
@@ -90,6 +90,27 @@ export const workerEnvironmentSchema = z
       .refine(privateIpv4, '只能监听内网或回环 IPv4 地址')
       .default('127.0.0.1'),
     WORKER_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+    // 页面保存的 SMTP 密码用这把密钥解密（AES-256-GCM，32 字节 base64）。
+    // 空字符串等同未设置：环境变量来源的发信不依赖它；只有页面管理的密码才需要。
+    // 写了但格式错时启动就失败（否则要等到发信时才发现，邮件会一直留在发件箱）。信息固定，不回显取值。
+    SETTINGS_ENCRYPTION_KEY: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z
+        .string()
+        .optional()
+        .transform((value, context) => {
+          if (value === undefined) return undefined;
+          try {
+            return parseSettingsKey(value);
+          } catch {
+            context.addIssue({
+              code: 'custom',
+              message: 'SETTINGS_ENCRYPTION_KEY 必须是 32 字节的 base64',
+            });
+            return z.NEVER;
+          }
+        }),
+    ),
     WORKER_SHARED_KEY: z.string().min(16),
     WORKER_ALLOWED_IPS: z
       .string()

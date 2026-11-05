@@ -28,8 +28,11 @@ export const NOTIFY_CRON = '* * * * *';
 export const NOTIFY_TIMEZONE = 'Asia/Shanghai';
 
 export interface NotifyTickOptions {
-  /** 邮件配置；SMTP_HOST 未设置时为 undefined：告警恢复与发件箱入队照常，只是不分发。 */
-  readonly mail: MailSettings | undefined;
+  /**
+   * 每轮发信前解析一次邮件配置（环境变量或数据库，见 mail-settings.ts）。
+   * 返回 undefined 表示这一轮不分发：告警恢复与发件箱入队照常进行。
+   */
+  readonly resolveMail: () => Promise<MailSettings | undefined>;
   /** 事件型告警的静默恢复窗口（分钟），ALERT_QUIET_MINUTES。 */
   readonly quietMinutes: number;
   readonly now?: () => Date;
@@ -127,8 +130,10 @@ export async function queueNotifications(
 
 /**
  * 每分钟一次的 Worker 任务（阶段 9 设计：定时任务只有一个）：{@link queueNotifications} 的事务，
- * 然后分发发件箱（认领、租约、停止信号都在 `dispatchOutbox`）。`SMTP_HOST` 未设置时事务照常运行（邮件入发件箱），
- * 只是不分发，返回 undefined。
+ * 然后解析这一轮的邮件配置，再分发发件箱（认领、租约、停止信号都在 `dispatchOutbox`）。
+ *
+ * 配置在入队**之后**才读：数据库暂时不可用或配置有问题时，告警与通知仍然入发件箱，只是这一轮不分发。
+ * 配置解析返回 undefined（未配置、页面停用、密码解不开）时事务照常提交，返回 undefined。
  */
 export async function runNotifyTick(
   db: PoolDb,
@@ -157,15 +162,25 @@ export async function runNotifyTick(
       '告警恢复与通知入队失败，仍分发发件箱',
     );
   }
+  // 入队已经提交。解析配置失败同样让任务可见地失败，但不能因此丢掉这次入队的结果。
+  let mail: MailSettings | undefined;
+  try {
+    mail = await options.resolveMail();
+  } catch (error) {
+    // 入队也失败时保留原有的优先顺序（抛入队错误），但两条错误都要留下。
+    if (failure) {
+      options.logger?.error({ err: error }, '读取邮件配置失败');
+      throw failure.error;
+    }
+    throw error;
+  }
   let summary: DispatchSummary | undefined;
-  if (options.mail) {
-    const transport = (options.createTransport ?? createMailTransport)(
-      options.mail,
-    );
+  if (mail) {
+    const transport = (options.createTransport ?? createMailTransport)(mail);
     try {
       summary = await dispatchOutbox(db, {
         transport,
-        settings: options.mail,
+        settings: mail,
         now: clock,
         logger: options.logger,
         signal: options.signal,

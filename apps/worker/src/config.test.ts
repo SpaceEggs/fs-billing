@@ -73,6 +73,46 @@ describe('Worker 启动配置边界', () => {
   });
 });
 
+describe('设置加密密钥', () => {
+  it('未设置或空字符串等同于没有密钥', () => {
+    expect(
+      workerEnvironmentSchema.parse(environment).SETTINGS_ENCRYPTION_KEY,
+    ).toBeUndefined();
+    expect(
+      workerEnvironmentSchema.parse({
+        ...environment,
+        SETTINGS_ENCRYPTION_KEY: '',
+      }).SETTINGS_ENCRYPTION_KEY,
+    ).toBeUndefined();
+  });
+
+  it('接受 32 字节的 base64', () => {
+    expect(
+      workerEnvironmentSchema.parse({
+        ...environment,
+        SETTINGS_ENCRYPTION_KEY: `${'A'.repeat(43)}=`,
+      }).SETTINGS_ENCRYPTION_KEY,
+    ).toHaveLength(32);
+  });
+
+  it('格式错误时启动失败，信息固定且不回显取值', () => {
+    const value = 'not-a-32-byte-base64-key';
+    let message = '';
+    try {
+      workerEnvironmentSchema.parse({
+        ...environment,
+        SETTINGS_ENCRYPTION_KEY: value,
+      });
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).toContain(
+      'SETTINGS_ENCRYPTION_KEY 必须是 32 字节的 base64',
+    );
+    expect(message).not.toContain(value);
+  });
+});
+
 describe('原始 JSON 归档配置', () => {
   it('is disabled until a directory is set and defaults to six months and a seven day grace period', () => {
     const defaults = workerEnvironmentSchema.parse(environment);
