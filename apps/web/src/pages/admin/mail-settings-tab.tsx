@@ -84,11 +84,6 @@ const testResultMessages: Record<
   },
 };
 
-function isQqHost(host: string | null | undefined) {
-  const value = (host ?? '').trim().toLowerCase();
-  return value === 'qq.com' || value.endsWith('.qq.com');
-}
-
 function normalizeHost(host: string | null | undefined) {
   return (host ?? '')
     .trim()
@@ -187,9 +182,6 @@ function MailSettingsForm({
   const [username, setUsername] = useState(initialUsername ?? '');
   const [mailFrom, setMailFrom] = useState(initialMailFrom ?? '');
   const [siteUrl, setSiteUrl] = useState(initialSiteUrl ?? '');
-  const [provider, setProvider] = useState<'qq' | 'custom'>(() =>
-    isQqHost(initialHost) ? 'qq' : 'custom',
-  );
   const [showPassword, setShowPassword] = useState(
     !settings.passwordSet || !settings.passwordUsable,
   );
@@ -236,14 +228,7 @@ function MailSettingsForm({
       port: port.trim() === '' ? null : Number(port),
       secure,
       username: username.trim() === '' ? null : username.trim(),
-      mailFrom:
-        provider === 'qq'
-          ? username.trim() === ''
-            ? null
-            : username.trim()
-          : mailFrom.trim() === ''
-            ? null
-            : mailFrom.trim(),
+      mailFrom: mailFrom.trim() === '' ? null : mailFrom.trim(),
       siteUrl: siteUrl.trim() === '' ? null : siteUrl.trim(),
     };
   }
@@ -254,28 +239,6 @@ function MailSettingsForm({
 
   function describedBy(field: string, helpId?: string) {
     return fieldError(field) ? `${id}-${field}-error` : helpId;
-  }
-
-  function selectProvider(value: string) {
-    if (value !== 'qq' && value !== 'custom') return;
-    setProvider(value);
-    if (value === 'qq') {
-      setHost('smtp.qq.com');
-      setPort('465');
-      setSecure(true);
-      setMailFrom(username);
-    }
-  }
-
-  function changeHost(value: string) {
-    setHost(value);
-    if (isQqHost(value)) setProvider('qq');
-    else if (provider === 'qq') setProvider('custom');
-  }
-
-  function changeUsername(value: string) {
-    setUsername(value);
-    if (provider === 'qq') setMailFrom(value);
   }
 
   async function submit(event: React.FormEvent) {
@@ -438,21 +401,6 @@ function MailSettingsForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>服务商</Label>
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                aria-label="服务商"
-                value={provider}
-                disabled={!editing}
-                onValueChange={selectProvider}
-              >
-                <ToggleGroupItem value="qq">QQ 邮箱</ToggleGroupItem>
-                <ToggleGroupItem value="custom">自定义</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
@@ -468,7 +416,7 @@ function MailSettingsForm({
                   placeholder="smtp.example.com"
                   aria-invalid={fieldError('host') ? true : undefined}
                   aria-describedby={describedBy('host')}
-                  onChange={(event) => changeHost(event.target.value)}
+                  onChange={(event) => setHost(event.target.value)}
                 />
                 {fieldError('host') ? (
                   <p
@@ -520,7 +468,7 @@ function MailSettingsForm({
                 placeholder="billing@example.com"
                 aria-invalid={fieldError('username') ? true : undefined}
                 aria-describedby={describedBy('username')}
-                onChange={(event) => changeUsername(event.target.value)}
+                onChange={(event) => setUsername(event.target.value)}
               />
               {fieldError('username') ? (
                 <p
@@ -536,9 +484,7 @@ function MailSettingsForm({
             {envSource && !editing ? null : (
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
-                  <Label htmlFor={`${id}-password`}>
-                    {provider === 'qq' ? '授权码' : '密码或授权码'}
-                  </Label>
+                  <Label htmlFor={`${id}-password`}>密码或授权码</Label>
                   {passwordRequired ? (
                     <span className="text-err" aria-hidden="true">
                       *
@@ -587,7 +533,7 @@ function MailSettingsForm({
                   id={`${id}-password-help`}
                   className="text-xs leading-relaxed text-muted-foreground"
                 >
-                  不是 QQ 登录密码。保存后加密存储，不再显示。
+                  QQ 等邮箱要填授权码，不是登录密码。保存后加密存储，不再显示。
                 </p>
                 {passwordChanged && settings.passwordSet ? (
                   <p className="text-xs text-warn">
@@ -606,14 +552,11 @@ function MailSettingsForm({
               </div>
               <Input
                 id={`${id}-mail-from`}
-                value={provider === 'qq' ? username : mailFrom}
-                readOnly={!editing || provider === 'qq'}
+                value={mailFrom}
+                readOnly={!editing}
                 placeholder="billing@example.com"
                 aria-invalid={fieldError('mailFrom') ? true : undefined}
-                aria-describedby={describedBy(
-                  'mailFrom',
-                  provider === 'qq' ? `${id}-mail-from-help` : undefined,
-                )}
+                aria-describedby={describedBy('mailFrom')}
                 onChange={(event) => setMailFrom(event.target.value)}
               />
               {fieldError('mailFrom') ? (
@@ -623,14 +566,6 @@ function MailSettingsForm({
                   role="alert"
                 >
                   {fieldError('mailFrom')}
-                </p>
-              ) : null}
-              {provider === 'qq' ? (
-                <p
-                  id={`${id}-mail-from-help`}
-                  className="text-xs text-muted-foreground"
-                >
-                  QQ 邮箱要求和账号相同
                 </p>
               ) : null}
             </div>
