@@ -1,3 +1,4 @@
+import { Item } from '../../components/ui/item';
 import { Input } from '../../components/ui/input';
 import { Card } from '@/components/ui/card';
 import {
@@ -695,24 +696,27 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
                 ) : (
                   <div className="space-y-2">
                     {query.data.items.map((a) => (
-                      <button
+                      <Item
                         key={a.id}
+                        asChild
+                        variant="outline"
                         className={cn(
-                          'w-full rounded-xl border bg-card p-4 text-left',
+                          'w-full flex-col items-stretch gap-2 bg-card text-left',
                           a.status === 'open' &&
                             'border-err-border bg-err-soft',
                         )}
-                        onClick={() => setSelected(a)}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <strong>{a.kindLabel}</strong>
-                          <AlertStatus status={a.status} />
-                        </div>
-                        <p className="mt-2 text-sm">{a.description}</p>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {formatDateTime(a.startedAt)}
-                        </p>
-                      </button>
+                        <button type="button" onClick={() => setSelected(a)}>
+                          <div className="flex items-center justify-between gap-2">
+                            <strong>{a.kindLabel}</strong>
+                            <AlertStatus status={a.status} />
+                          </div>
+                          <p className="text-sm">{a.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDateTime(a.startedAt)}
+                          </p>
+                        </button>
+                      </Item>
                     ))}
                   </div>
                 )}

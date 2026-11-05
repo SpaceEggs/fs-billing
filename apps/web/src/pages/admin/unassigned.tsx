@@ -1,3 +1,4 @@
+import { Item } from '../../components/ui/item';
 import { Badge } from '../../components/ui/badge';
 import {
   Table,
@@ -719,33 +720,39 @@ function GroupCard({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
+    <Item
+      asChild
+      variant="outline"
+      size="sm"
       className={cn(
-        'flex flex-col gap-1 rounded-[10px] border px-3.5 py-3 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
-        selected
-          ? 'border-primary bg-brand-soft ring-1 ring-primary'
-          : 'border-border',
+        'flex-col items-stretch gap-1 text-left',
+        selected && 'border-primary bg-brand-soft ring-1 ring-primary',
       )}
     >
-      <span className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-semibold">{title}</span>
-        <span className="text-lg font-semibold tabular-nums">
-          {countText(count)}
-          <span className="text-xs font-normal text-muted-foreground"> 条</span>
+      <button type="button" aria-pressed={selected} onClick={onClick}>
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-semibold">{title}</span>
+          <span className="text-lg font-semibold tabular-nums">
+            {countText(count)}
+            <span className="text-xs font-normal text-muted-foreground">
+              {' '}
+              条
+            </span>
+          </span>
         </span>
-      </span>
-      <span
-        className={cn('text-xs', warn ? 'text-warn' : 'text-muted-foreground')}
-      >
-        {subtitle}
-      </span>
-      {detail ? (
-        <span className="text-xs text-muted-foreground">{detail}</span>
-      ) : null}
-    </button>
+        <span
+          className={cn(
+            'text-xs',
+            warn ? 'text-warn' : 'text-muted-foreground',
+          )}
+        >
+          {subtitle}
+        </span>
+        {detail ? (
+          <span className="text-xs text-muted-foreground">{detail}</span>
+        ) : null}
+      </button>
+    </Item>
   );
 }
 
