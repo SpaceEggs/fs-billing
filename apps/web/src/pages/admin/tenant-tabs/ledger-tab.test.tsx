@@ -335,9 +335,9 @@ describe('ledger tab filters', () => {
     });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('link', { name: '费率' }));
+    await user.click(screen.getByRole('tab', { name: '费率' }));
     await screen.findByRole('region', { name: '费率表' });
-    await user.click(screen.getByRole('link', { name: '余额流水' }));
+    await user.click(screen.getByRole('tab', { name: '余额流水' }));
     await screen.findByText('该日期范围内没有赠送流水');
     expect(rangeButton('2026-09-01', '2026-09-29')).toBeVisible();
     expect(screen.getByLabelText('类型')).toHaveValue('gift');

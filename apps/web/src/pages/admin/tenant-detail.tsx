@@ -1,3 +1,9 @@
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -443,29 +449,39 @@ function TenantDetail({
                 setStatusResult(result);
               }}
             />
-            <nav
-              aria-label="租户详情"
-              className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 text-sm md:mx-0 md:px-0 print:hidden"
-            >
-              {tenantTabs.map(({ key, label }) => (
-                <Link
+            <Tabs value={tab} activationMode="manual" className="contents">
+              <nav
+                aria-label="租户详情"
+                className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0 print:hidden"
+              >
+                <TabsList>
+                  {tenantTabs.map(({ key, label }) => (
+                    <TabsTrigger key={key} value={key} asChild>
+                      <Link
+                        to="/admin/tenants/$tenantId"
+                        params={{ tenantId }}
+                        search={tabSearch(ledger, tab, key)}
+                      >
+                        {label}
+                      </Link>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </nav>
+              {/* forceMount 让所有面板都在 DOM 里，标签的 aria-controls 因此总指向存在的元素；只有选中的面板渲染内容、其余隐藏。 */}
+              {tenantTabs.map(({ key }) => (
+                <TabsContent
                   key={key}
-                  to="/admin/tenants/$tenantId"
-                  params={{ tenantId }}
-                  search={tabSearch(ledger, tab, key)}
-                  aria-current={key === tab ? 'page' : undefined}
-                  className={cn(
-                    '-mb-px border-b-2 px-3 py-2.5 whitespace-nowrap',
-                    key === tab
-                      ? 'border-primary font-semibold text-foreground'
-                      : 'border-transparent text-muted-foreground',
-                  )}
+                  value={key}
+                  forceMount
+                  hidden={key !== tab}
                 >
-                  {label}
-                </Link>
+                  {key === tab ? (
+                    <TabContent tab={tab} tenant={tenant} />
+                  ) : null}
+                </TabsContent>
               ))}
-            </nav>
-            <TabContent tab={tab} tenant={tenant} />
+            </Tabs>
             {tab === 'settings' || tab === 'portal' ? null : (
               // 设置标签页底部是自己的保存按钮；门户账号标签页按第三批 3j 稿不放余额操作。
               <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-border bg-background px-4 pt-3 pb-4 md:hidden print:hidden">

@@ -169,12 +169,12 @@ describe('admin tenant statements list', () => {
     const nav = await screen.findByRole('navigation', { name: '租户详情' });
     expect(
       within(nav)
-        .getAllByRole('link')
+        .getAllByRole('tab')
         .map((link) => link.textContent),
     ).toEqual(['概况', '余额流水', '费率', '话单', '账单', '设置', '门户账号']);
-    expect(within(nav).getByRole('link', { name: '账单' })).toHaveAttribute(
-      'aria-current',
-      'page',
+    expect(within(nav).getByRole('tab', { name: '账单' })).toHaveAttribute(
+      'aria-selected',
+      'true',
     );
     const table = await screen.findByRole('table');
     const october = within(table).getByText('2026年10月').closest('tr')!;
@@ -312,7 +312,7 @@ describe('admin tenant statements list', () => {
     expect(location()).toBe(detailUrl);
     await userEvent.click(
       within(screen.getByRole('navigation', { name: '租户详情' })).getByRole(
-        'link',
+        'tab',
         { name: '账单' },
       ),
     );
@@ -325,7 +325,7 @@ describe('admin tenant statements list', () => {
     await screen.findByText('‹ 返回账单列表');
     await userEvent.click(
       within(screen.getByRole('navigation', { name: '租户详情' })).getByRole(
-        'link',
+        'tab',
         { name: '余额流水' },
       ),
     );

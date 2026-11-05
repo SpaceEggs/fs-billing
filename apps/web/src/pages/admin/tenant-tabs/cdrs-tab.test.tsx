@@ -143,10 +143,10 @@ describe('admin tenant CDR tab', () => {
     const nav = await screen.findByRole('navigation', { name: '租户详情' });
     expect(
       within(nav)
-        .getAllByRole('link')
+        .getAllByRole('tab')
         .map((link) => link.textContent),
     ).toEqual(['概况', '余额流水', '费率', '话单', '账单', '设置', '门户账号']);
-    await userEvent.click(within(nav).getByRole('link', { name: '话单' }));
+    await userEvent.click(within(nav).getByRole('tab', { name: '话单' }));
     expect(await screen.findByRole('table')).toBeVisible();
   });
 
@@ -382,7 +382,7 @@ describe('admin tenant CDR tab', () => {
       `/admin/tenants/${tenantId}?tab=ledger&from=2026-10-02&to=2026-10-09&page=3`,
     );
     const nav = await screen.findByRole('navigation', { name: '租户详情' });
-    await user.click(within(nav).getByRole('link', { name: '话单' }));
+    await user.click(within(nav).getByRole('tab', { name: '话单' }));
     await screen.findByRole('table');
     // 流水的 from / to 原样保留在地址里，但话单没有用它：请求的是本月默认范围，页码已清除。
     expect(location()).toBe(
@@ -405,7 +405,7 @@ describe('admin tenant CDR tab', () => {
       to: '2026-10-06',
     });
     const nav = screen.getByRole('navigation', { name: '租户详情' });
-    await user.click(within(nav).getByRole('link', { name: '余额流水' }));
+    await user.click(within(nav).getByRole('tab', { name: '余额流水' }));
     expect(location()).toBe(
       `/admin/tenants/${tenantId}?from=2026-10-02&to=2026-10-09&cdrFrom=2026-10-05&cdrTo=2026-10-06&tab=ledger`,
     );

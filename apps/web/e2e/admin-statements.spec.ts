@@ -472,7 +472,7 @@ test('opens the ABC001 September statement from the tab with the mockup figures 
   const id = await tenantByCode(page, 'ABC001');
   await page.goto(tenantTab(id));
   const nav = page.getByRole('navigation', { name: '租户详情' });
-  await expect(nav.getByRole('link')).toHaveText([
+  await expect(nav.getByRole('tab')).toHaveText([
     '概况',
     '余额流水',
     '费率',
@@ -481,9 +481,9 @@ test('opens the ABC001 September statement from the tab with the mockup figures 
     '设置',
     '门户账号',
   ]);
-  await expect(nav.getByRole('link', { name: '账单' })).toHaveAttribute(
-    'aria-current',
-    'page',
+  await expect(nav.getByRole('tab', { name: '账单' })).toHaveAttribute(
+    'aria-selected',
+    'true',
   );
   const august = page.locator('tbody tr').filter({ hasText: '2026年8月' });
   await expect(august).toContainText('¥1,176.60');
@@ -516,7 +516,7 @@ test('opens the ABC001 September statement from the tab with the mockup figures 
   await expect(page.getByText('部分扣费没有对应的话单明细')).toHaveCount(0);
   await expect(page.getByText(/话单明细与通话扣费相差/)).toHaveCount(0);
 
-  await nav.getByRole('link', { name: '账单' }).click();
+  await nav.getByRole('tab', { name: '账单' }).click();
   await expect(page).toHaveURL(tenantTab(id));
 });
 

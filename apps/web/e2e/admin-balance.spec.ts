@@ -139,7 +139,7 @@ test('ledger range defaults to this Beijing month and filters by a picked range'
     )
       ledgerRequests.push(url);
   });
-  await page.getByRole('link', { name: '余额流水' }).click();
+  await page.getByRole('tab', { name: '余额流水' }).click();
   const range = page.getByRole('button', { name: /^日期范围（北京时间）：/ });
   await expect(range).toHaveAccessibleName(
     /：\d{4}-\d{2}-01 至 \d{4}-\d{2}-\d{2}$/,
