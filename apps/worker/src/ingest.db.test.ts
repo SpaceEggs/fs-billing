@@ -277,6 +277,236 @@ describe('话单所属月份的话单已删除（阶段 8 决定 38）', () => {
   });
 });
 
+describe('呼入话单（docs/inbound-cdr-design.md）', () => {
+  /** 呼入行的形状：线路号码是被叫与计费号码，主叫是对方。 */
+  const inboundBody = (
+    tenant: string,
+    uuid: string,
+    overrides: Record<string, unknown> = {},
+  ) =>
+    body(tenant, uuid, {
+      billing_direction: 'inbound',
+      billing_unverified: 'false',
+      caller_id_number: '075586009999',
+      billing_dialed_number: '+8613800138000',
+      destination_number: '+8613800138000',
+      billing_number: '8613800138000',
+      ...overrides,
+    });
+
+  it('stores an answered inbound call with zero charge, no rate and no charge job', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      inboundBody(tenant.code, uuid),
+    );
+    expect(result.status).toBe('queued');
+    expect(jobs).toEqual([]);
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 0,
+      alerts: 0,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          `select direction, charge::text, rate::text, billed_minutes::text,
+                  matched_prefix, country, caller, callee, billing_number
+           from cdrs where call_uuid = $1`,
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([
+      {
+        direction: 'inbound',
+        charge: '0',
+        rate: null,
+        billed_minutes: '0',
+        matched_prefix: null,
+        country: null,
+        caller: '075586009999',
+        callee: '+8613800138000',
+        billing_number: '8613800138000',
+      },
+    ]);
+  });
+
+  it('stores an inbound call for a tenant without any rate table', async () => {
+    const tenant = await createTenant(connection, 'CNY');
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      inboundBody(tenant.code, uuid),
+    );
+    expect(result.status).toBe('queued');
+    expect(jobs).toEqual([]);
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 0,
+      alerts: 0,
+    });
+  });
+
+  it('stores an unanswered inbound call with zero duration and no charge job', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const start = Math.floor(
+      beijingTime('2026-10-20 10:00:00').getTime() / 1000,
+    );
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      inboundBody(tenant.code, uuid, {
+        start_epoch: String(start),
+        end_epoch: String(start + 20),
+        duration: '20',
+        billsec: '0',
+        answer_epoch: '0',
+      }),
+    );
+    expect(result.status).toBe('queued');
+    expect(jobs).toEqual([]);
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 0,
+      alerts: 0,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          `select answered_at is null as unanswered, duration_seconds, charge::text
+           from cdrs where call_uuid = $1`,
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([{ unanswered: true, duration_seconds: 0, charge: '0' }]);
+  });
+
+  it('does not create a second inbound row when the same call is pushed again', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const text = inboundBody(tenant.code, uuid);
+    expect((await ingestCdr(connection.db, queue, text)).status).toBe('queued');
+    expect((await ingestCdr(connection.db, queue, text)).status).toBe(
+      'duplicate',
+    );
+    expect(jobs).toEqual([]);
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 0,
+      alerts: 0,
+    });
+  });
+
+  it('parks an inbound call of an unknown tenant as unassigned', async () => {
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      inboundBody(`NOPE${randomUUID().slice(0, 6)}`, uuid),
+    );
+    expect(result.status).toBe('unassigned');
+    expect(jobs).toEqual([]);
+    expect(await state(uuid)).toEqual({
+      cdrs: 0,
+      unassigned: 1,
+      charges: 0,
+      alerts: 1,
+    });
+    expect(
+      (
+        await owner.pool.query(
+          'select direction from unassigned_cdrs where call_uuid = $1',
+          [uuid],
+        )
+      ).rows,
+    ).toEqual([{ direction: 'inbound' }]);
+  });
+
+  it('treats a missing or unknown billing_direction as outbound', async () => {
+    const tenant = await tenantWithRates();
+    for (const overrides of [{}, { billing_direction: 'outbound' }]) {
+      const uuid = randomUUID();
+      const { jobs, queue } = recordingQueue();
+      const result = await ingestCdr(
+        connection.db,
+        queue,
+        body(tenant.code, uuid, {
+          billing_unverified: 'false',
+          ...overrides,
+        }),
+      );
+      expect(result.status).toBe('queued');
+      expect(jobs).toEqual([{ tenantId: tenant.id, callUuid: uuid }]);
+      expect(
+        (
+          await owner.pool.query(
+            'select direction from cdrs where call_uuid = $1',
+            [uuid],
+          )
+        ).rows,
+      ).toEqual([{ direction: 'outbound' }]);
+    }
+  });
+
+  it('completes a stray charge job on an inbound row without a ledger entry', async () => {
+    const tenant = await tenantWithRates();
+    const uuid = randomUUID();
+    const { queue } = recordingQueue();
+    await ingestCdr(connection.db, queue, inboundBody(tenant.code, uuid));
+    await expect(
+      chargeCdr(connection.db, { tenantId: tenant.id, callUuid: uuid }),
+    ).resolves.toBeUndefined();
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 0,
+      alerts: 0,
+    });
+  });
+
+  it('stores inbound calls of a disabled tenant with no balance, without authorizing', async () => {
+    const tenant = await tenantWithRates();
+    await owner.pool.query(
+      `update tenants set status = 'disabled' where id = $1`,
+      [tenant.id],
+    );
+    await owner.pool.query(
+      `insert into tenant_balances (tenant_id, balance, updated_at)
+       values ($1, 0, now())
+       on conflict (tenant_id) do update set balance = 0, updated_at = now()`,
+      [tenant.id],
+    );
+    const uuid = randomUUID();
+    const { jobs, queue } = recordingQueue();
+    const result = await ingestCdr(
+      connection.db,
+      queue,
+      inboundBody(tenant.code, uuid),
+    );
+    expect(result.status).toBe('queued');
+    expect(jobs).toEqual([]);
+    expect(await state(uuid)).toEqual({
+      cdrs: 1,
+      unassigned: 0,
+      charges: 0,
+      alerts: 0,
+    });
+  });
+});
+
 /** 本文件的校验失败原文都带一个唯一标签，彼此（以及其他测试文件）不会撞上同一份原文。 */
 function invalidBody(tag: string, uuid: string | undefined, bad = 'bad') {
   return JSON.stringify({

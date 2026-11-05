@@ -90,6 +90,16 @@ describe('迁移 0023 的回填', () => {
   it('backfilled tenants queue no email', async () => {
     const scratch = await freshDatabase(BACKFILL);
     await migrate(scratch.db, { migrationsFolder: folder });
+    // 种子按当前 drizzle schema 写入，需要 0027 的 direction 列；这里只补列，不记录迁移，
+    // 后面完整 migrate 仍会应用 0023–0027（0027 的 ADD COLUMN 是 IF NOT EXISTS）。
+    await scratch.pool.query(
+      `alter table cdrs add column if not exists direction text not null default 'outbound'
+         check (direction in ('outbound', 'inbound'))`,
+    );
+    await scratch.pool.query(
+      `alter table unassigned_cdrs add column if not exists direction text not null default 'outbound'
+         check (direction in ('outbound', 'inbound'))`,
+    );
     // 迁移前的库结构：有发件箱，没有状态表。
     expect(
       (

@@ -42,7 +42,7 @@ export function listAdminCdrs({
       with ${cdrBounds(input)},
       filtered as (
         select c.call_uuid, c.started_at, c.answered_at, c.ended_at,
-          c.caller, c.callee, c.country, c.iso, c.description, c.matched_prefix, c.duration_seconds,
+          c.caller, c.callee, c.direction, c.country, c.iso, c.description, c.matched_prefix, c.duration_seconds,
           c.billed_minutes, c.rate, c.charge, c.hangup_cause, c.unverified
         from cdrs c where ${filters}
       ),
@@ -50,15 +50,18 @@ export function listAdminCdrs({
         select count(*)::int as total,
           coalesce(sum(billed_minutes), 0)::text as billed_minutes,
           coalesce(sum(charge), 0)::text as charge,
-          count(*) filter (where answered_at is null)::int as unanswered,
+          count(*) filter (where answered_at is null and direction = 'outbound')::int as unanswered,
           count(*) filter (where unverified)::int as unverified
         from filtered
       ),
       hidden_unanswered as (
         select count(*)::int as total from cdrs c
         where ${
-          input.status === 'answered' && !input.country
-            ? sql`c.tenant_id = ${tenantId}::uuid and c.answered_at is null
+          input.status === 'answered' &&
+          !input.country &&
+          input.direction !== 'inbound'
+            ? sql`c.tenant_id = ${tenantId}::uuid and c.direction = 'outbound'
+              and c.answered_at is null
               and c.started_at >= (select lo from bounds)
               and c.started_at < (select hi from bounds)
               and c.started_at >= (select lo from bounds) - interval '31 days'
@@ -70,7 +73,7 @@ export function listAdminCdrs({
       ),
       page as (
         select c.call_uuid, c.started_at, c.answered_at, c.ended_at,
-          c.caller, c.callee, c.country, c.iso, c.description, c.matched_prefix, c.duration_seconds,
+          c.caller, c.callee, c.direction, c.country, c.iso, c.description, c.matched_prefix, c.duration_seconds,
           c.billed_minutes, c.rate, c.charge, c.hangup_cause, c.unverified
         from filtered c
         order by ${
@@ -175,7 +178,8 @@ export function adminCdrExportCursorQuery({
     to_char(c.started_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as "startedAt",
     case when c.answered_at is null then null else to_char(c.answered_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') end as "answeredAt",
     to_char(c.ended_at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as "endedAt",
-    c.caller as "caller", c.callee as "callee", c.country as "country", c.iso as "iso", c.description as "description",
+    c.caller as "caller", c.callee as "callee", c.direction as "direction",
+    c.country as "country", c.iso as "iso", c.description as "description",
     c.duration_seconds as "durationSeconds", c.billed_minutes::text as "billedMinutes",
     case when c.rate is null then null else round(c.rate, 4)::text end as "rate",
     c.charge::text as "charge", c.hangup_cause as "hangupCause",
@@ -249,6 +253,7 @@ export async function acceptAdminCdrExport({
               status: input.status,
               ...(input.callee ? { callee: input.callee } : {}),
               ...(input.country ? { country: input.country } : {}),
+              ...(input.direction ? { direction: input.direction } : {}),
               unverifiedOnly: input.unverifiedOnly,
             },
           },

@@ -307,7 +307,9 @@ describe('故障告警邮件的 20 分钟场景（验收 4）', () => {
     ).rows.map((admin) => admin.email);
     expect(row!.recipients).toEqual(admins);
     const [message] = await mailpitMessages();
-    expect(message!.To.map((to) => to.Address).sort()).toEqual(admins);
+    expect(message!.To.map((to) => to.Address).sort()).toEqual(
+      [...admins].sort(),
+    );
   });
 });
 

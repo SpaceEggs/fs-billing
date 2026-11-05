@@ -53,6 +53,11 @@ const cdrHeaders = [
   '通话UUID',
 ] as const;
 
+/** 呼出/呼入的中文列值；新增列放在现有列之后。 */
+function directionLabel(direction: 'outbound' | 'inbound') {
+  return direction === 'inbound' ? '呼入' : '呼出';
+}
+
 type CdrExportRow = QueryResultRow & {
   callUuid: string;
   calledAt: string;
@@ -61,6 +66,7 @@ type CdrExportRow = QueryResultRow & {
   endedAt: string;
   caller: string;
   callee: string;
+  direction: 'outbound' | 'inbound';
   country: string | null;
   iso: string | null;
   description: string | null;
@@ -240,7 +246,7 @@ export function exportHandlers({
         admissionTenantId: tenantId,
         scope: { kind: 'tenant', tenantId },
         cursor: { text: cursor.sql, values: cursor.params },
-        headers: cdrHeaders,
+        headers: [...cdrHeaders, '方向'],
         prepare: (signal) => {
           signal.throwIfAborted();
           return Promise.resolve({
@@ -267,6 +273,7 @@ export function exportHandlers({
           formatHangupCause(row.hangupCause),
           row.matchedPrefix ?? '',
           row.callUuid,
+          directionLabel(row.direction),
         ],
       });
     },
@@ -283,7 +290,7 @@ export function exportHandlers({
         admissionTenantId: tenantId,
         scope: { kind: 'admin' },
         cursor: { text: cursor.sql, values: cursor.params },
-        headers: [...cdrHeaders, '验证状态'],
+        headers: [...cdrHeaders, '验证状态', '方向'],
         prepare: (signal) =>
           acceptAdminCdrExport({
             db: auditDb,
@@ -311,6 +318,7 @@ export function exportHandlers({
           row.matchedPrefix ?? '',
           row.callUuid,
           row.unverified ? '未经验证' : '',
+          directionLabel(row.direction),
         ],
       });
     },

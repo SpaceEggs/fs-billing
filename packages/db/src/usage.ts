@@ -54,13 +54,15 @@ export async function readTenantUsageOverview(
       select coalesce(sum(c.billed_minutes), 0)::text as minutes, count(*)::int as calls
       from cdrs c cross join bounds b
       where c.tenant_id = ${tenantId}::uuid
+        and c.direction = 'outbound'
         and c.answered_at >= b.month_start and c.answered_at < b.month_end
         and c.started_at < b.month_end
     ),
     unanswered as (
       select count(*)::int as calls
       from cdrs c cross join bounds b
-      where c.tenant_id = ${tenantId}::uuid and c.answered_at is null
+      where c.tenant_id = ${tenantId}::uuid and c.direction = 'outbound'
+        and c.answered_at is null
         and c.started_at >= b.month_start and c.started_at < b.month_end
     )
     select jsonb_build_object(

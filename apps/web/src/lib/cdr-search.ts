@@ -17,6 +17,8 @@ export type CdrFilters = {
   country?: string | undefined;
   /** 缺省为只看已接通。 */
   status?: 'all' | undefined;
+  /** 缺省为全部方向。 */
+  direction?: 'inbound' | 'outbound' | undefined;
   /** 只有后台话单有该筛选。 */
   unverifiedOnly?: true | undefined;
 };
@@ -35,6 +37,10 @@ export function validateCdrFilters(raw: Record<string, unknown>): CdrFilters {
     callee: textOf(raw['callee']),
     country: countrySchema.safeParse(raw['country']).data,
     status: raw['status'] === 'all' ? 'all' : undefined,
+    direction:
+      raw['direction'] === 'inbound' || raw['direction'] === 'outbound'
+        ? raw['direction']
+        : undefined,
     unverifiedOnly: raw['unverifiedOnly'] === true ? true : undefined,
   };
 }
@@ -66,6 +72,7 @@ export function validatePortalCdrsSearch(
     callee: filters.callee,
     country: filters.country,
     status: filters.status,
+    direction: filters.direction,
     ...validateCdrRange(raw),
     page: validateCdrPage(raw['page']),
   };
@@ -86,6 +93,7 @@ export function cdrListQuery(range: DayRange, filters: CdrFilters) {
     ...range,
     ...(filters.callee ? { callee: filters.callee } : {}),
     ...(filters.country ? { country: filters.country } : {}),
+    ...(filters.direction ? { direction: filters.direction } : {}),
     status: cdrStatusSchema.parse(filters.status ?? 'answered'),
   };
 }

@@ -5,6 +5,7 @@ import {
   answeredCount,
   cdrFixture,
   cdrRates,
+  inboundCall,
   septemberRange,
 } from './cdr-fixtures';
 import { recordCdrs, revokeSessions } from './db';
@@ -110,12 +111,43 @@ test('hides the unanswered calls by default and notes them, then lists them in t
   await expect(summary(portal)).toContainText('另有未接通 1 通');
   await expect(rows(portal)).toHaveCount(51);
 
-  await portal.getByRole('button', { name: '全部', exact: true }).click();
+  await portal
+    .getByRole('group', { name: '接通状态' })
+    .getByRole('button', { name: '全部', exact: true })
+    .click();
   await expect(summary(portal)).toContainText('含未接通 1');
   const unanswered = rows(portal).filter({ hasText: '8613900139000' });
   await expect(unanswered).toContainText('未接通');
   await expect(unanswered).toContainText('¥0.00');
   await expect(unanswered).toHaveClass(/text-muted-foreground/);
+  await context.close();
+});
+
+test('filters by direction and shows inbound rows with dashes', async ({
+  page,
+  browser,
+}) => {
+  const tenant = await createTenant(page, { rates: cdrRates });
+  await recordCdrs(tenant.id, [...cdrFixture, inboundCall]);
+  const { page: portal, context } = await openPortalCustomer(
+    page,
+    browser,
+    tenant,
+  );
+  await portal.goto(`/portal/cdrs?${septemberRange}&direction=inbound`);
+  await expect(rows(portal)).toHaveCount(2);
+  const inbound = rows(portal).nth(1);
+  await expect(inbound).toContainText('呼入');
+  await expect(inbound).toContainText('—');
+  await expect(summary(portal)).toContainText('通话数1');
+
+  await portal
+    .getByRole('radiogroup', { name: '方向' })
+    .getByRole('radio', { name: '全部', exact: true })
+    .click();
+  await expectPath(portal, `/portal/cdrs?${septemberRange}`);
+  // 全部时包含呼入和呼出；每页 50 条，所以看合计，不看行数。
+  await expect(summary(portal)).toContainText(`通话数${answeredCount + 1}`);
   await context.close();
 });
 
@@ -194,7 +226,7 @@ test('exports the current filters as CSV with ISO, country and description colum
   expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   const lines = bytes.toString('utf8').slice(1).trimEnd().split('\r\n');
   expect(lines[0]).toBe(
-    '接通时间,主叫号码,被叫号码,ISO,国家,说明,通话时长(秒),计费时长(分钟),费率,费用,振铃开始时间,挂断时间,挂断原因,匹配前缀,通话UUID',
+    '接通时间,主叫号码,被叫号码,ISO,国家,说明,通话时长(秒),计费时长(分钟),费率,费用,振铃开始时间,挂断时间,挂断原因,匹配前缀,通话UUID,方向',
   );
   // 按时间升序：44 的座机在前，447 的手机在后。
   expect(lines).toHaveLength(3);
@@ -276,7 +308,10 @@ test('changing a filter after the session ended goes to the login page and retur
   );
   await expect(rows(portal)).toHaveCount(3);
   await revokeSessions(email);
-  await portal.getByRole('button', { name: '全部', exact: true }).click();
+  await portal
+    .getByRole('group', { name: '接通状态' })
+    .getByRole('button', { name: '全部', exact: true })
+    .click();
   await expectFiltersAfterLogin(portal, email, password, {
     status: 'all',
     loginPath: '/login',

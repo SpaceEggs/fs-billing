@@ -400,6 +400,76 @@ describe('计费号码约束', () => {
   );
 });
 
+describe('呼入话单的形状约束', () => {
+  const startedAt = '2026-10-12T13:00:00+08:00';
+  const answeredRow = (
+    tenantId: string,
+    direction: 'outbound' | 'inbound',
+    overrides: Record<string, unknown> = {},
+  ) => ({
+    tenantId,
+    callUuid: randomUUID(),
+    startedAt: new Date(startedAt),
+    answeredAt: new Date(startedAt),
+    endedAt: new Date(new Date(startedAt).getTime() + 61_000),
+    caller: '075586001234',
+    callee: '8613800138000',
+    direction,
+    billingNumber: '8613800138000',
+    durationSeconds: 61,
+    billedMinutes: '0',
+    charge: '0',
+    hangupCause: 'NORMAL_CLEARING',
+    ...overrides,
+  });
+
+  beforeAll(() => ensureCdrPartitions(app.db, { moment: new Date(startedAt) }));
+
+  it('rejects an answered outbound call without a rate snapshot', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    expect(
+      await pgError(
+        withAdmin(app.db, (tx) =>
+          tx.insert(cdrs).values(answeredRow(tenant.id, 'outbound')),
+        ),
+      ),
+    ).toMatchObject({ code: '23514', constraint: 'cdrs_answered_shape' });
+  });
+
+  it('accepts an answered inbound call with no rate and zero charge', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    const stored = await withAdmin(app.db, (tx) =>
+      tx.insert(cdrs).values(answeredRow(tenant.id, 'inbound')).returning({
+        direction: cdrs.direction,
+        rate: cdrs.rate,
+        charge: cdrs.charge,
+        billedMinutes: cdrs.billedMinutes,
+      }),
+    );
+    expect(stored).toEqual([
+      {
+        direction: 'inbound',
+        rate: null,
+        charge: '0',
+        billedMinutes: '0',
+      },
+    ]);
+  });
+
+  it('rejects an inbound call that carries a charge', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    expect(
+      await pgError(
+        withAdmin(app.db, (tx) =>
+          tx
+            .insert(cdrs)
+            .values(answeredRow(tenant.id, 'inbound', { charge: '0.1' })),
+        ),
+      ),
+    ).toMatchObject({ code: '23514', constraint: 'cdrs_answered_shape' });
+  });
+});
+
 it('cdrs_iso_check rejects lowercase ISO and accepts NULL on the real partitioned table', async () => {
   const startedAt = '2026-10-12T10:00:00+08:00';
   await ensureCdrPartitions(app.db, { moment: new Date(startedAt) });

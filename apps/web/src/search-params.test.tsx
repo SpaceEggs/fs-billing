@@ -90,6 +90,7 @@ describe('tenant detail search', () => {
       callee: '447',
       country: '英国',
       status: 'all',
+      direction: undefined,
       unverifiedOnly: true,
       page: 2,
     });

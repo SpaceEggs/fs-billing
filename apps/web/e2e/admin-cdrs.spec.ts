@@ -111,11 +111,13 @@ test('exports CSV with the verification column and writes one cdr_export audit',
   );
   const text = (await readFile((await file.path()) ?? '')).toString('utf8');
   const lines = text.slice(1).trimEnd().split('\r\n');
-  expect(lines[0]).toContain(',通话UUID,验证状态');
+  expect(lines[0]).toContain(',通话UUID,验证状态,方向');
   expect(lines).toHaveLength(answeredCount + 1 + 1);
-  expect(lines.filter((line) => line.endsWith(',未经验证'))).toHaveLength(1);
+  expect(lines.filter((line) => line.endsWith(',未经验证,呼出'))).toHaveLength(
+    1,
+  );
   expect(lines.find((line) => line.includes('18765551234'))).toMatch(
-    /,未经验证$/,
+    /,未经验证,呼出$/,
   );
 
   await expect

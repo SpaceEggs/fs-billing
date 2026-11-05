@@ -27,6 +27,7 @@ async function addCall({
   country = '英国',
   unverified = false,
   callUuid = randomUUID(),
+  direction = 'outbound',
 }: {
   at: string;
   tenantId: string;
@@ -34,9 +35,11 @@ async function addCall({
   country?: string;
   unverified?: boolean;
   callUuid?: string;
+  direction?: 'outbound' | 'inbound';
 }) {
   const answeredAt = answered ? new Date(at) : null;
   const startedAt = new Date(Date.parse(at) - 60_000);
+  const inbound = direction === 'inbound';
   return withAdmin(app.db, (tx) =>
     tx.insert(cdrs).values({
       iso: null,
@@ -46,15 +49,16 @@ async function addCall({
       startedAt,
       answeredAt,
       endedAt: new Date(Date.parse(at) + 60_000),
-      caller: '1001',
-      callee: '+447700900123',
-      billingNumber: '447700900123',
+      caller: inbound ? '+447700900999' : '1001',
+      callee: inbound ? '8613800138000' : '+447700900123',
+      direction,
+      billingNumber: inbound ? '8613800138000' : '447700900123',
       durationSeconds: answered ? 60 : 0,
-      billedMinutes: answered ? '1' : '0',
-      matchedPrefix: answered ? '44' : null,
-      country: answered ? country : null,
-      rate: answered ? '0.2500' : null,
-      charge: answered ? '0.25' : '0',
+      billedMinutes: answered && !inbound ? '1' : '0',
+      matchedPrefix: answered && !inbound ? '44' : null,
+      country: answered && !inbound ? country : null,
+      rate: answered && !inbound ? '0.2500' : null,
+      charge: answered && !inbound ? '0.25' : '0',
       hangupCause: answered ? 'NORMAL_CLEARING' : 'NO_ANSWER',
       unverified,
     }),
@@ -118,6 +122,89 @@ describe('portal CDR queries', () => {
       ...range,
     });
     expect(countries.countries).toEqual(['中国', '英国']);
+  });
+
+  it('filters by direction and excludes inbound rows from usage and unanswered totals', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await addCall({
+      tenantId: tenant.id,
+      at: '2026-09-28T16:30:00Z',
+    });
+    await addCall({
+      tenantId: tenant.id,
+      at: '2026-09-28T16:31:00Z',
+      direction: 'inbound',
+    });
+    await addCall({
+      tenantId: tenant.id,
+      at: '2026-09-28T16:32:00Z',
+      direction: 'inbound',
+      answered: false,
+    });
+
+    const inbound = await listPortalCdrs({
+      db: app.db,
+      tenantId: tenant.id,
+      query: portalCdrsQuerySchema.parse({
+        ...range,
+        status: 'all',
+        direction: 'inbound',
+      }),
+    });
+    expect(inbound.pagination.total).toBe(2);
+    expect(inbound.items.every((row) => row.direction === 'inbound')).toBe(
+      true,
+    );
+    expect(inbound.summary).toEqual({
+      billedMinutes: '0',
+      charge: '0',
+      unansweredCalls: 0,
+    });
+
+    const inboundAnswered = await listPortalCdrs({
+      db: app.db,
+      tenantId: tenant.id,
+      query: portalCdrsQuerySchema.parse({
+        ...range,
+        direction: 'inbound',
+      }),
+    });
+    expect(inboundAnswered.pagination.total).toBe(1);
+    expect(inboundAnswered.summary.unansweredCalls).toBe(0);
+
+    const outbound = await listPortalCdrs({
+      db: app.db,
+      tenantId: tenant.id,
+      query: portalCdrsQuerySchema.parse({ ...range, direction: 'outbound' }),
+    });
+    expect(outbound.pagination.total).toBe(1);
+    expect(outbound.items[0]?.direction).toBe('outbound');
+
+    const all = await listPortalCdrs({
+      db: app.db,
+      tenantId: tenant.id,
+      query: portalCdrsQuerySchema.parse({ ...range, status: 'all' }),
+    });
+    expect(all.pagination.total).toBe(3);
+    expect(all.summary).toEqual({
+      billedMinutes: '1',
+      charge: '0.25',
+      unansweredCalls: 0,
+    });
+
+    const adminInbound = await listAdminCdrs({
+      db: app.db,
+      tenantId: tenant.id,
+      query: adminCdrsQuerySchema.parse({
+        ...range,
+        status: 'all',
+        direction: 'inbound',
+      }),
+    });
+    expect(adminInbound.pagination.total).toBe(2);
+    expect(adminInbound.items.every((row) => row.direction === 'inbound')).toBe(
+      true,
+    );
   });
 
   it('includes unanswered rows only in all status and leaves totals on an empty page', async () => {

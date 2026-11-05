@@ -58,10 +58,17 @@ async function call(
     minutes = '1',
     unverified = false,
     callee = '8613800138000',
-  }: { minutes?: string; unverified?: boolean; callee?: string } = {},
+    direction = 'outbound',
+  }: {
+    minutes?: string;
+    unverified?: boolean;
+    callee?: string;
+    direction?: 'outbound' | 'inbound';
+  } = {},
 ) {
   const start = new Date(startedAt);
   const answer = answeredAt ? new Date(answeredAt) : null;
+  const inbound = direction === 'inbound';
   const callUuid = randomUUID();
   await withAdmin(app.db, (tx) =>
     tx.insert(cdrs).values({
@@ -70,17 +77,18 @@ async function call(
       startedAt: start,
       answeredAt: answer,
       endedAt: new Date((answer ?? start).getTime() + 61_000),
-      caller: '1000',
+      caller: inbound ? '+447700900999' : '1000',
       callee,
+      direction,
       billingNumber: callee.replace(/\D/g, ''),
       durationSeconds: answer ? 61 : 0,
-      billedMinutes: answer ? minutes : '0',
-      matchedPrefix: answer ? '86' : null,
-      country: answer ? '中国' : null,
-      iso: answer ? 'CN' : null,
-      description: answer ? '手机' : null,
-      rate: answer ? '0.0500' : null,
-      charge: answer ? '0.05' : '0',
+      billedMinutes: answer && !inbound ? minutes : '0',
+      matchedPrefix: answer && !inbound ? '86' : null,
+      country: answer && !inbound ? '中国' : null,
+      iso: answer && !inbound ? 'CN' : null,
+      description: answer && !inbound ? '手机' : null,
+      rate: answer && !inbound ? '0.0500' : null,
+      charge: answer && !inbound ? '0.05' : '0',
       unverified,
       hangupCause: answer ? 'NORMAL_CLEARING' : 'CALL_REJECTED',
     }),
@@ -125,6 +133,17 @@ describe('portal home', () => {
       },
     );
     await call(tenant.id, '2026-09-20T10:00:00+08:00', null);
+    // 呼入不计入门户首页的用量（通话数、分钟数），但照常出现在最近话单里。
+    await call(
+      tenant.id,
+      '2026-09-20T11:00:00+08:00',
+      '2026-09-20T11:00:01+08:00',
+      { direction: 'inbound', callee: '8613800138001' },
+    );
+    await call(tenant.id, '2026-09-20T12:00:00+08:00', null, {
+      direction: 'inbound',
+      callee: '8613800138001',
+    });
     const now = '2026-09-30T15:59:59Z';
 
     const result = await home(tenant.id, now);

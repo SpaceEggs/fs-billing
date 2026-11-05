@@ -17,6 +17,7 @@ describe('validatePortalCdrsSearch', () => {
         callee: '+44 7700',
         country: '英国',
         status: 'all',
+        direction: 'inbound',
         page: 3,
       }),
     ).toEqual({
@@ -25,6 +26,7 @@ describe('validatePortalCdrsSearch', () => {
       callee: '+44 7700',
       country: '英国',
       status: 'all',
+      direction: 'inbound',
       page: 3,
     });
     expect(
@@ -41,6 +43,7 @@ describe('validatePortalCdrsSearch', () => {
       callee: undefined,
       country: undefined,
       status: undefined,
+      direction: undefined,
       page: undefined,
     });
   });
@@ -73,6 +76,19 @@ describe('validateCdrFilters', () => {
 
   it('keeps the default status out of the address', () => {
     expect(validateCdrFilters({ status: 'answered' }).status).toBeUndefined();
+  });
+
+  it('accepts only inbound or outbound as the direction filter', () => {
+    expect(validateCdrFilters({ direction: 'inbound' }).direction).toBe(
+      'inbound',
+    );
+    expect(validateCdrFilters({ direction: 'outbound' }).direction).toBe(
+      'outbound',
+    );
+    expect(validateCdrFilters({ direction: 'all' }).direction).toBeUndefined();
+    expect(
+      validateCdrFilters({ direction: 'bogus' }).direction,
+    ).toBeUndefined();
   });
 });
 
@@ -127,5 +143,13 @@ describe('cdrListQuery', () => {
         status: 'all',
       }),
     ).toEqual({ ...range, callee: '447', country: '英国', status: 'all' });
+  });
+
+  it('carries the direction filter to lists and exports', () => {
+    expect(cdrListQuery(range, { direction: 'inbound' })).toEqual({
+      ...range,
+      direction: 'inbound',
+      status: 'answered',
+    });
   });
 });

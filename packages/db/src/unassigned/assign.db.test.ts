@@ -588,6 +588,34 @@ describe('分配的规则', () => {
     ).toEqual({ charge: '0', billed_minutes: '0', answered_at: null });
   });
 
+  it('assigns an inbound call as inbound without a rate or a charge', async () => {
+    const tenant = await rateTenant(owner);
+    const tag = newTag();
+    await insertUnassigned(owner, [
+      { tag, answeredAt: '2026-09-10 10:00:00', direction: 'inbound' },
+    ]);
+    const { preview, result } = await previewAndAssign(tenant.id, group(tag));
+    expect(preview).toMatchObject({ assignable: 1, chargeTotal: '0' });
+    expect(preview.noRate.count).toBe(0);
+    expect(result).toMatchObject({ assigned: 1, chargeTotal: '0' });
+    expect(await ledgerCount(tenant.id)).toBe(0);
+    expect(
+      await one(
+        `select direction, charge::text, billed_minutes::text, rate::text,
+                matched_prefix, country
+         from cdrs where tenant_id = $1`,
+        [tenant.id],
+      ),
+    ).toEqual({
+      direction: 'inbound',
+      charge: '0',
+      billed_minutes: '0',
+      rate: null,
+      matched_prefix: null,
+      country: null,
+    });
+  });
+
   it('keeps rows without a rate pending and explains why', async () => {
     const tenant = await rateTenant(owner, {
       firstRateAt: '2026-06-01 00:00:00',

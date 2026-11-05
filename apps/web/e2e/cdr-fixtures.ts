@@ -35,7 +35,7 @@ const answered = (
     | 'minutes'
     | 'charge'
   > &
-    Partial<Pick<CdrFixture, 'unverified' | 'caller'>>,
+    Partial<Pick<CdrFixture, 'unverified' | 'caller' | 'direction'>>,
 ): CdrFixture => {
   const started = new Date(startedAt);
   const answeredAt = new Date(started.getTime() + 5000);
@@ -44,6 +44,7 @@ const answered = (
     answeredAt: answeredAt.toISOString(),
     endedAt: new Date(answeredAt.getTime() + seconds * 1000).toISOString(),
     caller: '075586001234',
+    direction: 'outbound',
     durationSeconds: seconds,
     hangupCause: 'NORMAL_CLEARING',
     unverified: false,
@@ -99,6 +100,21 @@ export const chinaCall = answered('2026-09-10T02:00:00Z', 90, {
   rate: '0.0500',
   minutes: '2',
   charge: '0.10',
+});
+
+/** 一通已接通的呼入：线路号码是被叫，没有国家、前缀和费率，费用为 0。 */
+export const inboundCall = answered('2026-09-12T02:00:00Z', 30, {
+  caller: '+447700900999',
+  callee: '8613800138000',
+  direction: 'inbound',
+  billingNumber: '8613800138000',
+  country: null,
+  iso: null,
+  description: null,
+  prefix: null,
+  rate: null,
+  minutes: '0',
+  charge: '0',
 });
 
 export const unansweredCall: CdrFixture = {

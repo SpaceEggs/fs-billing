@@ -51,8 +51,21 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const search = useSearch({ from: '/admin/tenants/$tenantId' });
   const navigate = useNavigate({ from: '/admin/tenants/$tenantId' });
-  const { callee, country, status, unverifiedOnly, page = 1 } = search;
-  const filters: CdrFilters = { callee, country, status, unverifiedOnly };
+  const {
+    callee,
+    country,
+    status,
+    direction,
+    unverifiedOnly,
+    page = 1,
+  } = search;
+  const filters: CdrFilters = {
+    callee,
+    country,
+    status,
+    direction,
+    unverifiedOnly,
+  };
   const now = new Date();
   // 话单标签页的日期范围与余额流水分开：地址里是 cdrFrom / cdrTo。
   const range = rangeOrMonthToDate(

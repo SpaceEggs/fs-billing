@@ -2,11 +2,14 @@ import type { Currency, PortalCdr } from '@fs-billing/shared';
 import { formatDateTime } from '../../lib/format';
 import { formatDuration } from '../../lib/duration';
 import { cn } from '../../lib/utils';
+import { Badge } from '../ui/badge';
 import { Money, Rate } from '../data-format';
 import { ModalDialog } from '../modal-dialog';
 import {
   cdrCountryLabel,
+  cdrDirectionLabel,
   cdrHangupCause,
+  cdrIsInbound,
   cdrRateUnit,
   formatMinutes,
 } from './cdr-format';
@@ -22,6 +25,14 @@ export type CdrDetailExtra = {
 function detailRows(cdr: PortalCdr): DetailRow[] {
   const dash = '—';
   return [
+    {
+      label: '方向',
+      value: (
+        <Badge variant={cdrIsInbound(cdr) ? 'secondary' : 'plain'}>
+          {cdrDirectionLabel(cdr)}
+        </Badge>
+      ),
+    },
     { label: '主叫号码', value: cdr.caller },
     { label: '被叫号码', value: cdr.callee },
     { label: '国家', value: cdrCountryLabel(cdr) },
@@ -36,7 +47,12 @@ function detailRows(cdr: PortalCdr): DetailRow[] {
     { label: '计费时长', value: formatMinutes(cdr.billedMinutes) },
     {
       label: '费率',
-      value: cdr.rate === null ? dash : <Rate value={cdr.rate} />,
+      value:
+        cdrIsInbound(cdr) || cdr.rate === null ? (
+          dash
+        ) : (
+          <Rate value={cdr.rate} />
+        ),
     },
     { label: '挂断原因', value: cdrHangupCause(cdr) },
     { label: '通话 UUID', value: cdr.callUuid, mono: true },
@@ -77,7 +93,9 @@ export function CdrDetailDialog({
           </div>
           <div className="mx-4 mt-3 flex items-baseline justify-between gap-3 rounded-[10px] bg-muted p-3.5 tabular-nums md:mx-0 md:mt-0 md:rounded-none md:px-6 md:py-4">
             <span className="text-[13px] text-muted-foreground">
-              {cdr.rate === null ? (
+              {cdrIsInbound(cdr) ? (
+                '呼入暂不收费'
+              ) : cdr.rate === null ? (
                 '未接通'
               ) : (
                 <>
@@ -86,12 +104,16 @@ export function CdrDetailDialog({
                 </>
               )}
             </span>
-            <Money
-              value={{ currency, amount: cdr.charge }}
-              tone="plain"
-              exact
-              className="text-[22px] font-semibold md:text-2xl"
-            />
+            {cdrIsInbound(cdr) ? (
+              <span className="text-[22px] font-semibold md:text-2xl">—</span>
+            ) : (
+              <Money
+                value={{ currency, amount: cdr.charge }}
+                tone="plain"
+                exact
+                className="text-[22px] font-semibold md:text-2xl"
+              />
+            )}
           </div>
           <dl className="m-0 grid grid-cols-[104px_1fr] px-4 pt-2 pb-5 text-sm tabular-nums md:grid-cols-[120px_1fr] md:px-6">
             {[...(more?.rows ?? []), ...rows].map((row) => (

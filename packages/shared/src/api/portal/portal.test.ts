@@ -28,6 +28,7 @@ const answered = {
   endedAt: '2026-09-27T03:16:33.000Z',
   caller: '075586001234',
   callee: '18765551234',
+  direction: 'outbound',
   country: '牙买加',
   matchedPrefix: '1876',
   durationSeconds: 388,

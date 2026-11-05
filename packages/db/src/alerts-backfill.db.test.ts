@@ -46,6 +46,16 @@ beforeAll(async () => {
     JSON.stringify(journal),
   );
   await migrate(scratch.db, { migrationsFolder: folder });
+  // 种子按当前 drizzle schema 写入，需要 0027 的 direction 列；这里只补列，不记录迁移，
+  // 后面完整 migrate 仍会应用 0020–0027（0027 的 ADD COLUMN 是 IF NOT EXISTS）。
+  await scratch.pool.query(
+    `alter table cdrs add column if not exists direction text not null default 'outbound'
+       check (direction in ('outbound', 'inbound'))`,
+  );
+  await scratch.pool.query(
+    `alter table unassigned_cdrs add column if not exists direction text not null default 'outbound'
+       check (direction in ('outbound', 'inbound'))`,
+  );
 });
 
 afterAll(async () => {

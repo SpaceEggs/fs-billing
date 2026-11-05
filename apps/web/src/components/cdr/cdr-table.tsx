@@ -7,17 +7,29 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import type { Currency, PortalCdr } from '@fs-billing/shared';
+import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { formatDuration } from '../../lib/duration';
 import { cn } from '../../lib/utils';
 import { DateTime, Money, Rate } from '../data-format';
 import {
   cdrCountryLabel,
+  cdrDirectionLabel,
+  cdrIsInbound,
   cdrMoment,
   cdrRateUnit,
   cdrShortMoment,
   formatMinutes,
 } from './cdr-format';
+
+/** 列表里的方向标签；呼入用 secondary，呼出用 plain。 */
+function DirectionBadge({ cdr }: { cdr: PortalCdr }) {
+  return (
+    <Badge variant={cdrIsInbound(cdr) ? 'secondary' : 'plain'}>
+      {cdrDirectionLabel(cdr)}
+    </Badge>
+  );
+}
 
 type ListProps<Row extends PortalCdr> = {
   currency: Currency;
@@ -45,6 +57,7 @@ export function CdrTable<Row extends PortalCdr>({
             <TableHead className="px-4">接通时间 ↓</TableHead>
             <TableHead>主叫号码</TableHead>
             <TableHead>被叫号码</TableHead>
+            <TableHead>方向</TableHead>
             <TableHead>国家</TableHead>
             <TableHead className="text-right">通话时长</TableHead>
             <TableHead className="text-right">计费时长</TableHead>
@@ -80,6 +93,9 @@ export function CdrTable<Row extends PortalCdr>({
               </TableCell>
               <TableCell>{cdr.caller}</TableCell>
               <TableCell>{cdr.callee}</TableCell>
+              <TableCell>
+                <DirectionBadge cdr={cdr} />
+              </TableCell>
               <TableCell>{cdrCountryLabel(cdr)}</TableCell>
               <TableCell className="text-right">
                 {formatDuration(cdr.durationSeconds)}
@@ -88,10 +104,21 @@ export function CdrTable<Row extends PortalCdr>({
                 {formatMinutes(cdr.billedMinutes)}
               </TableCell>
               <TableCell className="text-right">
-                {cdr.rate === null ? '—' : <Rate value={cdr.rate} />}
+                {cdrIsInbound(cdr) || cdr.rate === null ? (
+                  '—'
+                ) : (
+                  <Rate value={cdr.rate} />
+                )}
               </TableCell>
               <TableCell className="px-4 text-right font-medium">
-                <Money value={{ currency, amount: cdr.charge }} tone="plain" />
+                {cdrIsInbound(cdr) ? (
+                  '—'
+                ) : (
+                  <Money
+                    value={{ currency, amount: cdr.charge }}
+                    tone="plain"
+                  />
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -124,9 +151,14 @@ export function CdrCards<Row extends PortalCdr>({
             <span className="flex items-center justify-between gap-2 text-[15px] font-medium">
               <span className="flex items-center gap-2">
                 {cdr.callee}
+                <DirectionBadge cdr={cdr} />
                 {badge?.(cdr)}
               </span>
-              <Money value={{ currency, amount: cdr.charge }} tone="plain" />
+              {cdrIsInbound(cdr) ? (
+                '—'
+              ) : (
+                <Money value={{ currency, amount: cdr.charge }} tone="plain" />
+              )}
             </span>
             <span className="flex justify-between gap-2 text-xs text-muted-foreground">
               <span className="truncate">

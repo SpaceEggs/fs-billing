@@ -226,6 +226,7 @@ export const cdrs = pgTable(
     endedAt: at('ended_at').notNull(),
     caller: text('caller').notNull(),
     callee: text('callee').notNull(),
+    direction: text('direction').notNull().default('outbound'),
     billingNumber: text('billing_number').notNull(),
     durationSeconds: integer('duration_seconds').notNull().default(0),
     billedMinutes: numeric('billed_minutes').notNull().default('0'),
@@ -309,6 +310,7 @@ export const unassignedCdrs = pgTable('unassigned_cdrs', {
   endedAt: at('ended_at'),
   caller: text('caller').notNull(),
   callee: text('callee').notNull(),
+  direction: text('direction').notNull().default('outbound'),
   billingNumber: text('billing_number'),
   durationSeconds: integer('duration_seconds').notNull().default(0),
   status: text('status', { enum: unassignedCdrStatuses })

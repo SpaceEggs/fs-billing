@@ -177,7 +177,7 @@ const cases = {
     await insertIsolatedCdrs(fixture);
     for (const { session, amount, country } of users) {
       const response = await api.inject({
-        url: `${operation.path}?from=${from}&to=${day}&callee=${amount}`,
+        url: `${operation.path}?from=${from}&to=${day}&callee=${amount}&direction=outbound`,
         headers: forgedHeaders(session.cookie, fixture),
       });
       expect(response.statusCode, response.body).toBe(200);
@@ -191,6 +191,15 @@ const cases = {
       expect(body.items[0]?.callee).toBe(amount);
       expect(JSON.stringify(body)).not.toContain('unverified');
     }
+    // 方向筛选仍只作用于自己的租户：夹具里没有呼入话单。
+    const inbound = await api.inject({
+      url: `${operation.path}?from=${from}&to=${day}&direction=inbound`,
+      headers: forgedHeaders(a.cookie, fixture),
+    });
+    expect(inbound.statusCode, inbound.body).toBe(200);
+    expect(
+      portalCdrsResponseSchema.parse(inbound.json()).pagination.total,
+    ).toBe(0);
     for (const key of ['tenantId', 'tenant_id']) {
       const attack = await api.inject({
         url: `${operation.path}?from=${from}&to=${day}&${key}=${fixture.b.tenantId}`,

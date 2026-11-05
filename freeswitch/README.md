@@ -29,6 +29,8 @@ vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_pass
 - **号码：** 网关的 `extension` 参数是运营商来电不带号码（`gw+网关名`）时用的被叫。实际路由要兼容 `02...`、`2...`、`86...`、`+86...` 这些格式。
 - **3CX：** 用账号注册的 3CX 收到的请求地址是注册账号，它按 `To` 匹配入站规则，所以要用 `sip_invite_to_uri` 带上真实号码，否则 3CX 回 180 后接着回 `480 Not available`。
 
+来电路由示例见 [trunk-inbound.xml.example](dialplan/trunk-inbound.xml.example)：已知线路号码设置 `billing_direction=inbound`、`billing_tenant`、`billing_dialed_number`，按租户执行 `limit`，用 `sip_invite_to_uri` 覆盖 `To`，再转到内部目的地；未列出的号码回 404 并设 `process_cdr=false`，不产生话单。示例中的号码、租户编码、域名和内部目的地都是占位符，复制后必须替换。呼入话单不收费、不查费率、不入扣费队列；`billing_direction` 缺失时 Worker 仍按呼出处理。上线顺序不能反：先部署 Worker 与迁移，再去掉线路的 `process_cdr=false` 并加上这三个变量，否则旧 Worker 会把呼入当呼出、因没有费率停放到未归属。
+
 ## 安装授权脚本与拨号计划
 
 自定义 `lua.conf.xml` 的 `script-directory` 时，在路径末尾保留 `;;`，以保留 Lua 默认模块搜索路径。

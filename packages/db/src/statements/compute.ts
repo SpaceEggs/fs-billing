@@ -94,7 +94,7 @@ export async function computeStatement(
     by_country as (
       select c.country, count(*)::int as calls, sum(c.billed_minutes) as minutes, sum(c.charge) as charge
       from cdrs c
-      where c.tenant_id = ${tenantId}::uuid
+      where c.tenant_id = ${tenantId}::uuid and c.direction = 'outbound'
         and c.answered_at >= ${lo} and c.answered_at < ${hi}
         and c.started_at >= ${startedFloor} and c.started_at < ${hi}
       group by c.country
@@ -103,7 +103,7 @@ export async function computeStatement(
       select (c.answered_at at time zone 'Asia/Shanghai')::date as day,
         count(*)::int as calls, sum(c.billed_minutes) as minutes, sum(c.charge) as charge
       from cdrs c
-      where c.tenant_id = ${tenantId}::uuid
+      where c.tenant_id = ${tenantId}::uuid and c.direction = 'outbound'
         and c.answered_at >= ${lo} and c.answered_at < ${hi}
         and c.started_at >= ${startedFloor} and c.started_at < ${hi}
       group by 1

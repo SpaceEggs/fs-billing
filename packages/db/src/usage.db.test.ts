@@ -51,9 +51,11 @@ async function call(
   answeredAt: string | null,
   minutes = '0',
   unverified = false,
+  direction: 'outbound' | 'inbound' = 'outbound',
 ) {
   const start = new Date(startedAt);
   const answer = answeredAt ? new Date(answeredAt) : null;
+  const inbound = direction === 'inbound';
   await withAdmin(app.db, (tx) =>
     tx.insert(cdrs).values({
       iso: null,
@@ -63,14 +65,15 @@ async function call(
       startedAt: start,
       answeredAt: answer,
       endedAt: new Date((answer ?? start).getTime() + 61000),
-      caller: '1000',
+      caller: inbound ? '+447700900999' : '1000',
       callee: '8613800138000',
+      direction,
       billingNumber: '8613800138000',
       durationSeconds: answer ? 61 : 0,
-      billedMinutes: minutes,
-      matchedPrefix: answer ? '86' : null,
-      country: answer ? '中国' : null,
-      rate: answer ? '0' : null,
+      billedMinutes: inbound ? '0' : minutes,
+      matchedPrefix: answer && !inbound ? '86' : null,
+      country: answer && !inbound ? '中国' : null,
+      rate: answer && !inbound ? '0' : null,
       charge: '0',
       unverified,
       hangupCause: answer ? 'NORMAL_CLEARING' : 'CALL_REJECTED',
@@ -226,6 +229,38 @@ describe('tenant usage overview snapshot', () => {
     });
     expect(value.daily).toHaveLength(30);
     expect(value.daily.every((day) => day.spend === '0')).toBe(true);
+  });
+
+  it('does not count inbound calls or their minutes in the tenant usage overview', async () => {
+    const tenant = await createTenant(app, 'CNY');
+    await call(
+      tenant.id,
+      '2026-09-10T10:00:00+08:00',
+      '2026-09-10T10:00:01+08:00',
+      '2',
+    );
+    await call(
+      tenant.id,
+      '2026-09-10T11:00:00+08:00',
+      '2026-09-10T11:00:01+08:00',
+      '0',
+      false,
+      'inbound',
+    );
+    await call(
+      tenant.id,
+      '2026-09-10T12:00:00+08:00',
+      null,
+      '0',
+      false,
+      'inbound',
+    );
+    const value = await read(tenant.id, '2026-09-30T15:59:59Z');
+    expect(value).toMatchObject({
+      monthCallMinutes: '2',
+      answeredCalls: 1,
+      unansweredCalls: 0,
+    });
   });
 
   it('ignores topups, gifts, adjustments, credit, void adjustments and settlement reversals', async () => {

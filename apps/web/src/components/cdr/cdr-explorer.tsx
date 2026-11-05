@@ -147,12 +147,16 @@ export function CdrExplorer<Row extends PortalCdr>({
   const conditions = [
     ...(filters.callee ? [`被叫号码「${filters.callee}」`] : []),
     ...(filters.country ? [`国家：${filters.country}`] : []),
+    ...(filters.direction
+      ? [`方向：${filters.direction === 'inbound' ? '呼入' : '呼出'}`]
+      : []),
     ...activeExtraFilters,
   ];
   const clearFilters = () =>
     onFilters({
       callee: undefined,
       country: undefined,
+      direction: undefined,
       unverifiedOnly: undefined,
     });
   return (

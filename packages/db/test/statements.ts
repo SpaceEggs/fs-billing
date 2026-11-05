@@ -90,6 +90,7 @@ export async function statementCdr(
     country?: string;
     description?: string;
     callUuid?: string;
+    direction?: 'outbound' | 'inbound';
   },
 ): Promise<string> {
   const callUuid = options.callUuid ?? randomUUID();
@@ -100,6 +101,7 @@ export async function statementCdr(
       : options.answeredAt === undefined
         ? startedAt
         : ts(options.answeredAt);
+  const inbound = options.direction === 'inbound';
   await withAdmin(owner.db, (tx) =>
     tx.insert(cdrs).values({
       tenantId,
@@ -107,17 +109,19 @@ export async function statementCdr(
       startedAt,
       answeredAt,
       endedAt: new Date((answeredAt ?? startedAt).getTime() + 61_000),
-      caller: '1000',
+      caller: inbound ? '+447700900999' : '1000',
       callee: '8613800138000',
+      direction: options.direction ?? 'outbound',
       billingNumber: '8613800138000',
       durationSeconds: answeredAt ? 61 : 0,
-      billedMinutes: answeredAt ? (options.minutes ?? '2') : '0',
-      matchedPrefix: answeredAt ? '86' : null,
-      country: answeredAt ? (options.country ?? '中国') : null,
-      iso: answeredAt ? 'CN' : null,
-      description: answeredAt ? (options.description ?? null) : null,
-      rate: answeredAt ? '0.0500' : null,
-      charge: answeredAt ? (options.charge ?? '0.1') : '0',
+      billedMinutes: answeredAt && !inbound ? (options.minutes ?? '2') : '0',
+      matchedPrefix: answeredAt && !inbound ? '86' : null,
+      country: answeredAt && !inbound ? (options.country ?? '中国') : null,
+      iso: answeredAt && !inbound ? 'CN' : null,
+      description:
+        answeredAt && !inbound ? (options.description ?? null) : null,
+      rate: answeredAt && !inbound ? '0.0500' : null,
+      charge: answeredAt && !inbound ? (options.charge ?? '0.1') : '0',
       hangupCause: answeredAt ? 'NORMAL_CLEARING' : 'CALL_REJECTED',
     }),
   );

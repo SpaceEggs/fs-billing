@@ -78,6 +78,11 @@ beforeAll(async () => {
     });
   await call(cny.id, '2027-03-15 08:00:00', '2');
   await call(cny.id, '2027-03-15 08:10:00', '2');
+  // 呼入不计入今日计费分钟（计费分钟恒为 0，方向筛选是双保险）。
+  await statementCdr(owner, cny.id, {
+    startedAt: '2027-03-15 08:20:00',
+    direction: 'inbound',
+  });
   await call(usd.id, '2027-03-15 09:00:00', '3');
   await call(cny.id, '2027-03-15 00:01:00', '5', '2027-03-14 23:58:00'); // 昨天开始、今天接通
   await call(cny.id, '2027-03-14 23:59:00', '7'); // 昨天接通
