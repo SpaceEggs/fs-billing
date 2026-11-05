@@ -852,6 +852,27 @@ const adminProbeBodies: Partial<Record<string, object>> = {
     digestMinutes: 5,
     expectedVersion: 1,
   },
+  adminMailSettingsUpdate: {
+    expectedVersion: 1,
+    enabled: false,
+    host: null,
+    port: null,
+    secure: null,
+    username: null,
+    mailFrom: null,
+    siteUrl: null,
+  },
+  adminMailSettingsTest: {
+    enabled: true,
+    host: 'smtp.example.test',
+    port: 465,
+    secure: true,
+    username: null,
+    password: 'probe-password',
+    mailFrom: 'probe@example.test',
+    siteUrl: null,
+    to: 'probe@example.test',
+  },
   adminAccountCreate: { name: 'probe', email: 'probe@example.com' },
   adminPortalAccountCreate: { email: 'probe@example.com' },
 };
@@ -933,6 +954,26 @@ it('registers the six phase 9 operations as admin-only', () => {
     adminAlertSettings: 'get',
     adminAlertSettingsUpdate: 'put',
   });
+});
+
+it('registers the three mail settings operations as admin-only', () => {
+  const mailSettings = [
+    'adminMailSettings',
+    'adminMailSettingsUpdate',
+    'adminMailSettingsTest',
+  ];
+  const registered = operations.filter((operation) =>
+    mailSettings.includes(operation.operationId),
+  );
+  expect(registered.map((operation) => operation.operationId).sort()).toEqual(
+    [...mailSettings].sort(),
+  );
+  for (const operation of registered) {
+    expect(operation['x-access'], operation.operationId).toBe('admin');
+    expect(operation['x-isolation-case'], operation.operationId).toBe(
+      'admin-only',
+    );
+  }
 });
 
 it('covers exactly the nonempty live OpenAPI customer operation set and rejects an omitted case', () => {

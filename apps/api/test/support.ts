@@ -5,7 +5,7 @@ import type {} from '../../../packages/db/test/global-setup.js';
 import { appendLedgerEntries, connect, withAdmin } from '@fs-billing/db';
 import { money } from '@fs-billing/rating';
 import { sessionResponseSchema } from '@fs-billing/shared';
-import { createApi } from '../src/app.js';
+import { createApi, type ApiDependencies } from '../src/app.js';
 import { createBetterAuth } from '../src/auth/better-auth.js';
 import { createAuthGateway } from '../src/auth/gateway.js';
 import { createAdminAccountService } from '../src/auth/admin-accounts.js';
@@ -152,6 +152,8 @@ export function fixtureApi(
     rateLimit?: { max: number; timeWindow: number };
     exportPoolApplicationName?: string;
     mailEnabled?: boolean;
+    mailSettings?: ApiDependencies['mailSettings'];
+    loggerInstance?: ApiDependencies['loggerInstance'];
   } = {},
 ) {
   const logs: object[] = [];
@@ -182,6 +184,12 @@ export function fixtureApi(
     rateLimit: options.rateLimit ?? { max: 1000, timeWindow: 60_000 },
     ...(options.mailEnabled !== undefined
       ? { mailEnabled: options.mailEnabled }
+      : {}),
+    ...(options.mailSettings !== undefined
+      ? { mailSettings: options.mailSettings }
+      : {}),
+    ...(options.loggerInstance !== undefined
+      ? { loggerInstance: options.loggerInstance }
       : {}),
     ...(options.exportPoolApplicationName
       ? { exportPoolApplicationName: options.exportPoolApplicationName }

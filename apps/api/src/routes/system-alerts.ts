@@ -21,7 +21,11 @@ import { adminActor } from './admin/tenants.js';
  */
 export function systemAlertHandlers(
   db: Db,
-  options: { mailEnabled: boolean },
+  options: {
+    /** 兼容旧测试的固定值；`app.ts` 传解析函数，按页面设置或环境变量算。 */
+    mailEnabled?: boolean;
+    resolveMailEnabled?: () => Promise<boolean>;
+  },
 ): Pick<
   RouteHandlers,
   | 'adminSystemAlertsSummary'
@@ -30,7 +34,11 @@ export function systemAlertHandlers(
   | 'adminAlertSettings'
   | 'adminAlertSettingsUpdate'
 > {
-  const settingsBody = (settings: {
+  const mailEnabled = async () =>
+    options.resolveMailEnabled
+      ? options.resolveMailEnabled()
+      : (options.mailEnabled ?? false);
+  const settingsBody = async (settings: {
     recipients: readonly string[];
     digestMinutes: number;
     version: number;
@@ -38,7 +46,7 @@ export function systemAlertHandlers(
     recipients: [...settings.recipients],
     digestMinutes: settings.digestMinutes,
     version: settings.version,
-    mailEnabled: options.mailEnabled,
+    mailEnabled: await mailEnabled(),
   });
   return {
     adminSystemAlertsSummary: () => readAlertSummary(db),
@@ -66,7 +74,10 @@ export function systemAlertHandlers(
       const result = await mapBusinessErrors(() =>
         updateAlertSettings(db, { ...body, actor: adminActor(context) }),
       );
-      return { ...settingsBody(result.settings), auditId: result.auditId };
+      return {
+        ...(await settingsBody(result.settings)),
+        auditId: result.auditId,
+      };
     },
   };
 }

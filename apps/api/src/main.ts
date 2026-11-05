@@ -1,10 +1,6 @@
 import { APP_ROLE, AUTH_ROLE, connect } from '@fs-billing/db';
 import { createApi } from './app.js';
-import {
-  apiEnvironmentSchema,
-  apiRateLimitOptions,
-  mailEnabled,
-} from './config.js';
+import { apiEnvironmentSchema, apiRateLimitOptions } from './config.js';
 import { createAuthGateway } from './auth/gateway.js';
 import { assertEffectiveAuthOptions } from './auth/better-auth.js';
 import { createAdminAccountService } from './auth/admin-accounts.js';
@@ -41,7 +37,19 @@ const app = createApi({
     logger,
   }),
   adminAmountMaxIntegerDigits: config.ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
-  mailEnabled: mailEnabled(config),
+  mailSettings: {
+    key: config.SETTINGS_ENCRYPTION_KEY,
+    allowPlaintext: config.NODE_ENV !== 'production',
+    timeoutMs: config.SMTP_TIMEOUT_MS,
+    env: {
+      host: config.SMTP_HOST ?? null,
+      port: config.SMTP_PORT ?? null,
+      secure: config.SMTP_SECURE ?? null,
+      username: config.SMTP_USER ?? null,
+      mailFrom: config.MAIL_FROM ?? null,
+      siteUrl: config.APP_PUBLIC_URL ?? null,
+    },
+  },
   adminRates: {
     horizonMs: config.ADMIN_RATE_SCHEDULE_HORIZON_MS,
     previewTtlMs: config.ADMIN_RATE_PREVIEW_TTL_MS,

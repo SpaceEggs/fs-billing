@@ -139,16 +139,24 @@ test.each([
   ).toBe(expected);
 });
 
-test('the API neither needs nor validates SMTP credentials', () => {
+test('the API reads only non-secret SMTP environment values', () => {
   const parsed = apiEnvironmentSchema.parse({
     ...environment,
     SMTP_HOST: 'smtp.qq.com',
     MAIL_FROM: 'billing@example.test',
     SMTP_USER: 'someone',
-    SMTP_PASS: '',
-    SMTP_PORT: 'not-a-port',
+    SMTP_PASS: 'super-secret',
+    SMTP_PORT: '587',
+    SMTP_SECURE: 'false',
+    APP_PUBLIC_URL: 'https://billing.example.test',
   });
   expect(mailEnabled(parsed)).toBe(true);
   expect(parsed).not.toHaveProperty('SMTP_PASS');
-  expect(parsed).not.toHaveProperty('SMTP_USER');
+  expect(parsed).toMatchObject({
+    SMTP_USER: 'someone',
+    SMTP_PORT: 587,
+    SMTP_SECURE: false,
+    APP_PUBLIC_URL: 'https://billing.example.test',
+  });
+  expect(parsed.SETTINGS_ENCRYPTION_KEY).toBeUndefined();
 });

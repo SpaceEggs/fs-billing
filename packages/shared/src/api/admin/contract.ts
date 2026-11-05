@@ -16,6 +16,7 @@ import * as cdrDeletions from './cdr-deletions.js';
 import * as ledger from './ledger.js';
 import * as overview from './overview.js';
 import * as systemAlerts from './system-alerts.js';
+import * as mailSettings from './mail-settings.js';
 import * as rates from './rates.js';
 import * as receivables from './receivables.js';
 import * as statements from './statements.js';
@@ -32,6 +33,7 @@ import {
   adminConflictErrorSchema,
   adminCsvInputErrorSchema,
   adminCsvLimitErrorSchema,
+  adminMailSettingsErrorSchema,
 } from './errors.js';
 
 const noBody = emptyRequestSchema.optional();
@@ -657,3 +659,52 @@ export const adminSystemAlertApiContract = {
 } satisfies Record<string, ApiOperation>;
 export type AdminSystemAlertApiOperationId =
   keyof typeof adminSystemAlertApiContract;
+
+const mailSettingsInputErrors = {
+  400: z.union([
+    apiErrorSchemas.VALIDATION_ERROR,
+    adminMailSettingsErrorSchema,
+  ]),
+};
+
+/**
+ * 阶段 9 PR 4 邮箱设置：读取（GET）、保存（PUT，带 expectedVersion，冲突 409）与发送测试邮件
+ * （POST，成功和 SMTP 失败都是 200，失败只给分类）。全部是管理员操作，都不返回密码或密文。
+ */
+export const adminMailSettingsApiContract = {
+  adminMailSettings: operation(
+    'adminMailSettings',
+    'GET',
+    '/api/admin/mail-settings',
+    globalRequest,
+    mailSettings.adminMailSettingsResponseSchema,
+    {},
+  ),
+  adminMailSettingsUpdate: operation(
+    'adminMailSettingsUpdate',
+    'PUT',
+    '/api/admin/mail-settings',
+    {
+      ...globalRequest,
+      body: mailSettings.adminMailSettingsUpdateRequestSchema,
+    },
+    mailSettings.adminMailSettingsUpdateResponseSchema,
+    {
+      ...mailSettingsInputErrors,
+      ...conflicts(['MAIL_SETTINGS_VERSION_CONFLICT']),
+    },
+  ),
+  adminMailSettingsTest: operation(
+    'adminMailSettingsTest',
+    'POST',
+    '/api/admin/mail-settings/test',
+    {
+      ...globalRequest,
+      body: mailSettings.adminMailSettingsTestRequestSchema,
+    },
+    mailSettings.adminMailSettingsTestResponseSchema,
+    mailSettingsInputErrors,
+  ),
+} satisfies Record<string, ApiOperation>;
+export type AdminMailSettingsApiOperationId =
+  keyof typeof adminMailSettingsApiContract;

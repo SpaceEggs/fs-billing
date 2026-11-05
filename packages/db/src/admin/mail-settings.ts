@@ -1,10 +1,14 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { AuditActor, AuditChange } from '@fs-billing/shared';
 import { databaseNow } from '../clock.js';
 import { withAdmin, withSystem, type Db, type Tx } from '../client.js';
-import { smtpSettings } from '../schema.js';
-import { encryptSetting, SMTP_PASSWORD_AAD } from '../settings-crypto.js';
+import { emailOutbox, smtpSettings } from '../schema.js';
+import {
+  encryptSetting,
+  SettingsKeyError,
+  SMTP_PASSWORD_AAD,
+} from '../settings-crypto.js';
 import { writeAudit } from './audit.js';
 
 /**
@@ -41,7 +45,7 @@ export interface MailSettings {
 }
 
 /**
- * 系统作用域读到的整行（含密文）。**只从 `packages/db` 内部入口导出**，给下一个 PR 的 Worker 用。
+ * 系统作用域读到的整行（含密文）。给 Worker 与 API 的密码检查用。
  *
  * 调用方负责用 `decryptSetting` 解密 `passwordCiphertext`；**不得记录**这个字段，也不得把它放进任何
  * 响应或错误信息。解不开时按设计不发信、不回退环境变量。
@@ -78,8 +82,11 @@ export interface MailSettingsInput {
 
 export interface UpdateMailSettingsInput {
   readonly actor: AuditActor;
-  /** `SETTINGS_ENCRYPTION_KEY` 解析后的 32 字节密钥。 */
-  readonly key: Buffer;
+  /**
+   * `SETTINGS_ENCRYPTION_KEY` 解析后的 32 字节密钥；只有提供新密码时才需要。
+   * 不提供新密码（沿用旧密文或只改站点地址）时可以是 `undefined`。
+   */
+  readonly key: Buffer | undefined;
   readonly expectedVersion: number;
   readonly input: MailSettingsInput;
 }
@@ -160,9 +167,62 @@ export function getMailSettings(db: Db | Tx): Promise<MailSettings> {
   );
 }
 
+export interface MailDeliveryStatus {
+  /** `email_outbox` 里最新一封成功发送的 `sent_at`；没有发送记录为 null。 */
+  readonly lastSentAt: Date | null;
+  /** 等待发送的封数（`status = 'pending'`）。 */
+  readonly pendingCount: number;
+  /**
+   * 最近一次发送尝试是否失败：最新一条 `attempts > 0` 的行是 failed，或仍在等待重试（上一次 attempt
+   * 留下了 `last_error`）。没有尝试过为 false。
+   */
+  readonly lastAttemptFailed: boolean;
+}
+
+/** 发件箱概况（管理员作用域）；只读，不返回正文或收件人。 */
+export function readMailDeliveryStatus(
+  db: Db | Tx,
+): Promise<MailDeliveryStatus> {
+  return withAdmin(db, async (tx) => {
+    const [sent] = await tx
+      .select({ at: emailOutbox.sentAt })
+      .from(emailOutbox)
+      .where(eq(emailOutbox.status, 'sent'))
+      .orderBy(desc(emailOutbox.sentAt))
+      .limit(1);
+    const [pending] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(emailOutbox)
+      .where(eq(emailOutbox.status, 'pending'));
+    const [latest] = await tx
+      .select({
+        status: emailOutbox.status,
+        lastError: emailOutbox.lastError,
+      })
+      .from(emailOutbox)
+      .where(sql`${emailOutbox.attempts} > 0`)
+      .orderBy(
+        desc(
+          sql`coalesce(${emailOutbox.sentAt}, ${emailOutbox.nextAttemptAt}, ${emailOutbox.createdAt})`,
+        ),
+      )
+      .limit(1);
+    const lastAttemptFailed =
+      latest !== undefined &&
+      (latest.status === 'failed' ||
+        ((latest.status === 'pending' || latest.status === 'sending') &&
+          latest.lastError !== null));
+    return {
+      lastSentAt: sent?.at ?? null,
+      pendingCount: pending?.count ?? 0,
+      lastAttemptFailed,
+    };
+  });
+}
+
 /**
- * 系统作用域读取整行，含 `passwordCiphertext`。**只给 Worker 用**；调用方负责解密，且不得记录密文。
- * 这个 PR 不接到 Worker。
+ * 系统作用域读取整行，含 `passwordCiphertext`。给 Worker 与 API 的密码检查用；调用方负责解密，
+ * 且不得记录密文或把它放进响应。
  */
 export function readEffectiveMailRecord(
   db: Db | Tx,
@@ -260,12 +320,13 @@ export function updateMailSettings(
       passwordProvided;
     if (!changed) return { settings: toMailSettings(current), auditId: null };
 
-    const passwordCiphertext =
-      password !== undefined
-        ? encryptSetting(password, key, SMTP_PASSWORD_AAD)
-        : (input.username ?? '') === ''
-          ? null
-          : current.passwordCiphertext;
+    let passwordCiphertext: string | null;
+    if (password !== undefined) {
+      if (key === undefined) throw new SettingsKeyError();
+      passwordCiphertext = encryptSetting(password, key, SMTP_PASSWORD_AAD);
+    } else
+      passwordCiphertext =
+        (input.username ?? '') === '' ? null : current.passwordCiphertext;
     const [row] = await tx
       .update(smtpSettings)
       .set({

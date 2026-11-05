@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { databaseEnvironmentSchema } from '@fs-billing/db';
+import {
+  databaseEnvironmentSchema,
+  settingsEncryptionKeySchema,
+} from '@fs-billing/db';
+import { mailEnvironmentShape } from '@fs-billing/mailer';
 import {
   DEFAULT_TENANT_OVERDRAFT_LIMIT,
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
@@ -86,10 +90,21 @@ export const apiEnvironmentSchema = databaseEnvironmentSchema
       .positive()
       .default(DEFAULT_ADMIN_TEMPORARY_PASSWORD_TTL_MS),
     // 邮件发送是否启用（阶段 9）只给设置页显示「邮件发送未配置」：与 Worker 同一个信号，即 SMTP_HOST 与 MAIL_FROM
-    // 都已设置（空串等同于没设置，同 apps/worker/src/config.ts）。API 只读这两个非秘密的键，不读也不校验
-    // SMTP_USER / SMTP_PASS：API 没有 SMTP 凭据，也不该因为凭据配置问题而启动失败。
+    // 都已设置（空串等同于没设置，同 apps/worker/src/config.ts）。API 只读非秘密的键，**不读也不校验 SMTP_PASS**：
+    // API 没有环境变量来源的 SMTP 凭据，也不该因为凭据配置问题而启动失败。
     SMTP_HOST: blankToUndefined(z.string()),
-    MAIL_FROM: blankToUndefined(z.string()),
+    SMTP_PORT: blankToUndefined(z.coerce.number().int().min(1).max(65535)),
+    SMTP_SECURE: blankToUndefined(
+      z.enum(['true', 'false']).transform((value) => value === 'true'),
+    ),
+    SMTP_USER: blankToUndefined(z.string().min(1).max(320)),
+    MAIL_FROM: blankToUndefined(z.email()),
+    // 页面「环境变量来源」展示用；规则与邮件模块同一份。
+    APP_PUBLIC_URL: mailEnvironmentShape.APP_PUBLIC_URL,
+    // 测试邮件连接的连接、问候、套接字超时；不在页面上配置。
+    SMTP_TIMEOUT_MS: mailEnvironmentShape.SMTP_TIMEOUT_MS,
+    // 页面保存的 SMTP 密码用这把密钥解密；schema 与 Worker 共用（packages/db）。
+    SETTINGS_ENCRYPTION_KEY: settingsEncryptionKeySchema,
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),

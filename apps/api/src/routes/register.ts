@@ -64,6 +64,13 @@ export function registerRoutes(
 ) {
   const router = app;
   const credentialRateLimit = app.rateLimit(deps.rateLimit);
+  // 测试邮件每个管理员每分钟 5 次。onRequest 阶段还没有解析身份，按会话 cookie 分桶；
+  // 未登录请求没有 cookie，按来源地址分桶（它们也到不了处理函数）。
+  const mailTestRateLimit = app.rateLimit({
+    max: 5,
+    timeWindow: 60_000,
+    keyGenerator: (request) => request.headers.cookie ?? request.ip,
+  });
   for (const operation of Object.values(contract)) {
     const credential =
       operation.operationId === 'login' ||
@@ -88,7 +95,11 @@ export function registerRoutes(
       )
         ? { bodyLimit: DEFAULT_ADMIN_CSV_BODY_LIMIT }
         : {}),
-      ...(credential ? { onRequest: credentialRateLimit } : {}),
+      ...(credential
+        ? { onRequest: credentialRateLimit }
+        : operation.operationId === 'adminMailSettingsTest'
+          ? { onRequest: mailTestRateLimit }
+          : {}),
       preValidation: (request, _reply, done) => {
         // 会改数据的方法（POST、PUT）都要过来源检查；GET 只读。
         if (operation.method !== 'GET') {
