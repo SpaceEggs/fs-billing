@@ -271,6 +271,36 @@ it('sends the password typed in the form with the test mail', async () => {
   });
 });
 
+it('greys out and locks the settings while sending is off', async () => {
+  const user = userEvent.setup();
+  const { handler } = adminApi({
+    'GET /api/admin/mail-settings': () => ({
+      status: 200,
+      body: pageConfigured,
+    }),
+  });
+  renderApp('/admin/system-alerts?tab=mail', handler);
+  await screen.findByText('已设置');
+  const host = screen.getByLabelText(/SMTP 服务器/);
+  const change = screen.getByRole('button', { name: '更改' });
+  const test = screen.getByRole('button', { name: '发送测试邮件' });
+  expect(host).toBeEnabled();
+  expect(test).toBeEnabled();
+
+  await user.click(screen.getByRole('switch', { name: '启用邮件发送' }));
+  expect(host).toBeDisabled();
+  expect(change).toBeDisabled();
+  expect(screen.getByRole('radio', { name: 'STARTTLS' })).toBeDisabled();
+  expect(test).toBeDisabled();
+  expect(host).toHaveValue(pageConfigured.host);
+  expect(screen.getByText(/下面的配置会保留/)).toBeVisible();
+  // 关闭也要能保存，否则停用发不出去。
+  expect(screen.getByRole('button', { name: '保存' })).toBeEnabled();
+
+  await user.click(screen.getByRole('switch', { name: '启用邮件发送' }));
+  expect(host).toBeEnabled();
+});
+
 it('saves without sending a password that was not re-entered', async () => {
   const user = userEvent.setup();
   const { handler, calls } = adminApi({

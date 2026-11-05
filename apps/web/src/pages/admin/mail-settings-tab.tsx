@@ -15,6 +15,7 @@ import {
   type ApiProblem,
 } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
+import { cn } from '../../lib/utils';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -308,7 +309,9 @@ function MailSettingsForm({
       <Alert variant="warning">
         <AlertDescription>
           <strong>邮件发送未配置</strong>
-          <p>告警和余额提醒都发不出去。填写后先发一封测试邮件，再保存。</p>
+          <p>
+            告警和余额提醒都发不出去。打开下面的开关并填写配置，先发一封测试邮件，再保存。
+          </p>
         </AlertDescription>
       </Alert>
     ) : settings.source === 'env' ? (
@@ -382,14 +385,16 @@ function MailSettingsForm({
               </Alert>
             ) : null}
 
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/40 p-4">
               <div className="space-y-1">
                 <Label htmlFor={`${id}-enabled`}>启用邮件发送</Label>
                 <p
                   id={`${id}-enabled-help`}
                   className="text-xs leading-relaxed text-muted-foreground"
                 >
-                  关闭后，告警和提醒继续排队，但不会发出
+                  {enabled
+                    ? '已开启，告警和提醒会通过下面的配置发出'
+                    : '已关闭，告警和提醒继续排队，但不会发出。下面的配置会保留，打开后才能编辑'}
                 </p>
               </div>
               <Switch
@@ -401,240 +406,255 @@ function MailSettingsForm({
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
-              <div className="space-y-2">
-                <div className="flex items-center gap-1">
-                  <Label htmlFor={`${id}-host`}>SMTP 服务器</Label>
-                  <span className="text-err" aria-hidden="true">
-                    *
-                  </span>
-                </div>
-                <Input
-                  id={`${id}-host`}
-                  value={host}
-                  readOnly={!editing}
-                  placeholder="smtp.example.com"
-                  aria-invalid={fieldError('host') ? true : undefined}
-                  aria-describedby={describedBy('host')}
-                  onChange={(event) => setHost(event.target.value)}
-                />
-                {fieldError('host') ? (
-                  <p
-                    id={`${id}-host-error`}
-                    className="text-xs text-err"
-                    role="alert"
-                  >
-                    {fieldError('host')}
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-1">
-                  <Label htmlFor={`${id}-port`}>端口</Label>
-                  <span className="text-err" aria-hidden="true">
-                    *
-                  </span>
-                </div>
-                <Input
-                  id={`${id}-port`}
-                  value={port}
-                  readOnly={!editing}
-                  inputMode="numeric"
-                  placeholder="465"
-                  aria-invalid={fieldError('port') ? true : undefined}
-                  aria-describedby={describedBy('port')}
-                  onChange={(event) => setPort(event.target.value)}
-                />
-                {fieldError('port') ? (
-                  <p
-                    id={`${id}-port-error`}
-                    className="text-xs text-err"
-                    role="alert"
-                  >
-                    {fieldError('port')}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex min-h-5 items-center">
-                <Label htmlFor={`${id}-username`}>账号</Label>
-              </div>
-              <Input
-                id={`${id}-username`}
-                value={username}
-                readOnly={!editing}
-                placeholder="billing@example.com"
-                aria-invalid={fieldError('username') ? true : undefined}
-                aria-describedby={describedBy('username')}
-                onChange={(event) => setUsername(event.target.value)}
-              />
-              {fieldError('username') ? (
-                <p
-                  id={`${id}-username-error`}
-                  className="text-xs text-err"
-                  role="alert"
-                >
-                  {fieldError('username')}
-                </p>
-              ) : null}
-            </div>
-
-            {envSource && !editing ? null : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1">
-                  <Label htmlFor={`${id}-password`}>密码或授权码</Label>
-                  {passwordRequired ? (
+            <fieldset
+              disabled={!enabled}
+              aria-label="邮件服务器配置"
+              className={cn(
+                'min-w-0 space-y-5 transition-opacity duration-200 motion-reduce:transition-none',
+                // 整块统一变灰；控件自身的禁用透明度不再叠加，否则文字看不清。
+                !enabled &&
+                  'opacity-50 [&_button:disabled]:opacity-100 [&_input:disabled]:opacity-100',
+              )}
+            >
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor={`${id}-host`}>SMTP 服务器</Label>
                     <span className="text-err" aria-hidden="true">
                       *
                     </span>
+                  </div>
+                  <Input
+                    id={`${id}-host`}
+                    value={host}
+                    readOnly={!editing}
+                    placeholder="smtp.example.com"
+                    aria-invalid={fieldError('host') ? true : undefined}
+                    aria-describedby={describedBy('host')}
+                    onChange={(event) => setHost(event.target.value)}
+                  />
+                  {fieldError('host') ? (
+                    <p
+                      id={`${id}-host-error`}
+                      className="text-xs text-err"
+                      role="alert"
+                    >
+                      {fieldError('host')}
+                    </p>
                   ) : null}
                 </div>
-                {settings.passwordSet && !showPasswordInput ? (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm">已设置</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!editing}
-                      onClick={() => setShowPassword(true)}
-                    >
-                      更改
-                    </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor={`${id}-port`}>端口</Label>
+                    <span className="text-err" aria-hidden="true">
+                      *
+                    </span>
                   </div>
-                ) : (
                   <Input
-                    id={`${id}-password`}
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
+                    id={`${id}-port`}
+                    value={port}
                     readOnly={!editing}
-                    required={passwordRequired}
-                    aria-required={passwordRequired}
-                    aria-invalid={fieldError('password') ? true : undefined}
-                    aria-describedby={describedBy(
-                      'password',
-                      `${id}-password-help`,
-                    )}
-                    onChange={(event) => setPassword(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="465"
+                    aria-invalid={fieldError('port') ? true : undefined}
+                    aria-describedby={describedBy('port')}
+                    onChange={(event) => setPort(event.target.value)}
                   />
-                )}
-                {fieldError('password') ? (
+                  {fieldError('port') ? (
+                    <p
+                      id={`${id}-port-error`}
+                      className="text-xs text-err"
+                      role="alert"
+                    >
+                      {fieldError('port')}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex min-h-5 items-center">
+                  <Label htmlFor={`${id}-username`}>账号</Label>
+                </div>
+                <Input
+                  id={`${id}-username`}
+                  value={username}
+                  readOnly={!editing}
+                  placeholder="billing@example.com"
+                  aria-invalid={fieldError('username') ? true : undefined}
+                  aria-describedby={describedBy('username')}
+                  onChange={(event) => setUsername(event.target.value)}
+                />
+                {fieldError('username') ? (
                   <p
-                    id={`${id}-password-error`}
+                    id={`${id}-username-error`}
                     className="text-xs text-err"
                     role="alert"
                   >
-                    {fieldError('password')}
-                  </p>
-                ) : null}
-                <p
-                  id={`${id}-password-help`}
-                  className="text-xs leading-relaxed text-muted-foreground"
-                >
-                  QQ 等邮箱要填授权码，不是登录密码。保存后加密存储，不再显示。
-                </p>
-                {passwordChanged && settings.passwordSet ? (
-                  <p className="text-xs text-warn">
-                    服务器或账号改过了，请重新填写密码或授权码。
+                    {fieldError('username')}
                   </p>
                 ) : null}
               </div>
-            )}
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor={`${id}-mail-from`}>发件人邮箱</Label>
-                <span className="text-err" aria-hidden="true">
-                  *
-                </span>
+              {envSource && !editing ? null : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor={`${id}-password`}>密码或授权码</Label>
+                    {passwordRequired ? (
+                      <span className="text-err" aria-hidden="true">
+                        *
+                      </span>
+                    ) : null}
+                  </div>
+                  {settings.passwordSet && !showPasswordInput ? (
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm">已设置</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!editing}
+                        onClick={() => setShowPassword(true)}
+                      >
+                        更改
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      id={`${id}-password`}
+                      type="password"
+                      autoComplete="new-password"
+                      value={password}
+                      readOnly={!editing}
+                      required={passwordRequired}
+                      aria-required={passwordRequired}
+                      aria-invalid={fieldError('password') ? true : undefined}
+                      aria-describedby={describedBy(
+                        'password',
+                        `${id}-password-help`,
+                      )}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                  )}
+                  {fieldError('password') ? (
+                    <p
+                      id={`${id}-password-error`}
+                      className="text-xs text-err"
+                      role="alert"
+                    >
+                      {fieldError('password')}
+                    </p>
+                  ) : null}
+                  <p
+                    id={`${id}-password-help`}
+                    className="text-xs leading-relaxed text-muted-foreground"
+                  >
+                    QQ
+                    等邮箱要填授权码，不是登录密码。保存后加密存储，不再显示。
+                  </p>
+                  {passwordChanged && settings.passwordSet ? (
+                    <p className="text-xs text-warn">
+                      服务器或账号改过了，请重新填写密码或授权码。
+                    </p>
+                  ) : null}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  <Label htmlFor={`${id}-mail-from`}>发件人邮箱</Label>
+                  <span className="text-err" aria-hidden="true">
+                    *
+                  </span>
+                </div>
+                <Input
+                  id={`${id}-mail-from`}
+                  value={mailFrom}
+                  readOnly={!editing}
+                  placeholder="billing@example.com"
+                  aria-invalid={fieldError('mailFrom') ? true : undefined}
+                  aria-describedby={describedBy('mailFrom')}
+                  onChange={(event) => setMailFrom(event.target.value)}
+                />
+                {fieldError('mailFrom') ? (
+                  <p
+                    id={`${id}-mailFrom-error`}
+                    className="text-xs text-err"
+                    role="alert"
+                  >
+                    {fieldError('mailFrom')}
+                  </p>
+                ) : null}
               </div>
-              <Input
-                id={`${id}-mail-from`}
-                value={mailFrom}
-                readOnly={!editing}
-                placeholder="billing@example.com"
-                aria-invalid={fieldError('mailFrom') ? true : undefined}
-                aria-describedby={describedBy('mailFrom')}
-                onChange={(event) => setMailFrom(event.target.value)}
-              />
-              {fieldError('mailFrom') ? (
-                <p
-                  id={`${id}-mailFrom-error`}
-                  className="text-xs text-err"
-                  role="alert"
-                >
-                  {fieldError('mailFrom')}
-                </p>
-              ) : null}
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex min-h-5 items-center">
-                <Label htmlFor={`${id}-site-url`}>站点地址</Label>
+              <div className="space-y-2">
+                <div className="flex min-h-5 items-center">
+                  <Label htmlFor={`${id}-site-url`}>站点地址</Label>
+                </div>
+                <Input
+                  id={`${id}-site-url`}
+                  value={siteUrl}
+                  readOnly={!editing}
+                  placeholder="https://billing.example.com"
+                  aria-invalid={fieldError('siteUrl') ? true : undefined}
+                  aria-describedby={describedBy(
+                    'siteUrl',
+                    `${id}-site-url-help`,
+                  )}
+                  onChange={(event) => setSiteUrl(event.target.value)}
+                />
+                {fieldError('siteUrl') ? (
+                  <p
+                    id={`${id}-siteUrl-error`}
+                    className="text-xs text-err"
+                    role="alert"
+                  >
+                    {fieldError('siteUrl')}
+                  </p>
+                ) : null}
+                <p
+                  id={`${id}-site-url-help`}
+                  className="text-xs text-muted-foreground"
+                >
+                  邮件里的链接指向这个地址
+                </p>
               </div>
-              <Input
-                id={`${id}-site-url`}
-                value={siteUrl}
-                readOnly={!editing}
-                placeholder="https://billing.example.com"
-                aria-invalid={fieldError('siteUrl') ? true : undefined}
-                aria-describedby={describedBy('siteUrl', `${id}-site-url-help`)}
-                onChange={(event) => setSiteUrl(event.target.value)}
-              />
-              {fieldError('siteUrl') ? (
-                <p
-                  id={`${id}-siteUrl-error`}
-                  className="text-xs text-err"
-                  role="alert"
-                >
-                  {fieldError('siteUrl')}
-                </p>
-              ) : null}
-              <p
-                id={`${id}-site-url-help`}
-                className="text-xs text-muted-foreground"
-              >
-                邮件里的链接指向这个地址
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label>加密方式</Label>
-              <ToggleGroup
-                type="single"
-                variant="outline"
-                aria-label="加密方式"
-                aria-invalid={fieldError('secure') ? true : undefined}
-                aria-describedby={
-                  fieldError('secure') ? `${id}-secure-error` : undefined
-                }
-                value={secure ? 'tls' : 'starttls'}
-                disabled={!editing}
-                onValueChange={(value) => {
-                  if (value === 'tls') setSecure(true);
-                  if (value === 'starttls') setSecure(false);
-                }}
-              >
-                <ToggleGroupItem value="tls">隐式 TLS</ToggleGroupItem>
-                <ToggleGroupItem value="starttls">STARTTLS</ToggleGroupItem>
-              </ToggleGroup>
-              {fieldError('secure') ? (
-                <p
-                  id={`${id}-secure-error`}
-                  className="text-xs text-err"
-                  role="alert"
+              <div className="space-y-2">
+                <Label>加密方式</Label>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  aria-label="加密方式"
+                  aria-invalid={fieldError('secure') ? true : undefined}
+                  aria-describedby={
+                    fieldError('secure') ? `${id}-secure-error` : undefined
+                  }
+                  value={secure ? 'tls' : 'starttls'}
+                  disabled={!editing}
+                  onValueChange={(value) => {
+                    if (value === 'tls') setSecure(true);
+                    if (value === 'starttls') setSecure(false);
+                  }}
                 >
-                  {fieldError('secure')}
-                </p>
-              ) : null}
-              {settings.allowPlaintext ? (
-                <p className="text-xs text-muted-foreground">
-                  STARTTLS：回环地址（如本机 Mailpit）可以不加密
-                </p>
-              ) : null}
-            </div>
+                  <ToggleGroupItem value="tls">隐式 TLS</ToggleGroupItem>
+                  <ToggleGroupItem value="starttls">STARTTLS</ToggleGroupItem>
+                </ToggleGroup>
+                {fieldError('secure') ? (
+                  <p
+                    id={`${id}-secure-error`}
+                    className="text-xs text-err"
+                    role="alert"
+                  >
+                    {fieldError('secure')}
+                  </p>
+                ) : null}
+                {settings.allowPlaintext ? (
+                  <p className="text-xs text-muted-foreground">
+                    STARTTLS：回环地址（如本机 Mailpit）可以不加密
+                  </p>
+                ) : null}
+              </div>
+            </fieldset>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t px-5 py-3">
             <span className="text-xs text-muted-foreground">
@@ -643,7 +663,7 @@ function MailSettingsForm({
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                disabled={!editing || test.isPending}
+                disabled={!editing || !enabled || test.isPending}
                 onClick={() => setDialogOpen(true)}
               >
                 发送测试邮件
