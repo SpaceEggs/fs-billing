@@ -284,7 +284,7 @@ test('configures mail from the page and sends a test message', async ({
     await page.getByRole('switch', { name: '启用邮件发送' }).click();
     await page.getByLabel('SMTP 服务器').fill('127.0.0.1');
     await page.getByLabel('端口').fill('1025');
-    await page.getByLabel('账号').fill('e2e@example.test');
+    await page.getByLabel('账号', { exact: true }).fill('e2e@example.test');
     await page.getByLabel('密码或授权码').fill('e2e-test-password');
     await page.getByLabel('发件人邮箱').fill('e2e@example.test');
     await page.getByRole('radio', { name: 'STARTTLS' }).click();

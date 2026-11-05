@@ -456,6 +456,21 @@ describe('production host safety', () => {
     );
   });
 
+  it('shows form field names, not environment variable names, in errors', async () => {
+    const response = await put({
+      ...validUpdate,
+      enabled: true,
+      host: 'smtp.qq.com',
+      username: 'owner@qq.com',
+      mailFrom: 'other@qq.com',
+      expectedVersion: 1,
+      password: 'super-secret',
+    });
+    expect(response.statusCode, response.body).toBe(400);
+    expect(response.body).toContain('QQ 邮箱的发件人邮箱必须与账号相同');
+    expect(response.body).not.toMatch(/SMTP_|MAIL_FROM/);
+  });
+
   it('rejects ports outside 25/465/587/2525', async () => {
     const prod = productionApi();
     const prodCookie = (await login(prod.api, fixture.admin)).cookie;

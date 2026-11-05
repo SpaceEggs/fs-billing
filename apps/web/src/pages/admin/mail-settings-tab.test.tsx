@@ -246,6 +246,34 @@ it('shows server validation errors under the matching fields', async () => {
   });
 });
 
+it('sends the password typed in the form with the test mail', async () => {
+  const user = userEvent.setup();
+  const { handler, calls } = adminApi({
+    'GET /api/admin/mail-settings': () => ({
+      status: 200,
+      body: pageConfigured,
+    }),
+    'POST /api/admin/mail-settings/test': () => ({
+      status: 200,
+      body: { ok: true, result: 'ok' },
+    }),
+  });
+  renderApp('/admin/system-alerts?tab=mail', handler);
+  await screen.findByText('已设置');
+  await user.click(screen.getByRole('button', { name: '更改' }));
+  await user.type(
+    document.querySelector('input[type="password"]') as HTMLInputElement,
+    'new-secret',
+  );
+  await user.click(screen.getByRole('button', { name: '发送测试邮件' }));
+  const dialog = screen.getByRole('dialog', { name: '发送测试邮件' });
+  await user.click(within(dialog).getByRole('button', { name: '发送' }));
+  await screen.findByText('测试邮件已发送');
+  expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({
+    password: 'new-secret',
+  });
+});
+
 it('saves without sending a password that was not re-entered', async () => {
   const user = userEvent.setup();
   const { handler, calls } = adminApi({

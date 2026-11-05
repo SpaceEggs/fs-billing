@@ -327,6 +327,7 @@ function MailSettingsForm({
     const body: ApiBody<'adminMailSettingsTest'> = {
       ...config(),
       to: testTo.trim(),
+      ...(password === '' ? {} : { password }),
     };
     try {
       const result = await test.mutateAsync(body);
@@ -509,7 +510,9 @@ function MailSettingsForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${id}-username`}>账号</Label>
+              <div className="flex min-h-5 items-center">
+                <Label htmlFor={`${id}-username`}>账号</Label>
+              </div>
               <Input
                 id={`${id}-username`}
                 value={username}
@@ -633,7 +636,9 @@ function MailSettingsForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${id}-site-url`}>站点地址</Label>
+              <div className="flex min-h-5 items-center">
+                <Label htmlFor={`${id}-site-url`}>站点地址</Label>
+              </div>
               <Input
                 id={`${id}-site-url`}
                 value={siteUrl}
@@ -696,8 +701,8 @@ function MailSettingsForm({
               ) : null}
             </div>
           </div>
-          <div className="flex items-center justify-between gap-4 border-t px-5 py-3">
-            <span className="text-xs whitespace-nowrap text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t px-5 py-3">
+            <span className="text-xs text-muted-foreground">
               修改记入操作日志，密码不会记录
             </span>
             <div className="flex gap-2">
