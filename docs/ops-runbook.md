@@ -1161,6 +1161,49 @@ chronyc makestep
 | `check-clock.sh` 报 chrony 未同步                 | `chronyc sources -v`、NTP 源是否可达                                                         | 修 NTP 源后 `systemctl restart chrony`；未同步期间告警保持                                     |
 | 体检每分钟都失败但只收到一封邮件                  | 这是 30 分钟去重；`MONITOR_DEDUPE_SECONDS` 可调                                              | 先修问题；恢复后状态文件自动清除                                                               |
 
+## 邮箱设置
+
+后台「系统告警 → 邮箱设置」(`/admin/system-alerts?tab=mail`) 管理 Worker 发告警和余额提醒用的 SMTP。保存后下一轮发信就生效，不用重启服务。改配置记入操作日志，密码只记“已设置/已更改”，不记内容。
+
+### 密钥与保存
+
+页面保存密码前，`/etc/fs-billing/app.env` 必须已有 `SETTINGS_ENCRYPTION_KEY`：
+
+```sh
+# 在服务器 B 上；app.env 权限 0640 root:fs-billing
+openssl rand -base64 32
+# 把输出整行写成 SETTINGS_ENCRYPTION_KEY=<值>，不要加引号
+systemctl restart fs-billing-api fs-billing-worker
+```
+
+base64 里的 `+`、`/`、`=` 都是普通字符，heredoc、systemd `EnvironmentFile` 和 `. app.env` 都能直接解析。生成后**离线保存一份**：密钥丢了不会影响数据库和其他配置，但已保存的 SMTP 密码解不开，页面会显示“已保存的密码无法解密”，需要重新填写并保存一次。
+
+### 换邮箱与 notify.sh
+
+`ops/monitor/notify.sh` 不读数据库，只读 `app.env` 的 `SMTP_*`、`MAIL_FROM` 与 `monitor.env` 的 `NOTIFY_TO`，用于数据库或 Worker 整体宕机时发信。所以换邮箱要改两处：
+
+1. 后台「邮箱设置」保存新的服务器、账号、密码/授权码和发件人。
+2. 服务器 B 的 `app.env` 同步改 `SMTP_*` 与 `MAIL_FROM`（`notify.sh` 每次运行重新读文件，不用重启）。
+
+两处都发测试邮件并确认真的收到：页面里的「发送测试邮件」，以及：
+
+```sh
+/opt/fs-billing/current/ops/monitor/notify.sh \
+  --subject '【FS-Billing】邮箱设置测试' \
+  --body '这是一封运维通知测试。'
+```
+
+### 退回环境变量
+
+页面保存过一次后 `smtp_settings.managed` 为 true，Worker 不再看环境变量。要退回环境变量（例如页面配置的服务器不可用），由运维直接改数据库：
+
+```sh
+sudo -u postgres psql -d fs_billing -c \
+  "update smtp_settings set managed=false, enabled=false;"
+```
+
+Worker 下一轮读到 `managed=false` 就重新使用 `app.env` 的 `SMTP_*`；`notify.sh` 本来就不读数据库，不需要改。退回后页面显示“当前使用服务器环境变量里的配置”，再点“改由页面管理”可以重新接管。
+
 ## 证书
 
 ### 当前：自签证书
@@ -1328,8 +1371,9 @@ systemctl restart fs-billing-api fs-billing-worker
 ### SMTP 授权码（`SMTP_PASS`，QQ 邮箱）
 
 用途：Worker 发告警与账单邮件；`ops/monitor/notify.sh` 也从 `app.env` 读同一组
-`SMTP_*`，数据库或 Worker 整体宕机时仍能发信。API 只读 `SMTP_HOST` 与 `MAIL_FROM`
-来显示「邮件发送未配置」，不读密码。
+`SMTP_*`，数据库或 Worker 整体宕机时仍能发信。页面「邮箱设置」接管后，Worker 改读页面保存的
+配置，`app.env` 的 `SMTP_*` 只留给 `notify.sh` 与 `mail:test`。API 只读 `SMTP_HOST` 与
+`MAIL_FROM` 来判断「邮件发送未配置」，不读密码。
 
 步骤：
 

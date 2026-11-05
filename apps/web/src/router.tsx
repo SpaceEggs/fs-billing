@@ -377,9 +377,14 @@ const adminSystemAlerts = createRoute({
   path: 'system-alerts',
   validateSearch: (
     raw: Record<string, unknown>,
-  ): { window?: '24h' | undefined; tab?: 'settings' | undefined } => ({
+  ): { window?: '24h' | undefined; tab?: 'settings' | 'mail' | undefined } => ({
     window: raw['window'] === '24h' ? '24h' : undefined,
-    tab: raw['tab'] === 'settings' ? 'settings' : undefined,
+    tab:
+      raw['tab'] === 'settings'
+        ? 'settings'
+        : raw['tab'] === 'mail'
+          ? 'mail'
+          : undefined,
   }),
   component: lazyRoute(
     () => <SystemAlertsPage identity={useZoneIdentity()} />,

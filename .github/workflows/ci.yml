@@ -163,6 +163,8 @@ jobs:
       AUTH_DATABASE_URL: postgresql://fs_billing_auth:local-auth-only@127.0.0.1:5432/fs_billing
       # 仅用于 CI 一次性数据库的开发种子密码；会话签名密钥由 Playwright 配置每次随机生成。
       SEED_AUTH_PASSWORD: ci-web-e2e-only-password
+      # 仅用于 CI：页面邮箱设置保存密码用的测试密钥（32 字节 base64），不是真实密钥。
+      SETTINGS_ENCRYPTION_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: pnpm/action-setup@v6.1.0

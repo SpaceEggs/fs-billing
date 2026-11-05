@@ -228,6 +228,8 @@ else
   app_password=$(openssl rand -hex 24)
   auth_password=$(openssl rand -hex 24)
   better_auth_secret=$(openssl rand -hex 32)
+  # base64 的 +、/、= 在 KEY=value、heredoc、systemd EnvironmentFile 与 `. app.env` 中都是普通字符。
+  settings_encryption_key=$(openssl rand -base64 32)
   worker_shared_key=$(openssl rand -hex 24)
 
   role_exists=$(runuser -u postgres -- psql -X -tAc \
@@ -270,6 +272,8 @@ AUTH_DATABASE_URL=postgresql://fs_billing_auth:$auth_password@127.0.0.1:5432/fs_
 BETTER_AUTH_SECRET=$better_auth_secret
 BETTER_AUTH_URL=https://$public_ip
 BETTER_AUTH_TRUSTED_ORIGINS=https://$public_ip
+# 页面邮箱设置的密码加密密钥（32 字节 base64）。丢失后需到页面重填 SMTP 密码。
+SETTINGS_ENCRYPTION_KEY=$settings_encryption_key
 API_HOST=127.0.0.1
 API_PORT=3000
 WORKER_HOST=$worker_host
@@ -290,7 +294,7 @@ EOF
   install -m 0600 -o root -g root "$owner_env" /etc/fs-billing/owner.env
   install -m 0640 -o root -g fs-billing "$app_env" /etc/fs-billing/app.env
 
-  unset owner_password app_password auth_password better_auth_secret worker_shared_key
+  unset owner_password app_password auth_password better_auth_secret settings_encryption_key worker_shared_key
 fi
 
 db_exists=$(runuser -u postgres -- psql -X -tAc \

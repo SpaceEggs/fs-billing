@@ -107,7 +107,7 @@ const settingsOpen = async (page: Page) => {
   await page.goto('/admin/system-alerts');
   if ((page.viewportSize()?.width ?? 0) < 768)
     await page.getByRole('button', { name: '告警设置' }).click();
-  else await page.getByRole('tab', { name: '设置' }).click();
+  else await page.getByRole('tab', { name: '告警设置' }).click();
   await expect(page.getByText('告警接收邮箱', { exact: true })).toBeVisible();
 };
 

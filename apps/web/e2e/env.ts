@@ -32,6 +32,10 @@ export function apiEnvironment() {
     API_PORT: '3000',
     BETTER_AUTH_SECRET:
       process.env['BETTER_AUTH_SECRET'] ?? randomBytes(32).toString('hex'),
+    // 页面邮箱设置的密码加密密钥；缺失时每次运行随机生成，测试里保存的密码即可解开。
+    SETTINGS_ENCRYPTION_KEY:
+      process.env['SETTINGS_ENCRYPTION_KEY'] ??
+      randomBytes(32).toString('base64'),
     BETTER_AUTH_URL: process.env['BETTER_AUTH_URL'] ?? apiOrigin,
     BETTER_AUTH_TRUSTED_ORIGINS: [
       apiOrigin,

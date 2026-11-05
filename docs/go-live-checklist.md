@@ -32,6 +32,8 @@
 - [ ] 迁移之后已重跑 `pnpm --filter @fs-billing/worker queue:migrate`（`deploy.sh` 会自动跑；手工发布不要漏）。
 - [ ] `RAW_CDR_ARCHIVE_DIR=/var/lib/fs-billing/archive` 已设置且可写：`runuser -u fs-billing -- test -w /var/lib/fs-billing/archive`。
 - [ ] `pnpm --filter @fs-billing/worker mail:test -- --to <运维邮箱>` 成功，后台「告警设置」的系统告警接收邮箱也已填好（与 `monitor.env` 的 `NOTIFY_TO` 是两处配置，见[监测与告警](ops-runbook.md#监测与告警)）。
+- [ ] `app.env` 已配置 `SETTINGS_ENCRYPTION_KEY`（`openssl rand -base64 32`）并在离线介质保存一份；丢失后需要到页面重填 SMTP 密码（见[邮箱设置](ops-runbook.md#邮箱设置)）。
+- [ ] 后台「系统告警 → 邮箱设置」已保存，并在页面与 `notify.sh` 各发过一封测试邮件、确认真的收到（页面与监测脚本是两处配置，见[邮箱设置](ops-runbook.md#邮箱设置)）。
 
 ## 数据
 

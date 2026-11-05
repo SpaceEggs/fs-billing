@@ -24,6 +24,7 @@ import { RecipientsInput } from '../../components/admin/form-fields';
 import { SheetPanel } from '../../components/sheet-panel';
 import { Segmented } from '../../components/segmented';
 import { LoadError } from '../../components/load-error';
+import { MailSettingsTab } from './mail-settings-tab';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -403,7 +404,10 @@ function SettingsForm({
           {!settings.mailEnabled ? (
             <Alert variant="warning">
               <AlertDescription>
-                邮件发送未配置，告警和提醒不会发出
+                <span>邮件发送未配置，告警和提醒不会发出</span>{' '}
+                <Link to="/admin/system-alerts" search={{ tab: 'mail' }}>
+                  去邮箱设置
+                </Link>
               </AlertDescription>
             </Alert>
           ) : null}
@@ -478,7 +482,12 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
   const [status, setStatus] = useState<'all' | 'open' | 'recovered'>('all');
   const [kind, setKind] = useState('');
   const initialSearch = useSearch({ from: '/admin/system-alerts' });
-  const tab = initialSearch.tab === 'settings' ? 'settings' : 'list';
+  const tab =
+    initialSearch.tab === 'settings'
+      ? 'settings'
+      : initialSearch.tab === 'mail'
+        ? 'mail'
+        : 'list';
   const navigate = useNavigate({ from: '/admin/system-alerts' });
   const [window, setWindow] = useState<'24h' | '30d' | 'all'>(
     initialSearch.window ?? '30d',
@@ -540,18 +549,27 @@ export function SystemAlertsPage({ identity }: { identity: Identity }) {
             void navigate({
               search: {
                 ...initialSearch,
-                tab: value === 'settings' ? 'settings' : undefined,
+                tab:
+                  value === 'settings'
+                    ? 'settings'
+                    : value === 'mail'
+                      ? 'mail'
+                      : undefined,
               },
             })
           }
           className="gap-5"
         >
-          <TabsList className="max-md:hidden">
+          <TabsList>
             <TabsTrigger value="list">告警列表</TabsTrigger>
-            <TabsTrigger value="settings">设置</TabsTrigger>
+            <TabsTrigger value="settings">告警设置</TabsTrigger>
+            <TabsTrigger value="mail">邮箱设置</TabsTrigger>
           </TabsList>
           <TabsContent value="settings">
             <Settings />
+          </TabsContent>
+          <TabsContent value="mail">
+            <MailSettingsTab identity={identity} />
           </TabsContent>
           <TabsContent value="list" className="flex flex-col gap-5">
             <div className="flex flex-wrap items-center gap-3">

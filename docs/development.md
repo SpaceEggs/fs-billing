@@ -41,15 +41,18 @@ Web 开发服务器把 `/api` 代理到 `FS_BILLING_API_ORIGIN`，缺省为 `htt
 
 `pnpm db:up` 同时启动 Mailpit（`axllent/mailpit`，固定版本见 `compose.yaml`）：SMTP 在 `127.0.0.1:1025`，网页收件箱与 HTTP API 在 `http://127.0.0.1:8025`。`.env.example` 里的 `SMTP_HOST=127.0.0.1`、`SMTP_PORT=1025`、`SMTP_SECURE=false`、`MAIL_FROM=billing@example.test` 就指向它，复制成 `.env` 后 Worker 发出的邮件都落在 Mailpit，不会发到外面。
 
-| 键                                         | 默认      | 说明                                                                                               |
-| ------------------------------------------ | --------- | -------------------------------------------------------------------------------------------------- |
-| `SMTP_HOST`                                | 无        | 不设置则邮件发送未启用：发件箱照常入队，Worker 启动时告警                                          |
-| `SMTP_PORT`、`SMTP_SECURE`                 | 465、true | `true` 隐式 TLS（465）；`false` 为 STARTTLS，只有回环地址（Mailpit）允许不加密                     |
-| `SMTP_USER`、`SMTP_PASS`                   | 无        | 同有或同无；非回环主机必须认证。QQ 邮箱的 `SMTP_PASS` 是授权码；只放运行环境，不进仓库、日志、文档 |
-| `MAIL_FROM`                                | 无        | 设置了 `SMTP_HOST` 就必填；QQ 邮箱要求与 `SMTP_USER` 相同                                          |
-| `SMTP_TIMEOUT_MS`、`MAIL_RATE_PER_MINUTE`  | 15000、20 | 连接/问候/套接字超时；每次分发（每分钟）最多发送封数                                               |
-| `MAIL_MAX_ATTEMPTS`、`ALERT_QUIET_MINUTES` | 6、10     | 单封最多尝试次数（退避 1 分、5 分、15 分、1 小时、3 小时）；事件型告警的静默恢复窗口               |
-| `APP_PUBLIC_URL`                           | 无        | 邮件里链接的站点根地址（`https://…`，本机回环可用 `http://`）                                      |
+| 键                                         | 默认      | 说明                                                                                                      |
+| ------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------------- |
+| `SMTP_HOST`                                | 无        | 不设置则邮件发送未启用：发件箱照常入队，Worker 启动时告警                                                 |
+| `SMTP_PORT`、`SMTP_SECURE`                 | 465、true | `true` 隐式 TLS（465）；`false` 为 STARTTLS，只有回环地址（Mailpit）允许不加密                            |
+| `SMTP_USER`、`SMTP_PASS`                   | 无        | 同有或同无；非回环主机必须认证。QQ 邮箱的 `SMTP_PASS` 是授权码；只放运行环境，不进仓库、日志、文档        |
+| `MAIL_FROM`                                | 无        | 设置了 `SMTP_HOST` 就必填；QQ 邮箱要求与 `SMTP_USER` 相同                                                 |
+| `SMTP_TIMEOUT_MS`、`MAIL_RATE_PER_MINUTE`  | 15000、20 | 连接/问候/套接字超时；每次分发（每分钟）最多发送封数                                                      |
+| `MAIL_MAX_ATTEMPTS`、`ALERT_QUIET_MINUTES` | 6、10     | 单封最多尝试次数（退避 1 分、5 分、15 分、1 小时、3 小时）；事件型告警的静默恢复窗口                      |
+| `APP_PUBLIC_URL`                           | 无        | 邮件里链接的站点根地址（`https://…`，本机回环可用 `http://`）                                             |
+| `SETTINGS_ENCRYPTION_KEY`                  | 无        | 页面「邮箱设置」保存 SMTP 密码用；32 字节 base64（`openssl rand -base64 32`），本地留空则页面不能保存密码 |
+
+页面「系统告警 → 邮箱设置」与这些环境变量共用同一套发信代码：页面保存过配置后，Worker 读页面配置，不再读 `SMTP_*` / `MAIL_FROM`；没保存过则继续用环境变量（Mailpit）。
 
 - `pnpm --filter @fs-billing/worker mail:test -- --to <地址>`：用当前 `SMTP_*` 直接发一封测试邮件并打印响应码，不经过发件箱（核实 SMTP 配置，真实 QQ 账号的核实步骤见 [运行手册](evidence/phase-9/qq-smtp-check.md)）。
 - `pnpm --filter @fs-billing/worker mail:requeue -- --id <uuid>` 或 `--since <时间>`：把 `failed` 的邮件放回待发（额度恢复后补发）。
