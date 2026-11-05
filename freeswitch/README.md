@@ -14,6 +14,12 @@ vanilla 配置的 event socket 监听 `::`、密码为 `ClueCon`，`default_pass
 4. 替换 `/etc/freeswitch/autoload_configs/modules.conf.xml`，只加载已安装且需要的模块，包括 `mod_lua` 与 `mod_json_cdr`。完成下述授权脚本与话单推送配置。
 5. 完成上述配置后，执行 `systemctl enable --now freeswitch`。
 
+## SIP profile 必填项
+
+真实部署的 SIP profile 必须设 `rtp-timer-name=soft`。`test/conf` 的联调 profile 没有这一项。缺少时，FreeSWITCH 收到 BYE 后要等约 5 秒才回应，每条通话腿都会多等，话单的结束时间也跟着推迟；计费按分钟进位，可能多收一分钟。同机实测：缺少时 20 秒的通话记为 30 秒（模拟上游也是一条通话腿），加上后记为 20 秒，BYE 约 10 毫秒得到响应。
+
+服务器有公网 NAT 时，`sip-ip`、`rtp-ip` 填内网地址，`ext-sip-ip`、`ext-rtp-ip` 填公网地址。
+
 ## 安装授权脚本与拨号计划
 
 自定义 `lua.conf.xml` 的 `script-directory` 时，在路径末尾保留 `;;`，以保留 Lua 默认模块搜索路径。
