@@ -2,13 +2,16 @@ import Decimal from 'decimal.js';
 import {
   adminRateAmountSchema,
   beijingDateOf,
+  translate,
   type AdminRateChange,
   type AdminRateEntry,
   type AdminRateSchedule,
+  type Locale,
 } from '@fs-billing/shared';
 import { ApiRequestError } from './api';
 import { apiProblem, issueText } from './api-problem';
-import { formatDateTime, formatRate } from './format';
+import { formatDateTime, formatMonthDay, formatRate } from './format';
+import { currentLocale } from '../i18n';
 
 /** 与服务端预览相同的比较：前缀相同而 ISO、国家、说明或费率（按数值）不同算修改。 */
 export function diffRateTables(
@@ -42,19 +45,26 @@ export function diffRateTables(
 export function scheduledRowHints(
   current: readonly AdminRateEntry[],
   scheduled: { effectiveFrom: string; entries: readonly AdminRateEntry[] },
+  locale: Locale = currentLocale(),
 ) {
-  const day = beijingDateOf(scheduled.effectiveFrom).slice(5);
+  const day = formatMonthDay(beijingDateOf(scheduled.effectiveFrom), locale);
   const hints = new Map<string, string>();
   for (const change of diffRateTables(current, scheduled.entries)) {
     if (change.kind === 'modified')
       hints.set(
         change.before.prefix,
         new Decimal(change.before.rate).eq(change.after.rate)
-          ? `${day} 起更新名称`
-          : `${day} 起 ${formatRate(change.after.rate)}`,
+          ? translate(locale, 'rates:hint.updateName', { date: day })
+          : translate(locale, 'rates:hint.rate', {
+              date: day,
+              rate: formatRate(change.after.rate),
+            }),
       );
     else if (change.kind === 'deleted')
-      hints.set(change.before.prefix, `${day} 起删除`);
+      hints.set(
+        change.before.prefix,
+        translate(locale, 'rates:hint.delete', { date: day }),
+      );
   }
   return hints;
 }
@@ -117,25 +127,29 @@ export function resolveSchedule(
   choice: ScheduleChoice,
   now: number,
   horizonMs: number,
+  locale: Locale = currentLocale(),
 ): { schedule: AdminRateSchedule } | { error: string } {
   if (choice.kind === 'immediate') return { schedule: { kind: 'immediate' } };
   const effectiveFrom = beijingMinuteToIso(choice.minute);
-  if (!effectiveFrom) return { error: '请选择生效时间' };
+  if (!effectiveFrom)
+    return { error: translate(locale, 'rates:schedule.selectEffective') };
   const at = Date.parse(effectiveFrom);
-  if (at < now) return { error: '生效时间必须晚于当前时间' };
+  if (at < now) return { error: translate(locale, 'rates:schedule.afterNow') };
   if (at > now + horizonMs)
     return {
-      error: `生效时间不能晚于 ${formatDateTime(new Date(now + horizonMs))}`,
+      error: translate(locale, 'rates:schedule.beforeHorizon', {
+        time: formatDateTime(new Date(now + horizonMs), locale),
+      }),
     };
   return { schedule: { kind: 'scheduled', effectiveFrom } };
 }
 
 /** 费率行的文字字段，按表头顺序。变动表逐列、编辑确认页逐项显示「旧 → 新」；前缀是行的键，不会变。 */
 export const rateEntryFields = [
-  { key: 'iso', label: 'ISO' },
-  { key: 'prefix', label: '号码前缀' },
-  { key: 'country', label: '国家' },
-  { key: 'description', label: '说明' },
+  { key: 'iso', label: translate('zh', 'rates:field.iso') },
+  { key: 'prefix', label: translate('zh', 'rates:field.prefix') },
+  { key: 'country', label: translate('zh', 'rates:field.country') },
+  { key: 'description', label: translate('zh', 'rates:field.description') },
 ] as const satisfies readonly {
   key: keyof AdminRateEntry;
   label: string;
@@ -159,25 +173,39 @@ const maxLabelLength = 200;
 export function validateRateEdit(
   current: AdminRateEntry,
   draft: RateEditDraft,
+  locale: Locale = currentLocale(),
 ): { entry: AdminRateEntry } | { errors: RateEditErrors } {
   const errors: RateEditErrors = {};
   const iso = draft.iso.trim();
-  if (!isoPattern.test(iso)) errors.iso = 'ISO 必须是两位字母，或留空';
+  if (!isoPattern.test(iso))
+    errors.iso = translate(locale, 'errors:validation.rate.iso');
   const country = draft.country.trim();
-  if (/[\r\n]/.test(draft.country)) errors.country = '国家不能包含换行';
-  else if (!country) errors.country = '请输入国家';
+  if (/[\r\n]/.test(draft.country))
+    errors.country = translate(locale, 'errors:validation.rate.countryNewline');
+  else if (!country)
+    errors.country = translate(locale, 'rates:edit.countryRequired');
   else if (country.length > maxLabelLength)
-    errors.country = `国家不能超过 ${maxLabelLength} 字`;
+    errors.country = translate(locale, 'rates:edit.countryTooLong', {
+      max: maxLabelLength,
+    });
   const description = draft.description.trim();
-  if (/[\r\n]/.test(draft.description)) errors.description = '说明不能包含换行';
+  if (/[\r\n]/.test(draft.description))
+    errors.description = translate(
+      locale,
+      'errors:validation.rate.descriptionNewline',
+    );
   else if (description.length > maxLabelLength)
-    errors.description = `说明不能超过 ${maxLabelLength} 字`;
+    errors.description = translate(locale, 'rates:edit.descriptionTooLong', {
+      max: maxLabelLength,
+    });
   const rate = draft.rate.trim();
-  if (!rate) errors.rate = '请输入费率';
-  else if (rate.startsWith('-')) errors.rate = '费率不能为负数';
-  else if (/^\d+\.\d{5,}$/.test(rate)) errors.rate = '小数不超过 4 位';
+  if (!rate) errors.rate = translate(locale, 'rates:edit.rateRequired');
+  else if (rate.startsWith('-'))
+    errors.rate = translate(locale, 'rates:edit.rateNegative');
+  else if (/^\d+\.\d{5,}$/.test(rate))
+    errors.rate = translate(locale, 'rates:edit.rateDecimals');
   else if (!adminRateAmountSchema.safeParse(rate).success)
-    errors.rate = '请输入有效的费率';
+    errors.rate = translate(locale, 'rates:edit.rateInvalid');
   if (Object.keys(errors).length > 0) return { errors };
   const entry = {
     prefix: current.prefix,
@@ -187,7 +215,7 @@ export function validateRateEdit(
     rate,
   };
   if (diffRateTables([current], [entry]).length === 0)
-    return { errors: { rate: '新费率与当前费率相同' } };
+    return { errors: { rate: translate(locale, 'rates:edit.unchanged') } };
   return { entry };
 }
 
@@ -203,7 +231,10 @@ const issueFields: Record<string, RateEditField> = {
  * 提交失败的去向：条目字段的校验错误退回第一步并标在字段上，生效时间错误留在确认步；
  * 其他失败（无对应字段的校验、冲突、限流、不可用）由确认步的通用提示说明。
  */
-export function rateEditFailure(error: unknown): {
+export function rateEditFailure(
+  error: unknown,
+  locale: Locale = currentLocale(),
+): {
   step: 'form' | 'confirm';
   fields: RateEditErrors;
   general: boolean;
@@ -216,7 +247,10 @@ export function rateEditFailure(error: unknown): {
   for (const issue of problem.issues) {
     const field = issueFields[issue.path.join('.')];
     if (!field) general = true;
-    else fields[field] ??= issueText(issue);
+    else
+      fields[field] ??= issueText(issue, (key, params) =>
+        translate(locale, key, params),
+      );
   }
   return {
     step: Object.keys(fields).some((field) => field !== 'effectiveFrom')
@@ -231,12 +265,15 @@ export function rateEditFailure(error: unknown): {
  * 取消排定被拒：版本已生效、距生效不足取消余量（服务端按数据库时间判断），
  * 或已被他人取消、替换。都需要刷新后再看。
  */
-export function cancelFailureMessage(error: unknown) {
+export function cancelFailureMessage(
+  error: unknown,
+  locale: Locale = currentLocale(),
+) {
   if (error instanceof ApiRequestError && error.outcomeUnknown) return null;
   const problem = apiProblem(error);
   if (problem.kind === 'conflict' && problem.code === 'RATE_VERSION_CONFLICT')
-    return '该版本已生效或即将生效，不能取消；也可能费率表已被修改。请刷新后查看。';
+    return translate(locale, 'rates:edit.cancelConflict');
   if (problem.kind === 'not-found')
-    return '该排定版本已不存在，可能已被取消。请刷新后查看。';
+    return translate(locale, 'rates:edit.cancelNotFound');
   return null;
 }

@@ -1,12 +1,15 @@
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { useDeferredValue, useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
+  translate,
   type AdminRateSchedule,
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { useLocale } from '@/i18n';
 import { Skeleton } from '../ui/skeleton';
 import { Input } from '../ui/input';
 import {
@@ -76,17 +79,16 @@ export type RateCopyState =
 
 const pickerPageSize = 20;
 
-export const targetScheduledMessage =
-  '目标租户已有排定的新版本，请先在目标租户取消排定';
+/** 中文文案；英文界面用 `rates:copy.scheduledBlocked`。 */
+export const targetScheduledMessage = translate(
+  'zh',
+  'rates:copy.scheduledBlocked',
+);
 
 function stepIndex(step: RateCopyState['step']) {
   if (step === 'step1' || step === 'previewing') return 0;
   if (step === 'done') return 2;
   return 1;
-}
-
-function summary({ tenant, entryCount }: CopySide) {
-  return `${tenant.code} ${tenant.name} · ${tenant.currency} · ${entryCount} 条`;
 }
 
 /**
@@ -106,6 +108,15 @@ export function RateCopyDialog({
   fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation(['rates', 'common']);
+  const locale = useLocale();
+  const summary = ({ tenant, entryCount }: CopySide) =>
+    t('rates:copy.summary', {
+      code: tenant.code,
+      name: tenant.name,
+      currency: tenant.currency,
+      count: entryCount,
+    });
   const previewCopy = useApiMutation('adminRateCopyPreview');
   const commitCopy = useApiMutation('adminRateCopyCommit');
   const [self, setSelf] = useState(initialSelf);
@@ -173,13 +184,16 @@ export function RateCopyDialog({
 
   async function runPreview() {
     if (!source || !target) {
-      setPickError(push ? '请选择目标租户' : '请选择来源租户');
+      setPickError(
+        push ? t('rates:copy.pickTarget') : t('rates:copy.pickSource'),
+      );
       return;
     }
     const resolved = resolveSchedule(
       choice,
       Date.now(),
       DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
+      locale,
     );
     if ('error' in resolved) {
       setScheduleError(resolved.error);
@@ -210,7 +224,11 @@ export function RateCopyDialog({
       else
         setState({
           step: 'step1',
-          notice: `无法预览：${result.errors.map((error) => csvRowText(error)).join('；')}`,
+          notice: t('rates:copy.previewFailed', {
+            errors: result.errors
+              .map((error) => csvRowText(error))
+              .join(t('rates:copy.errorSeparator')),
+          }),
           error: null,
         });
     } catch (error) {
@@ -220,7 +238,7 @@ export function RateCopyDialog({
           await rebaseTarget(target);
           setState({
             step: 'step1',
-            notice: '目标租户费率表已被修改，已载入最新版本，请重新预览',
+            notice: t('rates:copy.conflictReloaded'),
             error: null,
           });
           return;
@@ -228,7 +246,7 @@ export function RateCopyDialog({
         if (problem.code === 'CURRENCY_MISMATCH') {
           setState({
             step: 'step1',
-            notice: '来源与目标租户币种不一致，费率不能跨币种复制',
+            notice: t('rates:copy.currencyMismatch'),
             error: null,
           });
           return;
@@ -259,7 +277,7 @@ export function RateCopyDialog({
         if (problem.code === 'PREVIEW_EXPIRED') {
           setState({
             step: 'step1',
-            notice: '预览已过期，请重新预览',
+            notice: t('rates:copy.previewExpired'),
             error: null,
           });
           return;
@@ -267,7 +285,7 @@ export function RateCopyDialog({
         if (problem.code === 'CURRENCY_MISMATCH') {
           setState({
             step: 'step1',
-            notice: '来源与目标租户币种不一致，费率不能跨币种复制',
+            notice: t('rates:copy.currencyMismatch'),
             error: null,
           });
           return;
@@ -280,8 +298,10 @@ export function RateCopyDialog({
           setState({
             step: 'step1',
             notice: uncertain
-              ? `可能已复制，请核对 ${bound.target.tenant.code} 的费率表；确认未复制时再重新预览`
-              : '目标租户费率表已变化或预览已失效，已载入最新版本，请重新预览',
+              ? t('rates:copy.mayCopied', {
+                  code: bound.target.tenant.code,
+                })
+              : t('rates:copy.staleReloaded'),
             error: null,
           });
           return;
@@ -296,13 +316,26 @@ export function RateCopyDialog({
     }
   }
 
-  const title = push ? '复制费率表到其他租户' : '复制其他租户的费率表';
+  const title = push ? t('rates:copy.titlePush') : t('rates:copy.titlePull');
   const subtitle =
     state.step === 'step1' || state.step === 'previewing'
       ? push
-        ? `来源：${summary(self)}`
-        : `目标：${summary(self)}`
+        ? t('rates:copy.source', { summary: summary(self) })
+        : t('rates:copy.target', { summary: summary(self) })
       : `${state.source.tenant.code} → ${state.target.tenant.code} ${state.target.tenant.name} · ${state.target.tenant.currency}`;
+
+  const labelsForCode = (code: string): PreviewLabels => ({
+    summary: t('rates:copy.labelsSummary', { code }),
+    columns: {
+      before: t('rates:copy.labelsBefore', { code }),
+      after: t('rates:copy.labelsAfter'),
+    },
+    overwrite: code,
+    confirm: t('rates:copy.labelsConfirm', { code }),
+    busy: t('rates:copy.labelsBusy'),
+    networkMessage: t('rates:copy.labelsNetwork', { code }),
+    uncertainNote: t('rates:copy.labelsUncertain'),
+  });
 
   return (
     <ModalDialog
@@ -318,8 +351,12 @@ export function RateCopyDialog({
         subtitle={subtitle}
       />
       <StepList
-        label="复制步骤"
-        steps={[push ? '选择目标' : '选择来源', '预览变动', '完成']}
+        label={t('rates:copy.stepLabel')}
+        steps={[
+          push ? t('rates:copy.stepTarget') : t('rates:copy.stepSource'),
+          t('rates:copy.stepPreview'),
+          t('rates:copy.stepDone'),
+        ]}
         position={stepIndex(state.step)}
         complete={state.step === 'done'}
       />
@@ -355,7 +392,7 @@ export function RateCopyDialog({
             tableSizes(state.target.entryCount, state.preview.counts).unchanged
           }
           schedule={state.schedule}
-          labels={copyLabels(state.target.tenant.code)}
+          labels={labelsForCode(state.target.tenant.code)}
           error={state.step === 'step2' ? state.error : null}
           uncertain={state.uncertain}
           busy={state.step === 'committing'}
@@ -368,19 +405,6 @@ export function RateCopyDialog({
       )}
     </ModalDialog>
   );
-}
-
-function copyLabels(code: string): PreviewLabels {
-  return {
-    summary: `${code} 的费率表将`,
-    columns: { before: `${code} 当前`, after: '复制后' },
-    overwrite: code,
-    confirm: `确认覆盖 ${code}`,
-    busy: '正在复制…',
-    networkMessage: `无法确认是否已复制，请核对 ${code} 的费率表后再操作。`,
-    uncertainNote:
-      '上次确认复制的结果未知。再次确认不会重复复制：如已复制，系统会提示核对。',
-  };
 }
 
 function ChooseTenant({
@@ -417,6 +441,7 @@ function ChooseTenant({
   onNext: () => void;
 }) {
   const id = useId();
+  const { t } = useTranslation(['rates', 'common']);
   const push = direction === 'push';
   const pickedTenant =
     picked === null
@@ -435,16 +460,21 @@ function ChooseTenant({
         <TriangleAlertIcon aria-hidden />
         <AlertTitle>
           {push
-            ? '将覆盖目标租户的整张费率表'
-            : `将覆盖 ${self.tenant.code} 的整张费率表`}
+            ? t('rates:copy.overwriteTitlePush')
+            : t('rates:copy.overwriteTitlePull', { code: self.tenant.code })}
         </AlertTitle>
         <AlertDescription className="text-foreground!">
-          {push ? '目标租户' : '本租户'}
-          现有费率会被替换，来源中没有的前缀将被删除。
+          {t('rates:copy.overwriteBody', {
+            subject: push
+              ? t('rates:copy.overwriteTarget')
+              : t('rates:copy.overwriteSelf'),
+          })}
         </AlertDescription>
       </Alert>
       <TenantPicker
-        label={push ? '目标租户' : '来源租户'}
+        label={
+          push ? t('rates:copy.pickerTarget') : t('rates:copy.pickerSource')
+        }
         currency={self.tenant.currency}
         excludeId={self.tenant.id}
         selectedId={pickedTenant?.id ?? null}
@@ -460,7 +490,7 @@ function ChooseTenant({
             disabled={busy}
             onClick={onRetryPick}
           >
-            重新读取费率表
+            {t('rates:copy.retrySnapshot')}
           </Button>
         </div>
       ) : null}
@@ -478,20 +508,22 @@ function ChooseTenant({
       {error ? <ProblemAlert error={error} /> : null}
       {blocked ? (
         <span id={`${id}-blocked`} className="text-[13px] text-warn">
-          {targetScheduledMessage}
+          {t('rates:copy.scheduledBlocked')}
         </span>
       ) : null}
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         {pickedTenant ? (
           <span className="text-[13px] text-muted-foreground md:flex-1">
-            已选：
+            {t('rates:copy.selected')}
             <span className="text-foreground">
               {pickedTenant.code} {pickedTenant.name}
             </span>
             {picked?.status === 'ready'
-              ? ` · ${picked.side.entryCount} 条`
+              ? t('rates:copy.selectedCount', {
+                  count: picked.side.entryCount,
+                })
               : picked?.status === 'loading'
-                ? ' · 正在读取费率表…'
+                ? t('rates:copy.reading')
                 : null}
           </span>
         ) : (
@@ -504,7 +536,7 @@ function ChooseTenant({
             disabled={busy}
             onClick={onCancel}
           >
-            取消
+            {t('common:action.cancel')}
           </Button>
           <Button
             className="h-12 md:h-9"
@@ -512,7 +544,7 @@ function ChooseTenant({
             aria-describedby={blocked ? `${id}-blocked` : undefined}
             onClick={onNext}
           >
-            {busy ? '正在预览…' : '下一步：预览变动'}
+            {busy ? t('rates:copy.previewing') : t('rates:copy.next')}
           </Button>
         </div>
       </div>
@@ -537,6 +569,7 @@ function TenantPicker({
   onPick: (tenant: CopyTenant) => void;
 }) {
   const id = useId();
+  const { t } = useTranslation(['rates', 'common']);
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search.trim());
   const tenants = useQuery(
@@ -558,8 +591,8 @@ function TenantPicker({
     <div className="flex flex-col gap-2">
       <Input
         type="search"
-        aria-label="搜索租户编码或名称"
-        placeholder="搜索租户编码或名称"
+        aria-label={t('rates:copy.pickerSearch')}
+        placeholder={t('rates:copy.pickerSearch')}
         maxLength={200}
         value={search}
         disabled={disabled}
@@ -567,7 +600,7 @@ function TenantPicker({
         className="h-9 text-sm sm:h-9"
       />
       <span id={`${id}-group`} className="text-xs text-muted-foreground">
-        可选 · 同币种（{currency}）
+        {t('rates:copy.pickerHint', { currency })}
       </span>
       {tenants.isError ? (
         <ProblemAlert
@@ -577,12 +610,14 @@ function TenantPicker({
       ) : !tenants.data ? (
         <Skeleton
           aria-busy
-          aria-label="租户加载中"
+          aria-label={t('rates:copy.pickerLoading')}
           className="h-[120px] rounded-lg"
         />
       ) : items.length === 0 ? (
         <span className="rounded-lg border border-border px-3 py-4 text-center text-[13px] text-muted-foreground">
-          {deferred ? '没有匹配的同币种租户' : '没有其他同币种租户'}
+          {deferred
+            ? t('rates:copy.pickerNoMatch')
+            : t('rates:copy.pickerNoOthers')}
         </span>
       ) : (
         <RadioGroup
@@ -611,7 +646,9 @@ function TenantPicker({
               <span className="font-mono">{tenant.code}</span>
               <span className="flex-1 truncate">{tenant.name}</span>
               {tenant.status === 'disabled' ? (
-                <span className="text-xs text-muted-foreground">已停用</span>
+                <span className="text-xs text-muted-foreground">
+                  {t('rates:copy.pickerDisabled')}
+                </span>
               ) : null}
             </label>
           ))}
@@ -619,7 +656,7 @@ function TenantPicker({
       )}
       {more ? (
         <span className="text-xs text-muted-foreground">
-          仅显示前 {pickerPageSize} 个，请输入编码或名称缩小范围
+          {t('rates:copy.pickerMore', { count: pickerPageSize })}
         </span>
       ) : null}
     </div>
@@ -635,10 +672,12 @@ function CopyDone({
   direction: RateCopyDirection;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['rates', 'common']);
+  const locale = useLocale();
   const { counts } = state.preview;
   const code = state.target.tenant.code;
   const scheduled = state.schedule.kind === 'scheduled';
-  const at = formatDateTime(state.response.version.effectiveFrom);
+  const at = formatDateTime(state.response.version.effectiveFrom, locale);
   return (
     <>
       <div
@@ -646,18 +685,26 @@ function CopyDone({
         className="flex flex-col items-center gap-2 py-4 text-center text-[13px]"
       >
         <span className="text-[17px] font-semibold text-ok">
-          {scheduled ? `已复制到 ${code}，已排定新版本` : `已复制到 ${code}`}
+          {scheduled
+            ? t('rates:copy.doneScheduled', { code })
+            : t('rates:copy.doneEffective', { code })}
         </span>
         <span className="tabular-nums">
-          新增 {counts.added} · 修改 {counts.modified} · 删除 {counts.deleted}
+          {t('rates:copy.counts', {
+            added: counts.added,
+            modified: counts.modified,
+            deleted: counts.deleted,
+          })}
         </span>
         <span className="tabular-nums">
           {scheduled
-            ? `将于 ${at} 生效，此前继续使用当前费率`
-            : `生效时间 ${at}`}
+            ? t('rates:copy.scheduledAt', { time: at })
+            : t('rates:copy.effectiveAt', { time: at })}
         </span>
         {state.response.auditId !== null ? (
-          <span className="text-muted-foreground">已记入操作日志</span>
+          <span className="text-muted-foreground">
+            {t('rates:copy.audited')}
+          </span>
         ) : null}
       </div>
       <div className="flex justify-center gap-2">
@@ -669,11 +716,11 @@ function CopyDone({
               'h-12 md:h-9',
             )}
           >
-            查看 {code} 费率
+            {t('rates:copy.viewRates', { code })}
           </a>
         ) : null}
         <Button className="h-12 md:h-9" onClick={onClose}>
-          完成
+          {t('rates:copy.done')}
         </Button>
       </div>
     </>

@@ -1,13 +1,15 @@
 import Decimal from 'decimal.js';
 import type { z } from 'zod';
-import type {
-  AdminBalanceOperationRequest,
-  AdminLedgerKind,
-  AdminTenantDetailResponse,
-  TenantHealth,
-  Currency,
-  ValidationIssue,
-  adminBalanceOperationRequestSchema,
+import {
+  translate,
+  type AdminBalanceOperationRequest,
+  type AdminLedgerKind,
+  type AdminTenantDetailResponse,
+  type TenantHealth,
+  type Currency,
+  type Locale,
+  type ValidationIssue,
+  type adminBalanceOperationRequestSchema,
 } from '@fs-billing/shared';
 import { webConfig } from '../config';
 import { issueText } from './api-problem';
@@ -18,48 +20,94 @@ import {
   amountSchemas,
   normalizeAmountInput,
 } from './amounts';
+import { currentLocale } from '../i18n';
 
 export type BalanceKind = AdminBalanceOperationRequest['kind'];
 type NoteField = 'note' | 'internalNote' | 'reason';
 
+const balanceKindKey = {
+  topup: 'topup',
+  credit_topup: 'creditTopup',
+  gift: 'gift',
+  adjustment: 'adjustment',
+} as const satisfies Record<BalanceKind, string>;
+
+const ledgerKindKey = {
+  recharge: 'recharge',
+  credit_recharge: 'creditRecharge',
+  gift: 'gift',
+  adjustment: 'adjustment',
+  call_charge: 'callCharge',
+} as const satisfies Record<AdminLedgerKind, string>;
+
+/** 余额操作类型的名称；英文界面用。 */
+export function balanceKindLabel(
+  kind: BalanceKind,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, `admin:balance.kind.${balanceKindKey[kind]}`);
+}
+
+export function balanceKindConfirmType(
+  kind: BalanceKind,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, `admin:balance.confirmType.${balanceKindKey[kind]}`);
+}
+
+export function balanceKindHint(
+  kind: BalanceKind,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, `admin:balance.hint.${balanceKindKey[kind]}`);
+}
+
+/** 流水类型名称；`ledgerKindLabels` 是中文兼容值。 */
+export function ledgerKindLabel(
+  kind: AdminLedgerKind,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, `admin:balance.ledgerKind.${ledgerKindKey[kind]}`);
+}
+
 /** 四种人工余额操作的规则：精度、正负、备注字段与可见性、是否适用大额确认。 */
 export const balanceKinds = {
   topup: {
-    label: '充值',
-    confirmType: '充值 · 已收款',
+    label: balanceKindLabel('topup', 'zh'),
+    confirmType: balanceKindConfirmType('topup', 'zh'),
     signed: false,
     decimals: amountDecimals.topup,
-    hint: '只能为正数',
+    hint: balanceKindHint('topup', 'zh'),
     noteField: 'note',
     noteVisibility: 'customer',
     largeAmountConfirm: false,
   },
   credit_topup: {
-    label: '赊账充值',
-    confirmType: '赊账充值 · 待收款',
+    label: balanceKindLabel('credit_topup', 'zh'),
+    confirmType: balanceKindConfirmType('credit_topup', 'zh'),
     signed: false,
     decimals: amountDecimals.topup,
-    hint: '只能为正数，记为「待收款」',
+    hint: balanceKindHint('credit_topup', 'zh'),
     noteField: 'internalNote',
     noteVisibility: 'admin',
     largeAmountConfirm: true,
   },
   gift: {
-    label: '赠送',
-    confirmType: '赠送',
+    label: balanceKindLabel('gift', 'zh'),
+    confirmType: balanceKindConfirmType('gift', 'zh'),
     signed: false,
     decimals: amountDecimals.topup,
-    hint: '只能为正数',
+    hint: balanceKindHint('gift', 'zh'),
     noteField: 'note',
     noteVisibility: 'customer',
     largeAmountConfirm: true,
   },
   adjustment: {
-    label: '调账',
-    confirmType: '调账',
+    label: balanceKindLabel('adjustment', 'zh'),
+    confirmType: balanceKindConfirmType('adjustment', 'zh'),
     signed: true,
     decimals: amountDecimals.adjustment,
-    hint: '可为负数（扣减余额），最多 4 位小数',
+    hint: balanceKindHint('adjustment', 'zh'),
     noteField: 'reason',
     noteVisibility: 'customer',
     largeAmountConfirm: false,
@@ -85,11 +133,11 @@ export const balanceKindOrder = [
 ] as const satisfies readonly BalanceKind[];
 
 export const ledgerKindLabels = {
-  recharge: '充值',
-  credit_recharge: '赊账充值',
-  gift: '赠送',
-  adjustment: '调账',
-  call_charge: '通话扣费',
+  recharge: ledgerKindLabel('recharge', 'zh'),
+  credit_recharge: ledgerKindLabel('credit_recharge', 'zh'),
+  gift: ledgerKindLabel('gift', 'zh'),
+  adjustment: ledgerKindLabel('adjustment', 'zh'),
+  call_charge: ledgerKindLabel('call_charge', 'zh'),
 } as const satisfies Record<AdminLedgerKind, string>;
 
 export type BalanceDraft = { kind: BalanceKind; amount: string; note: string };
@@ -98,26 +146,37 @@ export type BalanceErrors = { amount?: string; note?: string; form?: string };
 const noteMaxLength = 2000;
 
 /** 本地校验；与契约同一套金额 schema，错误信息按字段给出。 */
-export function validateBalanceDraft(draft: BalanceDraft): BalanceErrors {
+export function validateBalanceDraft(
+  draft: BalanceDraft,
+  locale: Locale = currentLocale(),
+): BalanceErrors {
   const rule = balanceKinds[draft.kind];
   const errors: BalanceErrors = {};
   const amount = normalizeAmountInput(draft.amount);
   const schema = rule.signed
     ? amountSchemas.adjustment
     : amountSchemas.positive;
-  if (!amount) errors.amount = '请输入金额';
+  if (!amount)
+    errors.amount = translate(locale, 'admin:balance.amountRequired');
   else if (!schema.safeParse(amount).success) {
     const numeric = /^-?\d+(?:\.\d+)?$/.test(amount);
     if (numeric && new Decimal(amount).isZero())
-      errors.amount = rule.signed ? '调账金额不能为 0' : '金额必须大于 0';
+      errors.amount = rule.signed
+        ? translate(locale, 'admin:balance.adjustmentZero')
+        : translate(locale, 'admin:balance.amountPositive');
     else if (numeric && !rule.signed && amount.startsWith('-'))
-      errors.amount = '金额必须大于 0';
-    else errors.amount = `金额${amountFormatMessage(rule.decimals)}`;
+      errors.amount = translate(locale, 'admin:balance.amountPositive');
+    else
+      errors.amount = translate(locale, 'admin:balance.amountFormat', {
+        message: amountFormatMessage(rule.decimals, locale),
+      });
   }
   if (draft.kind === 'adjustment' && !draft.note.trim())
-    errors.note = '调账必须填写备注';
+    errors.note = translate(locale, 'admin:balance.adjustmentNoteRequired');
   else if (draft.note.length > noteMaxLength)
-    errors.note = `备注最多 ${noteMaxLength} 个字符`;
+    errors.note = translate(locale, 'admin:balance.noteTooLong', {
+      max: noteMaxLength,
+    });
   return errors;
 }
 
@@ -222,7 +281,10 @@ export function projectBalance(
 }
 
 /** 服务端 VALIDATION_ERROR 的字段路径映射到对话框字段。 */
-export function balanceFieldErrors(issues: ValidationIssue[]): BalanceErrors {
+export function balanceFieldErrors(
+  issues: ValidationIssue[],
+  locale: Locale = currentLocale(),
+): BalanceErrors {
   const errors: BalanceErrors = {};
   for (const issue of issues) {
     const [head] = issue.path;
@@ -232,7 +294,9 @@ export function balanceFieldErrors(issues: ValidationIssue[]): BalanceErrors {
         : head === 'note' || head === 'internalNote' || head === 'reason'
           ? 'note'
           : 'form';
-    errors[field] ??= issueText(issue);
+    errors[field] ??= issueText(issue, (key, params) =>
+      translate(locale, key, params),
+    );
   }
   return errors;
 }

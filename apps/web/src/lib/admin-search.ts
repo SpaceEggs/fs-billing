@@ -8,7 +8,9 @@ import {
   adminUnassignedListQuerySchema,
   dayRangeFields,
   statementMonthSchema,
+  translate,
   type AuditLabel,
+  type Locale,
 } from '@fs-billing/shared';
 import { validateCdrFilters, type CdrFilters } from './cdr-search';
 
@@ -80,16 +82,28 @@ export function validateReceivablesSearch(
   };
 }
 
-export const tenantTabs = [
-  { key: 'overview', label: '概况' },
-  { key: 'ledger', label: '余额流水' },
-  { key: 'rates', label: '费率' },
-  { key: 'cdrs', label: '话单' },
-  { key: 'statements', label: '账单' },
-  { key: 'settings', label: '设置' },
-  { key: 'portal', label: '门户账号' },
+const tenantTabKeys = [
+  ['overview', 'admin:tabs.overview'],
+  ['ledger', 'admin:tabs.ledger'],
+  ['rates', 'admin:tabs.rates'],
+  ['cdrs', 'admin:tabs.cdrs'],
+  ['statements', 'admin:tabs.statements'],
+  ['settings', 'admin:tabs.settings'],
+  ['portal', 'admin:tabs.portal'],
 ] as const;
-export type TenantTab = (typeof tenantTabs)[number]['key'];
+
+export type TenantTab = (typeof tenantTabKeys)[number][0];
+
+/** 标签名；`label` 是中文兼容值。 */
+export function tenantTabLabel(tab: TenantTab, locale: Locale) {
+  const key = tenantTabKeys.find(([value]) => value === tab)?.[1];
+  return key ? translate(locale, key) : tab;
+}
+
+export const tenantTabs = tenantTabKeys.map(([key]) => ({
+  key,
+  label: tenantTabLabel(key, 'zh'),
+})) satisfies readonly { key: TenantTab; label: string }[];
 
 /** 余额流水筛选：北京时间日期（YYYY-MM-DD，含两端）、类型与页码，切换标签页时保留。 */
 export type LedgerSearch = {

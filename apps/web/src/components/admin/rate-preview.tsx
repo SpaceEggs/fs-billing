@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import {
   formatCountryLabel,
   type AdminRatePreviewResponse,
   type AdminRateSchedule,
 } from '@fs-billing/shared';
 import { formatDateTime } from '../../lib/format';
+import { useLocale } from '@/i18n';
 import { cn } from '../../lib/utils';
 import { CircleAlertIcon, CircleCheckIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -149,6 +151,8 @@ export function PreviewChanges({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation(['rates', 'common']);
+  const locale = useLocale();
   const { counts, changes } = preview;
   const deleted = changes.flatMap((change) =>
     change.kind === 'deleted' ? [change.before] : [],
@@ -160,8 +164,10 @@ export function PreviewChanges({
           (entry) =>
             `${entry.prefix} ${formatCountryLabel(entry.country, entry.description)}`,
         )
-        .join('、') +
-      (deleted.length > deleteListLimit ? ` 等 ${deleted.length} 个前缀` : '')
+        .join(t('rates:changes.listSeparator')) +
+      (deleted.length > deleteListLimit
+        ? ` ${t('rates:changes.morePrefixes', { count: deleted.length })}`
+        : '')
     : null;
   return (
     <>
@@ -180,10 +186,15 @@ export function PreviewChanges({
               {labels.summary}
             </span>
           )}
-          新增 <Count className="text-ok">{counts.added}</Count> 条、修改{' '}
-          <Count className="text-primary">{counts.modified}</Count> 条、删除{' '}
-          <Count className="text-err">{counts.deleted}</Count> 条，其余{' '}
-          {unchanged} 条不变
+          {t('rates:changes.addedCount')}
+          <Count className="text-ok">{counts.added}</Count>
+          {t('rates:changes.modifiedCount')}
+          <Count className="text-primary">{counts.modified}</Count>
+          {t('rates:changes.deletedCount')}
+          <Count className="text-err">{counts.deleted}</Count>
+          {t('rates:changes.beforeUnchanged')}
+          {unchanged}
+          {t('rates:changes.unchangedCount')}
         </span>
       </div>
       {labels.overwrite || deletedList ? (
@@ -193,18 +204,21 @@ export function PreviewChanges({
             {labels.overwrite ? (
               <>
                 <span className="font-semibold">
-                  将覆盖 {labels.overwrite} 的整张费率表
+                  {t('rates:changes.overwriteTitle', {
+                    code: labels.overwrite,
+                  })}
                 </span>
                 {deletedList
-                  ? `；删除后，拨打 ${deletedList} 的呼叫将被拒绝`
+                  ? t('rates:changes.overwriteSuffix', { list: deletedList })
                   : null}
               </>
             ) : (
               <>
                 <span className="font-semibold">
-                  删除后，拨打这些前缀的呼叫将被拒绝
+                  {t('rates:changes.deleteWarningTitle')}
                 </span>
-                ：{deletedList}
+                {t('rates:changes.colon')}
+                {deletedList}
               </>
             )}
           </AlertDescription>
@@ -221,15 +235,19 @@ export function PreviewChanges({
         </div>
       ) : (
         <span className="text-[13px] text-muted-foreground">
-          与当前费率表相同，没有变动。
+          {t('rates:changes.same')}
         </span>
       )}
       <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3.5 py-2.5 text-[13px] tabular-nums">
-        <span className="text-muted-foreground">生效时间</span>
+        <span className="text-muted-foreground">
+          {t('rates:changes.effectiveFrom')}
+        </span>
         <span className="font-semibold">
           {schedule.kind === 'scheduled'
-            ? `${formatDateTime(schedule.effectiveFrom)} 起（北京时间）`
-            : '立即生效'}
+            ? t('rates:changes.effectiveFromAt', {
+                time: formatDateTime(schedule.effectiveFrom, locale),
+              })
+            : t('rates:changes.immediate')}
         </span>
       </div>
       {error ? (
@@ -247,7 +265,7 @@ export function PreviewChanges({
           disabled={busy}
           onClick={onBack}
         >
-          上一步
+          {t('rates:changes.back')}
         </Button>
         <div className="flex flex-col-reverse gap-2 md:flex-row">
           <Button
@@ -256,7 +274,7 @@ export function PreviewChanges({
             disabled={busy}
             onClick={onCancel}
           >
-            取消
+            {t('common:action.cancel')}
           </Button>
           <Button className="h-12 md:h-9" disabled={busy} onClick={onConfirm}>
             {busy ? labels.busy : labels.confirm}
