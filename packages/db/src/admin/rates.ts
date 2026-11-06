@@ -610,6 +610,7 @@ export function createAdminRatesService(
             description: entry.description,
             perMinute: rate(tenant.currency, entry.rate),
           })),
+          input.locale,
         ),
       };
     });

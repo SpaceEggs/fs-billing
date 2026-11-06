@@ -8,7 +8,10 @@ import {
 import { apiErrorSchemas } from '../errors.js';
 import * as accounts from './accounts.js';
 import { cdrCountriesResponseSchema } from '../cdr-fields.js';
-import { csvExportResponseSchema } from '../export.js';
+import {
+  csvExportResponseSchema,
+  exportLocaleRequestSchema,
+} from '../export.js';
 import * as cdrs from './cdrs.js';
 import * as balance from './balance.js';
 import * as auditLogs from './audit-logs.js';
@@ -431,6 +434,12 @@ const statementRequest = {
   body: noBody,
 };
 
+/** 账单汇总导出只多一个语言；详情 GET 仍然没有 body。 */
+const statementExportRequest = {
+  ...statementRequest,
+  body: exportLocaleRequestSchema.optional(),
+};
+
 /**
  * 阶段 7 后台月账单，登记方式同 adminCdrApiContract：后端 PR 把它并入 liveApiContract。
  * 汇总 CSV 导出是 POST（响应是流式 CSV），不写操作日志（决定 16）；重新生成写 statement_regenerate。
@@ -465,7 +474,7 @@ export const adminStatementApiContract = {
     'adminTenantStatementExport',
     'POST',
     '/api/admin/tenants/{tenantId}/statements/{month}/export',
-    statementRequest,
+    statementExportRequest,
     csvExportResponseSchema,
     {},
   ),

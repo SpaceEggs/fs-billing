@@ -220,6 +220,7 @@ describe('callDownload', () => {
       to: '2026-09-29',
       callee: '447700900123',
       status: 'answered',
+      locale: 'zh',
     });
     expect(saved).toHaveLength(1);
     expect(saved[0]![0]).toBe('cdrs_ABC001_2026-09-01_2026-09-29.csv');

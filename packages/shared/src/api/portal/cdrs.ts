@@ -10,6 +10,7 @@ import {
   pageNumberSchema,
 } from '../cdr-fields.js';
 import { checkDayRange, dayRangeFields } from '../day-range.js';
+import { exportLocaleSchema } from '../export.js';
 
 /**
  * 门户话单行。strict 且不含 unverified / billing_unverified：该字段在这里无法表示，
@@ -52,7 +53,7 @@ export const portalCdrCountriesQuerySchema = z
   .superRefine(checkDayRange);
 
 export const portalCdrExportRequestSchema = z
-  .strictObject(cdrFilterFields)
+  .strictObject({ ...cdrFilterFields, locale: exportLocaleSchema })
   .superRefine(checkDayRange);
 export type PortalCdrExportRequest = z.infer<
   typeof portalCdrExportRequestSchema

@@ -10,6 +10,7 @@ import {
   pageNumberSchema,
 } from '../cdr-fields.js';
 import { checkDayRange, dayRangeFields } from '../day-range.js';
+import { exportLocaleSchema } from '../export.js';
 import { statementMonthSchema } from '../statement-fields.js';
 import { adminTimestampSchema } from './common.js';
 
@@ -89,6 +90,7 @@ export const adminCdrExportRequestSchema = z
   .strictObject({
     ...cdrFilterFields,
     unverifiedOnly: z.boolean().default(false),
+    locale: exportLocaleSchema,
   })
   .superRefine(checkDayRange);
 export type AdminCdrExportRequest = z.infer<typeof adminCdrExportRequestSchema>;

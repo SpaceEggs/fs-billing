@@ -55,7 +55,13 @@ const cases: [string, z.ZodType, unknown, unknown][] = [
     'portalCdrExportRequestSchema',
     portalCdrExportRequestSchema,
     filters,
-    { ...range, callee: '447700900123', country: '牙买加', status: 'all' },
+    {
+      ...range,
+      callee: '447700900123',
+      country: '牙买加',
+      status: 'all',
+      locale: 'zh',
+    },
   ],
   [
     'portalLedgerQuerySchema',
@@ -67,7 +73,7 @@ const cases: [string, z.ZodType, unknown, unknown][] = [
     'portalLedgerExportRequestSchema',
     portalLedgerExportRequestSchema,
     { ...range, kind: 'recharge' },
-    { ...range, kind: 'recharge' },
+    { ...range, kind: 'recharge', locale: 'zh' },
   ],
   [
     'adminCdrsQuerySchema with the flag false',
@@ -99,7 +105,7 @@ const cases: [string, z.ZodType, unknown, unknown][] = [
     'adminCdrExportRequestSchema',
     adminCdrExportRequestSchema,
     range,
-    { ...range, status: 'answered', unverifiedOnly: false },
+    { ...range, status: 'answered', unverifiedOnly: false, locale: 'zh' },
   ],
   [
     'adminLedgerQuerySchema',

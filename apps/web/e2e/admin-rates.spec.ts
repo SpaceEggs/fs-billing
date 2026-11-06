@@ -312,7 +312,7 @@ test('exports the current version as CSV', async ({ page }) => {
   const file = await download;
   expect(file.suggestedFilename()).toBe(`${tenant.code}-${current.id}.csv`);
   const lines = (await readFile(await file.path(), 'utf8')).split('\n');
-  expect(lines[0]).toBe('ISO,Country,Destination Prefix,Description,Rate');
+  expect(lines[0]).toBe('ISO,国家,号码前缀,说明,费率');
   expect(lines).toEqual(
     expect.arrayContaining([',中国,86,,0.0500', ',英国手机,447,,0.0450']),
   );
@@ -348,7 +348,7 @@ test('exports a scheduled version as CSV from its card (G11)', async ({
   const file = await download;
   expect(file.suggestedFilename()).toBe(`${tenant.code}-${version.id}.csv`);
   const lines = (await readFile(await file.path(), 'utf8')).split('\n');
-  expect(lines[0]).toBe('ISO,Country,Destination Prefix,Description,Rate');
+  expect(lines[0]).toBe('ISO,国家,号码前缀,说明,费率');
   expect(lines).toEqual(
     expect.arrayContaining([',中国,86,,0.0500', ',英国手机,447,,0.0480']),
   );

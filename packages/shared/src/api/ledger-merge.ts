@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { beijingDateOf } from './beijing-time.js';
 import { moneyAmountSchema } from './money.js';
+import { DEFAULT_LOCALE, type Locale } from '../i18n/index.js';
+import { translate } from '../i18n/translate.js';
 
 const timestamp = z.iso.datetime({ offset: true });
 
@@ -55,7 +57,20 @@ const groupThousands = (value: number) =>
 /** 合并行的备注，页面与 CSV 共用：「2026-09-28 通话扣费，共 356 通」。 */
 export function formatMergedChargeNote(
   row: Pick<MergedChargeRow, 'day' | 'calls' | 'partial'>,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
-  const label = row.partial ? '通话扣费（截至当前）' : '通话扣费';
-  return `${row.day} ${label}，共 ${groupThousands(row.calls)} 通`;
+  const label = translate(
+    locale,
+    row.partial
+      ? 'enums:ledger.mergedChargePartial'
+      : 'enums:ledger.mergedCharge',
+  );
+  const callsKey =
+    locale === 'en' && row.calls === 1
+      ? 'enums:ledger.mergedChargeCalls_one'
+      : 'enums:ledger.mergedChargeCalls_other';
+  const calls = translate(locale, callsKey, {
+    count: groupThousands(row.calls),
+  });
+  return `${row.day} ${label}${locale === 'zh' ? '，' : ', '}${calls}`;
 }

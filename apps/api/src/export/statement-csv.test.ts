@@ -113,4 +113,45 @@ describe('statement summary CSV rows', () => {
     );
     expect(csvRecord(negative ?? [])).toBe('汇总,通话扣费,12804,49726,-2486.3');
   });
+
+  it('keeps the Chinese export byte-identical to the pre-i18n output', () => {
+    expect(csvRecord(statementSummaryHeaders('CNY', 'zh'))).toBe(
+      '类别,项目,通话数,计费分钟,金额（CNY）',
+    );
+    expect(
+      statementSummaryRows(statement, 'zh').map((row) => csvRecord(row)),
+    ).toEqual([
+      '汇总,期初余额,,,1176.6',
+      '汇总,充值,,,1300',
+      '汇总,赠送,,,0',
+      '汇总,调账,,,-25.5',
+      '汇总,通话扣费,12804,49726,-2486.3',
+      '汇总,期末余额,,,-35.2',
+      '国家,中国,9000,30000,1500',
+      "国家,'=1+1,3804,19726,986.3",
+      '日期,2026-09-01,400,1600,80.1',
+      '日期,2026-09-02,0,0,0',
+    ]);
+  });
+
+  it('writes English headers and fixed labels', () => {
+    expect(statementSummaryHeaders('USD', 'en')).toEqual([
+      'Category',
+      'Item',
+      'Calls',
+      'Billed minutes',
+      'Amount (USD)',
+    ]);
+    const rows = statementSummaryRows(statement, 'en');
+    expect(rows.slice(0, 6)).toEqual([
+      ['Summary', 'Opening balance', '', '', '1176.6'],
+      ['Summary', 'Recharge', '', '', '1300'],
+      ['Summary', 'Gift', '', '', '0'],
+      ['Summary', 'Adjustment', '', '', '-25.5'],
+      ['Summary', 'Call charges', '12804', '49726', '-2486.3'],
+      ['Summary', 'Closing balance', '', '', '-35.2'],
+    ]);
+    expect(rows[6]).toEqual(['Country', '中国', '9000', '30000', '1500']);
+    expect(rows[8]).toEqual(['Day', '2026-09-01', '400', '1600', '80.1']);
+  });
 });

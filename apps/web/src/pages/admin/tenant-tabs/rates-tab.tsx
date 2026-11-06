@@ -50,6 +50,7 @@ import { downloadText } from '../../../lib/download';
 import { formatDateTime, formatRate } from '../../../lib/format';
 import { rateChangePercent, scheduledRowHints } from '../../../lib/rates';
 import { cn } from '../../../lib/utils';
+import { currentLocale } from '../../../i18n';
 
 const entriesPerPage = 100;
 
@@ -240,7 +241,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     try {
       const result = await exportCsv.mutateAsync({
         params: { tenantId },
-        body: { versionId },
+        body: { versionId, locale: currentLocale() },
       });
       downloadText(result.filename, result.csv, 'text/csv;charset=utf-8');
     } catch {

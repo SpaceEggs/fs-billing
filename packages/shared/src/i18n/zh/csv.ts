@@ -1,0 +1,60 @@
+export const csv = {
+  cdr: {
+    headers: {
+      answeredAt: '接通时间',
+      caller: '主叫号码',
+      callee: '被叫号码',
+      iso: 'ISO',
+      country: '国家',
+      description: '说明',
+      durationSeconds: '通话时长(秒)',
+      billedMinutes: '计费时长(分钟)',
+      rate: '费率',
+      charge: '费用',
+      startedAt: '振铃开始时间',
+      endedAt: '挂断时间',
+      hangupCause: '挂断原因',
+      matchedPrefix: '匹配前缀',
+      callUuid: '通话UUID',
+      direction: '方向',
+      verificationStatus: '验证状态',
+    },
+    direction: {
+      inbound: '呼入',
+      outbound: '呼出',
+    },
+    unanswered: '未接通',
+    unverified: '未经验证',
+  },
+  ledger: {
+    headers: {
+      time: '时间',
+      kind: '类型',
+      amount: '金额（{{currency}}）',
+      balanceAfter: '变动后余额（{{currency}}）',
+      note: '备注',
+    },
+  },
+  statement: {
+    headers: {
+      category: '类别',
+      item: '项目',
+      calls: '通话数',
+      billedMinutes: '计费分钟',
+      amount: '金额（{{currency}}）',
+    },
+    category: {
+      summary: '汇总',
+      country: '国家',
+      day: '日期',
+    },
+    item: {
+      openingBalance: '期初余额',
+      recharge: '充值',
+      gift: '赠送',
+      adjustment: '调账',
+      callCharges: '通话扣费',
+      closingBalance: '期末余额',
+    },
+  },
+} as const;

@@ -15,6 +15,7 @@ import {
   latestRangeEnd,
   portalLedgerKindSchema,
   PORTAL_LEDGER_PAGE_SIZE,
+  translate,
   type Currency,
   type Identity,
   type PortalLedgerRow,
@@ -44,6 +45,7 @@ import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
 import { formatDate, formatDateTime } from '../../lib/format';
+import { useLocale } from '../../i18n';
 import {
   cdrDayHref,
   portalLedgerKindLabels,
@@ -103,13 +105,16 @@ function CdrDayLink({
   );
 }
 
-function Note({ row }: { row: PortalLedgerRow }) {
+export function Note({ row }: { row: PortalLedgerRow }) {
+  const locale = useLocale();
   if (row.kind === 'call_charge')
     return (
       <CdrDayLink day={row.day} partial={row.partial}>
-        {formatMergedChargeNote(row)}
+        {formatMergedChargeNote(row, locale)}
       </CdrDayLink>
     );
+  if (row.noteKey)
+    return <span>{translate(locale, `enums:${row.noteKey}`)}</span>;
   return <span>{row.note || '—'}</span>;
 }
 

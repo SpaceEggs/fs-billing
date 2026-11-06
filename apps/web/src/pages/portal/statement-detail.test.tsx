@@ -294,7 +294,7 @@ describe('portal statement detail', () => {
     expect(requests.at(-1)).toEqual({
       path: '/api/portal/statements/2026-09/export',
       method: 'POST',
-      body: {},
+      body: { locale: 'zh' },
     });
   });
 
@@ -310,7 +310,12 @@ describe('portal statement detail', () => {
       path: '/api/portal/cdrs/export',
       method: 'POST',
       // 状态缺省为已接通，行数与账单的通话数一致。
-      body: { from: '2026-09-01', to: '2026-09-30', status: 'answered' },
+      body: {
+        from: '2026-09-01',
+        to: '2026-09-30',
+        status: 'answered',
+        locale: 'zh',
+      },
     });
   });
 

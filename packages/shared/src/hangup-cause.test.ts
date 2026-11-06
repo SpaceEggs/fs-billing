@@ -32,6 +32,15 @@ describe('formatHangupCause', () => {
     expect(formatHangupCause(' USER_BUSY ')).toBe('USER_BUSY（被叫忙）');
     expect(formatHangupCause('')).toBe('');
   });
+
+  it('shows English labels with ASCII parentheses for locale en', () => {
+    expect(formatHangupCause('NORMAL_CLEARING', 'en')).toBe(
+      'NORMAL_CLEARING (Normal clearing)',
+    );
+    expect(formatHangupCause('USER_BUSY', 'en')).toBe('USER_BUSY (User busy)');
+    expect(formatHangupCause('SOMETHING_NEW', 'en')).toBe('SOMETHING_NEW');
+    expect(hangupCauseLabel('NO_ANSWER', 'en')).toBe('No answer');
+  });
 });
 
 describe('HANGUP_CAUSE_LABELS', () => {

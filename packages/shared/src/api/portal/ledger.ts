@@ -3,11 +3,14 @@ import { currencySchema } from '../identity.js';
 import { moneyAmountSchema } from '../money.js';
 import { pageNumberSchema } from '../cdr-fields.js';
 import { checkDayRange, dayRangeFields } from '../day-range.js';
+import { exportLocaleSchema } from '../export.js';
 import { ledgerAmounts, mergedChargeRowSchema } from '../ledger-merge.js';
 
 export const PORTAL_LEDGER_PAGE_SIZE = 25;
 /** 赊账充值对客户显示的备注；内部备注不离开数据库。 */
 export const PORTAL_CREDIT_RECHARGE_NOTE = '账户充值';
+/** 赊账充值备注的文案键；前端按键翻译，I9 再删除旧的 note。 */
+export const PORTAL_CREDIT_RECHARGE_NOTE_KEY = 'ledger.accountRecharge';
 
 /** 客户看到的类型。赊账充值与充值同属 recharge，所以没有 credit_recharge。 */
 export const portalLedgerKindSchema = z.enum([
@@ -23,6 +26,8 @@ const manualFields = {
   balanceAfter: moneyAmountSchema,
   occurredAt: z.iso.datetime({ offset: true }),
   note: z.string(),
+  /** 系统备注的文案键；有它时前端按键翻译，note 继续保留到 I9。 */
+  noteKey: z.string().optional(),
 };
 
 /**
@@ -59,7 +64,11 @@ export const portalLedgerQuerySchema = z
 export type PortalLedgerQuery = z.infer<typeof portalLedgerQuerySchema>;
 
 export const portalLedgerExportRequestSchema = z
-  .strictObject({ ...dayRangeFields, kind: portalLedgerKindSchema.optional() })
+  .strictObject({
+    ...dayRangeFields,
+    kind: portalLedgerKindSchema.optional(),
+    locale: exportLocaleSchema,
+  })
   .superRefine(checkDayRange);
 export type PortalLedgerExportRequest = z.infer<
   typeof portalLedgerExportRequestSchema
