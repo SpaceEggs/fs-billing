@@ -11,8 +11,8 @@ import {
 import { detectLocale, htmlLang, writeStoredLocale } from './detect';
 
 const resources = {
-  zh: { common: zh.common, auth: zh.auth },
-  en: { common: en.common, auth: en.auth },
+  zh: { common: zh.common, auth: zh.auth, errors: zh.errors },
+  en: { common: en.common, auth: en.auth, errors: en.errors },
 } as const;
 
 declare module 'i18next' {
@@ -40,7 +40,7 @@ export function initI18n() {
     lng: detectLocale(),
     fallbackLng: DEFAULT_LOCALE,
     supportedLngs: [...LOCALES],
-    ns: ['common', 'auth'],
+    ns: ['common', 'auth', 'errors'],
     defaultNS: 'common',
     initAsync: false,
     interpolation: { escapeValue: false },

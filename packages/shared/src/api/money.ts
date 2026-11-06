@@ -6,11 +6,11 @@ export const moneyAmountSchema = z
   .max(128)
   .regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/)
   .refine((amount) => !/^-0(?:\.0+)?$/.test(amount), {
-    message: '金额不得为负零',
+    message: 'errors:validation.amount.negativeZero',
   });
 export const nonnegativeMoneyAmountSchema = moneyAmountSchema.refine(
   (amount) => !amount.startsWith('-'),
-  { message: '金额不能为负' },
+  { message: 'errors:validation.amount.negative' },
 );
 export const moneySchema = z.strictObject({
   currency: currencySchema,

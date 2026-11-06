@@ -122,7 +122,10 @@ export const modJsonCdrSchema = z
         ? v.billsec !== 0
         : v.billsec > v.end_epoch - v.answer_epoch)
     ) {
-      ctx.addIssue({ code: 'custom', message: '话单时间与时长不一致' });
+      ctx.addIssue({
+        code: 'custom',
+        message: 'errors:validation.cdr.workerTiming',
+      });
     }
   })
   .transform(({ variables: v, callflow }) => ({

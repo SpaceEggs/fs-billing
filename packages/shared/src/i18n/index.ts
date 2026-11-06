@@ -16,4 +16,5 @@ export function isLocale(value: unknown): value is Locale {
 
 export { en } from './en/index.js';
 export { zh } from './zh/index.js';
+export { translate, type MessageParams } from './translate.js';
 export type { DeepSameShape } from './types.js';

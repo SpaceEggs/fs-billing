@@ -106,13 +106,13 @@ export const adminCdrDeleteResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['remaining'],
-        message: '有失败才有未处理的月份',
+        message: 'errors:validation.cdrDeletion.remainingMatchesFailure',
       });
     if (response.failure && response.remaining[0] !== response.failure.month)
       context.addIssue({
         code: 'custom',
         path: ['failure', 'month'],
-        message: '失败的月份是第一个未处理的月份',
+        message: 'errors:validation.cdrDeletion.failureFirstRemaining',
       });
   });
 export type AdminCdrDeleteResponse = z.infer<

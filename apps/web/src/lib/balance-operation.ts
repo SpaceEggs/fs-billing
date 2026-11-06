@@ -10,6 +10,7 @@ import type {
   adminBalanceOperationRequestSchema,
 } from '@fs-billing/shared';
 import { webConfig } from '../config';
+import { issueText } from './api-problem';
 import { beginAttempt } from './balance-attempts';
 import {
   amountDecimals,
@@ -231,7 +232,7 @@ export function balanceFieldErrors(issues: ValidationIssue[]): BalanceErrors {
         : head === 'note' || head === 'internalNote' || head === 'reason'
           ? 'note'
           : 'form';
-    errors[field] ??= issue.message;
+    errors[field] ??= issueText(issue);
   }
   return errors;
 }

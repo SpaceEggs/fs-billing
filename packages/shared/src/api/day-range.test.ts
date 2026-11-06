@@ -42,7 +42,10 @@ describe('one-month range', () => {
     });
     expect(result.success).toBe(false);
     expect(result.error?.issues).toEqual([
-      expect.objectContaining({ path: ['to'], message: '日期范围最长一个月' }),
+      expect.objectContaining({
+        path: ['to'],
+        message: 'errors:validation.date.rangeTooLong',
+      }),
     ]);
   });
 
@@ -54,7 +57,7 @@ describe('one-month range', () => {
     expect(result.error?.issues).toEqual([
       expect.objectContaining({
         path: ['to'],
-        message: '结束日期不能早于开始日期',
+        message: 'errors:validation.date.endBeforeStart',
       }),
     ]);
   });

@@ -69,13 +69,13 @@ export const adminCdrsResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['summary', 'unverifiedCalls'],
-        message: '未经验证条数不能超过总数',
+        message: 'errors:validation.cdr.unverifiedTotal',
       });
     if (response.items.length > response.pagination.total)
       context.addIssue({
         code: 'custom',
         path: ['pagination', 'total'],
-        message: '总数不能小于当前页条数',
+        message: 'errors:validation.cdr.total',
       });
   });
 export type AdminCdrsResponse = z.infer<typeof adminCdrsResponseSchema>;

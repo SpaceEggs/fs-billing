@@ -8,7 +8,7 @@ export const portalContextResponseSchema = z
     (context) => context.identity.tenant.currency === context.balance.currency,
     {
       path: ['balance', 'currency'],
-      message: '余额币种必须与租户币种一致',
+      message: 'errors:validation.context.balanceCurrencyMismatch',
     },
   );
 export type PortalContextResponse = z.infer<typeof portalContextResponseSchema>;

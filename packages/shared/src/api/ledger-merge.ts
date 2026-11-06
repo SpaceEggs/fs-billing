@@ -11,13 +11,13 @@ export const beijingDayOf = beijingDateOf;
 export const ledgerAmounts = {
   positive: moneyAmountSchema.refine(
     (value) => !value.startsWith('-') && /[1-9]/.test(value),
-    { message: '金额必须大于零' },
+    { message: 'errors:validation.amount.positive' },
   ),
   nonzero: moneyAmountSchema.refine((value) => /[1-9]/.test(value), {
-    message: '金额不能为零',
+    message: 'errors:validation.amount.zero',
   }),
   negative: moneyAmountSchema.refine((value) => value.startsWith('-'), {
-    message: '通话扣费金额必须为负',
+    message: 'errors:validation.amount.callChargeNegative',
   }),
 };
 
@@ -44,7 +44,7 @@ export const mergedChargeRowSchema = z
       context.addIssue({
         code: 'custom',
         path: ['occurredAt'],
-        message: '合并行的时间必须落在 day 当天（北京时间）',
+        message: 'errors:validation.ledger.mergeDayMismatch',
       });
   });
 export type MergedChargeRow = z.infer<typeof mergedChargeRowSchema>;

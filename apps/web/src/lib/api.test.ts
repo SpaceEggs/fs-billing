@@ -106,7 +106,13 @@ describe('callApi', () => {
         code: 'CSV_INVALID',
         message: 'CSV 无效',
         requestId: 'req-2',
-        rows: [{ line: 3, reason: '前缀只能包含数字' }],
+        rows: [
+          {
+            line: 3,
+            key: 'errors:csv.row.prefixDigits',
+            params: { prefix: '4a' },
+          },
+        ],
       },
     });
     const error = await callApi('adminTenants').catch(
@@ -118,7 +124,13 @@ describe('callApi', () => {
         code: 'CSV_INVALID',
         message: 'CSV 无效',
         requestId: 'req-2',
-        rows: [{ line: 3, reason: '前缀只能包含数字' }],
+        rows: [
+          {
+            line: 3,
+            key: 'errors:csv.row.prefixDigits',
+            params: { prefix: '4a' },
+          },
+        ],
       },
     });
   });

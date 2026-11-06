@@ -53,7 +53,7 @@ export const portalStatementsResponseSchema = z
         context.addIssue({
           code: 'custom',
           path: ['items', index, 'month'],
-          message: '月份必须降序且不重复',
+          message: 'errors:validation.statement.monthsDescending',
         });
     });
   });

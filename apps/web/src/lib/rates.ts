@@ -6,7 +6,7 @@ import {
   type AdminRateSchedule,
 } from '@fs-billing/shared';
 import { ApiRequestError } from './api';
-import { apiProblem } from './api-problem';
+import { apiProblem, issueText } from './api-problem';
 import { formatDate, formatDateTime, formatRate } from './format';
 
 /** 与服务端预览相同的比较：前缀相同而 ISO、国家、说明或费率（按数值）不同算修改。 */
@@ -215,7 +215,7 @@ export function rateEditFailure(error: unknown): {
   for (const issue of problem.issues) {
     const field = issueFields[issue.path.join('.')];
     if (!field) general = true;
-    else fields[field] ??= issue.message;
+    else fields[field] ??= issueText(issue);
   }
   return {
     step: Object.keys(fields).some((field) => field !== 'effectiveFrom')

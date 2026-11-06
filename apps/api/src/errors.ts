@@ -2,10 +2,52 @@ import { DatabaseUnavailableError } from '@fs-billing/db';
 import {
   apiErrorSchema,
   apiErrorStatus,
+  translate,
   type ApiErrorCode,
   type ValidationIssue,
 } from '@fs-billing/shared';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+
+const VALIDATION_KEY_PREFIX = 'errors:';
+
+/**
+ * 校验问题：`key` 是文案目录键，`message` 是保留到 I9 的中文原文。
+ * 目录只放在 shared，这里用纯查表得到中文，不依赖语言运行时。
+ */
+export function validationIssue(
+  path: ValidationIssue['path'],
+  key: string,
+  params?: ValidationIssue['params'],
+): ValidationIssue {
+  return {
+    path,
+    key,
+    ...(params === undefined ? {} : { params }),
+    message: translate('zh', key, params),
+  };
+}
+
+type ZodIssueLike = {
+  readonly path: readonly PropertyKey[];
+  readonly message: string;
+  readonly params?: Readonly<Record<string, unknown>> | undefined;
+};
+
+/** 把 Zod 的自定义消息（已是目录键）转成契约里的校验问题；内置英文消息用通用键。 */
+export function validationIssues(error: {
+  readonly issues: readonly ZodIssueLike[];
+}): ValidationIssue[] {
+  return error.issues.map((issue) => {
+    const path = issue.path.map((part) =>
+      typeof part === 'number' ? part : String(part),
+    );
+    const key = issue.message.startsWith(VALIDATION_KEY_PREFIX)
+      ? issue.message
+      : 'errors:validation.field.invalid';
+    const params = issue.params as ValidationIssue['params'] | undefined;
+    return validationIssue(path, key, params);
+  });
+}
 
 const transientCodes = new Set([
   '40001',
@@ -43,19 +85,19 @@ export function isTransientServiceError(error: unknown): boolean {
 }
 
 const messages: Record<ApiErrorCode, string> = {
-  UNAUTHENTICATED: '请先登录',
-  SESSION_EXPIRED: '登录已过期',
-  INVALID_CREDENTIALS: '账号或密码错误',
-  FORBIDDEN: '没有访问权限',
-  ACCOUNT_DISABLED: '账号已停用',
-  IDENTITY_UNAVAILABLE: '身份暂不可用',
-  PASSWORD_CHANGE_REQUIRED: '请先修改初始或重置密码',
-  ACCOUNT_LOCKED: '账号暂时锁定',
-  VALIDATION_ERROR: '请求格式错误',
-  NOT_FOUND: '资源不存在',
-  RATE_LIMITED: '请求过于频繁',
-  SERVICE_UNAVAILABLE: '服务暂不可用',
-  INTERNAL_ERROR: '服务内部错误',
+  UNAUTHENTICATED: 'Authentication required',
+  SESSION_EXPIRED: 'Session expired',
+  INVALID_CREDENTIALS: 'Invalid credentials',
+  FORBIDDEN: 'Forbidden',
+  ACCOUNT_DISABLED: 'Account disabled',
+  IDENTITY_UNAVAILABLE: 'Identity unavailable',
+  PASSWORD_CHANGE_REQUIRED: 'Password change required',
+  ACCOUNT_LOCKED: 'Account locked',
+  VALIDATION_ERROR: 'Invalid request',
+  NOT_FOUND: 'Not found',
+  RATE_LIMITED: 'Rate limit exceeded',
+  SERVICE_UNAVAILABLE: 'Service unavailable',
+  INTERNAL_ERROR: 'Internal server error',
 };
 export class ApiFailure extends Error {
   constructor(
@@ -78,7 +120,9 @@ export function sendFailure(
         ? { retryAfterSeconds: failure.retryAfterSeconds ?? 1 }
         : failure.code === 'VALIDATION_ERROR'
           ? {
-              issues: failure.issues ?? [{ path: [], message: '请求格式错误' }],
+              issues: failure.issues ?? [
+                validationIssue([], 'errors:validation.request.invalid'),
+              ],
             }
           : {};
   const body = apiErrorSchema.parse({

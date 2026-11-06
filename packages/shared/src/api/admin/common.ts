@@ -15,15 +15,15 @@ export const adminPageInfoSchema = z.strictObject({
 export const adminTimestampSchema = z.iso.datetime({ offset: true });
 export const adminNonnegativeAmountSchema = moneyAmountSchema.refine(
   (value) => !value.startsWith('-'),
-  { message: '金额不能为负' },
+  { message: 'errors:validation.amount.negative' },
 );
 export const adminNonzeroAmountSchema = moneyAmountSchema.refine(
   (value) => /[1-9]/.test(value),
-  { message: '金额不能为零' },
+  { message: 'errors:validation.amount.zero' },
 );
 export const adminPositiveAmountSchema = adminNonnegativeAmountSchema.refine(
   (value) => /[1-9]/.test(value),
-  { message: '金额必须大于零' },
+  { message: 'errors:validation.amount.positive' },
 );
 export const DEFAULT_ADMIN_AMOUNT_MAX_INTEGER_DIGITS = 10;
 export const DEFAULT_ADMIN_TOPUP_DECIMAL_PLACES = 2;
@@ -35,29 +35,29 @@ export function createAdminInputAmountSchemas(
 ) {
   const digits = z.number().int().min(1).max(128).parse(maxIntegerDigits);
   const bounded = (decimalPlaces: number) =>
-    moneyAmountSchema.refine(
-      (value) => {
-        const [integer = '', fraction = ''] = value
-          .replace(/^-/, '')
-          .split('.');
-        return integer.length <= digits && fraction.length <= decimalPlaces;
-      },
-      { message: `金额最多 ${digits} 位整数，且最多 ${decimalPlaces} 位小数` },
-    );
+    moneyAmountSchema.superRefine((value, context) => {
+      const [integer = '', fraction = ''] = value.replace(/^-/, '').split('.');
+      if (integer.length > digits || fraction.length > decimalPlaces)
+        context.addIssue({
+          code: 'custom',
+          message: 'errors:validation.amount.precision',
+          params: { digits, decimalPlaces },
+        });
+    });
   return {
     positive: bounded(DEFAULT_ADMIN_TOPUP_DECIMAL_PLACES).refine(
       (value) => !value.startsWith('-') && /[1-9]/.test(value),
       {
-        message: '金额必须大于零',
+        message: 'errors:validation.amount.positive',
       },
     ),
     adjustment: bounded(DEFAULT_ADMIN_ADJUSTMENT_DECIMAL_PLACES).refine(
       (value) => /[1-9]/.test(value),
-      { message: '金额不能为零' },
+      { message: 'errors:validation.amount.zero' },
     ),
     settings: bounded(DEFAULT_ADMIN_SETTINGS_DECIMAL_PLACES).refine(
       (value) => !value.startsWith('-'),
-      { message: '金额不能为负' },
+      { message: 'errors:validation.amount.negative' },
     ),
   };
 }

@@ -127,7 +127,7 @@ export const adminAuditLogsQuerySchema = adminPageQuerySchema
       context.addIssue({
         code: 'custom',
         path: ['to'],
-        message: '结束日期不能早于开始日期',
+        message: 'errors:validation.date.endBeforeStart',
       });
   });
 export type AdminAuditLogsQuery = z.infer<typeof adminAuditLogsQuerySchema>;

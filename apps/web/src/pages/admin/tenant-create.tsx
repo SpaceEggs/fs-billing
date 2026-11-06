@@ -41,7 +41,7 @@ import {
   useCredentialMutation,
 } from '../../lib/admin-api';
 import { ApiRequestError } from '../../lib/api';
-import { apiProblem, problemNotice } from '../../lib/api-problem';
+import { apiProblem, csvRowText, problemNotice } from '../../lib/api-problem';
 import {
   buildSubmission,
   changeCurrency,
@@ -253,8 +253,8 @@ function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
       </span>
       <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-y-auto p-0 tabular-nums">
         {rows.map((row) => (
-          <li key={`${row.line}-${row.reason}`}>
-            第 {row.line} 行：{row.reason}
+          <li key={`${row.line}-${row.key}`}>
+            第 {row.line} 行：{csvRowText(row)}
           </li>
         ))}
       </ul>

@@ -6,6 +6,7 @@ import {
   dayRangeFields,
 } from '@fs-billing/shared';
 import type { DayRange } from './day-range';
+import { issueText } from './api-problem';
 
 /**
  * 话单筛选的地址状态，门户页和后台租户详情的话单标签页共用：
@@ -84,7 +85,9 @@ export function calleeProblem(callee: string | undefined) {
   const parsed = calleeSearchSchema.safeParse(callee);
   return parsed.success
     ? null
-    : (parsed.error.issues[0]?.message ?? '被叫号码格式不正确');
+    : parsed.error.issues[0]
+      ? issueText(parsed.error.issues[0])
+      : '被叫号码格式不正确';
 }
 
 /** 列表、国家选项与导出共用的筛选查询；页码由调用方另加。 */

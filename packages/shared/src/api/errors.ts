@@ -12,6 +12,10 @@ const retryFields = {
 };
 export const validationIssueSchema = z.strictObject({
   path: z.array(z.union([z.string(), z.number()])),
+  /** 文案目录键，如 `errors:validation.amount.negative`；旧响应可以没有，I9 起必填。 */
+  key: z.string().min(1).optional(),
+  /** 目录文案的插值参数。 */
+  params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
   message: z.string().min(1),
 });
 export type ValidationIssue = z.infer<typeof validationIssueSchema>;

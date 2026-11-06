@@ -162,11 +162,11 @@ export const adminTenantCopyConsistencySchema =
         copy.sourceVersion.id === copy.sourceVersionId &&
         copy.sourceVersion.tenantId === copy.sourceTenantId,
       {
-        message: '来源版本必须属于来源租户',
+        message: 'errors:validation.tenant.copySourceVersion',
         path: ['sourceVersionId'],
       },
     )
     .refine((copy) => copy.sourceVersion.currency === copy.targetCurrency, {
-      message: '来源与目标币种必须一致',
+      message: 'errors:validation.tenant.copyCurrency',
       path: ['targetCurrency'],
     });
