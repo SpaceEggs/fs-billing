@@ -12,7 +12,6 @@ import { useRouter } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   beijingDateOf,
-  formatMergedChargeNote,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
   portalLedgerKindSchema,
@@ -47,7 +46,11 @@ import { apiQuery } from '../../lib/admin-api';
 import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
-import { formatDay, formatShortDateTime } from '../../lib/format';
+import {
+  formatDay,
+  formatLedgerChargeNote,
+  formatShortDateTime,
+} from '../../lib/format';
 import { useLocale } from '../../i18n';
 import {
   cdrDayHref,
@@ -105,7 +108,7 @@ export function Note({ row }: { row: PortalLedgerRow }) {
   if (row.kind === 'call_charge')
     return (
       <CdrDayLink day={row.day} partial={row.partial}>
-        {formatMergedChargeNote(row, locale)}
+        {formatLedgerChargeNote(row, locale)}
       </CdrDayLink>
     );
   if (row.noteKey)

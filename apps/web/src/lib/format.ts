@@ -1,9 +1,11 @@
 import Decimal from 'decimal.js';
 import {
   beijingDateTimeParts,
+  formatMergedChargeNote,
   translate,
   type Currency,
   type Locale,
+  type MergedChargeRow,
   type Money,
 } from '@fs-billing/shared';
 import { currentLocale } from '../i18n';
@@ -206,4 +208,12 @@ export function formatBilledMinutes(
   locale: Locale = currentLocale(),
 ) {
   return translate(locale, 'format:billedMinutes', { minutes });
+}
+
+/** 合并扣费备注：日期用页面统一的写法（中文 YYYY-MM-DD，英文 DD MMM YYYY），CSV 仍用原日期。 */
+export function formatLedgerChargeNote(
+  row: Pick<MergedChargeRow, 'day' | 'calls' | 'partial'>,
+  locale: Locale = currentLocale(),
+) {
+  return formatMergedChargeNote(row, locale, formatDay(row.day, locale));
 }

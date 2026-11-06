@@ -27,14 +27,14 @@ describe('statement helpers in English', () => {
         'final',
         'en',
       ),
-    ).toBe('2026-08-12 (opened) to 2026-08-31');
+    ).toBe('12 Aug 2026 (opened) to 31 Aug 2026');
     expect(
       statementPeriodLabel(
         { from: '2026-09-01', to: '2026-09-29', openedOn: null },
         'in_progress',
         'en',
       ),
-    ).toBe('2026-09-01 to 2026-09-29 (in progress)');
+    ).toBe('01 Sep 2026 to 29 Sep 2026 (in progress)');
   });
 
   it('keeps grouped minute counts the same in both languages', () => {

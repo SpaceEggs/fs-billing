@@ -39,7 +39,7 @@ import { apiQuery } from '../../../lib/admin-api';
 import type { LedgerSearch } from '../../../lib/admin-search';
 import { ledgerKindLabels } from '../../../lib/balance-operation';
 import { rangeOrMonthToDate } from '../../../lib/day-range';
-import { formatDateTime } from '../../../lib/format';
+import { formatDateTime, formatLedgerChargeNote } from '../../../lib/format';
 import { useLocale } from '../../../i18n';
 
 const ledgerPageSize = 25;
@@ -79,7 +79,7 @@ function PaymentStatus({ entry }: { entry: AdminLedgerRow }) {
 function Note({ entry }: { entry: AdminLedgerRow }) {
   const locale = useLocale();
   if (entry.kind === 'call_charge')
-    return <span>{formatMergedChargeNote(entry, locale)}</span>;
+    return <span>{formatLedgerChargeNote(entry, locale)}</span>;
   return (
     <span className="flex items-center gap-2">
       <span className={entry.note ? undefined : 'text-muted-foreground'}>

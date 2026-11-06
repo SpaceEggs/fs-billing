@@ -65,8 +65,17 @@ const ledgerResponse = {
       note: '账户充值',
       noteKey: 'ledger.accountRecharge',
     },
+    {
+      kind: 'call_charge',
+      day: '2026-11-01',
+      calls: 20,
+      amount: '-12.34',
+      balanceAfter: '487.66',
+      occurredAt: '2026-11-01T10:00:00.000Z',
+      partial: false,
+    },
   ],
-  pagination: { page: 1, pageSize: 25, total: 1 },
+  pagination: { page: 1, pageSize: 25, total: 2 },
 };
 
 function renderPage(path: string, routes: Parameters<typeof adminApi>[0]) {
@@ -185,6 +194,9 @@ describe('portal pages (English)', () => {
       screen.getByRole('region', { name: 'Statement summary' }),
     ).toHaveTextContent('Opening balance');
     expect(screen.getByText(/Beijing time \(UTC\+8\)/)).toBeVisible();
+    expect(
+      screen.getByText(/01 Sep 2026 to 29 Sep 2026 \(in progress\)/),
+    ).toBeVisible();
     expect(container).not.toHaveTextContent(HAN);
   });
 
@@ -199,7 +211,10 @@ describe('portal pages (English)', () => {
     expect(
       (await screen.findAllByText('Account recharge')).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText('1 entry')).toBeVisible();
+    expect(screen.getByText('2 entries')).toBeVisible();
+    expect(
+      screen.getAllByText(/01 Nov 2026 Call charges, 20 calls/).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText('23 Sep 10:15').length).toBeGreaterThan(0);
     expect(
       screen.getByRole('button', {

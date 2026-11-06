@@ -6,7 +6,7 @@ import {
   type StatementState,
 } from '@fs-billing/shared';
 import { currentLocale } from '../i18n';
-import { monthName } from './format';
+import { formatDay, monthName } from './format';
 
 /** 页面与组件共用的账单数字（门户与后台的响应都满足这个形状）。 */
 export type StatementFigures = {
@@ -180,5 +180,8 @@ export function statementPeriodLabel(
     : inProgress
       ? 'statement:period.inProgress'
       : 'statement:period.plain';
-  return translate(locale, key, { from: period.from, to: period.to });
+  return translate(locale, key, {
+    from: formatDay(period.from, locale),
+    to: formatDay(period.to, locale),
+  });
 }

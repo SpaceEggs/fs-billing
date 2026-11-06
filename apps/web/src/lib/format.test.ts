@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { formatMergedChargeNote } from '@fs-billing/shared';
 import {
   formatBilledMinutes,
   formatDate,
   formatDateTime,
   formatExactMoney,
+  formatLedgerChargeNote,
   formatMoney,
   formatMonth,
   formatRate,
@@ -125,6 +127,16 @@ describe('English formatting (docs/i18n-design.md §7)', () => {
     );
     expect(formatExactMoney({ currency: 'USD', amount: '-0.0001' })).toBe(
       '-$0.0001',
+    );
+  });
+
+  it('writes the ledger charge note with the app date style', () => {
+    const row = { day: '2026-11-01', calls: 20, partial: false };
+    expect(formatLedgerChargeNote(row, 'en')).toBe(
+      '01 Nov 2026 Call charges, 20 calls',
+    );
+    expect(formatLedgerChargeNote(row, 'zh')).toBe(
+      formatMergedChargeNote(row, 'zh'),
     );
   });
 });
