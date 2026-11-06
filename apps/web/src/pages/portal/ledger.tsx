@@ -9,6 +9,7 @@ import {
 import { useId } from 'react';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import {
   beijingDateOf,
   formatMergedChargeNote,
@@ -19,6 +20,7 @@ import {
   translate,
   type Currency,
   type Identity,
+  type Locale,
   type PortalLedgerRow,
 } from '@fs-billing/shared';
 import { DownloadIcon } from 'lucide-react';
@@ -45,7 +47,7 @@ import { apiQuery } from '../../lib/admin-api';
 import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
-import { formatDateTime } from '../../lib/format';
+import { formatDay, formatShortDateTime } from '../../lib/format';
 import { useLocale } from '../../i18n';
 import {
   cdrDayHref,
@@ -118,17 +120,28 @@ function LedgerTable({
   currency: Currency;
   items: PortalLedgerRow[];
 }) {
+  const { t } = useTranslation(['portal']);
   const locale = useLocale();
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
       <Table>
         <TableHeader>
           <TableRow className="border-t-0 whitespace-nowrap">
-            <TableHead className="w-[180px] px-4">时间</TableHead>
-            <TableHead className="w-[110px]">类型</TableHead>
-            <TableHead className="w-[140px] text-right">金额</TableHead>
-            <TableHead className="w-[150px] text-right">变动后余额</TableHead>
-            <TableHead className="pr-4 pl-8">备注</TableHead>
+            <TableHead className="w-[180px] px-4">
+              {t('portal:ledger.time')}
+            </TableHead>
+            <TableHead className="w-[110px]">
+              {t('portal:ledger.kind')}
+            </TableHead>
+            <TableHead className="w-[140px] text-right">
+              {t('portal:ledger.amount')}
+            </TableHead>
+            <TableHead className="w-[150px] text-right">
+              {t('portal:ledger.balanceAfter')}
+            </TableHead>
+            <TableHead className="pr-4 pl-8">
+              {t('portal:ledger.note')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="tabular-nums">
@@ -168,6 +181,7 @@ function LedgerCards({
   currency: Currency;
   items: PortalLedgerRow[];
 }) {
+  const { t } = useTranslation(['portal']);
   const locale = useLocale();
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
@@ -191,9 +205,10 @@ function LedgerCards({
             <Note row={row} />
           </div>
           <div className="flex justify-between gap-2 text-xs text-muted-foreground">
-            <span>{formatDateTime(row.occurredAt, 'zh').slice(5, 16)}</span>
+            <span>{formatShortDateTime(row.occurredAt, locale, false)}</span>
             <span className="whitespace-nowrap">
-              余额 <Money value={{ currency, amount: row.balanceAfter }} />
+              {t('portal:ledger.balance')}{' '}
+              <Money value={{ currency, amount: row.balanceAfter }} />
             </span>
           </div>
         </li>
@@ -202,11 +217,16 @@ function LedgerCards({
   );
 }
 
-function exportFailure(error: unknown) {
+function exportFailure(error: unknown, locale: Locale) {
   if (error instanceof ApiRequestError && error.status === 0)
-    return '导出中断，请重试';
+    return translate(locale, 'portal:ledger.exportInterrupted');
   const notice = problemNotice(apiProblem(error));
-  return notice.body ? `${notice.title}，${notice.body}` : notice.title;
+  return notice.body
+    ? translate(locale, 'common:error.titleBody', {
+        title: notice.title,
+        body: notice.body,
+      })
+    : notice.title;
 }
 
 /**
@@ -222,10 +242,11 @@ export function PortalLedgerPage({
   search: PortalLedgerSearch;
   onSearch: (patch: PortalLedgerSearch) => void;
 }) {
+  const { t } = useTranslation(['portal', 'common']);
   const kindId = useId();
   const locale = useLocale();
   const kindChoices = [
-    { value: undefined, label: '全部类型' },
+    { value: undefined, label: t('portal:ledger.allKinds') },
     ...portalLedgerKindSchema.options.map((value) => ({
       value,
       label: portalLedgerKindLabel(value, locale),
@@ -250,7 +271,9 @@ export function PortalLedgerPage({
       callDownload('portalLedgerExport', { body: current }),
   });
   const canExport = !rangeIsOverlong && !download.isPending;
-  const exportLabel = download.isPending ? '导出中…' : '导出 CSV';
+  const exportLabel = download.isPending
+    ? t('portal:ledger.exporting')
+    : t('portal:ledger.export');
   const crumb =
     identity.kind === 'customer'
       ? `${identity.tenant.code} · ${identity.tenant.name}`
@@ -263,12 +286,12 @@ export function PortalLedgerPage({
   return (
     <AppShell
       identity={identity}
-      title="余额流水"
+      title={t('portal:ledger.title')}
       crumb={crumb}
-      activeNav="余额流水"
+      activeNav={translate('zh', 'shell:nav.ledger')}
       mobileActions={
         <MobileBarButton
-          aria-label="导出 CSV"
+          aria-label={t('portal:ledger.export')}
           disabled={!canExport}
           onClick={() => download.mutate(filter)}
           className="border-0"
@@ -278,11 +301,11 @@ export function PortalLedgerPage({
       }
     >
       <PageBody
-        title="余额流水"
+        title={t('portal:ledger.title')}
         meta={
           data ? (
             <>
-              当前余额{' '}
+              {t('portal:ledger.currentBalance')}{' '}
               <Money
                 value={{ currency: data.currency, amount: data.balance }}
                 className="font-semibold"
@@ -302,7 +325,7 @@ export function PortalLedgerPage({
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <DateRangeField
-            label="日期范围（北京时间）"
+            label={t('portal:ledger.dateRange')}
             value={range}
             max={beijingDateOf(now)}
             maxRangeEndForStart={latestRangeEnd}
@@ -311,10 +334,14 @@ export function PortalLedgerPage({
           />
           <FilterSheet
             activeCount={kind ? 1 : 0}
-            resultLabel={resultLabel(data?.pagination.total, '条')}
+            resultLabel={resultLabel(
+              data?.pagination.total,
+              t('portal:ledger.unit'),
+              locale,
+            )}
             onClear={() => setFilter({ kind: undefined })}
           >
-            <FilterGroup label="类型">
+            <FilterGroup label={t('portal:ledger.kind')}>
               {(labelId) => (
                 <ChoiceGrid
                   labelledBy={labelId}
@@ -327,7 +354,7 @@ export function PortalLedgerPage({
           </FilterSheet>
           <div className="hidden md:contents">
             <Label htmlFor={kindId} className="sr-only">
-              类型
+              {t('portal:ledger.kind')}
             </Label>
             <NativeSelect
               id={kindId}
@@ -351,7 +378,7 @@ export function PortalLedgerPage({
             </NativeSelect>
             <span className="flex-1" />
             <span className="text-xs text-muted-foreground">
-              通话扣费按天合并，点击可查看当天话单
+              {t('portal:ledger.mergeNote')}
             </span>
           </div>
         </div>
@@ -361,7 +388,9 @@ export function PortalLedgerPage({
             className="flex items-center gap-3 rounded-lg border border-err/30 bg-err/5 px-3.5 py-2.5 text-[13px] text-err"
           >
             <span className="flex-1">
-              导出失败：{exportFailure(download.error)}
+              {t('portal:ledger.exportFailed', {
+                reason: exportFailure(download.error, locale),
+              })}
             </span>
             <Button
               variant="outline"
@@ -369,30 +398,33 @@ export function PortalLedgerPage({
               disabled={!canExport}
               onClick={() => download.mutate(filter)}
             >
-              重试
+              {t('common:action.retry')}
             </Button>
           </div>
         ) : null}
-        <RefreshError
-          title="余额流水刷新失败，列表可能不是最新"
-          query={ledger}
-        />
+        <RefreshError title={t('portal:ledger.refreshFailed')} query={ledger} />
         {rangeIsOverlong ? (
           <div
             role="alert"
             className="rounded-lg border border-err/30 bg-err/5 px-3.5 py-3 text-[13px] text-err"
           >
-            日期范围超出一个月上限：{range.from} 至 {range.to}。结束日期不能晚于{' '}
-            {latestRangeEnd(range.from)}。
+            {t('portal:ledger.rangeTooLong', {
+              from: range.from,
+              to: range.to,
+              limit: latestRangeEnd(range.from),
+            })}
           </div>
         ) : null}
         {data ? (
           <div className="flex justify-between gap-x-5 gap-y-1 text-xs tabular-nums text-muted-foreground md:justify-start md:text-[13px]">
             <span>
-              共 {data.pagination.total} 条
+              {t('portal:ledger.total', {
+                count: data.pagination.total,
+                total: data.pagination.total,
+              })}
               {kind ? (
                 <>
-                  {' · 合计 '}
+                  {t('portal:ledger.filteredTotal')}
                   <Money
                     value={{
                       currency: data.currency,
@@ -405,7 +437,7 @@ export function PortalLedgerPage({
               ) : null}
             </span>
             <span className="md:hidden">
-              当前余额{' '}
+              {t('portal:ledger.currentBalance')}{' '}
               <Money
                 value={{ currency: data.currency, amount: data.balance }}
                 className="font-semibold"
@@ -415,7 +447,7 @@ export function PortalLedgerPage({
         ) : null}
         {rangeIsOverlong ? null : ledger.isError && !data ? (
           <QueryError
-            title="余额流水加载失败"
+            title={t('portal:ledger.loadFailed')}
             error={ledger.error}
             retrying={ledger.isFetching}
             onRetry={() => void ledger.refetch()}
@@ -423,25 +455,37 @@ export function PortalLedgerPage({
         ) : !data ? (
           <Skeleton
             aria-busy
-            aria-label="余额流水加载中"
+            aria-label={t('portal:ledger.loading')}
             className="h-[240px] rounded-xl"
           />
         ) : data.items.length === 0 ? (
           isDefaultView ? (
             <div className="flex flex-col items-center gap-2 rounded-[10px] border border-border px-5 py-14 text-center">
-              <span className="text-[15px] font-semibold">还没有余额流水</span>
+              <span className="text-[15px] font-semibold">
+                {t('portal:ledger.empty.title')}
+              </span>
               <span className="text-[13px] text-muted-foreground">
-                充值到账或产生通话扣费后，每一笔变动都会记录在这里
+                {t('portal:ledger.empty.body')}
               </span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2 rounded-[10px] border border-border px-5 py-14 text-center">
               <span className="text-[15px] font-semibold">
-                没有符合条件的流水
+                {t('portal:ledger.filteredEmpty.title')}
               </span>
               <span className="text-[13px] text-muted-foreground">
-                {range.from} — {range.to.slice(5)}
-                {kind ? ` · 类型：${portalLedgerKindLabel(kind, locale)}` : ''}
+                {t('portal:ledger.filteredEmpty.range', {
+                  from: formatDay(range.from, locale),
+                  to:
+                    locale === 'en'
+                      ? formatDay(range.to, locale)
+                      : range.to.slice(5),
+                })}
+                {kind
+                  ? t('portal:ledger.filteredEmpty.kind', {
+                      kind: portalLedgerKindLabel(kind, locale),
+                    })
+                  : ''}
               </span>
               <Button
                 variant="outline"
@@ -455,7 +499,7 @@ export function PortalLedgerPage({
                   })
                 }
               >
-                清除筛选
+                {t('common:action.clearFilters')}
               </Button>
             </div>
           )
@@ -465,9 +509,11 @@ export function PortalLedgerPage({
             <LedgerCards currency={data.currency} items={data.items} />
             <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-muted-foreground tabular-nums">
               <span>
-                第 {(page - 1) * PORTAL_LEDGER_PAGE_SIZE + 1}–
-                {(page - 1) * PORTAL_LEDGER_PAGE_SIZE + data.items.length}{' '}
-                条，共 {data.pagination.total} 条
+                {t('portal:ledger.range', {
+                  from: (page - 1) * PORTAL_LEDGER_PAGE_SIZE + 1,
+                  to: (page - 1) * PORTAL_LEDGER_PAGE_SIZE + data.items.length,
+                  total: data.pagination.total,
+                })}
               </span>
               <Pagination
                 page={page}

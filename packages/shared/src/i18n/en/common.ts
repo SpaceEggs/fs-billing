@@ -38,6 +38,17 @@ export const common = {
     previous: 'Previous',
     next: 'Next',
   },
+  loading: {
+    page: 'Loading page',
+    label: 'Loading',
+  },
+  notFound: {
+    title: 'Page not found',
+    body: 'This page does not exist or the link has expired. Check the address',
+    backHome: 'Back to home',
+    adminNote: 'Back to home opens Overview',
+    appTitle: 'Page not found',
+  },
   status: {
     normal: 'Normal',
     lowBalance: 'Low balance',

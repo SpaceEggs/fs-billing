@@ -1,9 +1,11 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import {
   beijingDateOf,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
+  translate,
   type Identity,
 } from '@fs-billing/shared';
 import { AppShell, PageBody } from '../../components/app-shell';
@@ -14,6 +16,7 @@ import {
   CdrExportIcon,
   useCdrExport,
 } from '../../components/cdr/cdr-export';
+import { useLocale } from '../../i18n';
 import { apiQuery } from '../../lib/admin-api';
 import { callDownload } from '../../lib/api';
 import {
@@ -29,6 +32,8 @@ import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
  * 刷新与登录过期后保留；列表、汇总、国家选项和导出都只带这些筛选，租户来自会话。
  */
 export function PortalCdrsPage({ identity }: { identity: Identity }) {
+  const { t } = useTranslation(['portal', 'common']);
+  const locale = useLocale();
   const search = useSearch({ from: '/portal/portal/cdrs' });
   const navigate = useNavigate({ from: '/portal/cdrs' });
   const { callee, country, status, direction, page = 1 } = search;
@@ -40,7 +45,11 @@ export function PortalCdrsPage({ identity }: { identity: Identity }) {
     range.to === beijingMonthToDate(now).to;
   const rangeIsOverlong = !isDayRangeWithinOneMonth(range.from, range.to);
   const inputError = rangeIsOverlong
-    ? `日期范围超出一个月上限：${range.from} 至 ${range.to}。结束日期不能晚于 ${latestRangeEnd(range.from)}。`
+    ? t('portal:cdrs.rangeTooLong', {
+        from: range.from,
+        to: range.to,
+        limit: latestRangeEnd(range.from),
+      })
     : calleeProblem(filters.callee);
   const query = cdrListQuery(range, filters);
   const list = useQuery({
@@ -70,13 +79,13 @@ export function PortalCdrsPage({ identity }: { identity: Identity }) {
   return (
     <AppShell
       identity={identity}
-      title="话单"
+      title={t('portal:cdrs.title')}
       crumb={
         identity.kind === 'customer'
           ? `${identity.tenant.code} · ${identity.tenant.name}`
           : ''
       }
-      activeNav="话单"
+      activeNav={translate('zh', 'shell:nav.cdrs')}
       mobileActions={
         <CdrExportIcon
           exporting={exporter.isPending}
@@ -86,10 +95,10 @@ export function PortalCdrsPage({ identity }: { identity: Identity }) {
       }
     >
       <PageBody
-        title="话单"
+        title={t('portal:cdrs.title')}
         actions={
           <CdrExportButton
-            label="导出 CSV（当前筛选）"
+            label={t('portal:cdrs.exportLabel')}
             exporting={exporter.isPending}
             disabled={inputError !== null}
             onExport={exportNow}
@@ -105,6 +114,13 @@ export function PortalCdrsPage({ identity }: { identity: Identity }) {
           list={list}
           countries={countries.data?.countries ?? []}
           inputError={inputError}
+          banner={
+            locale === 'en' ? (
+              <p className="m-0 text-xs text-muted-foreground">
+                {t('portal:cdrs.timezone')}
+              </p>
+            ) : null
+          }
           notices={
             <CdrExportError
               error={exporter.error}
