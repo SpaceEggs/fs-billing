@@ -18,6 +18,7 @@ import {
 } from '../../lib/statement';
 import { formatCount, formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
+import { useLocale } from '../../i18n';
 
 /**
  * 按国家汇总（设计稿 2a、2b，决定 21）：只按国家分组，列头「国家」，按费用从高到低。
@@ -33,6 +34,7 @@ export function StatementCountries({
   countries: readonly StatementCountry[];
   figures: StatementFigures;
 }) {
+  const locale = useLocale();
   const money = (amount: string) => ({ currency, amount });
   const total = sumRows(countries);
   const totalMinutes = formatMinutes(total.minutes);
@@ -131,7 +133,7 @@ export function StatementCountries({
       </ul>
       {unmatched ? (
         <p className="m-0 text-xs text-muted-foreground md:border-t md:border-border md:px-5 md:py-2.5">
-          {unmatchedChargeNote}
+          {unmatchedChargeNote(locale)}
         </p>
       ) : null}
     </section>

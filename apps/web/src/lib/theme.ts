@@ -1,13 +1,20 @@
 import { useSyncExternalStore } from 'react';
+import { translate, type Locale } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 
-export const themeOptions = [
-  { value: 'light', label: '浅色' },
-  { value: 'dark', label: '深色' },
-  { value: 'system', label: '跟随系统' },
-] as const satisfies readonly { value: ThemePreference; label: string }[];
+/** 主题单选的可选项；文案随界面语言（common:theme.*）。 */
+export function themeOptions(
+  locale: Locale = currentLocale(),
+): readonly { value: ThemePreference; label: string }[] {
+  return [
+    { value: 'light', label: translate(locale, 'common:theme.light') },
+    { value: 'dark', label: translate(locale, 'common:theme.dark') },
+    { value: 'system', label: translate(locale, 'common:theme.system') },
+  ];
+}
 
 /** 与 index.html 中的首屏脚本共用同一个键，避免刷新时闪烁。 */
 export const themeStorageKey = 'fs-billing.theme';

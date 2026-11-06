@@ -2,8 +2,11 @@ import {
   dayRangeFields,
   pageNumberSchema,
   portalLedgerKindSchema,
+  translate,
+  type Locale,
   type PortalLedgerKind,
 } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 
 /** 门户流水页的地址状态：北京日范围、类型与页码，刷新与登录过期后保留。 */
 export type PortalLedgerSearch = {
@@ -26,12 +29,19 @@ export function validatePortalLedgerSearch(
   };
 }
 
-export const portalLedgerKindLabels = {
-  recharge: '充值',
-  gift: '赠送',
-  adjustment: '调账',
-  call_charge: '通话扣费',
+const ledgerKindKeys = {
+  recharge: 'recharge',
+  gift: 'gift',
+  adjustment: 'adjustment',
+  call_charge: 'callCharge',
 } as const satisfies Record<PortalLedgerKind, string>;
+
+export function portalLedgerKindLabel(
+  kind: PortalLedgerKind,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, `portal:ledgerKind.${ledgerKindKeys[kind]}`);
+}
 
 export type PortalLedgerFilter = {
   from: string;

@@ -109,7 +109,7 @@ export function AccountMenu({
         </div>
         {logout.isError ? (
           <p role="alert" className="m-0 px-2.5 py-1.5 text-xs text-neg">
-            {logoutFailedMessage}
+            {logoutFailedMessage()}
           </p>
         ) : null}
         {identity.kind === 'customer' ? (
@@ -173,7 +173,7 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
       </div>
       {logout.isError ? (
         <p role="alert" className="m-0 pt-3 text-sm text-neg">
-          {logoutFailedMessage}
+          {logoutFailedMessage()}
         </p>
       ) : null}
       {identity.kind === 'customer' ? (

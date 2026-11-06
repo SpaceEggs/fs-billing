@@ -303,7 +303,7 @@ export function ChangePasswordPage({
           </div>
           {logout.isError ? (
             <p role="alert" className="m-0 text-center text-sm text-neg">
-              {logoutFailedMessage}
+              {logoutFailedMessage()}
             </p>
           ) : null}
         </Card>

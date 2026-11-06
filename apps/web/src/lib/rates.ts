@@ -1,13 +1,14 @@
 import Decimal from 'decimal.js';
 import {
   adminRateAmountSchema,
+  beijingDateOf,
   type AdminRateChange,
   type AdminRateEntry,
   type AdminRateSchedule,
 } from '@fs-billing/shared';
 import { ApiRequestError } from './api';
 import { apiProblem, issueText } from './api-problem';
-import { formatDate, formatDateTime, formatRate } from './format';
+import { formatDateTime, formatRate } from './format';
 
 /** 与服务端预览相同的比较：前缀相同而 ISO、国家、说明或费率（按数值）不同算修改。 */
 export function diffRateTables(
@@ -42,7 +43,7 @@ export function scheduledRowHints(
   current: readonly AdminRateEntry[],
   scheduled: { effectiveFrom: string; entries: readonly AdminRateEntry[] },
 ) {
-  const day = formatDate(scheduled.effectiveFrom).slice(5);
+  const day = beijingDateOf(scheduled.effectiveFrom).slice(5);
   const hints = new Map<string, string>();
   for (const change of diffRateTables(current, scheduled.entries)) {
     if (change.kind === 'modified')

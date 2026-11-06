@@ -85,7 +85,7 @@ export function RecentCalls({
               <span>
                 {countryLabel(call)} · {formatDuration(call.durationSeconds)}
               </span>
-              <span>{formatDateTime(call.answeredAt).slice(5)}</span>
+              <span>{formatDateTime(call.answeredAt, 'zh').slice(5)}</span>
             </div>
           </li>
         ))}

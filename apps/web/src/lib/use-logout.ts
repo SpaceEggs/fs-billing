@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { translate, type Locale } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 import { ApiRequestError, callApi } from './api';
 import { clearBalanceAttempts } from './balance-attempts';
 import {
@@ -10,7 +12,9 @@ import {
 } from './session';
 import { zones, type Zone } from './zone';
 
-export const logoutFailedMessage = '退出失败，请检查网络后重试';
+export function logoutFailedMessage(locale: Locale = currentLocale()) {
+  return translate(locale, 'auth:logout.failed');
+}
 
 /**
  * 服务器确认退出后才清除缓存并回到登录页；会话已失效（401）也视为已退出。

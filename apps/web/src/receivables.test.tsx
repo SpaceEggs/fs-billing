@@ -82,7 +82,7 @@ const confirmed = (ledgerEntryId: string) => ({
     auditId: ids.audit,
     settlementId: ids.newSettlement,
     ledgerEntryId,
-    receivedOn: formatDate(new Date()),
+    receivedOn: formatDate(new Date(), 'zh'),
   },
 });
 
@@ -256,7 +256,7 @@ describe('receivables list', () => {
 });
 
 describe('confirm payment', () => {
-  const today = formatDate(new Date());
+  const today = formatDate(new Date(), 'zh');
 
   it('sends the listed settlement token with the chosen date and note, no amount', async () => {
     const { calls, user } = openReceivables(

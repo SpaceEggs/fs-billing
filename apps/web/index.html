@@ -39,6 +39,8 @@
             : 'zh';
         }
         root.lang = locale === 'zh' ? 'zh-CN' : 'en';
+        // 标题按语言设置；产品名 FS-Billing 两种语言相同，中文保持原值。
+        document.title = locale === 'zh' ? 'FS-Billing' : 'FS-Billing';
         var path = location.pathname;
         root.dataset.product =
           path === '/admin' || path.indexOf('/admin/') === 0

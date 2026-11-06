@@ -76,7 +76,7 @@ export function GenerationNotes({
       ) : null}
       {regenerated ? (
         <span className="text-[11px] text-primary">
-          已重新生成 · 原 {formatDateTime(firstGeneratedAt).slice(5, 16)}
+          已重新生成 · 原 {formatDateTime(firstGeneratedAt, 'zh').slice(5, 16)}
         </span>
       ) : null}
       {detailsDeleted ? (

@@ -11,6 +11,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   adminLedgerKindSchema,
+  beijingDateOf,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
   type AdminLedgerRow,
@@ -38,7 +39,7 @@ import { apiQuery } from '../../../lib/admin-api';
 import type { LedgerSearch } from '../../../lib/admin-search';
 import { ledgerKindLabels } from '../../../lib/balance-operation';
 import { rangeOrMonthToDate } from '../../../lib/day-range';
-import { formatDate, formatDateTime } from '../../../lib/format';
+import { formatDateTime } from '../../../lib/format';
 import { useLocale } from '../../../i18n';
 
 const ledgerPageSize = 25;
@@ -195,7 +196,7 @@ function LedgerCards({
           </div>
           <div className="flex justify-between gap-2 text-xs text-muted-foreground">
             <span className="truncate">
-              {formatDateTime(entry.occurredAt).slice(5, 16)} ·{' '}
+              {formatDateTime(entry.occurredAt, 'zh').slice(5, 16)} ·{' '}
               {entry.kind === 'call_charge'
                 ? formatMergedChargeNote(entry)
                 : entry.note || '—'}
@@ -257,7 +258,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         <DateRangeField
           label="日期范围（北京时间）"
           value={range}
-          max={formatDate(now)}
+          max={beijingDateOf(now)}
           maxRangeEndForStart={latestRangeEnd}
           onChange={(next) => setFilter(next)}
           className="min-w-0 flex-1 md:w-[260px] md:flex-none"

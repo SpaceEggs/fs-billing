@@ -3,9 +3,11 @@ import {
   adminAccountCreateRequestSchema,
   adminPortalAccountCreateRequestSchema,
   newPasswordSchema,
+  translate,
   type AdminAccountCreateRequest,
   type AdminPortalAccountCreateRequest,
 } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 import { ApiRequestError } from './api';
 import { fieldIssues, type ApiProblem } from './api-problem';
 
@@ -14,9 +16,13 @@ export type AccountFieldErrors = Partial<Record<AccountField, string>>;
 
 const emailSchema = z.email();
 
+const t = (key: string, params?: Record<string, unknown>) =>
+  translate(currentLocale(), key, params);
+
 function emailError(email: string) {
-  if (!email) return '请输入登录邮箱';
-  if (!emailSchema.safeParse(email).success) return '邮箱格式不正确';
+  if (!email) return t('errors:form.emailRequired');
+  if (!emailSchema.safeParse(email).success)
+    return t('errors:form.emailInvalid');
   return undefined;
 }
 
@@ -30,15 +36,16 @@ function result<Request>(
   const parsed = schema.safeParse(request);
   return parsed.success
     ? { ok: true, request: parsed.data }
-    : { ok: false, errors: { email: '提交内容有误，请检查后重试' } };
+    : { ok: false, errors: { email: t('errors:form.submitInvalid') } };
 }
 
 export function buildAdminCreate(form: { name: string; email: string }) {
   const name = form.name.trim();
   const email = form.email.trim();
   const errors: AccountFieldErrors = {};
-  if (!name) errors.name = '请输入姓名';
-  else if (name.length > 200) errors.name = '姓名最多 200 个字符';
+  if (!name) errors.name = t('errors:form.nameRequired');
+  else if (name.length > 200)
+    errors.name = t('errors:form.nameTooLong', { max: 200 });
   const emailMessage = emailError(email);
   if (emailMessage) errors.email = emailMessage;
   return result<AdminAccountCreateRequest>(
@@ -61,7 +68,10 @@ export function buildPortalCreate(form: {
     form.initialPassword &&
     !newPasswordSchema.safeParse(form.initialPassword).success
   )
-    errors.initialPassword = '初始密码须为 8 到 128 位';
+    errors.initialPassword = t('errors:form.passwordLength', {
+      min: 8,
+      max: 128,
+    });
   return result<AdminPortalAccountCreateRequest>(
     errors,
     {

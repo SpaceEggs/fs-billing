@@ -50,7 +50,7 @@ export function formatCount(value: number) {
 
 /** 手机卡片的短时间，如 09-29 00:30:00。 */
 export function cdrShortMoment(cdr: PortalCdr) {
-  return formatDateTime(cdrMoment(cdr)).slice(5);
+  return formatDateTime(cdrMoment(cdr), 'zh').slice(5);
 }
 
 export function cdrHangupCause(cdr: PortalCdr) {

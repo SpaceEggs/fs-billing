@@ -4,7 +4,9 @@ import {
   calleeSearchSchema,
   cdrStatusSchema,
   dayRangeFields,
+  translate,
 } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 import type { DayRange } from './day-range';
 import { issueText } from './api-problem';
 
@@ -87,7 +89,7 @@ export function calleeProblem(callee: string | undefined) {
     ? null
     : parsed.error.issues[0]
       ? issueText(parsed.error.issues[0])
-      : '被叫号码格式不正确';
+      : translate(currentLocale(), 'errors:validation.cdr.calleeInvalid');
 }
 
 /** 列表、国家选项与导出共用的筛选查询；页码由调用方另加。 */

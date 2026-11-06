@@ -1,11 +1,12 @@
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
+import { beijingDateOf } from '@fs-billing/shared';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { DailyChart } from '../../../components/daily-spend-chart';
 import { QueryError } from '../../../components/query-error';
 import { apiQuery } from '../../../lib/admin-api';
-import { formatDate, formatMoney, formatTime } from '../../../lib/format';
+import { formatMoney, formatTime } from '../../../lib/format';
 import { cn } from '../../../lib/utils';
 
 const countFormat = new Intl.NumberFormat('en-US');
@@ -84,7 +85,7 @@ export function OverviewTab({ tenantId }: { tenantId: string }) {
         <StatCard
           label="本月消费"
           value={money(data.monthSpend)}
-          sub={`${formatDate(data.asOf).slice(0, 8)}01 至今 · 截至 ${formatTime(data.asOf)}`}
+          sub={`${beijingDateOf(data.asOf).slice(0, 8)}01 至今 · 截至 ${formatTime(data.asOf)}`}
         />
         <StatCard
           label="本月通话"

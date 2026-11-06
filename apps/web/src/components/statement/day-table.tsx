@@ -17,6 +17,7 @@ import {
 } from '../../lib/statement';
 import { formatCount, formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
+import { useLocale } from '../../i18n';
 
 /**
  * 按日汇总（设计稿 2a、2b，决定 23）：区间内每一天一行，没有通话的日子补零；
@@ -35,6 +36,7 @@ export function StatementDays({
   figures: StatementFigures;
   today?: string | undefined;
 }) {
+  const locale = useLocale();
   const money = (amount: string) => ({ currency, amount });
   const total = sumRows(days);
   const totalMinutes = formatMinutes(total.minutes);
@@ -128,7 +130,7 @@ export function StatementDays({
       </div>
       {unmatched ? (
         <p className="m-0 text-xs text-muted-foreground md:border-t md:border-border md:px-5 md:py-2.5">
-          {unmatchedChargeNote}
+          {unmatchedChargeNote(locale)}
         </p>
       ) : null}
     </section>

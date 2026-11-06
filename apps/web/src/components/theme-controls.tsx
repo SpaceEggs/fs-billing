@@ -1,4 +1,5 @@
 import { SunMoonIcon } from 'lucide-react';
+import { useLocale } from '../i18n';
 import {
   setThemePreference,
   themeOptions,
@@ -21,6 +22,8 @@ import { menuContentClass, menuItemClass } from './menu';
  */
 export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
   const preference = useThemePreference();
+  const locale = useLocale();
+  const options = themeOptions(locale);
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
@@ -42,12 +45,12 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
           value={preference}
           onValueChange={(value) =>
             setThemePreference(
-              themeOptions.find((option) => option.value === value)?.value ??
+              options.find((option) => option.value === value)?.value ??
                 'system',
             )
           }
         >
-          {themeOptions.map((option) => (
+          {options.map((option) => (
             <DropdownMenuRadioItem
               key={option.value}
               value={option.value}
@@ -66,10 +69,11 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
 /** 主题单选，用于客户门户账号设置和手机账号菜单。 */
 export function ThemeSegmented({ className }: { className?: string }) {
   const preference = useThemePreference();
+  const locale = useLocale();
   return (
     <OptionTabs
       label="主题"
-      options={themeOptions}
+      options={themeOptions(locale)}
       value={preference}
       onChange={setThemePreference}
       {...(className ? { className } : {})}

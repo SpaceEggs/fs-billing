@@ -1,4 +1,5 @@
 import {
+  beijingDateOf,
   currencySchema,
   type AdminCurrencyTotals,
   type AdminLedgerEntry,
@@ -14,7 +15,6 @@ import { queryOptions } from '@tanstack/react-query';
 import { apiKey, send } from './admin-api';
 import { ApiRequestError } from './api';
 import { apiProblem, fieldIssues } from './api-problem';
-import { formatDate } from './format';
 
 /**
  * 合计卡片：CNY、USD 各自一张，不相加。服务端在币种筛选时把另一币种置为 "0"，
@@ -37,7 +37,7 @@ export type ConfirmPaymentErrors = Partial<
 
 /** 收款日期的可选范围：赊账当天（北京时间）到今天（北京时间）。 */
 export function receivedOnBounds(receivable: AdminReceivable, now: Date) {
-  return { min: formatDate(receivable.createdAt), max: formatDate(now) };
+  return { min: beijingDateOf(receivable.createdAt), max: beijingDateOf(now) };
 }
 
 export function validateConfirmPayment(
@@ -226,8 +226,8 @@ export const adjustmentScanLimit = 1000;
 export function adjustmentsSince(receivable: AdminReceivable) {
   const tenantId = receivable.tenant.id;
   const pageSize = 100;
-  const from = formatDate(receivable.createdAt);
-  const to = formatDate(new Date());
+  const from = beijingDateOf(receivable.createdAt);
+  const to = beijingDateOf(new Date());
   const ranges: { from: string; to: string }[] = [];
   for (let start = from; start <= to;) {
     const rangeEnd = latestRangeEnd(start);
