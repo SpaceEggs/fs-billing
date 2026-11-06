@@ -1,4 +1,6 @@
+import { translate } from '@fs-billing/shared';
 import { Button } from '../components/ui/button';
+import { useLocale } from '../i18n';
 import { loginAlert } from '../lib/login-errors';
 import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import type { Zone } from '../lib/zone';
@@ -11,6 +13,7 @@ export function BlockedPage({
   zone: Zone;
   code: 'ACCOUNT_DISABLED' | 'IDENTITY_UNAVAILABLE';
 }) {
+  const locale = useLocale();
   const logout = useLogout(zone);
   const alert = loginAlert(
     zone,
@@ -32,7 +35,7 @@ export function BlockedPage({
         disabled={logout.isPending}
         onClick={() => logout.mutate()}
       >
-        退出登录
+        {translate(locale, 'common:account.signOut')}
       </Button>
       {logout.isError ? (
         <p role="alert" className="m-0 text-sm text-neg">

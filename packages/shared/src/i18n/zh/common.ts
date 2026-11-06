@@ -38,6 +38,17 @@ export const common = {
     previous: '上一页',
     next: '下一页',
   },
+  loading: {
+    page: '页面加载中',
+    label: '加载中',
+  },
+  notFound: {
+    title: '找不到这个页面',
+    body: '页面不存在或链接已失效，请检查地址是否正确',
+    backHome: '返回首页',
+    adminNote: '返回首页即回到「概览」',
+    appTitle: '找不到页面',
+  },
   status: {
     normal: '正常',
     lowBalance: '余额不足',

@@ -1,9 +1,11 @@
 import Decimal from 'decimal.js';
 import {
   beijingDateTimeParts,
+  formatMergedChargeNote,
   translate,
   type Currency,
   type Locale,
+  type MergedChargeRow,
   type Money,
 } from '@fs-billing/shared';
 import { currentLocale } from '../i18n';
@@ -170,15 +172,20 @@ export function formatDay(value: string, locale: Locale = currentLocale()) {
     : `${p.year}-${p.monthText}-${p.day}`;
 }
 
-/** 手机卡片的短时间：中文 MM-DD HH:mm:ss，英文 DD MMM HH:mm:ss。 */
+/**
+ * 手机卡片的短时间：中文 MM-DD HH:mm:ss，英文 DD MMM HH:mm:ss。
+ * `seconds: false` 去掉秒（门户流水卡片的 MM-DD HH:mm）。
+ */
 export function formatShortDateTime(
   value: string | Date,
   locale: Locale = currentLocale(),
+  seconds = true,
 ) {
   const p = beijingDateTimeParts(value);
+  const time = seconds ? formatTimeParts(p) : `${pad(p.hour)}:${pad(p.minute)}`;
   if (locale === 'en')
-    return `${pad(p.day)} ${monthName(p.month, locale)} ${formatTimeParts(p)}`;
-  return `${pad(p.month)}-${pad(p.day)} ${formatTimeParts(p)}`;
+    return `${pad(p.day)} ${monthName(p.month, locale)} ${time}`;
+  return `${pad(p.month)}-${pad(p.day)} ${time}`;
 }
 
 /** 日期区间：中文与 lib/day-range 的 rangeLabel 逐字一致，英文用月份名。 */
@@ -201,4 +208,12 @@ export function formatBilledMinutes(
   locale: Locale = currentLocale(),
 ) {
   return translate(locale, 'format:billedMinutes', { minutes });
+}
+
+/** 合并扣费备注：日期用页面统一的写法（中文 YYYY-MM-DD，英文 DD MMM YYYY），CSV 仍用原日期。 */
+export function formatLedgerChargeNote(
+  row: Pick<MergedChargeRow, 'day' | 'calls' | 'partial'>,
+  locale: Locale = currentLocale(),
+) {
+  return formatMergedChargeNote(row, locale, formatDay(row.day, locale));
 }

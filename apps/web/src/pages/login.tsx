@@ -3,14 +3,10 @@ import { useEffect, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { CircleAlertIcon, TriangleAlertIcon } from 'lucide-react';
-import type { LoginRequest } from '@fs-billing/shared';
+import { translate, type LoginRequest } from '@fs-billing/shared';
 import { Label } from '../components/ui/label';
-import {
-  AdminPill,
-  BrandRow,
-  LogoMark,
-  productLabel,
-} from '../components/brand';
+import { useLocale } from '../i18n';
+import { AdminPill, BrandRow, LogoMark } from '../components/brand';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -35,18 +31,18 @@ import type { Zone } from '../lib/zone';
 
 const copy = {
   portal: {
-    mobileTitle: '登录客户门户',
-    title: '登录',
-    subtitle: '使用为你开通的登录邮箱和密码',
-    emailPlaceholder: 'name@company.com',
-    forgot: '请联系客服重置密码',
+    mobileTitle: 'auth:login.mobileTitle.portal',
+    title: 'auth:login.title.portal',
+    subtitle: 'auth:login.subtitle.portal',
+    emailPlaceholder: 'auth:login.emailPlaceholder.portal',
+    forgot: 'auth:login.forgotHint.portal',
   },
   admin: {
-    mobileTitle: '登录管理后台',
-    title: '登录管理后台',
-    subtitle: '仅限内部管理员使用',
-    emailPlaceholder: 'name@fs-billing.com',
-    forgot: '请联系其他管理员在「管理员」页面为你重置密码',
+    mobileTitle: 'auth:login.mobileTitle.admin',
+    title: 'auth:login.title.admin',
+    subtitle: 'auth:login.subtitle.admin',
+    emailPlaceholder: 'auth:login.emailPlaceholder.admin',
+    forgot: 'auth:login.forgotHint.admin',
   },
 } as const satisfies Record<Zone, Record<string, string>>;
 
@@ -62,14 +58,17 @@ function useNow(active: boolean) {
 }
 
 function ExpiredBanner() {
+  const locale = useLocale();
   return (
     <Alert
       variant="warning"
       role="status"
       className="shrink-0 rounded-none border-x-0 px-5 sm:h-11 sm:flex-row sm:items-center sm:justify-center sm:gap-2 sm:border-t-0 sm:py-0"
     >
-      <span className="font-semibold">登录已过期，请重新登录</span>
-      <span>登录后将返回之前的页面</span>
+      <span className="font-semibold">
+        {translate(locale, 'auth:login.expired.title')}
+      </span>
+      <span>{translate(locale, 'auth:login.expired.body')}</span>
     </Alert>
   );
 }
@@ -83,6 +82,7 @@ function ForgotLink({
   onClick: () => void;
   className?: string;
 }) {
+  const locale = useLocale();
   return (
     <Button
       variant="link"
@@ -95,12 +95,13 @@ function ForgotLink({
         className,
       )}
     >
-      忘记密码？
+      {translate(locale, 'auth:login.forgot')}
     </Button>
   );
 }
 
 function ForgotHint({ zone, className }: { zone: Zone; className?: string }) {
+  const locale = useLocale();
   return (
     <div
       role="note"
@@ -112,12 +113,13 @@ function ForgotHint({ zone, className }: { zone: Zone; className?: string }) {
         className,
       )}
     >
-      {copy[zone].forgot}
+      {translate(locale, copy[zone].forgot)}
     </div>
   );
 }
 
 export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
+  const locale = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
   const ids = { email: useId(), password: useId() };
@@ -182,10 +184,12 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             )}
           >
             <h1 className="m-0 text-[22px] font-semibold">
-              {copy[zone].mobileTitle}
+              {translate(locale, copy[zone].mobileTitle)}
             </h1>
             {zone === 'admin' ? (
-              <AdminPill>FS-Billing {productLabel.admin}</AdminPill>
+              <AdminPill>
+                FS-Billing {translate(locale, 'shell:product.admin')}
+              </AdminPill>
             ) : (
               <span className="text-[13px] text-muted-foreground">
                 FS-Billing
@@ -205,10 +209,10 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
           >
             <div className="hidden flex-col gap-1.5 sm:flex">
               <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
-                {copy[zone].title}
+                {translate(locale, copy[zone].title)}
               </h1>
               <span className="text-[13px] text-muted-foreground">
-                {copy[zone].subtitle}
+                {translate(locale, copy[zone].subtitle)}
               </span>
             </div>
             {alert ? (
@@ -227,7 +231,9 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
             ) : null}
             <div className="flex flex-col gap-3.5">
               <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
-                <Label htmlFor={ids.email}>登录邮箱</Label>
+                <Label htmlFor={ids.email}>
+                  {translate(locale, 'auth:login.email')}
+                </Label>
                 <Input
                   id={ids.email}
                   type="email"
@@ -235,7 +241,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                   autoComplete="username"
                   required
                   disabled={blocked}
-                  placeholder={copy[zone].emailPlaceholder}
+                  placeholder={translate(locale, copy[zone].emailPlaceholder)}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className={cn('font-normal', fieldClass)}
@@ -243,7 +249,9 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
               </div>
               <div className="flex flex-col gap-1.5 text-sm font-medium sm:text-[13px]">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor={ids.password}>密码</Label>
+                  <Label htmlFor={ids.password}>
+                    {translate(locale, 'auth:login.password')}
+                  </Label>
                   <ForgotLink
                     zone={zone}
                     onClick={() => setForgotOpen((open) => !open)}
@@ -265,7 +273,10 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                     autoComplete="current-password"
                     required
                     disabled={blocked}
-                    placeholder="请输入密码"
+                    placeholder={translate(
+                      locale,
+                      'auth:login.passwordPlaceholder',
+                    )}
                     aria-invalid={invalid || undefined}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -274,12 +285,20 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
                   <Button
                     variant="ghost"
                     size="inline"
-                    aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                    aria-label={translate(
+                      locale,
+                      showPassword
+                        ? 'auth:login.hidePassword'
+                        : 'auth:login.showPassword',
+                    )}
                     aria-pressed={showPassword}
                     onClick={() => setShowPassword((shown) => !shown)}
                     className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
                   >
-                    {showPassword ? '隐藏' : '显示'}
+                    {translate(
+                      locale,
+                      showPassword ? 'auth:login.hide' : 'auth:login.show',
+                    )}
                   </Button>
                 </div>
                 {forgotOpen ? (
@@ -295,7 +314,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
               size="field"
               disabled={blocked || login.isPending}
             >
-              {alert?.waitLabel ?? '登录'}
+              {alert?.waitLabel ?? translate(locale, 'auth:login.submit')}
             </Button>
             <div className="flex flex-col items-center gap-2 sm:hidden">
               <ForgotLink
@@ -314,7 +333,7 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
         </Card>
         {zone === 'admin' ? (
           <span className="hidden text-xs text-muted-foreground sm:block">
-            客户请使用客户门户登录
+            {translate(locale, 'auth:login.adminFooter')}
           </span>
         ) : null}
       </main>

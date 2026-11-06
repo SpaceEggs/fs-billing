@@ -1,16 +1,18 @@
 import { cn } from '@/lib/utils';
 import { Card as UiCard } from '@/components/ui/card';
-import type { Currency, Identity } from '@fs-billing/shared';
+import { useTranslation } from 'react-i18next';
+import { translate, type Currency, type Identity } from '@fs-billing/shared';
 import { Badge } from '../../components/ui/badge';
 import { AppShell, PageBody } from '../../components/app-shell';
 import { ThemeSegmented } from '../../components/theme-controls';
 import { Button } from '../../components/ui/button';
+import { useLocale } from '../../i18n';
 import { logoutFailedMessage, useLogout } from '../../lib/use-logout';
 import { ChangePasswordForm } from '../change-password';
 
 const currencyLabel = {
-  CNY: 'CNY 人民币',
-  USD: 'USD 美元',
+  CNY: 'portal:settings.currencyNames.CNY',
+  USD: 'portal:settings.currencyNames.USD',
 } as const satisfies Record<Currency, string>;
 
 function Card({
@@ -47,31 +49,33 @@ function Card({
 
 /** 账号设置（设计稿第三批 2a 至 2e）：只读账号信息、修改密码、主题、退出登录。 */
 export function PortalSettingsPage({ identity }: { identity: Identity }) {
+  const { t } = useTranslation(['portal', 'auth', 'common']);
+  const locale = useLocale();
   const logout = useLogout('portal');
   if (identity.kind !== 'customer') return null;
   const { tenant } = identity;
   return (
     <AppShell
       identity={identity}
-      title="账号设置"
+      title={t('portal:settings.title')}
       crumb={`${tenant.code} · ${tenant.name}`}
-      activeNav="账号设置"
+      activeNav={translate('zh', 'shell:nav.settings')}
     >
-      <PageBody title="账号设置">
+      <PageBody title={t('portal:settings.title')}>
         <div className="flex max-w-[760px] flex-col gap-5">
           <Card
-            title="账号信息"
-            description="以下信息由管理员设置，如需修改请联系客服"
+            title={t('portal:settings.info')}
+            description={t('portal:settings.infoHint')}
           >
             <dl className="m-0 grid grid-cols-[88px_1fr] text-sm md:grid-cols-[120px_1fr]">
               <dt className="border-b border-border py-3 text-muted-foreground">
-                登录邮箱
+                {t('portal:settings.email')}
               </dt>
               <dd className="m-0 border-b border-border py-3 break-all">
                 {identity.email}
               </dd>
               <dt className="border-b border-border py-3 text-muted-foreground">
-                租户
+                {t('portal:settings.tenant')}
               </dt>
               <dd className="m-0 flex flex-wrap items-center gap-2 border-b border-border py-3">
                 {tenant.name}
@@ -82,16 +86,23 @@ export function PortalSettingsPage({ identity }: { identity: Identity }) {
                   {tenant.code}
                 </Badge>
               </dd>
-              <dt className="py-3 text-muted-foreground">币种</dt>
-              <dd className="m-0 py-3">{currencyLabel[tenant.currency]}</dd>
+              <dt className="py-3 text-muted-foreground">
+                {t('portal:settings.currency')}
+              </dt>
+              <dd className="m-0 py-3">
+                {translate(locale, currencyLabel[tenant.currency])}
+              </dd>
             </dl>
           </Card>
-          <Card title="修改密码" description="修改后，其他设备上的登录将失效">
+          <Card
+            title={t('auth:changePassword.title.normal')}
+            description={t('auth:changePassword.description.normal')}
+          >
             <div className="md:w-[360px]">
               <ChangePasswordForm forced={false} />
             </div>
           </Card>
-          <Card title="主题">
+          <Card title={t('portal:settings.theme')}>
             <ThemeSegmented className="self-start" />
           </Card>
           <div className="flex flex-col gap-2 border-t border-border pt-5">
@@ -101,7 +112,7 @@ export function PortalSettingsPage({ identity }: { identity: Identity }) {
               disabled={logout.isPending}
               onClick={() => logout.mutate()}
             >
-              退出登录
+              {t('common:account.signOut')}
             </Button>
             {logout.isError ? (
               <p role="alert" className="m-0 text-sm text-neg">

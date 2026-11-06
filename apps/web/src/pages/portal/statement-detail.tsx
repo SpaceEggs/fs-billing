@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { Identity, PortalStatementResponse } from '@fs-billing/shared';
+import { useTranslation } from 'react-i18next';
+import {
+  translate,
+  type Identity,
+  type PortalStatementResponse,
+} from '@fs-billing/shared';
 import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
 import { AppShell } from '../../components/app-shell';
@@ -11,7 +16,6 @@ import {
   CdrExportButton,
   useCdrExport,
 } from '../../components/cdr/cdr-export';
-import { DateTime } from '../../components/data-format';
 import { QueryError, RefreshError } from '../../components/query-error';
 import { StatementCountries } from '../../components/statement/country-table';
 import { StatementDays } from '../../components/statement/day-table';
@@ -19,8 +23,10 @@ import { StatementEquation } from '../../components/statement/statement-equation
 import { StatementStateTag } from '../../components/statement/state-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { ModalDialog } from '../../components/modal-dialog';
+import { useLocale } from '../../i18n';
 import { apiQuery } from '../../lib/admin-api';
 import { callDownload } from '../../lib/api';
+import { formatDateTime, formatDay } from '../../lib/format';
 import {
   fillDays,
   nextMonthFirstDay,
@@ -30,20 +36,26 @@ import {
 } from '../../lib/statement';
 import { cn } from '../../lib/utils';
 
-const detailsDeletedTitle = '该月话单明细已删除';
-
 function StatementMeta({ statement }: { statement: PortalStatementResponse }) {
+  const { t } = useTranslation(['portal']);
+  const locale = useLocale();
   if (statement.state === 'final' && statement.generatedAt)
     return (
       <>
-        账单生成于 <DateTime value={statement.generatedAt} />
+        {t('portal:statementDetail.generatedAt', {
+          time: formatDateTime(statement.generatedAt, locale),
+        })}
       </>
     );
   if (!statement.asOf) return null;
   return (
     <>
-      数据截至 <DateTime value={statement.asOf} />
-      {statement.state === 'in_progress' ? ' · 实时更新' : ' · 正式账单待生成'}
+      {t('portal:statementDetail.asOf', {
+        time: formatDateTime(statement.asOf, locale),
+      })}
+      {statement.state === 'in_progress'
+        ? t('portal:statementDetail.liveSuffix')
+        : t('portal:statementDetail.pendingSuffix')}
     </>
   );
 }
@@ -54,6 +66,8 @@ function StatementNotices({
 }: {
   statement: PortalStatementResponse;
 }) {
+  const { t } = useTranslation(['portal']);
+  const locale = useLocale();
   return (
     <>
       {statement.detailsDeleted ? (
@@ -67,26 +81,29 @@ function StatementNotices({
           >
             i
           </span>
-          <span className="font-semibold">{detailsDeletedTitle}</span>
+          <span className="font-semibold">
+            {t('portal:statementDetail.detailsDeleted')}
+          </span>
           <span className="text-[13px] text-muted-foreground md:text-sm">
             <span className="md:hidden">
-              账单汇总不受影响，但无法再导出话单明细。
+              {t('portal:statementDetail.detailsDeletedBodyMobile')}
             </span>
             <span className="hidden md:inline">
-              账单汇总不受影响，但无法再导出该月话单明细。
+              {t('portal:statementDetail.detailsDeletedBody')}
             </span>
           </span>
         </div>
       ) : null}
       {statement.state === 'in_progress' ? (
         <p className="m-0 text-[13px] text-muted-foreground">
-          本月尚未结束，以下数据截至今日并实时更新；
-          {nextMonthFirstDay(statement.month)} 凌晨生成正式账单。
+          {t('portal:statementDetail.inProgressNote', {
+            date: formatDay(nextMonthFirstDay(statement.month), locale),
+          })}
         </p>
       ) : null}
       {statement.state === 'pending' ? (
         <p className="m-0 text-[13px] text-muted-foreground">
-          该月已结束，正式账单尚未生成；以下数据为实时计算。
+          {t('portal:statementDetail.pendingNote')}
         </p>
       ) : null}
     </>
@@ -95,17 +112,22 @@ function StatementNotices({
 
 /** 手机顶栏 ⋯：打印（导出按钮在页面底部，稿 2b）。 */
 function MobileMenu() {
+  const { t } = useTranslation(['portal']);
   const [open, setOpen] = useState(false);
   return (
     <>
       <MobileBarButton
-        aria-label="更多操作"
+        aria-label={t('portal:statementDetail.moreActions')}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
         <EllipsisIcon aria-hidden />
       </MobileBarButton>
-      <ModalDialog open={open} onOpenChange={setOpen} title="更多操作">
+      <ModalDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('portal:statementDetail.moreActions')}
+      >
         <Button
           variant="ghost"
           className="h-12 justify-start px-0 text-base font-normal"
@@ -115,7 +137,7 @@ function MobileMenu() {
             setTimeout(() => window.print(), 0);
           }}
         >
-          打印
+          {t('portal:statementDetail.print')}
         </Button>
       </ModalDialog>
     </>
@@ -131,6 +153,8 @@ function StatementDetailContent({
   tenant: { code: string; name: string };
   refreshError: React.ReactNode;
 }) {
+  const { t } = useTranslation(['portal']);
+  const locale = useLocale();
   const { month, currency, figures } = statement;
   const params = { month };
   const summary = useCdrExport(
@@ -151,7 +175,7 @@ function StatementDetailContent({
   const today =
     statement.state === 'in_progress' ? statement.period.to : undefined;
   const days = fillDays(statement.period, statement.days);
-  const title = statementMonthTitle(month);
+  const title = statementMonthTitle(month, locale);
   return (
     <div className="flex flex-col gap-4 p-4 md:gap-6 md:p-7">
       <div className="flex flex-col gap-1.5 md:gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -170,11 +194,16 @@ function StatementDetailContent({
             <span className="text-foreground">{tenant.name}</span>
             <span className="hidden font-mono md:inline">{tenant.code}</span>
             <span>
-              <span className="hidden md:inline">币种 </span>
+              <span className="hidden md:inline">
+                {t('portal:statementDetail.currency')}{' '}
+              </span>
               {currency}
             </span>
             <span className="hidden md:inline">
-              {statementPeriodLabel(statement.period, statement.state)}
+              {statementPeriodLabel(statement.period, statement.state, locale)}
+              {locale === 'en'
+                ? ` · ${t('portal:statementDetail.timezone')}`
+                : null}
             </span>
           </div>
           <StatementStateTag
@@ -188,25 +217,25 @@ function StatementDetailContent({
         <div className="hidden flex-col gap-2 md:flex xl:items-end">
           <div className="flex flex-wrap gap-2 print:hidden">
             <CdrExportButton
-              label="导出 CSV（汇总）"
+              label={t('portal:statementDetail.exportSummary')}
               exporting={summary.isPending}
               disabled={details.isPending}
               onExport={() => summary.mutate()}
             />
             <span
               {...(statement.detailsDeleted
-                ? { title: detailsDeletedTitle }
+                ? { title: t('portal:statementDetail.detailsDeleted') }
                 : {})}
             >
               <CdrExportButton
-                label="导出 CSV（该月话单明细）"
+                label={t('portal:statementDetail.exportDetails')}
                 exporting={details.isPending}
                 disabled={statement.detailsDeleted || summary.isPending}
                 onExport={() => details.mutate()}
               />
             </span>
             <Button variant="outline" onClick={() => window.print()}>
-              打印
+              {t('portal:statementDetail.print')}
             </Button>
           </div>
           <span className="text-xs text-muted-foreground">
@@ -246,7 +275,9 @@ function StatementDetailContent({
           disabled={summary.isPending || details.isPending}
           onClick={() => summary.mutate()}
         >
-          {summary.isPending ? '正在导出…' : '导出 CSV（汇总）'}
+          {summary.isPending
+            ? t('portal:statementDetail.exporting')
+            : t('portal:statementDetail.exportSummary')}
         </Button>
         <Button
           variant="outline"
@@ -256,11 +287,13 @@ function StatementDetailContent({
           }
           onClick={() => details.mutate()}
         >
-          {details.isPending ? '正在导出…' : '导出 CSV（该月话单明细）'}
+          {details.isPending
+            ? t('portal:statementDetail.exporting')
+            : t('portal:statementDetail.exportDetails')}
         </Button>
         {statement.detailsDeleted ? (
           <span className="text-center text-xs text-muted-foreground">
-            {detailsDeletedTitle}
+            {t('portal:statementDetail.detailsDeleted')}
           </span>
         ) : null}
       </div>
@@ -279,11 +312,13 @@ export function PortalStatementDetailPage({
   identity: Identity;
   month: string;
 }) {
+  const { t } = useTranslation(['portal']);
+  const locale = useLocale();
   const statement = useQuery(
     apiQuery('portalStatement', { params: { month } }),
   );
   const data = statement.data;
-  const title = statementMonthTitle(month);
+  const title = statementMonthTitle(month, locale);
   const tenant = identity.kind === 'customer' ? identity.tenant : null;
   return (
     <AppShell
@@ -295,16 +330,19 @@ export function PortalStatementDetailPage({
             to="/portal/statements"
             className="underline underline-offset-[3px]"
           >
-            月账单
+            {t('portal:statements.title')}
           </Link>{' '}
           / {title}
         </>
       }
-      activeNav="月账单"
+      activeNav={translate('zh', 'shell:nav.statements')}
       centerTitle
       mobileNav={
         <MobileBarButton asChild>
-          <Link to="/portal/statements" aria-label="返回月账单">
+          <Link
+            to="/portal/statements"
+            aria-label={t('portal:statementDetail.back')}
+          >
             <ChevronLeftIcon aria-hidden />
           </Link>
         </MobileBarButton>
@@ -317,7 +355,7 @@ export function PortalStatementDetailPage({
           tenant={tenant}
           refreshError={
             <RefreshError
-              title="月账单刷新失败，数据可能不是最新"
+              title={t('portal:statements.refreshFailed')}
               query={statement}
             />
           }
@@ -326,7 +364,7 @@ export function PortalStatementDetailPage({
         <div className="flex flex-col gap-4 p-4 md:p-7">
           <h1 className="m-0 text-2xl font-semibold max-md:sr-only">{title}</h1>
           <QueryError
-            title="月账单加载失败"
+            title={t('portal:statements.loadFailed')}
             error={statement.error}
             retrying={statement.isFetching}
             onRetry={() => void statement.refetch()}
@@ -335,14 +373,14 @@ export function PortalStatementDetailPage({
             to="/portal/statements"
             className={cn(buttonVariants({ variant: 'outline' }), 'self-start')}
           >
-            返回月账单
+            {t('portal:statementDetail.back')}
           </Link>
         </div>
       ) : (
         <div className="p-4 md:p-7">
           <Skeleton
             aria-busy
-            aria-label="月账单加载中"
+            aria-label={t('portal:statements.loading')}
             className="h-[320px] rounded-xl"
           />
         </div>

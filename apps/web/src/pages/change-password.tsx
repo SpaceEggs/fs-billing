@@ -7,8 +7,10 @@ import {
   CircleCheckIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
+import { translate, type Locale } from '@fs-billing/shared';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { currentLocale, useLocale } from '../i18n';
 import { BrandRow } from '../components/brand';
 import { SessionExpiredDialog } from '../components/session-expired-dialog';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
@@ -33,25 +35,48 @@ type Problem =
   | { kind: 'unavailable' };
 
 /** 本地先检查长度与两次输入一致，再由服务端核对当前密码。 */
-export function checkNewPassword(values: Record<Field, string>) {
+export function checkNewPassword(
+  values: Record<Field, string>,
+  locale: Locale = currentLocale(),
+) {
   const errors: Partial<Record<Field, string>> = {};
-  if (!values.current) errors.current = '请输入当前密码';
-  if (values.next.length < 8) errors.next = '新密码至少 8 位';
-  else if (values.next.length > 128) errors.next = '新密码最多 128 位';
+  const text = (key: string) => translate(locale, key);
+  if (!values.current)
+    errors.current = text('auth:changePassword.validation.currentRequired');
+  if (values.next.length < 8)
+    errors.next = text('auth:changePassword.validation.tooShort');
+  else if (values.next.length > 128)
+    errors.next = text('auth:changePassword.validation.tooLong');
   if (!errors.next && values.confirm !== values.next)
-    errors.confirm = '两次输入的新密码不一致';
+    errors.confirm = text('auth:changePassword.validation.mismatch');
   return errors;
 }
 
-function serverProblem(error: unknown): Problem | null {
+function serverProblem(
+  error: unknown,
+  locale: Locale = currentLocale(),
+): Problem | null {
   if (!(error instanceof ApiRequestError) || !error.body)
     return { kind: 'unavailable' };
   const detail = error.body.error;
   switch (detail.code) {
     case 'INVALID_CREDENTIALS':
-      return { kind: 'fields', errors: { current: '当前密码不正确' } };
+      return {
+        kind: 'fields',
+        errors: {
+          current: translate(
+            locale,
+            'auth:changePassword.validation.wrongCurrent',
+          ),
+        },
+      };
     case 'VALIDATION_ERROR':
-      return { kind: 'fields', errors: { next: '新密码至少 8 位' } };
+      return {
+        kind: 'fields',
+        errors: {
+          next: translate(locale, 'auth:changePassword.validation.tooShort'),
+        },
+      };
     case 'ACCOUNT_LOCKED':
     case 'RATE_LIMITED':
       return { kind: 'wait', seconds: detail.retryAfterSeconds };
@@ -81,6 +106,7 @@ function PasswordInput({
   autoComplete: string;
   onChange: (value: string) => void;
 }) {
+  const locale = useLocale();
   const [shown, setShown] = useState(false);
   const message = error ?? hint;
   return (
@@ -106,12 +132,21 @@ function PasswordInput({
         <Button
           variant="ghost"
           size="inline"
-          aria-label={shown ? `隐藏${label}` : `显示${label}`}
+          aria-label={translate(
+            locale,
+            shown
+              ? 'auth:changePassword.hideLabel'
+              : 'auth:changePassword.showLabel',
+            { label },
+          )}
           aria-pressed={shown}
           onClick={() => setShown((value) => !value)}
           className="h-11 w-14 shrink-0 text-[13px] text-muted-foreground hover:bg-transparent sm:h-8 sm:w-auto sm:rounded-md sm:px-2.5 sm:text-xs"
         >
-          {shown ? '隐藏' : '显示'}
+          {translate(
+            locale,
+            shown ? 'auth:changePassword.hide' : 'auth:changePassword.show',
+          )}
         </Button>
       </div>
       {message ? (
@@ -134,6 +169,7 @@ function PasswordInput({
  * `forced` 时成功后回到进入前的页面，否则留在原页并显示成功提示。
  */
 export function ChangePasswordForm({ forced }: { forced: boolean }) {
+  const locale = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
   const ids = { current: useId(), next: useId(), confirm: useId() };
@@ -153,7 +189,7 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
         body: { currentPassword, newPassword },
       });
     } catch (error) {
-      setProblem(serverProblem(error));
+      setProblem(serverProblem(error, locale));
       return;
     }
     if (!session) return;
@@ -176,11 +212,11 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
 
   return (
     <form
-      aria-label="修改密码"
+      aria-label={translate(locale, 'auth:changePassword.formLabel')}
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        const local = checkNewPassword(values);
+        const local = checkNewPassword(values, locale);
         if (Object.keys(local).length) {
           setProblem({ kind: 'fields', errors: local });
           return;
@@ -192,31 +228,47 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
       {changed ? (
         <Alert variant="success">
           <CircleCheckIcon aria-hidden />
-          <AlertTitle>密码已修改</AlertTitle>
-          <AlertDescription>其他设备上的登录将失效</AlertDescription>
+          <AlertTitle>
+            {translate(locale, 'auth:changePassword.success.title')}
+          </AlertTitle>
+          <AlertDescription>
+            {translate(locale, 'auth:changePassword.success.body')}
+          </AlertDescription>
         </Alert>
       ) : null}
       {problem?.kind === 'wait' ? (
         <Alert variant="warning" role="alert">
           <TriangleAlertIcon aria-hidden />
-          <AlertTitle>尝试次数过多，已暂时锁定</AlertTitle>
+          <AlertTitle>
+            {translate(locale, 'auth:changePassword.locked.title')}
+          </AlertTitle>
           <AlertDescription>
-            {`请在 ${formatDuration(problem.seconds)} 后重试`}
+            {translate(locale, 'auth:changePassword.locked.retry', {
+              duration: formatDuration(problem.seconds, locale),
+            })}
           </AlertDescription>
         </Alert>
       ) : null}
       {problem?.kind === 'unavailable' ? (
         <Alert variant="destructive">
           <CircleAlertIcon aria-hidden />
-          <AlertTitle>暂时无法修改密码</AlertTitle>
-          <AlertDescription>服务暂时不可用，请稍后重试</AlertDescription>
+          <AlertTitle>
+            {translate(locale, 'auth:changePassword.unavailable.title')}
+          </AlertTitle>
+          <AlertDescription>
+            {translate(locale, 'auth:changePassword.unavailable.body')}
+          </AlertDescription>
         </Alert>
       ) : null}
       <div className="flex flex-col gap-3.5">
         <PasswordInput
           id={ids.current}
-          label="当前密码"
-          hint={forced ? '管理员提供的临时密码' : undefined}
+          label={translate(locale, 'auth:changePassword.current')}
+          hint={
+            forced
+              ? translate(locale, 'auth:changePassword.currentForcedHint')
+              : undefined
+          }
           error={errors.current}
           value={values.current}
           autoComplete="current-password"
@@ -224,8 +276,8 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
         />
         <PasswordInput
           id={ids.next}
-          label="新密码"
-          hint="至少 8 位"
+          label={translate(locale, 'auth:changePassword.next')}
+          hint={translate(locale, 'auth:changePassword.nextHint')}
           error={errors.next}
           value={values.next}
           autoComplete="new-password"
@@ -233,7 +285,7 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
         />
         <PasswordInput
           id={ids.confirm}
-          label="确认新密码"
+          label={translate(locale, 'auth:changePassword.confirm')}
           error={errors.confirm}
           value={values.confirm}
           autoComplete="new-password"
@@ -246,7 +298,7 @@ export function ChangePasswordForm({ forced }: { forced: boolean }) {
         disabled={change.isPending}
         className={forced ? undefined : 'sm:h-9 sm:self-start'}
       >
-        修改密码
+        {translate(locale, 'auth:changePassword.submit')}
       </Button>
     </form>
   );
@@ -263,6 +315,7 @@ export function ChangePasswordPage({
   zone: Zone;
   forced: boolean;
 }) {
+  const locale = useLocale();
   const logout = useLogout(zone);
   return (
     <div
@@ -276,19 +329,27 @@ export function ChangePasswordPage({
         <Card className="rounded-none border-0 bg-transparent py-0 text-inherit shadow-none flex flex-col gap-5 sm:w-[400px] sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-8 sm:shadow-[0_1px_3px_rgba(0,0,0,.04)]">
           <div className="flex flex-col gap-1.5">
             <h1 className="m-0 text-[22px] font-semibold tracking-[-0.01em]">
-              {forced ? '请修改初始密码' : '修改密码'}
+              {translate(
+                locale,
+                forced
+                  ? 'auth:changePassword.title.forced'
+                  : 'auth:changePassword.title.normal',
+              )}
             </h1>
             <span className="text-[13px] leading-normal text-muted-foreground">
-              {forced
-                ? '首次登录或密码被重置后，需要设置新密码才能继续使用。修改后，其他设备上的登录将失效'
-                : '修改后，其他设备上的登录将失效'}
+              {translate(
+                locale,
+                forced
+                  ? 'auth:changePassword.description.forced'
+                  : 'auth:changePassword.description.normal',
+              )}
             </span>
           </div>
           <ChangePasswordForm forced={forced} />
           <div className="flex items-center justify-center gap-4 text-sm">
             {forced ? null : (
               <Link to={zones[zone].home} className="text-muted-foreground">
-                返回
+                {translate(locale, 'auth:changePassword.back')}
               </Link>
             )}
             <Button
@@ -298,7 +359,7 @@ export function ChangePasswordPage({
               disabled={logout.isPending}
               onClick={() => logout.mutate()}
             >
-              退出登录
+              {translate(locale, 'common:account.signOut')}
             </Button>
           </div>
           {logout.isError ? (

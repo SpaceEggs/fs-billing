@@ -336,6 +336,15 @@ describe('portal ledger rows', () => {
     ).toBe('2026-09-29 Call charges (to date), 1,702 calls');
   });
 
+  it('replaces the day only when a day label is supplied', () => {
+    expect(formatMergedChargeNote(charge, 'en', '28 Sep 2026')).toBe(
+      '28 Sep 2026 Call charges, 356 calls',
+    );
+    expect(formatMergedChargeNote(charge, 'en')).toBe(
+      '2026-09-28 Call charges, 356 calls',
+    );
+  });
+
   it('filters by customer kinds and the same one-month range', () => {
     expect(
       portalLedgerQuerySchema.parse({ ...range, kind: 'recharge' }),

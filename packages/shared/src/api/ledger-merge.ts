@@ -58,6 +58,7 @@ const groupThousands = (value: number) =>
 export function formatMergedChargeNote(
   row: Pick<MergedChargeRow, 'day' | 'calls' | 'partial'>,
   locale: Locale = DEFAULT_LOCALE,
+  dayLabel: string = row.day,
 ): string {
   const label = translate(
     locale,
@@ -72,5 +73,5 @@ export function formatMergedChargeNote(
   const calls = translate(locale, callsKey, {
     count: groupThousands(row.calls),
   });
-  return `${row.day} ${label}${locale === 'zh' ? '，' : ', '}${calls}`;
+  return `${dayLabel} ${label}${locale === 'zh' ? '，' : ', '}${calls}`;
 }

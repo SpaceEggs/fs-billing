@@ -1,9 +1,11 @@
+import type { Locale } from '@fs-billing/shared';
 import { render } from '@testing-library/react';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { vi } from 'vitest';
 import { createQueryClient } from '../query-client';
 import { createAppRouter } from '../router';
+import { renderWithLocale } from './i18n';
 
 type Reply = {
   status: number;
@@ -115,8 +117,8 @@ export function adminApi(
   return { calls, handler };
 }
 
-/** 用内存路由渲染完整应用，fetch 由测试按路径应答。 */
-export function renderApp(path: string, handler: ApiHandler) {
+/** 按路径应答 fetch；页面测试可先在内存路由外自行准备查询客户端。 */
+export function stubFetch(handler: ApiHandler) {
   const fetchMock = vi.fn(async (input: string, init: RequestInit = {}) => {
     const reply = await handler(input, init);
     if (reply.file)
@@ -138,6 +140,12 @@ export function renderApp(path: string, handler: ApiHandler) {
     );
   });
   vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+/** 用内存路由渲染完整应用，fetch 由测试按路径应答。 */
+export function renderApp(path: string, handler: ApiHandler) {
+  const fetchMock = stubFetch(handler);
   const queryClient = createQueryClient();
   const history = createMemoryHistory({ initialEntries: [path] });
   const router = createAppRouter(queryClient, history);
@@ -149,4 +157,25 @@ export function renderApp(path: string, handler: ApiHandler) {
   const location = () =>
     `${router.state.location.pathname}${router.state.location.searchStr}`;
   return { router, fetchMock, location, queryClient };
+}
+
+/** 同 renderApp，但先按指定语言初始化界面（英文渲染测试用）。 */
+export async function renderAppWithLocale(
+  locale: Locale,
+  path: string,
+  handler: ApiHandler,
+) {
+  const fetchMock = stubFetch(handler);
+  const queryClient = createQueryClient();
+  const history = createMemoryHistory({ initialEntries: [path] });
+  const router = createAppRouter(queryClient, history);
+  const result = await renderWithLocale(
+    locale,
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+  const location = () =>
+    `${router.state.location.pathname}${router.state.location.searchStr}`;
+  return { ...result, router, fetchMock, location, queryClient };
 }
