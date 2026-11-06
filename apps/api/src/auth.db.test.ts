@@ -483,6 +483,7 @@ it('denies customers every admin operation and honors real admin profiles over f
       profileId: fixture.admin.profileId,
       name: 'admin',
       email: fixture.admin.email,
+      locale: null,
     },
   });
 });

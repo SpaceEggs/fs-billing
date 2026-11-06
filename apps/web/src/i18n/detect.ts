@@ -18,6 +18,18 @@ export function pickLocale(
   return DEFAULT_LOCALE;
 }
 
+/**
+ * 已登录时的顺序（docs/i18n-design.md §6.2）：账号 locale 非空 → 账号；
+ * 否则 localStorage → 浏览器第一种语言 → 默认值。
+ */
+export function pickAccountLocale(
+  account: string | null | undefined,
+  stored: string | null,
+  languages: readonly string[] | undefined,
+): Locale {
+  return isLocale(account) ? account : pickLocale(stored, languages);
+}
+
 export function readStoredLocale(): Locale | null {
   try {
     const stored = localStorage.getItem(localeStorageKey);

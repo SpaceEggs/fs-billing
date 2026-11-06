@@ -351,6 +351,7 @@ describe('home load errors', () => {
               profileId: customerSession.identity.profileId,
               name: '王敏',
               email: 'wangmin@example.com',
+              locale: 'zh',
             },
             expiresAt: customerSession.expiresAt,
             passwordChangeRequired: false,

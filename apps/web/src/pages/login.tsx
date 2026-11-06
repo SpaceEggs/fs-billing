@@ -24,8 +24,10 @@ import {
 } from '../lib/login-errors';
 import { resolveReturnPath, takeReturnPath } from '../lib/return-to';
 import {
+  resetAccountLocaleSync,
   sessionExpiry,
   sessionQueryKey,
+  syncAccountLocale,
   type SessionState,
 } from '../lib/session';
 import { cn } from '../lib/utils';
@@ -145,6 +147,8 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
       sessionExpiry.clear();
       const state: SessionState = { status: 'active', session };
       queryClient.setQueryData(sessionQueryKey, state);
+      resetAccountLocaleSync();
+      void syncAccountLocale(session);
       router.history.replace(
         resolveReturnPath(takeReturnPath(), session.identity, router),
       );

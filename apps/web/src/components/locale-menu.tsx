@@ -8,6 +8,7 @@ import {
   type Locale,
 } from '@fs-billing/shared';
 import { setLocale } from '../i18n';
+import { saveAccountLocale } from '../lib/session';
 import { cn } from '../lib/utils';
 import { menuContentClass, menuItemClass } from './menu';
 import { Button } from './ui/button';
@@ -23,8 +24,15 @@ import {
  * Top-bar language button (Languages icon): Chinese / English.
  * `mobile` is the borderless 40 px button used in the mobile top bar and account sheet;
  * language names keep their native spelling.
+ * `signedIn` sends the choice to the account; on the login page only localStorage changes.
  */
-export function LocaleMenu({ mobile = false }: { mobile?: boolean }) {
+export function LocaleMenu({
+  mobile = false,
+  signedIn = false,
+}: {
+  mobile?: boolean;
+  signedIn?: boolean;
+}) {
   const { t, i18n } = useTranslation(['common']);
   const current: Locale = isLocale(i18n.resolvedLanguage)
     ? i18n.resolvedLanguage
@@ -49,7 +57,9 @@ export function LocaleMenu({ mobile = false }: { mobile?: boolean }) {
         <DropdownMenuRadioGroup
           value={current}
           onValueChange={(value) => {
-            if (isLocale(value)) setLocale(value);
+            if (!isLocale(value)) return;
+            setLocale(value);
+            if (signedIn) void saveAccountLocale(value);
           }}
         >
           {LOCALES.map((locale) => (

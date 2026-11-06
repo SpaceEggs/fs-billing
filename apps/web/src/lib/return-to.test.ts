@@ -13,6 +13,7 @@ const customer: Identity = {
   kind: 'customer',
   profileId: '00000000-0000-4000-8000-000000000001',
   email: 'abc001@example.com',
+  locale: 'zh',
   tenant: {
     id: '00000000-0000-4000-8000-000000000002',
     code: 'ABC001',
@@ -25,6 +26,7 @@ const admin: Identity = {
   profileId: '00000000-0000-4000-8000-000000000003',
   name: '王敏',
   email: 'wangmin@example.com',
+  locale: 'zh',
 };
 
 const router = createAppRouter(createQueryClient(), createMemoryHistory());

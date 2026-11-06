@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LOCALES } from '../i18n/index.js';
 import { identitySchema } from './identity.js';
 
 export const loginRequestSchema = z.strictObject({
@@ -25,6 +26,12 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>;
 
 export const resetPasswordParamsSchema = z.strictObject({ id: z.uuid() });
 export type ResetPasswordParams = z.infer<typeof resetPasswordParamsSchema>;
+
+/** 只接受语言本身；目标账号永远取自会话身份的 profileId，请求里没有 id。 */
+export const setLocaleRequestSchema = z.strictObject({
+  locale: z.enum(LOCALES),
+});
+export type SetLocaleRequest = z.infer<typeof setLocaleRequestSchema>;
 export const resetPasswordResponseSchema = z.strictObject({
   temporaryPassword: newPasswordSchema,
 });

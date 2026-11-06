@@ -55,6 +55,7 @@ export const admins = pgTable('admins', {
     .notNull()
     .default('active'),
   lastLoginAt: at('last_login_at'),
+  locale: text('locale', { enum: ['zh', 'en'] }),
   createdAt: at('created_at').notNull().defaultNow(),
 });
 
@@ -69,6 +70,7 @@ export const portalAccounts = pgTable('portal_accounts', {
     .notNull()
     .default('active'),
   lastLoginAt: at('last_login_at'),
+  locale: text('locale', { enum: ['zh', 'en'] }),
   createdAt: at('created_at').notNull().defaultNow(),
 });
 
