@@ -47,6 +47,7 @@ test.each([
         profileId,
         name: 'Test admin',
         email: 'admin@example.com',
+        locale: null,
       },
     });
     const app = createApi({

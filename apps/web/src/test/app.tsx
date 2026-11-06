@@ -26,6 +26,7 @@ export const customerSession = {
     kind: 'customer',
     profileId: ids.profile,
     email: 'abc001@example.com',
+    locale: 'zh',
     tenant: {
       id: ids.tenant,
       code: 'ABC001',
@@ -43,6 +44,7 @@ export const adminSession = {
     profileId: '00000000-0000-4000-8000-000000000009',
     name: '王敏',
     email: 'WangMin@example.com',
+    locale: 'zh',
   },
   expiresAt: '2026-10-21T00:00:00.000Z',
   passwordChangeRequired: false,

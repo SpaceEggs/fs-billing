@@ -142,6 +142,7 @@ logout 使用 access=session，只验证有效 Better Auth session，不调用�
 | `session`                    | GET `/api/auth/session`                               | customer、admin            | authenticated | 200，session schema                 |
 | `changePassword`             | POST `/api/auth/change-password`                      | customer、admin            | authenticated | 200，session schema 及新 cookie     |
 | `revokeOtherSessions`        | POST `/api/auth/revoke-other-sessions`                | customer、admin            | authenticated | 204，保留当前会话                   |
+| `setAccountLocale`           | POST `/api/auth/locale`                               | customer、admin            | authenticated | 204，写入会话身份自己的账号语言     |
 | `portalContext`              | GET `/api/portal/context`                             | customer                   | customer      | 200，portal context schema          |
 | `adminContext`               | GET `/api/admin/context`                              | admin                      | admin         | 200，管理员 identity schema         |
 | `resetPortalAccountPassword` | POST `/api/admin/portal-accounts/{id}/reset-password` | admin                      | admin         | 200，临时密码，只响应一次，no-store |

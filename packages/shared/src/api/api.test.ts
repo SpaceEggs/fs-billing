@@ -14,6 +14,7 @@ import {
   portalContextResponseSchema,
   resetPasswordResponseSchema,
   sessionResponseSchema,
+  setLocaleRequestSchema,
 } from '../index.js';
 import type { ApiOperation } from '../index.js';
 
@@ -23,6 +24,7 @@ const customer = {
   kind: 'customer',
   profileId,
   email: 'customer@example.com',
+  locale: 'zh',
   tenant: { id: tenantId, code: 'tenantA', name: '租户 A', currency: 'CNY' },
 };
 const admin = {
@@ -30,6 +32,7 @@ const admin = {
   profileId,
   name: '管理员',
   email: 'admin@example.com',
+  locale: null,
 };
 const errorFields = { message: '请求失败', requestId: 'request-123' };
 const invalidCredentials = {
@@ -56,6 +59,12 @@ describe('browser identity and context', () => {
       identitySchema.safeParse({ ...customer, profileId: 'not-a-uuid' })
         .success,
     ).toBe(false);
+    expect(
+      identitySchema.safeParse({ ...customer, locale: 'ja' }).success,
+    ).toBe(false);
+    expect(
+      identitySchema.parse({ ...customer, locale: null }).locale,
+    ).toBeNull();
   });
 
   it('parses sessions without accepting session tokens or malformed expiry', () => {
@@ -181,6 +190,25 @@ describe('credential request boundaries', () => {
     expect(
       loginRequestSchema.safeParse({ ...login, email: 'invalid' }).success,
     ).toBe(false);
+  });
+
+  it('accepts only the locale and never a target id', () => {
+    expect(setLocaleRequestSchema.parse({ locale: 'en' })).toEqual({
+      locale: 'en',
+    });
+    const invalid = [
+      { locale: 'ja' },
+      { locale: 'EN' },
+      {},
+      { locale: 'en', id: profileId },
+      { locale: 'en', profileId },
+      { locale: 'en', tenantId },
+    ];
+    for (const body of invalid)
+      expect(
+        setLocaleRequestSchema.safeParse(body).success,
+        JSON.stringify(body),
+      ).toBe(false);
   });
 
   it('enforces new-password limits without trimming and uses the same reset policy', () => {
@@ -338,6 +366,7 @@ describe('operation registry', () => {
       'GET /api/auth/session',
       'POST /api/auth/change-password',
       'POST /api/auth/revoke-other-sessions',
+      'POST /api/auth/locale',
       'GET /api/portal/context',
       'GET /api/admin/context',
       'POST /api/admin/portal-accounts/{id}/reset-password',
@@ -368,6 +397,7 @@ describe('operation registry', () => {
       'session',
       'changePassword',
       'revokeOtherSessions',
+      'setAccountLocale',
       'portalContext',
     ]);
     expect(

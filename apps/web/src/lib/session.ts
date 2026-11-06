@@ -1,5 +1,11 @@
 import { useSyncExternalStore } from 'react';
-import type { SessionResponse } from '@fs-billing/shared';
+import type { Locale, SessionResponse } from '@fs-billing/shared';
+import { setLocale } from '../i18n';
+import {
+  browserLanguages,
+  pickAccountLocale,
+  readStoredLocale,
+} from '../i18n/detect';
 import { ApiRequestError, callApi, needsReauthentication } from './api';
 
 export const sessionQueryKey = ['session'] as const;
@@ -39,6 +45,60 @@ export function requiresPasswordChange(error: unknown) {
     error instanceof ApiRequestError &&
     error.code === 'PASSWORD_CHANGE_REQUIRED'
   );
+}
+
+// 账号 locale 为 NULL 时只在登录后写一次；同一会话反复进入受保护页面不再重复请求。
+const localeSynced = new Set<string>();
+// 账号语言只在本次登录后的首次加载采用；之后用户手动切换（即使写入失败）不再被
+// 每次导航的会话刷新覆盖，下次登录或刷新页面再以账号值为准。
+const accountApplied = new Set<string>();
+
+/**
+ * 登录后把语言对齐到账号（docs/i18n-design.md §6.2）：账号有值时以账号为准并写入
+ * localStorage；账号为 NULL 时把当前语言写入账号一次。
+ */
+export async function syncAccountLocale(
+  session: SessionResponse,
+): Promise<void> {
+  const profileId = session.identity.profileId;
+  const account = session.identity.locale;
+  if (account) {
+    if (accountApplied.has(profileId)) return;
+    accountApplied.add(profileId);
+    setLocale(
+      pickAccountLocale(account, readStoredLocale(), browserLanguages()),
+    );
+    return;
+  }
+  const locale = pickAccountLocale(
+    null,
+    readStoredLocale(),
+    browserLanguages(),
+  );
+  setLocale(locale);
+  if (localeSynced.has(profileId)) return;
+  localeSynced.add(profileId);
+  if (!(await saveAccountLocale(locale))) localeSynced.delete(profileId);
+}
+
+/**
+ * 已登录时切换语言：界面和 localStorage 已经先改好。请求失败不回退界面语言，
+ * 也不弹全局错误；下次登录仍以账号值为准。返回是否写入成功。
+ */
+export async function saveAccountLocale(locale: Locale): Promise<boolean> {
+  try {
+    await callApi('setAccountLocale', { body: { locale } });
+    return true;
+  } catch {
+    // 同上：静默失败，保留本次界面选择。
+    return false;
+  }
+}
+
+/** 退出登录或重新登录后，下一次会话重新采用账号语言。 */
+export function resetAccountLocaleSync(): void {
+  localeSynced.clear();
+  accountApplied.clear();
 }
 
 function createFlag() {

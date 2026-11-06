@@ -190,7 +190,7 @@ export function AppShell({
             {crumb}
           </span>
           <div className="flex items-center gap-2">
-            <LocaleMenu />
+            <LocaleMenu signedIn />
             <ThemeMenu />
             <AccountMenu identity={identity} condensedBelowXl={narrowTopbar} />
           </div>

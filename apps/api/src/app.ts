@@ -16,10 +16,12 @@ import {
   createAdminRateRequestSchemas,
   createAdminAmountRequestSchemas,
   portalLedgerQuerySchema,
+  setLocaleRequestSchema,
 } from '@fs-billing/shared';
 import {
   AdminServiceError,
   NotFoundError,
+  setAccountLocale,
   withTenant,
   listPortalLedger,
   connect,
@@ -264,6 +266,17 @@ export function createApi(deps: ApiDependencies) {
     },
     revokeOtherSessions: async (context, _request, reply) => {
       await deps.auth.revokeOtherSessions(sessionContext(context));
+      return reply.code(204).send();
+    },
+    setAccountLocale: async (context, request, reply) => {
+      const current = identityContext(context);
+      const { locale } = setLocaleRequestSchema.parse(request.body);
+      const written = await setAccountLocale(
+        deps.businessDb,
+        current.principal,
+        locale,
+      );
+      if (!written) throw new ApiFailure('IDENTITY_UNAVAILABLE');
       return reply.code(204).send();
     },
     portalLedger: (context, request) => {

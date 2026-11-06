@@ -169,7 +169,7 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
         <span className="text-sm text-muted-foreground">
           {t('common:locale.label')}
         </span>
-        <LocaleMenu mobile />
+        <LocaleMenu mobile signedIn />
       </div>
       {logout.isError ? (
         <p role="alert" className="m-0 pt-3 text-sm text-neg">

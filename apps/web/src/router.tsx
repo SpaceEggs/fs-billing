@@ -38,6 +38,7 @@ import {
   identityBlock,
   passwordGate,
   sessionQueryKey,
+  syncAccountLocale,
   useIdentityBlock,
   usePasswordChangeRequired,
   type SessionState,
@@ -180,6 +181,7 @@ async function requireZone(
   }
   if (state.status === 'active') {
     identityBlock.clear();
+    await syncAccountLocale(state.session);
     const own = zoneOfIdentity(state.session.identity);
     if (own !== zone) throw redirect({ to: zones[own].home });
     passwordGate.set(state.session.passwordChangeRequired);

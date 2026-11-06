@@ -340,10 +340,12 @@ describe('auth catalog and privilege boundary', () => {
     expect(grants.rows.map((r) => `${r.table_name}.${r.column_name}`)).toEqual([
       'admins.auth_user_id',
       'admins.id',
+      'admins.locale',
       'admins.name',
       'admins.status',
       'portal_accounts.auth_user_id',
       'portal_accounts.id',
+      'portal_accounts.locale',
       'portal_accounts.status',
       'portal_accounts.tenant_id',
       'tenants.code',
@@ -666,6 +668,7 @@ describe('identity cardinality before status', () => {
       tenant_name: null,
       tenant_currency: null,
       tenant_status: null,
+      profile_locale: null,
     });
   });
 

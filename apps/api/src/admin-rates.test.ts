@@ -273,6 +273,7 @@ it('an edit schedule that expires after initial validation stays a validation er
           profileId: principal.profileId,
           name: 'Admin',
           email: 'admin@example.com',
+          locale: null,
         },
         session: {
           authUserId: principal.authUserId,

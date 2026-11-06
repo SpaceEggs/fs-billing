@@ -49,7 +49,7 @@ export function initI18n() {
   return i18n;
 }
 
-/** 切换界面语言；登录前只写 localStorage，账号同步属于 I3。 */
+/** 切换界面语言并写入 localStorage；已登录时同步账号由 lib/session 负责。 */
 export function setLocale(locale: Locale): void {
   writeStoredLocale(locale);
   void i18n.changeLanguage(locale);

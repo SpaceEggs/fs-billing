@@ -298,6 +298,7 @@ test.each([
           tenant_name: null,
           tenant_currency: null,
           tenant_status: null,
+          profile_locale: null,
         },
       ],
     });

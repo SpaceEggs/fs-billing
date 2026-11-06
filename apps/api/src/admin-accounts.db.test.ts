@@ -560,6 +560,7 @@ it('blocks business routes until a temporary password is changed', async () => {
       profileId: body.account.id,
       name: 'Temporary',
       email,
+      locale: null,
     },
   });
 });

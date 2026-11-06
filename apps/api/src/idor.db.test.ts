@@ -718,6 +718,69 @@ const cases = {
     ).toBe(200);
     await assertBSession(api, b.cookie, fixture);
   },
+  setAccountLocale: async ({ api, fixture, operation }: CaseContext) => {
+    const a = await login(api, fixture.a);
+    const b = await login(api, fixture.b);
+    const read = async () =>
+      (
+        await connections.owner.pool.query<{
+          id: string;
+          locale: string | null;
+        }>(
+          'select id, locale from public.portal_accounts where id = any($1::uuid[])',
+          [[fixture.a.profileId, fixture.b.profileId]],
+        )
+      ).rows;
+    const before = await read();
+    const localeOf = (
+      rows: { id: string; locale: string | null }[],
+      id: string,
+    ) => rows.find((row) => row.id === id)?.locale ?? null;
+    const localeB = localeOf(before, fixture.b.profileId);
+    const target = localeOf(before, fixture.a.profileId) === 'en' ? 'zh' : 'en';
+
+    for (const payload of [
+      { locale: 'en', id: fixture.b.profileId },
+      { locale: 'en', profileId: fixture.b.profileId },
+      { locale: 'en', tenantId: fixture.b.tenantId },
+      { locale: 'ja' },
+    ]) {
+      const attack = await api.inject({
+        method: 'POST',
+        url: operation.path,
+        headers: forgedHeaders(a.cookie, fixture),
+        payload,
+      });
+      expect(attack.statusCode, JSON.stringify(payload)).toBe(400);
+    }
+
+    const response = await api.inject({
+      method: 'POST',
+      url: operation.path,
+      headers: forgedHeaders(a.cookie, fixture),
+      payload: { locale: target },
+    });
+    expect(response.statusCode, response.body).toBe(204);
+    const after = await read();
+    expect(localeOf(after, fixture.a.profileId)).toBe(target);
+    expect(localeOf(after, fixture.b.profileId)).toBe(localeB);
+
+    const session = await api.inject({
+      url: '/api/auth/session',
+      headers: requestHeaders(a.cookie),
+    });
+    expect(sessionResponseSchema.parse(session.json()).identity.locale).toBe(
+      target,
+    );
+
+    const anonymous = await api.inject({
+      method: 'POST',
+      url: operation.path,
+      payload: { locale: 'en' },
+    });
+    expect(anonymous.statusCode).toBe(401);
+    await assertBSession(api, b.cookie, fixture);
+  },
   changePassword: async ({ api, fixture, operation }: CaseContext) => {
     const a = await login(api, fixture.a);
     const b = await login(api, fixture.b);
@@ -786,6 +849,7 @@ const caseKinds = new Map([
   ['session', 'self-session'],
   ['logout', 'self-session-mutation'],
   ['revokeOtherSessions', 'self-session-mutation'],
+  ['setAccountLocale', 'self-session-mutation'],
   ['changePassword', 'self-credential'],
 ]);
 const adminProbeBodies: Partial<Record<string, object>> = {
@@ -1064,39 +1128,41 @@ for (const lane of lanes) {
                 currentPassword: password,
                 newPassword: 'Unauthenticated-password-58',
               }
-            : operation.operationId === 'adminTenantCreate'
-              ? {
-                  code: 'IDORPROBE',
-                  name: 'probe',
-                  currency: 'CNY',
-                  settings: { lowBalanceThreshold: '10' },
-                  initialRates: { kind: 'blank' },
-                }
-              : operation.operationId === 'adminTenantEdit'
+            : operation.operationId === 'setAccountLocale'
+              ? { locale: 'en' }
+              : operation.operationId === 'adminTenantCreate'
                 ? {
+                    code: 'IDORPROBE',
                     name: 'probe',
-                    contactName: '',
-                    contactPhone: '',
-                    remark: '',
+                    currency: 'CNY',
+                    settings: { lowBalanceThreshold: '10' },
+                    initialRates: { kind: 'blank' },
                   }
-                : operation.operationId === 'adminTenantSettings'
+                : operation.operationId === 'adminTenantEdit'
                   ? {
-                      overdraftLimit: '100',
-                      lowBalanceThreshold: '10',
-                      emails: [],
+                      name: 'probe',
+                      contactName: '',
+                      contactPhone: '',
+                      remark: '',
                     }
-                  : operation.operationId === 'adminBalanceOperation'
+                  : operation.operationId === 'adminTenantSettings'
                     ? {
-                        kind: 'topup',
-                        currency: 'CNY',
-                        amount: '1',
-                        idempotencyKey: 'idor-probe',
+                        overdraftLimit: '100',
+                        lowBalanceThreshold: '10',
+                        emails: [],
                       }
-                    : operation.operationId === 'portalCdrsExport' ||
-                        operation.operationId === 'portalLedgerExport' ||
-                        operation.operationId === 'adminTenantCdrsExport'
-                      ? { from: '2026-09-01', to: '2026-09-30' }
-                      : adminProbeBodies[operation.operationId];
+                    : operation.operationId === 'adminBalanceOperation'
+                      ? {
+                          kind: 'topup',
+                          currency: 'CNY',
+                          amount: '1',
+                          idempotencyKey: 'idor-probe',
+                        }
+                      : operation.operationId === 'portalCdrsExport' ||
+                          operation.operationId === 'portalLedgerExport' ||
+                          operation.operationId === 'adminTenantCdrsExport'
+                        ? { from: '2026-09-01', to: '2026-09-30' }
+                        : adminProbeBodies[operation.operationId];
         const missing = await api.inject({
           method,
           url,

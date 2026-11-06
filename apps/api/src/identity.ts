@@ -19,6 +19,7 @@ const rowSchema = z.object({
   tenant_name: z.string().nullable(),
   tenant_currency: z.enum(['CNY', 'USD']).nullable(),
   tenant_status: z.string().nullable(),
+  profile_locale: z.enum(['zh', 'en']).nullable(),
 });
 export async function resolvePrincipal(
   db: Db,
@@ -49,11 +50,13 @@ export async function resolvePrincipal(
           profileId: row.profile_id,
           name: row.profile_name,
           email: session.email,
+          locale: row.profile_locale,
         }
       : {
           kind: 'customer',
           profileId: row.profile_id,
           email: session.email,
+          locale: row.profile_locale,
           tenant: {
             id: row.tenant_id,
             code: row.tenant_code,

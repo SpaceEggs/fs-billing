@@ -6,6 +6,7 @@ import {
   resetPasswordParamsSchema,
   resetPasswordResponseSchema,
   sessionResponseSchema,
+  setLocaleRequestSchema,
 } from './auth.js';
 import {
   adminContextResponseSchema,
@@ -148,6 +149,15 @@ export const apiContract = {
     access: 'authenticated',
     isolationCase: 'self-session-mutation',
     request: noInput,
+    responses: { ...protectedErrors, 204: noContentResponseSchema },
+  },
+  setAccountLocale: {
+    operationId: 'setAccountLocale',
+    method: 'POST',
+    path: '/api/auth/locale',
+    access: 'authenticated',
+    isolationCase: 'self-session-mutation',
+    request: { ...noInput, body: setLocaleRequestSchema },
     responses: { ...protectedErrors, 204: noContentResponseSchema },
   },
   portalContext: {

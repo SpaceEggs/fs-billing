@@ -4,6 +4,7 @@ import {
   htmlLang,
   localeFromLanguage,
   localeStorageKey,
+  pickAccountLocale,
   pickLocale,
   readStoredLocale,
   writeStoredLocale,
@@ -41,6 +42,21 @@ describe('pickLocale', () => {
   it('falls back to Chinese when there is no browser language', () => {
     expect(pickLocale(null, undefined)).toBe('zh');
     expect(pickLocale(null, [])).toBe('zh');
+  });
+});
+
+describe('pickAccountLocale', () => {
+  it('prefers the account locale over localStorage and the browser', () => {
+    expect(pickAccountLocale('en', 'zh', ['zh-CN'])).toBe('en');
+    expect(pickAccountLocale('zh', 'en', ['en-US'])).toBe('zh');
+  });
+
+  it('falls back to localStorage, browser language, then Chinese', () => {
+    expect(pickAccountLocale(null, 'en', ['zh-CN'])).toBe('en');
+    expect(pickAccountLocale(undefined, null, ['zh-HK'])).toBe('zh');
+    expect(pickAccountLocale(null, null, ['ja-JP'])).toBe('en');
+    expect(pickAccountLocale(null, null, undefined)).toBe('zh');
+    expect(pickAccountLocale('ja', null, ['en-US'])).toBe('en');
   });
 });
 

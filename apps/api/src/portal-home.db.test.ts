@@ -132,6 +132,7 @@ describe('GET /api/portal/home', () => {
         kind: 'customer',
         profileId: fixture.a.profileId,
         email: fixture.a.email,
+        locale: null,
         tenant: { id: tenantId, code: 'GONE', name: 'Gone', currency: 'CNY' },
       },
     });
