@@ -8,6 +8,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { useRouter } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import type { Currency } from '@fs-billing/shared';
 import {
   minutesCount,
@@ -15,6 +16,7 @@ import {
   type StatementFigures,
   type StatementState,
 } from '../../lib/statement';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 import { Money } from '../data-format';
 import { StatementStateTag } from './state-tag';
@@ -68,7 +70,7 @@ export function StatementList<Row extends StatementListRow>({
   currency,
   rows,
   hrefFor,
-  actionLabel = '操作',
+  actionLabel,
   renderAction,
   renderMonthNote,
   renderMonthTag,
@@ -90,36 +92,49 @@ export function StatementList<Row extends StatementListRow>({
   /** 通话分钟数列带「分钟」（后台稿 1f）；门户稿的列表不带。 */
   minutesUnit?: boolean;
 }) {
+  const { t } = useTranslation(['statement']);
+  const locale = useLocale();
   const router = useRouter();
   const money = (amount: string) => ({ currency, amount });
+  const action = actionLabel ?? t('statement:list.action');
   return (
     <>
       <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
         <Table className="whitespace-nowrap">
           <TableHeader>
             <TableRow className="border-t-0">
-              <TableHead className="px-4">月份</TableHead>
-              <TableHead className="text-right">期初余额</TableHead>
-              <TableHead className="hidden text-right xl:table-cell">
-                充值
+              <TableHead className="px-4">
+                {t('statement:list.month')}
+              </TableHead>
+              <TableHead className="text-right">
+                {t('statement:list.opening')}
               </TableHead>
               <TableHead className="hidden text-right xl:table-cell">
-                赠送
+                {t('statement:list.recharge')}
               </TableHead>
               <TableHead className="hidden text-right xl:table-cell">
-                调账
+                {t('statement:list.gift')}
               </TableHead>
-              <TableHead className="text-right">通话扣费</TableHead>
-              <TableHead className="text-right">期末余额</TableHead>
               <TableHead className="hidden text-right xl:table-cell">
-                通话分钟数
+                {t('statement:list.adjustment')}
+              </TableHead>
+              <TableHead className="text-right">
+                {t('statement:list.callCharges')}
+              </TableHead>
+              <TableHead className="text-right">
+                {t('statement:list.closing')}
+              </TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
+                {t('statement:list.minutes')}
               </TableHead>
               {renderAction ? (
-                <TableHead className="px-4 text-right">{actionLabel}</TableHead>
+                <TableHead className="px-4 text-right">{action}</TableHead>
               ) : null}
               {hrefFor ? (
                 <TableHead className="font-bold text-center w-10 px-4">
-                  <span className="sr-only">查看详情</span>
+                  <span className="sr-only">
+                    {t('statement:list.viewDetail')}
+                  </span>
                 </TableHead>
               ) : null}
             </TableRow>
@@ -153,11 +168,11 @@ export function StatementList<Row extends StatementListRow>({
                             href={href}
                             className="text-sm font-medium no-underline outline-none focus-visible:underline"
                           >
-                            {statementMonthTitle(row.month)}
+                            {statementMonthTitle(row.month, locale)}
                           </InternalLink>
                         ) : (
                           <span className="text-sm font-medium">
-                            {statementMonthTitle(row.month)}
+                            {statementMonthTitle(row.month, locale)}
                           </span>
                         )}
                         <StatementStateTag state={row.state} />
@@ -189,7 +204,7 @@ export function StatementList<Row extends StatementListRow>({
                   </TableCell>
                   <TableCell className="hidden py-3.5 text-right xl:table-cell">
                     {minutesCount(row.figures.callMinutes)}
-                    {minutesUnit ? '分钟' : ''}
+                    {minutesUnit ? t('statement:list.minutesUnit') : ''}
                   </TableCell>
                   {renderAction ? (
                     <TableCell className="px-4 py-3.5 text-right">
@@ -219,7 +234,7 @@ export function StatementList<Row extends StatementListRow>({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold">
-                    {statementMonthTitle(row.month)}
+                    {statementMonthTitle(row.month, locale)}
                   </span>
                   <StatementStateTag state={row.state} size="sm" />
                 </div>
@@ -232,14 +247,16 @@ export function StatementList<Row extends StatementListRow>({
               {renderMonthNote?.(row, 'card')}
               <div className="grid grid-cols-3 gap-2">
                 <div className="flex flex-col gap-[3px]">
-                  <span className="text-xs text-muted-foreground">期初</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('statement:list.openingShort')}
+                  </span>
                   <span className="text-sm">
                     <Money value={money(row.figures.openingBalance)} />
                   </span>
                 </div>
                 <div className="flex flex-col gap-[3px]">
                   <span className="text-xs text-muted-foreground">
-                    通话扣费
+                    {t('statement:list.callCharges')}
                   </span>
                   <span className="text-sm">
                     <Money
@@ -249,7 +266,9 @@ export function StatementList<Row extends StatementListRow>({
                   </span>
                 </div>
                 <div className="flex flex-col items-end gap-[3px]">
-                  <span className="text-xs text-muted-foreground">期末</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('statement:list.closingShort')}
+                  </span>
                   <span className="text-[15px] font-semibold">
                     <Money value={money(row.figures.closingBalance)} />
                   </span>

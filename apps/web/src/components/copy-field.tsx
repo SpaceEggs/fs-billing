@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -16,9 +17,10 @@ function useCopy(value: string) {
 }
 
 function CopyFailed() {
+  const { t } = useTranslation(['common']);
   return (
     <span role="alert" className="text-xs text-neg">
-      无法访问剪贴板，请手动选中复制
+      {t('copy.failed')}
     </span>
   );
 }
@@ -36,6 +38,7 @@ export function CopyField({
   label: string;
   className?: string;
 }) {
+  const { t } = useTranslation(['common']);
   const { state, copy } = useCopy(value);
   return (
     <div className={cn('flex flex-col gap-1', className)}>
@@ -51,10 +54,10 @@ export function CopyField({
         <Button
           variant="outline"
           className="shrink-0"
-          aria-label={`复制 ${label}`}
+          aria-label={t('copy.copyLabel', { label })}
           onClick={copy}
         >
-          {state === 'copied' ? '已复制 ✓' : '复制'}
+          {state === 'copied' ? t('copy.copied') : t('copy.copy')}
         </Button>
       </div>
       {state === 'failed' ? <CopyFailed /> : null}
@@ -73,6 +76,7 @@ export function SecretField({
   value: string;
   label: string;
 }) {
+  const { t } = useTranslation(['common']);
   const { state, copy } = useCopy(value);
   return (
     <div className="flex flex-col gap-1">
@@ -87,15 +91,17 @@ export function SecretField({
         />
         <Button
           className="max-md:h-11"
-          aria-label={`复制 ${label}`}
+          aria-label={t('copy.copyLabel', { label })}
           onClick={copy}
         >
           {state === 'copied' ? (
-            '已复制 ✓'
+            t('copy.copied')
           ) : (
             <>
-              <span className="md:hidden">复制{label}</span>
-              <span className="hidden md:inline">复制</span>
+              <span className="md:hidden">
+                {t('copy.copySecret', { label })}
+              </span>
+              <span className="hidden md:inline">{t('copy.copy')}</span>
             </>
           )}
         </Button>

@@ -118,15 +118,82 @@ export function formatTime(value: string | Date) {
   return formatTimeParts(beijingDateTimeParts(value));
 }
 
+export function formatYearMonth(
+  year: number,
+  monthNumber: number,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, 'format:yearMonth', {
+    year,
+    month:
+      locale === 'en' ? monthName(monthNumber, locale) : String(monthNumber),
+  });
+}
+
 export function formatMonth(
   value: string | Date,
   locale: Locale = currentLocale(),
 ) {
   const p = beijingDateTimeParts(value);
-  return translate(locale, 'format:yearMonth', {
-    year: p.year,
-    month: locale === 'en' ? monthName(p.month, locale) : String(p.month),
-  });
+  return formatYearMonth(p.year, p.month, locale);
+}
+
+export function formatYear(year: number, locale: Locale = currentLocale()) {
+  return translate(locale, 'format:year', { year });
+}
+
+function dayParts(value: string) {
+  return {
+    year: value.slice(0, 4),
+    month: Number(value.slice(5, 7)),
+    day: value.slice(8, 10),
+    monthText: value.slice(5, 7),
+  };
+}
+
+/** 业务日期的短写：中文 MM-DD，英文 DD MMM（图表的日期标注、手机卡片）。 */
+export function formatMonthDay(
+  value: string,
+  locale: Locale = currentLocale(),
+) {
+  const p = dayParts(value);
+  return locale === 'en'
+    ? `${p.day} ${monthName(p.month, locale)}`
+    : `${p.monthText}-${p.day}`;
+}
+
+/** 业务日期的完整写法：中文 YYYY-MM-DD，英文 DD MMM YYYY。 */
+export function formatDay(value: string, locale: Locale = currentLocale()) {
+  const p = dayParts(value);
+  return locale === 'en'
+    ? `${p.day} ${monthName(p.month, locale)} ${p.year}`
+    : `${p.year}-${p.monthText}-${p.day}`;
+}
+
+/** 手机卡片的短时间：中文 MM-DD HH:mm:ss，英文 DD MMM HH:mm:ss。 */
+export function formatShortDateTime(
+  value: string | Date,
+  locale: Locale = currentLocale(),
+) {
+  const p = beijingDateTimeParts(value);
+  if (locale === 'en')
+    return `${pad(p.day)} ${monthName(p.month, locale)} ${formatTimeParts(p)}`;
+  return `${pad(p.month)}-${pad(p.day)} ${formatTimeParts(p)}`;
+}
+
+/** 日期区间：中文与 lib/day-range 的 rangeLabel 逐字一致，英文用月份名。 */
+export function formatDayRange(
+  range: { from: string; to: string },
+  short = false,
+  locale: Locale = currentLocale(),
+) {
+  const sameYear = range.from.slice(0, 4) === range.to.slice(0, 4);
+  const from = formatDay(range.from, locale);
+  const to =
+    short && sameYear
+      ? formatMonthDay(range.to, locale)
+      : formatDay(range.to, locale);
+  return `${from} — ${to}`;
 }
 
 export function formatBilledMinutes(

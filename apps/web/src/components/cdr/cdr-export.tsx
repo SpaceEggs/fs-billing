@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
+import { translate, type Locale } from '@fs-billing/shared';
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, issueText, problemNotice } from '../../lib/api-problem';
+import { useLocale } from '../../i18n';
 import { CircleAlertIcon, DownloadIcon, EllipsisIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { MobileBarButton } from '../mobile-bar-button';
@@ -45,6 +48,7 @@ export function CdrExportButton({
   onExport: () => void;
   className?: string;
 }) {
+  const { t } = useTranslation(['common', 'cdr']);
   return (
     <Button
       variant="outline"
@@ -53,7 +57,7 @@ export function CdrExportButton({
       {...(title ? { title } : {})}
       className={className}
     >
-      {exporting ? '正在导出…' : label}
+      {exporting ? t('cdr:export.exporting') : label}
     </Button>
   );
 }
@@ -68,9 +72,12 @@ export function CdrExportIcon({
   disabled?: boolean;
   onExport: () => void;
 }) {
+  const { t } = useTranslation(['common', 'cdr']);
   return (
     <MobileBarButton
-      aria-label={exporting ? '正在导出' : '导出 CSV'}
+      aria-label={
+        exporting ? t('cdr:export.exportingShort') : t('cdr:export.csv')
+      }
       disabled={exporting || disabled}
       onClick={onExport}
     >
@@ -89,8 +96,10 @@ export function CdrExportError({
   retrying: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation(['common', 'cdr']);
+  const locale = useLocale();
   if (error === null) return null;
-  const message = exportFailure(error);
+  const message = exportFailure(error, locale);
   if (message === null) return null;
   return (
     <Alert
@@ -109,16 +118,19 @@ export function CdrExportError({
           disabled={retrying}
           onClick={onRetry}
         >
-          重试
+          {t('common:action.retry')}
         </Button>
       </AlertAction>
     </Alert>
   );
 }
 
-function exportFailure(error: unknown) {
+function exportFailure(error: unknown, locale: Locale) {
   if (error instanceof ApiRequestError && error.outcomeUnknown)
-    return { title: '导出中断，请重试', body: undefined };
+    return {
+      title: translate(locale, 'cdr:export.interrupted'),
+      body: undefined,
+    };
   const problem = apiProblem(error);
   if (
     problem.kind === 'reauthenticate' ||
@@ -127,12 +139,17 @@ function exportFailure(error: unknown) {
     return null;
   if (problem.kind === 'validation')
     return {
-      title: '导出失败',
+      title: translate(locale, 'cdr:export.failed'),
       body:
         [...new Set(problem.issues.map((issue) => issueText(issue)))].join(
-          '；',
-        ) || '导出条件有误',
+          translate(locale, 'common:error.listSeparator'),
+        ) || translate(locale, 'cdr:export.invalidConditions'),
     };
   const notice = problemNotice(problem);
-  return { title: `导出失败：${notice.title}`, body: notice.body };
+  return {
+    title: translate(locale, 'cdr:export.failedWithReason', {
+      reason: notice.title,
+    }),
+    body: notice.body,
+  };
 }

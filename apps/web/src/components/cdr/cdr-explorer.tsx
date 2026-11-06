@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { Currency, PortalCdr } from '@fs-billing/shared';
 import { Skeleton } from '../ui/skeleton';
 import type { CdrFilters } from '../../lib/cdr-search';
-import { rangeLabel, type DayRange } from '../../lib/day-range';
+import type { DayRange } from '../../lib/day-range';
+import { formatDayRange } from '../../lib/format';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 import { Pagination } from '../pagination';
 import { QueryError, RefreshError } from '../query-error';
@@ -28,10 +31,11 @@ export type CdrListData<Row extends PortalCdr> = {
 };
 
 function CdrSkeleton() {
+  const { t } = useTranslation(['common', 'cdr']);
   return (
     <div
       aria-busy
-      aria-label="话单加载中"
+      aria-label={t('cdr:list.loading')}
       className="flex flex-col overflow-hidden rounded-xl border border-border"
     >
       {Array.from({ length: 6 }, (_, index) => (
@@ -53,7 +57,7 @@ function Empty({
   filtered,
   title,
   hint,
-  action = '清除筛选',
+  action,
   onClear,
 }: {
   filtered: boolean;
@@ -106,7 +110,7 @@ export function CdrExplorer<Row extends PortalCdr>({
   activeExtraFilters = [],
   rowBadge,
   detailExtra,
-  emptyHint = '可切换日期范围查看其他月份',
+  emptyHint,
   onRange,
   onFilters,
   onPage,
@@ -139,16 +143,29 @@ export function CdrExplorer<Row extends PortalCdr>({
   onFilters: (patch: CdrFilters) => void;
   onPage: (page: number) => void;
 }) {
+  const { t } = useTranslation(['common', 'cdr']);
+  const locale = useLocale();
   const [selected, setSelected] = useState<Row | null>(null);
   const data = inputError === null ? list.data : undefined;
   const status = filters.status ?? 'answered';
   const total = data?.pagination.total;
   const pageSize = data?.pagination.pageSize ?? 50;
   const conditions = [
-    ...(filters.callee ? [`被叫号码「${filters.callee}」`] : []),
-    ...(filters.country ? [`国家：${filters.country}`] : []),
+    ...(filters.callee
+      ? [t('cdr:list.conditionCallee', { callee: filters.callee })]
+      : []),
+    ...(filters.country
+      ? [t('cdr:list.conditionCountry', { country: filters.country })]
+      : []),
     ...(filters.direction
-      ? [`方向：${filters.direction === 'inbound' ? '呼入' : '呼出'}`]
+      ? [
+          t('cdr:list.conditionDirection', {
+            direction:
+              filters.direction === 'inbound'
+                ? t('cdr:direction.inbound')
+                : t('cdr:direction.outbound'),
+          }),
+        ]
       : []),
     ...activeExtraFilters,
   ];
@@ -167,7 +184,9 @@ export function CdrExplorer<Row extends PortalCdr>({
         filters={filters}
         countries={countries}
         resultLabel={
-          total === undefined ? '查看结果' : `查看 ${formatCount(total)} 条结果`
+          total === undefined
+            ? t('cdr:list.result')
+            : t('cdr:list.resultCount', { n: formatCount(total) })
         }
         extra={filterExtra}
         trailing={filterTrailing}
@@ -184,7 +203,7 @@ export function CdrExplorer<Row extends PortalCdr>({
         </div>
       ) : null}
       {inputError === null ? (
-        <RefreshError title="话单刷新失败，列表可能不是最新" query={list} />
+        <RefreshError title={t('cdr:list.refreshFailed')} query={list} />
       ) : null}
       {banner}
       {data ? (
@@ -198,14 +217,14 @@ export function CdrExplorer<Row extends PortalCdr>({
           <CdrSummaryLine
             currency={data.currency}
             status={status}
-            rangeText={rangeLabel(range, true)}
+            rangeText={formatDayRange(range, true, locale)}
             summary={{ total: data.pagination.total, ...data.summary }}
           />
         </>
       ) : null}
       {inputError !== null ? null : list.isError && !data ? (
         <QueryError
-          title="话单加载失败"
+          title={t('cdr:list.loadFailed')}
           error={list.error}
           retrying={list.isFetching}
           onRetry={() => void list.refetch()}
@@ -215,9 +234,12 @@ export function CdrExplorer<Row extends PortalCdr>({
       ) : data.items.length === 0 && data.pagination.total > 0 ? (
         <Empty
           filtered
-          title="这一页没有话单"
-          hint={`共 ${formatCount(data.pagination.total)} 条，每页 ${pageSize} 条`}
-          action="回到第 1 页"
+          title={t('cdr:list.pageEmpty')}
+          hint={t('cdr:list.pageSummary', {
+            total: formatCount(data.pagination.total),
+            size: pageSize,
+          })}
+          action={t('common:action.backToFirstPage')}
           onClear={() => onPage(1)}
         />
       ) : data.items.length === 0 ? (
@@ -225,12 +247,17 @@ export function CdrExplorer<Row extends PortalCdr>({
           filtered={conditions.length > 0}
           title={
             conditions.length > 0
-              ? '没有符合条件的话单'
+              ? t('cdr:list.emptyFiltered')
               : defaultRange
-                ? '本月还没有话单'
-                : '所选日期范围内没有话单'
+                ? t('cdr:list.emptyThisMonth')
+                : t('cdr:list.emptyRange')
           }
-          hint={conditions.length > 0 ? conditions.join(' · ') : emptyHint}
+          hint={
+            conditions.length > 0
+              ? conditions.join(' · ')
+              : (emptyHint ?? t('cdr:list.emptyHint'))
+          }
+          action={t('common:action.clearFilters')}
           onClear={clearFilters}
         />
       ) : (
@@ -255,10 +282,14 @@ export function CdrExplorer<Row extends PortalCdr>({
           <div className="flex items-center justify-between gap-3 text-[13px] text-muted-foreground tabular-nums">
             <span>
               {data.pagination.total <= pageSize
-                ? `共 ${formatCount(data.pagination.total)} 条`
-                : `第 ${formatCount((page - 1) * pageSize + 1)}–${formatCount(
-                    (page - 1) * pageSize + data.items.length,
-                  )} 条，共 ${formatCount(data.pagination.total)} 条`}
+                ? t('cdr:list.total', {
+                    n: formatCount(data.pagination.total),
+                  })
+                : t('cdr:list.range', {
+                    from: formatCount((page - 1) * pageSize + 1),
+                    to: formatCount((page - 1) * pageSize + data.items.length),
+                    total: formatCount(data.pagination.total),
+                  })}
             </span>
             <Pagination
               page={page}

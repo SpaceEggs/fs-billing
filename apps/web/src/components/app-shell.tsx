@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import { translate } from '@fs-billing/shared';
 import {
   BellRingIcon,
   Building2Icon,
@@ -19,11 +21,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Identity } from '@fs-billing/shared';
+import { useLocale } from '../i18n';
 import { apiQuery } from '../lib/admin-api';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity, zones, type Zone } from '../lib/zone';
 import { AccountMenu, MobileAccountMenu } from './account-menu';
-import { productLabel, SidebarBrand } from './brand';
+import { SidebarBrand } from './brand';
 import { LocaleMenu } from './locale-menu';
 import { SessionExpiredDialog } from './session-expired-dialog';
 import { MobileBarButton } from './mobile-bar-button';
@@ -33,27 +36,34 @@ import { SheetPanel } from './sheet-panel';
 /** 后台导航按设计稿顺序；未归属话单带待处理条数角标，系统告警有进行中时显示红点。 */
 const navigation = {
   portal: [
-    { label: '首页', to: zones.portal.home, icon: HouseIcon },
-    { label: '话单', to: '/portal/cdrs', icon: PhoneCallIcon },
-    { label: '月账单', to: '/portal/statements', icon: FileTextIcon },
-    { label: '余额流水', to: '/portal/ledger', icon: WalletIcon },
-    { label: '账号设置', to: '/portal/settings', icon: SettingsIcon },
+    { key: 'home', to: zones.portal.home, icon: HouseIcon },
+    { key: 'cdrs', to: '/portal/cdrs', icon: PhoneCallIcon },
+    { key: 'statements', to: '/portal/statements', icon: FileTextIcon },
+    { key: 'ledger', to: '/portal/ledger', icon: WalletIcon },
+    { key: 'settings', to: '/portal/settings', icon: SettingsIcon },
   ],
   admin: [
-    { label: '概览', to: zones.admin.home, icon: LayoutDashboardIcon },
-    { label: '租户', to: '/admin/tenants', icon: Building2Icon },
-    { label: '待收款', to: '/admin/receivables', icon: HandCoinsIcon },
-    { label: '未归属话单', to: '/admin/unassigned', icon: PhoneMissedIcon },
-    { label: '账单', to: '/admin/statements', icon: ReceiptIcon },
-    { label: '系统告警', to: '/admin/system-alerts', icon: BellRingIcon },
-    { label: '操作日志', to: '/admin/audit-logs', icon: ScrollTextIcon },
-    { label: '管理员', to: '/admin/admins', icon: ShieldUserIcon },
+    { key: 'overview', to: zones.admin.home, icon: LayoutDashboardIcon },
+    { key: 'tenants', to: '/admin/tenants', icon: Building2Icon },
+    { key: 'receivables', to: '/admin/receivables', icon: HandCoinsIcon },
+    { key: 'unassigned', to: '/admin/unassigned', icon: PhoneMissedIcon },
+    { key: 'statementAdmin', to: '/admin/statements', icon: ReceiptIcon },
+    { key: 'alerts', to: '/admin/system-alerts', icon: BellRingIcon },
+    { key: 'audit', to: '/admin/audit-logs', icon: ScrollTextIcon },
+    { key: 'admins', to: '/admin/admins', icon: ShieldUserIcon },
   ],
 } as const satisfies Record<
   Zone,
-  readonly { label: string; to: string; icon: LucideIcon }[]
+  readonly { key: string; to: string; icon: LucideIcon }[]
 >;
-export type NavLabel = (typeof navigation)[Zone][number]['label'];
+
+/**
+ * 页面用中文导航名标记当前项（未迁移的页面仍写中文），所以高亮与界面语言无关；
+ * 显示文字按界面语言从目录取。
+ */
+export type NavLabel = string;
+
+const zhNavLabel = (key: string) => translate('zh', `shell:nav.${key}`);
 
 function NavItems({
   zone,
@@ -66,6 +76,8 @@ function NavItems({
   mobile?: boolean;
   onNavigate?: () => void;
 }) {
+  const { t } = useTranslation(['shell']);
+  const locale = useLocale();
   const pending = useQuery({
     ...apiQuery('adminUnassignedSummary'),
     enabled: zone === 'admin',
@@ -81,11 +93,11 @@ function NavItems({
       : null;
   return (
     <nav
-      aria-label="主导航"
+      aria-label={t('shell:nav.label')}
       className={cn('flex flex-col gap-0.5', mobile ? 'text-base' : 'text-sm')}
     >
       {navigation[zone].map((item) => {
-        const current = item.label === active;
+        const current = zhNavLabel(item.key) === active;
         const Icon = item.icon;
         return (
           <Link
@@ -108,11 +120,11 @@ function NavItems({
               aria-hidden
               className={cn('shrink-0', mobile ? 'size-[18px]' : 'size-4')}
             />
-            {item.label}
+            {translate(locale, `shell:nav.${item.key}`)}
             {item.to === '/admin/system-alerts' &&
             (alerts.data?.open ?? 0) > 0 ? (
               <span
-                aria-label="有进行中的告警"
+                aria-label={t('shell:nav.activeAlerts')}
                 className="ml-auto size-2 rounded-full bg-destructive"
               />
             ) : null}
@@ -165,6 +177,7 @@ export function AppShell({
   centerTitle?: boolean;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation(['shell']);
   const zone = zoneOfIdentity(identity);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // 手机顶栏的 ☰ 上也有红点（运营稿 2a、6e）；与侧边导航共用同一份汇总查询（同一个 queryKey，只请求一次）。
@@ -205,11 +218,14 @@ export function AppShell({
             {mobileNav ?? (
               <SheetPanel
                 side="left"
-                title="导航"
+                title={t('shell:nav.drawer')}
                 open={drawerOpen}
                 onOpenChange={setDrawerOpen}
                 trigger={
-                  <MobileBarButton aria-label="打开导航" className="relative">
+                  <MobileBarButton
+                    aria-label={t('shell:nav.open')}
+                    className="relative"
+                  >
                     <MenuIcon aria-hidden />
                     {zone === 'admin' && (alerts.data?.open ?? 0) > 0 ? (
                       <span
@@ -241,7 +257,7 @@ export function AppShell({
                 {title}
               </span>
               <span className="text-[10px] font-medium text-primary">
-                {productLabel.admin}
+                {t('shell:product.admin')}
               </span>
             </div>
           ) : (

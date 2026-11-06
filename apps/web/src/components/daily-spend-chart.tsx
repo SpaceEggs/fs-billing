@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import Decimal from 'decimal.js';
 import type { Currency } from '@fs-billing/shared';
-import { formatMoney } from '../lib/format';
+import { formatDay, formatMoney, formatMonthDay } from '../lib/format';
+import { useLocale } from '../i18n';
 import { cn } from '../lib/utils';
 
 /** 纵轴三格：每格取 1、2、2.5、4、5 × 10ⁿ 中能容纳峰值的最小值。 */
@@ -49,6 +51,8 @@ export function DailyChart({
   /** `portal` 是客户首页稿（7 个日期、手机柱距 8 px），`admin` 是后台概况稿。 */
   variant?: 'admin' | 'portal';
 }) {
+  const { t } = useTranslation(['common']);
+  const locale = useLocale();
   const [active, setActive] = useState<number | null>(null);
   const list = useRef<HTMLOListElement>(null);
   // 触屏点一根柱子后气泡一直留着，点图表外面收起；鼠标移开与失焦也收起。
@@ -97,7 +101,7 @@ export function DailyChart({
       <div className="relative flex flex-1 flex-col gap-2">
         {top ? null : (
           <span className="absolute inset-x-0 top-[40px] text-center text-[13px] text-muted-foreground md:top-[90px]">
-            最近 30 天没有消费
+            {t('chart.noSpend')}
           </span>
         )}
         <div className="relative">
@@ -105,7 +109,7 @@ export function DailyChart({
             ref={list}
             // 键盘：Tab 进入后用方向键、Home、End 逐根查看，Esc 收起。
             tabIndex={0}
-            aria-label={`最近 ${days.length} 天每日消费`}
+            aria-label={t('chart.label', { n: days.length })}
             onFocus={() => setActive((current) => current ?? days.length - 1)}
             onBlur={() => setActive(null)}
             onKeyDown={move}
@@ -119,7 +123,7 @@ export function DailyChart({
           >
             {days.map((day, index) => {
               const today = index === days.length - 1;
-              const label = `${day.date}${today ? '（今日）' : ''} ${formatMoney({ currency, amount: day.spend })}`;
+              const label = `${formatDay(day.date, locale)}${today ? t('common:chart.todaySuffix') : ''} ${formatMoney({ currency, amount: day.spend })}`;
               return (
                 <li
                   key={day.date}
@@ -159,8 +163,10 @@ export function DailyChart({
               className="pointer-events-none absolute top-0 z-10 flex flex-col gap-0.5 rounded-md bg-foreground px-2.5 py-1.5 text-xs whitespace-nowrap text-background tabular-nums md:-top-1.5"
             >
               <span className="opacity-70">
-                {shown.date}
-                {active === days.length - 1 ? '（今日）' : ''}
+                {formatDay(shown.date, locale)}
+                {active === days.length - 1
+                  ? t('common:chart.todaySuffix')
+                  : ''}
               </span>
               <span className="font-semibold">
                 {formatMoney({ currency, amount: shown.spend })}
@@ -178,7 +184,7 @@ export function DailyChart({
               key={index}
               className={mobile ? undefined : 'hidden md:inline'}
             >
-              {days[index]?.date.slice(5)}
+              {formatMonthDay(days[index]?.date ?? '', locale)}
             </span>
           ))}
         </div>

@@ -1,6 +1,9 @@
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { translate } from '@fs-billing/shared';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { cn } from '../lib/utils';
+import { currentLocale } from '../i18n';
 import { Button } from './ui/button';
 import { SheetPanel } from './sheet-panel';
 
@@ -19,23 +22,28 @@ export function FilterSheet({
   onClear: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation(['common']);
   const [open, setOpen] = useState(false);
   return (
     <SheetPanel
       side="bottom"
-      title="筛选"
+      title={t('filter.title')}
       open={open}
       onOpenChange={setOpen}
       trigger={
         <Button
           variant="outline"
-          aria-label={activeCount ? `筛选，已选 ${activeCount} 项` : '筛选'}
+          aria-label={
+            activeCount
+              ? t('filter.active', { n: activeCount })
+              : t('filter.title')
+          }
           className={cn(
             'h-11 gap-1.5 px-3.5 text-[15px] font-normal md:hidden',
             activeCount && 'border-primary bg-brand-soft hover:bg-brand-soft',
           )}
         >
-          筛选
+          {t('filter.title')}
           {activeCount ? (
             <span
               aria-hidden
@@ -49,7 +57,7 @@ export function FilterSheet({
     >
       <div className="flex items-center justify-between">
         <span aria-hidden className="text-[17px] font-semibold">
-          筛选
+          {t('filter.title')}
         </span>
         <Button
           variant="ghost"
@@ -58,7 +66,7 @@ export function FilterSheet({
           onClick={onClear}
           className="h-11 text-[15px] text-muted-foreground hover:bg-transparent"
         >
-          清除筛选
+          {t('action.clearFilters')}
         </Button>
       </div>
       <div className="flex flex-col gap-[18px] pt-2 pb-5">{children}</div>
@@ -127,7 +135,15 @@ export function ChoiceGrid<Value extends string | undefined>({
   );
 }
 
-/** 面板里的结果按钮文字：结果未到时不显示上一次的数量。 */
-export function resultLabel(total: number | undefined, unit: string) {
-  return total === undefined ? '查看结果' : `查看 ${total} ${unit}结果`;
+/** 面板里的结果按钮文字：结果未到时不显示上一次的数量。英文不带量词。 */
+export function resultLabel(
+  total: number | undefined,
+  unit: string,
+  locale = currentLocale(),
+) {
+  if (total === undefined) return translate(locale, 'common:filter.result');
+  return translate(locale, 'common:filter.resultCount', {
+    count: total,
+    unit: locale === 'en' ? '' : unit,
+  });
 }

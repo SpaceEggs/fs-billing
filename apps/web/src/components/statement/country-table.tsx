@@ -7,6 +7,7 @@ import {
   TableCell,
   TableFooter,
 } from '@/components/ui/table';
+import { useTranslation } from 'react-i18next';
 import type { Currency } from '@fs-billing/shared';
 import {
   chargeShare,
@@ -34,35 +35,51 @@ export function StatementCountries({
   countries: readonly StatementCountry[];
   figures: StatementFigures;
 }) {
+  const { t } = useTranslation(['statement']);
   const locale = useLocale();
   const money = (amount: string) => ({ currency, amount });
   const total = sumRows(countries);
-  const totalMinutes = formatMinutes(total.minutes);
+  const totalMinutes = formatMinutes(total.minutes, locale);
   const unmatched = hasUnmatchedCharge(figures.callCharges, countries);
   return (
     <section
-      aria-label="按国家汇总"
+      aria-label={t('statement:country.label')}
       className="flex flex-col gap-2 md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border print:break-inside-avoid"
     >
       <div className="flex items-baseline justify-between md:px-5 md:py-3.5">
         <h2 className="m-0 text-[15px] font-semibold md:text-base">
-          按国家汇总
+          {t('statement:country.label')}
         </h2>
         <span className="text-xs text-muted-foreground">
           <span className="md:hidden">
-            {formatCount(total.calls)} 通 · {totalMinutes}
+            {t('statement:country.callsMinutes', {
+              calls: formatCount(total.calls),
+              minutes: totalMinutes,
+            })}
           </span>
-          <span className="hidden md:inline">按费用从高到低</span>
+          <span className="hidden md:inline">
+            {t('statement:country.byCharge')}
+          </span>
         </span>
       </div>
       <Table className="hidden whitespace-nowrap md:table">
         <TableHeader>
           <TableRow className="border-t-0">
-            <TableHead className="px-5 py-[9px]">国家</TableHead>
-            <TableHead className="py-[9px] text-right">通话数</TableHead>
-            <TableHead className="py-[9px] text-right">计费分钟</TableHead>
-            <TableHead className="py-[9px] text-right">占比</TableHead>
-            <TableHead className="px-5 py-[9px] text-right">费用</TableHead>
+            <TableHead className="px-5 py-[9px]">
+              {t('statement:country.country')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('statement:country.calls')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('statement:country.minutes')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('statement:country.share')}
+            </TableHead>
+            <TableHead className="px-5 py-[9px] text-right">
+              {t('statement:country.charge')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="tabular-nums">
@@ -72,7 +89,7 @@ export function StatementCountries({
                 colSpan={5}
                 className="px-5 py-5 text-center text-muted-foreground"
               >
-                没有已接通的通话
+                {t('statement:country.empty')}
               </TableCell>
             </TableRow>
           ) : null}
@@ -83,7 +100,7 @@ export function StatementCountries({
                 {formatCount(row.calls)}
               </TableCell>
               <TableCell className="py-2.5 text-right">
-                {formatMinutes(row.minutes)}
+                {formatMinutes(row.minutes, locale)}
               </TableCell>
               <TableCell className="py-2.5 text-right text-muted-foreground">
                 {chargeShare(row.charge, total.charge)}
@@ -96,7 +113,9 @@ export function StatementCountries({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="px-5 py-2.5">合计</TableCell>
+            <TableCell className="px-5 py-2.5">
+              {t('statement:country.total')}
+            </TableCell>
             <TableCell className="py-2.5 text-right">
               {formatCount(total.calls)}
             </TableCell>
@@ -111,7 +130,7 @@ export function StatementCountries({
       <ul className="m-0 flex list-none flex-col overflow-hidden rounded-xl border border-border p-0 md:hidden">
         {countries.length === 0 ? (
           <li className="px-3.5 py-4 text-center text-[13px] text-muted-foreground">
-            没有已接通的通话
+            {t('statement:country.empty')}
           </li>
         ) : null}
         {countries.map((row) => (
@@ -122,7 +141,10 @@ export function StatementCountries({
             <div className="flex flex-col gap-0.5">
               <span className="text-sm">{row.country}</span>
               <span className="text-xs text-muted-foreground tabular-nums">
-                {formatCount(row.calls)} 通 · {formatMinutes(row.minutes)}
+                {t('statement:country.callsMinutes', {
+                  calls: formatCount(row.calls),
+                  minutes: formatMinutes(row.minutes, locale),
+                })}
               </span>
             </div>
             <span className="text-sm font-semibold tabular-nums">

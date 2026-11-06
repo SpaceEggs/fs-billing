@@ -1,6 +1,13 @@
-import type { Currency, PortalCdr } from '@fs-billing/shared';
+import { useTranslation } from 'react-i18next';
+import {
+  translate,
+  type Currency,
+  type Locale,
+  type PortalCdr,
+} from '@fs-billing/shared';
 import { formatDateTime } from '../../lib/format';
 import { formatDuration } from '../../lib/duration';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import { Money, Rate } from '../data-format';
@@ -22,31 +29,40 @@ export type CdrDetailExtra = {
   note: React.ReactNode;
 };
 
-function detailRows(cdr: PortalCdr): DetailRow[] {
+function detailRows(cdr: PortalCdr, locale: Locale): DetailRow[] {
   const dash = '—';
+  const label = (key: string) => translate(locale, `cdr:detail.${key}`);
   return [
     {
-      label: '方向',
+      label: label('direction'),
       value: (
         <Badge variant={cdrIsInbound(cdr) ? 'secondary' : 'plain'}>
-          {cdrDirectionLabel(cdr)}
+          {cdrDirectionLabel(cdr, locale)}
         </Badge>
       ),
     },
-    { label: '主叫号码', value: cdr.caller },
-    { label: '被叫号码', value: cdr.callee },
-    { label: '国家', value: cdrCountryLabel(cdr) },
-    { label: '匹配的前缀', value: cdr.matchedPrefix ?? dash, mono: true },
-    { label: '振铃开始', value: formatDateTime(cdr.startedAt) },
+    { label: label('caller'), value: cdr.caller },
+    { label: label('callee'), value: cdr.callee },
+    { label: label('country'), value: cdrCountryLabel(cdr, locale) },
     {
-      label: '接通时间',
-      value: cdr.answeredAt === null ? dash : formatDateTime(cdr.answeredAt),
+      label: label('matchedPrefix'),
+      value: cdr.matchedPrefix ?? dash,
+      mono: true,
     },
-    { label: '挂断时间', value: formatDateTime(cdr.endedAt) },
-    { label: '通话时长', value: formatDuration(cdr.durationSeconds) },
-    { label: '计费时长', value: formatMinutes(cdr.billedMinutes) },
+    { label: label('ringStart'), value: formatDateTime(cdr.startedAt, locale) },
     {
-      label: '费率',
+      label: label('answeredAt'),
+      value:
+        cdr.answeredAt === null ? dash : formatDateTime(cdr.answeredAt, locale),
+    },
+    { label: label('endedAt'), value: formatDateTime(cdr.endedAt, locale) },
+    {
+      label: label('duration'),
+      value: formatDuration(cdr.durationSeconds, locale),
+    },
+    { label: label('billed'), value: formatMinutes(cdr.billedMinutes, locale) },
+    {
+      label: label('rate'),
       value:
         cdrIsInbound(cdr) || cdr.rate === null ? (
           dash
@@ -54,8 +70,8 @@ function detailRows(cdr: PortalCdr): DetailRow[] {
           <Rate value={cdr.rate} />
         ),
     },
-    { label: '挂断原因', value: cdrHangupCause(cdr) },
-    { label: '通话 UUID', value: cdr.callUuid, mono: true },
+    { label: label('hangupCause'), value: cdrHangupCause(cdr, locale) },
+    { label: label('uuid'), value: cdr.callUuid, mono: true },
   ];
 }
 
@@ -74,33 +90,37 @@ export function CdrDetailDialog({
   onClose: () => void;
   extra?: ((cdr: PortalCdr) => CdrDetailExtra) | undefined;
 }) {
-  const rows = cdr ? detailRows(cdr) : [];
+  const { t } = useTranslation(['cdr']);
+  const locale = useLocale();
+  const rows = cdr ? detailRows(cdr, locale) : [];
   const more = cdr && extra ? extra(cdr) : null;
+  const title = t('cdr:detail.title');
   return (
     <ModalDialog
       open={cdr !== null}
       onOpenChange={(open) => open || onClose()}
-      title="话单详情"
+      title={title}
       className="gap-0 px-0 md:w-[540px] md:gap-0 md:p-0"
     >
       {cdr ? (
         <>
           <div className="flex flex-col gap-1 border-b border-border px-4 pb-3 md:px-6 md:pt-5 md:pb-4">
-            <span className="text-[17px] font-semibold">话单详情</span>
+            <span className="text-[17px] font-semibold">{title}</span>
             <span className="text-[13px] text-muted-foreground tabular-nums">
-              {cdr.callee} · {cdrCountryLabel(cdr)}
+              {cdr.callee} · {cdrCountryLabel(cdr, locale)}
             </span>
           </div>
           <div className="mx-4 mt-3 flex items-baseline justify-between gap-3 rounded-[10px] bg-muted p-3.5 tabular-nums md:mx-0 md:mt-0 md:rounded-none md:px-6 md:py-4">
             <span className="text-[13px] text-muted-foreground">
               {cdrIsInbound(cdr) ? (
-                '呼入暂不收费'
+                t('cdr:detail.inboundFree')
               ) : cdr.rate === null ? (
-                '未接通'
+                t('cdr:notConnected')
               ) : (
                 <>
-                  {formatMinutes(cdr.billedMinutes)} × <Rate value={cdr.rate} />
-                  {` ${cdrRateUnit[currency]}`}
+                  {formatMinutes(cdr.billedMinutes, locale)} ×{' '}
+                  <Rate value={cdr.rate} />
+                  {` ${cdrRateUnit(currency, locale)}`}
                 </>
               )}
             </span>

@@ -1,4 +1,6 @@
-import type { Currency } from '@fs-billing/shared';
+import { useTranslation } from 'react-i18next';
+import { translate, type Currency, type Locale } from '@fs-billing/shared';
+import { currentLocale } from '../../i18n';
 import { Money } from '../data-format';
 import { formatCount, formatMinutes } from './cdr-format';
 
@@ -16,13 +18,18 @@ export type CdrSummaryData = {
 export function unansweredNote(
   status: 'answered' | 'all',
   unansweredCalls: number,
+  locale: Locale = currentLocale(),
 ) {
   if (status === 'all')
     return unansweredCalls > 0
-      ? `含未接通 ${formatCount(unansweredCalls)}`
-      : '全部已接通';
+      ? translate(locale, 'cdr:summary.containing', {
+          count: formatCount(unansweredCalls),
+        })
+      : translate(locale, 'cdr:summary.allAnswered');
   return unansweredCalls > 0
-    ? `另有未接通 ${formatCount(unansweredCalls)} 通`
+    ? translate(locale, 'cdr:summary.additional', {
+        count: formatCount(unansweredCalls),
+      })
     : null;
 }
 
@@ -59,17 +66,20 @@ export function CdrSummaryBar({
   /** 后台在通话数后追加「其中未经验证 N 条」。 */
   extraNote?: React.ReactNode;
 }) {
+  const { t } = useTranslation(['cdr']);
   const note = unansweredNote(status, summary.unansweredCalls);
   return (
     <section
-      aria-label="汇总"
+      aria-label={t('cdr:summary.label')}
       className="hidden flex-wrap items-baseline gap-x-8 gap-y-2 rounded-[10px] border border-border bg-muted px-5 py-3.5 tabular-nums md:flex"
     >
-      <Stat label="通话数" note={note}>
+      <Stat label={t('cdr:summary.calls')} note={note}>
         {formatCount(summary.total)}
       </Stat>
-      <Stat label="总计费">{formatMinutes(summary.billedMinutes)}</Stat>
-      <Stat label="总费用">
+      <Stat label={t('cdr:summary.billed')}>
+        {formatMinutes(summary.billedMinutes)}
+      </Stat>
+      <Stat label={t('cdr:summary.charge')}>
         <Money value={{ currency, amount: summary.charge }} tone="plain" />
       </Stat>
       {extraNote ? (
@@ -91,17 +101,21 @@ export function CdrSummaryLine({
   rangeText: string;
   status: 'answered' | 'all';
 }) {
+  const { t } = useTranslation(['cdr']);
   const note = unansweredNote(status, summary.unansweredCalls);
   return (
     <section
-      aria-label="汇总"
+      aria-label={t('cdr:summary.label')}
       className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums md:hidden"
     >
       <span>
-        {rangeText} · {status === 'all' ? '全部' : '已接通'}
+        {rangeText} ·{' '}
+        {status === 'all'
+          ? t('cdr:filters.all')
+          : t('cdr:filters.statusAnswered')}
       </span>
       <span>
-        {formatCount(summary.total)} 通 ·{' '}
+        {t('cdr:summary.callsCount', { n: formatCount(summary.total) })} ·{' '}
         <Money value={{ currency, amount: summary.charge }} tone="plain" />
       </span>
       {note ? <span className="basis-full text-right">{note}</span> : null}

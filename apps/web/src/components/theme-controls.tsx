@@ -1,4 +1,5 @@
 import { SunMoonIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useLocale } from '../i18n';
 import {
   setThemePreference,
@@ -21,6 +22,7 @@ import { menuContentClass, menuItemClass } from './menu';
  * 顶部主题按钮（SunMoon 图标）：浅色 / 深色 / 跟随系统。`mobile` 是门户手机顶栏的无边框 40 px 按钮（设计稿 1b）。
  */
 export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
+  const { t } = useTranslation(['common']);
   const preference = useThemePreference();
   const locale = useLocale();
   const options = themeOptions(locale);
@@ -28,7 +30,7 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
-          aria-label="主题"
+          aria-label={t('theme.label')}
           variant={mobile ? 'ghost' : 'outline'}
           size="icon"
           className={cn(mobile && 'size-10 shrink-0')}
@@ -68,11 +70,12 @@ export function ThemeMenu({ mobile = false }: { mobile?: boolean }) {
 
 /** 主题单选，用于客户门户账号设置和手机账号菜单。 */
 export function ThemeSegmented({ className }: { className?: string }) {
+  const { t } = useTranslation(['common']);
   const preference = useThemePreference();
   const locale = useLocale();
   return (
     <OptionTabs
-      label="主题"
+      label={t('theme.label')}
       options={themeOptions(locale)}
       value={preference}
       onChange={setThemePreference}

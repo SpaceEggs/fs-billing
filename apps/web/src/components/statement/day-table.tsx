@@ -7,6 +7,7 @@ import {
   TableCell,
   TableFooter,
 } from '@/components/ui/table';
+import { useTranslation } from 'react-i18next';
 import type { Currency } from '@fs-billing/shared';
 import {
   hasUnmatchedCharge,
@@ -16,6 +17,7 @@ import {
   type StatementFigures,
 } from '../../lib/statement';
 import { formatCount, formatMinutes } from '../cdr/cdr-format';
+import { formatDay, formatMonthDay } from '../../lib/format';
 import { Money } from '../data-format';
 import { useLocale } from '../../i18n';
 
@@ -36,28 +38,39 @@ export function StatementDays({
   figures: StatementFigures;
   today?: string | undefined;
 }) {
+  const { t } = useTranslation(['statement']);
   const locale = useLocale();
   const money = (amount: string) => ({ currency, amount });
   const total = sumRows(days);
-  const totalMinutes = formatMinutes(total.minutes);
+  const totalMinutes = formatMinutes(total.minutes, locale);
   const unmatched = hasUnmatchedCharge(figures.callCharges, days);
-  const dayCount = `${days.length} 天`;
+  const dayCount = t('statement:day.days', { n: days.length });
   return (
     <section
-      aria-label="按日汇总"
+      aria-label={t('statement:day.label')}
       className="flex flex-col gap-2 md:gap-0 md:overflow-hidden md:rounded-xl md:border md:border-border"
     >
       <div className="flex items-baseline justify-between md:px-5 md:py-3.5">
-        <h2 className="m-0 text-[15px] font-semibold md:text-base">按日汇总</h2>
+        <h2 className="m-0 text-[15px] font-semibold md:text-base">
+          {t('statement:day.label')}
+        </h2>
         <span className="text-xs text-muted-foreground">{dayCount}</span>
       </div>
       <Table className="hidden whitespace-nowrap md:table">
         <TableHeader>
           <TableRow className="border-t-0">
-            <TableHead className="px-5 py-[9px]">日期</TableHead>
-            <TableHead className="py-[9px] text-right">通话数</TableHead>
-            <TableHead className="py-[9px] text-right">计费分钟</TableHead>
-            <TableHead className="px-5 py-[9px] text-right">费用</TableHead>
+            <TableHead className="px-5 py-[9px]">
+              {t('statement:day.day')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('statement:day.calls')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('statement:day.minutes')}
+            </TableHead>
+            <TableHead className="px-5 py-[9px] text-right">
+              {t('statement:day.charge')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="tabular-nums">
@@ -65,10 +78,10 @@ export function StatementDays({
             <TableRow key={row.day} className="print:break-inside-avoid">
               <TableCell className="px-5 py-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  {row.day}
+                  {formatDay(row.day, locale)}
                   {row.day === today ? (
                     <span className="rounded border border-border px-[5px] text-[11px] text-muted-foreground">
-                      今日 · 截至当前
+                      {t('statement:day.today')}
                     </span>
                   ) : null}
                 </div>
@@ -77,7 +90,7 @@ export function StatementDays({
                 {formatCount(row.calls)}
               </TableCell>
               <TableCell className="py-2 text-right">
-                {formatMinutes(row.minutes)}
+                {formatMinutes(row.minutes, locale)}
               </TableCell>
               <TableCell className="px-5 py-2 text-right font-medium">
                 <Money value={money(row.charge)} tone="plain" />
@@ -87,7 +100,9 @@ export function StatementDays({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell className="px-5 py-2.5">合计</TableCell>
+            <TableCell className="px-5 py-2.5">
+              {t('statement:day.total')}
+            </TableCell>
             <TableCell className="py-2.5 text-right">
               {formatCount(total.calls)}
             </TableCell>
@@ -100,9 +115,11 @@ export function StatementDays({
       </Table>
       <div className="overflow-hidden rounded-xl border border-border tabular-nums md:hidden">
         <div className="grid grid-cols-[1fr_1fr_1.1fr] gap-2 bg-muted px-3.5 py-2 text-xs text-muted-foreground">
-          <span>日期</span>
-          <span className="whitespace-nowrap text-right">通话 / 分钟</span>
-          <span className="text-right">费用</span>
+          <span>{t('statement:day.day')}</span>
+          <span className="whitespace-nowrap text-right">
+            {t('statement:day.mobileHeader')}
+          </span>
+          <span className="text-right">{t('statement:day.charge')}</span>
         </div>
         <ul className="m-0 list-none p-0">
           {days.map((row) => (
@@ -111,15 +128,15 @@ export function StatementDays({
               className="grid grid-cols-[1fr_1fr_1.1fr] gap-2 border-t border-border px-3.5 py-2 text-[13px]"
             >
               <span>
-                {row.day.slice(5)}
+                {formatMonthDay(row.day, locale)}
                 {row.day === today ? (
                   <span className="ml-1.5 text-[11px] text-muted-foreground">
-                    今日
+                    {t('statement:day.todayShort')}
                   </span>
                 ) : null}
               </span>
               <span className="whitespace-nowrap text-right text-muted-foreground">
-                {formatCount(row.calls)} / {formatMinutes(row.minutes)}
+                {formatCount(row.calls)} / {formatMinutes(row.minutes, locale)}
               </span>
               <span className="text-right font-medium">
                 <Money value={money(row.charge)} tone="plain" />

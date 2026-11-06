@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CalendarDaysIcon,
   ChevronLeftIcon,
@@ -8,15 +9,16 @@ import {
   monthCells,
   monthOf,
   orderedRange,
-  rangeLabel,
   shiftMonth,
   type DayRange,
 } from '../lib/day-range';
+import { formatDay, formatDayRange, formatYearMonth } from '../lib/format';
+import { useLocale } from '../i18n';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { ModalDialog } from './modal-dialog';
 
-const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+const weekdayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 /**
  * 设计系统 · 日期范围：一个显示「开始 — 结束」的输入框，点开为月历（客户门户第一批 2f）。
@@ -38,21 +40,29 @@ export function DateRangeField({
   onChange: (range: DayRange) => void;
   className?: string;
 }) {
+  const { t } = useTranslation(['common']);
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button
         variant="outline"
         aria-haspopup="dialog"
-        aria-label={`${label}：${value.from} 至 ${value.to}`}
+        aria-label={t('dateRange.value', {
+          label,
+          from: formatDay(value.from, locale),
+          to: formatDay(value.to, locale),
+        })}
         onClick={() => setOpen(true)}
         className={cn(
           'h-11 justify-between gap-2.5 px-3 font-normal tabular-nums md:h-9',
           className,
         )}
       >
-        <span className="md:hidden">{rangeLabel(value, true)}</span>
-        <span className="hidden md:inline">{rangeLabel(value)}</span>
+        <span className="md:hidden">{formatDayRange(value, true, locale)}</span>
+        <span className="hidden md:inline">
+          {formatDayRange(value, false, locale)}
+        </span>
         <CalendarDaysIcon
           aria-hidden
           className="hidden size-3.5 text-muted-foreground md:inline"
@@ -93,6 +103,8 @@ function RangeCalendar({
   onClose: () => void;
   onConfirm: (range: DayRange) => void;
 }) {
+  const { t } = useTranslation(['common']);
+  const locale = useLocale();
   const [draft, setDraft] = useState<Draft>(initial);
   const [view, setView] = useState(() => monthOf(initial.to));
   const lastMonth = monthOf(max);
@@ -126,19 +138,19 @@ function RangeCalendar({
         <Button
           variant="ghost"
           size="icon"
-          aria-label="上个月"
+          aria-label={t('dateRange.previousMonth')}
           onClick={() => setView((month) => shiftMonth(month, -1))}
           className="rounded-md text-muted-foreground"
         >
           <ChevronLeftIcon aria-hidden />
         </Button>
         <span aria-live="polite" className="text-base font-semibold">
-          {view.year}年{view.month}月
+          {formatYearMonth(view.year, view.month, locale)}
         </span>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="下个月"
+          aria-label={t('dateRange.nextMonth')}
           disabled={atLastMonth}
           onClick={() => setView((month) => shiftMonth(month, 1))}
           className="rounded-md text-muted-foreground disabled:opacity-40"
@@ -150,8 +162,8 @@ function RangeCalendar({
         aria-hidden
         className="grid grid-cols-7 text-center text-xs text-muted-foreground"
       >
-        {weekdays.map((day) => (
-          <span key={day}>{day}</span>
+        {weekdayKeys.map((day) => (
+          <span key={day}>{t(`weekday.${day}` as 'weekday.mon')}</span>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-y-1 text-center text-[15px] tabular-nums md:text-sm">
@@ -168,7 +180,7 @@ function RangeCalendar({
             <button
               key={day}
               type="button"
-              aria-label={day}
+              aria-label={formatDay(day, locale)}
               aria-pressed={start || end || inside}
               disabled={day > max || exceedsPendingRangeLimit}
               onClick={() => pick(day)}
@@ -192,16 +204,22 @@ function RangeCalendar({
         className="flex justify-between rounded-lg bg-muted px-3 py-2.5 text-[13px] text-muted-foreground tabular-nums"
       >
         {to === null ? (
-          <span>{draft.from} — 请选择结束日期</span>
+          <span>
+            {formatDay(draft.from, locale)} — {t('dateRange.selectEnd')}
+          </span>
         ) : (
           <span>
-            {rangeLabel(completeRange ?? { from: draft.from, to }, false)}
+            {formatDayRange(
+              completeRange ?? { from: draft.from, to },
+              false,
+              locale,
+            )}
           </span>
         )}
         <span>
           {maxRangeEndForStart === undefined
-            ? '北京时间'
-            : '北京时间 · 最长一个月'}
+            ? t('timezone.beijing')
+            : t('timezone.rangeLimited')}
         </span>
       </div>
       {maxRangeEndForStart !== undefined &&
@@ -215,13 +233,17 @@ function RangeCalendar({
           )}
         >
           {to === null
-            ? `选择结束日期不能晚于 ${endLimit}（日期范围最长一个月；倒序选择时按较早日期重新计算）`
-            : `结束日期不能晚于 ${endLimit}（日期范围最长一个月）`}
+            ? t('dateRange.endLimitPending', {
+                date: formatDay(endLimit, locale),
+              })
+            : t('dateRange.endLimit', {
+                date: formatDay(endLimit, locale),
+              })}
         </p>
       ) : null}
       <div className="grid grid-cols-[1fr_2fr] gap-2 md:flex md:justify-end">
         <Button variant="outline" className="h-12 md:h-9" onClick={onClose}>
-          取消
+          {t('action.cancel')}
         </Button>
         <Button
           className="h-12 md:h-9"
@@ -236,7 +258,7 @@ function RangeCalendar({
               onConfirm(completeRange);
           }}
         >
-          确定
+          {t('action.confirm')}
         </Button>
       </div>
     </ModalDialog>

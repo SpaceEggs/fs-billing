@@ -7,13 +7,15 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
+import { useTranslation } from 'react-i18next';
 import {
   formatCountryLabel,
   type Currency,
   type PortalHomeResponse,
 } from '@fs-billing/shared';
-import { formatBilledMinutes, formatDateTime } from '../../lib/format';
+import { formatBilledMinutes, formatShortDateTime } from '../../lib/format';
 import { formatDuration } from '../../lib/duration';
+import { useLocale } from '../../i18n';
 import { DateTime, Money } from '../data-format';
 
 type RecentCall = PortalHomeResponse['recentCalls'][number];
@@ -35,19 +37,31 @@ export function RecentCalls({
   currency: Currency;
   calls: readonly RecentCall[];
 }) {
+  const { t } = useTranslation(['cdr']);
+  const locale = useLocale();
   const money = (amount: string) => ({ currency, amount });
   return (
     <>
       <Table className="hidden tabular-nums md:table">
-        <TableCaption>最近 10 通话单</TableCaption>
+        <TableCaption>{t('cdr:recent.caption')}</TableCaption>
         <TableHeader>
           <TableRow className="border-t-0">
-            <TableHead className="px-6 py-[9px]">接通时间</TableHead>
-            <TableHead className="py-[9px]">被叫号码</TableHead>
-            <TableHead className="py-[9px]">国家</TableHead>
-            <TableHead className="py-[9px] text-right">通话时长</TableHead>
-            <TableHead className="py-[9px] text-right">计费时长</TableHead>
-            <TableHead className="px-6 py-[9px] text-right">费用</TableHead>
+            <TableHead className="px-6 py-[9px]">
+              {t('cdr:recent.answeredAt')}
+            </TableHead>
+            <TableHead className="py-[9px]">{t('cdr:recent.callee')}</TableHead>
+            <TableHead className="py-[9px]">
+              {t('cdr:recent.country')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('cdr:recent.duration')}
+            </TableHead>
+            <TableHead className="py-[9px] text-right">
+              {t('cdr:recent.billed')}
+            </TableHead>
+            <TableHead className="px-6 py-[9px] text-right">
+              {t('cdr:recent.charge')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -59,10 +73,10 @@ export function RecentCalls({
               <TableCell className="py-2.5">{call.callee}</TableCell>
               <TableCell className="py-2.5">{countryLabel(call)}</TableCell>
               <TableCell className="py-2.5 text-right">
-                {formatDuration(call.durationSeconds)}
+                {formatDuration(call.durationSeconds, locale)}
               </TableCell>
               <TableCell className="py-2.5 text-right">
-                {formatBilledMinutes(Number(call.billedMinutes))}
+                {formatBilledMinutes(Number(call.billedMinutes), locale)}
               </TableCell>
               <TableCell className="px-6 py-2.5 text-right font-medium">
                 <Money value={money(call.charge)} />
@@ -83,9 +97,10 @@ export function RecentCalls({
             </div>
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>
-                {countryLabel(call)} · {formatDuration(call.durationSeconds)}
+                {countryLabel(call)} ·{' '}
+                {formatDuration(call.durationSeconds, locale)}
               </span>
-              <span>{formatDateTime(call.answeredAt, 'zh').slice(5)}</span>
+              <span>{formatShortDateTime(call.answeredAt, locale)}</span>
             </div>
           </li>
         ))}

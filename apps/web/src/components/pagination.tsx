@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 
 /** 前端分页：取第 `page` 页（从 1 开始）的条目。 */
@@ -17,23 +18,22 @@ export function Pagination({
   rowCount: number;
   onPage: (page: number) => void;
 }) {
+  const { t } = useTranslation(['common']);
   const pages = Math.max(1, Math.ceil(rowCount / pageSize));
   if (pages <= 1) return null;
   return (
     <nav
-      aria-label="分页"
+      aria-label={t('pagination.label')}
       className="flex items-center justify-end gap-3 text-[13px] text-muted-foreground"
     >
-      <span>
-        第 {page} / {pages} 页
-      </span>
+      <span>{t('pagination.page', { page, pages })}</span>
       <Button
         variant="outline"
         size="sm"
         disabled={page <= 1}
         onClick={() => onPage(page - 1)}
       >
-        上一页
+        {t('pagination.previous')}
       </Button>
       <Button
         variant="outline"
@@ -41,7 +41,7 @@ export function Pagination({
         disabled={page >= pages}
         onClick={() => onPage(page + 1)}
       >
-        下一页
+        {t('pagination.next')}
       </Button>
     </nav>
   );
