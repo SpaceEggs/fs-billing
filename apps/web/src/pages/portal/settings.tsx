@@ -105,7 +105,7 @@ export function PortalSettingsPage({ identity }: { identity: Identity }) {
             </Button>
             {logout.isError ? (
               <p role="alert" className="m-0 text-sm text-neg">
-                {logoutFailedMessage}
+                {logoutFailedMessage()}
               </p>
             ) : null}
           </div>

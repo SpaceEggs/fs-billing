@@ -35,11 +35,16 @@ export function validateSettings(
 ):
   { ok: true; value: SettingsRequest } | { ok: false; errors: SettingsErrors } {
   const errors: SettingsErrors = {};
-  const overdraft = settingsAmountError(form.overdraftLimit, '透支额度');
+  const overdraft = settingsAmountError(
+    form.overdraftLimit,
+    '透支额度',
+    'overdraft',
+  );
   if (overdraft) errors.overdraftLimit = overdraft;
   const threshold = settingsAmountError(
     form.lowBalanceThreshold,
     '余额提醒阈值',
+    'amount',
   );
   if (threshold) errors.lowBalanceThreshold = threshold;
   // 与服务端同一 schema：先小写去重，再限制 20 个；已保存的历史邮箱可能大小写不同。

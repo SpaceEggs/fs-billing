@@ -1,4 +1,4 @@
-import { formatDate } from './format';
+import { beijingDateOf } from '@fs-billing/shared';
 
 /** 北京时间日期 YYYY-MM-DD，含两端，from 不晚于 to。 */
 export type DayRange = { from: string; to: string };
@@ -10,7 +10,7 @@ export function orderedRange(a: string, b: string): DayRange {
 
 /** 当前北京月份的 1 日到今天。 */
 export function beijingMonthToDate(now: Date): DayRange {
-  const today = formatDate(now);
+  const today = beijingDateOf(now);
   return { from: `${today.slice(0, 8)}01`, to: today };
 }
 

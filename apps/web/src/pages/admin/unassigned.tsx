@@ -887,8 +887,9 @@ function PendingRows({
                     </span>
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatDateTime(momentOf(row)).slice(5)} · 主叫 {row.caller}{' '}
-                    · <span className="font-mono">{tagLabel(row.tag)}</span>
+                    {formatDateTime(momentOf(row), 'zh').slice(5)} · 主叫{' '}
+                    {row.caller} ·{' '}
+                    <span className="font-mono">{tagLabel(row.tag)}</span>
                     {row.time ? '' : ' · 接收时间'}
                     {row.assignable ? '' : ' · 不可分配'}
                   </span>
@@ -1012,7 +1013,8 @@ function IgnoredRows({
                   </span>
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {formatDateTime(momentOf(row)).slice(5)} · 主叫 {row.caller} ·{' '}
+                  {formatDateTime(momentOf(row), 'zh').slice(5)} · 主叫{' '}
+                  {row.caller} ·{' '}
                   <span className="font-mono">{tagLabel(row.tag)}</span>
                   {row.time ? '' : ' · 接收时间'}
                 </span>

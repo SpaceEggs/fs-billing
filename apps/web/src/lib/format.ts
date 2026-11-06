@@ -1,14 +1,38 @@
 import Decimal from 'decimal.js';
 import {
   beijingDateTimeParts,
+  translate,
   type Currency,
+  type Locale,
   type Money,
 } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 
 const currencySymbol = { CNY: '¥', USD: '$' } as const satisfies Record<
   Currency,
   string
 >;
+
+const monthKeys = [
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'may',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'oct',
+  'nov',
+  'dec',
+] as const;
+
+/** 英文月份缩写从目录取（docs/i18n-design.md §7），中文目录里也有对应项。 */
+export function monthName(month: number, locale: Locale) {
+  const key = monthKeys[month - 1] ?? 'jan';
+  return translate(locale, `format:months.${key}`);
+}
 
 function groupThousands(integer: string) {
   return integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -41,38 +65,73 @@ export function formatExactMoney(money: Money) {
   return `${sign}${currencySymbol[money.currency]}${groupThousands(integer)}.${fraction.padEnd(2, '0')}`;
 }
 
-/** 费率固定 4 位小数；带单位时 CNY 为“元/分钟”，USD 为“$…/分钟”。 */
+/**
+ * 费率固定 4 位小数；带单位时中文为“元/分钟”“$/分钟”，
+ * 英文为“¥…/min”“$…/min”（docs/i18n-design.md §7）。
+ */
 export function formatRate(
   rate: string,
-  options: { currency?: Currency; unit?: boolean } = {},
+  options: { currency?: Currency; unit?: boolean; locale?: Locale } = {},
 ) {
   const value = new Decimal(rate).toFixed(4, Decimal.ROUND_HALF_UP);
   if (!options.unit || !options.currency) return value;
-  return options.currency === 'CNY' ? `${value} 元/分钟` : `$${value}/分钟`;
+  const locale = options.locale ?? currentLocale();
+  return translate(
+    locale,
+    options.currency === 'CNY' ? 'format:rate.cny' : 'format:rate.usd',
+    { value },
+  );
 }
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
-export function formatDateTime(value: string | Date) {
-  const p = beijingDateTimeParts(value);
-  return `${String(p.year).padStart(4, '0')}-${pad(p.month)}-${pad(p.day)} ${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
+const year4 = (year: number) => String(year).padStart(4, '0');
+
+type TimeParts = ReturnType<typeof beijingDateTimeParts>;
+
+/** 业务日期仍是北京时间，语言只改写法：中文 YYYY-MM-DD，英文 DD MMM YYYY。 */
+function formatDateParts(p: TimeParts, locale: Locale) {
+  if (locale === 'en')
+    return `${pad(p.day)} ${monthName(p.month, locale)} ${year4(p.year)}`;
+  return `${year4(p.year)}-${pad(p.month)}-${pad(p.day)}`;
 }
 
-export function formatDate(value: string | Date) {
+const formatTimeParts = (p: TimeParts) =>
+  `${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
+
+export function formatDateTime(
+  value: string | Date,
+  locale: Locale = currentLocale(),
+) {
   const p = beijingDateTimeParts(value);
-  return `${String(p.year).padStart(4, '0')}-${pad(p.month)}-${pad(p.day)}`;
+  return `${formatDateParts(p, locale)} ${formatTimeParts(p)}`;
+}
+
+export function formatDate(
+  value: string | Date,
+  locale: Locale = currentLocale(),
+) {
+  return formatDateParts(beijingDateTimeParts(value), locale);
 }
 
 export function formatTime(value: string | Date) {
-  const p = beijingDateTimeParts(value);
-  return `${pad(p.hour)}:${pad(p.minute)}`;
+  return formatTimeParts(beijingDateTimeParts(value));
 }
 
-export function formatMonth(value: string | Date) {
+export function formatMonth(
+  value: string | Date,
+  locale: Locale = currentLocale(),
+) {
   const p = beijingDateTimeParts(value);
-  return `${p.year}年${p.month}月`;
+  return translate(locale, 'format:yearMonth', {
+    year: p.year,
+    month: locale === 'en' ? monthName(p.month, locale) : String(p.month),
+  });
 }
 
-export function formatBilledMinutes(minutes: number) {
-  return `${minutes}分钟`;
+export function formatBilledMinutes(
+  minutes: number,
+  locale: Locale = currentLocale(),
+) {
+  return translate(locale, 'format:billedMinutes', { minutes });
 }

@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
+  beijingDateOf,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
   type Identity,
@@ -22,7 +23,6 @@ import {
   type PortalCdrsSearch,
 } from '../../lib/cdr-search';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
-import { formatDate } from '../../lib/format';
 
 /**
  * 客户门户话单（设计稿客户门户第一批 2a 至 2g）：日期范围、被叫号码、国家、接通状态都写入地址，
@@ -99,7 +99,7 @@ export function PortalCdrsPage({ identity }: { identity: Identity }) {
         <CdrExplorer
           range={range}
           defaultRange={defaultRange}
-          maxDate={formatDate(now)}
+          maxDate={beijingDateOf(now)}
           filters={filters}
           page={page}
           list={list}

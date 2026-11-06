@@ -1,8 +1,8 @@
-import { formatDate } from './format';
+import { beijingDateOf } from '@fs-billing/shared';
 
 /** 当前北京月的上一个月（后台账单页的默认月份，也是能选的最晚月份）。 */
 export function previousBeijingMonth(now: Date) {
-  return shiftStatementMonth(formatDate(now).slice(0, 7), -1);
+  return shiftStatementMonth(beijingDateOf(now).slice(0, 7), -1);
 }
 
 export function shiftStatementMonth(month: string, delta: number) {

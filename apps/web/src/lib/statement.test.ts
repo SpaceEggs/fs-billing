@@ -18,6 +18,30 @@ import {
   statementsResponse,
 } from '../test/portal-statements';
 
+describe('statement helpers in English', () => {
+  it('writes months and the period in English', () => {
+    expect(statementMonthTitle('2026-09', 'en')).toBe('Sep 2026');
+    expect(
+      statementPeriodLabel(
+        { from: '2026-08-12', to: '2026-08-31', openedOn: '2026-08-12' },
+        'final',
+        'en',
+      ),
+    ).toBe('2026-08-12 (opened) to 2026-08-31');
+    expect(
+      statementPeriodLabel(
+        { from: '2026-09-01', to: '2026-09-29', openedOn: null },
+        'in_progress',
+        'en',
+      ),
+    ).toBe('2026-09-01 to 2026-09-29 (in progress)');
+  });
+
+  it('keeps grouped minute counts the same in both languages', () => {
+    expect(minutesCount('49726')).toBe('49,726');
+  });
+});
+
 describe('statement helpers', () => {
   it('titles a month and finds the next first day across the year end', () => {
     expect(statementMonthTitle('2026-09')).toBe('2026年9月');

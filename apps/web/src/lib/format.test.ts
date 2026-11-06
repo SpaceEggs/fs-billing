@@ -88,3 +88,43 @@ describe('time formatting in Asia/Shanghai time', () => {
     expect(() => formatDateTime('tomorrow')).toThrow(RangeError);
   });
 });
+
+describe('English formatting (docs/i18n-design.md §7)', () => {
+  it('writes date-times and dates as DD MMM YYYY', () => {
+    expect(formatDateTime('2026-09-29T06:03:22.000Z', 'en')).toBe(
+      '29 Sep 2026 14:03:22',
+    );
+    expect(formatDate('2026-09-29T06:03:22.000Z', 'en')).toBe('29 Sep 2026');
+    expect(formatDate('2026-01-05T00:00:00Z', 'en')).toBe('05 Jan 2026');
+  });
+
+  it('writes months as MMM YYYY', () => {
+    expect(formatMonth('2026-09-30T16:00:00Z', 'en')).toBe('Oct 2026');
+    expect(formatMonth('2026-09-30T15:59:59Z', 'en')).toBe('Sep 2026');
+  });
+
+  it('writes durations and billed minutes in English', () => {
+    expect(formatDuration(230, 'en')).toBe('3m 50s');
+    expect(formatDuration(724, 'en')).toBe('12m 04s');
+    expect(formatDuration(-3, 'en')).toBe('0m 00s');
+    expect(formatBilledMinutes(4, 'en')).toBe('4 min');
+  });
+
+  it('writes rate units in English', () => {
+    expect(
+      formatRate('0.045', { currency: 'CNY', unit: true, locale: 'en' }),
+    ).toBe('¥0.0450/min');
+    expect(
+      formatRate('0.012', { currency: 'USD', unit: true, locale: 'en' }),
+    ).toBe('$0.0120/min');
+  });
+
+  it('keeps money formatting identical in both languages', () => {
+    expect(formatMoney({ currency: 'CNY', amount: '-1234.5' })).toBe(
+      '-¥1,234.50',
+    );
+    expect(formatExactMoney({ currency: 'USD', amount: '-0.0001' })).toBe(
+      '-$0.0001',
+    );
+  });
+});

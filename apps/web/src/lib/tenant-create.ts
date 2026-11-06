@@ -153,11 +153,16 @@ export function buildSubmission(
   if (!form.name.trim()) errors.name = '请输入租户名称';
   else if (form.name.trim().length > 200)
     errors.name = '租户名称最多 200 个字符';
-  const overdraft = settingsAmountError(form.overdraftLimit, '透支额度');
+  const overdraft = settingsAmountError(
+    form.overdraftLimit,
+    '透支额度',
+    'overdraft',
+  );
   if (overdraft) errors.overdraftLimit = overdraft;
   const threshold = settingsAmountError(
     form.lowBalanceThreshold,
     '余额提醒阈值',
+    'amount',
   );
   if (threshold) errors.lowBalanceThreshold = threshold;
   const badEmail = invalidRecipient(form.emails);

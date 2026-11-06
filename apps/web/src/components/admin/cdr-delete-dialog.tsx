@@ -5,10 +5,11 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query';
-import type {
-  AdminCdrDeleteResponse,
-  AdminCdrDeletionMonth,
-  AdminTenantDetailResponse,
+import {
+  beijingDateOf,
+  type AdminCdrDeleteResponse,
+  type AdminCdrDeletionMonth,
+  type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
 import { Label } from '../ui/label';
 import {
@@ -19,7 +20,7 @@ import {
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem } from '../../lib/api-problem';
 import { formatCount } from '../cdr/cdr-format';
-import { formatDate, formatDateTime, formatMoney } from '../../lib/format';
+import { formatDateTime, formatMoney } from '../../lib/format';
 import { shiftStatementMonth } from '../../lib/admin-statements';
 import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
@@ -129,7 +130,7 @@ function lastDay(month: string) {
 function displayWindow(fromMonth: string, toMonth: string, createdAt: string) {
   const startDay = `${fromMonth}-01`;
   const endDay = `${toMonth}-${String(lastDay(toMonth)).padStart(2, '0')}`;
-  const createdDay = formatDate(createdAt);
+  const createdDay = beijingDateOf(createdAt);
   const start =
     createdDay > startDay && createdDay <= endDay ? createdDay : startDay;
   return { start, end: endDay };
@@ -412,8 +413,8 @@ function CdrDeleteForm({
   const queryClient = useQueryClient();
   const remove = useApiMutation('adminTenantCdrDelete');
   const isDesktop = useIsDesktop();
-  const currentYear = Number(formatDate(new Date()).slice(0, 4));
-  const currentMonth = formatDate(new Date()).slice(0, 7);
+  const currentYear = Number(beijingDateOf(new Date()).slice(0, 4));
+  const currentMonth = beijingDateOf(new Date()).slice(0, 7);
   const [flow, setFlow] = useState<CdrDeleteFlow>({
     step: 'pick',
     grid: null,
@@ -442,7 +443,10 @@ function CdrDeleteForm({
     // 最多往前查两年（共 3 次请求），也不早于租户创建年；找不到就不预选，不让对话框一直停在加载。
     const floorYear = Math.max(
       currentYear - maxPreselectLookbackYears,
-      Math.min(currentYear, Number(formatDate(tenant.createdAt).slice(0, 4))),
+      Math.min(
+        currentYear,
+        Number(beijingDateOf(tenant.createdAt).slice(0, 4)),
+      ),
     );
     const decision = preselectMonth(
       currentYear,
@@ -679,7 +683,7 @@ function CdrDeleteForm({
           year={grid.year}
           byMonth={byMonth}
           currentMonth={currentMonth}
-          openingDay={formatDate(tenant.createdAt)}
+          openingDay={beijingDateOf(tenant.createdAt)}
           sheet={!isDesktop}
         />
       </>

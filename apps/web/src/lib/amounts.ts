@@ -5,7 +5,10 @@ import {
   DEFAULT_ADMIN_SETTINGS_DECIMAL_PLACES,
   DEFAULT_ADMIN_TOPUP_DECIMAL_PLACES,
   DEFAULT_ADMIN_AMOUNT_MAX_INTEGER_DIGITS,
+  translate,
+  type Locale,
 } from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
 
 /**
  * 人工金额的整数位上限。服务端可配置，前端按默认值校验（2026-10-15 决定，不改契约）；
@@ -21,8 +24,14 @@ export const amountDecimals = {
   settings: DEFAULT_ADMIN_SETTINGS_DECIMAL_PLACES,
 } as const;
 
-export const amountFormatMessage = (decimals: number) =>
-  `须为数字，最多 ${amountMaxIntegerDigits} 位整数、${decimals} 位小数`;
+export const amountFormatMessage = (
+  decimals: number,
+  locale: Locale = currentLocale(),
+) =>
+  translate(locale, 'errors:form.amountFormat', {
+    maxDigits: amountMaxIntegerDigits,
+    decimals,
+  });
 
 /**
  * 输入框里的金额转为契约格式：去掉千分位逗号、空格和正号，并去掉前导零（“0500”→“500”）。
@@ -37,20 +46,29 @@ export function normalizeAmountInput(raw: string) {
   return `${sign}${trimmed}${fraction ? `.${fraction}` : ''}`;
 }
 
-/** 透支额度、提醒阈值：非负、2 位小数、整数位不超过上限。 */
+/**
+ * 透支额度、提醒阈值：非负、2 位小数、整数位不超过上限。
+ * 透支额度有专门的负数提示；`kind` 由调用方显式传入，不依赖可翻译的标签文案。
+ */
 export function settingsAmountError(
   value: string,
   label: string,
+  kind: 'overdraft' | 'amount',
+  locale: Locale = currentLocale(),
 ): string | undefined {
-  if (!value.trim()) return `请输入${label}`;
+  if (!value.trim())
+    return translate(locale, 'errors:form.amountRequired', { label });
   const amount = normalizeAmountInput(value);
   if (amount.startsWith('-'))
-    return label === '透支额度'
-      ? '透支额度不能为负数，不允许透支请填 0'
-      : `${label}不能为负数`;
+    return kind === 'overdraft'
+      ? translate(locale, 'errors:form.amountOverdraftNegative')
+      : translate(locale, 'errors:form.amountNegative', { label });
   return amountSchemas.settings.safeParse(amount).success
     ? undefined
-    : `${label}${amountFormatMessage(amountDecimals.settings)}`;
+    : translate(locale, 'errors:form.amountInvalid', {
+        label,
+        message: amountFormatMessage(amountDecimals.settings, locale),
+      });
 }
 
 /** 已保存的金额可能有历史精度（多于两位），回填表单时不截断。 */

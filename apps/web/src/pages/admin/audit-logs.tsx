@@ -13,6 +13,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   auditLabelSchema,
   auditLabelText,
+  beijingDateOf,
   type AdminAuditLog,
   type Identity,
 } from '@fs-billing/shared';
@@ -34,7 +35,7 @@ import {
 import { apiQuery, send } from '../../lib/admin-api';
 import type { AuditLogSearch } from '../../lib/admin-search';
 import type { DayRange } from '../../lib/day-range';
-import { formatDate, formatDateTime } from '../../lib/format';
+import { formatDateTime } from '../../lib/format';
 import {
   adminNames,
   directoryCap,
@@ -433,9 +434,9 @@ function Filters({
             label="日期范围"
             value={range}
             max={
-              range.to > formatDate(new Date())
+              range.to > beijingDateOf(new Date())
                 ? range.to
-                : formatDate(new Date())
+                : beijingDateOf(new Date())
             }
             onChange={onRange}
             className="w-full md:w-[240px]"

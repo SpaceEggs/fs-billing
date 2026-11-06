@@ -61,7 +61,7 @@ function TenantAttention({
             <span className="block text-xs text-muted-foreground">
               {t.code} · {t.currency} ·{' '}
               {t.health === 'suspended'
-                ? `已达透支额度 ${formatMoney({ currency: t.currency, amount: t.overdraftLimit })}${t.suspendedAt ? ` · 停机于 ${formatDateTime(t.suspendedAt).slice(11, 16)}` : ''}`
+                ? `已达透支额度 ${formatMoney({ currency: t.currency, amount: t.overdraftLimit })}${t.suspendedAt ? ` · 停机于 ${formatDateTime(t.suspendedAt, 'zh').slice(11, 16)}` : ''}`
                 : t.health === 'overdraft'
                   ? `可用 ${formatMoney({ currency: t.currency, amount: t.availableBalance })}`
                   : t.threshold !== null
@@ -375,8 +375,8 @@ export function AdminHome({ identity }: { identity: Identity }) {
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {a.recoveredAt
-                              ? `恢复于 ${formatDateTime(a.recoveredAt).slice(11)}`
-                              : `开始于 ${formatDateTime(a.startedAt).slice(11)} · 已持续 ${Math.floor(a.durationSeconds / 60)} 分钟`}
+                              ? `恢复于 ${formatDateTime(a.recoveredAt, 'zh').slice(11)}`
+                              : `开始于 ${formatDateTime(a.startedAt, 'zh').slice(11)} · 已持续 ${Math.floor(a.durationSeconds / 60)} 分钟`}
                           </span>
                         </span>
                         <span>›</span>
@@ -400,6 +400,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                               最近一条{' '}
                               {formatDateTime(
                                 home.attention.unassigned.latestAt,
+                                'zh',
                               ).slice(11)}
                             </span>
                           )}
@@ -465,7 +466,7 @@ export function AdminHome({ identity }: { identity: Identity }) {
                           <p className="mt-1 text-xs text-muted-foreground">
                             无法匹配到租户，未计费
                             {home.attention.unassigned.latestAt
-                              ? ` · 最近一条 ${formatDateTime(home.attention.unassigned.latestAt).slice(11)}`
+                              ? ` · 最近一条 ${formatDateTime(home.attention.unassigned.latestAt, 'zh').slice(11)}`
                               : ''}
                           </p>
                           <p className="mt-2 text-2xl font-semibold tabular-nums text-warn">
@@ -515,8 +516,8 @@ export function AdminHome({ identity }: { identity: Identity }) {
                                 </span>
                                 <span className="block text-xs text-muted-foreground">
                                   {a.recoveredAt
-                                    ? `恢复于 ${formatDateTime(a.recoveredAt).slice(11)}`
-                                    : `开始于 ${formatDateTime(a.startedAt).slice(11)} · 已持续 ${Math.floor(a.durationSeconds / 60)} 分钟`}
+                                    ? `恢复于 ${formatDateTime(a.recoveredAt, 'zh').slice(11)}`
+                                    : `开始于 ${formatDateTime(a.startedAt, 'zh').slice(11)} · 已持续 ${Math.floor(a.durationSeconds / 60)} 分钟`}
                                 </span>
                               </span>
                               <span>›</span>

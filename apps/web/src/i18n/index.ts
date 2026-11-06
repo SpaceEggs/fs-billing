@@ -17,6 +17,9 @@ const resources = {
     errors: zh.errors,
     enums: zh.enums,
     csv: zh.csv,
+    format: zh.format,
+    portal: zh.portal,
+    statement: zh.statement,
   },
   en: {
     common: en.common,
@@ -24,6 +27,9 @@ const resources = {
     errors: en.errors,
     enums: en.enums,
     csv: en.csv,
+    format: en.format,
+    portal: en.portal,
+    statement: en.statement,
   },
 } as const;
 
@@ -52,7 +58,16 @@ export function initI18n() {
     lng: detectLocale(),
     fallbackLng: DEFAULT_LOCALE,
     supportedLngs: [...LOCALES],
-    ns: ['common', 'auth', 'errors', 'enums', 'csv'],
+    ns: [
+      'common',
+      'auth',
+      'errors',
+      'enums',
+      'csv',
+      'format',
+      'portal',
+      'statement',
+    ],
     defaultNS: 'common',
     initAsync: false,
     interpolation: { escapeValue: false },

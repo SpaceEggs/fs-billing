@@ -188,7 +188,11 @@ function SettingsEditor({
     }
   }
 
-  const overdraftHint = settingsAmountError(form.overdraftLimit, '透支额度')
+  const overdraftHint = settingsAmountError(
+    form.overdraftLimit,
+    '透支额度',
+    'overdraft',
+  )
     ? undefined
     : `余额可透支到 -${formatMoney({
         currency: tenant.currency,

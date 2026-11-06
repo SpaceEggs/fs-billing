@@ -56,6 +56,7 @@ export const errors = {
     },
     cdr: {
       calleeChars: '被叫号码只能包含数字、+、空格、连字符和括号',
+      calleeInvalid: '被叫号码格式不正确',
       endBeforeStart: '挂断时间不能早于振铃开始时间',
       unansweredZero: '未接通话单的时长、计费分钟和费用必须为 0',
       answerWithin: '接通时间必须在振铃开始与挂断之间',
@@ -131,6 +132,20 @@ export const errors = {
     MAIL_SETTINGS_PASSWORD_UNUSABLE: '已保存的密码无法解密，请重新填写密码',
     MAIL_SETTINGS_HOST_NOT_ALLOWED:
       '该邮件服务器地址不被允许：不能是回环地址、内网地址或 localhost',
+  },
+  form: {
+    amountFormat: '须为数字，最多 {{maxDigits}} 位整数、{{decimals}} 位小数',
+    amountInvalid: '{{label}}{{message}}',
+    amountRequired: '请输入{{label}}',
+    amountNegative: '{{label}}不能为负数',
+    amountOverdraftNegative: '透支额度不能为负数，不允许透支请填 0',
+    overdraftLabel: '透支额度',
+    emailRequired: '请输入登录邮箱',
+    emailInvalid: '邮箱格式不正确',
+    nameRequired: '请输入姓名',
+    nameTooLong: '姓名最多 {{max}} 个字符',
+    submitInvalid: '提交内容有误，请检查后重试',
+    passwordLength: '初始密码须为 {{min}} 到 {{max}} 位',
   },
   csvRejected: {
     encodingUnsupported: '无法识别文件编码，请保存为 UTF-8 或 GBK 后重新上传',

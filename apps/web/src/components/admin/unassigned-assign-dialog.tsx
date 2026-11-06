@@ -82,7 +82,7 @@ function isStaleRejection(error: unknown) {
 }
 
 function minutePrecision(value: string) {
-  const text = formatDateTime(value);
+  const text = formatDateTime(value, 'zh');
   return text.endsWith(':00') ? text.slice(0, -3) : text;
 }
 
@@ -437,7 +437,9 @@ function PreviewFigures({
         // 决定 38：接通月份已删除的话单不可分配，留在待处理。
         <p className="m-0 text-[13px] leading-normal text-muted-foreground">
           接通月份已删除，{preview.blocked.count} 条不能分配（
-          {preview.blocked.months.map(statementMonthTitle).join('、')}
+          {preview.blocked.months
+            .map((month) => statementMonthTitle(month))
+            .join('、')}
           ）。这些话单会留在待处理。
         </p>
       ) : null}

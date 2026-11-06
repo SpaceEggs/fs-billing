@@ -10,6 +10,7 @@ import { useId } from 'react';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import {
+  beijingDateOf,
   formatMergedChargeNote,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
@@ -44,22 +45,14 @@ import { apiQuery } from '../../lib/admin-api';
 import { ApiRequestError, callDownload } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../lib/day-range';
-import { formatDate, formatDateTime } from '../../lib/format';
+import { formatDateTime } from '../../lib/format';
 import { useLocale } from '../../i18n';
 import {
   cdrDayHref,
-  portalLedgerKindLabels,
+  portalLedgerKindLabel,
   type PortalLedgerFilter,
   type PortalLedgerSearch,
 } from '../../lib/portal-ledger';
-
-const kindChoices = [
-  { value: undefined, label: '全部类型' },
-  ...portalLedgerKindSchema.options.map((value) => ({
-    value,
-    label: portalLedgerKindLabels[value],
-  })),
-];
 
 const rowKey = (row: PortalLedgerRow) =>
   row.kind === 'call_charge' ? `${row.kind}:${row.day}` : row.id;
@@ -125,6 +118,7 @@ function LedgerTable({
   currency: Currency;
   items: PortalLedgerRow[];
 }) {
+  const locale = useLocale();
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
       <Table>
@@ -144,7 +138,7 @@ function LedgerTable({
                 <DateTime value={row.occurredAt} />
               </TableCell>
               <TableCell className="py-2.5 whitespace-nowrap">
-                {portalLedgerKindLabels[row.kind]}
+                {portalLedgerKindLabel(row.kind, locale)}
               </TableCell>
               <TableCell className="py-2.5 text-right font-semibold whitespace-nowrap">
                 <Money
@@ -174,6 +168,7 @@ function LedgerCards({
   currency: Currency;
   items: PortalLedgerRow[];
 }) {
+  const locale = useLocale();
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
       {items.map((row) => (
@@ -183,7 +178,7 @@ function LedgerCards({
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[15px] font-medium">
-              {portalLedgerKindLabels[row.kind]}
+              {portalLedgerKindLabel(row.kind, locale)}
             </span>
             <Money
               value={{ currency, amount: row.amount }}
@@ -196,7 +191,7 @@ function LedgerCards({
             <Note row={row} />
           </div>
           <div className="flex justify-between gap-2 text-xs text-muted-foreground">
-            <span>{formatDateTime(row.occurredAt).slice(5, 16)}</span>
+            <span>{formatDateTime(row.occurredAt, 'zh').slice(5, 16)}</span>
             <span className="whitespace-nowrap">
               余额 <Money value={{ currency, amount: row.balanceAfter }} />
             </span>
@@ -228,6 +223,14 @@ export function PortalLedgerPage({
   onSearch: (patch: PortalLedgerSearch) => void;
 }) {
   const kindId = useId();
+  const locale = useLocale();
+  const kindChoices = [
+    { value: undefined, label: '全部类型' },
+    ...portalLedgerKindSchema.options.map((value) => ({
+      value,
+      label: portalLedgerKindLabel(value, locale),
+    })),
+  ];
   const { kind, page = 1 } = search;
   const now = new Date();
   const range = rangeOrMonthToDate(search, now);
@@ -301,7 +304,7 @@ export function PortalLedgerPage({
           <DateRangeField
             label="日期范围（北京时间）"
             value={range}
-            max={formatDate(now)}
+            max={beijingDateOf(now)}
             maxRangeEndForStart={latestRangeEnd}
             onChange={(next) => setFilter(next)}
             className="min-w-0 flex-1 md:w-[260px] md:flex-none"
@@ -438,7 +441,7 @@ export function PortalLedgerPage({
               </span>
               <span className="text-[13px] text-muted-foreground">
                 {range.from} — {range.to.slice(5)}
-                {kind ? ` · 类型：${portalLedgerKindLabels[kind]}` : ''}
+                {kind ? ` · 类型：${portalLedgerKindLabel(kind, locale)}` : ''}
               </span>
               <Button
                 variant="outline"

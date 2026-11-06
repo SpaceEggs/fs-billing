@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
+  beijingDateOf,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
   type AdminDeletedMonth,
@@ -140,7 +141,7 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         defaultRange={
           range.from === monthToDate.from && range.to === monthToDate.to
         }
-        maxDate={formatDate(now)}
+        maxDate={beijingDateOf(now)}
         filters={filters}
         page={page}
         list={list}
@@ -204,7 +205,7 @@ function deletedMonthLine(row: AdminDeletedMonth) {
   const title = `${statementMonthTitle(row.month)} 的话单已删除`;
   if (row.count === null || row.deletedBy === null || row.deletedAt === null)
     return title;
-  return `${title} · 共 ${formatCount(row.count)} 条 · ${row.deletedBy.name} 删除于 ${formatDateTime(row.deletedAt).slice(0, 16)}`;
+  return `${title} · 共 ${formatCount(row.count)} 条 · ${row.deletedBy.name} 删除于 ${formatDateTime(row.deletedAt, 'zh').slice(0, 16)}`;
 }
 
 function DeletedMonthsBanner({

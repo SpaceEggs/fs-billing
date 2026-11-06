@@ -68,6 +68,7 @@ export const errors = {
     cdr: {
       calleeChars:
         'The called number may contain only digits, +, spaces, hyphens and parentheses',
+      calleeInvalid: 'The called number format is invalid',
       endBeforeStart: 'Hangup time must not be earlier than ring start time',
       unansweredZero:
         'An unanswered CDR must have zero duration, billed minutes and charge',
@@ -165,6 +166,23 @@ export const errors = {
       'The saved password cannot be decrypted. Re-enter it',
     MAIL_SETTINGS_HOST_NOT_ALLOWED:
       'This mail server address is not allowed: loopback, private network and localhost addresses are rejected',
+  },
+  form: {
+    amountFormat:
+      'must be a number with at most {{maxDigits}} integer digits and {{decimals}} decimal places',
+    amountInvalid: '{{label}} {{message}}',
+    amountRequired: 'Enter {{label}}',
+    amountNegative: '{{label}} cannot be negative',
+    amountOverdraftNegative:
+      'Overdraft limit cannot be negative. Enter 0 to disallow overdraft',
+    overdraftLabel: 'Overdraft limit',
+    emailRequired: 'Enter the sign-in email',
+    emailInvalid: 'Email format is invalid',
+    nameRequired: 'Enter a name',
+    nameTooLong: 'Name must be at most {{max}} characters',
+    submitInvalid: 'The submission is invalid. Check it and try again',
+    passwordLength:
+      'The initial password must be {{min}} to {{max}} characters',
   },
   csvRejected: {
     encodingUnsupported:

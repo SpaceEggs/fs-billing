@@ -1,5 +1,12 @@
 import Decimal from 'decimal.js';
-import { latestRangeEnd, type StatementState } from '@fs-billing/shared';
+import {
+  latestRangeEnd,
+  translate,
+  type Locale,
+  type StatementState,
+} from '@fs-billing/shared';
+import { currentLocale } from '../i18n';
+import { monthName } from './format';
 
 /** 页面与组件共用的账单数字（门户与后台的响应都满足这个形状）。 */
 export type StatementFigures = {
@@ -26,9 +33,18 @@ export type StatementDay = {
 };
 export type { StatementState };
 
-/** 2026-09 → 2026年9月。 */
-export function statementMonthTitle(month: string) {
-  return `${Number(month.slice(0, 4))}年${Number(month.slice(5, 7))}月`;
+/** 2026-09 → 中文 2026年9月，英文 Sep 2026。 */
+export function statementMonthTitle(
+  month: string,
+  locale: Locale = currentLocale(),
+) {
+  const year = Number(month.slice(0, 4));
+  const monthNumber = Number(month.slice(5, 7));
+  return translate(locale, 'format:yearMonth', {
+    year,
+    month:
+      locale === 'en' ? monthName(monthNumber, locale) : String(monthNumber),
+  });
 }
 
 export function statementHref(month: string) {
@@ -101,7 +117,9 @@ export function sumRows(
   };
 }
 
-export const unmatchedChargeNote = '部分扣费没有对应的话单明细';
+export function unmatchedChargeNote(locale: Locale = currentLocale()) {
+  return translate(locale, 'statement:unmatchedCharge');
+}
 
 /**
  * 头部的通话扣费来自流水，国家与日明细来自话单，二者可能不等（话单缺失、延迟入账等）。
@@ -151,6 +169,16 @@ export function fillDays(
 export function statementPeriodLabel(
   period: { from: string; to: string; openedOn: string | null },
   state: StatementState,
+  locale: Locale = currentLocale(),
 ) {
-  return `${period.from}${period.openedOn ? '（开户）' : ' '}至 ${period.to}${state === 'in_progress' ? '（进行中）' : ''}`;
+  const opened = period.openedOn !== null;
+  const inProgress = state === 'in_progress';
+  const key = opened
+    ? inProgress
+      ? 'statement:period.openedInProgress'
+      : 'statement:period.opened'
+    : inProgress
+      ? 'statement:period.inProgress'
+      : 'statement:period.plain';
+  return translate(locale, key, { from: period.from, to: period.to });
 }
