@@ -2,7 +2,7 @@
 
 发现一类 bug，就加一条机器强制。修完后跑 `/correct`：架构 → 类型 → 报错能点出改法的 lint → 测试 → CI probe，并在下表加一行。
 
-`pnpm check` 必须通过。Node 24.22.1（`.node-version`）。验证技能：`.cursor/skills/verify-fs-billing/SKILL.md`。
+`pnpm check` 必须通过。Node 24.22.2（`.node-version`）。验证技能：`.cursor/skills/verify-fs-billing/SKILL.md`。
 
 ## 规则 → 由什么强制 → 位置/证明
 

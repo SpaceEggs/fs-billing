@@ -80,7 +80,7 @@ Worker 另有原始 JSON 的 6 个月压缩归档与恢复（[Worker 接口](doc
 
 ## 快速开始
 
-需要 Node.js 24.22.1（见 `.node-version`）、pnpm 10.34.7（`corepack enable`），以及 Docker（仅用于本地 PostgreSQL，执行前启动 Docker Desktop 或 OrbStack）。
+需要 Node.js 24.22.2（见 `.node-version`）、pnpm 10.34.7（`corepack enable`），以及 Docker（仅用于本地 PostgreSQL，执行前启动 Docker Desktop 或 OrbStack）。
 
 首次启动按顺序执行：
 
