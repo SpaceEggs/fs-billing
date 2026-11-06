@@ -10,6 +10,7 @@ import {
   type ValidationIssue,
 } from '@fs-billing/shared';
 import { normalizeAmountInput, settingsAmountError } from './amounts';
+import { issueText } from './api-problem';
 
 export const maxRecipients = 20;
 
@@ -240,7 +241,7 @@ export function serverFieldErrors(issues: ValidationIssue[]): FieldErrors {
       serverFieldPrefixes.find(
         ([prefix]) => path === prefix || path.startsWith(`${prefix}.`),
       )?.[1] ?? 'form';
-    if (!errors[field]) errors[field] = issue.message;
+    if (!errors[field]) errors[field] = issueText(issue);
   }
   return errors;
 }

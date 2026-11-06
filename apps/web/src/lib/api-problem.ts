@@ -5,9 +5,25 @@ import type {
   adminConflictCodeSchema,
 } from '@fs-billing/shared';
 import type { z } from 'zod';
+import { i18n } from '../i18n';
 import { ApiRequestError, needsReauthentication } from './api';
 
 export type ConflictCode = z.infer<typeof adminConflictCodeSchema>;
+
+/** 目录翻译函数；shared 只放目录数据，这里由 web 的 i18next 实例提供实现。 */
+export type Translator = (
+  key: string,
+  params?: Record<string, unknown>,
+) => string;
+
+const translate: Translator = (key, params) =>
+  i18n.t(key, (params ?? {}) as never) as unknown as string;
+
+type TranslatableIssue = {
+  readonly key?: unknown;
+  readonly params?: unknown;
+  readonly message: string;
+};
 
 /**
  * 页面可处理的失败种类。401 reauthenticate 与 403 PASSWORD_CHANGE_REQUIRED
@@ -31,41 +47,46 @@ export type ApiProblem =
   | { kind: 'rate-limited'; retryAfterSeconds: number }
   | { kind: 'unavailable' };
 
-export const conflictMessages = {
-  TENANT_CODE_EXISTS: '租户编码已被使用',
-  EMAIL_EXISTS: '该邮箱已被其他账号使用',
-  PORTAL_ACCOUNT_EXISTS: '该租户已有门户账号',
-  CURRENCY_MISMATCH: '币种与租户币种不一致',
-  IDEMPOTENCY_CONFLICT: '该操作已用不同内容提交过，请刷新后重新操作',
-  RATE_VERSION_CONFLICT: '费率表已被修改，请刷新后重试',
-  PREVIEW_STALE: '预览已失效，费率表可能已变化，请刷新后重新预览',
-  PREVIEW_EXPIRED: '预览已过期，请重新预览',
-  ALREADY_RECEIVED: '该笔已确认收款',
-  RECEIVABLE_VOIDED: '该笔应收已作废',
-  SETTLEMENT_CONFLICT: '收款状态已变化，请刷新后重新确认',
-  RECEIVABLE_REVERSAL_MISMATCH: '冲正流水与该笔赊账不匹配',
-  SELF_DISABLE: '不能停用自己的账号',
-  LAST_ADMIN: '至少保留一个启用的管理员',
-  STATEMENT_DETAILS_DELETED: '该月话单已删除，无法重新生成账单',
-  STATEMENT_NOT_FINAL: '该月尚未结束，月结后才能重新生成账单',
-  STATEMENT_VERSION_CONFLICT: '账单已被重新生成，请刷新后重试',
-  UNASSIGNED_PREVIEW_STALE: '预览之后数据已变化，请重新预览',
-  UNASSIGNED_NOTHING_TO_ASSIGN:
-    '选择中没有可分配的待处理话单，请刷新后重新选择',
-  CDR_MONTH_NOT_DELETABLE: '所选月份不能删除话单，请刷新后重新选择',
-  CDR_DELETE_COUNT_CHANGED: '话单条数与预览不符，请刷新后重新预览',
-  ALERT_SETTINGS_VERSION_CONFLICT: '告警设置已被其他人修改，请刷新后重试',
-  MAIL_SETTINGS_VERSION_CONFLICT: '邮箱设置已被其他人修改，请刷新后重试',
-} as const satisfies Record<ConflictCode, string>;
+/** 校验问题优先按目录键取文案；没有键（旧响应、库内业务错误）回落中文原文。 */
+export function issueText(
+  issue: TranslatableIssue,
+  t: Translator = translate,
+): string {
+  if (typeof issue.key === 'string')
+    return t(issue.key, issue.params as Record<string, unknown> | undefined);
+  // 客户端直接用 shared schema 校验时，Zod issue 只有 message（可能是目录键）。
+  if (issue.message.startsWith('errors:'))
+    return t(
+      issue.message,
+      issue.params as Record<string, unknown> | undefined,
+    );
+  return issue.message;
+}
 
-export const mailSettingsMessages = {
-  SETTINGS_KEY_MISSING:
-    '服务器未配置设置加密密钥（SETTINGS_ENCRYPTION_KEY），无法保存或使用密码',
-  MAIL_SETTINGS_PASSWORD_REQUIRED: '修改服务器或账号后必须重新填写密码',
-  MAIL_SETTINGS_PASSWORD_UNUSABLE: '已保存的密码无法解密，请重新填写密码',
-  MAIL_SETTINGS_HOST_NOT_ALLOWED:
-    '该邮件服务器地址不被允许：不能是回环地址、内网地址或 localhost',
-} as const satisfies Record<AdminMailSettingsErrorCode, string>;
+/** CSV 行错误按目录键取文案。 */
+export function csvRowText(
+  row: AdminCsvRowError,
+  t: Translator = translate,
+): string {
+  return t(row.key, row.params);
+}
+
+/** 冲突、邮箱设置与 CSV 拒绝的说明。 */
+export function problemText(
+  problem: ApiProblem,
+  t: Translator = translate,
+): string | null {
+  switch (problem.kind) {
+    case 'conflict':
+      return t(`errors:conflict.${problem.code}`);
+    case 'mail-settings':
+      return t(`errors:mailSettings.${problem.code}`);
+    case 'csv-rejected':
+      return problem.message;
+    default:
+      return null;
+  }
+}
 
 /** 冲突说明页面数据已过时，刷新后可重新操作。 */
 const staleConflicts: ReadonlySet<ConflictCode> = new Set([
@@ -106,12 +127,12 @@ export function apiProblem(error: unknown): ApiProblem {
     case 'CSV_ENCODING_UNSUPPORTED':
       return {
         kind: 'csv-rejected',
-        message: '无法识别文件编码，请保存为 UTF-8 或 GBK 后重新上传',
+        message: translate('errors:csvRejected.encodingUnsupported'),
       };
     case 'CSV_LIMIT_EXCEEDED':
       return {
         kind: 'csv-rejected',
-        message: '文件超过 2 MB 或 10000 行上限',
+        message: translate('errors:csvRejected.limitExceeded'),
       };
     case 'NOT_FOUND':
       return { kind: 'not-found' };
@@ -147,7 +168,7 @@ export function apiProblem(error: unknown): ApiProblem {
       return {
         kind: 'conflict',
         code: detail.code,
-        message: conflictMessages[detail.code],
+        message: translate(`errors:conflict.${detail.code}`),
       };
     case 'SETTINGS_KEY_MISSING':
     case 'MAIL_SETTINGS_PASSWORD_REQUIRED':
@@ -156,7 +177,7 @@ export function apiProblem(error: unknown): ApiProblem {
       return {
         kind: 'mail-settings',
         code: detail.code,
-        message: mailSettingsMessages[detail.code],
+        message: translate(`errors:mailSettings.${detail.code}`),
       };
     case 'UNAUTHENTICATED':
     case 'SESSION_EXPIRED':
@@ -182,7 +203,7 @@ export function problemNotice(problem: ApiProblem): ProblemNotice {
     case 'validation':
       return {
         title: '提交内容有误，请检查标红的字段',
-        details: [...new Set(problem.issues.map((issue) => issue.message))],
+        details: [...new Set(problem.issues.map((issue) => issueText(issue)))],
         refresh: false,
       };
     case 'csv-invalid':
@@ -234,7 +255,7 @@ export function fieldIssues(problem: ApiProblem | null) {
   if (problem?.kind !== 'validation') return fields;
   for (const issue of problem.issues) {
     const key = issue.path.join('.');
-    if (!fields.has(key)) fields.set(key, issue.message);
+    if (!fields.has(key)) fields.set(key, issueText(issue));
   }
   return fields;
 }

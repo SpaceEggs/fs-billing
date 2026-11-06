@@ -70,7 +70,7 @@ test.each([
       const body = apiErrorSchemas.SERVICE_UNAVAILABLE.parse(response.json());
       expect(body.error).toMatchObject({
         code: 'SERVICE_UNAVAILABLE',
-        message: '服务暂不可用',
+        message: 'Service unavailable',
       });
       expect(body.error.requestId).toMatch(/\S+/);
       expect(response.headers['cache-control']).toBe('no-store');

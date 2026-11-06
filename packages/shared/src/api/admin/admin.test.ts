@@ -162,9 +162,17 @@ describe('admin rate contract', () => {
     const result = {
       ok: false,
       errors: [
-        { line: 12, reason: '前缀只能是数字' },
-        { line: 37, reason: '费率不能为负' },
-        { line: 45, reason: '前缀重复' },
+        {
+          line: 12,
+          key: 'errors:csv.row.prefixDigits',
+          params: { prefix: 'x' },
+        },
+        {
+          line: 37,
+          key: 'errors:csv.row.rateNegative',
+          params: { rate: '-1' },
+        },
+        { line: 45, key: 'errors:csv.row.duplicatePrefix' },
       ],
     };
     expect(adminRatePreviewResponseSchema.parse(result)).toEqual(result);

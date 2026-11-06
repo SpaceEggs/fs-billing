@@ -9,7 +9,7 @@ import {
 } from '@fs-billing/shared';
 import type { AuthGateway } from '../auth/gateway.js';
 import { resolvePrincipal } from '../identity.js';
-import { ApiFailure } from '../errors.js';
+import { ApiFailure, validationIssues } from '../errors.js';
 import type { RequestContext } from '../types.js';
 
 export type RouteHandler = (
@@ -145,12 +145,7 @@ export function registerRoutes(
             new ApiFailure(
               'VALIDATION_ERROR',
               undefined,
-              body.error.issues.map((issue) => ({
-                path: issue.path.map((part) =>
-                  typeof part === 'number' ? part : String(part),
-                ),
-                message: '请求字段格式错误',
-              })),
+              validationIssues(body.error),
             ),
           );
         done();

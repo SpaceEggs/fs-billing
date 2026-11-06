@@ -45,26 +45,59 @@ test.each([
 });
 
 test.each([
-  ['ß,英国,44,,0.02', 'ISO 必须是两位字母，或留空：ß'],
-  ['GBR,英国,44,,0.02', 'ISO 必须是两位字母，或留空：GBR'],
-  ['G1,英国,44,,0.02', 'ISO 必须是两位字母，或留空：G1'],
-  ['英国,英国,44,,0.02', 'ISO 必须是两位字母，或留空：英国'],
-  ['GB,,44,,0.02', '国家不能为空'],
-  ['GB,英国,447,0.0450', '应为 5 列，实际 4 列'],
-  ['GB,英国,44,,0.02,x', '应为 5 列，实际 6 列'],
-  ['GB,英国,44a,,0.02', '前缀只能是数字：44a'],
-  ['GB,英国,,,0.02', '前缀只能是数字：'],
-  ['GB,英国,0044,,0.02', '前缀不能以 00 开头（国际冠字应去掉）：0044'],
-  ['GB,英国,44,,abc', '费率不是数字：abc'],
-  ['GB,英国,44,,-1', '费率不能为负：-1'],
-  ['GB,英国,44,,0.12345', '费率最多 4 位小数：0.12345'],
-  ['GB,"英国"x,44,,0.02', '引号后只能是逗号'],
-  ['GB,英"国,44,,0.02', '未加引号的字段中不能有引号'],
-  ['GB,"英国,44,,0.02', '引号未闭合（引号内不能换行）'],
-])('row errors keep their physical line numbers: %s', (row, reason) => {
+  ['ß,英国,44,,0.02', { key: 'errors:csv.row.iso', params: { iso: 'ß' } }],
+  ['GBR,英国,44,,0.02', { key: 'errors:csv.row.iso', params: { iso: 'GBR' } }],
+  ['G1,英国,44,,0.02', { key: 'errors:csv.row.iso', params: { iso: 'G1' } }],
+  [
+    '英国,英国,44,,0.02',
+    { key: 'errors:csv.row.iso', params: { iso: '英国' } },
+  ],
+  ['GB,,44,,0.02', { key: 'errors:csv.row.countryEmpty' }],
+  [
+    'GB,英国,447,0.0450',
+    { key: 'errors:csv.row.columnCount', params: { count: 4 } },
+  ],
+  [
+    'GB,英国,44,,0.02,x',
+    { key: 'errors:csv.row.columnCount', params: { count: 6 } },
+  ],
+  [
+    'GB,英国,44a,,0.02',
+    { key: 'errors:csv.row.prefixDigits', params: { prefix: '44a' } },
+  ],
+  [
+    'GB,英国,,,0.02',
+    { key: 'errors:csv.row.prefixDigits', params: { prefix: '' } },
+  ],
+  [
+    'GB,英国,0044,,0.02',
+    {
+      key: 'errors:csv.row.prefixLeadingZeros',
+      params: { prefix: '0044' },
+    },
+  ],
+  [
+    'GB,英国,44,,abc',
+    { key: 'errors:csv.row.rateNotNumber', params: { rate: 'abc' } },
+  ],
+  [
+    'GB,英国,44,,-1',
+    { key: 'errors:csv.row.rateNegative', params: { rate: '-1' } },
+  ],
+  [
+    'GB,英国,44,,0.12345',
+    {
+      key: 'errors:csv.row.rateMaxFourDecimals',
+      params: { rate: '0.12345' },
+    },
+  ],
+  ['GB,"英国"x,44,,0.02', { key: 'errors:csv.row.quoteAfter' }],
+  ['GB,英"国,44,,0.02', { key: 'errors:csv.row.quoteInUnquoted' }],
+  ['GB,"英国,44,,0.02', { key: 'errors:csv.row.quoteUnclosed' }],
+])('row errors keep their physical line numbers: %s', (row, error) => {
   expect(parseRateCsv(`\n${header}\n\n${row}`, 'CNY')).toEqual({
     ok: false,
-    errors: [{ line: 4, reason }],
+    errors: [{ line: 4, ...error }],
   });
 });
 
@@ -74,13 +107,7 @@ test.each(['prefix,country,rate', '前缀,国家,费率', '44,英国,0.02'])(
     const result = parseRateCsv(`\n${old}\n44,英国,bad`, 'CNY');
     expect(result).toEqual({
       ok: false,
-      errors: [
-        {
-          line: 2,
-          reason:
-            '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板',
-        },
-      ],
+      errors: [{ line: 2, key: 'errors:csv.file.oldFormat' }],
     });
   },
 );
@@ -98,8 +125,7 @@ test.each([
       errors: [
         expect.objectContaining({
           line: 3,
-          reason:
-            '表头无法识别，第一行必须是：ISO,Country,Destination Prefix,Description,Rate（也可用中文表头 ISO,国家,号码前缀,说明,费率）',
+          key: 'errors:csv.file.invalidHeader',
         }),
       ],
     });
@@ -111,7 +137,7 @@ test.each(['', header, `${header}\n\n`])(
   (text) => {
     expect(parseRateCsv(text, 'CNY')).toEqual({
       ok: false,
-      errors: [{ line: 1, reason: '文件没有费率行' }],
+      errors: [{ line: 1, key: 'errors:csv.file.empty' }],
     });
   },
 );
@@ -120,8 +146,12 @@ test('duplicate prefixes across descriptions are rejected, including prefixes on
   expect(parse('GB,,44,,0.02\nGB,英国,44,手机,0.05')).toEqual({
     ok: false,
     errors: [
-      { line: 2, reason: '国家不能为空' },
-      { line: 3, reason: '前缀 44 与第 2 行重复' },
+      { line: 2, key: 'errors:csv.row.countryEmpty' },
+      {
+        line: 3,
+        key: 'errors:csv.row.duplicatePrefix',
+        params: { prefix: '44', firstLine: 2 },
+      },
     ],
   });
 });
@@ -132,15 +162,22 @@ test('validateEntry errors are merged with parser errors by physical line', () =
       `${header}\nGB,英国,44,,0.02\nGB,英国,0044,,0.02\nGB,英国,447,手机,0.05`,
       'CNY',
       {
-        validateEntry: (entry) => (entry.description ? '说明错误' : '国家错误'),
+        validateEntry: (entry) =>
+          entry.description
+            ? { key: 'test.description' }
+            : { key: 'test.country' },
       },
     ),
   ).toEqual({
     ok: false,
     errors: [
-      { line: 2, reason: '国家错误' },
-      { line: 3, reason: '前缀不能以 00 开头（国际冠字应去掉）：0044' },
-      { line: 4, reason: '说明错误' },
+      { line: 2, key: 'test.country' },
+      {
+        line: 3,
+        key: 'errors:csv.row.prefixLeadingZeros',
+        params: { prefix: '0044' },
+      },
+      { line: 4, key: 'test.description' },
     ],
   });
 });

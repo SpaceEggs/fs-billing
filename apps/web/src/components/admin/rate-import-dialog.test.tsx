@@ -194,10 +194,22 @@ describe('rate import dialog', () => {
       body: {
         ok: false,
         errors: [
-          { line: 2, reason: '前缀只能是数字：8a6' },
-          { line: 3, reason: '费率不能为负：-0.1' },
-          { line: 5, reason: '费率最多 4 位小数：0.12345' },
-          { line: 9, reason: '文件没有费率行' },
+          {
+            line: 2,
+            key: 'errors:csv.row.prefixDigits',
+            params: { prefix: '8a6' },
+          },
+          {
+            line: 3,
+            key: 'errors:csv.row.rateNegative',
+            params: { rate: '-0.1' },
+          },
+          {
+            line: 5,
+            key: 'errors:csv.row.rateMaxFourDecimals',
+            params: { rate: '0.12345' },
+          },
+          { line: 9, key: 'errors:csv.file.empty' },
         ],
       },
     }));
@@ -239,7 +251,10 @@ describe('rate import dialog', () => {
       '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板';
     stubApi(() => ({
       status: 200,
-      body: { ok: false, errors: [{ line: 1, reason }] },
+      body: {
+        ok: false,
+        errors: [{ line: 1, key: 'errors:csv.file.oldFormat' }],
+      },
     }));
     renderTab();
     const { user, dialog } = await openAndUpload(

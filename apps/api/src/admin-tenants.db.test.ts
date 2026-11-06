@@ -141,7 +141,7 @@ describe('admin tenant and balance API', () => {
         ).toMatchObject({
           error: {
             code: 'SERVICE_UNAVAILABLE',
-            message: '服务暂不可用',
+            message: 'Service unavailable',
           },
         });
       } finally {
@@ -281,7 +281,7 @@ describe('admin tenant and balance API', () => {
     expect(detail.json()).toEqual({
       error: {
         code: 'INTERNAL_ERROR',
-        message: '服务内部错误',
+        message: 'Internal server error',
         requestId: failure.error.requestId,
       },
     });
@@ -704,7 +704,15 @@ describe('admin tenant and balance API', () => {
       expect(response.json()).toMatchObject({ error: { code } });
       if (code === 'CSV_INVALID')
         expect(response.json()).toMatchObject({
-          error: { rows: [{ line: 2, reason: '费率不能为负：-1' }] },
+          error: {
+            rows: [
+              {
+                line: 2,
+                key: 'errors:csv.row.rateNegative',
+                params: { rate: '-1' },
+              },
+            ],
+          },
         });
     }
     const content = Buffer.from(

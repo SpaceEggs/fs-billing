@@ -20,7 +20,7 @@ export const adminReceivableStatusSchema = z.enum([
 const receivedOnSchema = z.iso
   .date()
   .refine((date) => date <= beijingDate(Date.now()), {
-    message: '收款日期不能晚于当前北京时间日期',
+    message: 'errors:validation.receivable.receivedOnFuture',
   });
 
 export const adminCurrencyTotalsSchema = z.strictObject({
@@ -61,19 +61,25 @@ export const adminReceivableSchema = z
     (entry) =>
       entry.payment.status !== 'received' ||
       entry.latestSettlementId === entry.payment.settlementId,
-    { message: '已收款必须引用最新确认事件', path: ['latestSettlementId'] },
+    {
+      message: 'errors:validation.receivable.latestSettlement',
+      path: ['latestSettlementId'],
+    },
   )
   .refine(
     (entry) =>
       entry.overdue ===
       (entry.payment.status === 'pending' && entry.ageDays > 30),
-    { message: '待收款超过 30 天才标记逾期' },
+    { message: 'errors:validation.receivable.overdueAfter30' },
   )
   .refine(
     (entry) =>
       entry.payment.status !== 'received' ||
       entry.payment.receivedOn >= beijingDate(Date.parse(entry.createdAt)),
-    { message: '收款日期不能早于赊账日期', path: ['payment', 'receivedOn'] },
+    {
+      message: 'errors:validation.receivable.receivedBeforeCredit',
+      path: ['payment', 'receivedOn'],
+    },
   );
 export const adminReceivablesQuerySchema = adminPageQuerySchema.extend({
   search: z.string().max(200).optional(),

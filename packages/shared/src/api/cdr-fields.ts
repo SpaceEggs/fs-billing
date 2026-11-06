@@ -32,7 +32,7 @@ export const calleeSearchSchema = z
     if (normalized === undefined) {
       context.addIssue({
         code: 'custom',
-        message: '被叫号码只能包含数字、+、空格、连字符和括号',
+        message: 'errors:validation.cdr.calleeChars',
       });
       return z.NEVER;
     }
@@ -113,7 +113,7 @@ export function checkCdrShape(cdr: CdrShape, context: z.RefinementCtx) {
     context.addIssue({
       code: 'custom',
       path: ['endedAt'],
-      message: '挂断时间不能早于振铃开始时间',
+      message: 'errors:validation.cdr.endBeforeStart',
     });
   if (cdr.answeredAt === null) {
     if (
@@ -124,7 +124,7 @@ export function checkCdrShape(cdr: CdrShape, context: z.RefinementCtx) {
       context.addIssue({
         code: 'custom',
         path: ['charge'],
-        message: '未接通话单的时长、计费分钟和费用必须为 0',
+        message: 'errors:validation.cdr.unansweredZero',
       });
     return;
   }
@@ -133,7 +133,7 @@ export function checkCdrShape(cdr: CdrShape, context: z.RefinementCtx) {
     context.addIssue({
       code: 'custom',
       path: ['answeredAt'],
-      message: '接通时间必须在振铃开始与挂断之间',
+      message: 'errors:validation.cdr.answerWithin',
     });
   if (
     cdr.direction === 'outbound' &&
@@ -142,19 +142,19 @@ export function checkCdrShape(cdr: CdrShape, context: z.RefinementCtx) {
     context.addIssue({
       code: 'custom',
       path: ['country'],
-      message: '已接通话单必须有国家、匹配前缀和费率',
+      message: 'errors:validation.cdr.outboundFields',
     });
   if (cdr.direction === 'inbound' && !isZero(cdr.billedMinutes))
     context.addIssue({
       code: 'custom',
       path: ['billedMinutes'],
-      message: '呼入话单的计费分钟必须为 0',
+      message: 'errors:validation.cdr.inboundMinutesZero',
     });
   if (cdr.direction === 'inbound' && !isZero(cdr.charge))
     context.addIssue({
       code: 'custom',
       path: ['charge'],
-      message: '呼入话单的费用必须为 0',
+      message: 'errors:validation.cdr.inboundChargeZero',
     });
 }
 

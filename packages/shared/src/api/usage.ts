@@ -37,7 +37,7 @@ export function checkUsageDailyWindow(
       context.addIssue({
         code: 'custom',
         path: ['daily', index, 'date'],
-        message: '消费日期必须为截至 asOf 北京时间当天的连续 30 天',
+        message: 'errors:validation.usage.dailyWindow',
       });
   });
 }

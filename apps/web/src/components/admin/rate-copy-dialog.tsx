@@ -14,7 +14,7 @@ import {
   invalidateTenant,
   useApiMutation,
 } from '../../lib/admin-api';
-import { apiProblem, fieldIssues } from '../../lib/api-problem';
+import { apiProblem, csvRowText, fieldIssues } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
 import { resolveSchedule, type ScheduleChoice } from '../../lib/rates';
 import { cn } from '../../lib/utils';
@@ -210,7 +210,7 @@ export function RateCopyDialog({
       else
         setState({
           step: 'step1',
-          notice: `无法预览：${result.errors.map((error) => error.reason).join('；')}`,
+          notice: `无法预览：${result.errors.map((error) => csvRowText(error)).join('；')}`,
           error: null,
         });
     } catch (error) {

@@ -44,7 +44,7 @@ function clampYear(year: number, month: number, date: number) {
 
 /** 北京时间日期（YYYY-MM-DD），含两端。 */
 const supportedDaySchema = z.iso.date().refine((day) => day >= '0001-01-01', {
-  message: '日期范围必须在 0001-01-01 至 9999-12-31 之间',
+  message: 'errors:validation.date.outOfRange',
 });
 
 export const dayRangeFields = {
@@ -68,12 +68,12 @@ export function checkDayRange(
     context.addIssue({
       code: 'custom',
       path: ['to'],
-      message: '结束日期不能早于开始日期',
+      message: 'errors:validation.date.endBeforeStart',
     });
   else if (range.to > latestRangeEnd(range.from))
     context.addIssue({
       code: 'custom',
       path: ['to'],
-      message: '日期范围最长一个月',
+      message: 'errors:validation.date.rangeTooLong',
     });
 }

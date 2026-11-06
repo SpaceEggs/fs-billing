@@ -42,7 +42,7 @@ export const portalCdrsResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['pagination', 'total'],
-        message: '总数不能小于当前页条数',
+        message: 'errors:validation.cdr.total',
       });
   });
 export type PortalCdrsResponse = z.infer<typeof portalCdrsResponseSchema>;

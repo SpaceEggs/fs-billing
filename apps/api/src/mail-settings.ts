@@ -34,7 +34,7 @@ import {
   type MailSettingsSource,
   type ValidationIssue,
 } from '@fs-billing/shared';
-import { ApiFailure } from './errors.js';
+import { ApiFailure, validationIssue } from './errors.js';
 
 /**
  * 生产环境拒绝连接这些地址，开发环境保留（Mailpit 要用）。
@@ -156,25 +156,33 @@ function validateConfig(
   const issues: ValidationIssue[] = [];
   if (options.requireComplete) {
     if (input.host === null)
-      issues.push({
-        path: ['host'],
-        message: '启用邮件时必须填写服务器地址',
-      });
+      issues.push(
+        validationIssue(
+          ['host'],
+          'errors:validation.mailSettings.hostRequired',
+        ),
+      );
     if (input.port === null)
-      issues.push({
-        path: ['port'],
-        message: '启用邮件时必须填写端口',
-      });
+      issues.push(
+        validationIssue(
+          ['port'],
+          'errors:validation.mailSettings.portRequired',
+        ),
+      );
     if (input.secure === null)
-      issues.push({
-        path: ['secure'],
-        message: '启用邮件时必须选择加密方式',
-      });
+      issues.push(
+        validationIssue(
+          ['secure'],
+          'errors:validation.mailSettings.secureRequired',
+        ),
+      );
     if (input.mailFrom === null)
-      issues.push({
-        path: ['mailFrom'],
-        message: '启用邮件时必须填写发件人邮箱',
-      });
+      issues.push(
+        validationIssue(
+          ['mailFrom'],
+          'errors:validation.mailSettings.mailFromRequired',
+        ),
+      );
     if (issues.length > 0) return issues;
   }
 
@@ -202,10 +210,9 @@ function validateConfig(
     !options.allowPlaintext &&
     !ALLOWED_PORTS.has(input.port)
   )
-    issues.push({
-      path: ['port'],
-      message: '端口只允许 25、465、587 或 2525',
-    });
+    issues.push(
+      validationIssue(['port'], 'errors:validation.mailSettings.portAllowed'),
+    );
 
   return issues;
 }

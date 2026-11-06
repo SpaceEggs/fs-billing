@@ -394,7 +394,17 @@ export function createAdminRatesService(
           description: entry.description,
           rate: entry.perMinute.perMinute.toFixed(),
         });
-        return parsed.success ? undefined : parsed.error.issues[0]?.message;
+        if (parsed.success) return undefined;
+        const issue = parsed.error.issues[0];
+        if (issue === undefined) return undefined;
+        const params =
+          'params' in issue && issue.params !== undefined
+            ? issue.params
+            : undefined;
+        return {
+          key: issue.message,
+          ...(params === undefined ? {} : { params }),
+        };
       },
     });
     const errors = result.ok ? [] : [...result.errors];

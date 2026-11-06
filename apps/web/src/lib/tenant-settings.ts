@@ -11,6 +11,7 @@ import {
   settingsAmountError,
 } from './amounts';
 import { invalidRecipient, maxRecipients } from './tenant-create';
+import { issueText } from './api-problem';
 
 export type SettingsForm = {
   overdraftLimit: string;
@@ -127,7 +128,7 @@ export function serverSettingsErrors(issues: ValidationIssue[]) {
       head === 'emails'
         ? head
         : 'form';
-    errors[field] ??= issue.message;
+    errors[field] ??= issueText(issue);
   }
   return errors;
 }

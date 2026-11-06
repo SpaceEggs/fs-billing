@@ -14,21 +14,23 @@ export const adminRateEntrySchema = z.strictObject({
     .string()
     .regex(/^\d+$/)
     .refine((value) => !value.startsWith('00'), {
-      message: '前缀不能包含国际冠字 00',
+      message: 'errors:validation.rate.prefixLeadingZeros',
     }),
   iso: z
     .string()
     .trim()
-    .regex(/^(?:[A-Za-z]{2})?$/, 'ISO 必须是两位字母，或留空')
+    .regex(/^(?:[A-Za-z]{2})?$/, { message: 'errors:validation.rate.iso' })
     .toUpperCase(),
   description: z
     .string()
-    .refine((value) => !/[\r\n]/.test(value), { message: '说明不能包含换行' })
+    .refine((value) => !/[\r\n]/.test(value), {
+      message: 'errors:validation.rate.descriptionNewline',
+    })
     .pipe(z.string().trim().max(200)),
   country: z
     .string()
     .refine((value) => !/[\r\n]/.test(value), {
-      message: '国家不能包含换行',
+      message: 'errors:validation.rate.countryNewline',
     })
     .pipe(z.string().trim().min(1).max(200)),
   rate: adminRateAmountSchema,
@@ -56,7 +58,7 @@ export function createAdminRateEntriesSchema(
     .refine(
       (entries) =>
         new Set(entries.map((entry) => entry.prefix)).size === entries.length,
-      { message: '前缀不能重复' },
+      { message: 'errors:validation.rate.duplicatePrefix' },
     );
 }
 export const adminRateEntriesSchema = createAdminRateEntriesSchema();
@@ -82,7 +84,7 @@ export function createAdminRateScheduleSchema(
             const effectiveFrom = Date.parse(value);
             return effectiveFrom >= now && effectiveFrom <= now + limit;
           },
-          { message: '指定生效时间必须在当前时间至配置的排期上限之间' },
+          { message: 'errors:validation.rate.scheduleHorizon' },
         ),
     }),
   ]);
@@ -125,7 +127,7 @@ export function createAdminCsvFileSchema(
               : 0;
           return (value.length / 4) * 3 - padding <= limit;
         },
-        { message: 'CSV 解码字节超限' },
+        { message: 'errors:validation.rate.csvDecodeTooLarge' },
       ),
   });
 }
@@ -139,7 +141,9 @@ export const adminRateCancelFutureVersionResponseSchema =
   });
 export const adminCsvRowErrorSchema = z.strictObject({
   line: z.number().int().positive(),
-  reason: z.string().min(1),
+  /** 文案目录键，例如 `errors:csv.row.rateNegative`。 */
+  key: z.string().min(1),
+  params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 export const adminRateChangeSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('added'), after: adminRateEntrySchema }),
@@ -179,7 +183,7 @@ export const adminRatePreviewResponseSchema = z.discriminatedUnion('ok', [
             .length &&
         preview.counts.deleted ===
           preview.changes.filter((change) => change.kind === 'deleted').length,
-      { message: '预览计数必须与变更一致' },
+      { message: 'errors:validation.rate.previewCounts' },
     ),
 ]);
 export const adminRateImportCommitRequestSchema = z.strictObject({

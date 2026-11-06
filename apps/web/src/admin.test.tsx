@@ -1056,8 +1056,16 @@ describe('tenant create', () => {
         status: 400,
         body: apiError('CSV_INVALID', {
           rows: [
-            { line: 12, reason: '前缀只能包含数字' },
-            { line: 37, reason: '费率不能为负数' },
+            {
+              line: 12,
+              key: 'errors:csv.row.prefixDigits',
+              params: { prefix: '44-7' },
+            },
+            {
+              line: 37,
+              key: 'errors:csv.row.rateNegative',
+              params: { rate: '-1' },
+            },
           ],
         }),
       }),
@@ -1082,7 +1090,7 @@ describe('tenant create', () => {
     await user.click(screen.getByRole('button', { name: '创建租户' }));
     const rows = await screen.findByText('CSV 有 2 行错误，租户未创建');
     expect(rows.parentElement).toHaveTextContent(
-      '第 12 行：前缀只能包含数字第 37 行：费率不能为负数',
+      '第 12 行：前缀只能是数字：44-7第 37 行：费率不能为负：-1',
     );
     expect(screen.queryByRole('dialog')).toBeNull();
   });

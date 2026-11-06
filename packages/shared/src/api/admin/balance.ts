@@ -16,7 +16,7 @@ const balanceFields = {
     .min(1)
     .max(200)
     .refine((key) => !key.startsWith('call:'), {
-      message: 'call: 是通话扣费保留命名空间',
+      message: 'errors:validation.ledger.callNamespace',
     }),
 };
 export function createAdminBalanceOperationRequestSchema(
@@ -74,7 +74,7 @@ export const adminLedgerEntrySchema = z
     (entry) =>
       entry.noteVisibility ===
       (entry.kind === 'credit_recharge' ? 'admin' : 'customer'),
-    { message: '赊账备注仅管理员可见' },
+    { message: 'errors:validation.ledger.creditNoteAdminOnly' },
   );
 export const adminBalanceOperationResponseSchema =
   adminAuditedMutationResponseSchema.extend({

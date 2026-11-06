@@ -1175,8 +1175,7 @@ it('old three-column CSV is rejected with a dedicated error and no writes', asyn
     errors: [
       expect.objectContaining({
         line: 1,
-        reason:
-          '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板',
+        key: 'errors:csv.file.oldFormat',
       }),
     ],
   });

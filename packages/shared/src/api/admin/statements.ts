@@ -73,13 +73,13 @@ function checkRowShape(
     context.addIssue({
       code: 'custom',
       path: ['version'],
-      message: '只有已生成的账单才有版本和首次生成时间',
+      message: 'errors:validation.statement.versionOnlyFinal',
     });
   if (stored !== (row.reconcileStatus !== null))
     context.addIssue({
       code: 'custom',
       path: ['reconcileStatus'],
-      message: '只有已生成的账单才有核对状态',
+      message: 'errors:validation.statement.reconcileOnlyFinal',
     });
   const expected =
     row.state === 'in_progress'
@@ -91,7 +91,7 @@ function checkRowShape(
     context.addIssue({
       code: 'custom',
       path: ['regenerable', 'reason'],
-      message: '不可重新生成的原因与状态不符',
+      message: 'errors:validation.statement.regenerableReasonMismatch',
     });
 }
 
@@ -121,7 +121,7 @@ export const adminTenantStatementsResponseSchema = z
         context.addIssue({
           code: 'custom',
           path: ['items', index, 'month'],
-          message: '月份必须降序且不重复',
+          message: 'errors:validation.statement.monthsDescending',
         });
     });
   });
@@ -146,7 +146,7 @@ export const adminStatementListRowSchema = z
       context.addIssue({
         code: 'custom',
         path: ['figures'],
-        message: '只有未生成的行没有数字',
+        message: 'errors:validation.statement.pendingFiguresNull',
       });
   });
 export type AdminStatementListRow = z.infer<typeof adminStatementListRowSchema>;
@@ -171,14 +171,14 @@ export const adminStatementsResponseSchema = z
         context.addIssue({
           code: 'custom',
           path: ['groups', index, 'tenantCount'],
-          message: '租户数必须等于行数',
+          message: 'errors:validation.statement.tenantCountMismatch',
         });
       group.items.forEach((item, itemIndex) => {
         if (item.month !== response.month)
           context.addIssue({
             code: 'custom',
             path: ['groups', index, 'items', itemIndex, 'month'],
-            message: '行的月份必须是所选月份',
+            message: 'errors:validation.statement.rowMonthMismatch',
           });
       });
     });
@@ -189,7 +189,7 @@ export const adminStatementsResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['groups'],
-        message: '每个币种只能有一组',
+        message: 'errors:validation.statement.oneGroupPerCurrency',
       });
   });
 export type AdminStatementsResponse = z.infer<
@@ -238,19 +238,19 @@ export const adminTenantStatementResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['version'],
-        message: '只有已生成的账单才有版本和核对结果',
+        message: 'errors:validation.statement.versionAndReconcileOnlyFinal',
       });
     if (stored !== (response.firstGeneratedAt !== null))
       context.addIssue({
         code: 'custom',
         path: ['firstGeneratedAt'],
-        message: '只有已生成的账单才有首次生成时间',
+        message: 'errors:validation.statement.firstGeneratedOnlyFinal',
       });
     if (!stored && response.generatedBy !== null)
       context.addIssue({
         code: 'custom',
         path: ['generatedBy'],
-        message: '只有已生成的账单才有生成人',
+        message: 'errors:validation.statement.generatedByOnlyFinal',
       });
   });
 export type AdminTenantStatementResponse = z.infer<
@@ -286,13 +286,13 @@ export const adminStatementRegenerateResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['before'],
-        message: '补建没有之前的账单',
+        message: 'errors:validation.statement.createdBefore',
       });
     if (!response.created && response.before === null)
       context.addIssue({
         code: 'custom',
         path: ['before'],
-        message: '重新生成必须有之前的账单',
+        message: 'errors:validation.statement.regenerateRequiresBefore',
       });
     if (
       !response.changed &&
@@ -301,7 +301,7 @@ export const adminStatementRegenerateResponseSchema = z
       context.addIssue({
         code: 'custom',
         path: ['changed'],
-        message: '无变化时前后数字必须相同',
+        message: 'errors:validation.statement.unchangedFigures',
       });
   });
 export type AdminStatementRegenerateResponse = z.infer<

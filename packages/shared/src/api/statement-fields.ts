@@ -11,7 +11,7 @@ export const statementMonthSchema = z
   .string()
   .regex(/^[0-9]{4}-(?:0[1-9]|1[0-2])$/)
   .refine((month) => !month.startsWith('0000'), {
-    message: '账单月份必须在 0001-01 之后',
+    message: 'errors:validation.statement.monthTooEarly',
   });
 export const statementMonthParamsSchema = z.strictObject({
   month: statementMonthSchema,
@@ -83,7 +83,7 @@ export const adminStatementRegenerableSchema = z
     reason: z.enum(['in_progress', 'details_deleted']).nullable(),
   })
   .refine((value) => value.allowed === (value.reason === null), {
-    message: '可重新生成时不应有原因，不可时必须有原因',
+    message: 'errors:validation.statement.regenerableReason',
   });
 
 export const statementTimestampSchema = timestamp;
@@ -164,7 +164,7 @@ export function checkStatementFigures(
     context.addIssue({
       code: 'custom',
       path: [...path, 'closingBalance'],
-      message: '期末余额必须等于期初 + 充值 + 赠送 + 调账 − 通话扣费',
+      message: 'errors:validation.statement.figuresBalance',
     });
 }
 
@@ -186,19 +186,19 @@ export function checkStatementLiveness(
     context.addIssue({
       code: 'custom',
       path: ['generatedAt'],
-      message: '只有已生成的账单才有生成时间',
+      message: 'errors:validation.statement.generatedAtOnlyFinal',
     });
   if (value.asOf !== undefined && live !== (value.asOf !== null))
     context.addIssue({
       code: 'custom',
       path: ['asOf'],
-      message: '只有实时月份才有读取时刻',
+      message: 'errors:validation.statement.asOfOnlyLive',
     });
   if (live && value.detailsDeleted)
     context.addIssue({
       code: 'custom',
       path: ['detailsDeleted'],
-      message: '实时月份没有已删除的话单明细',
+      message: 'errors:validation.statement.noDeletedDetailsForLive',
     });
 }
 
@@ -216,7 +216,7 @@ export function checkStatementBreakdown(
       context.addIssue({
         code: 'custom',
         path: ['countries', index, 'country'],
-        message: '国家不能重复',
+        message: 'errors:validation.statement.duplicateCountry',
       });
     seen.add(row.country);
   }
@@ -226,7 +226,7 @@ export function checkStatementBreakdown(
       context.addIssue({
         code: 'custom',
         path: ['days', index, 'day'],
-        message: '日期必须升序且不重复',
+        message: 'errors:validation.statement.daysAscending',
       });
   }
 }

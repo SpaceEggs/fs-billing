@@ -21,7 +21,7 @@ import {
   invalidateTenant,
   useApiMutation,
 } from '../../lib/admin-api';
-import { apiProblem, fieldIssues } from '../../lib/api-problem';
+import { apiProblem, csvRowText, fieldIssues } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
 import {
   csvRawLine,
@@ -596,7 +596,7 @@ function RowErrors({
                   第 {error.line} 行
                 </TableCell>
                 <TableCell className="px-2 py-2 text-err">
-                  {error.reason}
+                  {csvRowText(error)}
                 </TableCell>
                 <TableCell className="py-2 pr-3.5 pl-2 font-mono break-all text-muted-foreground">
                   {csvRawLine(lines, error.line)}

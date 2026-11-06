@@ -142,7 +142,7 @@ test.each([
       expect(
         apiErrorSchemas.SERVICE_UNAVAILABLE.parse(response.json()),
       ).toMatchObject({
-        error: { code: 'SERVICE_UNAVAILABLE', message: '服务暂不可用' },
+        error: { code: 'SERVICE_UNAVAILABLE', message: 'Service unavailable' },
       });
       expect(response.body).not.toContain('private');
     } finally {
@@ -210,7 +210,8 @@ test.each([
       expect(apiErrorSchemas[code].parse(response.json())).toMatchObject({
         error: {
           code,
-          message: status === 500 ? '服务内部错误' : '服务暂不可用',
+          message:
+            status === 500 ? 'Internal server error' : 'Service unavailable',
         },
       });
       expect(response.headers['cache-control']).toBe('no-store');

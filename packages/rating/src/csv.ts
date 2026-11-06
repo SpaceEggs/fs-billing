@@ -1,10 +1,17 @@
 import { rate, type Currency } from './money.js';
 import type { RateEntry } from './rates.js';
 
-export interface CsvError {
+export type CsvErrorParams = Readonly<Record<string, string | number>>;
+
+/** 错误文案用目录键加插值参数表示，由界面按当前语言翻译。 */
+export interface CsvErrorInput {
+  readonly key: string;
+  readonly params?: CsvErrorParams;
+}
+
+export interface CsvError extends CsvErrorInput {
   /** 文件中的物理行号，从 1 开始（含表头）。 */
   readonly line: number;
-  readonly reason: string;
 }
 
 export type CsvResult<C extends Currency> =
@@ -17,15 +24,17 @@ const HEADER_ALIASES = [
   'iso,country,destination prefixes,description,rate',
   'iso,国家,号码前缀,说明,费率',
 ];
-const OLD_FORMAT =
-  '不再支持三列格式（前缀、国家、费率）。请改用五列并保留表头：ISO,Country,Destination Prefix,Description,Rate；可在导入对话框下载 CSV 模板';
-const INVALID_HEADER =
-  '表头无法识别，第一行必须是：ISO,Country,Destination Prefix,Description,Rate（也可用中文表头 ISO,国家,号码前缀,说明,费率）';
+const OLD_FORMAT: CsvErrorInput = {
+  key: 'errors:csv.file.oldFormat',
+};
+const INVALID_HEADER: CsvErrorInput = {
+  key: 'errors:csv.file.invalidHeader',
+};
 const PREFIX = /^\d+$/;
 const RATE_TEXT = /^-?\d+(?:\.\d+)?$/;
 
 /** 按 RFC 4180 拆分一行；引号内不允许换行，所以一行就是一条记录。 */
-function splitRow(row: string): string[] | string {
+function splitRow(row: string): string[] | CsvErrorInput {
   const cells: string[] = [];
   let i = 0;
   for (;;) {
@@ -33,7 +42,7 @@ function splitRow(row: string): string[] | string {
     if (row[i] === '"') {
       i++;
       for (;;) {
-        if (i >= row.length) return '引号未闭合（引号内不能换行）';
+        if (i >= row.length) return { key: 'errors:csv.row.quoteUnclosed' };
         if (row[i] === '"') {
           if (row[i + 1] === '"') {
             cell += '"';
@@ -45,11 +54,12 @@ function splitRow(row: string): string[] | string {
         }
         cell += row[i++];
       }
-      if (i < row.length && row[i] !== ',') return '引号后只能是逗号';
+      if (i < row.length && row[i] !== ',')
+        return { key: 'errors:csv.row.quoteAfter' };
     } else {
       const end = row.indexOf(',', i);
       cell = row.slice(i, end === -1 ? row.length : end);
-      if (cell.includes('"')) return '未加引号的字段中不能有引号';
+      if (cell.includes('"')) return { key: 'errors:csv.row.quoteInUnquoted' };
       i += cell.length;
     }
     cells.push(cell.trim());
@@ -62,7 +72,9 @@ function splitRow(row: string): string[] | string {
 export function parseRateCsv<C extends Currency>(
   text: string,
   currency: C,
-  options: { validateEntry?: (entry: RateEntry<C>) => string | undefined } = {},
+  options: {
+    validateEntry?: (entry: RateEntry<C>) => CsvErrorInput | undefined;
+  } = {},
 ): CsvResult<C> {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
   const entries: RateEntry<C>[] = [];
@@ -75,12 +87,12 @@ export function parseRateCsv<C extends Currency>(
     if (headerFailed) return;
     const line = index + 1;
     if (raw.trim() === '') return;
-    const fail = (reason: string) => errors.push({ line, reason });
+    const fail = (error: CsvErrorInput) => errors.push({ line, ...error });
     const isFirst = first;
     first = false;
 
     const split = splitRow(raw);
-    if (typeof split === 'string') {
+    if (!Array.isArray(split)) {
       if (isFirst) headerFailed = true;
       return fail(split);
     }
@@ -98,29 +110,57 @@ export function parseRateCsv<C extends Currency>(
           : INVALID_HEADER,
       );
     }
-    if (cells.length !== 5) return fail(`应为 5 列，实际 ${cells.length} 列`);
+    if (cells.length !== 5)
+      return fail({
+        key: 'errors:csv.row.columnCount',
+        params: { count: cells.length },
+      });
     const iso = cells[0]!.toUpperCase();
     const country = cells[1]!;
     const prefix = cells[2]!;
     const description = cells[3]!;
     const rateText = cells[4]!;
 
-    if (!PREFIX.test(prefix)) return fail(`前缀只能是数字：${prefix}`);
+    if (!PREFIX.test(prefix))
+      return fail({
+        key: 'errors:csv.row.prefixDigits',
+        params: { prefix },
+      });
     if (prefix.startsWith('00')) {
-      return fail(`前缀不能以 00 开头（国际冠字应去掉）：${prefix}`);
+      return fail({
+        key: 'errors:csv.row.prefixLeadingZeros',
+        params: { prefix },
+      });
     }
     const firstLine = seen.get(prefix);
     if (firstLine !== undefined) {
-      return fail(`前缀 ${prefix} 与第 ${firstLine} 行重复`);
+      return fail({
+        key: 'errors:csv.row.duplicatePrefix',
+        params: { prefix, firstLine },
+      });
     }
     seen.set(prefix, line);
     if (!/^(?:[A-Za-z]{2})?$/.test(cells[0]!))
-      return fail(`ISO 必须是两位字母，或留空：${cells[0]}`);
-    if (country === '') return fail('国家不能为空');
-    if (!RATE_TEXT.test(rateText)) return fail(`费率不是数字：${rateText}`);
-    if (rateText.startsWith('-')) return fail(`费率不能为负：${rateText}`);
+      return fail({
+        key: 'errors:csv.row.iso',
+        params: { iso: cells[0]! },
+      });
+    if (country === '') return fail({ key: 'errors:csv.row.countryEmpty' });
+    if (!RATE_TEXT.test(rateText))
+      return fail({
+        key: 'errors:csv.row.rateNotNumber',
+        params: { rate: rateText },
+      });
+    if (rateText.startsWith('-'))
+      return fail({
+        key: 'errors:csv.row.rateNegative',
+        params: { rate: rateText },
+      });
     if ((rateText.split('.')[1] ?? '').length > 4) {
-      return fail(`费率最多 4 位小数：${rateText}`);
+      return fail({
+        key: 'errors:csv.row.rateMaxFourDecimals',
+        params: { rate: rateText },
+      });
     }
     const entry = {
       prefix,
@@ -136,7 +176,10 @@ export function parseRateCsv<C extends Currency>(
 
   if (errors.length > 0) return { ok: false, errors };
   if (entries.length === 0) {
-    return { ok: false, errors: [{ line: 1, reason: '文件没有费率行' }] };
+    return {
+      ok: false,
+      errors: [{ line: 1, key: 'errors:csv.file.empty' }],
+    };
   }
   return { ok: true, entries };
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiRequestError } from '../../lib/api';
-import { apiProblem, problemNotice } from '../../lib/api-problem';
+import { apiProblem, issueText, problemNotice } from '../../lib/api-problem';
 import { CircleAlertIcon, DownloadIcon, EllipsisIcon } from 'lucide-react';
 import { Button } from '../ui/button';
 import { MobileBarButton } from '../mobile-bar-button';
@@ -129,8 +129,9 @@ function exportFailure(error: unknown) {
     return {
       title: '导出失败',
       body:
-        [...new Set(problem.issues.map((issue) => issue.message))].join('；') ||
-        '导出条件有误',
+        [...new Set(problem.issues.map((issue) => issueText(issue)))].join(
+          '；',
+        ) || '导出条件有误',
     };
   const notice = problemNotice(problem);
   return { title: `导出失败：${notice.title}`, body: notice.body };
