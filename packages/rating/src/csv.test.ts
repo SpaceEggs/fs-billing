@@ -199,24 +199,76 @@ test('export writes five columns, LF, no BOM, four decimals and round-trips quot
       perMinute: rate('CNY', '0.02'),
     },
   ];
-  const text = formatRateCsv(entries);
+  const text = formatRateCsv(entries, 'en');
   expect(text).toBe(
     `${header}\n,=shared,1,"a, ""quote""",0.0100\nGB,英国,44,,0.0200\n`,
   );
   expect(parseRateCsv(text, 'CNY')).toEqual({ ok: true, entries });
 });
 
+test('exports the Chinese header by default and round-trips it', () => {
+  const entries = [
+    {
+      iso: 'GB',
+      country: '英国',
+      prefix: '44',
+      description: '',
+      perMinute: rate('CNY', '0.02'),
+    },
+  ];
+  const text = formatRateCsv(entries);
+  expect(text).toBe('ISO,国家,号码前缀,说明,费率\nGB,英国,44,,0.0200\n');
+  expect(parseRateCsv(text, 'CNY')).toEqual({ ok: true, entries });
+});
+
+test('exports the English header with locale en and round-trips it', () => {
+  const entries = [
+    {
+      iso: 'GB',
+      country: '英国',
+      prefix: '44',
+      description: 'Mobile',
+      perMinute: rate('CNY', '0.02'),
+    },
+  ];
+  const text = formatRateCsv(entries, 'en');
+  expect(text).toBe(
+    'ISO,Country,Destination Prefix,Description,Rate\nGB,英国,44,Mobile,0.0200\n',
+  );
+  expect(parseRateCsv(text, 'CNY')).toEqual({ ok: true, entries });
+});
+
+test('keeps the data rows byte-identical across locales; only the header follows the locale', () => {
+  const entries = [
+    {
+      iso: 'GB',
+      country: '英国',
+      prefix: '44',
+      description: 'a, "quote"',
+      perMinute: rate('CNY', '0.02'),
+    },
+  ];
+  const zh = formatRateCsv(entries, 'zh').split('\n');
+  const en = formatRateCsv(entries, 'en').split('\n');
+  expect(zh.slice(1)).toEqual(en.slice(1));
+  expect(zh[0]).toBe('ISO,国家,号码前缀,说明,费率');
+  expect(en[0]).toBe('ISO,Country,Destination Prefix,Description,Rate');
+});
+
 test('export quotes newlines', () => {
   expect(
-    formatRateCsv([
-      {
-        iso: '',
-        prefix: '1',
-        country: 'A\nB',
-        description: '',
-        perMinute: rate('USD', '0.01'),
-      },
-    ]),
+    formatRateCsv(
+      [
+        {
+          iso: '',
+          prefix: '1',
+          country: 'A\nB',
+          description: '',
+          perMinute: rate('USD', '0.01'),
+        },
+      ],
+      'en',
+    ),
   ).toBe(`${header}\n,"A\nB",1,,0.0100\n`);
 });
 

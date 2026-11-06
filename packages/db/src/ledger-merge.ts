@@ -1,6 +1,7 @@
 import { sql, type SQL } from 'drizzle-orm';
 import {
   PORTAL_CREDIT_RECHARGE_NOTE,
+  PORTAL_CREDIT_RECHARGE_NOTE_KEY,
   type PortalLedgerExportRequest,
   type AdminLedgerQuery,
   type PortalLedgerQuery,
@@ -46,7 +47,10 @@ export function mergedLedgerSql({
     audience === 'portal'
       ? sql`jsonb_build_object(
           'id', p.id, 'kind', case when p.kind = 'credit_recharge' then 'recharge' else p.kind end,
-          'note', p.note)`
+          'note', p.note) ||
+        case when p.kind = 'credit_recharge'
+          then jsonb_build_object('noteKey', ${PORTAL_CREDIT_RECHARGE_NOTE_KEY}::text)
+          else '{}'::jsonb end`
       : sql`jsonb_build_object(
           'id', p.id, 'kind', p.kind, 'note', p.note,
           'noteVisibility', case when p.kind = 'credit_recharge' then 'admin' else 'customer' end,
@@ -160,6 +164,7 @@ export function mergedLedgerExportQuery({
       day::text as day, calls,
       to_char(at at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as "occurredAt",
       amount::text as amount, balance_after::text as "balanceAfter", note,
+      case when kind = 'credit_recharge' then ${PORTAL_CREDIT_RECHARGE_NOTE_KEY}::text else null::text end as "noteKey",
       (day = (statement_timestamp() at time zone 'Asia/Shanghai')::date) as partial
     from filtered order by at desc, sort_id desc
   `;

@@ -6,7 +6,10 @@ import {
 } from '../contract.js';
 import { apiErrorSchemas } from '../errors.js';
 import { cdrCountriesResponseSchema } from '../cdr-fields.js';
-import { csvExportResponseSchema } from '../export.js';
+import {
+  csvExportResponseSchema,
+  exportLocaleRequestSchema,
+} from '../export.js';
 import {
   portalCdrCountriesQuerySchema,
   portalCdrExportRequestSchema,
@@ -135,6 +138,13 @@ const monthRequest = {
   body: noBody,
 };
 
+/** 账单汇总导出只多一个语言；详情 GET 仍然没有 body。 */
+const monthExportRequest = {
+  params: statementMonthParamsSchema,
+  query: emptyRequestSchema,
+  body: exportLocaleRequestSchema.optional(),
+};
+
 /**
  * 阶段 7 月账单。租户只来自会话，路径里的 month 不是租户选择器；别的租户独有的月份与不存在的月份
  * 都是 404，响应无法区分。汇总 CSV 不写操作日志（话单明细 CSV 复用 portalCdrsExport）。
@@ -160,7 +170,7 @@ export const portalStatementApiContract = {
     'portalStatementExport',
     'POST',
     '/api/portal/statements/{month}/export',
-    monthRequest,
+    monthExportRequest,
     csvExportResponseSchema,
     { 404: apiErrorSchemas.NOT_FOUND },
   ),

@@ -565,6 +565,7 @@ describe('portal CDR export', () => {
         callee: '447700',
         country: '英国',
         status: 'all',
+        locale: 'zh',
       },
     ]);
     expect(downloadBlob.mock.calls[0]![0]).toBe(

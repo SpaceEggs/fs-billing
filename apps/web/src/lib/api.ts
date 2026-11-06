@@ -16,6 +16,7 @@ import {
   type ApiOperation,
 } from '@fs-billing/shared';
 import { downloadBlob } from './download';
+import { currentLocale } from '../i18n';
 
 const { adminTenantCdrsExport, ...adminCdrQueries } = adminCdrApiContract;
 const { adminTenantStatementExport, ...adminStatementQueries } =
@@ -234,7 +235,13 @@ export async function callDownload<Id extends DownloadOperationId>(
   input: DownloadInput<Id>,
 ): Promise<{ filename: string }> {
   const operation: ApiOperation = downloadApiContract[operationId];
-  const body = operation.request.body.parse(input.body);
+  // 导出跟随当前界面语言，而不是账号语言；缺省字段由请求 schema 补中文。
+  const body = operation.request.body.parse({
+    locale: currentLocale(),
+    ...(typeof input.body === 'object' && input.body !== null
+      ? input.body
+      : {}),
+  });
   const url = apiPath(operation, {
     params: (input as { params?: unknown }).params,
   });

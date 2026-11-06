@@ -19,10 +19,14 @@ export type CsvResult<C extends Currency> =
   | { readonly ok: false; readonly errors: readonly CsvError[] };
 
 const HEADER = ['ISO', 'Country', 'Destination Prefix', 'Description', 'Rate'];
+const HEADERS = {
+  zh: ['ISO', '国家', '号码前缀', '说明', '费率'],
+  en: HEADER,
+} as const;
 const HEADER_ALIASES = [
   HEADER.join(',').toLowerCase(),
   'iso,country,destination prefixes,description,rate',
-  'iso,国家,号码前缀,说明,费率',
+  HEADERS.zh.join(',').toLowerCase(),
 ];
 const OLD_FORMAT: CsvErrorInput = {
   key: 'errors:csv.file.oldFormat',
@@ -217,8 +221,13 @@ export function csvRecord(cells: readonly string[]): string {
   return cells.map(csvCell).join(',');
 }
 
-/** 导出为 `ISO,Country,Destination Prefix,Description,Rate`，费率固定 4 位小数。 */
-export function formatRateCsv(entries: readonly RateEntry<Currency>[]): string {
+export type CsvLocale = 'zh' | 'en';
+
+/** 导出为当前语言的五列表头，费率固定 4 位小数；两种表头都能再导入。 */
+export function formatRateCsv(
+  entries: readonly RateEntry<Currency>[],
+  locale: CsvLocale = 'zh',
+): string {
   const rows = entries.map((e) =>
     [
       e.iso,
@@ -230,5 +239,5 @@ export function formatRateCsv(entries: readonly RateEntry<Currency>[]): string {
       .map(quoteCsvCell)
       .join(','),
   );
-  return `${[HEADER.join(','), ...rows].join('\n')}\n`;
+  return `${[HEADERS[locale].join(','), ...rows].join('\n')}\n`;
 }

@@ -1,0 +1,60 @@
+export const csv = {
+  cdr: {
+    headers: {
+      answeredAt: 'Answer time (Beijing time)',
+      caller: 'Caller',
+      callee: 'Callee',
+      iso: 'ISO',
+      country: 'Country',
+      description: 'Description',
+      durationSeconds: 'Duration (seconds)',
+      billedMinutes: 'Billed minutes',
+      rate: 'Rate',
+      charge: 'Charge',
+      startedAt: 'Ring start time (Beijing time)',
+      endedAt: 'Hangup time (Beijing time)',
+      hangupCause: 'Hangup cause',
+      matchedPrefix: 'Matched prefix',
+      callUuid: 'Call UUID',
+      direction: 'Direction',
+      verificationStatus: 'Verification status',
+    },
+    direction: {
+      inbound: 'Inbound',
+      outbound: 'Outbound',
+    },
+    unanswered: 'Unanswered',
+    unverified: 'Unverified',
+  },
+  ledger: {
+    headers: {
+      time: 'Time',
+      kind: 'Type',
+      amount: 'Amount ({{currency}})',
+      balanceAfter: 'Balance after ({{currency}})',
+      note: 'Note',
+    },
+  },
+  statement: {
+    headers: {
+      category: 'Category',
+      item: 'Item',
+      calls: 'Calls',
+      billedMinutes: 'Billed minutes',
+      amount: 'Amount ({{currency}})',
+    },
+    category: {
+      summary: 'Summary',
+      country: 'Country',
+      day: 'Day',
+    },
+    item: {
+      openingBalance: 'Opening balance',
+      recharge: 'Recharge',
+      gift: 'Gift',
+      adjustment: 'Adjustment',
+      callCharges: 'Call charges',
+      closingBalance: 'Closing balance',
+    },
+  },
+} as const;

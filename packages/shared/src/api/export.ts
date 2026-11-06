@@ -1,6 +1,15 @@
 import { z } from 'zod';
+import { DEFAULT_LOCALE, LOCALES } from '../i18n/index.js';
 
 export const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
+
+/** 导出请求的语言；缺省中文，非法值让请求 schema 返回 400。 */
+export const exportLocaleSchema = z.enum(LOCALES).default(DEFAULT_LOCALE);
+
+/** 账单汇总导出没有筛选，只带语言；没有 body 时由契约层按可选处理。 */
+export const exportLocaleRequestSchema = z.strictObject({
+  locale: exportLocaleSchema,
+});
 
 /**
  * CSV 导出的成功响应是分块写出的原始 CSV 文本，不是 JSON。路由用 reply.hijack() 直接写 socket，

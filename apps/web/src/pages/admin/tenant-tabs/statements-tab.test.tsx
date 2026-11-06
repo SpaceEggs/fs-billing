@@ -467,7 +467,10 @@ describe('admin statement detail', () => {
       ),
     );
     expect(downloads).toEqual([
-      { path: `${detailPath}/statements/2026-08/export`, body: {} },
+      {
+        path: `${detailPath}/statements/2026-08/export`,
+        body: { locale: 'zh' },
+      },
       {
         path: `${detailPath}/cdrs/export`,
         body: {
@@ -475,6 +478,7 @@ describe('admin statement detail', () => {
           to: '2026-08-31',
           status: 'answered',
           unverifiedOnly: false,
+          locale: 'zh',
         },
       },
     ]);

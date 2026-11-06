@@ -85,6 +85,7 @@ describe('portal and admin ledger HTTP boundary', () => {
           kind: 'recharge',
           amount: '25.5',
           note: '账户充值',
+          noteKey: 'ledger.accountRecharge',
         }),
       ]),
     );
@@ -92,6 +93,25 @@ describe('portal and admin ledger HTTP boundary', () => {
     expect(body.totalAmount).toBe('136.75');
     expect(body.balance).toBe('135.50');
   });
+  it('streams English ledger headers and system notes for locale en', async () => {
+    const params = new URLSearchParams(range());
+    const response = await api.inject({
+      method: 'POST',
+      url: '/api/portal/ledger/export',
+      headers: requestHeaders(customerCookie),
+      payload: {
+        from: params.get('from'),
+        to: params.get('to'),
+        locale: 'en',
+      },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.body).toContain(
+      'Time,Type,Amount (CNY),Balance after (CNY),Note',
+    );
+    expect(response.body).toContain('Account recharge');
+  });
+
   it('adds payment status, actor and internal note for admins only', async () => {
     const response = await api.inject({
       url: `/api/admin/tenants/${fixture.a.tenantId}/ledger?${range()}`,

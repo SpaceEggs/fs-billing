@@ -368,6 +368,7 @@ describe('admin tenant CDR tab', () => {
           country: '英国',
           status: 'answered',
           unverifiedOnly: true,
+          locale: 'zh',
         },
       },
     ]);

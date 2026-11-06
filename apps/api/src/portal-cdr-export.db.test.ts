@@ -24,6 +24,37 @@ beforeAll(async () => {
 });
 
 describe('portal CDR export HTTP lifecycle', () => {
+  it('rejects an unsupported export locale with 400', async () => {
+    const session = await login(api, fixture.a);
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const response = await api.inject({
+      method: 'POST',
+      url: '/api/portal/cdrs/export',
+      headers: requestHeaders(session.cookie),
+      payload: { from: `${day.slice(0, 7)}-01`, to: day, locale: 'fr' },
+    });
+    expect(response.statusCode, response.body).toBe(400);
+  });
+
+  it('streams English CDR headers when locale is en', async () => {
+    const session = await login(api, fixture.a);
+    const day = new Date(Date.now() + 8 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const response = await api.inject({
+      method: 'POST',
+      url: '/api/portal/cdrs/export',
+      headers: requestHeaders(session.cookie),
+      payload: { from: `${day.slice(0, 7)}-01`, to: day, locale: 'en' },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.body).toContain('Answer time (Beijing time)');
+    expect(response.body).toContain('Direction');
+    expect(response.body).not.toContain('接通时间');
+  });
+
   it('returns the contract JSON error before hijacking when the first cursor batch is cancelled', async () => {
     const tenantId = fixture.a.tenantId;
     if (!tenantId) throw new Error('Expected portal tenant to exist');

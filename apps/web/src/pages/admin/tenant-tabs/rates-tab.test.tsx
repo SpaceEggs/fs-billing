@@ -449,7 +449,7 @@ describe('rates tab export', () => {
       within(scheduled).getByRole('button', { name: '导出 CSV' }),
     );
     await waitFor(() => expect(downloads).toEqual(['ABC001-scheduled.csv']));
-    expect(exports).toEqual([{ versionId: versionB }]);
+    expect(exports).toEqual([{ versionId: versionB, locale: 'zh' }]);
     expect(await blobs[0]!.text()).toBe(
       'ISO,Country,Destination Prefix,Description,Rate\n,中国,86,,0.0500\n',
     );

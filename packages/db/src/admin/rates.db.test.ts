@@ -520,7 +520,7 @@ describe('admin rates service', () => {
     });
     const exported = await service.exportRates({
       ...context,
-      request: { versionId: edited.version.id },
+      request: { versionId: edited.version.id, locale: 'en' },
     });
     expect(exported.csv).toContain(',"英国,""手机""",44,,0.0400');
     const preview = await service.importPreview({
@@ -896,7 +896,7 @@ describe('admin rates service', () => {
     const result = adminRateExportResponseSchema.parse(
       await service.exportRates({
         ...context,
-        request: { versionId: context.baseVersionId },
+        request: { versionId: context.baseVersionId, locale: 'en' },
       }),
     );
     expect(result.csv).toBe(
@@ -910,9 +910,52 @@ describe('admin rates service', () => {
     await expect(
       service.exportRates({
         ...context,
-        request: { versionId: (await fixture()).baseVersionId },
+        request: {
+          versionId: (await fixture()).baseVersionId,
+          locale: 'en',
+        },
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('exports Chinese headers and keeps entries unchanged after reimport', async () => {
+    const context = await fixture();
+    const service = createAdminRatesService();
+    const exported = adminRateExportResponseSchema.parse(
+      await service.exportRates({
+        ...context,
+        request: { versionId: context.baseVersionId, locale: 'zh' },
+      }),
+    );
+    expect(exported.csv).toBe(
+      'ISO,国家,号码前缀,说明,费率\n,中国,86,,0.1234\n',
+    );
+    const preview = await service.importPreview({
+      ...context,
+      request: {
+        baseVersionId: context.baseVersionId,
+        file: file(exported.csv),
+        schedule: { kind: 'immediate' },
+      },
+    });
+    expect(preview).toMatchObject({
+      ok: true,
+      counts: { added: 0, modified: 0, deleted: 0 },
+    });
+    if (!preview.ok) throw new Error('预期中文表头 CSV 可重新导入');
+    const imported = await service.importCommit({
+      ...context,
+      request: { previewId: preview.previewId },
+    });
+    expect(imported.version.entries).toEqual([
+      {
+        iso: '',
+        description: '',
+        prefix: '86',
+        country: '中国',
+        rate: '0.1234',
+      },
+    ]);
   });
 
   it('cancels only future versions beyond configured margin and audits full entries', async () => {
@@ -1096,7 +1139,7 @@ it('ISO-only and description-only edits are modified rows, search all labels, ex
   }
   const exported = await service.exportRates({
     ...context,
-    request: { versionId: first.version.id },
+    request: { versionId: first.version.id, locale: 'en' },
   });
   expect(exported.csv).toBe(
     'ISO,Country,Destination Prefix,Description,Rate\nCN,中国,86,Mobile,0.1234\n',

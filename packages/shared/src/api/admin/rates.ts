@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { currencySchema } from '../identity.js';
+import { exportLocaleSchema } from '../export.js';
 import {
   adminAuditedMutationResponseSchema,
   adminTimestampSchema,
@@ -191,6 +192,7 @@ export const adminRateImportCommitRequestSchema = z.strictObject({
 });
 export const adminRateExportRequestSchema = z.strictObject({
   versionId: z.uuid(),
+  locale: exportLocaleSchema,
 });
 export const adminRateExportResponseSchema =
   adminAuditedMutationResponseSchema.extend({

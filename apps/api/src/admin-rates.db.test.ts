@@ -140,6 +140,7 @@ describe('admin rates HTTP', () => {
     });
     const exported = await post(tenantId, 'export', {
       versionId: saved.version.id,
+      locale: 'en',
     });
     expect(exported.statusCode, exported.body).toBe(200);
     const output = adminRateExportResponseSchema.parse(exported.json());

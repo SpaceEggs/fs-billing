@@ -242,6 +242,17 @@ describe('portal ledger rows', () => {
     ).toBe('gift');
   });
 
+  it('carries the optional system note key while keeping the old note', () => {
+    const row = {
+      ...recharge,
+      noteKey: 'ledger.accountRecharge',
+    };
+    expect(portalLedgerRowSchema.parse(row)).toEqual(row);
+    expect(
+      portalLedgerRowSchema.safeParse({ ...recharge, noteKey: 1 }).success,
+    ).toBe(false);
+  });
+
   it('cannot represent a credit recharge or its internal fields', () => {
     expect(
       portalLedgerRowSchema.safeParse({ ...recharge, kind: 'credit_recharge' })
@@ -303,6 +314,26 @@ describe('portal ledger rows', () => {
         partial: true,
       }),
     ).toBe('2026-09-29 通话扣费（截至当前），共 1,702 通');
+  });
+
+  it('writes the English merged note with correct plurals', () => {
+    expect(formatMergedChargeNote(charge, 'en')).toBe(
+      '2026-09-28 Call charges, 356 calls',
+    );
+    expect(formatMergedChargeNote({ ...charge, calls: 1 }, 'en')).toBe(
+      '2026-09-28 Call charges, 1 call',
+    );
+    expect(
+      formatMergedChargeNote(
+        {
+          ...charge,
+          day: '2026-09-29',
+          calls: 1702,
+          partial: true,
+        },
+        'en',
+      ),
+    ).toBe('2026-09-29 Call charges (to date), 1,702 calls');
   });
 
   it('filters by customer kinds and the same one-month range', () => {
@@ -521,7 +552,7 @@ describe('portal operations', () => {
     );
     expect(
       portalApiContract.portalCdrsExport.request.body.parse(range),
-    ).toEqual({ ...range, status: 'answered' });
+    ).toEqual({ ...range, status: 'answered', locale: 'zh' });
     expect(
       portalApiContract.portalCdrsExport.request.body.safeParse({
         ...range,

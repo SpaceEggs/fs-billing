@@ -114,6 +114,7 @@ describe('admin CDR list contract', () => {
       ...range,
       status: 'answered',
       unverifiedOnly: false,
+      locale: 'zh',
     });
     expect(
       adminCdrExportRequestSchema.parse({ ...range, unverifiedOnly: true })

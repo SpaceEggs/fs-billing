@@ -13,15 +13,15 @@ import {
 import {
   adminCdrExportRequestSchema,
   exportFilename,
-  formatHangupCause,
-  formatMergedChargeNote,
   adminStatementApiContract,
   adminTenantParamsSchema,
   latestRangeEnd,
   statementMonthParamsSchema,
+  exportLocaleRequestSchema,
   portalCdrExportRequestSchema,
   portalLedgerExportRequestSchema,
-  type PortalLedgerRow,
+  translate,
+  type Locale,
 } from '@fs-billing/shared';
 import type { Pool } from 'pg';
 import type { RequestContext } from '../types.js';
@@ -34,97 +34,23 @@ import {
   statementSummaryHeaders,
   statementSummaryRows,
 } from '../export/statement-csv.js';
+import {
+  adminCdrCells,
+  cdrCells,
+  cdrHeaders,
+  ledgerCells,
+  ledgerHeaders,
+  type CdrExportRow,
+  type LedgerExportRow,
+} from '../export/csv-labels.js';
 
-const cdrHeaders = [
-  '接通时间',
-  '主叫号码',
-  '被叫号码',
-  'ISO',
-  '国家',
-  '说明',
-  '通话时长(秒)',
-  '计费时长(分钟)',
-  '费率',
-  '费用',
-  '振铃开始时间',
-  '挂断时间',
-  '挂断原因',
-  '匹配前缀',
-  '通话UUID',
-] as const;
-
-/** 呼出/呼入的中文列值；新增列放在现有列之后。 */
-function directionLabel(direction: 'outbound' | 'inbound') {
-  return direction === 'inbound' ? '呼入' : '呼出';
-}
-
-type CdrExportRow = QueryResultRow & {
-  callUuid: string;
-  calledAt: string;
-  startedAt: string;
-  answeredAt: string | null;
-  endedAt: string;
-  caller: string;
-  callee: string;
-  direction: 'outbound' | 'inbound';
-  country: string | null;
-  iso: string | null;
-  description: string | null;
-  durationSeconds: number;
-  billedMinutes: string;
-  rate: string | null;
-  charge: string;
-  hangupCause: string;
-  matchedPrefix: string | null;
-};
-
-type AdminCdrExportRow = CdrExportRow & {
-  unverified: boolean;
-};
-
-type LedgerExportRow = QueryResultRow & {
-  kind: PortalLedgerRow['kind'];
-  day: string;
-  calls: number;
-  partial: boolean;
-  occurredAt: string;
-  amount: string;
-  balanceAfter: string;
-  note: string;
-};
+type CdrRow = QueryResultRow & CdrExportRow;
+type AdminCdrRow = CdrRow & { unverified: boolean };
+type LedgerRow = QueryResultRow & LedgerExportRow;
 
 function customerTenant(context: RequestContext) {
   if (context.kind !== 'customer') throw new ApiFailure('FORBIDDEN');
   return context.principal.tenantId;
-}
-
-function ledgerCells(row: LedgerExportRow): readonly string[] {
-  let kind: string;
-  let note = row.note;
-  switch (row.kind) {
-    case 'recharge':
-      kind = '充值';
-      break;
-    case 'gift':
-      kind = '赠送';
-      break;
-    case 'adjustment':
-      kind = '调账';
-      break;
-    case 'call_charge':
-      kind = '通话扣费';
-      note = formatMergedChargeNote({
-        day: row.day,
-        calls: row.calls,
-        partial: row.partial,
-      });
-      break;
-    default: {
-      const exhaustive: never = row.kind;
-      return exhaustive;
-    }
-  }
-  return [row.occurredAt, kind, row.amount, row.balanceAfter, note];
 }
 
 type SummaryRow = QueryResultRow & { cells: string[] };
@@ -144,6 +70,7 @@ function streamStatementSummary({
   scope,
   tenantId,
   statement,
+  locale,
 }: {
   request: Parameters<typeof streamCsv>[0]['request'];
   reply: Parameters<typeof streamCsv>[0]['reply'];
@@ -155,6 +82,7 @@ function streamStatementSummary({
     month: string;
     currency: string;
   };
+  locale: Locale;
 }) {
   const first = `${statement.month}-01`;
   return streamCsv<SummaryRow>({
@@ -166,9 +94,9 @@ function streamStatementSummary({
     scope,
     cursor: {
       text: summaryCursor,
-      values: [JSON.stringify(statementSummaryRows(statement))],
+      values: [JSON.stringify(statementSummaryRows(statement, locale))],
     },
-    headers: statementSummaryHeaders(statement.currency),
+    headers: statementSummaryHeaders(statement.currency, locale),
     prepare: (signal) => {
       signal.throwIfAborted();
       return Promise.resolve({
@@ -202,6 +130,7 @@ export function exportHandlers({
     portalStatementExport: async (context, request, reply) => {
       const tenantId = customerTenant(context);
       if (context.kind !== 'customer') throw new ApiFailure('FORBIDDEN');
+      const { locale } = exportLocaleRequestSchema.parse(request.body ?? {});
       const statement = await readPortalStatement({
         db,
         tenantId,
@@ -214,10 +143,12 @@ export function exportHandlers({
         scope: { kind: 'tenant', tenantId },
         tenantId,
         statement: { ...statement, tenantCode: context.identity.tenant.code },
+        locale,
       });
     },
     adminTenantStatementExport: async (context, request, reply) => {
       adminActor(context);
+      const { locale } = exportLocaleRequestSchema.parse(request.body ?? {});
       const statement = await readAdminTenantStatement({
         db,
         ...adminStatementApiContract.adminTenantStatementExport.request.params.parse(
@@ -231,6 +162,7 @@ export function exportHandlers({
         scope: { kind: 'admin' },
         tenantId: statement.tenant.id,
         statement: { ...statement, tenantCode: statement.tenant.code },
+        locale,
       });
     },
     portalCdrsExport: (context, request, reply) => {
@@ -238,7 +170,7 @@ export function exportHandlers({
       if (context.kind !== 'customer') throw new ApiFailure('FORBIDDEN');
       const query = portalCdrExportRequestSchema.parse(request.body);
       const cursor = portalCdrExportCursorQuery({ tenantId, query });
-      return streamCsv<CdrExportRow>({
+      return streamCsv<CdrRow>({
         request,
         reply,
         pool,
@@ -246,7 +178,10 @@ export function exportHandlers({
         admissionTenantId: tenantId,
         scope: { kind: 'tenant', tenantId },
         cursor: { text: cursor.sql, values: cursor.params },
-        headers: [...cdrHeaders, '方向'],
+        headers: [
+          ...cdrHeaders(query.locale),
+          translate(query.locale, 'csv:cdr.headers.direction'),
+        ],
         prepare: (signal) => {
           signal.throwIfAborted();
           return Promise.resolve({
@@ -257,24 +192,7 @@ export function exportHandlers({
             ),
           });
         },
-        rowToCells: (row) => [
-          row.calledAt,
-          row.caller,
-          row.callee,
-          row.iso ?? '',
-          row.country ?? '未接通',
-          row.description ?? '',
-          String(row.durationSeconds),
-          row.billedMinutes,
-          row.rate ?? '',
-          row.charge,
-          row.startedAt,
-          row.endedAt,
-          formatHangupCause(row.hangupCause),
-          row.matchedPrefix ?? '',
-          row.callUuid,
-          directionLabel(row.direction),
-        ],
+        rowToCells: (row) => cdrCells(row, query.locale),
       });
     },
     adminTenantCdrsExport: (context, request, reply) => {
@@ -282,7 +200,7 @@ export function exportHandlers({
       const actor = adminActor(context);
       const query = adminCdrExportRequestSchema.parse(request.body);
       const cursor = adminCdrExportCursorQuery({ tenantId, query });
-      return streamCsv<AdminCdrExportRow>({
+      return streamCsv<AdminCdrRow>({
         request,
         reply,
         pool,
@@ -290,7 +208,11 @@ export function exportHandlers({
         admissionTenantId: tenantId,
         scope: { kind: 'admin' },
         cursor: { text: cursor.sql, values: cursor.params },
-        headers: [...cdrHeaders, '验证状态', '方向'],
+        headers: [
+          ...cdrHeaders(query.locale),
+          translate(query.locale, 'csv:cdr.headers.verificationStatus'),
+          translate(query.locale, 'csv:cdr.headers.direction'),
+        ],
         prepare: (signal) =>
           acceptAdminCdrExport({
             db: auditDb,
@@ -301,25 +223,7 @@ export function exportHandlers({
           }).then((accepted) => ({
             filename: exportFilename('cdrs', accepted.code, query),
           })),
-        rowToCells: (row) => [
-          row.calledAt,
-          row.caller,
-          row.callee,
-          row.iso ?? '',
-          row.country ?? '未接通',
-          row.description ?? '',
-          String(row.durationSeconds),
-          row.billedMinutes,
-          row.rate ?? '',
-          row.charge,
-          row.startedAt,
-          row.endedAt,
-          formatHangupCause(row.hangupCause),
-          row.matchedPrefix ?? '',
-          row.callUuid,
-          row.unverified ? '未经验证' : '',
-          directionLabel(row.direction),
-        ],
+        rowToCells: (row) => adminCdrCells(row, query.locale),
       });
     },
     portalLedgerExport: (context, request, reply) => {
@@ -327,7 +231,7 @@ export function exportHandlers({
       if (context.kind !== 'customer') throw new ApiFailure('FORBIDDEN');
       const query = portalLedgerExportRequestSchema.parse(request.body);
       const exportQuery = mergedLedgerExportQuery({ tenantId, query });
-      return streamCsv<LedgerExportRow>({
+      return streamCsv<LedgerRow>({
         request,
         reply,
         pool,
@@ -335,13 +239,7 @@ export function exportHandlers({
         admissionTenantId: tenantId,
         scope: { kind: 'tenant', tenantId },
         cursor: { text: exportQuery.sql, values: exportQuery.params },
-        headers: [
-          '时间',
-          '类型',
-          `金额（${context.identity.tenant.currency}）`,
-          `变动后余额（${context.identity.tenant.currency}）`,
-          '备注',
-        ],
+        headers: ledgerHeaders(context.identity.tenant.currency, query.locale),
         prepare: (signal) => {
           signal.throwIfAborted();
           return Promise.resolve({
@@ -352,7 +250,7 @@ export function exportHandlers({
             ),
           });
         },
-        rowToCells: ledgerCells,
+        rowToCells: (row) => ledgerCells(row, query.locale),
       });
     },
   };
