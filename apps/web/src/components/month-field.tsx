@@ -1,11 +1,15 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from 'lucide-react';
+import { translate, type Locale } from '@fs-billing/shared';
 import { shiftStatementMonth } from '../lib/admin-statements';
 import { statementMonthTitle } from '../lib/statement';
+import { formatYear, monthName } from '../lib/format';
+import { useLocale } from '../i18n';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { ModalDialog } from './modal-dialog';
@@ -37,6 +41,8 @@ export function MonthField({
 }) {
   const [open, setOpen] = useState(false);
   const [year, setYear] = useState(() => Number(value.slice(0, 4)));
+  const { t } = useTranslation(['common']);
+  const locale = useLocale();
   const openGrid = () => {
     setYear(Number(value.slice(0, 4)));
     setOpen(true);
@@ -46,7 +52,7 @@ export function MonthField({
       <Button
         variant="outline"
         size="icon"
-        aria-label={`${label}：上个月`}
+        aria-label={t('monthField.previousMonth', { label })}
         disabled={value <= min}
         onClick={() => onChange(shiftStatementMonth(value, -1))}
         className={step}
@@ -56,11 +62,14 @@ export function MonthField({
       <Button
         variant="outline"
         aria-haspopup="dialog"
-        aria-label={`${label}：${statementMonthTitle(value)}`}
+        aria-label={t('monthField.value', {
+          label,
+          month: statementMonthTitle(value, locale),
+        })}
         onClick={openGrid}
         className="min-w-0 justify-between gap-6 px-3 font-normal max-md:h-11 max-md:flex-1 max-md:justify-center max-md:text-[15px]"
       >
-        {statementMonthTitle(value)}
+        {statementMonthTitle(value, locale)}
         <ChevronDownIcon
           aria-hidden
           className="size-3.5 text-muted-foreground"
@@ -69,7 +78,7 @@ export function MonthField({
       <Button
         variant="outline"
         size="icon"
-        aria-label={`${label}：下个月`}
+        aria-label={t('monthField.nextMonth', { label })}
         disabled={value >= max}
         onClick={() => onChange(shiftStatementMonth(value, 1))}
         className={step}
@@ -103,7 +112,7 @@ export function MonthField({
               className="h-12 md:h-9"
               onClick={() => setOpen(false)}
             >
-              取消
+              {t('action.cancel')}
             </Button>
           </div>
         </ModalDialog>
@@ -131,12 +140,14 @@ export type MonthCellState = {
   readonly title?: string;
 };
 
-function monthCellName(month: string, state: MonthCellState) {
-  const label = statementMonthTitle(month);
+function monthCellName(month: string, state: MonthCellState, locale: Locale) {
+  const label = statementMonthTitle(month, locale);
   const extra = [state.sub, state.title].filter(
     (part): part is string => !!part,
   );
-  return extra.length === 0 ? label : [label, ...extra].join('，');
+  return extra.length === 0
+    ? label
+    : [label, ...extra].join(translate(locale, 'common:listComma'));
 }
 
 /**
@@ -167,6 +178,8 @@ export function MonthGrid({
   /** 月份格的列数类。默认四列（账单页）；删除话单手机稿三列，传 `grid-cols-3 md:grid-cols-4`。 */
   columnsClassName?: string;
 }) {
+  const { t } = useTranslation(['common']);
+  const locale = useLocale();
   const key = (month: number) => `${year}-${String(month).padStart(2, '0')}`;
   return (
     <>
@@ -179,7 +192,7 @@ export function MonthGrid({
         <Button
           variant="ghost"
           size="icon"
-          aria-label="上一年"
+          aria-label={t('monthField.previousYear')}
           disabled={year <= minYear}
           onClick={() => onYearChange(year - 1)}
           className="rounded-md text-muted-foreground disabled:opacity-40"
@@ -187,12 +200,12 @@ export function MonthGrid({
           <ChevronLeftIcon aria-hidden />
         </Button>
         <span aria-live="polite" className="text-base font-semibold">
-          {year}年
+          {formatYear(year, locale)}
         </span>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="下一年"
+          aria-label={t('monthField.nextYear')}
           disabled={year >= maxYear}
           onClick={() => onYearChange(year + 1)}
           className="rounded-md text-muted-foreground disabled:opacity-40"
@@ -210,7 +223,7 @@ export function MonthGrid({
             <button
               key={month}
               type="button"
-              aria-label={monthCellName(monthKey, state)}
+              aria-label={monthCellName(monthKey, state, locale)}
               aria-pressed={selected}
               disabled={state.disabled}
               {...(state.title ? { title: state.title } : {})}
@@ -223,7 +236,7 @@ export function MonthGrid({
                   : 'hover:bg-muted',
               )}
             >
-              {month}月
+              {monthName(month, locale)}
               {sub ? (
                 <span className="text-[10px] font-normal leading-none">
                   {sub}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Item } from '../ui/item';
 import {
   Table,
@@ -11,6 +12,7 @@ import type { Currency, PortalCdr } from '@fs-billing/shared';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { formatDuration } from '../../lib/duration';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 import { DateTime, Money, Rate } from '../data-format';
 import {
@@ -25,9 +27,10 @@ import {
 
 /** 列表里的方向标签；呼入用 secondary，呼出用 plain。 */
 function DirectionBadge({ cdr }: { cdr: PortalCdr }) {
+  const locale = useLocale();
   return (
     <Badge variant={cdrIsInbound(cdr) ? 'secondary' : 'plain'}>
-      {cdrDirectionLabel(cdr)}
+      {cdrDirectionLabel(cdr, locale)}
     </Badge>
   );
 }
@@ -50,22 +53,30 @@ export function CdrTable<Row extends PortalCdr>({
   onSelect,
   badge,
 }: ListProps<Row>) {
+  const { t } = useTranslation(['cdr']);
+  const locale = useLocale();
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
       <Table className="whitespace-nowrap">
         <TableHeader>
           <TableRow className="border-t-0">
-            <TableHead className="px-4">接通时间 ↓</TableHead>
-            <TableHead>主叫号码</TableHead>
-            <TableHead>被叫号码</TableHead>
-            <TableHead>方向</TableHead>
-            <TableHead>国家</TableHead>
-            <TableHead className="text-right">通话时长</TableHead>
-            <TableHead className="text-right">计费时长</TableHead>
+            <TableHead className="px-4">{t('cdr:table.answeredAt')}</TableHead>
+            <TableHead>{t('cdr:table.caller')}</TableHead>
+            <TableHead>{t('cdr:table.callee')}</TableHead>
+            <TableHead>{t('cdr:table.direction')}</TableHead>
+            <TableHead>{t('cdr:table.country')}</TableHead>
             <TableHead className="text-right">
-              费率（{cdrRateUnit[currency]}）
+              {t('cdr:table.duration')}
             </TableHead>
-            <TableHead className="px-4 text-right">费用</TableHead>
+            <TableHead className="text-right">
+              {t('cdr:table.billed')}
+            </TableHead>
+            <TableHead className="text-right">
+              {t('cdr:table.rate', { unit: cdrRateUnit(currency, locale) })}
+            </TableHead>
+            <TableHead className="px-4 text-right">
+              {t('cdr:table.charge')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="tabular-nums">
@@ -84,7 +95,9 @@ export function CdrTable<Row extends PortalCdr>({
                       event.stopPropagation();
                       onSelect(cdr);
                     }}
-                    aria-label={`查看话单详情 ${cdr.callee}`}
+                    aria-label={t('cdr:table.viewDetail', {
+                      callee: cdr.callee,
+                    })}
                     className="text-left hover:bg-transparent"
                   >
                     <DateTime value={cdrMoment(cdr)} />
@@ -97,12 +110,12 @@ export function CdrTable<Row extends PortalCdr>({
               <TableCell>
                 <DirectionBadge cdr={cdr} />
               </TableCell>
-              <TableCell>{cdrCountryLabel(cdr)}</TableCell>
+              <TableCell>{cdrCountryLabel(cdr, locale)}</TableCell>
               <TableCell className="text-right">
-                {formatDuration(cdr.durationSeconds)}
+                {formatDuration(cdr.durationSeconds, locale)}
               </TableCell>
               <TableCell className="text-right">
-                {formatMinutes(cdr.billedMinutes)}
+                {formatMinutes(cdr.billedMinutes, locale)}
               </TableCell>
               <TableCell className="text-right">
                 {cdrIsInbound(cdr) || cdr.rate === null ? (
@@ -136,6 +149,8 @@ export function CdrCards<Row extends PortalCdr>({
   onSelect,
   badge,
 }: ListProps<Row>) {
+  const { t } = useTranslation(['cdr']);
+  const locale = useLocale();
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
       {items.map((cdr) => (
@@ -152,7 +167,7 @@ export function CdrCards<Row extends PortalCdr>({
             <button
               type="button"
               onClick={() => onSelect(cdr)}
-              aria-label={`查看话单详情 ${cdr.callee}`}
+              aria-label={t('cdr:table.viewDetail', { callee: cdr.callee })}
             >
               <span className="flex items-center justify-between gap-2 text-[15px] font-medium">
                 <span className="flex items-center gap-2">
@@ -171,9 +186,12 @@ export function CdrCards<Row extends PortalCdr>({
               </span>
               <span className="flex justify-between gap-2 text-xs text-muted-foreground">
                 <span className="truncate">
-                  {cdrCountryLabel(cdr)} · {formatDuration(cdr.durationSeconds)}
+                  {cdrCountryLabel(cdr, locale)} ·{' '}
+                  {formatDuration(cdr.durationSeconds, locale)}
                 </span>
-                <span className="whitespace-nowrap">{cdrShortMoment(cdr)}</span>
+                <span className="whitespace-nowrap">
+                  {cdrShortMoment(cdr, locale)}
+                </span>
               </span>
             </button>
           </Item>

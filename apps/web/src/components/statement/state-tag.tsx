@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 import type { StatementState } from '../../lib/statement';
@@ -15,6 +16,7 @@ export function StatementStateTag({
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }) {
+  const { t } = useTranslation(['statement']);
   if (state === 'final') return null;
   return (
     <Badge
@@ -28,7 +30,9 @@ export function StatementStateTag({
       {state === 'in_progress' ? (
         <span aria-hidden className="size-1.5 rounded-full bg-pos" />
       ) : null}
-      {state === 'in_progress' ? '本月（进行中）' : '待生成'}
+      {state === 'in_progress'
+        ? t('statement:state.inProgress')
+        : t('statement:state.pending')}
     </Badge>
   );
 }

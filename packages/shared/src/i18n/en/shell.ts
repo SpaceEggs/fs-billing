@@ -1,0 +1,30 @@
+export const shell = {
+  nav: {
+    label: 'Main navigation',
+    home: 'Home',
+    cdrs: 'Calls',
+    statements: 'Statements',
+    ledger: 'Balance history',
+    settings: 'Account settings',
+    overview: 'Overview',
+    tenants: 'Tenants',
+    receivables: 'Receivables',
+    unassigned: 'Unassigned calls',
+    statementAdmin: 'Statements',
+    alerts: 'Alerts',
+    audit: 'Audit log',
+    admins: 'Admins',
+    drawer: 'Navigation',
+    open: 'Open navigation',
+    activeAlerts: 'Active alerts',
+  },
+  product: {
+    portal: 'Customer portal',
+    admin: 'Admin',
+  },
+  sessionExpired: {
+    title: 'Session expired. Sign in again',
+    body: 'For your security, sign in again after a long period of inactivity. You will return to this page.',
+    action: 'Sign in again',
+  },
+} as const;

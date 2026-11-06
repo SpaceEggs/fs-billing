@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ApiRequestError } from '../lib/api';
 import { CircleAlertIcon } from 'lucide-react';
 import { Alert } from './ui/alert';
@@ -13,6 +14,7 @@ export function LoadError({
   retrying: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation(['common']);
   const forbidden = error instanceof ApiRequestError && error.status === 403;
   const retryable = !(
     error instanceof ApiRequestError &&
@@ -31,14 +33,14 @@ export function LoadError({
         <CircleAlertIcon className="size-5" />
       </span>
       <span className="text-base font-semibold">
-        {forbidden ? '没有权限查看' : '加载失败'}
+        {forbidden ? t('error.loadForbiddenTitle') : t('error.loadFailedTitle')}
       </span>
       <span className="text-sm text-muted-foreground">
         {forbidden
-          ? '当前账号无权查看此内容，如有疑问请联系管理员'
+          ? t('error.loadForbiddenBody')
           : retryable
-            ? '网络异常，请稍后重试'
-            : '请求无法完成，请刷新页面或联系管理员'}
+            ? t('error.loadNetworkBody')
+            : t('error.loadRequestBody')}
       </span>
       {retryable ? (
         <Button
@@ -47,7 +49,7 @@ export function LoadError({
           disabled={retrying}
           onClick={onRetry}
         >
-          重试
+          {t('action.retry')}
         </Button>
       ) : null}
     </Alert>

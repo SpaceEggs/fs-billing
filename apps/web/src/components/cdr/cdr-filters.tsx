@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import type { CdrFilters } from '../../lib/cdr-search';
@@ -10,17 +11,6 @@ import { OptionTabs } from '../option-tabs';
 import { SearchBox } from '../search-box';
 import { NativeSelect, NativeSelectOption } from '../ui/native-select';
 import { cn } from '../../lib/utils';
-
-const statusOptions = [
-  { value: 'answered', label: '已接通' },
-  { value: 'all', label: '全部' },
-] as const;
-
-const directionOptions = [
-  { value: 'all', label: '全部' },
-  { value: 'inbound', label: '呼入' },
-  { value: 'outbound', label: '呼出' },
-] as const;
 
 /** 后台在筛选里多出的「仅看未经验证」：电脑端排在状态之后，手机端放在面板里。 */
 export type CdrFilterExtra = {
@@ -79,10 +69,20 @@ export function CdrFilterBar({
   onRange: (range: DayRange) => void;
   onFilters: (patch: CdrFilters) => void;
 }) {
+  const { t } = useTranslation(['cdr', 'common']);
   const countryId = useId();
   const sheetCountryId = useId();
   const status = filters.status ?? 'answered';
   const country = filters.country ?? '';
+  const statusOptions = [
+    { value: 'answered', label: t('cdr:filters.statusAnswered') },
+    { value: 'all', label: t('cdr:filters.all') },
+  ] as const;
+  const directionOptions = [
+    { value: 'all', label: t('cdr:filters.all') },
+    { value: 'inbound', label: t('cdr:direction.inbound') },
+    { value: 'outbound', label: t('cdr:direction.outbound') },
+  ] as const;
   const sheetActive =
     (filters.country ? 1 : 0) +
     (status === 'all' ? 1 : 0) +
@@ -97,7 +97,9 @@ export function CdrFilterBar({
   });
   const countryOptions = (
     <>
-      <NativeSelectOption value="">全部国家</NativeSelectOption>
+      <NativeSelectOption value="">
+        {t('cdr:filters.allCountries')}
+      </NativeSelectOption>
       {filters.country && !countries.includes(filters.country) ? (
         <NativeSelectOption value={filters.country}>
           {filters.country}
@@ -112,7 +114,7 @@ export function CdrFilterBar({
   );
   const dateField = (className: string) => (
     <DateRangeField
-      label="日期范围（北京时间）"
+      label={t('cdr:filters.dateRangeBeijing')}
       value={range}
       max={maxDate}
       maxRangeEndForStart={latestRangeEnd}
@@ -123,12 +125,12 @@ export function CdrFilterBar({
   return (
     <div className="flex items-end gap-2 md:flex-wrap md:gap-3">
       <Field
-        label="被叫号码"
+        label={t('cdr:filters.callee')}
         className="min-w-0 flex-1 md:w-[220px] md:flex-none"
       >
         <SearchBox
-          label="被叫号码"
-          placeholder="搜索被叫号码"
+          label={t('cdr:filters.callee')}
+          placeholder={t('cdr:filters.calleePlaceholder')}
           value={filters.callee ?? ''}
           onChange={(callee) => onFilters({ callee: callee || undefined })}
           className="w-full"
@@ -139,17 +141,19 @@ export function CdrFilterBar({
         resultLabel={resultLabel}
         onClear={() => onFilters(clearSheet())}
       >
-        <FilterGroup label="日期范围">
+        <FilterGroup label={t('cdr:filters.dateRange')}>
           {() => (
             <>
               {dateField('w-full')}
-              <span className="text-xs text-muted-foreground">最长一个月</span>
+              <span className="text-xs text-muted-foreground">
+                {t('cdr:filters.maxOneMonth')}
+              </span>
             </>
           )}
         </FilterGroup>
         <div className="flex flex-col gap-2">
           <Label htmlFor={sheetCountryId} className="text-sm font-medium">
-            国家
+            {t('cdr:filters.country')}
           </Label>
           <NativeSelect
             id={sheetCountryId}
@@ -163,9 +167,9 @@ export function CdrFilterBar({
           </NativeSelect>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">接通状态</span>
+          <span className="text-sm font-medium">{t('cdr:filters.status')}</span>
           <OptionTabs
-            label="接通状态"
+            label={t('cdr:filters.status')}
             options={statusOptions}
             value={status}
             onChange={(next) =>
@@ -175,9 +179,11 @@ export function CdrFilterBar({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">方向</span>
+          <span className="text-sm font-medium">
+            {t('cdr:filters.direction')}
+          </span>
           <OptionTabs
-            label="方向"
+            label={t('cdr:filters.direction')}
             options={directionOptions}
             value={filters.direction ?? 'all'}
             onChange={(next) =>
@@ -189,10 +195,12 @@ export function CdrFilterBar({
         {extra?.sheet}
       </FilterSheet>
       <div className="hidden md:contents">
-        <Field label="日期范围 · 最长一个月">{dateField('w-[260px]')}</Field>
-        <Field label="国家">
+        <Field label={t('cdr:filters.dateRangeLimited')}>
+          {dateField('w-[260px]')}
+        </Field>
+        <Field label={t('cdr:filters.country')}>
           <Label htmlFor={countryId} className="sr-only">
-            国家
+            {t('cdr:filters.country')}
           </Label>
           <NativeSelect
             id={countryId}
@@ -205,9 +213,9 @@ export function CdrFilterBar({
             {countryOptions}
           </NativeSelect>
         </Field>
-        <Field label="接通状态">
+        <Field label={t('cdr:filters.status')}>
           <OptionTabs
-            label="接通状态"
+            label={t('cdr:filters.status')}
             options={statusOptions}
             value={status}
             onChange={(next) =>
@@ -215,9 +223,9 @@ export function CdrFilterBar({
             }
           />
         </Field>
-        <Field label="方向">
+        <Field label={t('cdr:filters.direction')}>
           <OptionTabs
-            label="方向"
+            label={t('cdr:filters.direction')}
             options={directionOptions}
             value={filters.direction ?? 'all'}
             onChange={(next) =>
@@ -232,7 +240,7 @@ export function CdrFilterBar({
           onClick={() => onFilters({ callee: undefined, ...clearSheet() })}
           className="font-normal text-muted-foreground hover:bg-transparent"
         >
-          重置
+          {t('common:action.reset')}
         </Button>
         {trailing ? <div className="ml-auto">{trailing}</div> : null}
       </div>

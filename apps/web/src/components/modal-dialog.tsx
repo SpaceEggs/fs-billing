@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XIcon } from 'lucide-react';
 import {
   Dialog,
@@ -54,6 +55,7 @@ export function ModalDialog({
   /** 设为 false 不显示标题栏 ×（完成页只留「完成」按钮）；Esc 与点击遮罩仍照常关闭。 */
   showClose?: boolean;
 }) {
+  const { t } = useTranslation(['common']);
   const dismissible = onOpenChange !== undefined;
   // 每次打开时（首次挂载即打开，或 open 由 false 变 true）在渲染中记下打开者，此时焦点尚未移入对话框。
   const [opener, setOpener] = useState(() => (open ? currentOpener() : null));
@@ -109,7 +111,7 @@ export function ModalDialog({
         {dismissible && showClose ? (
           // 放在内容之后：打开时焦点仍落在第一个字段或按钮上。
           <DialogClose
-            aria-label="关闭对话框"
+            aria-label={t('ui.closeDialog')}
             className={cn(
               'absolute top-6 right-3 flex size-8 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring md:top-5 md:right-5',
               plainOnDesktop && 'md:hidden',

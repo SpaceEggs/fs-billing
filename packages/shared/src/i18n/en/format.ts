@@ -1,4 +1,5 @@
 export const format = {
+  year: '{{year}}',
   yearMonth: '{{month}} {{year}}',
   months: {
     jan: 'Jan',
@@ -19,5 +20,9 @@ export const format = {
   rate: {
     cny: '¥{{value}}/min',
     usd: '${{value}}/min',
+  },
+  rateUnit: {
+    cny: '¥/min',
+    usd: '$/min',
   },
 } as const;

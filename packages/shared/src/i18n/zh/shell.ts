@@ -1,0 +1,30 @@
+export const shell = {
+  nav: {
+    label: '主导航',
+    home: '首页',
+    cdrs: '话单',
+    statements: '月账单',
+    ledger: '余额流水',
+    settings: '账号设置',
+    overview: '概览',
+    tenants: '租户',
+    receivables: '待收款',
+    unassigned: '未归属话单',
+    statementAdmin: '账单',
+    alerts: '系统告警',
+    audit: '操作日志',
+    admins: '管理员',
+    drawer: '导航',
+    open: '打开导航',
+    activeAlerts: '有进行中的告警',
+  },
+  product: {
+    portal: '客户门户',
+    admin: '管理后台',
+  },
+  sessionExpired: {
+    title: '登录已过期，请重新登录',
+    body: '为保障账户安全，长时间未操作后需要重新登录。登录后将回到当前页面。',
+    action: '重新登录',
+  },
+} as const;

@@ -20,6 +20,8 @@ const resources = {
     format: zh.format,
     portal: zh.portal,
     statement: zh.statement,
+    shell: zh.shell,
+    cdr: zh.cdr,
   },
   en: {
     common: en.common,
@@ -30,6 +32,8 @@ const resources = {
     format: en.format,
     portal: en.portal,
     statement: en.statement,
+    shell: en.shell,
+    cdr: en.cdr,
   },
 } as const;
 
@@ -67,6 +71,8 @@ export function initI18n() {
       'format',
       'portal',
       'statement',
+      'shell',
+      'cdr',
     ],
     defaultNS: 'common',
     initAsync: false,

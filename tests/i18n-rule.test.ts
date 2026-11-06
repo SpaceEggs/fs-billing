@@ -65,7 +65,7 @@ test('repository config flags Chinese in a non-allowlisted web file', async () =
 test('repository config leaves the allowlist, i18n adapters, and tests alone', async () => {
   for (const filePath of [
     'apps/web/src/pages/login.tsx',
-    'apps/web/src/components/app-shell.tsx',
+    'apps/web/src/pages/admin/statements.tsx',
     'apps/web/src/i18n/detect.ts',
     'apps/web/src/components/theme-controls.test.tsx',
   ]) {

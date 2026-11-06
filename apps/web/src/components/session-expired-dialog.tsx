@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { clearBalanceAttempts } from '../lib/balance-attempts';
 import { rememberReturnPath } from '../lib/return-to';
 import { sessionExpiry, useSessionExpired } from '../lib/session';
@@ -14,6 +15,7 @@ import {
 
 /** 页面内请求收到 401 reauthenticate 时弹出（第三批 3c/3d）；不可关闭，只能重新登录。 */
 export function SessionExpiredDialog({ zone }: { zone: Zone }) {
+  const { t } = useTranslation(['shell']);
   const expired = useSessionExpired();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -43,10 +45,10 @@ export function SessionExpiredDialog({ zone }: { zone: Zone }) {
         />
         <div className="flex flex-col gap-2">
           <DialogTitle className="m-0 text-[17px] leading-normal font-semibold">
-            登录已过期，请重新登录
+            {t('shell:sessionExpired.title')}
           </DialogTitle>
           <DialogDescription className="m-0 text-sm leading-relaxed">
-            为保障账户安全，长时间未操作后需要重新登录。登录后将回到当前页面。
+            {t('shell:sessionExpired.body')}
           </DialogDescription>
         </div>
         <div className="flex md:justify-end">
@@ -54,7 +56,7 @@ export function SessionExpiredDialog({ zone }: { zone: Zone }) {
             className="h-11 w-full text-base md:h-9 md:w-auto md:text-sm"
             onClick={() => void reauthenticate()}
           >
-            重新登录
+            {t('shell:sessionExpired.action')}
           </Button>
         </div>
       </DialogContent>

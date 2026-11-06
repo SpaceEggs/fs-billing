@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { apiProblem, problemNotice } from '../lib/api-problem';
 import { CircleAlertIcon } from 'lucide-react';
 import { Alert } from './ui/alert';
@@ -18,6 +19,7 @@ export function QueryError({
   retrying: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation(['common']);
   const problem = apiProblem(error);
   if (
     problem.kind === 'reauthenticate' ||
@@ -27,16 +29,19 @@ export function QueryError({
   const notice = problemNotice(problem);
   const body =
     problem.kind === 'unavailable'
-      ? '服务暂时不可用，请稍后重试'
+      ? t('error.unavailable')
       : problem.kind === 'forbidden' || problem.kind === 'blocked'
-        ? '当前账号无权查看此内容，如有疑问请联系其他管理员'
+        ? t('error.forbidden')
         : problem.kind === 'not-found'
-          ? '内容不存在或已被删除'
+          ? t('error.notFound')
           : problem.kind === 'rate-limited'
-            ? `${notice.title}，${notice.body}`
+            ? t('error.titleBody', {
+                title: notice.title,
+                body: notice.body ?? '',
+              })
             : notice.details?.length
-              ? notice.details.join('；')
-              : '请求无法完成，请刷新页面后重试';
+              ? notice.details.join(t('error.listSeparator'))
+              : t('error.unknown');
   const retryable =
     problem.kind === 'unavailable' || problem.kind === 'rate-limited';
   return (
@@ -61,7 +66,7 @@ export function QueryError({
           disabled={retrying}
           onClick={onRetry}
         >
-          重试
+          {t('action.retry')}
         </Button>
       ) : null}
     </Alert>

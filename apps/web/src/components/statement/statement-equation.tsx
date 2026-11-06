@@ -1,5 +1,7 @@
 import { Card } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import type { Currency } from '@fs-billing/shared';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 import { formatCount, formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
@@ -107,31 +109,40 @@ export function StatementEquation({
   currency: Currency;
   figures: StatementFigures;
 }) {
+  const { t } = useTranslation(['statement']);
+  const locale = useLocale();
   const money = (amount: string) => ({ currency, amount });
-  const usageNote = `${formatCount(figures.calls)} 通 · ${formatMinutes(figures.callMinutes)}`;
+  const usageNote = t('statement:equation.usage', {
+    calls: formatCount(figures.calls),
+    minutes: formatMinutes(figures.callMinutes, locale),
+  });
   return (
-    <section aria-label="账单汇总">
+    <section aria-label={t('statement:equation.label')}>
       <Card
         style={{ gridTemplateColumns: columns }}
         className="gap-0 bg-transparent py-0 text-inherit shadow-none hidden items-baseline gap-y-1.5 rounded-xl border border-border px-7 py-6 tabular-nums xl:grid print:break-inside-avoid"
       >
-        <Term index={1} label="期初余额">
+        <Term index={1} label={t('statement:equation.opening')}>
           <Money value={money(figures.openingBalance)} />
         </Term>
         <Operator index={1}>+</Operator>
-        <Term index={2} label="充值">
+        <Term index={2} label={t('statement:equation.recharge')}>
           <Money value={money(figures.recharge)} tone="plain" />
         </Term>
         <Operator index={2}>+</Operator>
-        <Term index={3} label="赠送">
+        <Term index={3} label={t('statement:equation.gift')}>
           <Money value={money(figures.gift)} tone="plain" />
         </Term>
         <Operator index={3}>±</Operator>
-        <Term index={4} label="调账">
+        <Term index={4} label={t('statement:equation.adjustment')}>
           <Money value={money(figures.adjustment)} />
         </Term>
         <Operator index={4}>−</Operator>
-        <Term index={5} label="通话扣费" note={usageNote}>
+        <Term
+          index={5}
+          label={t('statement:equation.callCharges')}
+          note={usageNote}
+        >
           <Money value={money(figures.callCharges)} tone="plain" />
         </Term>
         <Operator index={5}>=</Operator>
@@ -140,31 +151,37 @@ export function StatementEquation({
           style={{ gridColumn: closingColumn, gridRow: '1 / span 3' }}
           className="-mx-4 -my-3.5 self-stretch rounded-lg bg-muted"
         />
-        <Term index={6} label="期末余额" className="text-[26px] font-bold">
+        <Term
+          index={6}
+          label={t('statement:equation.closing')}
+          className="text-[26px] font-bold"
+        >
           <Money value={money(figures.closingBalance)} />
         </Term>
       </Card>
       <Card className="gap-0 bg-transparent py-0 text-inherit shadow-none flex flex-col rounded-xl border border-border px-4 py-1.5 text-[15px] tabular-nums xl:hidden print:break-inside-avoid">
-        <Row label="期初余额">
+        <Row label={t('statement:equation.opening')}>
           <Money value={money(figures.openingBalance)} />
         </Row>
-        <Row operator="+" label="充值">
+        <Row operator="+" label={t('statement:equation.recharge')}>
           <Money value={money(figures.recharge)} tone="plain" />
         </Row>
-        <Row operator="+" label="赠送">
+        <Row operator="+" label={t('statement:equation.gift')}>
           <Money value={money(figures.gift)} tone="plain" />
         </Row>
-        <Row operator="±" label="调账">
+        <Row operator="±" label={t('statement:equation.adjustment')}>
           <Money value={money(figures.adjustment)} />
         </Row>
-        <Row operator="−" label="通话扣费">
+        <Row operator="−" label={t('statement:equation.callCharges')}>
           <Money value={money(figures.callCharges)} tone="plain" />
         </Row>
         <div className="grid grid-cols-[1.25rem_1fr_auto] items-baseline gap-x-2 border-t-2 border-foreground pt-3 pb-2.5">
           <span aria-hidden className="text-center text-muted-foreground">
             =
           </span>
-          <span className="font-semibold">期末余额</span>
+          <span className="font-semibold">
+            {t('statement:equation.closing')}
+          </span>
           <span className="text-right text-[22px] font-bold">
             <Money value={money(figures.closingBalance)} />
           </span>

@@ -63,12 +63,13 @@ export function AccountMenu({
   /** 1280 px 以下只显示头像（门户月账单列表稿 1b），其余页面不传。 */
   condensedBelowXl?: boolean;
 }) {
+  const { t } = useTranslation();
   const logout = useLogout(zoneOfIdentity(identity));
   const summary = accountSummary(identity);
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger
-        aria-label="账号菜单"
+        aria-label={t('account.menu')}
         className="group flex h-9 items-center gap-2 rounded-lg py-1 pr-2.5 pl-1 text-[13px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring data-[state=open]:bg-muted"
       >
         <Avatar
@@ -114,7 +115,7 @@ export function AccountMenu({
         ) : null}
         {identity.kind === 'customer' ? (
           <DropdownMenuItem asChild className={menuItemClass}>
-            <Link to="/portal/settings">账号设置</Link>
+            <Link to="/portal/settings">{t('account.settings')}</Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem
@@ -125,7 +126,7 @@ export function AccountMenu({
             logout.mutate();
           }}
         >
-          退出登录
+          {t('account.signOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -140,12 +141,12 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
   return (
     <SheetPanel
       side="bottom"
-      title="账号菜单"
+      title={t('account.menu')}
       trigger={
         <Button
           variant="ghost"
           size="inline"
-          aria-label="账号菜单"
+          aria-label={t('account.menu')}
           className="m-[5px] rounded-full hover:bg-transparent"
         >
           <Avatar identity={identity} className="size-[30px]" />
@@ -162,7 +163,9 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
         </div>
       </div>
       <div className="flex flex-col gap-2 border-b border-border py-3">
-        <span className="text-sm text-muted-foreground">主题</span>
+        <span className="text-sm text-muted-foreground">
+          {t('theme.label')}
+        </span>
         <ThemeSegmented className="w-full" />
       </div>
       <div className="flex items-center justify-between gap-2 border-b border-border py-3">
@@ -181,7 +184,7 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
           to="/portal/settings"
           className="flex h-12 items-center justify-between border-b border-border text-base"
         >
-          账号设置
+          {t('account.settings')}
           <ChevronRightIcon
             aria-hidden
             className="size-4 text-muted-foreground"
@@ -195,7 +198,7 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
         onClick={() => logout.mutate()}
         className="h-12 justify-start rounded-none text-base text-neg hover:bg-transparent"
       >
-        退出登录
+        {t('account.signOut')}
       </Button>
     </SheetPanel>
   );

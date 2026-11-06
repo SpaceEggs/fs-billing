@@ -1,5 +1,6 @@
 import Decimal from 'decimal.js';
 import type { Currency, Money as MoneyValue } from '@fs-billing/shared';
+import { useLocale } from '../i18n';
 import {
   formatDateTime,
   formatExactMoney,
@@ -52,14 +53,18 @@ export function Rate({
   unit?: boolean;
   className?: string;
 }) {
+  const locale = useLocale();
   return (
     <span className={cn('tabular-nums', className)}>
-      {formatRate(value, currency ? { currency, unit } : { unit })}
+      {formatRate(
+        value,
+        currency ? { currency, unit, locale } : { unit, locale },
+      )}
     </span>
   );
 }
 
-/** 北京时间 YYYY-MM-DD HH:mm:ss。 */
+/** 北京时间 YYYY-MM-DD HH:mm:ss（英文 DD MMM YYYY HH:mm:ss）。 */
 export function DateTime({
   value,
   className,
@@ -67,9 +72,10 @@ export function DateTime({
   value: string;
   className?: string;
 }) {
+  const locale = useLocale();
   return (
     <time dateTime={value} className={cn('tabular-nums', className)}>
-      {formatDateTime(value)}
+      {formatDateTime(value, locale)}
     </time>
   );
 }
