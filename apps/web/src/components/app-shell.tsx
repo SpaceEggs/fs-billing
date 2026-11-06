@@ -24,6 +24,7 @@ import { cn } from '../lib/utils';
 import { zoneOfIdentity, zones, type Zone } from '../lib/zone';
 import { AccountMenu, MobileAccountMenu } from './account-menu';
 import { productLabel, SidebarBrand } from './brand';
+import { LocaleMenu } from './locale-menu';
 import { SessionExpiredDialog } from './session-expired-dialog';
 import { MobileBarButton } from './mobile-bar-button';
 import { ThemeMenu } from './theme-controls';
@@ -189,6 +190,7 @@ export function AppShell({
             {crumb}
           </span>
           <div className="flex items-center gap-2">
+            <LocaleMenu />
             <ThemeMenu />
             <AccountMenu identity={identity} condensedBelowXl={narrowTopbar} />
           </div>

@@ -14,6 +14,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { LocaleMenu } from '../components/locale-menu';
 import { callApi } from '../lib/api';
 import { clearBalanceAttempts } from '../lib/balance-attempts';
 import {
@@ -161,7 +162,10 @@ export function LoginPage({ zone, expired }: { zone: Zone; expired: boolean }) {
       )}
     >
       {expired ? <ExpiredBanner /> : null}
-      <main className="flex flex-1 flex-col justify-center gap-6 px-6 pb-16 sm:items-center sm:px-0 sm:pb-0">
+      <main className="relative flex flex-1 flex-col justify-center gap-6 px-6 pb-16 sm:items-center sm:px-0 sm:pb-0">
+        <div className="absolute top-4 right-4 z-10">
+          <LocaleMenu />
+        </div>
         <div className="hidden sm:block">
           <BrandRow zone={zone} />
         </div>
