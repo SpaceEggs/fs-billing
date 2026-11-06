@@ -1,10 +1,12 @@
 import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import type { Identity } from '@fs-billing/shared';
 import { Button } from './ui/button';
 import { logoutFailedMessage, useLogout } from '../lib/use-logout';
 import { cn } from '../lib/utils';
 import { zoneOfIdentity } from '../lib/zone';
+import { LocaleMenu } from './locale-menu';
 import { menuContentClass, menuItemClass } from './menu';
 import {
   DropdownMenu,
@@ -132,6 +134,7 @@ export function AccountMenu({
 
 /** 手机版：头像按钮打开底部面板，包含主题切换与退出登录（第三批 3b/3f）。 */
 export function MobileAccountMenu({ identity }: { identity: Identity }) {
+  const { t } = useTranslation(['common']);
   const logout = useLogout(zoneOfIdentity(identity));
   const summary = accountSummary(identity);
   return (
@@ -161,6 +164,12 @@ export function MobileAccountMenu({ identity }: { identity: Identity }) {
       <div className="flex flex-col gap-2 border-b border-border py-3">
         <span className="text-sm text-muted-foreground">主题</span>
         <ThemeSegmented className="w-full" />
+      </div>
+      <div className="flex items-center justify-between gap-2 border-b border-border py-3">
+        <span className="text-sm text-muted-foreground">
+          {t('common:locale.label')}
+        </span>
+        <LocaleMenu mobile />
       </div>
       {logout.isError ? (
         <p role="alert" className="m-0 pt-3 text-sm text-neg">

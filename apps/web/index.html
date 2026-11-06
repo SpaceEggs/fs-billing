@@ -20,6 +20,25 @@
             matchMedia('(prefers-color-scheme: dark)').matches);
         var root = document.documentElement;
         root.dataset.theme = dark ? 'dark' : 'light';
+        var locale = null;
+        try {
+          locale = localStorage.getItem('fs-billing.locale');
+        } catch (e) {}
+        if (locale !== 'zh' && locale !== 'en') {
+          var languages =
+            navigator.languages && navigator.languages.length
+              ? navigator.languages
+              : navigator.language
+                ? [navigator.language]
+                : [];
+          var first = languages[0];
+          locale = first
+            ? first.toLowerCase().indexOf('zh') === 0
+              ? 'zh'
+              : 'en'
+            : 'zh';
+        }
+        root.lang = locale === 'zh' ? 'zh-CN' : 'en';
         var path = location.pathname;
         root.dataset.product =
           path === '/admin' || path.indexOf('/admin/') === 0

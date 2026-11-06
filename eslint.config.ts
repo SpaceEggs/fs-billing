@@ -2,12 +2,14 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import money from './tooling/eslint/money.ts';
+import i18nAllowlist from './tooling/eslint/i18n-allowlist.json' with { type: 'json' };
 import {
   alertRestrictedSyntax,
   consoleRestrictedGlobals,
   consoleRestrictedImports,
   eslintCommentsPlugin,
   fetchRestrictedGlobals,
+  i18nRestrictedSyntax,
   ledgerRestrictedSyntax,
   localTimeRestrictedSyntax,
 } from './tooling/eslint/guardrails.ts';
@@ -163,6 +165,19 @@ export default tseslint.config(
       '@eslint-community/eslint-comments/require-description': [
         'error',
         { ignore: ['eslint-enable'] },
+      ],
+    },
+  },
+  {
+    files: [`apps/web/src/**/*.${sourceExt}`],
+    ignores: [...testFiles, 'apps/web/src/i18n/**', ...i18nAllowlist],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...localTimeRestrictedSyntax,
+        ...ledgerRestrictedSyntax,
+        ...alertRestrictedSyntax,
+        ...i18nRestrictedSyntax,
       ],
     },
   },

@@ -16,6 +16,26 @@ const consoleMessage =
 const fetchMessage =
   '禁止直接 fetch / XMLHttpRequest，改用 apps/web/src/lib/api.ts 的 callApi / apiQuery（组件经 TanStack Query 取数）';
 
+const i18nMessage =
+  '禁止在 apps/web 的字符串、模板字符串与 JSX 文本里写死中文，改用 packages/shared/src/i18n 的文案键';
+
+const hanRange = '\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff';
+
+export const i18nRestrictedSyntax = [
+  {
+    selector: `Literal[value=/[${hanRange}]/]`,
+    message: i18nMessage,
+  },
+  {
+    selector: `TemplateElement[value.raw=/[${hanRange}]/]`,
+    message: i18nMessage,
+  },
+  {
+    selector: `JSXText[value=/[${hanRange}]/]`,
+    message: i18nMessage,
+  },
+];
+
 const localDateMethod =
   '/^(get|set)(FullYear|Year|Month|Date|Day|Hours|Minutes|Seconds|Milliseconds)$/';
 const localDateStringMethod =
