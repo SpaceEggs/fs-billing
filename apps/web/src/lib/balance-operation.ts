@@ -62,7 +62,7 @@ export function balanceKindHint(
   return translate(locale, `admin:balance.hint.${balanceKindKey[kind]}`);
 }
 
-/** 流水类型名称；`ledgerKindLabels` 是中文兼容值。 */
+/** 流水类型名称。 */
 export function ledgerKindLabel(
   kind: AdminLedgerKind,
   locale: Locale = currentLocale(),
@@ -131,14 +131,6 @@ export const balanceKindOrder = [
   'gift',
   'adjustment',
 ] as const satisfies readonly BalanceKind[];
-
-export const ledgerKindLabels = {
-  recharge: ledgerKindLabel('recharge', 'zh'),
-  credit_recharge: ledgerKindLabel('credit_recharge', 'zh'),
-  gift: ledgerKindLabel('gift', 'zh'),
-  adjustment: ledgerKindLabel('adjustment', 'zh'),
-  call_charge: ledgerKindLabel('call_charge', 'zh'),
-} as const satisfies Record<AdminLedgerKind, string>;
 
 export type BalanceDraft = { kind: BalanceKind; amount: string; note: string };
 export type BalanceErrors = { amount?: string; note?: string; form?: string };

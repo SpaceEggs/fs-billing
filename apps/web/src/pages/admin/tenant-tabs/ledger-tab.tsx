@@ -7,6 +7,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
@@ -17,7 +18,6 @@ import {
   type AdminLedgerRow,
   type Currency,
 } from '@fs-billing/shared';
-import { formatMergedChargeNote } from '@fs-billing/shared';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { Label } from '../../../components/ui/label';
 import { DateTime, Money } from '../../../components/data-format';
@@ -37,20 +37,15 @@ import {
 import { StatusTag, type StatusKey } from '../../../components/status-tag';
 import { apiQuery } from '../../../lib/admin-api';
 import type { LedgerSearch } from '../../../lib/admin-search';
-import { ledgerKindLabels } from '../../../lib/balance-operation';
+import { ledgerKindLabel } from '../../../lib/balance-operation';
 import { rangeOrMonthToDate } from '../../../lib/day-range';
-import { formatDateTime, formatLedgerChargeNote } from '../../../lib/format';
+import {
+  formatLedgerChargeNote,
+  formatShortDateTime,
+} from '../../../lib/format';
 import { useLocale } from '../../../i18n';
 
 const ledgerPageSize = 25;
-
-const kindChoices = [
-  { value: undefined, label: '全部类型' },
-  ...adminLedgerKindSchema.options.map((value) => ({
-    value,
-    label: ledgerKindLabels[value],
-  })),
-];
 
 const paymentTags = {
   pending: 'unpaid',
@@ -77,6 +72,7 @@ function PaymentStatus({ entry }: { entry: AdminLedgerRow }) {
 }
 
 function Note({ entry }: { entry: AdminLedgerRow }) {
+  const { t } = useTranslation(['admin']);
   const locale = useLocale();
   if (entry.kind === 'call_charge')
     return <span>{formatLedgerChargeNote(entry, locale)}</span>;
@@ -87,7 +83,7 @@ function Note({ entry }: { entry: AdminLedgerRow }) {
       </span>
       {entry.noteVisibility === 'admin' ? (
         <span className="rounded bg-muted px-1.5 py-px text-[11px] whitespace-nowrap text-muted-foreground">
-          仅内部可见
+          {t('admin:balanceDialog.visibilityAdmin')}
         </span>
       ) : null}
     </span>
@@ -101,18 +97,24 @@ function LedgerTable({
   currency: Currency;
   items: AdminLedgerRow[];
 }) {
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
       <Table>
         <TableHeader>
           <TableRow className="border-t-0 whitespace-nowrap">
-            <TableHead className="px-4">时间</TableHead>
-            <TableHead>类型</TableHead>
-            <TableHead className="text-right">金额</TableHead>
-            <TableHead className="text-right">变动后余额</TableHead>
-            <TableHead>收款状态</TableHead>
-            <TableHead>备注</TableHead>
-            <TableHead className="px-4">操作人</TableHead>
+            <TableHead className="px-4">{t('tenant:ledger.time')}</TableHead>
+            <TableHead>{t('tenant:ledger.kind')}</TableHead>
+            <TableHead className="text-right">
+              {t('tenant:ledger.amount')}
+            </TableHead>
+            <TableHead className="text-right">
+              {t('tenant:ledger.balanceAfter')}
+            </TableHead>
+            <TableHead>{t('tenant:ledger.paymentStatus')}</TableHead>
+            <TableHead>{t('tenant:ledger.note')}</TableHead>
+            <TableHead className="px-4">{t('tenant:ledger.actor')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="tabular-nums">
@@ -128,7 +130,7 @@ function LedgerTable({
                 <DateTime value={entry.occurredAt} />
               </TableCell>
               <TableCell className="py-2.5 whitespace-nowrap">
-                {ledgerKindLabels[entry.kind]}
+                {ledgerKindLabel(entry.kind, locale)}
               </TableCell>
               <TableCell className="py-2.5 text-right font-semibold whitespace-nowrap">
                 <Money
@@ -164,6 +166,8 @@ function LedgerCards({
   currency: Currency;
   items: AdminLedgerRow[];
 }) {
+  const { t } = useTranslation(['tenant', 'admin']);
+  const locale = useLocale();
   return (
     <ul className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
       {items.map((entry) => (
@@ -177,7 +181,7 @@ function LedgerCards({
         >
           <div className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2 text-[15px] font-medium">
-              {ledgerKindLabels[entry.kind]}
+              {ledgerKindLabel(entry.kind, locale)}
               {entry.kind === 'call_charge' ? (
                 <span className="text-muted-foreground">—</span>
               ) : entry.paymentStatus ? (
@@ -196,20 +200,22 @@ function LedgerCards({
           </div>
           <div className="flex justify-between gap-2 text-xs text-muted-foreground">
             <span className="truncate">
-              {formatDateTime(entry.occurredAt, 'zh').slice(5, 16)} ·{' '}
+              {formatShortDateTime(entry.occurredAt, locale, false)} ·{' '}
               {entry.kind === 'call_charge'
-                ? formatMergedChargeNote(entry)
+                ? formatLedgerChargeNote(entry, locale)
                 : entry.note || '—'}
               {entry.kind !== 'call_charge' && entry.noteVisibility === 'admin'
-                ? '（仅内部可见）'
+                ? t('admin:balanceDialog.internalVisibility')
                 : ''}
             </span>
             <span className="whitespace-nowrap">
-              余额 <Money value={{ currency, amount: entry.balanceAfter }} />
+              {t('tenant:ledger.balanceSuffix')}{' '}
+              <Money value={{ currency, amount: entry.balanceAfter }} />
             </span>
           </div>
           <div className="text-xs text-muted-foreground">
-            操作人 {entry.kind === 'call_charge' ? '—' : entry.actor.name}
+            {t('tenant:ledger.actor')}{' '}
+            {entry.kind === 'call_charge' ? '—' : entry.actor.name}
           </div>
         </li>
       ))}
@@ -222,6 +228,15 @@ function LedgerCards({
  * 手机上类型放进「筛选」面板。契约没有收款状态筛选和流水导出，设计稿中的这两项省略。
  */
 export function LedgerTab({ tenantId }: { tenantId: string }) {
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
+  const kindChoices = [
+    { value: undefined, label: t('tenant:ledger.allKinds') },
+    ...adminLedgerKindSchema.options.map((value) => ({
+      value,
+      label: ledgerKindLabel(value, locale),
+    })),
+  ];
   const kindId = useId();
   const search = useSearch({ from: '/admin/tenants/$tenantId' });
   const navigate = useNavigate({ from: '/admin/tenants/$tenantId' });
@@ -256,7 +271,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <DateRangeField
-          label="日期范围（北京时间）"
+          label={t('tenant:ledger.dateRange')}
           value={range}
           max={beijingDateOf(now)}
           maxRangeEndForStart={latestRangeEnd}
@@ -265,10 +280,14 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         />
         <FilterSheet
           activeCount={kind ? 1 : 0}
-          resultLabel={resultLabel(data?.pagination.total, '条')}
+          resultLabel={resultLabel(
+            data?.pagination.total,
+            t('tenant:ledger.resultUnit'),
+            locale,
+          )}
           onClear={() => setFilter({ kind: undefined })}
         >
-          <FilterGroup label="类型">
+          <FilterGroup label={t('tenant:ledger.type')}>
             {(labelId) => (
               <ChoiceGrid
                 labelledBy={labelId}
@@ -281,7 +300,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
         </FilterSheet>
         <div className="hidden md:contents">
           <Label htmlFor={kindId} className="sr-only">
-            类型
+            {t('tenant:ledger.type')}
           </Label>
           <NativeSelect
             id={kindId}
@@ -303,29 +322,32 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
           </NativeSelect>
           {data ? (
             <span className="text-[13px] text-muted-foreground tabular-nums">
-              共 {data.pagination.total} 条
+              {t('tenant:ledger.total', { count: data.pagination.total })}
             </span>
           ) : null}
         </div>
       </div>
-      <RefreshError title="余额流水刷新失败，列表可能不是最新" query={ledger} />
+      <RefreshError title={t('tenant:ledger.refreshFailed')} query={ledger} />
       {rangeIsOverlong ? (
         <div
           role="alert"
           className="rounded-lg border border-err/30 bg-err/5 px-3.5 py-3 text-[13px] text-err"
         >
-          日期范围超出一个月上限：{range.from} 至 {range.to}。结束日期不能晚于{' '}
-          {latestRangeEnd(range.from)}。
+          {t('tenant:ledger.rangeOverlong', {
+            from: range.from,
+            to: range.to,
+            limit: latestRangeEnd(range.from),
+          })}
         </div>
       ) : null}
       {data ? (
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] tabular-nums text-muted-foreground">
           <span>
-            当前余额{' '}
+            {t('tenant:ledger.currentBalance')}{' '}
             <Money value={{ currency: data.currency, amount: data.balance }} />
           </span>
           <span>
-            筛选金额合计{' '}
+            {t('tenant:ledger.filteredAmount')}{' '}
             <Money
               value={{ currency: data.currency, amount: data.totalAmount }}
               tone="signed"
@@ -336,7 +358,7 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
       ) : null}
       {rangeIsOverlong ? null : ledger.isError && !data ? (
         <QueryError
-          title="余额流水加载失败"
+          title={t('tenant:ledger.loadFailed')}
           error={ledger.error}
           retrying={ledger.isFetching}
           onRetry={() => void ledger.refetch()}
@@ -344,16 +366,20 @@ export function LedgerTab({ tenantId }: { tenantId: string }) {
       ) : !data ? (
         <Skeleton
           aria-busy
-          aria-label="余额流水加载中"
+          aria-label={t('tenant:ledger.loading')}
           className="h-[240px] rounded-xl"
         />
       ) : data.items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-[10px] border border-border px-5 py-14 text-center">
           <span className="text-[15px] font-semibold">
-            {`该日期范围内没有${kind ? ledgerKindLabels[kind] : '余额'}流水`}
+            {kind
+              ? t('tenant:ledger.emptyFor', {
+                  kind: ledgerKindLabel(kind, locale),
+                })
+              : t('tenant:ledger.emptyAll')}
           </span>
           <span className="text-[13px] text-muted-foreground">
-            充值、赊账、赠送、调账和通话扣费都会记录在这里，可调整日期范围或类型
+            {t('tenant:ledger.emptyHint')}
           </span>
         </div>
       ) : (

@@ -24,6 +24,7 @@ const resources = {
     cdr: zh.cdr,
     admin: zh.admin,
     rates: zh.rates,
+    tenant: zh.tenant,
   },
   en: {
     common: en.common,
@@ -38,6 +39,7 @@ const resources = {
     cdr: en.cdr,
     admin: en.admin,
     rates: en.rates,
+    tenant: en.tenant,
   },
 } as const;
 
@@ -79,6 +81,7 @@ export function initI18n() {
       'cdr',
       'admin',
       'rates',
+      'tenant',
     ],
     defaultNS: 'common',
     initAsync: false,

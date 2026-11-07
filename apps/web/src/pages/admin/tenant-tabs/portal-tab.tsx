@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AdminPortalAccount,
@@ -35,17 +36,14 @@ import {
 import { apiProblem } from '../../../lib/api-problem';
 import { cn } from '../../../lib/utils';
 
-const accountStatus = {
-  active: { label: '启用', variant: 'ok' },
-  disabled: { label: '已停用', variant: 'off' },
-} as const satisfies Record<AdminStatus, { label: string; variant: string }>;
+const accountStatusVariant = {
+  active: 'ok',
+  disabled: 'off',
+} as const satisfies Record<AdminStatus, string>;
 
 const fieldRow =
   'flex flex-col gap-0.5 border-b border-border py-3 last:border-b-0 md:grid md:grid-cols-[140px_1fr] md:items-center md:gap-0';
 const fieldLabel = 'text-xs text-muted-foreground md:text-sm';
-
-const tenantDisabledEnableNote =
-  '租户仍为停用状态。启用门户账号不会启用租户，租户启用前客户仍无法登录。';
 
 type Action = 'create' | 'reset' | 'disable' | 'enable';
 
@@ -67,6 +65,7 @@ export function CreatePortalDialog({
   tenantId: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['tenant', 'admin', 'common']);
   const queryClient = useQueryClient();
   const create = useCredentialMutation('adminPortalAccountCreate');
   const [form, setForm] = useState({ email: '', initialPassword: '' });
@@ -115,11 +114,13 @@ export function CreatePortalDialog({
     return (
       <ModalDialog
         open
-        title="门户账号已开通"
+        title={t('tenant:portal.createdTitle')}
         description={created.account.email}
       >
         <div className="flex flex-col gap-1">
-          <h2 className="m-0 text-[17px] font-semibold">门户账号已开通</h2>
+          <h2 className="m-0 text-[17px] font-semibold">
+            {t('tenant:portal.createdTitle')}
+          </h2>
           <span className="text-[13px] text-muted-foreground">
             {created.account.email}
           </span>
@@ -127,17 +128,19 @@ export function CreatePortalDialog({
         {created.passwordSource === 'generated' ? (
           <TemporaryPassword
             value={created.temporaryPassword}
-            recipient="客户"
-            logged="本次开通已记入操作日志。"
+            recipient={t('admin:accountDialogs.portalRecipient')}
+            logged={t('tenant:portal.createdLogged')}
           />
         ) : (
           <p className="m-0 text-[13px] text-muted-foreground">
-            使用填写的初始密码，客户首次登录后需修改密码。本次开通已记入操作日志。
+            {t('tenant:portal.initialPasswordUsed')}
           </p>
         )}
         <div className="flex flex-col md:flex-row md:justify-end">
           <Button variant="outline" className="h-12 md:h-9" onClick={onClose}>
-            {created.passwordSource === 'generated' ? '我已复制，关闭' : '关闭'}
+            {created.passwordSource === 'generated'
+              ? t('admin:accountDialogs.copiedClose')
+              : t('common:ui.close')}
           </Button>
         </div>
       </ModalDialog>
@@ -149,23 +152,29 @@ export function CreatePortalDialog({
       {...(create.isPending
         ? {}
         : { onOpenChange: (open: boolean) => open || onClose() })}
-      title="开通门户账号"
-      description="客户登录客户门户使用；第一版每个租户一个门户账号"
+      title={t('tenant:portal.createTitle')}
+      description={t('tenant:portal.createDescription')}
       className="md:w-[480px]"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-[17px] font-semibold">开通门户账号</h2>
+        <h2 className="m-0 text-[17px] font-semibold">
+          {t('tenant:portal.createTitle')}
+        </h2>
         <span className="text-[13px] text-muted-foreground">
-          客户登录客户门户使用；第一版每个租户一个门户账号
+          {t('tenant:portal.createDescription')}
         </span>
       </div>
       <form
-        aria-label="开通门户账号"
+        aria-label={t('tenant:portal.createTitle')}
         noValidate
         onSubmit={(event) => void submit(event)}
         className="flex flex-col gap-4"
       >
-        <Field label="登录邮箱" required error={shown.email}>
+        <Field
+          label={t('tenant:create.portalEmail')}
+          required
+          error={shown.email}
+        >
           {(props) => (
             <Input
               {...props}
@@ -181,17 +190,17 @@ export function CreatePortalDialog({
           )}
         </Field>
         <Field
-          label="初始密码"
+          label={t('tenant:create.initialPassword')}
           optional
           error={shown.initialPassword}
-          hint="留空由系统生成临时密码；客户首次登录后需修改密码"
+          hint={t('tenant:create.passwordHint')}
         >
           {(props) => (
             <Input
               {...props}
               type="password"
               autoComplete="new-password"
-              placeholder="至少 8 位"
+              placeholder={t('tenant:create.passwordPlaceholder')}
               value={form.initialPassword}
               onChange={(event) =>
                 setForm({ ...form, initialPassword: event.target.value })
@@ -202,10 +211,10 @@ export function CreatePortalDialog({
         </Field>
         {unknown ? (
           <Alert variant="error">
-            <span className="font-semibold">无法确认是否已开通</span>
-            <span>
-              请关闭后查看门户账号：若已开通，用「重置密码」生成新的临时密码，不要重复开通。
+            <span className="font-semibold">
+              {t('tenant:portal.unknownTitle')}
             </span>
+            <span>{t('tenant:portal.unknownBody')}</span>
           </Alert>
         ) : create.error && !emailTaken ? (
           <ProblemAlert
@@ -223,14 +232,16 @@ export function CreatePortalDialog({
             disabled={create.isPending}
             onClick={onClose}
           >
-            取消
+            {t('common:action.cancel')}
           </Button>
           <Button
             type="submit"
             className="h-12 md:h-9"
             disabled={create.isPending}
           >
-            {create.isPending ? '正在开通…' : '开通'}
+            {create.isPending
+              ? t('tenant:portal.creating')
+              : t('tenant:portal.create')}
           </Button>
         </div>
       </form>
@@ -246,6 +257,7 @@ export function PortalTab({
   tenantId: string;
   tenantDisabled: boolean;
 }) {
+  const { t } = useTranslation(['tenant', 'admin', 'common']);
   const accounts = useQuery(
     apiQuery('adminPortalAccounts', { params: { tenantId } }),
   );
@@ -259,7 +271,7 @@ export function PortalTab({
   if (accounts.isError)
     return (
       <QueryError
-        title="门户账号加载失败"
+        title={t('tenant:portal.loadFailed')}
         error={accounts.error}
         retrying={accounts.isFetching}
         onRetry={() => void accounts.refetch()}
@@ -269,7 +281,7 @@ export function PortalTab({
     return (
       <Skeleton
         aria-busy
-        aria-label="门户账号加载中"
+        aria-label={t('tenant:portal.loading')}
         className="h-[180px] max-w-[760px] rounded-xl"
       />
     );
@@ -282,7 +294,7 @@ export function PortalTab({
         className="h-11 md:h-9"
         onClick={() => open('reset')}
       >
-        重置密码
+        {t('admin:accountDialogs.resetPassword')}
       </Button>
       <Button
         variant="outline"
@@ -294,7 +306,9 @@ export function PortalTab({
         )}
         onClick={() => open(toggle)}
       >
-        {toggle === 'disable' ? '停用账号' : '启用账号'}
+        {toggle === 'disable'
+          ? t('admin:accountDialogs.status.portal.disable.confirm')
+          : t('admin:accountDialogs.status.portal.enable.confirm')}
       </Button>
     </>
   ) : null;
@@ -304,16 +318,20 @@ export function PortalTab({
       {tenantDisabled ? (
         <Alert variant="muted" role="note" className="px-3.5">
           <AlertDescription>
-            <span className="font-semibold">租户已停用</span>
-            ，客户暂时无法登录客户门户。门户账号本身的状态不受影响，租户启用后即可恢复登录。
+            <span className="font-semibold">
+              {t('tenant:portal.tenantDisabledTitle')}
+            </span>
+            {t('tenant:portal.tenantDisabledBody')}
           </AlertDescription>
         </Alert>
       ) : null}
       {account?.status === 'disabled' ? (
         <Alert variant="muted" role="note" className="px-3.5">
           <AlertDescription>
-            <span className="font-semibold">门户账号已停用</span>
-            ，客户无法登录客户门户。呼叫与计费不受影响。
+            <span className="font-semibold">
+              {t('tenant:portal.accountDisabledTitle')}
+            </span>
+            {t('tenant:portal.accountDisabledBody')}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -324,12 +342,14 @@ export function PortalTab({
           'rounded-xl border border-border',
         )}
       >
-        <section aria-label="客户门户账号">
+        <section aria-label={t('tenant:portal.sectionAria')}>
           <div className="hidden items-center justify-between gap-3 border-b border-border px-5 py-4 md:flex">
             <div className="flex flex-col gap-1">
-              <span className="text-[15px] font-semibold">客户门户账号</span>
+              <span className="text-[15px] font-semibold">
+                {t('tenant:portal.sectionTitle')}
+              </span>
               <span className="text-xs text-muted-foreground">
-                第一版每个租户一个门户账号
+                {t('tenant:portal.subtitle')}
               </span>
             </div>
             {actions ? <div className="flex gap-2">{actions}</div> : null}
@@ -338,7 +358,7 @@ export function PortalTab({
             // 手机（第三批 3j）标签在上、值在下，状态标签靠右；电脑为两列。
             <dl className="m-0 px-3.5 py-1 text-sm tabular-nums md:px-5 md:pt-1 md:pb-2">
               <div className={fieldRow}>
-                <dt className={fieldLabel}>登录邮箱</dt>
+                <dt className={fieldLabel}>{t('tenant:portal.email')}</dt>
                 <dd className="m-0 break-all">{account.email}</dd>
               </div>
               <div
@@ -347,25 +367,29 @@ export function PortalTab({
                   'flex-row items-center justify-between',
                 )}
               >
-                <dt className={fieldLabel}>状态</dt>
+                <dt className={fieldLabel}>{t('tenant:portal.status')}</dt>
                 <dd className="m-0">
-                  <Badge variant={accountStatus[account.status].variant}>
-                    {accountStatus[account.status].label}
+                  <Badge variant={accountStatusVariant[account.status]}>
+                    {account.status === 'disabled'
+                      ? t('tenant:portal.accountStatusDisabled')
+                      : t('tenant:portal.accountStatusEnabled')}
                   </Badge>
                 </dd>
               </div>
               <div className={fieldRow}>
-                <dt className={fieldLabel}>最后登录时间</dt>
+                <dt className={fieldLabel}>{t('tenant:portal.lastLogin')}</dt>
                 <dd className="m-0">
                   {account.lastLoginAt ? (
                     <DateTime value={account.lastLoginAt} />
                   ) : (
-                    <span className="text-muted-foreground">从未登录</span>
+                    <span className="text-muted-foreground">
+                      {t('tenant:portal.never')}
+                    </span>
                   )}
                 </dd>
               </div>
               <div className={fieldRow}>
-                <dt className={fieldLabel}>开通时间</dt>
+                <dt className={fieldLabel}>{t('tenant:portal.createdAt')}</dt>
                 <dd className="m-0">
                   <DateTime value={account.createdAt} />
                 </dd>
@@ -374,20 +398,20 @@ export function PortalTab({
           ) : (
             <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
               <span className="text-[15px] font-semibold">
-                尚未开通门户账号
+                {t('tenant:portal.emptyTitle')}
               </span>
               <span className="text-[13px] text-muted-foreground">
-                开通后客户可登录客户门户查看余额、流水和话单
+                {t('tenant:portal.emptyBody')}
               </span>
               <Button className="mt-2" onClick={() => open('create')}>
-                开通门户账号
+                {t('tenant:portal.open')}
               </Button>
             </div>
           )}
         </section>
       </Card>
       <span className="text-xs text-muted-foreground md:hidden">
-        第一版每个租户一个门户账号
+        {t('tenant:portal.subtitle')}
       </span>
       {actions ? (
         <div className="flex flex-col gap-2 md:hidden">{actions}</div>
@@ -409,7 +433,7 @@ export function PortalTab({
           action={action}
           extraNote={
             action === 'enable' && tenantDisabled
-              ? tenantDisabledEnableNote
+              ? t('tenant:portal.tenantDisabledEnableNote')
               : undefined
           }
           onClose={close}

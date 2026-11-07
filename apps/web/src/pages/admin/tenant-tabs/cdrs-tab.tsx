@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   beijingDateOf,
   isDayRangeWithinOneMonth,
   latestRangeEnd,
+  translate,
   type AdminDeletedMonth,
   type AdminTenantDetailResponse,
+  type Locale,
 } from '@fs-billing/shared';
 import { CdrDeleteDialog } from '../../../components/admin/cdr-delete-dialog';
 import {
@@ -35,6 +38,7 @@ import {
 import { beijingMonthToDate, rangeOrMonthToDate } from '../../../lib/day-range';
 import { formatDate, formatDateTime } from '../../../lib/format';
 import { statementMonthTitle } from '../../../lib/statement';
+import { useLocale } from '../../../i18n';
 import { cn } from '../../../lib/utils';
 
 type CdrsSearch = Pick<
@@ -49,6 +53,8 @@ type CdrsSearch = Pick<
  * 范围内已删除的月份在列表上方提示（决定 12）。阶段 9 的「查看告警」未开发，不显示。
  */
 export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const search = useSearch({ from: '/admin/tenants/$tenantId' });
   const navigate = useNavigate({ from: '/admin/tenants/$tenantId' });
@@ -76,7 +82,11 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   const monthToDate = beijingMonthToDate(now);
   const rangeIsOverlong = !isDayRangeWithinOneMonth(range.from, range.to);
   const inputError = rangeIsOverlong
-    ? `日期范围超出一个月上限：${range.from} 至 ${range.to}。结束日期不能晚于 ${latestRangeEnd(range.from)}。`
+    ? t('tenant:cdrs.rangeOverlong', {
+        from: range.from,
+        to: range.to,
+        limit: latestRangeEnd(range.from),
+      })
     : calleeProblem(callee);
   const params = { tenantId: tenant.id };
   const query = {
@@ -109,7 +119,7 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     update({ ...patch, page: undefined });
   const exportButton = (className?: string) => (
     <CdrExportButton
-      label="导出 CSV"
+      label={t('tenant:cdrs.exportCsv')}
       exporting={exporter.isPending}
       disabled={inputError !== null}
       onExport={exportNow}
@@ -122,7 +132,7 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       className={cn('border-err-border', className)}
       onClick={() => setDeleteOpen(true)}
     >
-      删除话单
+      {t('tenant:cdrs.delete')}
     </Button>
   );
   const deletedMonths = list.data?.deletedMonths ?? [];
@@ -179,10 +189,14 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             {deleteButton()}
           </div>
         }
-        activeExtraFilters={unverifiedOnly ? ['仅看未经验证'] : []}
+        activeExtraFilters={
+          unverifiedOnly ? [t('tenant:cdrs.unverifiedOnly')] : []
+        }
         rowBadge={(cdr) => <UnverifiedBadge cdr={cdr} />}
         detailExtra={unverifiedDetail}
-        emptyHint={`该租户创建于 ${formatDate(tenant.createdAt)}，请调整日期范围`}
+        emptyHint={t('tenant:cdrs.emptyHint', {
+          date: formatDate(tenant.createdAt, locale),
+        })}
         onRange={(next) => setFilter({ cdrFrom: next.from, cdrTo: next.to })}
         onFilters={setFilter}
         onPage={(next) => update({ page: next > 1 ? next : undefined })}
@@ -201,11 +215,18 @@ export function CdrsTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
 }
 
 /** 旧标志没有条数、操作人或时间时只写月份（PR 4 偏差 4）。三列都在才写完整一行。 */
-function deletedMonthLine(row: AdminDeletedMonth) {
-  const title = `${statementMonthTitle(row.month)} 的话单已删除`;
+function deletedMonthLine(row: AdminDeletedMonth, locale: Locale) {
+  const title = translate(locale, 'tenant:cdrs.deletedTitle', {
+    month: statementMonthTitle(row.month, locale),
+  });
   if (row.count === null || row.deletedBy === null || row.deletedAt === null)
     return title;
-  return `${title} · 共 ${formatCount(row.count)} 条 · ${row.deletedBy.name} 删除于 ${formatDateTime(row.deletedAt, 'zh').slice(0, 16)}`;
+  return translate(locale, 'tenant:cdrs.deletedLine', {
+    title,
+    count: formatCount(row.count),
+    name: row.deletedBy.name,
+    time: formatDateTime(row.deletedAt, locale, false),
+  });
 }
 
 function DeletedMonthsBanner({
@@ -213,15 +234,17 @@ function DeletedMonthsBanner({
 }: {
   months: readonly AdminDeletedMonth[];
 }) {
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
   return (
     <div
       role="region"
-      aria-label="已删除的话单"
+      aria-label={t('tenant:cdrs.deletedAria')}
       className="flex flex-col gap-1 rounded-lg border border-border bg-muted px-3.5 py-2.5 text-[13px] leading-normal text-muted-foreground"
     >
       {months.map((row) => (
         <p key={row.month} className="m-0">
-          {deletedMonthLine(row)}
+          {deletedMonthLine(row, locale)}
         </p>
       ))}
     </div>

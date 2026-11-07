@@ -2,15 +2,13 @@ import { translate, type Locale, type TenantHealth } from '@fs-billing/shared';
 import { StatusTag } from '../status-tag';
 import { healthStatus } from '../tenant-health';
 
-/** 状态筛选项；中文页仍用 `healthOptions`，英文页按 `locale` 取。 */
+/** 状态筛选项；按 `locale` 取。 */
 export function healthOptionsFor(locale: Locale) {
   return (Object.keys(healthStatus) as TenantHealth[]).map((health) => ({
     value: health,
     label: translate(locale, `common:status.${healthStatus[health]}`),
   }));
 }
-
-export const healthOptions = healthOptionsFor('zh');
 
 /**
  * 状态标签；存量租户缺少余额提醒设置时另加标记（详情会返回服务内部错误），

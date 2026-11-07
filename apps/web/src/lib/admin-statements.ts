@@ -32,12 +32,6 @@ export function reconcileNote(
 
 export type RegenerateReason = 'in_progress' | 'details_deleted';
 
-/** 重新生成不可用的原因；可用时为 null。 */
-export const regenerateReasons = {
-  in_progress: translate('zh', 'admin:statement.regenerate.inProgress'),
-  details_deleted: translate('zh', 'admin:statement.regenerate.detailsDeleted'),
-} as const satisfies Record<RegenerateReason, string>;
-
 export function regenerateReason(
   reason: RegenerateReason,
   locale: Locale = currentLocale(),

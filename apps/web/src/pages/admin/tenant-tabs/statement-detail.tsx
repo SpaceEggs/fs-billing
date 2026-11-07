@@ -1,12 +1,15 @@
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
-import type {
-  AdminTenantDetailResponse,
-  AdminTenantStatementResponse,
+import {
+  translate,
+  type AdminTenantDetailResponse,
+  type AdminTenantStatementResponse,
+  type Locale,
 } from '@fs-billing/shared';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { Alert } from '../../../components/ui/alert';
@@ -33,10 +36,7 @@ import { apiQuery } from '../../../lib/admin-api';
 import { callDownload } from '../../../lib/api';
 import { cdrListQuery } from '../../../lib/cdr-search';
 import { formatDateTime } from '../../../lib/format';
-import {
-  reconcileNote,
-  regenerateReasons,
-} from '../../../lib/admin-statements';
+import { reconcileNote, regenerateReason } from '../../../lib/admin-statements';
 import {
   fillDays,
   nextMonthFirstDay,
@@ -44,6 +44,7 @@ import {
   statementMonthTitle,
   statementPeriodLabel,
 } from '../../../lib/statement';
+import { useLocale } from '../../../i18n';
 
 /**
  * 某个月的账单详情（与门户同一套汇总、国家表、日表，另有版本、生成人、核对状态与话单差额）：
@@ -56,6 +57,7 @@ export function StatementDetailView({
   tenant: AdminTenantDetailResponse;
   month: string;
 }) {
+  const { t } = useTranslation(['tenant']);
   const detail = useQuery(
     apiQuery('adminTenantStatement', {
       params: { tenantId: tenant.id, month },
@@ -71,7 +73,7 @@ export function StatementDetailView({
         search={{ tab: 'statements' }}
         className="self-start text-sm text-primary print:hidden"
       >
-        ‹ 返回账单列表
+        {t('tenant:statementDetail.back')}
       </Link>
       {outcome ? (
         <RegenerateNotice
@@ -80,7 +82,10 @@ export function StatementDetailView({
           className="print:hidden"
         />
       ) : null}
-      <RefreshError title="账单刷新失败，数据可能不是最新" query={detail} />
+      <RefreshError
+        title={t('tenant:statementDetail.refreshFailed')}
+        query={detail}
+      />
       {detail.data ? (
         <Detail
           tenant={tenant}
@@ -89,7 +94,7 @@ export function StatementDetailView({
         />
       ) : detail.isError ? (
         <QueryError
-          title="账单加载失败"
+          title={t('tenant:statementDetail.loadFailed')}
           error={detail.error}
           retrying={detail.isFetching}
           onRetry={() => void detail.refetch()}
@@ -97,7 +102,7 @@ export function StatementDetailView({
       ) : (
         <Skeleton
           aria-busy
-          aria-label="账单加载中"
+          aria-label={t('tenant:statementDetail.loading')}
           className="h-[240px] rounded-xl"
         />
       )}
@@ -115,15 +120,16 @@ export function StatementDetailView({
 
 function reconcileText(
   reconcile: NonNullable<AdminTenantStatementResponse['reconcile']>,
+  locale: Locale,
 ) {
   switch (reconcile.status) {
     case 'unchecked':
-      return '尚未核对';
+      return translate(locale, 'tenant:statementDetail.unchecked');
     case 'ok':
-      return '已核对，与流水一致';
+      return translate(locale, 'tenant:statementDetail.checked');
     case 'stale':
     case 'inconsistent':
-      return reconcileNote(reconcile.status);
+      return reconcileNote(reconcile.status, locale);
   }
 }
 
@@ -137,6 +143,8 @@ function Detail({
   onRegenerate: (target: RegenerateTarget) => void;
 }) {
   const { currency, month, state, period, figures } = statement;
+  const { t } = useTranslation(['tenant', 'statement']);
+  const locale = useLocale();
   const tenantId = tenant.id;
   const summaryExport = useCdrExport(
     () =>
@@ -198,51 +206,62 @@ function Detail({
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
             <h2 className="m-0 whitespace-nowrap text-[22px] font-semibold tracking-[-0.01em]">
-              {statementMonthTitle(month)}
+              {statementMonthTitle(month, locale)}
             </h2>
             <StatementStateTag state={state} size="lg" />
           </div>
           <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-[13px] text-muted-foreground tabular-nums">
             <span className="text-foreground">{statement.tenant.name}</span>
             <span className="font-mono">{statement.tenant.code}</span>
-            <span>币种 {currency}</span>
-            <span>{statementPeriodLabel(period, state)}</span>
+            <span>{t('tenant:statementDetail.currency', { currency })}</span>
+            <span>{statementPeriodLabel(period, state, locale)}</span>
           </div>
         </div>
         <div className="flex flex-col gap-2 xl:items-end">
           <div className="flex flex-col gap-2 md:flex-row md:flex-wrap print:hidden">
-            {exportButton('导出 CSV（汇总）', summaryExport)}
             {exportButton(
-              '导出 CSV（该月话单明细）',
+              t('tenant:statementDetail.exportSummary'),
+              summaryExport,
+            )}
+            {exportButton(
+              t('tenant:statementDetail.exportDetails'),
               cdrExport,
               statement.detailsDeleted,
-              statement.detailsDeleted ? '该月话单明细已删除' : undefined,
+              statement.detailsDeleted
+                ? t('tenant:statementDetail.detailsDeletedTitle')
+                : undefined,
             )}
             <Button
               variant="outline"
               className="max-md:h-11 max-md:w-full"
               onClick={() => window.print()}
             >
-              打印
+              {t('tenant:statementDetail.print')}
             </Button>
             <RegenerateButton
               allowed={statement.regenerable.allowed}
               reason={reason}
-              label={`重新生成 ${statementMonthTitle(month)}`}
+              label={t('tenant:statements.regenerateFor', {
+                month: statementMonthTitle(month, locale),
+              })}
               className="h-9 max-md:h-11 max-md:w-full"
               onClick={() => onRegenerate(target)}
             />
           </div>
           <span className="text-xs text-muted-foreground">
             {statement.asOf
-              ? `数据截至 ${formatDateTime(statement.asOf)} · 实时计算`
+              ? t('tenant:statementDetail.asOf', {
+                  time: formatDateTime(statement.asOf, locale),
+                })
               : statement.generatedAt
-                ? `账单生成于 ${formatDateTime(statement.generatedAt)}`
+                ? t('tenant:statementDetail.generatedAt', {
+                    time: formatDateTime(statement.generatedAt, locale),
+                  })
                 : null}
           </span>
           {reason ? (
             <span className="text-xs text-muted-foreground print:hidden">
-              {regenerateReasons[reason]}
+              {regenerateReason(reason, locale)}
             </span>
           ) : null}
         </div>
@@ -261,21 +280,24 @@ function Detail({
           variant="muted"
           className="rounded-[10px] px-4 py-3 text-sm md:flex-row md:items-center md:gap-2.5"
         >
-          <span className="font-semibold">该月话单明细已删除</span>
+          <span className="font-semibold">
+            {t('tenant:statementDetail.detailsDeletedTitle')}
+          </span>
           <span className="text-muted-foreground">
-            账单汇总不受影响，但无法再导出该月话单明细，也无法重新生成账单。
+            {t('tenant:statementDetail.detailsDeletedBody')}
           </span>
         </Alert>
       ) : null}
       {state === 'in_progress' ? (
         <p className="m-0 text-[13px] text-muted-foreground">
-          本月尚未结束，以下数据截至今日并实时更新；{nextMonthFirstDay(month)}{' '}
-          凌晨生成正式账单。
+          {t('tenant:statementDetail.inProgressNote', {
+            date: nextMonthFirstDay(month),
+          })}
         </p>
       ) : null}
       {state === 'pending' ? (
         <p className="m-0 text-[13px] text-muted-foreground">
-          该月账单尚未生成，以下数据由当前流水和话单实时计算；点「重新生成」可补建正式账单。
+          {t('tenant:statementDetail.pendingNote')}
         </p>
       ) : null}
       <AdminFacts statement={statement} />
@@ -303,6 +325,8 @@ function AdminFacts({
 }: {
   statement: AdminTenantStatementResponse;
 }) {
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
   const { reconcile, currency } = statement;
   const gap = new Decimal(statement.breakdownGap);
   if (!reconcile && gap.isZero()) return null;
@@ -315,22 +339,31 @@ function AdminFacts({
         'm-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-xl border border-border px-4 py-3 text-[13px] tabular-nums md:grid-cols-[auto_1fr_auto_1fr] print:hidden',
       )}
     >
-      <dl aria-label="账单信息">
+      <dl aria-label={t('tenant:statementDetail.factsAria')}>
         {reconcile ? (
           <>
-            <dt className="text-muted-foreground">版本</dt>
+            <dt className="text-muted-foreground">
+              {t('tenant:statementDetail.version')}
+            </dt>
             <dd className="m-0">
               v{statement.version}
               {statement.firstGeneratedAt &&
               statement.firstGeneratedAt !== statement.generatedAt
-                ? `（首次生成 ${formatDateTime(statement.firstGeneratedAt)}）`
+                ? t('tenant:statementDetail.firstGenerated', {
+                    time: formatDateTime(statement.firstGeneratedAt, locale),
+                  })
                 : ''}
             </dd>
-            <dt className="text-muted-foreground">生成人</dt>
+            <dt className="text-muted-foreground">
+              {t('tenant:statementDetail.generatedBy')}
+            </dt>
             <dd className="m-0">
-              {statement.generatedBy?.name ?? '系统（定时任务）'}
+              {statement.generatedBy?.name ??
+                t('tenant:statementDetail.system')}
             </dd>
-            <dt className="text-muted-foreground">核对</dt>
+            <dt className="text-muted-foreground">
+              {t('tenant:statementDetail.reconcile')}
+            </dt>
             <dd className="m-0 md:col-span-3">
               <span
                 className={
@@ -341,30 +374,34 @@ function AdminFacts({
                       : undefined
                 }
               >
-                {reconcileText(reconcile)}
+                {reconcileText(reconcile, locale)}
               </span>
               {diff ? (
                 <>
-                  ，流水合计与期末相差{' '}
+                  {t('tenant:statementDetail.reconcileDiffPrefix')}
                   <Money value={{ currency, amount: diff }} exact />
                 </>
               ) : null}
               {reconcile.reconciledAt
-                ? ` · 核对于 ${formatDateTime(reconcile.reconciledAt)}`
+                ? t('tenant:statementDetail.reconciledAt', {
+                    time: formatDateTime(reconcile.reconciledAt, locale),
+                  })
                 : ''}
             </dd>
           </>
         ) : null}
         {gap.isZero() ? null : (
           <>
-            <dt className="text-muted-foreground">话单差额</dt>
+            <dt className="text-muted-foreground">
+              {t('tenant:statementDetail.breakdownGap')}
+            </dt>
             <dd className="m-0 md:col-span-3">
-              话单明细与通话扣费相差{' '}
+              {t('tenant:statementDetail.breakdownGapPrefix')}
               <Money
                 value={{ currency, amount: statement.breakdownGap }}
                 exact
               />
-              （通话扣费减各国家费用合计）
+              {t('tenant:statementDetail.breakdownGapSuffix')}
             </dd>
           </>
         )}

@@ -104,9 +104,11 @@ const formatTimeParts = (p: TimeParts) =>
 export function formatDateTime(
   value: string | Date,
   locale: Locale = currentLocale(),
+  seconds = true,
 ) {
   const p = beijingDateTimeParts(value);
-  return `${formatDateParts(p, locale)} ${formatTimeParts(p)}`;
+  const time = seconds ? formatTimeParts(p) : `${pad(p.hour)}:${pad(p.minute)}`;
+  return `${formatDateParts(p, locale)} ${time}`;
 }
 
 export function formatDate(
