@@ -1,15 +1,15 @@
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
-import Decimal from 'decimal.js';
+import { useTranslation } from 'react-i18next';
 import { beijingDateOf } from '@fs-billing/shared';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { DailyChart } from '../../../components/daily-spend-chart';
+import { formatCount, formatMinutes } from '../../../components/cdr/cdr-format';
 import { QueryError } from '../../../components/query-error';
 import { apiQuery } from '../../../lib/admin-api';
-import { formatMoney, formatTime } from '../../../lib/format';
+import { formatDay, formatMoney, formatTime } from '../../../lib/format';
+import { useLocale } from '../../../i18n';
 import { cn } from '../../../lib/utils';
-
-const countFormat = new Intl.NumberFormat('en-US');
 
 function StatCard({
   label,
@@ -48,19 +48,17 @@ function StatCard({
   );
 }
 
-function minutes(value: string) {
-  return `${countFormat.format(new Decimal(value).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).toNumber())}分钟`;
-}
-
 /** 概况（设计稿第三批 1a/3a）。 */
 export function OverviewTab({ tenantId }: { tenantId: string }) {
+  const { t } = useTranslation(['tenant', 'common']);
+  const locale = useLocale();
   const overview = useQuery(
     apiQuery('adminTenantOverview', { params: { tenantId } }),
   );
   if (overview.isError)
     return (
       <QueryError
-        title="概况加载失败"
+        title={t('tenant:overview.loadFailed')}
         error={overview.error}
         retrying={overview.isFetching}
         onRetry={() => void overview.refetch()}
@@ -71,7 +69,7 @@ export function OverviewTab({ tenantId }: { tenantId: string }) {
     return (
       <Skeleton
         aria-busy
-        aria-label="概况加载中"
+        aria-label={t('tenant:overview.loading')}
         className="h-[320px] rounded-xl"
       />
     );
@@ -79,23 +77,30 @@ export function OverviewTab({ tenantId }: { tenantId: string }) {
     formatMoney({ currency: data.currency, amount });
   const days = data.daily;
   const today = days.at(-1);
+  const monthStart = `${beijingDateOf(data.asOf).slice(0, 8)}01`;
   return (
     <div className="flex flex-col gap-3 md:gap-5">
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4">
         <StatCard
-          label="本月消费"
+          label={t('tenant:overview.monthSpend')}
           value={money(data.monthSpend)}
-          sub={`${beijingDateOf(data.asOf).slice(0, 8)}01 至今 · 截至 ${formatTime(data.asOf)}`}
+          sub={t('tenant:overview.monthSpendSub', {
+            date: formatDay(monthStart, locale),
+            time: formatTime(data.asOf),
+          })}
         />
         <StatCard
-          label="本月通话"
-          value={minutes(data.monthCallMinutes)}
-          sub={`${countFormat.format(data.answeredCalls + data.unansweredCalls)} 通 · 含未接通 ${countFormat.format(data.unansweredCalls)}`}
+          label={t('tenant:overview.monthCalls')}
+          value={formatMinutes(data.monthCallMinutes, locale)}
+          sub={t('tenant:overview.monthCallsSub', {
+            calls: formatCount(data.answeredCalls + data.unansweredCalls),
+            unanswered: formatCount(data.unansweredCalls),
+          })}
         />
         <StatCard
-          label="今日消费"
+          label={t('tenant:overview.todaySpend')}
           value={today ? money(today.spend) : '—'}
-          sub={`截至 ${formatTime(data.asOf)}`}
+          sub={t('tenant:overview.asOf', { time: formatTime(data.asOf) })}
           className="hidden md:flex"
         />
       </div>
@@ -106,23 +111,32 @@ export function OverviewTab({ tenantId }: { tenantId: string }) {
           'flex flex-col gap-2.5 rounded-xl border border-border p-3.5 md:gap-4 md:px-6 md:py-5',
         )}
       >
-        <section aria-label="最近 30 天每日消费">
+        <section aria-label={t('tenant:overview.chartAria')}>
           <div className="flex items-baseline justify-between gap-3">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold md:text-base">
-                <span className="md:hidden">最近 30 天消费</span>
-                <span className="hidden md:inline">最近 30 天每日消费</span>
+                <span className="md:hidden">
+                  {t('tenant:overview.chartTitleMobile')}
+                </span>
+                <span className="hidden md:inline">
+                  {t('tenant:overview.chartTitle')}
+                </span>
               </span>
               <span className="hidden text-xs text-muted-foreground tabular-nums md:inline">
-                {days[0]?.date} 至 {today?.date} · 与客户门户首页一致
+                {t('tenant:overview.chartRange', {
+                  from: formatDay(days[0]?.date ?? monthStart, locale),
+                  to: formatDay(today?.date ?? monthStart, locale),
+                })}
               </span>
             </div>
             <div className="flex flex-col items-end gap-1">
               <span className="hidden text-xs text-muted-foreground md:inline">
-                合计
+                {t('tenant:overview.total')}
               </span>
               <span
-                aria-label={`合计 ${money(data.dailyTotal)}`}
+                aria-label={t('tenant:overview.totalAria', {
+                  amount: money(data.dailyTotal),
+                })}
                 className="text-sm font-semibold tabular-nums md:text-lg"
               >
                 {money(data.dailyTotal)}

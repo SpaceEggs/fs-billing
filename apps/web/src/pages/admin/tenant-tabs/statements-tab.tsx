@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearch } from '@tanstack/react-router';
 import type {
@@ -22,12 +23,10 @@ import {
 import { StatementList as SharedStatementList } from '../../../components/statement/statement-list';
 import { QueryError, RefreshError } from '../../../components/query-error';
 import { apiQuery } from '../../../lib/admin-api';
-import {
-  reconcileNote,
-  regenerateReasons,
-} from '../../../lib/admin-statements';
+import { reconcileNote, regenerateReason } from '../../../lib/admin-statements';
 import { minutesCount, statementMonthTitle } from '../../../lib/statement';
 import { Money } from '../../../components/data-format';
+import { useLocale } from '../../../i18n';
 import { StatementDetailView } from './statement-detail';
 
 /**
@@ -52,6 +51,7 @@ export function StatementsTab({
 }
 
 function StatementList({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const { t } = useTranslation(['tenant']);
   const list = useQuery(
     apiQuery('adminTenantStatements', { params: { tenantId: tenant.id } }),
   );
@@ -65,12 +65,12 @@ function StatementList({ tenant }: { tenant: AdminTenantDetailResponse }) {
           onDismiss={() => setOutcome(null)}
         />
       ) : null}
-      <RefreshError title="账单刷新失败，数据可能不是最新" query={list} />
+      <RefreshError title={t('tenant:statements.refreshFailed')} query={list} />
       {list.data ? (
         <Statements tenant={tenant} data={list.data} onRegenerate={setTarget} />
       ) : list.isError ? (
         <QueryError
-          title="账单加载失败"
+          title={t('tenant:statements.loadFailed')}
           error={list.error}
           retrying={list.isFetching}
           onRetry={() => void list.refetch()}
@@ -78,7 +78,7 @@ function StatementList({ tenant }: { tenant: AdminTenantDetailResponse }) {
       ) : (
         <Skeleton
           aria-busy
-          aria-label="账单加载中"
+          aria-label={t('tenant:statements.loading')}
           className="h-[160px] rounded-xl"
         />
       )}
@@ -126,19 +126,21 @@ function Statements({
   data: AdminTenantStatementsResponse;
   onRegenerate: (target: RegenerateTarget) => void;
 }) {
+  const { t } = useTranslation(['tenant', 'statement']);
+  const locale = useLocale();
   const deleted = data.items.filter((row) => row.detailsDeleted);
   return (
     <>
       <SharedStatementList
         currency={data.currency}
         rows={data.items}
-        actionLabel="操作"
+        actionLabel={t('statement:list.action')}
         minutesUnit
         renderMonthTag={(row) => (row.detailsDeleted ? <DeletedTag /> : null)}
         renderMonthNote={(row) => <MonthNotes row={row} />}
         renderAction={(row) => {
           const reason = row.regenerable.reason
-            ? regenerateReasons[row.regenerable.reason]
+            ? regenerateReason(row.regenerable.reason, locale)
             : null;
           return (
             <span className="flex items-center justify-end gap-3">
@@ -147,15 +149,19 @@ function Statements({
                 to="/admin/tenants/$tenantId"
                 params={{ tenantId: tenant.id }}
                 search={{ tab: 'statements', statementMonth: row.month }}
-                aria-label={`查看 ${statementMonthTitle(row.month)}`}
+                aria-label={t('tenant:statements.viewFor', {
+                  month: statementMonthTitle(row.month, locale),
+                })}
                 className="text-primary"
               >
-                查看
+                {t('tenant:statements.view')}
               </Link>
               <RegenerateButton
                 allowed={row.regenerable.allowed}
                 reason={row.regenerable.reason}
-                label={`重新生成 ${statementMonthTitle(row.month)}`}
+                label={t('tenant:statements.regenerateFor', {
+                  month: statementMonthTitle(row.month, locale),
+                })}
                 onClick={() => onRegenerate(targetOfRow(tenant, data, row))}
               />
             </span>
@@ -171,15 +177,20 @@ function Statements({
       />
       <p className="m-0 text-xs text-muted-foreground">
         {deleted.length > 0
-          ? `${deleted.map((row) => statementMonthTitle(row.month)).join('、')}的话单明细已被删除，账单数据保留，但无法重新生成。`
-          : '重新生成会按当前话单重新计算该月账单，用于补推话单后更正；每次操作记入操作日志。'}
+          ? t('tenant:statements.deletedNote', {
+              months: deleted
+                .map((row) => statementMonthTitle(row.month, locale))
+                .join(t('tenant:statements.monthSeparator')),
+            })
+          : t('tenant:statements.regenerateHint')}
       </p>
     </>
   );
 }
 
 function DeletedTag() {
-  return <Badge variant="off">话单已删除</Badge>;
+  const { t } = useTranslation(['tenant']);
+  return <Badge variant="off">{t('tenant:statements.deletedTag')}</Badge>;
 }
 
 /** 月份下方的小字：账单已过期 / 账单与流水不一致、已重新生成（决定 27）。话单已删除的标签在月份同一行。 */
@@ -210,15 +221,17 @@ function CompactCard({
   row: AdminTenantStatementRow;
   onRegenerate: () => void;
 }) {
+  const { t } = useTranslation(['tenant', 'statement']);
+  const locale = useLocale();
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   const reason = row.regenerable.reason
-    ? regenerateReasons[row.regenerable.reason]
+    ? regenerateReason(row.regenerable.reason, locale)
     : null;
   const stateLabel =
     row.state === 'in_progress'
-      ? '进行中'
+      ? t('tenant:statements.inProgress')
       : row.state === 'pending'
-        ? '待生成'
+        ? t('statement:state.pending')
         : null;
   return (
     <Card className="gap-0 bg-transparent py-0 text-inherit shadow-none flex flex-col gap-2.5 rounded-xl border border-border p-3.5 tabular-nums">
@@ -228,10 +241,12 @@ function CompactCard({
             to="/admin/tenants/$tenantId"
             params={{ tenantId: tenant.id }}
             search={{ tab: 'statements', statementMonth: row.month }}
-            aria-label={`查看 ${statementMonthTitle(row.month)}`}
+            aria-label={t('tenant:statements.viewFor', {
+              month: statementMonthTitle(row.month, locale),
+            })}
             className="text-[15px] font-semibold no-underline outline-none focus-visible:underline"
           >
-            {statementMonthTitle(row.month)}
+            {statementMonthTitle(row.month, locale)}
           </Link>
           {stateLabel ? (
             <span className="inline-flex h-5 items-center rounded-[5px] border border-border px-[7px] text-[11px]">
@@ -245,16 +260,22 @@ function CompactCard({
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>
-          通话扣费 <Money value={money(row.figures.callCharges)} tone="plain" />
+          {t('statement:equation.callCharges')}{' '}
+          <Money value={money(row.figures.callCharges)} tone="plain" />
         </span>
-        <span>{minutesCount(row.figures.callMinutes)}分钟</span>
+        <span>
+          {minutesCount(row.figures.callMinutes)}
+          {t('statement:list.minutesUnit')}
+        </span>
       </div>
       <MonthNotes row={row} />
       <div className="flex items-center gap-2.5">
         <RegenerateButton
           allowed={row.regenerable.allowed}
           reason={row.regenerable.reason}
-          label={`重新生成 ${statementMonthTitle(row.month)}`}
+          label={t('tenant:statements.regenerateFor', {
+            month: statementMonthTitle(row.month, locale),
+          })}
           className="h-11 px-4 text-[15px]"
           onClick={onRegenerate}
         />

@@ -6,6 +6,7 @@ import {
 } from '../../components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Link,
@@ -13,11 +14,12 @@ import {
   useParams,
   useSearch,
 } from '@tanstack/react-router';
-import type {
-  AdminTenantDetailResponse,
-  AdminTenantSummary,
-  AdminTenantsResponse,
-  Identity,
+import {
+  translate,
+  type AdminTenantDetailResponse,
+  type AdminTenantSummary,
+  type AdminTenantsResponse,
+  type Identity,
 } from '@fs-billing/shared';
 import { ChevronLeftIcon, EllipsisIcon } from 'lucide-react';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -37,6 +39,7 @@ import { ModalDialog } from '../../components/modal-dialog';
 import { apiQuery } from '../../lib/admin-api';
 import { apiProblem } from '../../lib/api-problem';
 import {
+  tenantTabLabel,
   tenantTabs,
   type TenantDetailSearch,
   type TenantTab,
@@ -49,6 +52,7 @@ import { RatesTab } from './tenant-tabs/rates-tab';
 import { SettingsTab } from './tenant-tabs/settings-tab';
 import { StatementsTab } from './tenant-tabs/statements-tab';
 import { formatDate } from '../../lib/format';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 
 /** 列表已加载过该租户时，详情失败仍能显示编码与名称，并判断是否缺少提醒设置。 */
@@ -64,10 +68,11 @@ function useListedTenant(tenantId: string) {
 }
 
 function Crumb({ code }: { code: string | undefined }) {
+  const { t } = useTranslation(['tenant']);
   return (
     <>
       <Link to="/admin/tenants" className="text-primary">
-        租户
+        {t('tenant:detail.tenant')}
       </Link>
       {code ? ` / ${code}` : null}
     </>
@@ -76,10 +81,11 @@ function Crumb({ code }: { code: string | undefined }) {
 
 /** 手机版标题（稿 3a）：名称、状态、币种与可用额度一行，右侧余额；透支额度与待收款只在电脑版卡片里。 */
 function MobileSummary({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const { t } = useTranslation(['tenant']);
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   return (
     <section
-      aria-label="余额概要"
+      aria-label={t('tenant:detail.summaryAria')}
       className="flex items-center justify-between gap-3 tabular-nums md:hidden"
     >
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -91,13 +97,13 @@ function MobileSummary({ tenant }: { tenant: AdminTenantDetailResponse }) {
             className="h-5 px-[7px] text-[11px]"
           />
           <span>
-            {tenant.currency} · 可用{' '}
+            {tenant.currency} · {t('tenant:detail.available')}{' '}
             <Money value={money(tenant.availableBalance)} tone="plain" />
           </span>
         </span>
       </div>
       <span className="flex shrink-0 flex-col items-end">
-        <span className="sr-only">当前余额</span>
+        <span className="sr-only">{t('tenant:detail.currentBalance')}</span>
         <Money
           value={money(tenant.balance)}
           className="text-[22px] font-semibold"
@@ -115,13 +121,14 @@ function MobileActions({
   tenant: AdminTenantDetailResponse;
   onStatus: () => void;
 }) {
+  const { t } = useTranslation(['tenant']);
   const [open, setOpen] = useState(false);
   const disabled = tenant.status === 'disabled';
-  const title = `${tenant.code} 的操作`;
+  const title = t('tenant:detail.actionsFor', { code: tenant.code });
   return (
     <>
       <MobileBarButton
-        aria-label="租户操作"
+        aria-label={t('tenant:detail.actionsAria')}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
@@ -141,14 +148,14 @@ function MobileActions({
               onStatus();
             }}
           >
-            {disabled ? '启用' : '停用'}
+            {disabled ? t('tenant:detail.enable') : t('tenant:detail.disable')}
           </Button>
           <Link
             to="/admin/tenants/$tenantId/edit"
             params={{ tenantId: tenant.id }}
             className="flex h-12 items-center text-base"
           >
-            编辑
+            {t('tenant:detail.edit')}
           </Link>
         </div>
       </ModalDialog>
@@ -157,28 +164,33 @@ function MobileActions({
 }
 
 function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const { t } = useTranslation(['tenant']);
   const money = (amount: string) => ({ currency: tenant.currency, amount });
   return (
     <Card className="gap-0 bg-transparent py-0 text-inherit shadow-none hidden rounded-xl border border-border tabular-nums md:grid md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] print:hidden">
       <section
-        aria-label="当前余额"
+        aria-label={t('tenant:detail.currentBalance')}
         className="flex flex-col gap-1.5 border-r border-b border-border px-6 py-5 lg:border-b-0"
       >
-        <span className="text-[13px] text-muted-foreground">当前余额</span>
+        <span className="text-[13px] text-muted-foreground">
+          {t('tenant:detail.currentBalance')}
+        </span>
         <Money
           value={money(tenant.balance)}
           className="text-[36px] leading-[1.1] font-semibold tracking-[-0.02em]"
         />
       </section>
       <section className="flex flex-col gap-1.5 border-b border-border px-6 py-5 lg:border-r lg:border-b-0">
-        <span className="text-[13px] text-muted-foreground">透支额度</span>
+        <span className="text-[13px] text-muted-foreground">
+          {t('tenant:detail.overdraftLimit')}
+        </span>
         <Money
           value={money(tenant.overdraftLimit)}
           tone="plain"
           className="text-[22px] font-semibold"
         />
         <span className="text-xs text-muted-foreground">
-          提醒阈值{' '}
+          {t('tenant:detail.alertThreshold')}{' '}
           <Money
             value={money(tenant.settings.lowBalanceThreshold)}
             tone="plain"
@@ -186,15 +198,21 @@ function BalanceCards({ tenant }: { tenant: AdminTenantDetailResponse }) {
         </span>
       </section>
       <section className="flex flex-col gap-1.5 border-r border-border px-6 py-5">
-        <span className="text-[13px] text-muted-foreground">可用额度</span>
+        <span className="text-[13px] text-muted-foreground">
+          {t('tenant:detail.availableCredit')}
+        </span>
         <Money
           value={money(tenant.availableBalance)}
           className="text-[22px] font-semibold"
         />
-        <span className="text-xs text-muted-foreground">余额 + 透支额度</span>
+        <span className="text-xs text-muted-foreground">
+          {t('tenant:detail.balancePlusOverdraft')}
+        </span>
       </section>
       <section className="flex flex-col gap-1.5 px-6 py-5">
-        <span className="text-[13px] text-muted-foreground">待收款</span>
+        <span className="text-[13px] text-muted-foreground">
+          {t('tenant:detail.pendingReceivable')}
+        </span>
         <Money
           value={money(tenant.pendingReceivable)}
           tone="plain"
@@ -216,6 +234,7 @@ function DetailError({
   retrying: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation(['tenant']);
   if (
     listed &&
     !listed.settingsConfigured &&
@@ -228,16 +247,16 @@ function DetailError({
         className="gap-1 rounded-xl px-[18px] py-4"
       >
         <span className="text-sm font-semibold">
-          该租户缺少余额提醒设置，暂时无法查看详情
+          {t('tenant:detail.missingSettingsTitle')}
         </span>
         <span className="text-[13px]">
-          这是开户早于提醒设置的存量租户。请联系技术人员补齐设置后再查看；租户本身的呼叫与计费不受影响。
+          {t('tenant:detail.missingSettingsBody')}
         </span>
       </Alert>
     );
   return (
     <QueryError
-      title="租户详情加载失败"
+      title={t('tenant:detail.loadFailed')}
       error={error}
       retrying={retrying}
       onRetry={onRetry}
@@ -296,14 +315,14 @@ function tabSearch(
   return target === 'overview' ? next : { ...next, tab: target };
 }
 
-const statusNotices = {
+const statusNoticeKeys = {
   disable: {
-    changed: '租户已停用，已记入操作日志',
-    same: '租户已是停用状态，没有变更',
+    changed: 'tenant:detail.disabledChanged',
+    same: 'tenant:detail.disabledSame',
   },
   enable: {
-    changed: '租户已启用，已记入操作日志',
-    same: '租户已是启用状态，没有变更',
+    changed: 'tenant:detail.enabledChanged',
+    same: 'tenant:detail.enabledSame',
   },
 } as const;
 
@@ -330,6 +349,8 @@ function TenantDetail({
   const { tab = 'overview', ...ledger } = useSearch({
     from: '/admin/tenants/$tenantId',
   });
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
   const navigate = useNavigate();
   const listed = useListedTenant(tenantId);
   const detail = useQuery(
@@ -344,8 +365,9 @@ function TenantDetail({
   );
   const tenant = detail.data;
   const code = tenant?.code ?? listed?.code;
-  const title = tenant?.name ?? listed?.name ?? '租户详情';
+  const title = tenant?.name ?? listed?.name ?? t('tenant:detail.detail');
   const disabled = tenant?.status === 'disabled';
+  const navLabel = translate('zh', 'shell:nav.tenants');
   const openStatus = () => {
     setStatusResult(null);
     setStatusAction(disabled ? 'enable' : 'disable');
@@ -353,13 +375,13 @@ function TenantDetail({
   return (
     <AppShell
       identity={identity}
-      title={code ?? '租户详情'}
+      title={code ?? t('tenant:detail.detail')}
       monoTitle={code !== undefined}
       crumb={<Crumb code={code} />}
-      activeNav="租户"
+      activeNav={navLabel}
       mobileNav={
         <MobileBarButton asChild>
-          <Link to="/admin/tenants" aria-label="返回租户列表">
+          <Link to="/admin/tenants" aria-label={t('tenant:detail.backAria')}>
             <ChevronLeftIcon aria-hidden />
           </Link>
         </MobileBarButton>
@@ -381,16 +403,20 @@ function TenantDetail({
               actions: (
                 <div className="flex gap-2 print:hidden">
                   <Button variant="outline" onClick={openStatus}>
-                    {disabled ? '启用' : '停用'}
+                    {disabled
+                      ? t('tenant:detail.enable')
+                      : t('tenant:detail.disable')}
                   </Button>
                   <Link
                     to="/admin/tenants/$tenantId/edit"
                     params={{ tenantId }}
                     className={buttonVariants({ variant: 'outline' })}
                   >
-                    编辑
+                    {t('tenant:detail.edit')}
                   </Link>
-                  <Button onClick={() => setBalanceOpen(true)}>余额操作</Button>
+                  <Button onClick={() => setBalanceOpen(true)}>
+                    {t('tenant:detail.balanceAction')}
+                  </Button>
                 </div>
               ),
             }
@@ -399,14 +425,18 @@ function TenantDetail({
         {tenant ? (
           <>
             <RefreshError
-              title="租户详情刷新失败，余额与状态可能不是最新"
+              title={t('tenant:detail.refreshFailed')}
               query={detail}
             />
             <MobileSummary tenant={tenant} />
             <div className="hidden flex-wrap gap-3.5 text-[13px] text-muted-foreground md:flex">
               <span className="font-mono text-foreground">{tenant.code}</span>
               <span>{tenant.currency}</span>
-              <span>创建于 {formatDate(tenant.createdAt)}</span>
+              <span>
+                {t('tenant:detail.created', {
+                  date: formatDate(tenant.createdAt, locale),
+                })}
+              </span>
             </div>
             {statusResult ? (
               <div
@@ -418,11 +448,11 @@ function TenantDetail({
                     : 'border-border bg-muted text-muted-foreground',
                 )}
               >
-                {
-                  statusNotices[statusResult.action][
+                {t(
+                  statusNoticeKeys[statusResult.action][
                     statusResult.changed ? 'changed' : 'same'
-                  ]
-                }
+                  ],
+                )}
               </div>
             ) : null}
             <BalanceCards tenant={tenant} />
@@ -451,18 +481,18 @@ function TenantDetail({
             />
             <Tabs value={tab} activationMode="manual" className="contents">
               <nav
-                aria-label="租户详情"
+                aria-label={t('tenant:detail.tabsAria')}
                 className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0 print:hidden"
               >
                 <TabsList>
-                  {tenantTabs.map(({ key, label }) => (
+                  {tenantTabs.map(({ key }) => (
                     <TabsTrigger key={key} value={key} asChild>
                       <Link
                         to="/admin/tenants/$tenantId"
                         params={{ tenantId }}
                         search={tabSearch(ledger, tab, key)}
                       >
-                        {label}
+                        {tenantTabLabel(key, locale)}
                       </Link>
                     </TabsTrigger>
                   ))}
@@ -490,7 +520,7 @@ function TenantDetail({
                   className="w-full"
                   onClick={() => setBalanceOpen(true)}
                 >
-                  余额操作
+                  {t('tenant:detail.balanceAction')}
                 </Button>
               </div>
             )}
@@ -505,7 +535,7 @@ function TenantDetail({
         ) : (
           <Skeleton
             aria-busy
-            aria-label="租户详情加载中"
+            aria-label={t('tenant:detail.loading')}
             className="h-[120px] rounded-xl"
           />
         )}

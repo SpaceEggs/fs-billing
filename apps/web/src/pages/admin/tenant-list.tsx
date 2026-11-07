@@ -7,23 +7,25 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import Decimal from 'decimal.js';
 import {
   currencySchema,
+  translate,
   type AdminTenantSummary,
   type Identity,
+  type Locale,
 } from '@fs-billing/shared';
 import { PlusIcon } from 'lucide-react';
 import { Label } from '../../components/ui/label';
 import { MobileBarButton } from '../../components/mobile-bar-button';
 import { AppShell, PageBody } from '../../components/app-shell';
 import {
-  healthOptions,
+  healthOptionsFor,
   TenantStatus,
 } from '../../components/admin/tenant-status';
-import { healthStatus } from '../../components/tenant-health';
 import { Money } from '../../components/data-format';
 import {
   ChoiceGrid,
@@ -34,7 +36,6 @@ import {
 import { Pagination } from '../../components/pagination';
 import { SearchBox } from '../../components/search-box';
 import { QueryError, RefreshError } from '../../components/query-error';
-import { statusTags } from '../../components/status-tag';
 import { Button, buttonVariants } from '../../components/ui/button';
 import { OptionTabs } from '../../components/option-tabs';
 import {
@@ -44,6 +45,7 @@ import {
 import { apiQuery } from '../../lib/admin-api';
 import type { TenantListSearch } from '../../lib/admin-search';
 import { cn } from '../../lib/utils';
+import { useLocale } from '../../i18n';
 
 export const tenantPageSize = 25;
 
@@ -70,22 +72,23 @@ function useTenantSearch() {
   return { search, update };
 }
 
-const statusChoices = [
-  { value: undefined, label: '全部状态' },
-  ...healthOptions,
-] as const;
-const currencyChoices = [
-  { value: undefined, label: '全部币种' },
-  ...currencySchema.options.map((currency) => ({
-    value: currency,
-    label: currency,
-  })),
-] as const;
-
 /** 电脑版筛选排成一行；手机版只留搜索框，状态与币种收进「筛选」面板（稿 1b）。 */
 function Filters({ total }: { total: number | undefined }) {
   const { search, update } = useTenantSearch();
+  const { t } = useTranslation(['tenant']);
+  const locale = useLocale();
   const statusId = useId();
+  const statusChoices = [
+    { value: undefined, label: t('tenant:list.allStatuses') },
+    ...healthOptionsFor(locale),
+  ] as const;
+  const currencyChoices = [
+    { value: undefined, label: t('tenant:list.allCurrencies') },
+    ...currencySchema.options.map((currency) => ({
+      value: currency,
+      label: currency,
+    })),
+  ] as const;
   /** 改筛选回到第一页；值为 undefined 表示清除该筛选。 */
   const setFilter = (patch: {
     [Key in keyof TenantListSearch]?: TenantListSearch[Key] | undefined;
@@ -93,7 +96,7 @@ function Filters({ total }: { total: number | undefined }) {
   return (
     <div className="flex gap-2 md:items-center md:gap-3">
       <SearchBox
-        label="搜索编码或名称"
+        label={t('tenant:list.search')}
         value={search.search ?? ''}
         onChange={(value) =>
           setFilter({ search: value === '' ? undefined : value })
@@ -102,10 +105,10 @@ function Filters({ total }: { total: number | undefined }) {
       />
       <FilterSheet
         activeCount={[search.status, search.currency].filter(Boolean).length}
-        resultLabel={resultLabel(total, '个')}
+        resultLabel={resultLabel(total, t('tenant:list.resultUnit'), locale)}
         onClear={() => setFilter({ status: undefined, currency: undefined })}
       >
-        <FilterGroup label="状态">
+        <FilterGroup label={t('tenant:list.status')}>
           {(labelId) => (
             <ChoiceGrid
               labelledBy={labelId}
@@ -115,10 +118,10 @@ function Filters({ total }: { total: number | undefined }) {
             />
           )}
         </FilterGroup>
-        <FilterGroup label="币种">
+        <FilterGroup label={t('tenant:list.currency')}>
           {() => (
             <OptionTabs
-              label="币种"
+              label={t('tenant:list.currency')}
               options={currencyChoices}
               value={search.currency}
               onChange={(currency) => setFilter({ currency })}
@@ -129,13 +132,13 @@ function Filters({ total }: { total: number | undefined }) {
       </FilterSheet>
       <div className="hidden md:contents">
         <Label htmlFor={statusId} className="sr-only">
-          状态
+          {t('tenant:list.status')}
         </Label>
         <NativeSelect
           id={statusId}
           value={search.status ?? ''}
           onChange={(event) => {
-            const status = healthOptions.find(
+            const status = healthOptionsFor(locale).find(
               ({ value }) => value === event.target.value,
             )?.value;
             setFilter({ status });
@@ -152,48 +155,67 @@ function Filters({ total }: { total: number | undefined }) {
           ))}
         </NativeSelect>
         <OptionTabs
-          label="币种"
+          label={t('tenant:list.currency')}
           options={currencyChoices}
           value={search.currency}
           onChange={(currency) => setFilter({ currency })}
         />
       </div>
       <span className="hidden flex-1 text-right text-xs text-muted-foreground md:block">
-        排序：状态 → 同币种内余额从低到高
+        {t('tenant:list.sortHint')}
       </span>
     </div>
   );
 }
 
-function filterSummary(search: TenantListSearch) {
+function filterSummary(search: TenantListSearch, locale: Locale) {
+  const statusLabel = search.status
+    ? healthOptionsFor(locale).find(({ value }) => value === search.status)
+        ?.label
+    : null;
   return [
-    search.search ? `搜索「${search.search}」` : null,
-    search.status
-      ? `状态：${statusTags[healthStatus[search.status]].label}`
+    search.search
+      ? translate(locale, 'tenant:list.summarySearch', {
+          term: search.search,
+        })
       : null,
-    search.currency ? `币种：${search.currency}` : null,
+    search.status
+      ? translate(locale, 'tenant:list.summaryStatus', {
+          status: statusLabel ?? search.status,
+        })
+      : null,
+    search.currency
+      ? translate(locale, 'tenant:list.summaryCurrency', {
+          currency: search.currency,
+        })
+      : null,
   ]
     .filter(Boolean)
     .join(' · ');
 }
 
 function NewTenantLink({ className }: { className?: string }) {
+  const { t } = useTranslation(['tenant']);
   return (
     <Link to="/admin/tenants/new" className={cn(buttonVariants(), className)}>
-      ＋ 新建租户
+      {t('tenant:list.newTenant')}
     </Link>
   );
 }
 
 function EmptyState({ search }: { search: TenantListSearch }) {
   const { update } = useTenantSearch();
-  const summary = filterSummary(search);
+  const { t } = useTranslation(['tenant', 'common']);
+  const locale = useLocale();
+  const summary = filterSummary(search, locale);
   if (!summary)
     return (
       <div className="flex flex-col items-center gap-2.5 rounded-xl border border-border px-5 py-8 text-center">
-        <span className="text-[15px] font-semibold">还没有租户</span>
+        <span className="text-[15px] font-semibold">
+          {t('tenant:list.noneTitle')}
+        </span>
         <span className="text-[13px] text-muted-foreground">
-          新建租户后，在 FreeSWITCH 中设置相同的 billing_tenant
+          {t('tenant:list.noneBody')}
         </span>
         <NewTenantLink />
       </div>
@@ -206,24 +228,27 @@ function EmptyState({ search }: { search: TenantListSearch }) {
       >
         ⌕
       </span>
-      <span className="text-[15px] font-semibold">没有符合条件的租户</span>
+      <span className="text-[15px] font-semibold">
+        {t('tenant:list.noMatchTitle')}
+      </span>
       <span className="text-[13px] text-muted-foreground">{summary}</span>
       <Button variant="outline" size="sm" onClick={() => update({})}>
-        清除筛选
+        {t('common:action.clearFilters')}
       </Button>
     </div>
   );
 }
 
 function LoadingRows() {
+  const { t } = useTranslation(['tenant', 'common']);
   return (
     <div
       aria-busy
-      aria-label="租户列表加载中"
+      aria-label={t('tenant:list.loadingList')}
       className="overflow-hidden rounded-xl border border-border"
     >
       <div className="border-b border-border px-3.5 py-2.5 text-xs text-muted-foreground">
-        加载中
+        {t('tenant:list.loading')}
       </div>
       {[1, 2, 3, 4].map((row) => (
         <div
@@ -254,21 +279,30 @@ function PendingReceivable({ tenant }: { tenant: AdminTenantSummary }) {
 
 function TenantTable({ items }: { items: AdminTenantSummary[] }) {
   const navigate = useNavigate();
+  const { t } = useTranslation(['tenant']);
   return (
     <div className="hidden overflow-x-auto rounded-[10px] border border-border md:block">
       <Table className="whitespace-nowrap">
         <TableHeader>
           <TableRow className="border-t-0">
-            <TableHead className="px-4">租户编码</TableHead>
-            <TableHead>名称</TableHead>
-            <TableHead>币种</TableHead>
-            <TableHead>状态</TableHead>
-            <TableHead className="text-right">当前余额</TableHead>
-            <TableHead className="text-right">透支额度</TableHead>
-            <TableHead className="text-right">本月消费</TableHead>
-            <TableHead className="text-right">待收款</TableHead>
+            <TableHead className="px-4">{t('tenant:list.code')}</TableHead>
+            <TableHead>{t('tenant:list.name')}</TableHead>
+            <TableHead>{t('tenant:list.currency')}</TableHead>
+            <TableHead>{t('tenant:list.status')}</TableHead>
+            <TableHead className="text-right">
+              {t('tenant:list.balance')}
+            </TableHead>
+            <TableHead className="text-right">
+              {t('tenant:list.overdraftLimit')}
+            </TableHead>
+            <TableHead className="text-right">
+              {t('tenant:list.monthSpend')}
+            </TableHead>
+            <TableHead className="text-right">
+              {t('tenant:list.pendingReceivable')}
+            </TableHead>
             <TableHead className="font-bold text-center px-4">
-              <span className="sr-only">操作</span>
+              <span className="sr-only">{t('tenant:list.actions')}</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -331,13 +365,15 @@ function TenantTable({ items }: { items: AdminTenantSummary[] }) {
                   params={{ tenantId: tenant.id }}
                   search={{ tab: 'ledger' }}
                   onClick={(event) => event.stopPropagation()}
-                  aria-label={`为 ${tenant.code} 充值`}
+                  aria-label={t('tenant:list.rechargeFor', {
+                    code: tenant.code,
+                  })}
                   className={cn(
                     buttonVariants({ variant: 'outline', size: 'sm' }),
                     'h-[30px] hover:border-primary hover:bg-transparent hover:text-primary',
                   )}
                 >
-                  充值
+                  {t('tenant:list.recharge')}
                 </Link>
               </TableCell>
             </TableRow>
@@ -390,6 +426,7 @@ function TenantCards({ items }: { items: AdminTenantSummary[] }) {
 /** 租户列表（第一批 1a/1b/1c）：筛选写入地址，排序由服务端按状态、币种、余额。 */
 export function TenantListPage({ identity }: { identity: Identity }) {
   const { search, update } = useTenantSearch();
+  const { t } = useTranslation(['tenant']);
   const page = search.page ?? 1;
   const tenants = useQuery({
     ...apiQuery('adminTenants', {
@@ -398,35 +435,37 @@ export function TenantListPage({ identity }: { identity: Identity }) {
     placeholderData: keepPreviousData,
   });
   const data = tenants.data;
+  const navLabel = translate('zh', 'shell:nav.tenants');
   return (
     <AppShell
       identity={identity}
-      title="租户"
-      crumb="租户"
-      activeNav="租户"
+      title={t('tenant:title')}
+      crumb={t('tenant:title')}
+      activeNav={navLabel}
       mobileActions={
         <MobileBarButton asChild variant="default">
-          <Link to="/admin/tenants/new" aria-label="新建租户">
+          <Link to="/admin/tenants/new" aria-label={t('tenant:create.title')}>
             <PlusIcon aria-hidden />
           </Link>
         </MobileBarButton>
       }
     >
       <PageBody
-        title="租户"
-        meta={data ? `共 ${data.pagination.total} 个` : undefined}
+        title={t('tenant:title')}
+        meta={
+          data
+            ? t('tenant:list.total', { count: data.pagination.total })
+            : undefined
+        }
         actions={<NewTenantLink />}
       >
         <Filters
           total={tenants.isPlaceholderData ? undefined : data?.pagination.total}
         />
-        <RefreshError
-          title="租户列表刷新失败，列表可能不是最新"
-          query={tenants}
-        />
+        <RefreshError title={t('tenant:list.refreshFailed')} query={tenants} />
         {tenants.isError && !data ? (
           <QueryError
-            title="租户列表加载失败"
+            title={t('tenant:list.loadFailed')}
             error={tenants.error}
             retrying={tenants.isFetching}
             onRetry={() => void tenants.refetch()}

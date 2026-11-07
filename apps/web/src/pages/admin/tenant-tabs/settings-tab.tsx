@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AdminAccountsResponse,
@@ -37,6 +38,7 @@ import {
   type SettingsForm,
   type SettingsRequest,
 } from '../../../lib/tenant-settings';
+import { useLocale } from '../../../i18n';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -70,28 +72,36 @@ function ChangeSummary({
   tenant: AdminTenantDetailResponse;
   changes: SettingsChanges;
 }) {
+  const { t } = useTranslation(['tenant']);
   const money = (amount: string) =>
     formatMoney({ currency: tenant.currency, amount });
+  const separator = t('tenant:settings.listSeparator');
   const rows: [string, string][] = [];
   if (changes.overdraftLimit)
     rows.push([
-      '透支额度',
+      t('tenant:settings.changeOverdraft'),
       `${money(changes.overdraftLimit.before)} → ${money(changes.overdraftLimit.after)}`,
     ]);
   if (changes.availableBalance)
     rows.push([
-      '可用额度',
+      t('tenant:settings.changeAvailable'),
       `${money(changes.availableBalance.before)} → ${money(changes.availableBalance.after)}`,
     ]);
   if (changes.lowBalanceThreshold)
     rows.push([
-      '余额提醒阈值',
+      t('tenant:settings.changeThreshold'),
       `${money(changes.lowBalanceThreshold.before)} → ${money(changes.lowBalanceThreshold.after)}`,
     ]);
   if (changes.emailsAdded.length)
-    rows.push(['新增邮箱', changes.emailsAdded.join('、')]);
+    rows.push([
+      t('tenant:settings.changeEmailsAdded'),
+      changes.emailsAdded.join(separator),
+    ]);
   if (changes.emailsRemoved.length)
-    rows.push(['移除邮箱', changes.emailsRemoved.join('、')]);
+    rows.push([
+      t('tenant:settings.changeEmailsRemoved'),
+      changes.emailsRemoved.join(separator),
+    ]);
   return (
     <dl className="m-0 grid grid-cols-[104px_1fr] border-t border-border text-sm tabular-nums">
       {rows.map(([label, value]) => (
@@ -132,6 +142,8 @@ function SettingsEditor({
   saved: Saved | null;
   onSaved: (saved: Saved | null) => void;
 }) {
+  const { t } = useTranslation(['tenant', 'common', 'admin']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const loaded = settingsForm(tenant);
   const [form, setForm] = useState<SettingsForm>(loaded);
@@ -155,7 +167,7 @@ function SettingsEditor({
   };
 
   function review() {
-    const result = validateSettings(form);
+    const result = validateSettings(form, locale);
     if (!result.ok) {
       setErrors(result.errors);
       return;
@@ -183,21 +195,24 @@ function SettingsEditor({
       const problem = apiProblem(error);
       if (problem.kind === 'validation') {
         setPending(null);
-        setErrors(serverSettingsErrors(problem.issues));
+        setErrors(serverSettingsErrors(problem.issues, locale));
       }
     }
   }
 
   const overdraftHint = settingsAmountError(
     form.overdraftLimit,
-    '透支额度',
+    t('tenant:detail.overdraftLimit'),
     'overdraft',
+    locale,
   )
     ? undefined
-    : `余额可透支到 -${formatMoney({
-        currency: tenant.currency,
-        amount: normalizeAmountInput(form.overdraftLimit),
-      }).replace(/^-/, '')} 后停机`;
+    : t('tenant:settings.overdraftHint', {
+        amount: formatMoney({
+          currency: tenant.currency,
+          amount: normalizeAmountInput(form.overdraftLimit),
+        }).replace(/^-/, ''),
+      });
 
   return (
     <>
@@ -210,7 +225,7 @@ function SettingsEditor({
       >
         <form
           noValidate
-          aria-label="租户设置"
+          aria-label={t('tenant:settings.formAria')}
           onSubmit={(event) => {
             event.preventDefault();
             review();
@@ -228,8 +243,8 @@ function SettingsEditor({
                 )}
               >
                 {saved.changed
-                  ? '设置已保存，已记入操作日志'
-                  : '设置没有变化，未记入操作日志'}
+                  ? t('tenant:settings.savedChanged')
+                  : t('tenant:settings.savedSame')}
               </div>
             ) : null}
             {errors.form ? (
@@ -239,7 +254,7 @@ function SettingsEditor({
             ) : null}
             <div className="grid gap-4 md:grid-cols-2">
               <Field
-                label="透支额度"
+                label={t('tenant:detail.overdraftLimit')}
                 error={errors.overdraftLimit}
                 hint={errors.overdraftLimit ? undefined : overdraftHint}
               >
@@ -254,12 +269,12 @@ function SettingsEditor({
                 )}
               </Field>
               <Field
-                label="余额提醒阈值"
+                label={t('tenant:create.thresholdLabel')}
                 error={errors.lowBalanceThreshold}
                 hint={
                   errors.lowBalanceThreshold
                     ? undefined
-                    : '余额低于此值时发送提醒'
+                    : t('tenant:settings.thresholdHint')
                 }
               >
                 {(props) => (
@@ -291,8 +306,8 @@ function SettingsEditor({
               )}
             >
               {errorCount
-                ? `请修正 ${errorCount} 处错误后再保存`
-                : '保存前会显示变更摘要，所有修改记入操作日志'}
+                ? t('tenant:settings.fixErrors', { count: errorCount })
+                : t('tenant:settings.saveHint')}
             </span>
             <div className="flex flex-col-reverse gap-2 md:flex-row">
               <Button
@@ -304,14 +319,14 @@ function SettingsEditor({
                   setErrors({});
                 }}
               >
-                取消
+                {t('common:action.cancel')}
               </Button>
               <Button
                 type="submit"
                 className="h-12 md:h-9"
                 disabled={!dirty || errorCount > 0}
               >
-                保存修改
+                {t('tenant:settings.save')}
               </Button>
             </div>
           </div>
@@ -322,11 +337,13 @@ function SettingsEditor({
         {...(save.isPending
           ? {}
           : { onOpenChange: (open: boolean) => open || setPending(null) })}
-        title="确认保存以下修改？"
+        title={t('tenant:settings.confirmTitle')}
         description={`${tenant.code} ${tenant.name}`}
       >
         <div className="flex flex-col gap-1.5">
-          <h2 className="m-0 text-[17px] font-semibold">确认保存以下修改？</h2>
+          <h2 className="m-0 text-[17px] font-semibold">
+            {t('tenant:settings.confirmTitle')}
+          </h2>
           <span className="text-sm text-muted-foreground">
             {tenant.code} {tenant.name}
           </span>
@@ -336,17 +353,19 @@ function SettingsEditor({
         ) : null}
         {pending?.request.emails.length === 0 ? (
           <Alert variant="warning" role="note">
-            未配置收件人，余额提醒无法送达；停用租户不发送
+            {t('admin:recipients.emptyNote')}
           </Alert>
         ) : null}
         <Alert variant="brand">
-          <span className="font-semibold text-primary">记入操作日志</span>
-          <span>保存后立即生效，变更将记入操作日志。</span>
+          <span className="font-semibold text-primary">
+            {t('tenant:settings.loggedTitle')}
+          </span>
+          <span>{t('tenant:settings.loggedBody')}</span>
         </Alert>
         {save.error ? (
           <ProblemAlert
             error={save.error}
-            networkMessage="无法确认是否已保存，请刷新后查看当前设置。"
+            networkMessage={t('tenant:settings.saveNetwork')}
             onRefresh={() => {
               setPending(null);
               void invalidateTenant(queryClient, tenant.id);
@@ -360,14 +379,14 @@ function SettingsEditor({
             disabled={save.isPending}
             onClick={() => setPending(null)}
           >
-            返回修改
+            {t('tenant:settings.back')}
           </Button>
           <Button
             className="h-12 md:h-9"
             disabled={save.isPending}
             onClick={() => void confirm()}
           >
-            确认保存
+            {t('tenant:settings.confirmSave')}
           </Button>
         </div>
       </ModalDialog>

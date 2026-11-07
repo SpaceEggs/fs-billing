@@ -1,10 +1,12 @@
 import { OptionTabs } from '../../components/option-tabs';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
   currencySchema,
+  translate,
   type AdminCsvRowError,
   type AdminPortalAccountCreateRequest,
   type AdminPortalAccountCreateResponse,
@@ -12,6 +14,7 @@ import {
   type AdminTenantSummary,
   type Currency,
   type Identity,
+  type Locale,
 } from '@fs-billing/shared';
 import { XIcon, CheckIcon } from 'lucide-react';
 import { Label } from '../../components/ui/label';
@@ -54,11 +57,12 @@ import {
 } from '../../lib/tenant-create';
 import { csvTooLarge, fileToBase64 } from '../../lib/rate-csv';
 import { RateCsvTemplateLink } from '../../components/admin/rate-csv-template-link';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 
-const currencyLabel = {
-  CNY: 'CNY 人民币',
-  USD: 'USD 美元',
+const currencyKeys = {
+  CNY: 'portal:settings.currencyNames.CNY',
+  USD: 'portal:settings.currencyNames.USD',
 } as const satisfies Record<Currency, string>;
 
 type CopySource = Extract<RatesChoice, { kind: 'copy' }>['source'];
@@ -79,45 +83,32 @@ function CurrencyChoice({
   value: Currency;
   onChange: (currency: Currency) => void;
 }) {
+  const { t } = useTranslation(['tenant', 'portal']);
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
       <span aria-hidden>
-        币种
+        {t('tenant:create.currencyLabel')}
         <span aria-hidden className="text-err">
           {' '}
           *
         </span>
       </span>
       <OptionTabs
-        label="币种"
+        label={t('tenant:create.currencyLabel')}
         options={currencySchema.options.map((currency) => ({
           value: currency,
-          label: currencyLabel[currency],
+          label: t(currencyKeys[currency]),
         }))}
         value={value}
         onChange={onChange}
         className="w-full"
       />
       <span className="text-xs font-normal text-muted-foreground">
-        创建后不可修改
+        {t('tenant:create.currencyLocked')}
       </span>
     </div>
   );
 }
-
-const rateOptions = [
-  { kind: 'blank', label: '空白费率表', sub: '创建后再逐条添加或导入' },
-  {
-    kind: 'csv',
-    label: '从 CSV 导入',
-    sub: '随开户一起导入，任何一行有错都不会创建租户',
-  },
-  {
-    kind: 'copy',
-    label: '复制某个租户的费率表',
-    sub: '以同币种租户的费率表为模板',
-  },
-] as const;
 
 function CsvPicker({
   file,
@@ -128,10 +119,11 @@ function CsvPicker({
   reading: string | null;
   onSelect: (file: File | null) => void;
 }) {
+  const { t } = useTranslation(['tenant']);
   const id = useId();
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <Label htmlFor={id}>CSV 文件</Label>
+      <Label htmlFor={id}>{t('tenant:create.csvFile')}</Label>
       <Input
         id={id}
         type="file"
@@ -144,10 +136,10 @@ function CsvPicker({
         className="text-xs font-normal text-muted-foreground"
       >
         {reading
-          ? `正在读取 ${reading}…`
+          ? t('tenant:create.readingFile', { filename: reading })
           : file
-            ? `已选择 ${file.filename}`
-            : '整表导入；首行必须为表头 ISO,Country,Destination Prefix,Description,Rate 或 ISO,国家,号码前缀,说明,费率；支持 UTF-8 与 GBK'}
+            ? t('tenant:create.selectedFile', { filename: file.filename })
+            : t('tenant:create.csvHint')}
       </span>
     </div>
   );
@@ -163,6 +155,7 @@ function CopySourcePicker({
   source: CopySource;
   onChange: (source: CopySource) => void;
 }) {
+  const { t } = useTranslation(['tenant']);
   const id = useId();
   const [search, setSearch] = useState('');
   const [picked, setPicked] = useState<AdminTenantSummary | null>(null);
@@ -184,9 +177,12 @@ function CopySourcePicker({
     onChange({
       tenantId: picked.id,
       versionId: current.id,
-      label: `已复制 ${picked.code} 的 ${current.entries.length} 条费率`,
+      label: t('tenant:create.copiedLabel', {
+        code: picked.code,
+        count: current.entries.length,
+      }),
     });
-  }, [picked, current, source, onChange]);
+  }, [picked, current, source, onChange, t]);
   const items = tenants.data?.items ?? [];
   const options =
     picked && !items.some((item) => item.id === picked.id)
@@ -195,16 +191,16 @@ function CopySourcePicker({
   const total = tenants.data?.pagination.total ?? 0;
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium md:col-span-2">
-      <Label htmlFor={`${id}-search`}>搜索来源租户</Label>
+      <Label htmlFor={`${id}-search`}>{t('tenant:create.searchSource')}</Label>
       <Input
         id={`${id}-search`}
         type="search"
         autoComplete="off"
-        placeholder="输入编码或名称"
+        placeholder={t('tenant:create.searchSourcePlaceholder')}
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      <Label htmlFor={id}>复制自</Label>
+      <Label htmlFor={id}>{t('tenant:create.copyFrom')}</Label>
       <NativeSelect
         id={id}
         value={picked?.id ?? ''}
@@ -219,12 +215,12 @@ function CopySourcePicker({
       >
         <NativeSelectOption value="">
           {tenants.isError
-            ? '租户列表加载失败'
+            ? t('tenant:create.tenantListFailed')
             : tenants.data
               ? items.length
-                ? '选择租户'
-                : '没有匹配的同币种租户'
-              : '加载中…'}
+                ? t('tenant:create.chooseTenant')
+                : t('tenant:create.noSameCurrency')
+              : t('tenant:create.loading')}
         </NativeSelectOption>
         {options.map((tenant) => (
           <NativeSelectOption key={tenant.id} value={tenant.id}>
@@ -234,27 +230,37 @@ function CopySourcePicker({
       </NativeSelect>
       <span className="text-xs font-normal text-muted-foreground">
         {rates.isError
-          ? '该租户的费率表加载失败，请重新选择'
+          ? t('tenant:create.ratesLoadFailed')
           : current && picked
-            ? `当前生效版本 ${current.entries.length} 条费率`
+            ? t('tenant:create.currentVersionEntries', {
+                count: current.entries.length,
+              })
             : total > items.length
-              ? `共 ${total} 个匹配的同币种（${currency}）租户，仅列出前 ${items.length} 个，请输入编码或名称缩小范围`
-              : `仅显示同币种（${currency}）的租户`}
+              ? t('tenant:create.moreTenants', {
+                  total,
+                  currency,
+                  shown: items.length,
+                })
+              : t('tenant:create.sameCurrencyOnly', { currency })}
       </span>
     </div>
   );
 }
 
 function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
+  const { t } = useTranslation(['tenant']);
   return (
     <Alert variant="error" className="gap-2 px-3.5 py-3 md:col-span-2">
       <span className="font-semibold">
-        CSV 有 {rows.length} 行错误，租户未创建
+        {t('tenant:create.csvErrorsTitle', { count: rows.length })}
       </span>
       <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-y-auto p-0 tabular-nums">
         {rows.map((row) => (
           <li key={`${row.line}-${row.key}`}>
-            第 {row.line} 行：{csvRowText(row)}
+            {t('tenant:create.csvErrorLine', {
+              line: row.line,
+              message: csvRowText(row),
+            })}
           </li>
         ))}
       </ul>
@@ -263,17 +269,21 @@ function CsvErrors({ rows }: { rows: AdminCsvRowError[] }) {
 }
 
 function PortalFailure({ error }: { error: unknown }) {
+  const { t } = useTranslation(['tenant', 'common']);
   if (error instanceof ApiRequestError && error.outcomeUnknown)
     return (
-      <span className="text-[13px]">
-        网络中断，无法确认是否已开通。请先在租户详情「门户账号」标签页查看，不要重复开通。
-      </span>
+      <span className="text-[13px]">{t('tenant:create.portalNetwork')}</span>
     );
   const notice = problemNotice(apiProblem(error));
   return (
     <>
       <span className="text-[13px]">
-        {notice.body ? `${notice.title}，${notice.body}` : notice.title}
+        {notice.body
+          ? t('common:error.titleBody', {
+              title: notice.title,
+              body: notice.body,
+            })
+          : notice.title}
       </span>
       {notice.details?.length ? (
         <ul className="m-0 flex list-disc flex-col gap-0.5 pl-5 text-[13px]">
@@ -293,22 +303,23 @@ function PortalResult({
   created: Created;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation(['tenant']);
   const { portal, portalRequest } = created;
   if (portal.status === 'pending')
     return (
       <p role="status" className="m-0 text-sm text-muted-foreground">
-        正在开通门户账号…
+        {t('tenant:create.portalCreating')}
       </p>
     );
   if (portal.status === 'failed')
     return (
       <Alert variant="error" className="gap-2 rounded-[10px] px-4 py-3.5">
         <span className="text-sm font-semibold">
-          门户账号 {portalRequest.email} 未开通
+          {t('tenant:create.portalFailed', { email: portalRequest.email })}
         </span>
         <PortalFailure error={portal.error} />
         <span className="text-xs text-foreground">
-          租户已创建。可以重试，或稍后在租户详情「门户账号」标签页开通。
+          {t('tenant:create.portalFailedBody')}
         </span>
         <Button
           variant="outline"
@@ -316,7 +327,7 @@ function PortalResult({
           className="self-start"
           onClick={onRetry}
         >
-          重试开通
+          {t('tenant:create.retryPortal')}
         </Button>
       </Alert>
     );
@@ -324,23 +335,24 @@ function PortalResult({
   return (
     <div className="flex flex-col gap-2.5 rounded-[10px] border border-border px-4 py-3.5">
       <span className="text-sm font-semibold">
-        门户账号 {response.account.email} 已开通
+        {t('tenant:create.portalCreated', { email: response.account.email })}
       </span>
       {response.passwordSource === 'generated' ? (
         <>
-          <SecretField value={response.temporaryPassword} label="临时密码" />
+          <SecretField
+            value={response.temporaryPassword}
+            label={t('tenant:create.temporaryPassword')}
+          />
           <Alert variant="warning">
             <span className="font-semibold">
-              只显示一次，关闭后无法再次查看
+              {t('tenant:create.oneTimeTitle')}
             </span>
-            <span>
-              请立即复制并通过安全渠道发给客户，客户首次登录后需修改密码。
-            </span>
+            <span>{t('tenant:create.oneTimeBody')}</span>
           </Alert>
         </>
       ) : (
         <span className="text-[13px] text-muted-foreground">
-          使用填写的初始密码，客户首次登录后需修改密码。
+          {t('tenant:create.initialPasswordUsed')}
         </span>
       )}
     </div>
@@ -359,13 +371,18 @@ function CreatedDialog({
   onView: () => void;
 }) {
   const { tenant } = created;
+  const { t } = useTranslation(['tenant']);
   // 开通结果返回前离开会丢失只显示一次的临时密码，也可能把结果挂到下一个租户上。
   const portalPending = created.portal.status === 'pending';
   return (
     <ModalDialog
       open
-      title={`租户 ${tenant.code} 已创建`}
-      description={`${tenant.name}（${tenant.currency}）· ${created.rates}`}
+      title={t('tenant:create.createdTitle', { code: tenant.code })}
+      description={t('tenant:create.createdSubtitle', {
+        name: tenant.name,
+        currency: tenant.currency,
+        rates: created.rates,
+      })}
     >
       <div className="flex flex-col items-center gap-2.5 pt-2 text-center">
         <span
@@ -375,23 +392,26 @@ function CreatedDialog({
           <CheckIcon className="size-6" />
         </span>
         <h2 className="m-0 text-[17px] font-semibold">
-          租户 {tenant.code} 已创建
+          {t('tenant:create.createdTitle', { code: tenant.code })}
         </h2>
         <span className="text-sm text-muted-foreground">
-          {tenant.name}（{tenant.currency}）· {created.rates}
+          {t('tenant:create.createdSubtitle', {
+            name: tenant.name,
+            currency: tenant.currency,
+            rates: created.rates,
+          })}
         </span>
       </div>
       <Alert variant="warning" className="gap-2.5 rounded-[10px] px-4 py-3.5">
         <span className="text-sm font-semibold text-warn">
-          下一步：请在 FreeSWITCH 中设置
+          {t('tenant:create.nextStep')}
         </span>
         <CopyField
           value={`billing_tenant=${tenant.code}`}
-          label="FreeSWITCH 通道变量"
+          label={t('tenant:create.channelVariable')}
         />
         <span className="text-xs leading-relaxed text-foreground">
-          在该客户的 SIP 账号或 IP
-          对接上设置此通道变量，否则话单会进入「未归属话单」。
+          {t('tenant:create.channelHint')}
         </span>
       </Alert>
       <PortalResult created={created} onRetry={onRetryPortal} />
@@ -402,29 +422,32 @@ function CreatedDialog({
           disabled={portalPending}
           onClick={onContinue}
         >
-          继续新建
+          {t('tenant:create.continueCreate')}
         </Button>
         <Button
           className="h-12 md:h-9"
           disabled={portalPending}
           onClick={onView}
         >
-          查看租户
+          {t('tenant:create.viewTenant')}
         </Button>
       </div>
     </ModalDialog>
   );
 }
 
-function ratesSummary(rates: RatesChoice) {
-  if (rates.kind === 'csv') return '已导入 CSV 费率表';
+function ratesSummary(rates: RatesChoice, locale: Locale) {
+  if (rates.kind === 'csv')
+    return translate(locale, 'tenant:create.ratesImported');
   if (rates.kind === 'copy' && rates.source) return rates.source.label;
-  return '空白费率表';
+  return translate(locale, 'tenant:create.ratesBlank');
 }
 
 /** 新建租户（第二批 4a–4e）：先开户，成功后单独开通门户账号。 */
 export function TenantCreatePage({ identity }: { identity: Identity }) {
   const navigate = useNavigate();
+  const { t } = useTranslation(['tenant', 'common']);
+  const locale = useLocale();
   const adminEmail = identity.kind === 'admin' ? identity.email : '';
   const [form, setForm] = useState<TenantForm>(() =>
     initialTenantForm(adminEmail),
@@ -470,7 +493,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     setRates({ kind: 'csv', file: null });
     if (!selected) return;
     if (csvTooLarge(selected.size)) {
-      rateError('文件超过 2 MB 上限');
+      rateError(t('tenant:create.fileTooLarge'));
       return;
     }
     const read = (csvReads.current += 1);
@@ -489,7 +512,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
       () => {
         if (read !== csvReads.current) return;
         setReadingCsv(null);
-        rateError('文件读取失败，请重新选择');
+        rateError(t('tenant:create.fileReadFailed'));
       },
     );
   }
@@ -531,42 +554,50 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     if (error instanceof ApiRequestError && error.outcomeUnknown) {
       showErrors(
         {},
-        `网络中断，无法确认租户是否已创建。请先在租户列表搜索编码 ${code.toUpperCase()} 确认，不要直接重复提交。`,
+        t('tenant:create.networkUnknownCreate', { code: code.toUpperCase() }),
       );
       return;
     }
     const problem = apiProblem(error);
     switch (problem.kind) {
       case 'validation': {
-        const fields = serverFieldErrors(problem.issues);
-        showErrors(fields, `有 ${Object.keys(fields).length} 处需要修改`);
+        const fields = serverFieldErrors(problem.issues, locale);
+        showErrors(
+          fields,
+          t('tenant:create.fixCount', { count: Object.keys(fields).length }),
+        );
         return;
       }
       case 'csv-invalid':
         setCsvRows(problem.rows);
         showErrors(
-          { rates: `CSV 有 ${problem.rows.length} 行错误` },
-          '费率表 CSV 有错误，租户未创建',
+          {
+            rates: t('tenant:create.csvRowCount', {
+              count: problem.rows.length,
+            }),
+          },
+          t('tenant:create.csvInvalid'),
         );
         return;
       case 'csv-rejected':
-        showErrors(
-          { rates: problem.message },
-          '费率表 CSV 无法导入，租户未创建',
-        );
+        showErrors({ rates: problem.message }, t('tenant:create.csvRejected'));
         return;
       case 'conflict':
         if (problem.code === 'TENANT_CODE_EXISTS') {
           showErrors(
-            { code: `编码 ${code.toUpperCase()} 已存在，请换一个` },
-            '租户编码已被使用',
+            {
+              code: t('tenant:create.codeExists', {
+                code: code.toUpperCase(),
+              }),
+            },
+            t('tenant:create.codeUsed'),
           );
           return;
         }
         if (problem.code === 'CURRENCY_MISMATCH') {
           showErrors(
-            { rates: '来源租户的币种与新租户不一致，请重新选择' },
-            '费率表来源币种不一致',
+            { rates: t('tenant:create.currencyMismatch') },
+            t('tenant:create.sourceCurrencyMismatch'),
           );
           return;
         }
@@ -579,7 +610,12 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
         const notice = problemNotice(problem);
         showErrors(
           {},
-          notice.body ? `${notice.title}，${notice.body}` : notice.title,
+          notice.body
+            ? t('common:error.titleBody', {
+                title: notice.title,
+                body: notice.body,
+              })
+            : notice.title,
         );
       }
     }
@@ -587,10 +623,13 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
 
   async function submit() {
     if (readingCsv) return;
-    const built = buildSubmission(form);
+    const built = buildSubmission(form, locale);
     if (!built.ok) {
       const count = Object.keys(built.errors).length;
-      showErrors(built.errors, built.errors.form ?? `有 ${count} 处需要修改`);
+      showErrors(
+        built.errors,
+        built.errors.form ?? t('tenant:create.fixCount', { count }),
+      );
       return;
     }
     setErrors({});
@@ -605,7 +644,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
     }
     setCreated({
       tenant: response.tenant,
-      rates: ratesSummary(form.rates),
+      rates: ratesSummary(form.rates, locale),
       portalRequest: built.value.portal,
       portal: { status: 'pending' },
     });
@@ -614,32 +653,49 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
 
   const codeHint = normalizedCode(form.code);
   const pending = createTenant.isPending || readingCsv !== null;
+  const initialRateOptions = [
+    {
+      kind: 'blank',
+      label: t('tenant:create.rateBlank'),
+      sub: t('tenant:create.rateBlankSub'),
+    },
+    {
+      kind: 'csv',
+      label: t('tenant:create.rateCsv'),
+      sub: t('tenant:create.rateCsvSub'),
+    },
+    {
+      kind: 'copy',
+      label: t('tenant:create.rateCopy'),
+      sub: t('tenant:create.rateCopySub'),
+    },
+  ] as const;
 
   return (
     <AppShell
       identity={identity}
-      title="新建租户"
+      title={t('tenant:create.title')}
       crumb={
         <>
           <Link to="/admin/tenants" className="text-primary">
-            租户
+            {t('tenant:detail.tenant')}
           </Link>{' '}
-          / <span className="text-foreground">新建租户</span>
+          / <span className="text-foreground">{t('tenant:create.title')}</span>
         </>
       }
-      activeNav="租户"
+      activeNav={translate('zh', 'shell:nav.tenants')}
       mobileNav={
         <MobileBarButton asChild>
-          <Link to="/admin/tenants" aria-label="取消新建，返回租户列表">
+          <Link to="/admin/tenants" aria-label={t('tenant:create.cancelAria')}>
             <XIcon aria-hidden />
           </Link>
         </MobileBarButton>
       }
     >
-      <PageBody title="新建租户">
+      <PageBody title={t('tenant:create.title')}>
         <form
           noValidate
-          aria-label="新建租户"
+          aria-label={t('tenant:create.title')}
           onSubmit={(event) => {
             event.preventDefault();
             if (!pending) void submit();
@@ -647,7 +703,9 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
           className="flex max-w-[1020px] flex-col"
         >
           <span className="-mt-3 hidden pb-5 text-[13px] text-muted-foreground md:block">
-            带 <span className="text-err">*</span> 为必填
+            {t('tenant:create.requiredHintPrefix')}
+            <span className="text-err">*</span>
+            {t('tenant:create.requiredHintSuffix')}
           </span>
           {summary ? (
             <div
@@ -662,19 +720,24 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
             </div>
           ) : null}
 
-          <FormSection title="基本信息" description="编码和币种创建后不可修改">
+          <FormSection
+            title={t('tenant:create.basicSection')}
+            description={t('tenant:create.basicDescription')}
+          >
             <Field
-              label="租户编码"
+              label={t('tenant:create.codeLabel')}
               required
               error={errors.code}
               hint={
                 <>
-                  {codeHint ? `将保存为大写 ${codeHint}。` : null}
-                  字母和数字。须与 FreeSWITCH 中的{' '}
+                  {codeHint
+                    ? t('tenant:create.codeWillSave', { code: codeHint })
+                    : null}
+                  {t('tenant:create.codeHintPrefix')}
                   <span className="font-mono text-foreground">
                     billing_tenant
-                  </span>{' '}
-                  一致
+                  </span>
+                  {t('tenant:create.codeHintSuffix')}
                 </>
               }
             >
@@ -684,19 +747,23 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                   autoComplete="off"
                   spellCheck={false}
                   maxLength={64}
-                  placeholder="例如 ABC001"
+                  placeholder={t('tenant:create.codePlaceholder')}
                   value={form.code}
                   onChange={(event) => update({ code: event.target.value })}
                   className={cn('font-mono', invalidClass(errors.code))}
                 />
               )}
             </Field>
-            <Field label="租户名称" required error={errors.name}>
+            <Field
+              label={t('tenant:create.nameLabel')}
+              required
+              error={errors.name}
+            >
               {(props) => (
                 <Input
                   {...props}
                   maxLength={200}
-                  placeholder="公司全称"
+                  placeholder={t('tenant:create.namePlaceholder')}
                   value={form.name}
                   onChange={(event) => update({ name: event.target.value })}
                   className={invalidClass(errors.name)}
@@ -712,18 +779,18 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
           </FormSection>
 
           <FormSection
-            title="额度与提醒"
-            description="余额 + 透支额度用完后停机；余额低于阈值时发邮件提醒"
+            title={t('tenant:create.quotaSection')}
+            description={t('tenant:create.quotaDescription')}
           >
             <div className="grid grid-cols-2 gap-2.5 md:contents">
               <Field
-                label="透支额度"
+                label={t('tenant:detail.overdraftLimit')}
                 required
                 error={errors.overdraftLimit}
                 hint={
                   form.overdraftEdited ? undefined : (
                     <span className="hidden text-primary md:inline">
-                      默认 CNY 100 / USD 15，切换币种时自动更新
+                      {t('tenant:create.overdraftDefaultHint')}
                     </span>
                   )
                 }
@@ -741,8 +808,8 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 )}
               </Field>
               <Field
-                label="余额提醒阈值"
-                shortLabel="提醒阈值"
+                label={t('tenant:create.thresholdLabel')}
+                shortLabel={t('tenant:create.thresholdShort')}
                 required
                 error={errors.lowBalanceThreshold}
               >
@@ -751,7 +818,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                     {...props}
                     currency={form.currency}
                     error={errors.lowBalanceThreshold}
-                    placeholder="例如 200.00"
+                    placeholder={t('tenant:create.thresholdPlaceholder')}
                     value={form.lowBalanceThreshold}
                     onChange={(lowBalanceThreshold) =>
                       update({ lowBalanceThreshold })
@@ -767,13 +834,19 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
             />
           </FormSection>
 
-          <FormSection title="联系信息" description="可选，仅内部可见">
-            <Field label="联系人" error={errors.contactName}>
+          <FormSection
+            title={t('tenant:create.contactSection')}
+            description={t('tenant:create.contactDescription')}
+          >
+            <Field
+              label={t('tenant:create.contactName')}
+              error={errors.contactName}
+            >
               {(props) => (
                 <Input
                   {...props}
                   maxLength={200}
-                  placeholder="选填"
+                  placeholder={t('tenant:create.optionalPlaceholder')}
                   value={form.contactName}
                   onChange={(event) =>
                     update({ contactName: event.target.value })
@@ -781,12 +854,12 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 />
               )}
             </Field>
-            <Field label="电话" error={errors.contactPhone}>
+            <Field label={t('tenant:create.phone')} error={errors.contactPhone}>
               {(props) => (
                 <Input
                   {...props}
                   maxLength={100}
-                  placeholder="选填"
+                  placeholder={t('tenant:create.optionalPlaceholder')}
                   value={form.contactPhone}
                   onChange={(event) =>
                     update({ contactPhone: event.target.value })
@@ -795,12 +868,16 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 />
               )}
             </Field>
-            <Field label="备注" error={errors.remark} className="md:col-span-2">
+            <Field
+              label={t('tenant:create.remark')}
+              error={errors.remark}
+              className="md:col-span-2"
+            >
               {(props) => (
                 <Textarea
                   {...props}
                   maxLength={2000}
-                  placeholder="选填"
+                  placeholder={t('tenant:create.optionalPlaceholder')}
                   value={form.remark}
                   onChange={(event) => update({ remark: event.target.value })}
                   className="min-h-16 py-2.5 font-normal"
@@ -810,10 +887,14 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
           </FormSection>
 
           <FormSection
-            title="门户账号"
-            description="客户登录客户门户使用；初始密码只在创建成功后显示一次"
+            title={t('tenant:create.portalSection')}
+            description={t('tenant:create.portalDescription')}
           >
-            <Field label="登录邮箱" required error={errors.portalEmail}>
+            <Field
+              label={t('tenant:create.portalEmail')}
+              required
+              error={errors.portalEmail}
+            >
               {(props) => (
                 <Input
                   {...props}
@@ -829,16 +910,16 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               )}
             </Field>
             <Field
-              label="初始密码"
+              label={t('tenant:create.initialPassword')}
               error={errors.portalPassword}
-              hint="留空由系统生成临时密码；客户首次登录后需修改密码"
+              hint={t('tenant:create.passwordHint')}
             >
               {(props) => (
                 <Input
                   {...props}
                   type="password"
                   autoComplete="new-password"
-                  placeholder="至少 8 位"
+                  placeholder={t('tenant:create.passwordPlaceholder')}
                   value={form.portalPassword}
                   onChange={(event) =>
                     update({ portalPassword: event.target.value })
@@ -853,11 +934,11 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
           </FormSection>
 
           <FormSection
-            title="费率表"
-            description="没有费率的前缀，呼叫会被拒绝"
+            title={t('tenant:create.ratesSection')}
+            description={t('tenant:create.ratesDescription')}
           >
             <RadioGroup
-              aria-label="初始费率表"
+              aria-label={t('tenant:create.initialRatesAria')}
               value={form.rates.kind}
               onValueChange={(kind) =>
                 setRates(
@@ -870,7 +951,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               }
               className="gap-2.5 md:col-span-2 md:grid-cols-3"
             >
-              {rateOptions.map((option) => (
+              {initialRateOptions.map((option) => (
                 <label
                   key={option.kind}
                   className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-input p-3 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-brand-soft"
@@ -921,7 +1002,7 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
                 'hidden md:inline-flex',
               )}
             >
-              取消
+              {t('common:action.cancel')}
             </Link>
             <Button
               type="submit"
@@ -929,10 +1010,10 @@ export function TenantCreatePage({ identity }: { identity: Identity }) {
               className="h-12 flex-1 text-base md:h-9 md:flex-none md:text-sm"
             >
               {createTenant.isPending
-                ? '创建中…'
+                ? t('tenant:create.creating')
                 : readingCsv
-                  ? '正在读取 CSV…'
-                  : '创建租户'}
+                  ? t('tenant:create.readingCsv')
+                  : t('tenant:create.create')}
             </Button>
           </div>
         </form>

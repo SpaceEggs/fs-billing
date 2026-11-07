@@ -7,6 +7,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { useDeferredValue, useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   keepPreviousData,
   useQuery,
@@ -14,16 +15,17 @@ import {
 } from '@tanstack/react-query';
 import {
   formatCountryLabel,
+  translate,
   type AdminRateEntry,
   type AdminRateVersion,
   type AdminTenantDetailResponse,
+  type Locale,
 } from '@fs-billing/shared';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import {
   RateEditDialog,
-  rateUnit,
   type RateEditResult,
 } from '../../../components/admin/rate-edit-dialog';
 import {
@@ -49,8 +51,8 @@ import { apiKey, apiQuery, useApiMutation } from '../../../lib/admin-api';
 import { downloadText } from '../../../lib/download';
 import { formatDateTime, formatRate } from '../../../lib/format';
 import { rateChangePercent, scheduledRowHints } from '../../../lib/rates';
+import { useLocale } from '../../../i18n';
 import { cn } from '../../../lib/utils';
-import { currentLocale } from '../../../i18n';
 
 const entriesPerPage = 100;
 
@@ -62,20 +64,34 @@ type Notice = { changed: boolean; text: string };
 function editNotice(
   { before, after, scheduled, response }: RateEditResult,
   unit: string,
+  locale: Locale,
 ): Notice {
   const name = rowName(after);
   if (response.auditId === null)
-    return { changed: false, text: `${name} 没有变更` };
+    return {
+      changed: false,
+      text: translate(locale, 'tenant:rates.noticeUnchanged', { name }),
+    };
   const rate = `${formatRate(after.rate)} ${unit}`;
   if (scheduled)
     return {
       changed: true,
-      text: `已排定：${name} 将于 ${formatDateTime(response.version.effectiveFrom)} 起改为 ${rate}，已记入操作日志`,
+      text: translate(locale, 'tenant:rates.noticeScheduled', {
+        name,
+        time: formatDateTime(response.version.effectiveFrom, locale),
+        rate,
+      }),
     };
   const percent = rateChangePercent(before.rate, after.rate);
   return {
     changed: true,
-    text: `${name} 费率已改为 ${rate}${percent ? `（${percent.text}）` : ''}，已记入操作日志`,
+    text: translate(locale, 'tenant:rates.noticeChanged', {
+      name,
+      rate,
+      percent: percent
+        ? translate(locale, 'tenant:rates.percent', { percent: percent.text })
+        : '',
+    }),
   };
 }
 
@@ -135,6 +151,8 @@ const scriptFocusOnly = -1;
  * 手机只能查看和搜索（pages.md §3.6）。
  */
 export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
+  const { t } = useTranslation(['tenant', 'format', 'common', 'rates']);
+  const locale = useLocale();
   const tenantId = tenant.id;
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search.trim());
@@ -171,7 +189,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
   if (rates.isError && !data)
     return (
       <QueryError
-        title="费率表加载失败"
+        title={t('tenant:rates.loadFailed')}
         error={rates.error}
         retrying={rates.isFetching}
         onRetry={() => void rates.refetch()}
@@ -181,11 +199,13 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     return (
       <Skeleton
         aria-busy
-        aria-label="费率表加载中"
+        aria-label={t('tenant:rates.loading')}
         className="h-[240px] rounded-xl"
       />
     );
-  const unit = rateUnit[data.currency];
+  const unit = t(
+    data.currency === 'CNY' ? 'format:rateUnit.cny' : 'format:rateUnit.usd',
+  );
   const entries = data.current.entries;
   const visible = pageSlice(entries, page, entriesPerPage);
   const currentId = data.current.id;
@@ -213,7 +233,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       aria-describedby={hasScheduled ? importBlockedId : undefined}
       onClick={openImport}
     >
-      导入 CSV
+      {t('tenant:rates.importCsv')}
     </Button>
   );
 
@@ -241,7 +261,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     try {
       const result = await exportCsv.mutateAsync({
         params: { tenantId },
-        body: { versionId, locale: currentLocale() },
+        body: { versionId, locale },
       });
       downloadText(result.filename, result.csv, 'text/csv;charset=utf-8');
     } catch {
@@ -253,12 +273,12 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
     <section
       ref={sectionRef}
       tabIndex={scriptFocusOnly}
-      aria-label="费率表"
+      aria-label={t('tenant:rates.tableAria')}
       className="flex flex-col gap-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
     >
       {/* 无搜索时两个查询同一缓存，只提示一次。 */}
       <RefreshError
-        title="费率表刷新失败，显示的可能不是最新"
+        title={t('tenant:rates.refreshFailed')}
         query={rates.isError ? rates : full}
       />
       {versions.slice(1).map((version, index) => (
@@ -276,9 +296,11 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         />
       ))}
       <div className="flex flex-col gap-0.5 rounded-[10px] border border-brand-border bg-brand-soft px-3.5 py-3 text-sm md:hidden">
-        <span className="font-semibold text-primary">请在电脑上操作</span>
+        <span className="font-semibold text-primary">
+          {t('tenant:rates.mobileOnlyTitle')}
+        </span>
         <span className="text-[13px] text-muted-foreground">
-          导入、复制费率表涉及大量明细核对，手机上仅支持查看和搜索。
+          {t('tenant:rates.mobileOnlyBody')}
         </span>
       </div>
       {notice ? (
@@ -298,15 +320,15 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             onClick={() => setNotice(null)}
             className="text-[13px] text-current"
           >
-            关闭
+            {t('common:ui.close')}
           </Button>
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-3 text-[13px] text-muted-foreground">
         <Input
           type="search"
-          aria-label="搜索前缀、ISO、国家或说明"
-          placeholder="搜索前缀、ISO、国家或说明"
+          aria-label={t('tenant:rates.search')}
+          placeholder={t('tenant:rates.search')}
           maxLength={200}
           value={search}
           onChange={(event) => {
@@ -317,16 +339,22 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
         />
         <Badge variant="ok" className="hidden h-6 md:inline-flex">
           <span aria-hidden className="size-1.5 rounded-full bg-current" />
-          当前生效版本
+          {t('tenant:rates.currentVersion')}
         </Badge>
         <span className="w-full text-xs tabular-nums max-md:order-first md:hidden">
-          当前生效版本 ·{' '}
-          {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`}
+          {deferred
+            ? t('tenant:rates.currentVersionMatches', { count: entries.length })
+            : t('tenant:rates.currentVersionCount', {
+                count: entries.length,
+              })}
         </span>
         <span className="hidden tabular-nums md:inline">
-          自 <DateTime value={data.current.effectiveFrom} /> ·{' '}
-          {deferred ? `匹配 ${entries.length} 条` : `${entries.length} 条`} ·
-          最长前缀优先匹配
+          {t('tenant:rates.effectiveFromPrefix')}
+          <DateTime value={data.current.effectiveFrom} /> ·{' '}
+          {deferred
+            ? t('tenant:rates.matches', { count: entries.length })
+            : t('tenant:rates.entries', { count: entries.length })}{' '}
+          · {t('tenant:rates.longestPrefix')}
         </span>
         <span className="hidden flex-1 md:block" />
         {emptyTable ? null : (
@@ -336,7 +364,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             disabled={!full.data}
             onClick={() => openCopy('push')}
           >
-            复制到其他租户
+            {t('tenant:rates.copyToOther')}
           </Button>
         )}
         <Button
@@ -345,7 +373,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           disabled={exportCsv.isPending}
           onClick={() => void download(currentId)}
         >
-          导出 CSV
+          {t('tenant:rates.exportCsv')}
         </Button>
         {emptyTable ? null : importButton}
         {hasScheduled ? (
@@ -353,7 +381,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             id={importBlockedId}
             className="hidden w-full text-right text-xs md:block"
           >
-            已有排定的新版本，请先取消排定
+            {t('rates:import.blocked')}
           </span>
         ) : null}
       </div>
@@ -361,12 +389,14 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
       {entries.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-[10px] border border-border px-5 py-14 text-center">
           <span className="text-[15px] font-semibold">
-            {deferred ? '没有匹配的费率' : '费率表为空'}
+            {deferred
+              ? t('tenant:rates.noMatchTitle')
+              : t('tenant:rates.emptyTitle')}
           </span>
           <span className="text-[13px] text-muted-foreground">
             {deferred
-              ? '请换一个前缀、ISO、国家或说明'
-              : `导入 CSV，或复制一个同币种（${data.currency}）租户的费率表作为起点`}
+              ? t('tenant:rates.noMatchHint')
+              : t('tenant:rates.emptyHint', { currency: data.currency })}
           </span>
           {emptyTable ? (
             <div className="mt-2 hidden flex-col items-center gap-2 md:flex">
@@ -378,7 +408,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                   aria-describedby={hasScheduled ? importBlockedId : undefined}
                   onClick={() => openCopy('pull')}
                 >
-                  复制其他租户的费率表
+                  {t('tenant:rates.copyOther')}
                 </Button>
               </div>
               <RateCsvTemplateLink />
@@ -392,15 +422,15 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             <Table>
               <TableHeader className="hidden md:table-header-group">
                 <TableRow className="border-t-0 whitespace-nowrap">
-                  <TableHead className="px-4">ISO</TableHead>
-                  <TableHead>国家</TableHead>
-                  <TableHead>号码前缀</TableHead>
-                  <TableHead>说明</TableHead>
+                  <TableHead className="px-4">{t('rates:field.iso')}</TableHead>
+                  <TableHead>{t('tenant:rates.country')}</TableHead>
+                  <TableHead>{t('tenant:rates.prefix')}</TableHead>
+                  <TableHead>{t('tenant:rates.description')}</TableHead>
                   <TableHead className="px-4 text-right">
-                    费率（{unit}）
+                    {t('tenant:rates.rateWithUnit', { unit })}
                   </TableHead>
                   <TableHead className="font-bold text-center hidden w-20 px-4 md:table-cell">
-                    <span className="sr-only">操作</span>
+                    <span className="sr-only">{t('tenant:rates.actions')}</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -449,7 +479,9 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                         <Button
                           variant="link"
                           size="inline"
-                          aria-label={`编辑 ${rowName(entry)}`}
+                          aria-label={t('tenant:rates.editFor', {
+                            name: rowName(entry),
+                          })}
                           disabled={hasScheduled}
                           aria-describedby={
                             hasScheduled ? importBlockedId : undefined
@@ -460,7 +492,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
                           }}
                           className="text-[13px] underline-offset-[3px] disabled:cursor-not-allowed disabled:text-muted-foreground"
                         >
-                          编辑
+                          {t('tenant:rates.edit')}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -487,7 +519,7 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
           onClose={() => setEditing(null)}
           onDone={(result) => {
             setEditing(null);
-            setNotice(editNotice(result, unit));
+            setNotice(editNotice(result, unit, locale));
           }}
         />
       ) : null}
@@ -522,8 +554,8 @@ export function RatesTab({ tenant }: { tenant: AdminTenantDetailResponse }) {
             setNotice({
               changed,
               text: changed
-                ? '已取消排定的新版本，已记入操作日志'
-                : '该版本已不在排定中，没有变更',
+                ? t('tenant:rates.cancelled')
+                : t('tenant:rates.cancelUnchanged'),
             });
           }}
         />

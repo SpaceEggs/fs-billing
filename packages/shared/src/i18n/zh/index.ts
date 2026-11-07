@@ -10,6 +10,7 @@ import { portal } from './portal.js';
 import { rates } from './rates.js';
 import { shell } from './shell.js';
 import { statement } from './statement.js';
+import { tenant } from './tenant.js';
 
 export const zh = {
   common,
@@ -24,4 +25,5 @@ export const zh = {
   cdr,
   admin,
   rates,
+  tenant,
 } as const;

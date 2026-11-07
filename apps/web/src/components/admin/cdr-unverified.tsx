@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AdminCdr } from '@fs-billing/shared';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
@@ -25,6 +26,7 @@ function UnverifiedOnly({
   className: string;
 }) {
   const id = useId();
+  const { t } = useTranslation(['tenant']);
   return (
     <Label
       htmlFor={id}
@@ -39,7 +41,7 @@ function UnverifiedOnly({
         checked={checked}
         onCheckedChange={(next) => onChange(next === true)}
       />
-      仅看未经验证
+      {t('tenant:cdrs.unverifiedOnly')}
     </Label>
   );
 }

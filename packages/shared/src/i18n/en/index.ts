@@ -12,6 +12,7 @@ import { portal } from './portal.js';
 import { rates } from './rates.js';
 import { shell } from './shell.js';
 import { statement } from './statement.js';
+import { tenant } from './tenant.js';
 
 const enCatalog = {
   common,
@@ -26,6 +27,7 @@ const enCatalog = {
   cdr,
   admin,
   rates,
+  tenant,
 } as const;
 
 export const en: DeepSameShape<typeof zh, typeof enCatalog> = enCatalog;
