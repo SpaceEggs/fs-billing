@@ -198,17 +198,22 @@ export type ProblemNotice = {
 };
 
 /** 表单或操作失败时的通用说明；500 与 503 统一为服务暂时不可用。 */
-export function problemNotice(problem: ApiProblem): ProblemNotice {
+export function problemNotice(
+  problem: ApiProblem,
+  t: Translator = translate,
+): ProblemNotice {
   switch (problem.kind) {
     case 'validation':
       return {
-        title: '提交内容有误，请检查标红的字段',
-        details: [...new Set(problem.issues.map((issue) => issueText(issue)))],
+        title: t('admin:problem.validation'),
+        details: [
+          ...new Set(problem.issues.map((issue) => issueText(issue, t))),
+        ],
         refresh: false,
       };
     case 'csv-invalid':
       return {
-        title: `CSV 有 ${problem.rows.length} 行错误，请修正后重新上传`,
+        title: t('admin:problem.csvRows', { count: problem.rows.length }),
         refresh: false,
       };
     case 'csv-rejected':
@@ -222,28 +227,30 @@ export function problemNotice(problem: ApiProblem): ProblemNotice {
       return { title: problem.message, refresh: false };
     case 'not-found':
       return {
-        title: '内容不存在或已被删除',
-        body: '请刷新后重试',
+        title: t('admin:problem.notFoundTitle'),
+        body: t('admin:problem.notFoundBody'),
         refresh: true,
       };
     case 'rate-limited':
       return {
-        title: '操作过于频繁',
-        body: `请在 ${problem.retryAfterSeconds} 秒后重试`,
+        title: t('admin:problem.rateLimitedTitle'),
+        body: t('admin:problem.rateLimitedBody', {
+          seconds: problem.retryAfterSeconds,
+        }),
         refresh: false,
       };
     case 'forbidden':
-      return { title: '没有权限执行此操作', refresh: false };
+      return { title: t('admin:problem.forbidden'), refresh: false };
     case 'blocked':
-      return { title: '该账号暂时无法使用', refresh: false };
+      return { title: t('admin:problem.blocked'), refresh: false };
     case 'reauthenticate':
-      return { title: '登录已过期，请重新登录', refresh: false };
+      return { title: t('admin:problem.reauthenticate'), refresh: false };
     case 'password-change-required':
-      return { title: '请先修改初始或重置密码', refresh: false };
+      return { title: t('admin:problem.passwordChange'), refresh: false };
     case 'unavailable':
       return {
-        title: '服务暂时不可用',
-        body: '请稍后重试',
+        title: t('admin:problem.unavailableTitle'),
+        body: t('admin:problem.unavailableBody'),
         refresh: false,
       };
   }

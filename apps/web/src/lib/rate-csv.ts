@@ -1,10 +1,19 @@
-import { DEFAULT_ADMIN_CSV_MAX_BYTES } from '@fs-billing/shared';
+import {
+  DEFAULT_ADMIN_CSV_MAX_BYTES,
+  translate,
+  type Locale,
+} from '@fs-billing/shared';
 
 /** 「下载 CSV 模板」：UTF-8 带 BOM（Excel 才能认出中文），CRLF 换行，表头加两行示例。 */
-export const rateCsvTemplate = {
-  filename: '费率模板.csv',
-  text: '\uFEFFISO,国家,号码前缀,说明,费率\r\nGB,英国,44,,0.0200\r\nGB,英国,447,手机,0.0450\r\n',
-};
+export function rateCsvTemplateFor(locale: Locale) {
+  return {
+    filename: translate(locale, 'rates:template.filename'),
+    text: `\uFEFF${translate(locale, 'rates:template.body')}`,
+  };
+}
+
+/** 中文模板；旧调用方保持不变。 */
+export const rateCsvTemplate = rateCsvTemplateFor('zh');
 
 export function csvTooLarge(bytes: number) {
   return bytes > DEFAULT_ADMIN_CSV_MAX_BYTES;

@@ -22,6 +22,8 @@ const resources = {
     statement: zh.statement,
     shell: zh.shell,
     cdr: zh.cdr,
+    admin: zh.admin,
+    rates: zh.rates,
   },
   en: {
     common: en.common,
@@ -34,6 +36,8 @@ const resources = {
     statement: en.statement,
     shell: en.shell,
     cdr: en.cdr,
+    admin: en.admin,
+    rates: en.rates,
   },
 } as const;
 
@@ -73,6 +77,8 @@ export function initI18n() {
       'statement',
       'shell',
       'cdr',
+      'admin',
+      'rates',
     ],
     defaultNS: 'common',
     initAsync: false,

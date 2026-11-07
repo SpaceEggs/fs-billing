@@ -7,6 +7,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   DEFAULT_ADMIN_RATE_SCHEDULE_HORIZON_MS,
@@ -15,6 +16,7 @@ import {
   type AdminRateVersionResponse,
   type Currency,
 } from '@fs-billing/shared';
+import { useLocale } from '@/i18n';
 import { Label } from '../ui/label';
 import {
   apiQuery,
@@ -92,22 +94,16 @@ export type RateImportState =
       response: AdminRateVersionResponse;
     };
 
-const steps = ['上传', '预览与校验', '确认导入'] as const;
+const stepKeys = [
+  'rates:import.steps.upload',
+  'rates:import.steps.preview',
+  'rates:import.steps.commit',
+] as const;
 
-const scheduleDescriptions = {
-  immediate: '确认导入后马上用于新呼叫',
-  scheduled: '到点前继续使用当前费率',
-};
-
-const importLabels: PreviewLabels = {
-  verified: '校验通过',
-  summary: '将',
-  confirm: '确认导入',
-  busy: '正在导入…',
-  networkMessage: '无法确认是否已导入，请核对费率表后再操作。',
-  uncertainNote:
-    '上次确认导入的结果未知。再次确认不会重复导入：如已导入，系统会提示核对。',
-};
+const scheduleDescriptionKeys = {
+  immediate: 'rates:import.scheduleImmediate',
+  scheduled: 'rates:import.scheduleScheduled',
+} as const;
 
 /** 电脑宽度随步骤变化（第二批导入稿）：上传 600、校验失败 620、预览 720；完成步保留步骤条，沿用 720。 */
 const dialogWidth = {
@@ -141,6 +137,16 @@ export function RateImportDialog({
   fallbackFocus: React.RefObject<HTMLElement | null>;
 }) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation(['rates', 'common']);
+  const steps = stepKeys.map((key) => t(key));
+  const importLabels: PreviewLabels = {
+    verified: t('rates:import.verified'),
+    summary: t('rates:import.summary'),
+    confirm: t('rates:import.confirm'),
+    busy: t('rates:import.busy'),
+    networkMessage: t('rates:import.networkMessage'),
+    uncertainNote: t('rates:import.uncertainNote'),
+  };
   const preview = useApiMutation('adminRateImportPreview');
   const commit = useApiMutation('adminRateImportCommit', {
     invalidate: (client, input) =>
@@ -169,12 +175,12 @@ export function RateImportDialog({
     if (!selected || busy) return;
     previewRequest.current += 1;
     if (csvTooLarge(selected.size)) {
-      setFileError('文件超过 2 MB 上限，请拆分或删减后重新选择');
+      setFileError(t('rates:import.fileTooLarge'));
       setFile(null);
       return;
     }
     if (selected.size === 0) {
-      setFileError('文件为空，请重新选择');
+      setFileError(t('rates:import.fileEmpty'));
       setFile(null);
       return;
     }
@@ -252,7 +258,7 @@ export function RateImportDialog({
         if (!latest()) return;
         setState({
           step: 'step1',
-          notice: '费率表已被修改，已载入最新版本，请重新预览',
+          notice: t('rates:import.conflictReloaded'),
           error: null,
         });
         return;
@@ -303,7 +309,7 @@ export function RateImportDialog({
       if (problem.kind === 'conflict' && problem.code === 'PREVIEW_EXPIRED') {
         setState({
           step: 'step1',
-          notice: '预览已过期，请重新预览',
+          notice: t('rates:import.previewExpired'),
           error: null,
         });
         return;
@@ -317,8 +323,8 @@ export function RateImportDialog({
         setState({
           step: 'step1',
           notice: uncertain
-            ? '可能已导入，请核对费率表；确认未导入时再重新预览'
-            : '费率表已变化或预览已失效，已载入最新版本，请重新预览',
+            ? t('rates:import.mayImported')
+            : t('rates:import.staleReloaded'),
           error: null,
         });
         return;
@@ -336,26 +342,30 @@ export function RateImportDialog({
 
   const subtitle =
     state.step === 'step2-ok' || state.step === 'committing'
-      ? `${state.file.name} · ${state.preview.encoding} · ${tableSizes(base.entryCount, state.preview.counts).rows} 条`
+      ? `${state.file.name} · ${state.preview.encoding} · ${t('rates:import.rows', { count: tableSizes(base.entryCount, state.preview.counts).rows })}`
       : state.step === 'step2-errors'
         ? state.file.name
-        : `${tenant.code} ${tenant.name}（${tenant.currency}）`;
+        : t('rates:import.tenantSubtitle', {
+            code: tenant.code,
+            name: tenant.name,
+            currency: tenant.currency,
+          });
 
   return (
     <ModalDialog
       open
       {...(busy ? {} : { onOpenChange: (open: boolean) => open || onClose() })}
-      title="导入费率表"
+      title={t('rates:import.title')}
       className={dialogWidth[state.step]}
       fallbackFocus={fallbackFocus}
     >
       <DialogHeading
         headingRef={headingRef}
-        title="导入费率表"
+        title={t('rates:import.title')}
         subtitle={subtitle}
       />
       <StepList
-        label="导入步骤"
+        label={t('rates:import.stepLabel')}
         steps={steps}
         position={stepIndex(state.step)}
         complete={state.step === 'done'}
@@ -439,6 +449,7 @@ function Upload({
   onNext: () => void;
 }) {
   const id = useId();
+  const { t } = useTranslation(['rates', 'common']);
   const [dragging, setDragging] = useState(false);
   return (
     <>
@@ -476,23 +487,25 @@ function Upload({
             <>
               <span className="font-semibold break-all">{file.name}</span>
               <span className="text-xs text-muted-foreground tabular-nums">
-                {formatFileSize(file.size)} · 点击更换文件
+                {formatFileSize(file.size)} · {t('rates:import.replaceFile')}
               </span>
             </>
           ) : (
             <span className="font-medium">
-              拖拽 CSV 文件到此处，或{' '}
-              <span className="text-primary">点击选择文件</span>
+              {t('rates:import.dropHint')}{' '}
+              <span className="text-primary">
+                {t('rates:import.chooseFile')}
+              </span>
             </span>
           )}
           <span className="text-xs text-muted-foreground">
-            支持 UTF-8 / GBK 编码（Excel 默认保存格式即可），系统自动识别编码
+            {t('rates:import.encodingHint')}
           </span>
           <input
             id={id}
             type="file"
             accept=".csv,text/csv"
-            aria-label="选择 CSV 文件"
+            aria-label={t('rates:import.selectFile')}
             disabled={busy}
             onChange={(event) => {
               onPick(event.target.files?.[0] ?? null);
@@ -508,13 +521,13 @@ function Upload({
         ) : null}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-muted px-3 py-2.5 text-[13px] text-muted-foreground">
           <span>
-            格式：
+            {t('rates:import.formatLabel')}
             <span className="font-mono text-foreground">
               ISO,Country,Destination Prefix,Description,Rate
             </span>
-            <span className="ml-3">每行一个前缀，覆盖整张费率表</span>
+            <span className="ml-3">{t('rates:import.perRow')}</span>
             <span className="mt-1 block">
-              说明会显示给客户，请勿填写内部备注
+              {t('rates:import.descriptionWarning')}
             </span>
           </span>
           <span className="flex-1" />
@@ -525,13 +538,16 @@ function Upload({
         choice={choice}
         error={scheduleError}
         disabled={busy}
-        descriptions={scheduleDescriptions}
+        descriptions={{
+          immediate: t(scheduleDescriptionKeys.immediate),
+          scheduled: t(scheduleDescriptionKeys.scheduled),
+        }}
         onChange={onChoice}
       />
       {error ? <ProblemAlert error={error} /> : null}
       {blocked ? (
         <span id={`${id}-blocked`} className="text-[13px] text-warn">
-          已有排定的新版本，请先取消排定
+          {t('rates:import.blocked')}
         </span>
       ) : null}
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
@@ -541,7 +557,7 @@ function Upload({
           disabled={busy}
           onClick={onCancel}
         >
-          取消
+          {t('common:action.cancel')}
         </Button>
         <Button
           className="h-12 md:h-9"
@@ -549,7 +565,7 @@ function Upload({
           aria-describedby={blocked ? `${id}-blocked` : undefined}
           onClick={onNext}
         >
-          {busy ? '正在预览…' : '下一步：预览'}
+          {busy ? t('rates:import.previewing') : t('rates:import.next')}
         </Button>
       </div>
     </>
@@ -567,15 +583,16 @@ function RowErrors({
   onCancel: () => void;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation(['rates', 'common']);
   return (
     <>
       <Alert variant="error" className="rounded-[10px] px-4 py-3.5">
         <CircleAlertIcon aria-hidden />
         <AlertTitle className="text-[15px]">
-          发现 {errors.length} 处错误，文件未导入
+          {t('rates:import.errorsTitle', { count: errors.length })}
         </AlertTitle>
         <AlertDescription className="text-foreground!">
-          有任何一行出错，整个文件不导入。请修改后重新上传，当前费率表未做任何改动。
+          {t('rates:import.errorsBody')}
         </AlertDescription>
       </Alert>
       <div className="max-h-[320px] overflow-auto rounded-lg border border-border">
@@ -583,17 +600,21 @@ function RowErrors({
           <TableHeader className="sticky top-0">
             <TableRow className="border-t-0">
               <TableHead className="py-2 pr-2 pl-3.5 whitespace-nowrap">
-                行号
+                {t('rates:import.line')}
               </TableHead>
-              <TableHead className="px-2 py-2">错误原因</TableHead>
-              <TableHead className="py-2 pr-3.5 pl-2">原始内容</TableHead>
+              <TableHead className="px-2 py-2">
+                {t('rates:import.reason')}
+              </TableHead>
+              <TableHead className="py-2 pr-3.5 pl-2">
+                {t('rates:import.raw')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {errors.map((error, index) => (
               <TableRow key={`${error.line}-${index}`}>
                 <TableCell className="py-2 pr-2 pl-3.5 font-semibold whitespace-nowrap tabular-nums">
-                  第 {error.line} 行
+                  {t('rates:import.lineNumber', { line: error.line })}
                 </TableCell>
                 <TableCell className="px-2 py-2 text-err">
                   {csvRowText(error)}
@@ -607,15 +628,14 @@ function RowErrors({
         </Table>
       </div>
       <span className="text-xs text-muted-foreground">
-        校验规则：前缀只能是数字、不能重复；ISO
-        为两位字母或留空；国家必填；费率不能为负；小数不超过 4 位。
+        {t('rates:import.rules')}
       </span>
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
         <Button variant="outline" className="h-12 md:h-9" onClick={onCancel}>
-          取消
+          {t('common:action.cancel')}
         </Button>
         <Button className="h-12 md:h-9" onClick={onRetry}>
-          重新上传
+          {t('rates:import.retry')}
         </Button>
       </div>
     </>
@@ -629,8 +649,10 @@ function ImportDone({
   state: Extract<RateImportState, { step: 'done' }>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['rates', 'common']);
+  const locale = useLocale();
   const { counts } = state.preview;
-  const at = formatDateTime(state.response.version.effectiveFrom);
+  const at = formatDateTime(state.response.version.effectiveFrom, locale);
   return (
     <>
       <div
@@ -638,23 +660,31 @@ function ImportDone({
         className="flex flex-col items-center gap-2 py-4 text-center text-[13px]"
       >
         <span className="text-[17px] font-semibold text-ok">
-          {state.scheduled ? '已导入，已排定新版本' : '已导入，已生效'}
+          {state.scheduled
+            ? t('rates:import.doneScheduled')
+            : t('rates:import.doneEffective')}
         </span>
         <span className="tabular-nums">
-          新增 {counts.added} · 修改 {counts.modified} · 删除 {counts.deleted}
+          {t('rates:import.counts', {
+            added: counts.added,
+            modified: counts.modified,
+            deleted: counts.deleted,
+          })}
         </span>
         <span className="tabular-nums">
           {state.scheduled
-            ? `将于 ${at} 生效，此前继续使用当前费率`
-            : `生效时间 ${at}，新呼叫按新费率计费`}
+            ? t('rates:import.scheduledAt', { time: at })
+            : t('rates:import.effectiveAt', { time: at })}
         </span>
         {state.response.auditId !== null ? (
-          <span className="text-muted-foreground">已记入操作日志</span>
+          <span className="text-muted-foreground">
+            {t('rates:import.audited')}
+          </span>
         ) : null}
       </div>
       <div className="flex justify-center">
         <Button className="h-12 md:h-9" onClick={onClose}>
-          返回费率表
+          {t('rates:import.backToTable')}
         </Button>
       </div>
     </>

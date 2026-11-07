@@ -6,10 +6,13 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
+import { useTranslation } from 'react-i18next';
+import { useLocale } from '@/i18n';
 import type {
   AdminRateChange,
   AdminRateEntry,
   Currency,
+  Locale,
 } from '@fs-billing/shared';
 import { formatRate } from '../../lib/format';
 import {
@@ -18,22 +21,16 @@ import {
   rateEntryFields,
 } from '../../lib/rates';
 import { cn } from '../../lib/utils';
-import { rateUnit } from './rate-edit-dialog';
 
 const changeTags = {
-  added: { label: '新增', className: 'border-ok-border bg-ok-soft text-ok' },
+  added: { className: 'border-ok-border bg-ok-soft text-ok' },
   modified: {
-    label: '修改',
     className: 'border-brand-border bg-brand-soft text-primary',
   },
   deleted: {
-    label: '删除',
     className: 'border-err-border bg-err-soft text-err',
   },
-} as const satisfies Record<
-  AdminRateChange['kind'],
-  { label: string; className: string }
->;
+} as const satisfies Record<AdminRateChange['kind'], { className: string }>;
 
 const cellClass: Partial<Record<keyof AdminRateEntry, string>> = {
   iso: 'font-mono',
@@ -46,14 +43,31 @@ export function RateChangesTable({
   changes,
   currency,
   showHeader = false,
-  columns = { before: '当前费率', after: '新费率' },
+  columns,
 }: {
   changes: readonly AdminRateChange[];
   currency: Currency;
   showHeader?: boolean;
   columns?: { before: string; after: string };
 }) {
-  const unit = rateUnit[currency];
+  const { t } = useTranslation(['rates', 'format', 'common']);
+  const locale = useLocale();
+  const unit = t(
+    currency === 'CNY' ? 'format:rateUnit.cny' : 'format:rateUnit.usd',
+  );
+  const fieldLabels = {
+    iso: t('rates:field.iso'),
+    prefix: t('rates:field.prefix'),
+    country: t('rates:field.country'),
+    description: t('rates:field.description'),
+  } as const satisfies Record<
+    'iso' | 'prefix' | 'country' | 'description',
+    string
+  >;
+  const shownColumns = columns ?? {
+    before: t('rates:changes.before'),
+    after: t('rates:changes.after'),
+  };
   return (
     <Table className="whitespace-nowrap">
       <TableHeader
@@ -64,19 +78,29 @@ export function RateChangesTable({
         }
       >
         <TableRow className="border-t-0">
-          <TableHead className="py-2 pr-2 pl-3.5">变动</TableHead>
-          {rateEntryFields.map(({ key, label }) => (
+          <TableHead className="py-2 pr-2 pl-3.5">
+            {t('rates:changes.column')}
+          </TableHead>
+          {rateEntryFields.map(({ key }) => (
             <TableHead key={key} className="px-2 py-2">
-              {label}
+              {fieldLabels[key]}
             </TableHead>
           ))}
           <TableHead className="px-2 py-2 text-right">
-            {columns.before}（{unit}）
+            {t('rates:changes.columnRate', {
+              label: shownColumns.before,
+              unit,
+            })}
           </TableHead>
           <TableHead className="px-2 py-2 text-right">
-            {columns.after}（{unit}）
+            {t('rates:changes.columnRate', {
+              label: shownColumns.after,
+              unit,
+            })}
           </TableHead>
-          <TableHead className="py-2 pr-3.5 pl-2 text-right">涨跌</TableHead>
+          <TableHead className="py-2 pr-3.5 pl-2 text-right">
+            {t('rates:changes.change')}
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody className="tabular-nums">
@@ -84,6 +108,7 @@ export function RateChangesTable({
           <ChangeRow
             key={`${change.kind}-${(change.kind === 'added' ? change.after : change.before).prefix}`}
             change={change}
+            locale={locale}
           />
         ))}
       </TableBody>
@@ -91,8 +116,21 @@ export function RateChangesTable({
   );
 }
 
-function ChangeRow({ change }: { change: AdminRateChange }) {
+function ChangeRow({
+  change,
+  locale,
+}: {
+  change: AdminRateChange;
+  locale: Locale;
+}) {
+  const { t } = useTranslation(['rates', 'format', 'common']);
   const tag = changeTags[change.kind];
+  const label =
+    change.kind === 'added'
+      ? t('rates:changes.added')
+      : change.kind === 'modified'
+        ? t('rates:changes.modified')
+        : t('rates:changes.deleted');
   const before = change.kind === 'added' ? null : change.before;
   const after = change.kind === 'deleted' ? null : change.after;
   const percent =
@@ -106,7 +144,7 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
             tag.className,
           )}
         >
-          {tag.label}
+          {label}
         </span>
       </TableCell>
       {rateEntryFields.map(({ key }) => (
@@ -123,7 +161,7 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
           change.kind === 'deleted' && 'line-through',
         )}
       >
-        {before ? formatRate(before.rate) : '—'}
+        {before ? formatRate(before.rate, { locale }) : '—'}
         {change.kind === 'modified' ? (
           <span aria-hidden className="pl-2">
             →
@@ -131,7 +169,7 @@ function ChangeRow({ change }: { change: AdminRateChange }) {
         ) : null}
       </TableCell>
       <TableCell className="px-2 py-2 text-right font-semibold">
-        {after ? formatRate(after.rate) : '—'}
+        {after ? formatRate(after.rate, { locale }) : '—'}
       </TableCell>
       <TableCell
         className={cn(

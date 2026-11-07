@@ -2,7 +2,9 @@ import Decimal from 'decimal.js';
 import type { z } from 'zod';
 import {
   adminTenantSettingsRequestSchema,
+  translate,
   type AdminTenantDetailResponse,
+  type Locale,
   type ValidationIssue,
 } from '@fs-billing/shared';
 import {
@@ -12,6 +14,7 @@ import {
 } from './amounts';
 import { invalidRecipient, maxRecipients } from './tenant-create';
 import { issueText } from './api-problem';
+import { currentLocale } from '../i18n';
 
 export type SettingsForm = {
   overdraftLimit: string;
@@ -32,19 +35,22 @@ export function settingsForm(tenant: AdminTenantDetailResponse): SettingsForm {
 
 export function validateSettings(
   form: SettingsForm,
+  locale: Locale = currentLocale(),
 ):
   { ok: true; value: SettingsRequest } | { ok: false; errors: SettingsErrors } {
   const errors: SettingsErrors = {};
   const overdraft = settingsAmountError(
     form.overdraftLimit,
-    '透支额度',
+    translate(locale, 'admin:tenant.fields.overdraftLimit'),
     'overdraft',
+    locale,
   );
   if (overdraft) errors.overdraftLimit = overdraft;
   const threshold = settingsAmountError(
     form.lowBalanceThreshold,
-    '余额提醒阈值',
+    translate(locale, 'admin:tenant.fields.lowBalanceThreshold'),
     'amount',
+    locale,
   );
   if (threshold) errors.lowBalanceThreshold = threshold;
   // 与服务端同一 schema：先小写去重，再限制 20 个；已保存的历史邮箱可能大小写不同。
@@ -52,8 +58,14 @@ export function validateSettings(
     form.emails,
   );
   const badEmail = invalidRecipient(form.emails);
-  if (badEmail) errors.emails = `「${badEmail}」不是有效的邮箱地址`;
-  else if (!emails.success) errors.emails = `最多 ${maxRecipients} 个通知邮箱`;
+  if (badEmail)
+    errors.emails = translate(locale, 'admin:tenant.create.invalidRecipient', {
+      email: badEmail,
+    });
+  else if (!emails.success)
+    errors.emails = translate(locale, 'admin:tenant.create.maxRecipients', {
+      max: maxRecipients,
+    });
   if (Object.keys(errors).length || !emails.success)
     return { ok: false, errors };
   return {
@@ -123,7 +135,10 @@ export function hasSettingsChanges(changes: SettingsChanges) {
   );
 }
 
-export function serverSettingsErrors(issues: ValidationIssue[]) {
+export function serverSettingsErrors(
+  issues: ValidationIssue[],
+  locale: Locale = currentLocale(),
+) {
   const errors: SettingsErrors = {};
   for (const issue of issues) {
     const [head] = issue.path;
@@ -133,7 +148,9 @@ export function serverSettingsErrors(issues: ValidationIssue[]) {
       head === 'emails'
         ? head
         : 'form';
-    errors[field] ??= issueText(issue);
+    errors[field] ??= issueText(issue, (key, params) =>
+      translate(locale, key, params),
+    );
   }
   return errors;
 }

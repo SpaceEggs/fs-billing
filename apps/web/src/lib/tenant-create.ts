@@ -5,12 +5,15 @@ import {
   adminTenantCreateRequestSchema,
   DEFAULT_TENANT_OVERDRAFT_LIMIT,
   newPasswordSchema,
+  translate,
   type AdminPortalAccountCreateRequest,
   type Currency,
+  type Locale,
   type ValidationIssue,
 } from '@fs-billing/shared';
 import { normalizeAmountInput, settingsAmountError } from './amounts';
 import { issueText } from './api-problem';
+import { currentLocale } from '../i18n';
 
 export const maxRecipients = 20;
 
@@ -112,6 +115,7 @@ const emailSchema = z.email();
 export function addRecipients(
   emails: string[],
   raw: string,
+  locale: Locale = currentLocale(),
 ): { emails: string[]; notice: string | null } {
   const next = [...emails];
   const notices: string[] = [];
@@ -119,11 +123,17 @@ export function addRecipients(
     const email = part.trim().toLowerCase();
     if (!email) continue;
     if (next.includes(email)) {
-      notices.push(`「${email}」已在列表中`);
+      notices.push(
+        translate(locale, 'admin:tenant.create.duplicateRecipient', { email }),
+      );
       continue;
     }
     if (next.length >= maxRecipients) {
-      notices.push(`最多 ${maxRecipients} 个通知邮箱`);
+      notices.push(
+        translate(locale, 'admin:tenant.create.maxRecipients', {
+          max: maxRecipients,
+        }),
+      );
       break;
     }
     next.push(email);
@@ -143,49 +153,74 @@ export type TenantSubmission = {
 /** 本地校验并组装两个请求；有错误时返回全部字段错误，不发送请求。 */
 export function buildSubmission(
   form: TenantForm,
+  locale: Locale = currentLocale(),
 ): { ok: true; value: TenantSubmission } | { ok: false; errors: FieldErrors } {
   const errors: FieldErrors = {};
   const code = form.code.trim();
-  if (!code) errors.code = '请输入租户编码';
+  if (!code)
+    errors.code = translate(locale, 'admin:tenant.create.codeRequired');
   else if (!/^[A-Za-z0-9]+$/.test(code))
-    errors.code = '只能包含字母和数字，不能有空格或符号';
-  else if (code.length > 64) errors.code = '租户编码最多 64 个字符';
-  if (!form.name.trim()) errors.name = '请输入租户名称';
+    errors.code = translate(locale, 'admin:tenant.create.codeChars');
+  else if (code.length > 64)
+    errors.code = translate(locale, 'admin:tenant.create.codeTooLong');
+  if (!form.name.trim())
+    errors.name = translate(locale, 'admin:tenant.create.nameRequired');
   else if (form.name.trim().length > 200)
-    errors.name = '租户名称最多 200 个字符';
+    errors.name = translate(locale, 'admin:tenant.create.nameTooLong');
   const overdraft = settingsAmountError(
     form.overdraftLimit,
-    '透支额度',
+    translate(locale, 'admin:tenant.fields.overdraftLimit'),
     'overdraft',
+    locale,
   );
   if (overdraft) errors.overdraftLimit = overdraft;
   const threshold = settingsAmountError(
     form.lowBalanceThreshold,
-    '余额提醒阈值',
+    translate(locale, 'admin:tenant.fields.lowBalanceThreshold'),
     'amount',
+    locale,
   );
   if (threshold) errors.lowBalanceThreshold = threshold;
   const badEmail = invalidRecipient(form.emails);
-  if (badEmail) errors.emails = `「${badEmail}」不是有效的邮箱地址`;
+  if (badEmail)
+    errors.emails = translate(locale, 'admin:tenant.create.invalidRecipient', {
+      email: badEmail,
+    });
   else if (form.emails.length > maxRecipients)
-    errors.emails = `最多 ${maxRecipients} 个通知邮箱`;
+    errors.emails = translate(locale, 'admin:tenant.create.maxRecipients', {
+      max: maxRecipients,
+    });
   if (form.contactName.length > 200)
-    errors.contactName = '联系人最多 200 个字符';
+    errors.contactName = translate(
+      locale,
+      'admin:tenant.create.contactTooLong',
+    );
   if (form.contactPhone.length > 100)
-    errors.contactPhone = '电话最多 100 个字符';
-  if (form.remark.length > 2000) errors.remark = '备注最多 2000 个字符';
-  if (!form.portalEmail.trim()) errors.portalEmail = '请输入登录邮箱';
+    errors.contactPhone = translate(locale, 'admin:tenant.create.phoneTooLong');
+  if (form.remark.length > 2000)
+    errors.remark = translate(locale, 'admin:tenant.create.remarkTooLong');
+  if (!form.portalEmail.trim())
+    errors.portalEmail = translate(
+      locale,
+      'admin:tenant.create.portalEmailRequired',
+    );
   else if (!emailSchema.safeParse(form.portalEmail.trim()).success)
-    errors.portalEmail = '邮箱格式不正确';
+    errors.portalEmail = translate(
+      locale,
+      'admin:tenant.create.portalEmailInvalid',
+    );
   if (
     form.portalPassword &&
     !newPasswordSchema.safeParse(form.portalPassword).success
   )
-    errors.portalPassword = '初始密码须为 8 到 128 位';
+    errors.portalPassword = translate(
+      locale,
+      'admin:tenant.create.passwordLength',
+    );
   if (form.rates.kind === 'csv' && !form.rates.file)
-    errors.rates = '请选择要导入的 CSV 文件';
+    errors.rates = translate(locale, 'admin:tenant.create.ratesFileRequired');
   if (form.rates.kind === 'copy' && !form.rates.source)
-    errors.rates = '请选择要复制费率表的租户';
+    errors.rates = translate(locale, 'admin:tenant.create.ratesSourceRequired');
   if (Object.keys(errors).length) return { ok: false, errors };
 
   const initialRates =
@@ -221,7 +256,10 @@ export function buildSubmission(
     !adminTenantCreateRequestSchema.safeParse(tenant).success ||
     !adminPortalAccountCreateRequestSchema.safeParse(portal).success
   )
-    return { ok: false, errors: { form: '提交内容不符合要求，请检查后重试' } };
+    return {
+      ok: false,
+      errors: { form: translate(locale, 'admin:tenant.create.submitInvalid') },
+    };
   return { ok: true, value: { tenant, portal } };
 }
 
@@ -238,7 +276,10 @@ const serverFieldPrefixes: [string, FieldKey][] = [
 ];
 
 /** 服务端 VALIDATION_ERROR 的字段路径映射回表单字段；无法归属的作为表单总提示。 */
-export function serverFieldErrors(issues: ValidationIssue[]): FieldErrors {
+export function serverFieldErrors(
+  issues: ValidationIssue[],
+  locale: Locale = currentLocale(),
+): FieldErrors {
   const errors: FieldErrors = {};
   for (const issue of issues) {
     const path = issue.path.join('.');
@@ -246,7 +287,10 @@ export function serverFieldErrors(issues: ValidationIssue[]): FieldErrors {
       serverFieldPrefixes.find(
         ([prefix]) => path === prefix || path.startsWith(`${prefix}.`),
       )?.[1] ?? 'form';
-    if (!errors[field]) errors[field] = issueText(issue);
+    if (!errors[field])
+      errors[field] = issueText(issue, (key, params) =>
+        translate(locale, key, params),
+      );
   }
   return errors;
 }
