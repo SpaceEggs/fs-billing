@@ -1,5 +1,8 @@
+import { useTranslation } from 'react-i18next';
+import { translate } from '@fs-billing/shared';
 import { ApiRequestError } from '../../lib/api';
 import { apiProblem, problemNotice } from '../../lib/api-problem';
+import { useLocale } from '../../i18n';
 import { CircleAlertIcon } from 'lucide-react';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '../ui/alert';
 import { Button } from '../ui/button';
@@ -20,15 +23,20 @@ export function ProblemAlert({
   networkMessage?: string;
   onRefresh?: () => void;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   if (error instanceof ApiRequestError && error.outcomeUnknown)
     return (
       <Alert variant="error" className={withAction}>
         <CircleAlertIcon aria-hidden />
-        <AlertTitle>网络中断</AlertTitle>
+        <AlertTitle>{t('admin:problem.networkTitle')}</AlertTitle>
         <AlertDescription>
-          {networkMessage ?? '请检查网络后重试'}
+          {networkMessage ?? t('admin:problem.networkBody')}
         </AlertDescription>
-        <RefreshButton onRefresh={onRefresh} />
+        <RefreshButton
+          onRefresh={onRefresh}
+          label={t('admin:problem.refresh')}
+        />
       </Alert>
     );
   const problem = apiProblem(error);
@@ -37,22 +45,35 @@ export function ProblemAlert({
     problem.kind === 'password-change-required'
   )
     return null;
-  const notice = problemNotice(problem);
+  const notice = problemNotice(problem, (key, params) =>
+    translate(locale, key, params),
+  );
   return (
     <Alert variant="error" className={withAction}>
       <CircleAlertIcon aria-hidden />
       <AlertTitle>{notice.title}</AlertTitle>
       {notice.body ? <AlertDescription>{notice.body}</AlertDescription> : null}
-      {notice.refresh ? <RefreshButton onRefresh={onRefresh} /> : null}
+      {notice.refresh ? (
+        <RefreshButton
+          onRefresh={onRefresh}
+          label={t('admin:problem.refresh')}
+        />
+      ) : null}
     </Alert>
   );
 }
 
-function RefreshButton({ onRefresh }: { onRefresh: (() => void) | undefined }) {
+function RefreshButton({
+  onRefresh,
+  label,
+}: {
+  onRefresh: (() => void) | undefined;
+  label: string;
+}) {
   return onRefresh ? (
     <AlertAction>
       <Button variant="outline" size="sm" onClick={onRefresh}>
-        刷新
+        {label}
       </Button>
     </AlertAction>
   ) : null;
@@ -68,9 +89,12 @@ export function RequestFailure({
   networkMessage?: string;
   onRefresh?: () => void;
 }) {
+  const locale = useLocale();
   const problem = apiProblem(error);
   if (problem.kind === 'validation') {
-    const notice = problemNotice(problem);
+    const notice = problemNotice(problem, (key, params) =>
+      translate(locale, key, params),
+    );
     return (
       <Alert variant="error">
         <AlertTitle>{notice.title}</AlertTitle>

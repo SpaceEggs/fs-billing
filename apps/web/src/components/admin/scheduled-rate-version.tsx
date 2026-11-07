@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { useQueryClient } from '@tanstack/react-query';
@@ -6,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Alert } from '../ui/alert';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
 import { formatDateTime } from '../../lib/format';
+import { useLocale } from '../../i18n';
 import {
   cancelFailureMessage,
   countChanges,
@@ -36,6 +38,8 @@ export function ScheduledRateVersion({
   onExport: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const changes = diffRateTables(previous.entries, version.entries);
   const counts = countChanges(changes);
   return (
@@ -46,15 +50,21 @@ export function ScheduledRateVersion({
         'flex flex-col gap-3 rounded-xl border border-brand-border bg-brand-soft px-3.5 py-3 md:px-[18px] md:py-3.5',
       )}
     >
-      <section aria-label="排定的新版本">
+      <section aria-label={t('admin:scheduledVersion.ariaLabel')}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Badge className="font-semibold">排定的新版本</Badge>
+          <Badge className="font-semibold">
+            {t('admin:scheduledVersion.badge')}
+          </Badge>
           <span className="text-sm tabular-nums">
+            {t('admin:scheduledVersion.summaryPrefix')}
             <time dateTime={version.effectiveFrom} className="font-semibold">
-              {formatDateTime(version.effectiveFrom)}
+              {formatDateTime(version.effectiveFrom, locale)}
             </time>{' '}
-            起生效 · 新增 {counts.added} · 修改 {counts.modified} · 删除{' '}
-            {counts.deleted}
+            {t('admin:scheduledVersion.summarySuffix', {
+              added: counts.added,
+              modified: counts.modified,
+              deleted: counts.deleted,
+            })}
           </span>
           <span className="flex-1" />
           <Button
@@ -64,7 +74,7 @@ export function ScheduledRateVersion({
             disabled={exporting}
             onClick={onExport}
           >
-            导出 CSV
+            {t('admin:scheduledVersion.exportCsv')}
           </Button>
           <Button
             variant="outline"
@@ -72,7 +82,7 @@ export function ScheduledRateVersion({
             className="hidden bg-background md:inline-flex"
             onClick={onCancel}
           >
-            取消排定
+            {t('admin:scheduledVersion.cancelSchedule')}
           </Button>
         </div>
         {changes.length ? (
@@ -97,6 +107,8 @@ export function CancelScheduledDialog({
   onClose: () => void;
   onDone: (changed: boolean) => void;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const cancel = useApiMutation('adminRateCancelFutureVersion', {
     invalidate: (client, input) =>
@@ -117,7 +129,7 @@ export function CancelScheduledDialog({
       // 失败说明由 cancel.error 显示。
     }
   }
-  const title = '取消排定的新版本？';
+  const title = t('admin:scheduledVersion.cancelTitle');
   const knownFailure = cancel.error ? cancelFailureMessage(cancel.error) : null;
   return (
     <ModalDialog
@@ -130,11 +142,9 @@ export function CancelScheduledDialog({
       <div className="flex flex-col gap-1.5">
         <h2 className="m-0 text-[17px] font-semibold">{title}</h2>
         <span className="text-sm leading-relaxed text-muted-foreground">
-          原定{' '}
-          <span className="tabular-nums">
-            {formatDateTime(version.effectiveFrom)}
-          </span>{' '}
-          起生效的新版本将被删除，当前版本继续生效。将记入操作日志。
+          {t('admin:scheduledVersion.cancelBody', {
+            time: formatDateTime(version.effectiveFrom, locale),
+          })}
         </span>
       </div>
       {cancel.error ? (
@@ -142,13 +152,13 @@ export function CancelScheduledDialog({
           <Alert variant="error" className="flex-row items-start gap-3">
             <span className="flex-1 font-semibold">{knownFailure}</span>
             <Button variant="outline" size="sm" onClick={refresh}>
-              刷新
+              {t('admin:scheduledVersion.refresh')}
             </Button>
           </Alert>
         ) : (
           <ProblemAlert
             error={cancel.error}
-            networkMessage="无法确认是否已取消，请刷新费率表核对后再操作。"
+            networkMessage={t('admin:scheduledVersion.network')}
             onRefresh={refresh}
           />
         )
@@ -160,14 +170,14 @@ export function CancelScheduledDialog({
           disabled={cancel.isPending}
           onClick={onClose}
         >
-          暂不取消
+          {t('admin:scheduledVersion.keep')}
         </Button>
         <Button
           className="h-12 bg-destructive text-white md:h-9"
           disabled={cancel.isPending}
           onClick={() => void confirm()}
         >
-          取消排定
+          {t('admin:scheduledVersion.cancelSchedule')}
         </Button>
       </div>
     </ModalDialog>

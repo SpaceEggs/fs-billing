@@ -1,10 +1,12 @@
 import { OptionTabs } from '../option-tabs';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import Decimal from 'decimal.js';
-import type {
-  AdminBalanceOperationResponse,
-  AdminTenantDetailResponse,
+import {
+  translate,
+  type AdminBalanceOperationResponse,
+  type AdminTenantDetailResponse,
 } from '@fs-billing/shared';
 import { CheckIcon } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
@@ -16,6 +18,9 @@ import { apiProblem } from '../../lib/api-problem';
 import {
   beginBalanceAttempt,
   balanceFieldErrors,
+  balanceKindConfirmType,
+  balanceKindHint,
+  balanceKindLabel,
   balanceKindOrder,
   balanceKinds,
   balanceRequest,
@@ -33,6 +38,7 @@ import {
 import { normalizeAmountInput } from '../../lib/amounts';
 import { formatExactMoney, formatMoney } from '../../lib/format';
 import { cn } from '../../lib/utils';
+import { useLocale } from '../../i18n';
 import { webConfig } from '../../config';
 import { Money } from '../data-format';
 import { statusTags } from '../status-tag';
@@ -57,13 +63,14 @@ function signedMoney(
 }
 
 function VisibilityBadge({ kind }: { kind: BalanceKind }) {
+  const { t } = useTranslation(['admin']);
   return balanceKinds[kind].noteVisibility === 'admin' ? (
     <span className="rounded border border-border bg-muted px-1.5 py-px text-xs font-medium text-muted-foreground">
-      仅内部可见
+      {t('admin:balanceDialog.visibilityAdmin')}
     </span>
   ) : (
     <span className="rounded bg-brand-soft px-1.5 py-px text-xs font-medium text-primary">
-      客户可见
+      {t('admin:balanceDialog.visibilityCustomer')}
     </span>
   );
 }
@@ -71,18 +78,21 @@ function VisibilityBadge({ kind }: { kind: BalanceKind }) {
 function KindChoice({
   value,
   onChange,
+  locale,
 }: {
   value: BalanceKind;
   onChange: (kind: BalanceKind) => void;
+  locale: ReturnType<typeof useLocale>;
 }) {
+  const { t } = useTranslation(['admin']);
   return (
     <div className="flex flex-col gap-1.5 text-sm font-medium">
-      <span aria-hidden>操作类型</span>
+      <span aria-hidden>{t('admin:balanceDialog.kindLabel')}</span>
       <OptionTabs
-        label="操作类型"
+        label={t('admin:balanceDialog.kindLabel')}
         options={balanceKindOrder.map((kind) => ({
           value: kind,
-          label: balanceKinds[kind].label,
+          label: balanceKindLabel(kind, locale),
         }))}
         value={value}
         onChange={onChange}
@@ -90,7 +100,7 @@ function KindChoice({
       />
       {value === 'credit_topup' ? (
         <span className="text-xs leading-normal font-normal text-muted-foreground">
-          先加余额，记为「待收款」，确认收款后变为「已收款」。客户看到的是「账户充值」。
+          {t('admin:balanceDialog.creditTopupNote')}
         </span>
       ) : null}
     </div>
@@ -104,10 +114,11 @@ function BalancePreview({
   tenant: AdminTenantDetailResponse;
   after: string | null;
 }) {
+  const { t } = useTranslation(['admin']);
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg bg-muted px-3.5 py-3 text-sm tabular-nums">
       <span className="text-muted-foreground">
-        当前余额{' '}
+        {t('admin:balanceDialog.currentBalance')}{' '}
         <Money
           value={{ currency: tenant.currency, amount: tenant.balance }}
           className="font-semibold"
@@ -117,7 +128,7 @@ function BalancePreview({
         →
       </span>
       <span className="text-muted-foreground">
-        操作后{' '}
+        {t('admin:balanceDialog.afterBalance')}{' '}
         <span className="font-semibold text-foreground">
           {after === null ? (
             '—'
@@ -154,6 +165,7 @@ export function BalanceDialog({
   initialDraft?: BalanceDraft;
   thresholds?: typeof webConfig.largeAmountThresholds;
 }) {
+  const { t } = useTranslation(['admin']);
   const operate = useApiMutation('adminBalanceOperation', {
     invalidate: (queryClient, input) =>
       invalidateTenant(queryClient, input.params.tenantId),
@@ -164,7 +176,7 @@ export function BalanceDialog({
     <ModalDialog
       open={open}
       {...(submitting ? {} : { onOpenChange })}
-      title="余额操作"
+      title={t('admin:balanceDialog.title')}
       className="md:w-[460px]"
     >
       {open ? (
@@ -218,6 +230,8 @@ function BalanceFlow({
   const [step, setStep] = useState<Step>({ name: 'form' });
   const [largeConfirmed, setLargeConfirmed] = useState(false);
   const [submitError, setSubmitError] = useState<unknown>(null);
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const mounted = useRef(false);
   useEffect(() => {
@@ -228,7 +242,8 @@ function BalanceFlow({
   }, []);
 
   const rule = balanceKinds[draft.kind];
-  const valid = Object.keys(validateBalanceDraft(draft)).length === 0;
+  const kindLabel = balanceKindLabel(draft.kind, locale);
+  const valid = Object.keys(validateBalanceDraft(draft, locale)).length === 0;
   const projected = valid ? projectBalance(tenant, draft.amount) : null;
   const large =
     valid &&
@@ -245,7 +260,7 @@ function BalanceFlow({
   };
 
   function next() {
-    const found = validateBalanceDraft(draft);
+    const found = validateBalanceDraft(draft, locale);
     if (Object.keys(found).length) {
       setErrors(found);
       requestAnimationFrame(() =>
@@ -282,7 +297,7 @@ function BalanceFlow({
         void invalidateTenant(queryClient, tenant.id);
       else if (attempt) resolveBalanceAttempt(attempt);
       if (problem.kind === 'validation') {
-        setErrors(balanceFieldErrors(problem.issues));
+        setErrors(balanceFieldErrors(problem.issues, locale));
         setStep({ name: 'form' });
         return;
       }
@@ -303,24 +318,31 @@ function BalanceFlow({
           >
             <CheckIcon className="size-6" />
           </span>
-          <h2 className="m-0 text-[17px] font-semibold">操作成功</h2>
+          <h2 className="m-0 text-[17px] font-semibold">
+            {t('admin:balanceDialog.successTitle')}
+          </h2>
           <p
             role="status"
             className="m-0 text-sm leading-relaxed text-muted-foreground tabular-nums"
           >
-            {rule.label} {signedMoney(result.currency, result.entry.amount)}{' '}
-            已入账，当前余额{' '}
-            {formatMoney({ currency: result.currency, amount: result.balance })}
+            {t('admin:balanceDialog.successBody', {
+              kind: kindLabel,
+              amount: signedMoney(result.currency, result.entry.amount),
+              balance: formatMoney({
+                currency: result.currency,
+                amount: result.balance,
+              }),
+            })}
             <br />
-            已记入操作日志
+            {t('admin:balanceDialog.logged')}
           </p>
         </div>
         <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-center">
           <Button variant="outline" className="h-12 md:h-9" onClick={onClose}>
-            完成
+            {t('admin:balanceDialog.done')}
           </Button>
           <Button className="h-12 md:h-9" onClick={onViewLedger}>
-            查看余额流水
+            {t('admin:balanceDialog.viewLedger')}
           </Button>
         </div>
       </>
@@ -329,21 +351,26 @@ function BalanceFlow({
 
   if (step.name === 'confirm' && projected) {
     const amount = normalizeAmountInput(draft.amount);
-    const confirmLabel = `确认${rule.label}`;
+    const confirmLabel = t('admin:balanceDialog.confirmTitle', {
+      kind: kindLabel,
+    });
     return (
       <>
         <div className="flex flex-col gap-1">
           <h2 className="m-0 text-[17px] font-semibold">{confirmLabel}</h2>
           <span className="text-[13px] leading-normal text-muted-foreground">
-            提交后将新增一条流水，不能修改或删除；如有错误需另做调账冲正。
+            {t('admin:balanceDialog.ledgerNote')}
           </span>
         </div>
         <dl className="m-0 grid grid-cols-[88px_1fr] overflow-hidden rounded-[10px] border border-border text-sm tabular-nums">
           {[
-            ['租户', `${tenant.code} ${tenant.name}`],
-            ['类型', rule.confirmType],
+            [t('admin:balanceDialog.tenant'), `${tenant.code} ${tenant.name}`],
             [
-              '金额',
+              t('admin:balanceDialog.type'),
+              balanceKindConfirmType(draft.kind, locale),
+            ],
+            [
+              t('admin:balanceDialog.amount'),
               <span
                 key="amount"
                 className={cn(
@@ -355,18 +382,18 @@ function BalanceFlow({
               </span>,
             ],
             [
-              '备注',
+              t('admin:balanceDialog.note'),
               <span key="note">
-                {draft.note.trim() || '（无）'}{' '}
+                {draft.note.trim() || t('admin:balanceDialog.emptyNote')}{' '}
                 <span className="text-xs text-muted-foreground">
                   {rule.noteVisibility === 'admin'
-                    ? '（仅内部可见）'
-                    : '（客户可见）'}
+                    ? t('admin:balanceDialog.internalVisibility')
+                    : t('admin:balanceDialog.customerVisibility')}
                 </span>
               </span>,
             ],
             [
-              '余额',
+              t('admin:balanceDialog.balance'),
               <span key="balance">
                 <Money
                   value={{ currency: tenant.currency, amount: tenant.balance }}
@@ -408,49 +435,62 @@ function BalanceFlow({
             outcomeTones[statusTags[healthStatus[projected.health]].tone],
           )}
         >
-          {rule.label}后可用额度{' '}
-          {formatMoney({
-            currency: tenant.currency,
-            amount: projected.available,
+          {t('admin:balanceDialog.available', {
+            kind: kindLabel,
+            amount: formatMoney({
+              currency: tenant.currency,
+              amount: projected.available,
+            }),
+            change:
+              projected.health === tenant.health
+                ? t('admin:balanceDialog.stay')
+                : t('admin:balanceDialog.become'),
+            status: translate(
+              locale,
+              `common:status.${healthStatus[projected.health]}`,
+            ),
           })}
-          ，状态
-          {projected.health === tenant.health ? '保持' : '将变为'}「
-          {statusTags[healthStatus[projected.health]].label}」
         </div>
         {tenant.status === 'disabled' ? (
           <Alert variant="muted" role="note">
-            <span className="font-semibold">该租户已停用，状态不会改变</span>
-            <span>
-              入账后租户仍为「已停用」，不会自动启用，正常授权路径仍拒绝新呼叫。如需恢复呼叫，请在租户详情右上角「启用」。
+            <span className="font-semibold">
+              {t('admin:balanceDialog.disabledTitle')}
             </span>
+            <span>{t('admin:balanceDialog.disabledBody')}</span>
           </Alert>
         ) : null}
         {large ? (
           <Alert variant="warning" className="gap-2">
             <span className="font-semibold">
-              大额{rule.label}，需要二次确认
+              {t('admin:balanceDialog.largeTitle', { kind: kindLabel })}
             </span>
             <span className="text-foreground">
-              金额超过 {tenant.currency} 大额阈值{' '}
-              {formatMoney({
+              {t('admin:balanceDialog.largeBody', {
                 currency: tenant.currency,
-                amount: thresholds[tenant.currency],
+                amount: formatMoney({
+                  currency: tenant.currency,
+                  amount: thresholds[tenant.currency],
+                }),
               })}
-              ，请再次核对金额与租户。
             </span>
             <label className="flex items-center gap-2 font-medium text-foreground">
               <Checkbox
                 checked={largeConfirmed}
                 onCheckedChange={(next) => setLargeConfirmed(next === true)}
               />
-              我已核对，确认{rule.label} {signedMoney(tenant.currency, amount)}
+              {t('admin:balanceDialog.largeConfirm', {
+                kind: kindLabel,
+                amount: signedMoney(tenant.currency, amount),
+              })}
             </label>
           </Alert>
         ) : null}
         {submitError ? (
           <ProblemAlert
             error={submitError}
-            networkMessage={`无法确认是否已入账。再次点击「${confirmLabel}」会按同一笔重试，不会重复入账；如需修改内容，请先在余额流水中核实。`}
+            networkMessage={t('admin:balanceDialog.network', {
+              confirm: confirmLabel,
+            })}
             onRefresh={() => {
               void invalidateTenant(queryClient, tenant.id);
               // 结果未知时留在确认步骤：核对后可按同一笔重试。
@@ -469,7 +509,7 @@ function BalanceFlow({
             disabled={submitting}
             onClick={() => setStep({ name: 'form' })}
           >
-            返回修改
+            {t('admin:balanceDialog.back')}
           </Button>
           <Button
             className="h-12 md:h-9"
@@ -486,7 +526,7 @@ function BalanceFlow({
   return (
     <form
       noValidate
-      aria-label="余额操作"
+      aria-label={t('admin:balanceDialog.title')}
       onSubmit={(event) => {
         event.preventDefault();
         next();
@@ -494,7 +534,9 @@ function BalanceFlow({
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="m-0 text-[17px] font-semibold">余额操作</h2>
+        <h2 className="m-0 text-[17px] font-semibold">
+          {t('admin:balanceDialog.title')}
+        </h2>
         <span className="hidden text-[13px] text-muted-foreground md:inline">
           {tenantLabel}
         </span>
@@ -502,8 +544,16 @@ function BalanceFlow({
           {tenant.code} · {tenant.currency}
         </span>
       </div>
-      <KindChoice value={draft.kind} onChange={(kind) => update({ kind })} />
-      <Field label="金额" error={errors.amount} hint={rule.hint}>
+      <KindChoice
+        value={draft.kind}
+        onChange={(kind) => update({ kind })}
+        locale={locale}
+      />
+      <Field
+        label={t('admin:balanceDialog.amountLabel')}
+        error={errors.amount}
+        hint={balanceKindHint(draft.kind, locale)}
+      >
         {(props) => (
           <MoneyInput
             {...props}
@@ -522,15 +572,15 @@ function BalanceFlow({
         )}
       </Field>
       <Field
-        label="备注"
+        label={t('admin:balanceDialog.noteLabel')}
         required={draft.kind === 'adjustment'}
         optional={draft.kind !== 'adjustment'}
         badge={<VisibilityBadge kind={draft.kind} />}
         error={errors.note}
         hint={
           rule.noteVisibility === 'customer'
-            ? '会显示在客户门户的余额流水中'
-            : '仅管理后台可见'
+            ? t('admin:balanceDialog.customerHint')
+            : t('admin:balanceDialog.adminHint')
         }
       >
         {(props) => (
@@ -540,8 +590,8 @@ function BalanceFlow({
             maxLength={2000}
             placeholder={
               draft.kind === 'adjustment'
-                ? '请说明调账原因'
-                : '例如：银行转账 · 招行尾号 6621'
+                ? t('admin:balanceDialog.adjustmentPlaceholder')
+                : t('admin:balanceDialog.notePlaceholder')
             }
             value={draft.note}
             onChange={(event) => update({ note: event.target.value })}
@@ -557,10 +607,10 @@ function BalanceFlow({
       ) : null}
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
         <Button variant="outline" className="h-12 md:h-9" onClick={onClose}>
-          取消
+          {t('admin:balanceDialog.cancel')}
         </Button>
         <Button type="submit" className="h-12 md:h-9">
-          下一步
+          {t('admin:balanceDialog.next')}
         </Button>
       </div>
     </form>
