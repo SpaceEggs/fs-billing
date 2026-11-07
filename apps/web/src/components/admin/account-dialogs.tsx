@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { translate, type Locale } from '@fs-billing/shared';
+import { useLocale } from '../../i18n';
 import { cn } from '../../lib/utils';
 import { Alert } from '../ui/alert';
 import { send, useCredentialMutation } from '../../lib/admin-api';
@@ -66,14 +69,19 @@ export function TemporaryPassword({
   recipient: string;
   logged: string;
 }) {
+  const { t } = useTranslation(['admin']);
   return (
     <>
-      <SecretField value={value} label="临时密码" />
+      <SecretField
+        value={value}
+        label={t('admin:accountDialogs.temporaryLabel')}
+      />
       <Alert variant="warning">
-        <span className="font-semibold">关闭后无法再次查看</span>
+        <span className="font-semibold">
+          {t('admin:accountDialogs.oneTimeTitle')}
+        </span>
         <span>
-          请立即复制并通过安全渠道发给{recipient}，{recipient}
-          首次登录后需修改密码。{logged}
+          {t('admin:accountDialogs.oneTimeBody', { recipient, logged })}
         </span>
       </Alert>
     </>
@@ -83,23 +91,34 @@ export function TemporaryPassword({
 const resetCopy = {
   admin: {
     operation: 'resetAdminPassword',
-    recipient: '对方',
-    confirm: (t: AccountTarget, self: boolean) =>
+    recipient: 'admin:accountDialogs.adminRecipient',
+    confirm: (locale: Locale, target: AccountTarget, self: boolean) =>
       self
-        ? '将生成新的临时密码，原密码立即失效，你的所有登录都会退出。之后需用临时密码重新登录并修改密码。'
-        : `将生成新的临时密码，原密码立即失效，${t.name}的所有登录都会退出。`,
-    done: (t: AccountTarget) => `已为 ${t.name} 生成临时密码`,
-    effect: (t: AccountTarget) =>
-      `${t.email} · 原密码已失效，${t.name}的所有登录已退出`,
+        ? translate(locale, 'admin:accountDialogs.resetSelfConfirm')
+        : translate(locale, 'admin:accountDialogs.resetAdminConfirm', {
+            name: target.name,
+          }),
+    done: (locale: Locale, target: AccountTarget) =>
+      translate(locale, 'admin:accountDialogs.resetDoneAdmin', {
+        name: target.name,
+      }),
+    effect: (locale: Locale, target: AccountTarget) =>
+      translate(locale, 'admin:accountDialogs.resetEffectAdmin', {
+        email: target.email,
+        name: target.name,
+      }),
   },
   portal: {
     operation: 'resetPortalAccountPassword',
-    recipient: '客户',
-    confirm: () =>
-      '将生成新的临时密码，原密码立即失效，客户所有设备上的登录都会退出。',
-    done: () => '已生成临时密码',
-    effect: (t: AccountTarget) =>
-      `${t.email} · 原密码已失效，客户所有设备上的登录已退出`,
+    recipient: 'admin:accountDialogs.portalRecipient',
+    confirm: (locale: Locale) =>
+      translate(locale, 'admin:accountDialogs.resetPortalConfirm'),
+    done: (locale: Locale) =>
+      translate(locale, 'admin:accountDialogs.resetDonePortal'),
+    effect: (locale: Locale, target: AccountTarget) =>
+      translate(locale, 'admin:accountDialogs.resetEffectPortal', {
+        email: target.email,
+      }),
   },
 } as const;
 
@@ -116,6 +135,8 @@ export function ResetPasswordDialog({
   self?: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const copy = resetCopy[target.audience];
   const reset = useCredentialMutation(copy.operation);
   const [password, setPassword] = useState<string | null>(null);
@@ -133,18 +154,21 @@ export function ResetPasswordDialog({
     return (
       <ModalDialog
         open
-        title={copy.done(target)}
-        description={copy.effect(target)}
+        title={copy.done(locale, target)}
+        description={copy.effect(locale, target)}
       >
-        <Heading title={copy.done(target)} sub={copy.effect(target)} />
+        <Heading
+          title={copy.done(locale, target)}
+          sub={copy.effect(locale, target)}
+        />
         <TemporaryPassword
           value={password}
-          recipient={copy.recipient}
-          logged="本次重置已记入操作日志。"
+          recipient={translate(locale, copy.recipient)}
+          logged={t('admin:accountDialogs.logged')}
         />
         <div className={dialogActions}>
           <Button variant="outline" onClick={onClose}>
-            我已复制，关闭
+            {t('admin:accountDialogs.copiedClose')}
           </Button>
         </div>
       </ModalDialog>
@@ -152,8 +176,8 @@ export function ResetPasswordDialog({
 
   const title =
     target.audience === 'admin'
-      ? `重置 ${target.name} 的密码？`
-      : '重置门户账号密码？';
+      ? t('admin:accountDialogs.resetAdminTitle', { name: target.name })
+      : t('admin:accountDialogs.resetPortalTitle');
   return (
     <ModalDialog
       open
@@ -161,26 +185,29 @@ export function ResetPasswordDialog({
         ? {}
         : { onOpenChange: (open: boolean) => open || onClose() })}
       title={title}
-      description={copy.confirm(target, self)}
+      description={copy.confirm(locale, target, self)}
     >
       <Heading title={title} sub={target.email} />
       <p className="m-0 text-sm leading-relaxed">
-        {copy.confirm(target, self)}
-        临时密码只显示一次，{copy.recipient}
-        登录后需修改密码。重置记入操作日志。
+        {copy.confirm(locale, target, self)}
+        {t('admin:accountDialogs.resetOnlyOnce', {
+          recipient: translate(locale, copy.recipient),
+        })}
       </p>
       {reset.error ? (
         <ProblemAlert
           error={reset.error}
-          networkMessage="无法确认是否已重置，原密码可能已失效。请再次重置以生成新的临时密码。"
+          networkMessage={t('admin:accountDialogs.resetNetwork')}
         />
       ) : null}
       <div className={dialogActions}>
         <Button variant="outline" disabled={reset.isPending} onClick={onClose}>
-          取消
+          {t('admin:accountDialogs.cancel')}
         </Button>
         <Button disabled={reset.isPending} onClick={() => void confirm()}>
-          {reset.isPending ? '正在重置…' : '重置密码'}
+          {reset.isPending
+            ? t('admin:accountDialogs.resetting')
+            : t('admin:accountDialogs.resetPassword')}
         </Button>
       </div>
     </ModalDialog>
@@ -188,8 +215,8 @@ export function ResetPasswordDialog({
 }
 
 type StatusCopy = {
-  title: (t: AccountTarget) => string;
-  body: (t: AccountTarget) => string;
+  title: (locale: Locale, target: AccountTarget) => string;
+  body: (locale: Locale, target: AccountTarget) => string;
   note?: { title: string; body: string; tone: 'error' | 'brand' };
   confirm: string;
 };
@@ -197,34 +224,51 @@ type StatusCopy = {
 const statusCopy = {
   admin: {
     disable: {
-      title: (t) => `停用管理员 ${t.name}？`,
-      body: (t) =>
-        `停用后${t.name}会立即退出登录，且无法再登录管理后台。之前的操作记录保留，可随时重新启用。停用操作记入操作日志。`,
-      confirm: '停用',
+      title: (locale, target) =>
+        translate(locale, 'admin:accountDialogs.status.admin.disable.title', {
+          name: target.name,
+        }),
+      body: (locale, target) =>
+        translate(locale, 'admin:accountDialogs.status.admin.disable.body', {
+          name: target.name,
+        }),
+      confirm: 'admin:accountDialogs.status.admin.disable.confirm',
     },
     enable: {
-      title: (t) => `启用管理员 ${t.name}？`,
-      body: (t) =>
-        `启用后${t.name}可以重新登录管理后台，停用时退出的登录不会恢复。启用操作记入操作日志。`,
-      confirm: '启用',
+      title: (locale, target) =>
+        translate(locale, 'admin:accountDialogs.status.admin.enable.title', {
+          name: target.name,
+        }),
+      body: (locale, target) =>
+        translate(locale, 'admin:accountDialogs.status.admin.enable.body', {
+          name: target.name,
+        }),
+      confirm: 'admin:accountDialogs.status.admin.enable.confirm',
     },
   },
   portal: {
     disable: {
-      title: () => '停用门户账号？',
-      body: (t) => `${t.email} 将立即退出登录，停用后客户无法登录客户门户。`,
+      title: (locale) =>
+        translate(locale, 'admin:accountDialogs.status.portal.disable.title'),
+      body: (locale, target) =>
+        translate(locale, 'admin:accountDialogs.status.portal.disable.body', {
+          email: target.email,
+        }),
       note: {
-        title: '不影响呼叫和计费',
-        body: '租户的呼叫、计费和余额不受影响；如需暂停呼叫，请使用页面右上角的「停用」。可随时重新启用。停用和启用均记入操作日志。',
+        title: 'admin:accountDialogs.portalDisableNoteTitle',
+        body: 'admin:accountDialogs.portalDisableNoteBody',
         tone: 'error',
       },
-      confirm: '停用账号',
+      confirm: 'admin:accountDialogs.status.portal.disable.confirm',
     },
     enable: {
-      title: () => '启用门户账号？',
-      body: (t) =>
-        `${t.email} 可重新登录客户门户，停用时退出的登录不会恢复。启用记入操作日志。`,
-      confirm: '启用账号',
+      title: (locale) =>
+        translate(locale, 'admin:accountDialogs.status.portal.enable.title'),
+      body: (locale, target) =>
+        translate(locale, 'admin:accountDialogs.status.portal.enable.body', {
+          email: target.email,
+        }),
+      confirm: 'admin:accountDialogs.status.portal.enable.confirm',
     },
   },
 } as const satisfies Record<AccountAudience, Record<StatusAction, StatusCopy>>;
@@ -239,9 +283,8 @@ const statusOperations = {
 
 /** 停用被服务端拒绝时（第三批系统与账号 2f）的说明。 */
 const disableRefusals = {
-  LAST_ADMIN:
-    '系统至少需要保留一位启用的管理员。请先新增或启用其他管理员，再执行此操作。',
-  SELF_DISABLE: '不能停用自己的账号。如需停用，请由其他管理员操作。',
+  LAST_ADMIN: 'admin:accountDialogs.refusalLastAdmin',
+  SELF_DISABLE: 'admin:accountDialogs.refusalSelfDisable',
 } as const;
 
 function refusal(error: unknown) {
@@ -267,6 +310,8 @@ export function AccountStatusDialog({
   onClose: () => void;
   onDone: (change: StatusChange) => void;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: () =>
@@ -277,6 +322,8 @@ export function AccountStatusDialog({
   });
   const copy: StatusCopy = statusCopy[target.audience][action];
   const refused = refusal(mutation.error);
+  const title = copy.title(locale, target);
+  const body = copy.body(locale, target);
 
   async function confirm() {
     try {
@@ -292,12 +339,15 @@ export function AccountStatusDialog({
       <ModalDialog
         open
         onOpenChange={(open) => open || onClose()}
-        title="无法停用"
-        description={refused}
+        title={t('admin:accountDialogs.cannotDisable')}
+        description={translate(locale, refused)}
       >
-        <Heading title="无法停用" sub={refused} />
+        <Heading
+          title={t('admin:accountDialogs.cannotDisable')}
+          sub={translate(locale, refused)}
+        />
         <div className={dialogActions}>
-          <Button onClick={onClose}>知道了</Button>
+          <Button onClick={onClose}>{t('admin:accountDialogs.known')}</Button>
         </div>
       </ModalDialog>
     );
@@ -308,14 +358,16 @@ export function AccountStatusDialog({
       {...(mutation.isPending
         ? {}
         : { onOpenChange: (open: boolean) => open || onClose() })}
-      title={copy.title(target)}
-      description={copy.body(target)}
+      title={title}
+      description={body}
     >
-      <Heading title={copy.title(target)} sub={copy.body(target)} />
+      <Heading title={title} sub={body} />
       {copy.note ? (
         <Alert variant={copy.note.tone} role="note" className="text-foreground">
-          <span className="font-semibold">{copy.note.title}</span>
-          <span>{copy.note.body}</span>
+          <span className="font-semibold">
+            {translate(locale, copy.note.title)}
+          </span>
+          <span>{translate(locale, copy.note.body)}</span>
         </Alert>
       ) : null}
       {extraNote ? (
@@ -326,7 +378,7 @@ export function AccountStatusDialog({
       {mutation.error ? (
         <ProblemAlert
           error={mutation.error}
-          networkMessage="无法确认是否已生效，列表已刷新，请查看账号状态后再操作。"
+          networkMessage={t('admin:accountDialogs.statusNetwork')}
           onRefresh={() => {
             void refreshAccounts(queryClient, target.audience);
             onClose();
@@ -339,7 +391,7 @@ export function AccountStatusDialog({
           disabled={mutation.isPending}
           onClick={onClose}
         >
-          取消
+          {t('admin:accountDialogs.cancel')}
         </Button>
         <Button
           className={
@@ -348,7 +400,7 @@ export function AccountStatusDialog({
           disabled={mutation.isPending}
           onClick={() => void confirm()}
         >
-          {copy.confirm}
+          {translate(locale, copy.confirm)}
         </Button>
       </div>
     </ModalDialog>
@@ -358,30 +410,33 @@ export function AccountStatusDialog({
 const noticeCopy = {
   admin: {
     disable: {
-      changed: (t: AccountTarget) => `已停用管理员 ${t.name}，已记入操作日志`,
-      same: (t: AccountTarget) => `${t.name} 已是停用状态，没有变更`,
+      changed: 'admin:accountDialogs.notice.adminDisableChanged',
+      same: 'admin:accountDialogs.notice.adminDisableSame',
     },
     enable: {
-      changed: (t: AccountTarget) => `已启用管理员 ${t.name}，已记入操作日志`,
-      same: (t: AccountTarget) => `${t.name} 已是启用状态，没有变更`,
+      changed: 'admin:accountDialogs.notice.adminEnableChanged',
+      same: 'admin:accountDialogs.notice.adminEnableSame',
     },
   },
   portal: {
     disable: {
-      changed: () => '门户账号已停用，已记入操作日志',
-      same: () => '门户账号已是停用状态，没有变更',
+      changed: 'admin:accountDialogs.notice.portalDisableChanged',
+      same: 'admin:accountDialogs.notice.portalDisableSame',
     },
     enable: {
-      changed: () => '门户账号已启用，已记入操作日志',
-      same: () => '门户账号已是启用状态，没有变更',
+      changed: 'admin:accountDialogs.notice.portalEnableChanged',
+      same: 'admin:accountDialogs.notice.portalEnableSame',
     },
   },
 } as const;
 
 export function StatusChangeNotice({ change }: { change: StatusChange }) {
-  const text = noticeCopy[change.target.audience][change.action][
-    change.changed ? 'changed' : 'same'
-  ](change.target);
+  const locale = useLocale();
+  const key =
+    noticeCopy[change.target.audience][change.action][
+      change.changed ? 'changed' : 'same'
+    ];
+  const text = translate(locale, key, { name: change.target.name });
   return (
     <Alert
       variant={change.changed ? 'success' : 'muted'}

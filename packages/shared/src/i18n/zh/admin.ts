@@ -66,16 +66,6 @@ export const admin = {
     adjustmentNoteRequired: '调账必须填写备注',
     noteTooLong: '备注最多 {{max}} 个字符',
   },
-  statement: {
-    reconcile: {
-      stale: '账单已过期',
-      inconsistent: '账单与流水不一致',
-    },
-    regenerate: {
-      inProgress: '进行中，月结后可重新生成',
-      detailsDeleted: '话单已删除，无法重新计算',
-    },
-  },
   problem: {
     validation: '提交内容有误，请检查标红的字段',
     csvRows: 'CSV 有 {{count}} 行错误，请修正后重新上传',
@@ -89,5 +79,226 @@ export const admin = {
     passwordChange: '请先修改初始或重置密码',
     unavailableTitle: '服务暂时不可用',
     unavailableBody: '请稍后重试',
+    networkTitle: '网络中断',
+    networkBody: '请检查网络后重试',
+    refresh: '刷新',
+  },
+  accountDialogs: {
+    temporaryLabel: '临时密码',
+    oneTimeTitle: '关闭后无法再次查看',
+    oneTimeBody:
+      '请立即复制并通过安全渠道发给{{recipient}}，{{recipient}}首次登录后需修改密码。{{logged}}',
+    logged: '本次重置已记入操作日志。',
+    copiedClose: '我已复制，关闭',
+    resetAdminTitle: '重置 {{name}} 的密码？',
+    resetPortalTitle: '重置门户账号密码？',
+    resetSelfConfirm:
+      '将生成新的临时密码，原密码立即失效，你的所有登录都会退出。之后需用临时密码重新登录并修改密码。',
+    resetAdminConfirm:
+      '将生成新的临时密码，原密码立即失效，{{name}}的所有登录都会退出。',
+    resetPortalConfirm:
+      '将生成新的临时密码，原密码立即失效，客户所有设备上的登录都会退出。',
+    resetDoneAdmin: '已为 {{name}} 生成临时密码',
+    resetDonePortal: '已生成临时密码',
+    resetEffectAdmin: '{{email}} · 原密码已失效，{{name}}的所有登录已退出',
+    resetEffectPortal: '{{email}} · 原密码已失效，客户所有设备上的登录已退出',
+    resetOnlyOnce:
+      '临时密码只显示一次，{{recipient}}登录后需修改密码。重置记入操作日志。',
+    resetNetwork:
+      '无法确认是否已重置，原密码可能已失效。请再次重置以生成新的临时密码。',
+    adminRecipient: '对方',
+    portalRecipient: '客户',
+    cancel: '取消',
+    resetting: '正在重置…',
+    resetPassword: '重置密码',
+    cannotDisable: '无法停用',
+    known: '知道了',
+    refusalLastAdmin:
+      '系统至少需要保留一位启用的管理员。请先新增或启用其他管理员，再执行此操作。',
+    refusalSelfDisable: '不能停用自己的账号。如需停用，请由其他管理员操作。',
+    status: {
+      admin: {
+        disable: {
+          title: '停用管理员 {{name}}？',
+          body: '停用后{{name}}会立即退出登录，且无法再登录管理后台。之前的操作记录保留，可随时重新启用。停用操作记入操作日志。',
+          confirm: '停用',
+        },
+        enable: {
+          title: '启用管理员 {{name}}？',
+          body: '启用后{{name}}可以重新登录管理后台，停用时退出的登录不会恢复。启用操作记入操作日志。',
+          confirm: '启用',
+        },
+      },
+      portal: {
+        disable: {
+          title: '停用门户账号？',
+          body: '{{email}} 将立即退出登录，停用后客户无法登录客户门户。',
+          confirm: '停用账号',
+        },
+        enable: {
+          title: '启用门户账号？',
+          body: '{{email}} 可重新登录客户门户，停用时退出的登录不会恢复。启用记入操作日志。',
+          confirm: '启用账号',
+        },
+      },
+    },
+    portalDisableNoteTitle: '不影响呼叫和计费',
+    portalDisableNoteBody:
+      '租户的呼叫、计费和余额不受影响；如需暂停呼叫，请使用页面右上角的「停用」。可随时重新启用。停用和启用均记入操作日志。',
+    statusNetwork: '无法确认是否已生效，列表已刷新，请查看账号状态后再操作。',
+    notice: {
+      adminDisableChanged: '已停用管理员 {{name}}，已记入操作日志',
+      adminDisableSame: '{{name}} 已是停用状态，没有变更',
+      adminEnableChanged: '已启用管理员 {{name}}，已记入操作日志',
+      adminEnableSame: '{{name}} 已是启用状态，没有变更',
+      portalDisableChanged: '门户账号已停用，已记入操作日志',
+      portalDisableSame: '门户账号已是停用状态，没有变更',
+      portalEnableChanged: '门户账号已启用，已记入操作日志',
+      portalEnableSame: '门户账号已是启用状态，没有变更',
+    },
+  },
+  tenantStatus: {
+    disableTitle: '停用租户 {{code}}？',
+    disableConfirm: '停用租户',
+    disableNoteTitle: '停用不能保证立即停止呼叫',
+    disableNote:
+      '停用后正常授权路径拒绝新呼叫；Worker 授权超时时，新呼叫仍可能按最多 1800 秒放行；已接通电话按原上限结束并正常计费。',
+    disableEffect1: '客户门户账号无法登录，门户账号本身的状态不变。',
+    disableEffect2:
+      '余额、费率和流水保留；仍可充值、赊账充值、赠送和调账，入账不会自动启用租户。',
+    disableEffect3: '可随时重新启用，停用和启用均记入操作日志。',
+    enableTitle: '启用租户 {{code}}？',
+    enableConfirm: '启用租户',
+    enableNoteTitle: '恢复正常授权',
+    enableNote: '启用后按余额与透支额度正常授权新呼叫；余额不足时仍会停机。',
+    enableEffect1:
+      '只恢复租户状态，不改变门户账号：门户账号若已单独停用，需在「门户账号」标签页启用。',
+    enableEffect2: '启用记入操作日志。',
+    network: '无法确认是否已生效，请刷新页面查看租户状态后再操作。',
+    cancel: '取消',
+  },
+  balanceDialog: {
+    visibilityAdmin: '仅内部可见',
+    visibilityCustomer: '客户可见',
+    kindLabel: '操作类型',
+    creditTopupNote:
+      '先加余额，记为「待收款」，确认收款后变为「已收款」。客户看到的是「账户充值」。',
+    currentBalance: '当前余额',
+    afterBalance: '操作后',
+    title: '余额操作',
+    successTitle: '操作成功',
+    successBody: '{{kind}} {{amount}} 已入账，当前余额 {{balance}}',
+    logged: '已记入操作日志',
+    done: '完成',
+    viewLedger: '查看余额流水',
+    confirmTitle: '确认{{kind}}',
+    ledgerNote:
+      '提交后将新增一条流水，不能修改或删除；如有错误需另做调账冲正。',
+    tenant: '租户',
+    type: '类型',
+    amount: '金额',
+    note: '备注',
+    balance: '余额',
+    emptyNote: '（无）',
+    internalVisibility: '（仅内部可见）',
+    customerVisibility: '（客户可见）',
+    available: '{{kind}}后可用额度 {{amount}}，状态{{change}}「{{status}}」',
+    stay: '保持',
+    become: '将变为',
+    disabledTitle: '该租户已停用，状态不会改变',
+    disabledBody:
+      '入账后租户仍为「已停用」，不会自动启用，正常授权路径仍拒绝新呼叫。如需恢复呼叫，请在租户详情右上角「启用」。',
+    largeTitle: '大额{{kind}}，需要二次确认',
+    largeBody:
+      '金额超过 {{currency}} 大额阈值 {{amount}}，请再次核对金额与租户。',
+    largeConfirm: '我已核对，确认{{kind}} {{amount}}',
+    network:
+      '无法确认是否已入账。再次点击「{{confirm}}」会按同一笔重试，不会重复入账；如需修改内容，请先在余额流水中核实。',
+    back: '返回修改',
+    amountLabel: '金额',
+    noteLabel: '备注',
+    customerHint: '会显示在客户门户的余额流水中',
+    adminHint: '仅管理后台可见',
+    adjustmentPlaceholder: '请说明调账原因',
+    notePlaceholder: '例如：银行转账 · 招行尾号 6621',
+    cancel: '取消',
+    next: '下一步',
+  },
+  field: {
+    optional: '（可选）',
+  },
+  recipients: {
+    label: '通知邮箱',
+    helper: '可添加多个，余额不足和停机通知会发送到这些邮箱',
+    emptyNote: '未配置收件人，余额提醒无法送达；停用租户不发送',
+    flagged: '已停用管理员',
+    remove: '移除 {{email}}',
+    placeholder: '输入邮箱后按回车添加',
+    listLabel: '已添加的{{label}}',
+    addMobile: '＋ 添加邮箱',
+    add: '添加',
+    flaggedNote: '「{{email}}」属于已停用管理员，请确认收件人',
+  },
+  statement: {
+    reconcile: {
+      stale: '账单已过期',
+      inconsistent: '账单与流水不一致',
+    },
+    regenerate: {
+      inProgress: '进行中，月结后可重新生成',
+      detailsDeleted: '话单已删除，无法重新计算',
+    },
+    regenerateDialog: {
+      title: '重新生成 {{code}} {{month}} 账单？',
+      titlePlain: '重新生成账单',
+      description: '按当前话单重新计算该月账单',
+      bodyCurrent: '将按当前话单重新计算该月账单，用于补推话单后更正。',
+      bodyMissing: '该月账单尚未生成，将按当前话单与流水生成，等同补建。',
+      callCharges: '当前通话扣费',
+      closingBalance: '当前期末余额',
+      generatedAt: '生成于',
+      portalNote:
+        '重新生成后客户门户的月账单同步更新；操作人和前后差异记入操作日志。',
+      network: '无法确认是否已重新生成，请刷新后查看账单版本再操作。',
+      close: '关闭',
+      cancel: '取消',
+      regenerating: '正在重新生成…',
+      regenerate: '重新生成',
+      created:
+        '已生成 {{code}} {{month}} 账单（版本 {{version}}），已记入操作日志。',
+      changedIntro: '已重新生成 {{code}} {{month}} 账单（版本 {{version}}）：',
+      changedCallCharges: '通话扣费',
+      changedSeparator: '，',
+      changedClosingBalance: '期末余额',
+      changedSuffix: '，已记入操作日志。',
+      unchanged:
+        '{{code}} {{month}} 账单与当前话单一致，没有变化（版本 {{version}} 不变），已记入操作日志。',
+      know: '知道了',
+      staleTitle: '后续月份的账单已过期',
+      stalePrefix: '{{code}} 的 ',
+      staleSuffix:
+        ' 账单的期初余额已与账本不符。重新生成只处理所选月份，请按月份顺序逐个重新生成。',
+      monthSeparator: '、',
+    },
+    parts: {
+      regenerate: '重新生成',
+      regenerated: '已重新生成 · 原 {{time}}',
+      detailsDeleted: '该月话单已删除',
+    },
+  },
+  scheduledVersion: {
+    ariaLabel: '排定的新版本',
+    badge: '排定的新版本',
+    summaryPrefix: '',
+    summarySuffix:
+      '起生效 · 新增 {{added}} · 修改 {{modified}} · 删除 {{deleted}}',
+    exportCsv: '导出 CSV',
+    cancelSchedule: '取消排定',
+    cancelTitle: '取消排定的新版本？',
+    cancelBody:
+      '原定 {{time}} 起生效的新版本将被删除，当前版本继续生效。将记入操作日志。',
+    refresh: '刷新',
+    network: '无法确认是否已取消，请刷新费率表核对后再操作。',
+    keep: '暂不取消',
   },
 } as const;

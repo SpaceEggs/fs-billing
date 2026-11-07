@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AdminTenantDetailResponse } from '@fs-billing/shared';
 import { invalidateTenant, useApiMutation } from '../../lib/admin-api';
@@ -12,28 +13,28 @@ export type StatusChangeResult = {
   changed: boolean;
 };
 
-const copy = {
+const copyKeys = {
   disable: {
-    title: (code: string) => `停用租户 ${code}？`,
-    confirm: '停用租户',
+    title: 'admin:tenantStatus.disableTitle',
+    confirm: 'admin:tenantStatus.disableConfirm',
     tone: 'error',
-    noteTitle: '停用不能保证立即停止呼叫',
-    note: '停用后正常授权路径拒绝新呼叫；Worker 授权超时时，新呼叫仍可能按最多 1800 秒放行；已接通电话按原上限结束并正常计费。',
+    noteTitle: 'admin:tenantStatus.disableNoteTitle',
+    note: 'admin:tenantStatus.disableNote',
     effects: [
-      '客户门户账号无法登录，门户账号本身的状态不变。',
-      '余额、费率和流水保留；仍可充值、赊账充值、赠送和调账，入账不会自动启用租户。',
-      '可随时重新启用，停用和启用均记入操作日志。',
+      'admin:tenantStatus.disableEffect1',
+      'admin:tenantStatus.disableEffect2',
+      'admin:tenantStatus.disableEffect3',
     ],
   },
   enable: {
-    title: (code: string) => `启用租户 ${code}？`,
-    confirm: '启用租户',
+    title: 'admin:tenantStatus.enableTitle',
+    confirm: 'admin:tenantStatus.enableConfirm',
     tone: 'brand',
-    noteTitle: '恢复正常授权',
-    note: '启用后按余额与透支额度正常授权新呼叫；余额不足时仍会停机。',
+    noteTitle: 'admin:tenantStatus.enableNoteTitle',
+    note: 'admin:tenantStatus.enableNote',
     effects: [
-      '只恢复租户状态，不改变门户账号：门户账号若已单独停用，需在「门户账号」标签页启用。',
-      '启用记入操作日志。',
+      'admin:tenantStatus.enableEffect1',
+      'admin:tenantStatus.enableEffect2',
     ],
   },
 } as const;
@@ -59,8 +60,10 @@ export function TenantStatusDialog({
     invalidate: (client, input) =>
       invalidateTenant(client, input.params.tenantId),
   });
+  const { t } = useTranslation(['admin']);
   const mutation = action === 'enable' ? enable : disable;
-  const text = copy[action ?? 'disable'];
+  const text = copyKeys[action ?? 'disable'];
+  const title = t(text.title, { code: tenant.code });
 
   async function confirm() {
     if (!action) return;
@@ -88,30 +91,28 @@ export function TenantStatusDialog({
               }
             },
           })}
-      title={text.title(tenant.code)}
-      description={text.note}
+      title={title}
+      description={t(text.note)}
     >
       <div className="flex flex-col gap-1.5">
-        <h2 className="m-0 text-[17px] font-semibold">
-          {text.title(tenant.code)}
-        </h2>
+        <h2 className="m-0 text-[17px] font-semibold">{title}</h2>
         <span className="text-sm leading-relaxed text-muted-foreground">
           {tenant.name}（{tenant.currency}）
         </span>
       </div>
       <Alert variant={text.tone} role="note" className="text-foreground">
-        <span className="font-semibold">{text.noteTitle}</span>
-        <span>{text.note}</span>
+        <span className="font-semibold">{t(text.noteTitle)}</span>
+        <span>{t(text.note)}</span>
       </Alert>
       <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-[13px] leading-normal text-muted-foreground">
         {text.effects.map((effect) => (
-          <li key={effect}>{effect}</li>
+          <li key={effect}>{t(effect)}</li>
         ))}
       </ul>
       {mutation.error ? (
         <ProblemAlert
           error={mutation.error}
-          networkMessage="无法确认是否已生效，请刷新页面查看租户状态后再操作。"
+          networkMessage={t('admin:tenantStatus.network')}
           onRefresh={() => {
             void invalidateTenant(queryClient, tenant.id);
             onClose();
@@ -125,7 +126,7 @@ export function TenantStatusDialog({
           disabled={mutation.isPending}
           onClick={onClose}
         >
-          取消
+          {t('admin:tenantStatus.cancel')}
         </Button>
         <Button
           className={
@@ -136,7 +137,7 @@ export function TenantStatusDialog({
           disabled={mutation.isPending}
           onClick={() => void confirm()}
         >
-          {text.confirm}
+          {t(text.confirm)}
         </Button>
       </div>
     </ModalDialog>

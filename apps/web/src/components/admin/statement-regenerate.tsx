@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { TriangleAlertIcon } from 'lucide-react';
@@ -10,6 +11,7 @@ import { apiProblem } from '../../lib/api-problem';
 import { formatDateTime } from '../../lib/format';
 import { statementMonthTitle } from '../../lib/statement';
 import { cn } from '../../lib/utils';
+import { useLocale } from '../../i18n';
 import { formatMinutes } from '../cdr/cdr-format';
 import { Money } from '../data-format';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -64,6 +66,8 @@ export function RegenerateDialog({
   onClose: () => void;
   onDone: (outcome: RegenerateOutcome) => void;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const regenerate = useApiMutation('adminTenantStatementRegenerate', {
     invalidate: (client) => refreshStatements(client),
@@ -98,8 +102,11 @@ export function RegenerateDialog({
   }
 
   const title = target
-    ? `重新生成 ${target.tenantCode} ${statementMonthTitle(target.month)} 账单？`
-    : '重新生成账单';
+    ? t('admin:statement.regenerateDialog.title', {
+        code: target.tenantCode,
+        month: statementMonthTitle(target.month, locale),
+      })
+    : t('admin:statement.regenerateDialog.titlePlain');
   const money = (amount: string) =>
     target ? { currency: target.currency, amount } : null;
   return (
@@ -109,7 +116,7 @@ export function RegenerateDialog({
         ? {}
         : { onOpenChange: (open) => open || close() })}
       title={title}
-      description="按当前话单重新计算该月账单"
+      description={t('admin:statement.regenerateDialog.description')}
       plainOnDesktop
       className="md:w-[500px]"
     >
@@ -117,29 +124,31 @@ export function RegenerateDialog({
         <h2 className="m-0 text-[17px] font-semibold">{title}</h2>
         <span className="text-sm leading-relaxed text-muted-foreground">
           {target?.current
-            ? '将按当前话单重新计算该月账单，用于补推话单后更正。'
-            : '该月账单尚未生成，将按当前话单与流水生成，等同补建。'}
+            ? t('admin:statement.regenerateDialog.bodyCurrent')
+            : t('admin:statement.regenerateDialog.bodyMissing')}
         </span>
       </div>
       {target?.current ? (
         <dl className="m-0 grid grid-cols-[120px_1fr] border-t border-border text-sm tabular-nums">
-          <Row label="当前通话扣费">
+          <Row label={t('admin:statement.regenerateDialog.callCharges')}>
             <Money value={money(target.current.callCharges)!} tone="plain" /> ·{' '}
-            {formatMinutes(target.current.callMinutes)}
+            {formatMinutes(target.current.callMinutes, locale)}
           </Row>
-          <Row label="当前期末余额">
+          <Row label={t('admin:statement.regenerateDialog.closingBalance')}>
             <Money value={money(target.current.closingBalance)!} />
           </Row>
-          <Row label="生成于">{formatDateTime(target.current.generatedAt)}</Row>
+          <Row label={t('admin:statement.regenerateDialog.generatedAt')}>
+            {formatDateTime(target.current.generatedAt, locale)}
+          </Row>
         </dl>
       ) : null}
       <div className="rounded-lg border border-brand-border bg-brand-soft px-3 py-2.5 text-[13px] leading-normal">
-        重新生成后客户门户的月账单同步更新；操作人和前后差异记入操作日志。
+        {t('admin:statement.regenerateDialog.portalNote')}
       </div>
       {regenerate.error ? (
         <ProblemAlert
           error={regenerate.error}
-          networkMessage="无法确认是否已重新生成，请刷新后查看账单版本再操作。"
+          networkMessage={t('admin:statement.regenerateDialog.network')}
           onRefresh={() => {
             void refreshStatements(queryClient);
             close();
@@ -153,14 +162,18 @@ export function RegenerateDialog({
           disabled={regenerate.isPending}
           onClick={close}
         >
-          {conflicted ? '关闭' : '取消'}
+          {conflicted
+            ? t('admin:statement.regenerateDialog.close')
+            : t('admin:statement.regenerateDialog.cancel')}
         </Button>
         <Button
           className="h-12 md:h-9"
           disabled={regenerate.isPending || conflicted}
           onClick={() => void confirm()}
         >
-          {regenerate.isPending ? '正在重新生成…' : '重新生成'}
+          {regenerate.isPending
+            ? t('admin:statement.regenerateDialog.regenerating')
+            : t('admin:statement.regenerateDialog.regenerate')}
         </Button>
       </div>
     </ModalDialog>
@@ -194,29 +207,42 @@ export function RegenerateNotice({
   onDismiss: () => void;
   className?: string;
 }) {
+  const { t } = useTranslation(['admin']);
+  const locale = useLocale();
   const { result, tenantCode, tenantId, currency } = outcome;
-  const month = statementMonthTitle(result.month);
+  const month = statementMonthTitle(result.month, locale);
   const money = (amount: string) => ({ currency, amount });
   const summary = result.created ? (
     <>
-      已生成 {tenantCode} {month} 账单（版本 {result.after.version}
-      ），已记入操作日志。
+      {t('admin:statement.regenerateDialog.created', {
+        code: tenantCode,
+        month,
+        version: result.after.version,
+      })}
     </>
   ) : result.changed && result.before ? (
     <>
-      已重新生成 {tenantCode} {month} 账单（版本 {result.after.version}
-      ）：通话扣费{' '}
+      {t('admin:statement.regenerateDialog.changedIntro', {
+        code: tenantCode,
+        month,
+        version: result.after.version,
+      })}
+      {t('admin:statement.regenerateDialog.changedCallCharges')}{' '}
       <Money value={money(result.before.callCharges)} tone="plain" /> →{' '}
       <Money value={money(result.after.callCharges)} tone="plain" />
-      ，期末余额{' '}
+      {t('admin:statement.regenerateDialog.changedSeparator')}
+      {t('admin:statement.regenerateDialog.changedClosingBalance')}{' '}
       <Money value={money(result.before.closingBalance)} tone="plain" /> →{' '}
       <Money value={money(result.after.closingBalance)} tone="plain" />
-      ，已记入操作日志。
+      {t('admin:statement.regenerateDialog.changedSuffix')}
     </>
   ) : (
     <>
-      {tenantCode} {month} 账单与当前话单一致，没有变化（版本{' '}
-      {result.after.version} 不变），已记入操作日志。
+      {t('admin:statement.regenerateDialog.unchanged', {
+        code: tenantCode,
+        month,
+        version: result.after.version,
+      })}
     </>
   );
   return (
@@ -235,29 +261,35 @@ export function RegenerateNotice({
           className="h-auto shrink-0 p-0 text-[13px] font-normal text-current"
           onClick={onDismiss}
         >
-          知道了
+          {t('admin:statement.regenerateDialog.know')}
         </Button>
       </Alert>
       {result.staleFollowingMonths.length > 0 ? (
         <Alert variant="warning" role="alert">
           <TriangleAlertIcon aria-hidden />
-          <AlertTitle>后续月份的账单已过期</AlertTitle>
+          <AlertTitle>
+            {t('admin:statement.regenerateDialog.staleTitle')}
+          </AlertTitle>
           <AlertDescription className="block">
-            {tenantCode} 的{' '}
+            {t('admin:statement.regenerateDialog.stalePrefix', {
+              code: tenantCode,
+            })}
             {result.staleFollowingMonths.map((stale, index) => (
               <span key={stale}>
-                {index > 0 ? '、' : ''}
+                {index > 0
+                  ? t('admin:statement.regenerateDialog.monthSeparator')
+                  : ''}
                 <Link
                   to="/admin/tenants/$tenantId"
                   params={{ tenantId }}
                   search={{ tab: 'statements', statementMonth: stale }}
                   className="underline"
                 >
-                  {statementMonthTitle(stale)}
+                  {statementMonthTitle(stale, locale)}
                 </Link>
               </span>
-            ))}{' '}
-            账单的期初余额已与账本不符。重新生成只处理所选月份，请按月份顺序逐个重新生成。
+            ))}
+            {t('admin:statement.regenerateDialog.staleSuffix')}
           </AlertDescription>
         </Alert>
       ) : null}

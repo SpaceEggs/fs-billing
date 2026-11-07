@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Currency } from '@fs-billing/shared';
 import { XIcon } from 'lucide-react';
 import { Label } from '../ui/label';
@@ -82,6 +83,7 @@ export function Field({
   className?: string;
   children: (props: FieldControlProps) => React.ReactNode;
 }) {
+  const { t } = useTranslation(['admin']);
   const id = useId();
   const messageId = `${id}-message`;
   const hintId = `${id}-hint`;
@@ -110,7 +112,9 @@ export function Field({
             </span>
           ) : null}
           {optional ? (
-            <span className="font-normal text-muted-foreground">（可选）</span>
+            <span className="font-normal text-muted-foreground">
+              {t('admin:field.optional')}
+            </span>
           ) : null}
         </Label>
         {badge}
@@ -190,9 +194,9 @@ export function RecipientsInput({
   flagged,
   stacked = false,
   className,
-  label = '通知邮箱',
-  helper = '可添加多个，余额不足和停机通知会发送到这些邮箱',
-  emptyNote = '未配置收件人，余额提醒无法送达；停用租户不发送',
+  label,
+  helper,
+  emptyNote,
 }: {
   emails: string[];
   error: string | undefined;
@@ -204,6 +208,10 @@ export function RecipientsInput({
   helper?: string;
   emptyNote?: string;
 }) {
+  const { t } = useTranslation(['admin']);
+  const shownLabel = label ?? t('admin:recipients.label');
+  const shownHelper = helper ?? t('admin:recipients.helper');
+  const shownEmptyNote = emptyNote ?? t('admin:recipients.emptyNote');
   const id = useId();
   const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
@@ -239,13 +247,15 @@ export function RecipientsInput({
       <span className="min-w-0 truncate">
         {email}
         {isFlagged(email) ? (
-          <span className="ml-1.5 text-[11px] text-warn">已停用管理员</span>
+          <span className="ml-1.5 text-[11px] text-warn">
+            {t('admin:recipients.flagged')}
+          </span>
         ) : null}
       </span>
       <Button
         variant="ghost"
         size="inline"
-        aria-label={`移除 ${email}`}
+        aria-label={t('admin:recipients.remove', { email })}
         onClick={() => onChange(emails.filter((item) => item !== email))}
         className={cn(
           'shrink-0 text-muted-foreground hover:bg-transparent',
@@ -264,7 +274,7 @@ export function RecipientsInput({
       autoComplete="off"
       aria-invalid={error ? true : undefined}
       aria-describedby={`${id}-messages`}
-      placeholder="输入邮箱后按回车添加"
+      placeholder={t('admin:recipients.placeholder')}
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
@@ -285,15 +295,17 @@ export function RecipientsInput({
         className,
       )}
     >
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id}>{shownLabel}</Label>
       <span className="-mt-1 text-xs font-normal text-muted-foreground">
-        {helper}
+        {shownHelper}
       </span>
       {stacked ? (
         <>
           {emails.length ? (
             <ul
-              aria-label={`已添加的${label}`}
+              aria-label={t('admin:recipients.listLabel', {
+                label: shownLabel,
+              })}
               className="m-0 flex list-none flex-col gap-2 p-0 font-normal md:flex-row md:flex-wrap"
             >
               {chipItems}
@@ -307,7 +319,7 @@ export function RecipientsInput({
               inputShown && 'hidden',
             )}
           >
-            ＋ 添加邮箱
+            {t('admin:recipients.addMobile')}
           </Button>
           <div
             className={cn(
@@ -322,7 +334,7 @@ export function RecipientsInput({
               className="h-11 md:h-9"
               onClick={commit}
             >
-              添加
+              {t('admin:recipients.add')}
             </Button>
           </div>
         </>
@@ -333,7 +345,12 @@ export function RecipientsInput({
             error && 'border-err',
           )}
         >
-          <ul aria-label={`已添加的${label}`} className="contents">
+          <ul
+            aria-label={t('admin:recipients.listLabel', {
+              label: shownLabel,
+            })}
+            className="contents"
+          >
             {chipItems}
           </ul>
           {input(
@@ -352,7 +369,7 @@ export function RecipientsInput({
         ) : null}
         {emails.length === 0 ? (
           <span role="status" className="text-xs font-normal text-warn">
-            {emptyNote}
+            {shownEmptyNote}
           </span>
         ) : null}
         {flaggedEmails.map((email) => (
@@ -361,7 +378,7 @@ export function RecipientsInput({
             role="status"
             className="text-xs font-normal text-warn"
           >
-            「{email}」属于已停用管理员，请确认收件人
+            {t('admin:recipients.flaggedNote', { email })}
           </span>
         ))}
       </div>
